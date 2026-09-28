@@ -411,3 +411,147 @@ func (l *LoggingCoordinator) RevokeAllSessions(ctx context.Context, req *RevokeA
 	)
 	return res, nil
 }
+
+// ListMFAFactors executes next.ListMFAFactors and logs execution duration and errors.
+func (l *LoggingCoordinator) ListMFAFactors(ctx context.Context, req *ListMFAFactorsRequest) (*ListMFAFactorsResponse, error) {
+	start := time.Now()
+	res, err := l.next.ListMFAFactors(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.ListMFAFactors failed",
+			log.String("component", "iam"),
+			log.String("operation", "ListMFAFactors"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.ListMFAFactors completed",
+		log.String("component", "iam"),
+		log.String("operation", "ListMFAFactors"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// DeleteMFAFactor executes next.DeleteMFAFactor and logs execution duration and errors.
+func (l *LoggingCoordinator) DeleteMFAFactor(ctx context.Context, req *DeleteMFAFactorRequest) error {
+	start := time.Now()
+	err := l.next.DeleteMFAFactor(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.DeleteMFAFactor failed",
+			log.String("component", "iam"),
+			log.String("operation", "DeleteMFAFactor"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return err
+	}
+
+	l.logger.Info(ctx, "iam.DeleteMFAFactor completed",
+		log.String("component", "iam"),
+		log.String("operation", "DeleteMFAFactor"),
+		log.Duration("duration", duration),
+	)
+	return nil
+}
+
+// SetPrimaryMFAFactor executes next.SetPrimaryMFAFactor and logs execution duration and errors.
+func (l *LoggingCoordinator) SetPrimaryMFAFactor(ctx context.Context, req *SetPrimaryMFAFactorRequest) error {
+	start := time.Now()
+	err := l.next.SetPrimaryMFAFactor(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.SetPrimaryMFAFactor failed",
+			log.String("component", "iam"),
+			log.String("operation", "SetPrimaryMFAFactor"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return err
+	}
+
+	l.logger.Info(ctx, "iam.SetPrimaryMFAFactor completed",
+		log.String("component", "iam"),
+		log.String("operation", "SetPrimaryMFAFactor"),
+		log.Duration("duration", duration),
+	)
+	return nil
+}
+
+// SetupTOTP executes next.SetupTOTP and logs execution duration and errors.
+func (l *LoggingCoordinator) SetupTOTP(ctx context.Context, req *SetupTOTPRequest) (*SetupTOTPResponse, error) {
+	start := time.Now()
+	res, err := l.next.SetupTOTP(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.SetupTOTP failed",
+			log.String("component", "iam"),
+			log.String("operation", "SetupTOTP"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.SetupTOTP completed",
+		log.String("component", "iam"),
+		log.String("operation", "SetupTOTP"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// ConfirmTOTP executes next.ConfirmTOTP and logs execution duration and errors.
+func (l *LoggingCoordinator) ConfirmTOTP(ctx context.Context, req *ConfirmTOTPRequest) (*ConfirmTOTPResponse, error) {
+	start := time.Now()
+	res, err := l.next.ConfirmTOTP(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.ConfirmTOTP failed",
+			log.String("component", "iam"),
+			log.String("operation", "ConfirmTOTP"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.ConfirmTOTP completed",
+		log.String("component", "iam"),
+		log.String("operation", "ConfirmTOTP"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// RegenerateBackupCodes executes next.RegenerateBackupCodes and logs execution duration and errors.
+func (l *LoggingCoordinator) RegenerateBackupCodes(ctx context.Context, req *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error) {
+	start := time.Now()
+	res, err := l.next.RegenerateBackupCodes(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.RegenerateBackupCodes failed",
+			log.String("component", "iam"),
+			log.String("operation", "RegenerateBackupCodes"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.RegenerateBackupCodes completed",
+		log.String("component", "iam"),
+		log.String("operation", "RegenerateBackupCodes"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}

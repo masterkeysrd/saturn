@@ -293,6 +293,106 @@ func (s *Ed25519Service) ValidateRefreshToken(raw string, now time.Time) (*Claim
 	return claims, nil
 }
 
+// IssueMFATicket creates a signed JWT ephemeral ticket for completing Step 2 MFA challenge (5-min TTL).
+func (s *Ed25519Service) IssueMFATicket(input IssueInput, now time.Time) (string, time.Time, error) {
+	jti, err := generateJTI()
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("generate jti: %w", err)
+	}
+
+	expiresAt := now.Add(5 * time.Minute)
+
+	claims := &Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    s.config.Issuer,
+			Subject:   input.Subject,
+			Audience:  []string{s.config.Audience},
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			ID:        jti,
+		},
+		AccessLevel: input.AccessLevel,
+		TokenUse:    "mfa_ticket",
+		AuthVersion: input.AuthVersion,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
+	token.Header["kid"] = s.activeKeyID
+
+	raw, err := token.SignedString(s.activePriv)
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("sign mfa ticket: %w", err)
+	}
+
+	return raw, expiresAt, nil
+}
+
+// ValidateMFATicket validates an ephemeral MFA ticket JWT.
+func (s *Ed25519Service) ValidateMFATicket(raw string, now time.Time) (*Claims, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, ErrInvalidToken
+	}
+
+	claims := &Claims{}
+	parser := jwt.NewParser(
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuedAt(),
+		jwt.WithNotBeforeRequired(),
+		jwt.WithLeeway(s.config.ClockSkew),
+	)
+
+	_, err := parser.ParseWithClaims(raw, claims, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
+			return nil, fmt.Errorf("unexpected signing method")
+		}
+		kid, _ := token.Header["kid"].(string)
+		kid = strings.TrimSpace(kid)
+		if kid == "" {
+			return nil, fmt.Errorf("missing kid")
+		}
+		pub, ok := s.publicKeys[kid]
+		if !ok {
+			return nil, fmt.Errorf("unknown key ID: %s", kid)
+		}
+		return pub, nil
+	})
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+	if claims.ID == "" {
+		return nil, ErrInvalidToken
+	}
+
+	if err := claims.ValidateBasic(); err != nil {
+		return nil, ErrInvalidToken
+	}
+
+	if claims.TokenUse != "mfa_ticket" {
+		return nil, ErrInvalidToken
+	}
+
+	nowUnix := now.Unix()
+	clockSkew := int64(s.config.ClockSkew.Seconds())
+
+	exp, _ := claims.GetExpirationTime()
+	if exp != nil && exp.Unix() <= nowUnix {
+		return nil, ErrExpiredToken
+	}
+
+	nbf, _ := claims.GetNotBefore()
+	if nbf != nil && nbf.Unix() > nowUnix+clockSkew {
+		return nil, ErrExpiredToken
+	}
+
+	iat, _ := claims.GetIssuedAt()
+	if iat != nil && iat.Unix() > nowUnix+clockSkew {
+		return nil, ErrExpiredToken
+	}
+
+	return claims, nil
+}
+
 // IssueInput holds the parameters for issuing a new JWT.
 type IssueInput struct {
 	Subject     string
@@ -306,6 +406,8 @@ type Service interface {
 	IssueRefreshToken(input IssueInput, now time.Time, absoluteExpiry time.Time) (string, time.Time, error)
 	ValidateAccessToken(raw string, now time.Time) (*Claims, error)
 	ValidateRefreshToken(raw string, now time.Time) (*Claims, error)
+	IssueMFATicket(input IssueInput, now time.Time) (string, time.Time, error)
+	ValidateMFATicket(raw string, now time.Time) (*Claims, error)
 }
 
 // generateJTI creates a cryptographically random token identifier.

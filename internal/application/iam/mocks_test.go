@@ -66,6 +66,24 @@ type CoordinatorMock struct {
 	// RevokeAllSessionsFunc mocks the RevokeAllSessions method.
 	RevokeAllSessionsFunc func(ctx context.Context, req *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error)
 
+	// ListMFAFactorsFunc mocks the ListMFAFactors method.
+	ListMFAFactorsFunc func(ctx context.Context, req *ListMFAFactorsRequest) (*ListMFAFactorsResponse, error)
+
+	// DeleteMFAFactorFunc mocks the DeleteMFAFactor method.
+	DeleteMFAFactorFunc func(ctx context.Context, req *DeleteMFAFactorRequest) error
+
+	// SetPrimaryMFAFactorFunc mocks the SetPrimaryMFAFactor method.
+	SetPrimaryMFAFactorFunc func(ctx context.Context, req *SetPrimaryMFAFactorRequest) error
+
+	// SetupTOTPFunc mocks the SetupTOTP method.
+	SetupTOTPFunc func(ctx context.Context, req *SetupTOTPRequest) (*SetupTOTPResponse, error)
+
+	// ConfirmTOTPFunc mocks the ConfirmTOTP method.
+	ConfirmTOTPFunc func(ctx context.Context, req *ConfirmTOTPRequest) (*ConfirmTOTPResponse, error)
+
+	// RegenerateBackupCodesFunc mocks the RegenerateBackupCodes method.
+	RegenerateBackupCodesFunc func(ctx context.Context, req *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		Authenticate []struct {
@@ -133,23 +151,53 @@ type CoordinatorMock struct {
 			Ctx context.Context
 			Req *RevokeAllSessionsRequest
 		}
+		ListMFAFactors []struct {
+			Ctx context.Context
+			Req *ListMFAFactorsRequest
+		}
+		DeleteMFAFactor []struct {
+			Ctx context.Context
+			Req *DeleteMFAFactorRequest
+		}
+		SetPrimaryMFAFactor []struct {
+			Ctx context.Context
+			Req *SetPrimaryMFAFactorRequest
+		}
+		SetupTOTP []struct {
+			Ctx context.Context
+			Req *SetupTOTPRequest
+		}
+		ConfirmTOTP []struct {
+			Ctx context.Context
+			Req *ConfirmTOTPRequest
+		}
+		RegenerateBackupCodes []struct {
+			Ctx context.Context
+			Req *RegenerateBackupCodesRequest
+		}
 	}
-	lockAuthenticate       sync.RWMutex
-	lockGetAuthVersion     sync.RWMutex
-	lockGetCurrentUser     sync.RWMutex
-	lockListSecurityEvents sync.RWMutex
-	lockLogin              sync.RWMutex
-	lockLogout             sync.RWMutex
-	lockRefreshSession     sync.RWMutex
-	lockRegister           sync.RWMutex
-	lockAdminCreateUser    sync.RWMutex
-	lockApproveUser        sync.RWMutex
-	lockRejectUser         sync.RWMutex
-	lockListUsers          sync.RWMutex
-	lockUpdateUserRole     sync.RWMutex
-	lockListActiveSessions sync.RWMutex
-	lockRevokeSession      sync.RWMutex
-	lockRevokeAllSessions  sync.RWMutex
+	lockAuthenticate          sync.RWMutex
+	lockGetAuthVersion        sync.RWMutex
+	lockGetCurrentUser        sync.RWMutex
+	lockListSecurityEvents    sync.RWMutex
+	lockLogin                 sync.RWMutex
+	lockLogout                sync.RWMutex
+	lockRefreshSession        sync.RWMutex
+	lockRegister              sync.RWMutex
+	lockAdminCreateUser       sync.RWMutex
+	lockApproveUser           sync.RWMutex
+	lockRejectUser            sync.RWMutex
+	lockListUsers             sync.RWMutex
+	lockUpdateUserRole        sync.RWMutex
+	lockListActiveSessions    sync.RWMutex
+	lockRevokeSession         sync.RWMutex
+	lockRevokeAllSessions     sync.RWMutex
+	lockListMFAFactors        sync.RWMutex
+	lockDeleteMFAFactor       sync.RWMutex
+	lockSetPrimaryMFAFactor   sync.RWMutex
+	lockSetupTOTP             sync.RWMutex
+	lockConfirmTOTP           sync.RWMutex
+	lockRegenerateBackupCodes sync.RWMutex
 }
 
 // Authenticate calls AuthenticateFunc.
@@ -587,6 +635,168 @@ func (mock *CoordinatorMock) RevokeAllSessionsCalls() []struct {
 	return mock.calls.RevokeAllSessions
 }
 
+// ListMFAFactors calls ListMFAFactorsFunc.
+func (mock *CoordinatorMock) ListMFAFactors(ctx context.Context, req *ListMFAFactorsRequest) (*ListMFAFactorsResponse, error) {
+	if mock.ListMFAFactorsFunc == nil {
+		panic("CoordinatorMock.ListMFAFactorsFunc: method is nil but Coordinator.ListMFAFactors was just called")
+	}
+	mock.lockListMFAFactors.Lock()
+	mock.calls.ListMFAFactors = append(mock.calls.ListMFAFactors, struct {
+		Ctx context.Context
+		Req *ListMFAFactorsRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockListMFAFactors.Unlock()
+	return mock.ListMFAFactorsFunc(ctx, req)
+}
+
+// ListMFAFactorsCalls returns all calls made to ListMFAFactors.
+func (mock *CoordinatorMock) ListMFAFactorsCalls() []struct {
+	Ctx context.Context
+	Req *ListMFAFactorsRequest
+} {
+	mock.lockListMFAFactors.RLock()
+	defer mock.lockListMFAFactors.RUnlock()
+	return mock.calls.ListMFAFactors
+}
+
+// DeleteMFAFactor calls DeleteMFAFactorFunc.
+func (mock *CoordinatorMock) DeleteMFAFactor(ctx context.Context, req *DeleteMFAFactorRequest) error {
+	if mock.DeleteMFAFactorFunc == nil {
+		panic("CoordinatorMock.DeleteMFAFactorFunc: method is nil but Coordinator.DeleteMFAFactor was just called")
+	}
+	mock.lockDeleteMFAFactor.Lock()
+	mock.calls.DeleteMFAFactor = append(mock.calls.DeleteMFAFactor, struct {
+		Ctx context.Context
+		Req *DeleteMFAFactorRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockDeleteMFAFactor.Unlock()
+	return mock.DeleteMFAFactorFunc(ctx, req)
+}
+
+// DeleteMFAFactorCalls returns all calls made to DeleteMFAFactor.
+func (mock *CoordinatorMock) DeleteMFAFactorCalls() []struct {
+	Ctx context.Context
+	Req *DeleteMFAFactorRequest
+} {
+	mock.lockDeleteMFAFactor.RLock()
+	defer mock.lockDeleteMFAFactor.RUnlock()
+	return mock.calls.DeleteMFAFactor
+}
+
+// SetPrimaryMFAFactor calls SetPrimaryMFAFactorFunc.
+func (mock *CoordinatorMock) SetPrimaryMFAFactor(ctx context.Context, req *SetPrimaryMFAFactorRequest) error {
+	if mock.SetPrimaryMFAFactorFunc == nil {
+		panic("CoordinatorMock.SetPrimaryMFAFactorFunc: method is nil but Coordinator.SetPrimaryMFAFactor was just called")
+	}
+	mock.lockSetPrimaryMFAFactor.Lock()
+	mock.calls.SetPrimaryMFAFactor = append(mock.calls.SetPrimaryMFAFactor, struct {
+		Ctx context.Context
+		Req *SetPrimaryMFAFactorRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockSetPrimaryMFAFactor.Unlock()
+	return mock.SetPrimaryMFAFactorFunc(ctx, req)
+}
+
+// SetPrimaryMFAFactorCalls returns all calls made to SetPrimaryMFAFactor.
+func (mock *CoordinatorMock) SetPrimaryMFAFactorCalls() []struct {
+	Ctx context.Context
+	Req *SetPrimaryMFAFactorRequest
+} {
+	mock.lockSetPrimaryMFAFactor.RLock()
+	defer mock.lockSetPrimaryMFAFactor.RUnlock()
+	return mock.calls.SetPrimaryMFAFactor
+}
+
+// SetupTOTP calls SetupTOTPFunc.
+func (mock *CoordinatorMock) SetupTOTP(ctx context.Context, req *SetupTOTPRequest) (*SetupTOTPResponse, error) {
+	if mock.SetupTOTPFunc == nil {
+		panic("CoordinatorMock.SetupTOTPFunc: method is nil but Coordinator.SetupTOTP was just called")
+	}
+	mock.lockSetupTOTP.Lock()
+	mock.calls.SetupTOTP = append(mock.calls.SetupTOTP, struct {
+		Ctx context.Context
+		Req *SetupTOTPRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockSetupTOTP.Unlock()
+	return mock.SetupTOTPFunc(ctx, req)
+}
+
+// SetupTOTPCalls returns all calls made to SetupTOTP.
+func (mock *CoordinatorMock) SetupTOTPCalls() []struct {
+	Ctx context.Context
+	Req *SetupTOTPRequest
+} {
+	mock.lockSetupTOTP.RLock()
+	defer mock.lockSetupTOTP.RUnlock()
+	return mock.calls.SetupTOTP
+}
+
+// ConfirmTOTP calls ConfirmTOTPFunc.
+func (mock *CoordinatorMock) ConfirmTOTP(ctx context.Context, req *ConfirmTOTPRequest) (*ConfirmTOTPResponse, error) {
+	if mock.ConfirmTOTPFunc == nil {
+		panic("CoordinatorMock.ConfirmTOTPFunc: method is nil but Coordinator.ConfirmTOTP was just called")
+	}
+	mock.lockConfirmTOTP.Lock()
+	mock.calls.ConfirmTOTP = append(mock.calls.ConfirmTOTP, struct {
+		Ctx context.Context
+		Req *ConfirmTOTPRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockConfirmTOTP.Unlock()
+	return mock.ConfirmTOTPFunc(ctx, req)
+}
+
+// ConfirmTOTPCalls returns all calls made to ConfirmTOTP.
+func (mock *CoordinatorMock) ConfirmTOTPCalls() []struct {
+	Ctx context.Context
+	Req *ConfirmTOTPRequest
+} {
+	mock.lockConfirmTOTP.RLock()
+	defer mock.lockConfirmTOTP.RUnlock()
+	return mock.calls.ConfirmTOTP
+}
+
+// RegenerateBackupCodes calls RegenerateBackupCodesFunc.
+func (mock *CoordinatorMock) RegenerateBackupCodes(ctx context.Context, req *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error) {
+	if mock.RegenerateBackupCodesFunc == nil {
+		panic("CoordinatorMock.RegenerateBackupCodesFunc: method is nil but Coordinator.RegenerateBackupCodes was just called")
+	}
+	mock.lockRegenerateBackupCodes.Lock()
+	mock.calls.RegenerateBackupCodes = append(mock.calls.RegenerateBackupCodes, struct {
+		Ctx context.Context
+		Req *RegenerateBackupCodesRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockRegenerateBackupCodes.Unlock()
+	return mock.RegenerateBackupCodesFunc(ctx, req)
+}
+
+// RegenerateBackupCodesCalls returns all calls made to RegenerateBackupCodes.
+func (mock *CoordinatorMock) RegenerateBackupCodesCalls() []struct {
+	Ctx context.Context
+	Req *RegenerateBackupCodesRequest
+} {
+	mock.lockRegenerateBackupCodes.RLock()
+	defer mock.lockRegenerateBackupCodes.RUnlock()
+	return mock.calls.RegenerateBackupCodes
+}
+
 // Compile-time interface assertion.
 var _ PasswordHasher = (*PasswordHasherMock)(nil)
 
@@ -680,6 +890,12 @@ type TokenServiceMock struct {
 	// ValidateRefreshTokenFunc mocks the ValidateRefreshToken method.
 	ValidateRefreshTokenFunc func(raw string, now time.Time) (*token.Claims, error)
 
+	// IssueMFATicketFunc mocks the IssueMFATicket method.
+	IssueMFATicketFunc func(input token.IssueInput, now time.Time) (string, time.Time, error)
+
+	// ValidateMFATicketFunc mocks the ValidateMFATicket method.
+	ValidateMFATicketFunc func(raw string, now time.Time) (*token.Claims, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		IssueAccessToken []struct {
@@ -699,11 +915,21 @@ type TokenServiceMock struct {
 			Raw string
 			Now time.Time
 		}
+		IssueMFATicket []struct {
+			Input token.IssueInput
+			Now   time.Time
+		}
+		ValidateMFATicket []struct {
+			Raw string
+			Now time.Time
+		}
 	}
 	lockIssueAccessToken     sync.RWMutex
 	lockIssueRefreshToken    sync.RWMutex
 	lockValidateAccessToken  sync.RWMutex
 	lockValidateRefreshToken sync.RWMutex
+	lockIssueMFATicket       sync.RWMutex
+	lockValidateMFATicket    sync.RWMutex
 }
 
 // IssueAccessToken calls IssueAccessTokenFunc.
@@ -817,6 +1043,60 @@ func (mock *TokenServiceMock) ValidateRefreshTokenCalls() []struct {
 	return mock.calls.ValidateRefreshToken
 }
 
+// IssueMFATicket calls IssueMFATicketFunc.
+func (mock *TokenServiceMock) IssueMFATicket(input token.IssueInput, now time.Time) (string, time.Time, error) {
+	if mock.IssueMFATicketFunc == nil {
+		panic("TokenServiceMock.IssueMFATicketFunc: method is nil but TokenService.IssueMFATicket was just called")
+	}
+	mock.lockIssueMFATicket.Lock()
+	mock.calls.IssueMFATicket = append(mock.calls.IssueMFATicket, struct {
+		Input token.IssueInput
+		Now   time.Time
+	}{
+		Input: input,
+		Now:   now,
+	})
+	mock.lockIssueMFATicket.Unlock()
+	return mock.IssueMFATicketFunc(input, now)
+}
+
+// IssueMFATicketCalls returns all calls made to IssueMFATicket.
+func (mock *TokenServiceMock) IssueMFATicketCalls() []struct {
+	Input token.IssueInput
+	Now   time.Time
+} {
+	mock.lockIssueMFATicket.RLock()
+	defer mock.lockIssueMFATicket.RUnlock()
+	return mock.calls.IssueMFATicket
+}
+
+// ValidateMFATicket calls ValidateMFATicketFunc.
+func (mock *TokenServiceMock) ValidateMFATicket(raw string, now time.Time) (*token.Claims, error) {
+	if mock.ValidateMFATicketFunc == nil {
+		panic("TokenServiceMock.ValidateMFATicketFunc: method is nil but TokenService.ValidateMFATicket was just called")
+	}
+	mock.lockValidateMFATicket.Lock()
+	mock.calls.ValidateMFATicket = append(mock.calls.ValidateMFATicket, struct {
+		Raw string
+		Now time.Time
+	}{
+		Raw: raw,
+		Now: now,
+	})
+	mock.lockValidateMFATicket.Unlock()
+	return mock.ValidateMFATicketFunc(raw, now)
+}
+
+// ValidateMFATicketCalls returns all calls made to ValidateMFATicket.
+func (mock *TokenServiceMock) ValidateMFATicketCalls() []struct {
+	Raw string
+	Now time.Time
+} {
+	mock.lockValidateMFATicket.RLock()
+	defer mock.lockValidateMFATicket.RUnlock()
+	return mock.calls.ValidateMFATicket
+}
+
 // Compile-time interface assertion.
 var _ IdentityService = (*IdentityServiceMock)(nil)
 
@@ -893,6 +1173,30 @@ type IdentityServiceMock struct {
 
 	// ListSecurityEventsFunc mocks the ListSecurityEvents method.
 	ListSecurityEventsFunc func(ctx context.Context, filter identity.SecurityEventFilter) (*paging.Page[*identity.SecurityEvent], error)
+
+	// HasActiveMFAFunc mocks the HasActiveMFA method.
+	HasActiveMFAFunc func(ctx context.Context, userID identity.UserID) (bool, []*identity.MFAFactor, error)
+
+	// SetupTOTPFunc mocks the SetupTOTP method.
+	SetupTOTPFunc func(ctx context.Context, req identity.SetupTOTPRequest) (*identity.SetupTOTPResult, error)
+
+	// ConfirmTOTPFunc mocks the ConfirmTOTP method.
+	ConfirmTOTPFunc func(ctx context.Context, req identity.ConfirmTOTPRequest) ([]string, error)
+
+	// ListMFAFactorsFunc mocks the ListMFAFactors method.
+	ListMFAFactorsFunc func(ctx context.Context, userID identity.UserID) (*identity.MFAFactorsSummary, error)
+
+	// DeleteMFAFactorFunc mocks the DeleteMFAFactor method.
+	DeleteMFAFactorFunc func(ctx context.Context, req identity.DeleteMFAFactorRequest) error
+
+	// SetPrimaryMFAFactorFunc mocks the SetPrimaryMFAFactor method.
+	SetPrimaryMFAFactorFunc func(ctx context.Context, req identity.SetPrimaryMFAFactorRequest) error
+
+	// RegenerateBackupCodesFunc mocks the RegenerateBackupCodes method.
+	RegenerateBackupCodesFunc func(ctx context.Context, req identity.RegenerateBackupCodesRequest) ([]string, error)
+
+	// VerifyMFAAssertionFunc mocks the VerifyMFAAssertion method.
+	VerifyMFAAssertionFunc func(ctx context.Context, req identity.VerifyMFAAssertionRequest) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -996,6 +1300,38 @@ type IdentityServiceMock struct {
 			Ctx    context.Context
 			Filter identity.SecurityEventFilter
 		}
+		HasActiveMFA []struct {
+			Ctx    context.Context
+			UserID identity.UserID
+		}
+		SetupTOTP []struct {
+			Ctx context.Context
+			Req identity.SetupTOTPRequest
+		}
+		ConfirmTOTP []struct {
+			Ctx context.Context
+			Req identity.ConfirmTOTPRequest
+		}
+		ListMFAFactors []struct {
+			Ctx    context.Context
+			UserID identity.UserID
+		}
+		DeleteMFAFactor []struct {
+			Ctx context.Context
+			Req identity.DeleteMFAFactorRequest
+		}
+		SetPrimaryMFAFactor []struct {
+			Ctx context.Context
+			Req identity.SetPrimaryMFAFactorRequest
+		}
+		RegenerateBackupCodes []struct {
+			Ctx context.Context
+			Req identity.RegenerateBackupCodesRequest
+		}
+		VerifyMFAAssertion []struct {
+			Ctx context.Context
+			Req identity.VerifyMFAAssertionRequest
+		}
 	}
 	lockCreateUser                       sync.RWMutex
 	lockCreateCredential                 sync.RWMutex
@@ -1021,6 +1357,14 @@ type IdentityServiceMock struct {
 	lockUpdateLockoutState               sync.RWMutex
 	lockCreateSecurityEvent              sync.RWMutex
 	lockListSecurityEvents               sync.RWMutex
+	lockHasActiveMFA                     sync.RWMutex
+	lockSetupTOTP                        sync.RWMutex
+	lockConfirmTOTP                      sync.RWMutex
+	lockListMFAFactors                   sync.RWMutex
+	lockDeleteMFAFactor                  sync.RWMutex
+	lockSetPrimaryMFAFactor              sync.RWMutex
+	lockRegenerateBackupCodes            sync.RWMutex
+	lockVerifyMFAAssertion               sync.RWMutex
 }
 
 // CreateUser calls CreateUserFunc.
@@ -1681,6 +2025,222 @@ func (mock *IdentityServiceMock) ListSecurityEventsCalls() []struct {
 	mock.lockListSecurityEvents.RLock()
 	defer mock.lockListSecurityEvents.RUnlock()
 	return mock.calls.ListSecurityEvents
+}
+
+// HasActiveMFA calls HasActiveMFAFunc.
+func (mock *IdentityServiceMock) HasActiveMFA(ctx context.Context, userID identity.UserID) (bool, []*identity.MFAFactor, error) {
+	if mock.HasActiveMFAFunc == nil {
+		panic("IdentityServiceMock.HasActiveMFAFunc: method is nil but IdentityService.HasActiveMFA was just called")
+	}
+	mock.lockHasActiveMFA.Lock()
+	mock.calls.HasActiveMFA = append(mock.calls.HasActiveMFA, struct {
+		Ctx    context.Context
+		UserID identity.UserID
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+	})
+	mock.lockHasActiveMFA.Unlock()
+	return mock.HasActiveMFAFunc(ctx, userID)
+}
+
+// HasActiveMFACalls returns all calls made to HasActiveMFA.
+func (mock *IdentityServiceMock) HasActiveMFACalls() []struct {
+	Ctx    context.Context
+	UserID identity.UserID
+} {
+	mock.lockHasActiveMFA.RLock()
+	defer mock.lockHasActiveMFA.RUnlock()
+	return mock.calls.HasActiveMFA
+}
+
+// SetupTOTP calls SetupTOTPFunc.
+func (mock *IdentityServiceMock) SetupTOTP(ctx context.Context, req identity.SetupTOTPRequest) (*identity.SetupTOTPResult, error) {
+	if mock.SetupTOTPFunc == nil {
+		panic("IdentityServiceMock.SetupTOTPFunc: method is nil but IdentityService.SetupTOTP was just called")
+	}
+	mock.lockSetupTOTP.Lock()
+	mock.calls.SetupTOTP = append(mock.calls.SetupTOTP, struct {
+		Ctx context.Context
+		Req identity.SetupTOTPRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockSetupTOTP.Unlock()
+	return mock.SetupTOTPFunc(ctx, req)
+}
+
+// SetupTOTPCalls returns all calls made to SetupTOTP.
+func (mock *IdentityServiceMock) SetupTOTPCalls() []struct {
+	Ctx context.Context
+	Req identity.SetupTOTPRequest
+} {
+	mock.lockSetupTOTP.RLock()
+	defer mock.lockSetupTOTP.RUnlock()
+	return mock.calls.SetupTOTP
+}
+
+// ConfirmTOTP calls ConfirmTOTPFunc.
+func (mock *IdentityServiceMock) ConfirmTOTP(ctx context.Context, req identity.ConfirmTOTPRequest) ([]string, error) {
+	if mock.ConfirmTOTPFunc == nil {
+		panic("IdentityServiceMock.ConfirmTOTPFunc: method is nil but IdentityService.ConfirmTOTP was just called")
+	}
+	mock.lockConfirmTOTP.Lock()
+	mock.calls.ConfirmTOTP = append(mock.calls.ConfirmTOTP, struct {
+		Ctx context.Context
+		Req identity.ConfirmTOTPRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockConfirmTOTP.Unlock()
+	return mock.ConfirmTOTPFunc(ctx, req)
+}
+
+// ConfirmTOTPCalls returns all calls made to ConfirmTOTP.
+func (mock *IdentityServiceMock) ConfirmTOTPCalls() []struct {
+	Ctx context.Context
+	Req identity.ConfirmTOTPRequest
+} {
+	mock.lockConfirmTOTP.RLock()
+	defer mock.lockConfirmTOTP.RUnlock()
+	return mock.calls.ConfirmTOTP
+}
+
+// ListMFAFactors calls ListMFAFactorsFunc.
+func (mock *IdentityServiceMock) ListMFAFactors(ctx context.Context, userID identity.UserID) (*identity.MFAFactorsSummary, error) {
+	if mock.ListMFAFactorsFunc == nil {
+		panic("IdentityServiceMock.ListMFAFactorsFunc: method is nil but IdentityService.ListMFAFactors was just called")
+	}
+	mock.lockListMFAFactors.Lock()
+	mock.calls.ListMFAFactors = append(mock.calls.ListMFAFactors, struct {
+		Ctx    context.Context
+		UserID identity.UserID
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+	})
+	mock.lockListMFAFactors.Unlock()
+	return mock.ListMFAFactorsFunc(ctx, userID)
+}
+
+// ListMFAFactorsCalls returns all calls made to ListMFAFactors.
+func (mock *IdentityServiceMock) ListMFAFactorsCalls() []struct {
+	Ctx    context.Context
+	UserID identity.UserID
+} {
+	mock.lockListMFAFactors.RLock()
+	defer mock.lockListMFAFactors.RUnlock()
+	return mock.calls.ListMFAFactors
+}
+
+// DeleteMFAFactor calls DeleteMFAFactorFunc.
+func (mock *IdentityServiceMock) DeleteMFAFactor(ctx context.Context, req identity.DeleteMFAFactorRequest) error {
+	if mock.DeleteMFAFactorFunc == nil {
+		panic("IdentityServiceMock.DeleteMFAFactorFunc: method is nil but IdentityService.DeleteMFAFactor was just called")
+	}
+	mock.lockDeleteMFAFactor.Lock()
+	mock.calls.DeleteMFAFactor = append(mock.calls.DeleteMFAFactor, struct {
+		Ctx context.Context
+		Req identity.DeleteMFAFactorRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockDeleteMFAFactor.Unlock()
+	return mock.DeleteMFAFactorFunc(ctx, req)
+}
+
+// DeleteMFAFactorCalls returns all calls made to DeleteMFAFactor.
+func (mock *IdentityServiceMock) DeleteMFAFactorCalls() []struct {
+	Ctx context.Context
+	Req identity.DeleteMFAFactorRequest
+} {
+	mock.lockDeleteMFAFactor.RLock()
+	defer mock.lockDeleteMFAFactor.RUnlock()
+	return mock.calls.DeleteMFAFactor
+}
+
+// SetPrimaryMFAFactor calls SetPrimaryMFAFactorFunc.
+func (mock *IdentityServiceMock) SetPrimaryMFAFactor(ctx context.Context, req identity.SetPrimaryMFAFactorRequest) error {
+	if mock.SetPrimaryMFAFactorFunc == nil {
+		panic("IdentityServiceMock.SetPrimaryMFAFactorFunc: method is nil but IdentityService.SetPrimaryMFAFactor was just called")
+	}
+	mock.lockSetPrimaryMFAFactor.Lock()
+	mock.calls.SetPrimaryMFAFactor = append(mock.calls.SetPrimaryMFAFactor, struct {
+		Ctx context.Context
+		Req identity.SetPrimaryMFAFactorRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockSetPrimaryMFAFactor.Unlock()
+	return mock.SetPrimaryMFAFactorFunc(ctx, req)
+}
+
+// SetPrimaryMFAFactorCalls returns all calls made to SetPrimaryMFAFactor.
+func (mock *IdentityServiceMock) SetPrimaryMFAFactorCalls() []struct {
+	Ctx context.Context
+	Req identity.SetPrimaryMFAFactorRequest
+} {
+	mock.lockSetPrimaryMFAFactor.RLock()
+	defer mock.lockSetPrimaryMFAFactor.RUnlock()
+	return mock.calls.SetPrimaryMFAFactor
+}
+
+// RegenerateBackupCodes calls RegenerateBackupCodesFunc.
+func (mock *IdentityServiceMock) RegenerateBackupCodes(ctx context.Context, req identity.RegenerateBackupCodesRequest) ([]string, error) {
+	if mock.RegenerateBackupCodesFunc == nil {
+		panic("IdentityServiceMock.RegenerateBackupCodesFunc: method is nil but IdentityService.RegenerateBackupCodes was just called")
+	}
+	mock.lockRegenerateBackupCodes.Lock()
+	mock.calls.RegenerateBackupCodes = append(mock.calls.RegenerateBackupCodes, struct {
+		Ctx context.Context
+		Req identity.RegenerateBackupCodesRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockRegenerateBackupCodes.Unlock()
+	return mock.RegenerateBackupCodesFunc(ctx, req)
+}
+
+// RegenerateBackupCodesCalls returns all calls made to RegenerateBackupCodes.
+func (mock *IdentityServiceMock) RegenerateBackupCodesCalls() []struct {
+	Ctx context.Context
+	Req identity.RegenerateBackupCodesRequest
+} {
+	mock.lockRegenerateBackupCodes.RLock()
+	defer mock.lockRegenerateBackupCodes.RUnlock()
+	return mock.calls.RegenerateBackupCodes
+}
+
+// VerifyMFAAssertion calls VerifyMFAAssertionFunc.
+func (mock *IdentityServiceMock) VerifyMFAAssertion(ctx context.Context, req identity.VerifyMFAAssertionRequest) error {
+	if mock.VerifyMFAAssertionFunc == nil {
+		panic("IdentityServiceMock.VerifyMFAAssertionFunc: method is nil but IdentityService.VerifyMFAAssertion was just called")
+	}
+	mock.lockVerifyMFAAssertion.Lock()
+	mock.calls.VerifyMFAAssertion = append(mock.calls.VerifyMFAAssertion, struct {
+		Ctx context.Context
+		Req identity.VerifyMFAAssertionRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockVerifyMFAAssertion.Unlock()
+	return mock.VerifyMFAAssertionFunc(ctx, req)
+}
+
+// VerifyMFAAssertionCalls returns all calls made to VerifyMFAAssertion.
+func (mock *IdentityServiceMock) VerifyMFAAssertionCalls() []struct {
+	Ctx context.Context
+	Req identity.VerifyMFAAssertionRequest
+} {
+	mock.lockVerifyMFAAssertion.RLock()
+	defer mock.lockVerifyMFAAssertion.RUnlock()
+	return mock.calls.VerifyMFAAssertion
 }
 
 // Compile-time interface assertion.

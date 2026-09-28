@@ -19,6 +19,7 @@ import (
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/apps/web"
 	"github.com/masterkeysrd/saturn/internal/platform/backup"
+	"github.com/masterkeysrd/saturn/internal/platform/crypto"
 	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
 	"golang.org/x/sync/errgroup"
@@ -55,6 +56,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/requestid"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
 	"github.com/masterkeysrd/saturn/internal/platform/shutdown"
+	"github.com/masterkeysrd/saturn/internal/platform/totp"
 	"github.com/masterkeysrd/saturn/internal/transport/event"
 	eventmiddleware "github.com/masterkeysrd/saturn/internal/transport/event/middleware"
 	agentgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/agent"
@@ -112,6 +114,11 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	}
 	sessionStore := identitystorage.NewSessionStore(dbClient)
 	securityEventStore := identitystorage.NewSecurityEventStore(dbClient)
+	mfaFactorStore := identitystorage.NewMFAFactorStore(dbClient)
+	mfaCipher, err := crypto.NewCipher(cfg.Security.EncryptionKey)
+	if err != nil {
+		return fmt.Errorf("create mfa cipher: %w", err)
+	}
 	identityService := identity.NewService(
 		identity.Dependencies{
 			UserStore:          userStore,
@@ -119,6 +126,9 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 			SessionStore:       sessionStore,
 			SecurityEventStore: securityEventStore,
 			Hasher:             passwordHasher,
+			MFAStore:           mfaFactorStore,
+			Cipher:             mfaCipher,
+			TOTP:               totp.NewProvider(),
 		},
 	)
 

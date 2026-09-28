@@ -19,4 +19,9 @@ const (
 	SessionReused      errors.Code = "SESSION_REUSED"
 	VersionMismatch    errors.Code = "USER_VERSION_MISMATCH"
 	InvalidUserID      errors.Code = "INVALID_USER_ID"
+	MFARequired        errors.Code = "MFA_REQUIRED"
+	MFAInvalidTicket   errors.Code = "MFA_INVALID_TICKET"
+	MFAInvalidCode     errors.Code = "MFA_INVALID_CODE"
+	MFANotFound        errors.Code = "MFA_NOT_FOUND"
+	MFAFactorExists    errors.Code = "MFA_FACTOR_EXISTS"
 )

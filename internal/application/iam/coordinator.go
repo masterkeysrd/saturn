@@ -37,6 +37,12 @@ type Coordinator interface {
 	RevokeSession(ctx context.Context, req *RevokeSessionRequest) (*RevokeSessionResponse, error)
 	// @transactional
 	RevokeAllSessions(ctx context.Context, req *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error)
+	ListMFAFactors(ctx context.Context, req *ListMFAFactorsRequest) (*ListMFAFactorsResponse, error)
+	DeleteMFAFactor(ctx context.Context, req *DeleteMFAFactorRequest) error
+	SetPrimaryMFAFactor(ctx context.Context, req *SetPrimaryMFAFactorRequest) error
+	SetupTOTP(ctx context.Context, req *SetupTOTPRequest) (*SetupTOTPResponse, error)
+	ConfirmTOTP(ctx context.Context, req *ConfirmTOTPRequest) (*ConfirmTOTPResponse, error)
+	RegenerateBackupCodes(ctx context.Context, req *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error)
 }
 
 // PasswordHasher defines the interface for computing and verifying password hashes.
@@ -53,6 +59,8 @@ type TokenService interface {
 	IssueRefreshToken(input token.IssueInput, now time.Time, absoluteExpiry time.Time) (string, time.Time, error)
 	ValidateAccessToken(raw string, now time.Time) (*token.Claims, error)
 	ValidateRefreshToken(raw string, now time.Time) (*token.Claims, error)
+	IssueMFATicket(input token.IssueInput, now time.Time) (string, time.Time, error)
+	ValidateMFATicket(raw string, now time.Time) (*token.Claims, error)
 }
 
 // Dependencies defines the inputs for creating a new Coordinator.
@@ -130,6 +138,14 @@ type IdentityService interface {
 	UpdateLockoutState(ctx context.Context, req identity.UpdateLockoutRequest) error
 	CreateSecurityEvent(ctx context.Context, event *identity.SecurityEvent) error
 	ListSecurityEvents(ctx context.Context, filter identity.SecurityEventFilter) (*paging.Page[*identity.SecurityEvent], error)
+	HasActiveMFA(ctx context.Context, userID identity.UserID) (bool, []*identity.MFAFactor, error)
+	SetupTOTP(ctx context.Context, req identity.SetupTOTPRequest) (*identity.SetupTOTPResult, error)
+	ConfirmTOTP(ctx context.Context, req identity.ConfirmTOTPRequest) ([]string, error)
+	ListMFAFactors(ctx context.Context, userID identity.UserID) (*identity.MFAFactorsSummary, error)
+	DeleteMFAFactor(ctx context.Context, req identity.DeleteMFAFactorRequest) error
+	SetPrimaryMFAFactor(ctx context.Context, req identity.SetPrimaryMFAFactorRequest) error
+	RegenerateBackupCodes(ctx context.Context, req identity.RegenerateBackupCodesRequest) ([]string, error)
+	VerifyMFAAssertion(ctx context.Context, req identity.VerifyMFAAssertionRequest) error
 }
 
 // SpaceService defines the interface for space operations required by IAM application.

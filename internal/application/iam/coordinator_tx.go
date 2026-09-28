@@ -155,3 +155,27 @@ func (t *TransactionalCoordinator) RevokeAllSessions(ctx context.Context, req *R
 
 	return res, nil
 }
+
+func (t *TransactionalCoordinator) ListMFAFactors(ctx context.Context, req *ListMFAFactorsRequest) (*ListMFAFactorsResponse, error) {
+	return t.next.ListMFAFactors(ctx, req)
+}
+
+func (t *TransactionalCoordinator) DeleteMFAFactor(ctx context.Context, req *DeleteMFAFactorRequest) error {
+	return t.next.DeleteMFAFactor(ctx, req)
+}
+
+func (t *TransactionalCoordinator) SetPrimaryMFAFactor(ctx context.Context, req *SetPrimaryMFAFactorRequest) error {
+	return t.next.SetPrimaryMFAFactor(ctx, req)
+}
+
+func (t *TransactionalCoordinator) SetupTOTP(ctx context.Context, req *SetupTOTPRequest) (*SetupTOTPResponse, error) {
+	return t.next.SetupTOTP(ctx, req)
+}
+
+func (t *TransactionalCoordinator) ConfirmTOTP(ctx context.Context, req *ConfirmTOTPRequest) (*ConfirmTOTPResponse, error) {
+	return t.next.ConfirmTOTP(ctx, req)
+}
+
+func (t *TransactionalCoordinator) RegenerateBackupCodes(ctx context.Context, req *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error) {
+	return t.next.RegenerateBackupCodes(ctx, req)
+}

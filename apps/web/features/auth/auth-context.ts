@@ -2,6 +2,7 @@ import { createContext } from "react"
 import type {
   User,
   LoginUserRequest,
+  LoginUserResponse,
   RegisterUserRequest,
 } from "@saturn/api/gen/saturn/identity/v1/identity"
 
@@ -14,7 +15,7 @@ export interface AuthContextType {
   accessToken: string | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (req: LoginUserRequest) => Promise<void>
+  login: (req: LoginUserRequest) => Promise<LoginUserResponse>
   register: (req: RegisterUserRequest) => Promise<void>
   logoutUser: () => Promise<void>
   error: string | null

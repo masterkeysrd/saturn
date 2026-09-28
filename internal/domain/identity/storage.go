@@ -56,3 +56,15 @@ type UserCredentialStore interface {
 	// Update replaces the secret_data for an existing credential.
 	Update(ctx context.Context, credential *Credential) error
 }
+
+// MFAFactorStore defines persistence operations for MFA factors and recovery backup codes.
+type MFAFactorStore interface {
+	CreateFactor(ctx context.Context, factor *MFAFactor) error
+	GetFactorByID(ctx context.Context, id MFAFactorID) (*MFAFactor, error)
+	ListFactorsByUserID(ctx context.Context, userID UserID) ([]*MFAFactor, error)
+	UpdateFactor(ctx context.Context, factor *MFAFactor) error
+	DeleteFactor(ctx context.Context, id MFAFactorID, now time.Time) error
+	SetPrimaryFactor(ctx context.Context, userID UserID, factorID MFAFactorID) error
+	GetRecovery(ctx context.Context, userID UserID) (*MFARecovery, error)
+	UpsertRecovery(ctx context.Context, recovery *MFARecovery) error
+}

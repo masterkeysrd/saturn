@@ -17,6 +17,10 @@ export interface LoginUserRequest {
    * Password-based authentication credentials.
    */
   userPassword?: LoginUserRequest_UserPassword
+  /**
+   * Second-factor authentication assertion.
+   */
+  mfaAssertion?: LoginUserRequest_MfaAssertion
 }
 
 /**
@@ -34,9 +38,36 @@ export interface LoginUserRequest_UserPassword {
 }
 
 /**
+ * MfaAssertion contains Step 2 second-factor verification credentials.
+ */
+export interface LoginUserRequest_MfaAssertion {
+  /**
+   * Required. Ephemeral, single-use ticket received from Step 1.
+   */
+  mfaTicket: string
+  /**
+   * Required. The specific factor being satisfied (or "recovery" for backup codes).
+   */
+  factorId: string
+  /**
+   * 6-digit TOTP code.
+   */
+  totpCode?: string
+  /**
+   * 8-character single-use recovery code.
+   */
+  backupCode?: string
+}
+
+/**
  * Response message for Identity.LoginUser.
  */
 export interface LoginUserResponse {
+  /**
+   * Output only. Present when password authentication succeeded but Step 2 MFA verification is required.
+   * When this field is populated, access_token and refresh_token will be omitted.
+   */
+  mfa?: LoginUserResponse_MfaChallenge
   /**
    * Output only. The user's unique identifier.
    * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
@@ -58,6 +89,47 @@ export interface LoginUserResponse {
    * Output only. The expiration time of the refresh token in Unix seconds.
    */
   refreshTokenExpiresAt?: string
+}
+
+/**
+ * MfaChallenge contains challenge details when Step 2 verification is required.
+ */
+export interface LoginUserResponse_MfaChallenge {
+  /**
+   * Output only. Ephemeral, single-use ticket to pass into Step 2 verification.
+   */
+  ticket?: string
+  /**
+   * Output only. List of registered factors the user can select from.
+   */
+  availableFactors?: MfaFactorDescriptor[]
+}
+
+/**
+ * MfaFactorDescriptor describes an enrolled multi-factor authentication (MFA) factor.
+ */
+export interface MfaFactorDescriptor {
+  /**
+   * Output only. The unique identifier of the registered MFA factor.
+   * Formatted as `mfa_<ksuid>` (e.g., `mfa_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  factorId?: string
+  /**
+   * Output only. The category or protocol of the factor (e.g., `totp`, `webauthn`, `mobile_push`).
+   */
+  type?: string
+  /**
+   * Output only. User-assigned label or device name (e.g., "Personal iPhone", "Hardware YubiKey").
+   */
+  name?: string
+  /**
+   * Output only. Indicates whether this factor is the default/primary choice presented on login.
+   */
+  isPrimary?: boolean
+  /**
+   * Output only. Factor-specific challenge parameters or prompt description.
+   */
+  challenge?: string
 }
 
 /**
@@ -308,6 +380,131 @@ export interface ListMySecurityEventsResponse {
 }
 
 /**
+ * Request message for Identity.ListMFAFactors.
+ * Lists all enrolled, active multi-factor authentication methods for the authenticated caller.
+ */
+export type ListMFAFactorsRequest = Record<string, never>
+
+/**
+ * Response message for Identity.ListMFAFactors.
+ */
+export interface ListMFAFactorsResponse {
+  /**
+   * Output only. The list of active registered MFA factors for the authenticated user.
+   */
+  factors?: MfaFactorDescriptor[]
+  /**
+   * Output only. Indicates whether emergency recovery backup codes have been generated for the account.
+   */
+  hasBackupCodes?: boolean
+  /**
+   * Output only. The count of unconsumed, single-use recovery backup codes available.
+   */
+  remainingBackupCodes?: number
+}
+
+/**
+ * Request message for Identity.DeleteMFAFactor.
+ */
+export interface DeleteMFAFactorRequest {
+  /**
+   * Required. The unique identifier of the MFA factor to revoke (e.g., `mfa_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  factorId: string
+}
+
+/**
+ * Request message for Identity.SetPrimaryMFAFactor.
+ */
+export interface SetPrimaryMFAFactorRequest {
+  /**
+   * Required. The unique identifier of the MFA factor to promote as the primary/default method.
+   */
+  factorId: string
+}
+
+/**
+ * Request message for Identity.SetupTOTP.
+ * Initiates enrollment of an RFC 6238 Time-based One-Time Password (TOTP) authenticator application.
+ */
+export interface SetupTOTPRequest {
+  /**
+   * Required. User-facing label or device name for the authenticator app (e.g. "Personal iPhone", "Google Authenticator").
+   */
+  name: string
+}
+
+/**
+ * Response message for Identity.SetupTOTP.
+ * Returns the provisional credentials required to configure an authenticator app.
+ */
+export interface SetupTOTPResponse {
+  /**
+   * Output only. The provisional factor ID staged for confirmation (e.g., `mfa_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  factorId?: string
+  /**
+   * Output only. Cryptographically random 160-bit Base32-encoded TOTP secret key for manual configuration.
+   */
+  secret?: string
+  /**
+   * Output only. Fully qualified `otpauth://totp/...` URI suitable for generating QR codes.
+   */
+  otpauthUri?: string
+  /**
+   * Output only. Inline SVG markup encoding the `otpauth://` URI for client-side rendering without external dependencies.
+   */
+  qrCodeSvg?: string
+}
+
+/**
+ * Request message for Identity.ConfirmTOTP.
+ * Verifies the initial 6-digit TOTP code generated by the authenticator app to activate the factor.
+ */
+export interface ConfirmTOTPRequest {
+  /**
+   * Required. The provisional factor ID returned from SetupTOTP.
+   */
+  factorId: string
+  /**
+   * Required. The current 6-digit verification code from the authenticator app matching RFC 6238.
+   */
+  code: string
+}
+
+/**
+ * Response message for Identity.ConfirmTOTP.
+ */
+export interface ConfirmTOTPResponse {
+  /**
+   * Output only. Set of 8 single-use recovery backup codes (`XXXX-XXXX`) generated upon first factor enrollment.
+   * Must be stored securely by the user; codes are hashed with SHA-256 at rest and cannot be retrieved again.
+   */
+  backupCodes?: string[]
+}
+
+/**
+ * Request message for Identity.RegenerateBackupCodes.
+ * Requests a fresh batch of emergency single-use recovery codes, invalidating all existing unused codes.
+ */
+export interface RegenerateBackupCodesRequest {
+  /**
+   * Required. Step-up 6-digit TOTP verification code from an active authenticator factor to authorize regeneration.
+   */
+  verificationCode: string
+}
+
+/**
+ * Response message for Identity.RegenerateBackupCodes.
+ */
+export interface RegenerateBackupCodesResponse {
+  /**
+   * Output only. Newly generated set of 8 single-use recovery backup codes (`XXXX-XXXX`).
+   */
+  backupCodes?: string[]
+}
+
+/**
  * Identity provides user authentication and session management.
  */
 /**
@@ -532,6 +729,167 @@ export function useListMySecurityEventsQuery(
   return useQuery<ListMySecurityEventsResponse, Error>({
     queryKey: ["/api/v1/identity/users/me/security-events", req],
     queryFn: () => listMySecurityEvents(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Lists all registered MFA factors for the caller.
+ */
+export async function listMFAFactors(
+  _req?: ListMFAFactorsRequest
+): Promise<ListMFAFactorsResponse> {
+  return request<ListMFAFactorsResponse>({
+    method: "GET",
+    url: "/api/v1/identity/mfa/factors",
+  })
+}
+
+export function useListMFAFactorsQuery(
+  req: ListMFAFactorsRequest,
+  options?: Omit<
+    UseQueryOptions<ListMFAFactorsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListMFAFactorsResponse, Error>({
+    queryKey: ["/api/v1/identity/mfa/factors", req],
+    queryFn: () => listMFAFactors(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Revokes a registered MFA factor.
+ */
+export async function deleteMFAFactor(
+  factor_id: string,
+  _req: DeleteMFAFactorRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: `/api/v1/identity/mfa/factors/${factor_id}`,
+  })
+}
+
+export function useDeleteMFAFactorMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    { factor_id: string; req: DeleteMFAFactorRequest }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { factor_id: string; req: DeleteMFAFactorRequest }
+  >({
+    mutationFn: ({ factor_id, req }) => deleteMFAFactor(factor_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Sets a factor as the default/primary option.
+ */
+export async function setPrimaryMFAFactor(
+  factor_id: string,
+  req: SetPrimaryMFAFactorRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
+    method: "POST",
+    url: `/api/v1/identity/mfa/factors/${factor_id}:set-primary`,
+    data: req,
+  })
+}
+
+export function useSetPrimaryMFAFactorMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    { factor_id: string; req: SetPrimaryMFAFactorRequest }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { factor_id: string; req: SetPrimaryMFAFactorRequest }
+  >({
+    mutationFn: ({ factor_id, req }) => setPrimaryMFAFactor(factor_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Generates a new pending TOTP secret and QR code URI.
+ */
+export async function setupTOTP(
+  req: SetupTOTPRequest
+): Promise<SetupTOTPResponse> {
+  return request<SetupTOTPResponse>({
+    method: "POST",
+    url: "/api/v1/identity/mfa/totp:setup",
+    data: req,
+  })
+}
+
+export function useSetupTOTPMutation(
+  options?: UseMutationOptions<SetupTOTPResponse, Error, SetupTOTPRequest>
+) {
+  return useMutation<SetupTOTPResponse, Error, SetupTOTPRequest>({
+    mutationFn: (req) => setupTOTP(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Confirms setup of the TOTP factor with a verification code.
+ */
+export async function confirmTOTP(
+  req: ConfirmTOTPRequest
+): Promise<ConfirmTOTPResponse> {
+  return request<ConfirmTOTPResponse>({
+    method: "POST",
+    url: "/api/v1/identity/mfa/totp:confirm",
+    data: req,
+  })
+}
+
+export function useConfirmTOTPMutation(
+  options?: UseMutationOptions<ConfirmTOTPResponse, Error, ConfirmTOTPRequest>
+) {
+  return useMutation<ConfirmTOTPResponse, Error, ConfirmTOTPRequest>({
+    mutationFn: (req) => confirmTOTP(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Regenerates a fresh set of 8 single-use recovery codes.
+ */
+export async function regenerateBackupCodes(
+  req: RegenerateBackupCodesRequest
+): Promise<RegenerateBackupCodesResponse> {
+  return request<RegenerateBackupCodesResponse>({
+    method: "POST",
+    url: "/api/v1/identity/mfa/backup-codes:regenerate",
+    data: req,
+  })
+}
+
+export function useRegenerateBackupCodesMutation(
+  options?: UseMutationOptions<
+    RegenerateBackupCodesResponse,
+    Error,
+    RegenerateBackupCodesRequest
+  >
+) {
+  return useMutation<
+    RegenerateBackupCodesResponse,
+    Error,
+    RegenerateBackupCodesRequest
+  >({
+    mutationFn: (req) => regenerateBackupCodes(req),
     ...options,
   })
 }

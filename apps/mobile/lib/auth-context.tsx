@@ -16,6 +16,7 @@ import {
   logout as apiLogout,
   useGetCurrentUserQuery,
   type LoginUserRequest,
+  type LoginUserResponse,
   type RegisterUserRequest,
 } from "@saturn/api/gen/saturn/identity/v1/identity"
 import {
@@ -59,7 +60,7 @@ export interface AuthContextType {
   activeSpaceId: string | null
   serverUrl: string
   error: string | null
-  login: (req: LoginUserRequest) => Promise<void>
+  login: (req: LoginUserRequest) => Promise<LoginUserResponse>
   register: (req: RegisterUserRequest) => Promise<void>
   logout: () => Promise<void>
   switchSpace: (spaceId: string | null) => Promise<void>
@@ -288,7 +289,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [accessToken, apiUser, cachedUser])
 
-  const login = async (req: LoginUserRequest) => {
+  const login = async (req: LoginUserRequest): Promise<LoginUserResponse> => {
     setError(null)
     try {
       const res = await loginUser(req)
@@ -301,6 +302,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAccessToken(res.accessToken)
         setSession({ accessToken: res.accessToken, hasSession: true })
       }
+      return res
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to authenticate"
@@ -380,14 +382,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateServerUrl = async (url: string): Promise<string> => {
     const updated = await setConfigServerUrl(url)
     setServerUrl(updated)
-    await queryClient.clear()
+    queryClient.clear()
     return updated
   }
 
   const resetServerUrl = async (): Promise<string> => {
     const reset = await resetConfigServerUrl()
     setServerUrl(reset)
-    await queryClient.clear()
+    queryClient.clear()
     return reset
   }
 

@@ -25,6 +25,7 @@ import {
   LogOutIcon,
   ChevronRightIcon,
   Layers,
+  ShieldCheck,
 } from "lucide-react"
 import { SpaceSelector } from "@/components/space-selector"
 import {
@@ -308,6 +309,18 @@ export function AppSidebar() {
               >
                 <UserIcon className="h-4 w-4 text-muted-foreground" />
                 <span>Account</span>
+              </Link>
+
+              <Link
+                to="/settings?tab=security"
+                onClick={() => {
+                  setProfileOpen(false)
+                  if (isMobile) setOpenMobile(false)
+                }}
+                className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted/60"
+              >
+                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                <span>Security & Logins</span>
               </Link>
 
               <Link

@@ -10,6 +10,7 @@ import (
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -31,6 +32,7 @@ type LoginUserRequest struct {
 	// Types that are valid to be assigned to Method:
 	//
 	//	*LoginUserRequest_UserPassword_
+	//	*LoginUserRequest_MfaAssertion_
 	Method        isLoginUserRequest_Method `protobuf_oneof:"method"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -82,6 +84,15 @@ func (x *LoginUserRequest) GetUserPassword() *LoginUserRequest_UserPassword {
 	return nil
 }
 
+func (x *LoginUserRequest) GetMfaAssertion() *LoginUserRequest_MfaAssertion {
+	if x != nil {
+		if x, ok := x.Method.(*LoginUserRequest_MfaAssertion_); ok {
+			return x.MfaAssertion
+		}
+	}
+	return nil
+}
+
 type isLoginUserRequest_Method interface {
 	isLoginUserRequest_Method()
 }
@@ -91,22 +102,32 @@ type LoginUserRequest_UserPassword_ struct {
 	UserPassword *LoginUserRequest_UserPassword `protobuf:"bytes,1,opt,name=user_password,json=userPassword,proto3,oneof"`
 }
 
+type LoginUserRequest_MfaAssertion_ struct {
+	// Second-factor authentication assertion.
+	MfaAssertion *LoginUserRequest_MfaAssertion `protobuf:"bytes,2,opt,name=mfa_assertion,json=mfaAssertion,proto3,oneof"`
+}
+
 func (*LoginUserRequest_UserPassword_) isLoginUserRequest_Method() {}
+
+func (*LoginUserRequest_MfaAssertion_) isLoginUserRequest_Method() {}
 
 // Response message for Identity.LoginUser.
 type LoginUserResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. Present when password authentication succeeded but Step 2 MFA verification is required.
+	// When this field is populated, access_token and refresh_token will be omitted.
+	Mfa *LoginUserResponse_MfaChallenge `protobuf:"bytes,1,opt,name=mfa,proto3" json:"mfa,omitempty"`
 	// Output only. The user's unique identifier.
 	// Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
-	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// Output only. The access token for authenticated requests.
-	AccessToken string `protobuf:"bytes,2,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	AccessToken string `protobuf:"bytes,3,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
 	// Output only. The expiration time of the access token in Unix seconds.
-	AccessTokenExpiresAt int64 `protobuf:"varint,3,opt,name=access_token_expires_at,json=accessTokenExpiresAt,proto3" json:"access_token_expires_at,omitempty"`
+	AccessTokenExpiresAt int64 `protobuf:"varint,4,opt,name=access_token_expires_at,json=accessTokenExpiresAt,proto3" json:"access_token_expires_at,omitempty"`
 	// Output only. The opaque refresh token.
-	RefreshToken string `protobuf:"bytes,4,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	RefreshToken string `protobuf:"bytes,5,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
 	// Output only. The expiration time of the refresh token in Unix seconds.
-	RefreshTokenExpiresAt int64 `protobuf:"varint,5,opt,name=refresh_token_expires_at,json=refreshTokenExpiresAt,proto3" json:"refresh_token_expires_at,omitempty"`
+	RefreshTokenExpiresAt int64 `protobuf:"varint,6,opt,name=refresh_token_expires_at,json=refreshTokenExpiresAt,proto3" json:"refresh_token_expires_at,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -139,6 +160,13 @@ func (x *LoginUserResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use LoginUserResponse.ProtoReflect.Descriptor instead.
 func (*LoginUserResponse) Descriptor() ([]byte, []int) {
 	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *LoginUserResponse) GetMfa() *LoginUserResponse_MfaChallenge {
+	if x != nil {
+		return x.Mfa
+	}
+	return nil
 }
 
 func (x *LoginUserResponse) GetUserId() string {
@@ -176,6 +204,89 @@ func (x *LoginUserResponse) GetRefreshTokenExpiresAt() int64 {
 	return 0
 }
 
+// MfaFactorDescriptor describes an enrolled multi-factor authentication (MFA) factor.
+type MfaFactorDescriptor struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the registered MFA factor.
+	// Formatted as `mfa_<ksuid>` (e.g., `mfa_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+	FactorId string `protobuf:"bytes,1,opt,name=factor_id,json=factorId,proto3" json:"factor_id,omitempty"`
+	// Output only. The category or protocol of the factor (e.g., `totp`, `webauthn`, `mobile_push`).
+	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	// Output only. User-assigned label or device name (e.g., "Personal iPhone", "Hardware YubiKey").
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	// Output only. Indicates whether this factor is the default/primary choice presented on login.
+	IsPrimary bool `protobuf:"varint,4,opt,name=is_primary,json=isPrimary,proto3" json:"is_primary,omitempty"`
+	// Output only. Factor-specific challenge parameters or prompt description.
+	Challenge     string `protobuf:"bytes,5,opt,name=challenge,proto3" json:"challenge,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MfaFactorDescriptor) Reset() {
+	*x = MfaFactorDescriptor{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MfaFactorDescriptor) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MfaFactorDescriptor) ProtoMessage() {}
+
+func (x *MfaFactorDescriptor) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MfaFactorDescriptor.ProtoReflect.Descriptor instead.
+func (*MfaFactorDescriptor) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *MfaFactorDescriptor) GetFactorId() string {
+	if x != nil {
+		return x.FactorId
+	}
+	return ""
+}
+
+func (x *MfaFactorDescriptor) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *MfaFactorDescriptor) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *MfaFactorDescriptor) GetIsPrimary() bool {
+	if x != nil {
+		return x.IsPrimary
+	}
+	return false
+}
+
+func (x *MfaFactorDescriptor) GetChallenge() string {
+	if x != nil {
+		return x.Challenge
+	}
+	return ""
+}
+
 // Request message for Identity.RegisterUser.
 type RegisterUserRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -195,7 +306,7 @@ type RegisterUserRequest struct {
 
 func (x *RegisterUserRequest) Reset() {
 	*x = RegisterUserRequest{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[2]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -207,7 +318,7 @@ func (x *RegisterUserRequest) String() string {
 func (*RegisterUserRequest) ProtoMessage() {}
 
 func (x *RegisterUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[2]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -220,7 +331,7 @@ func (x *RegisterUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterUserRequest.ProtoReflect.Descriptor instead.
 func (*RegisterUserRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{2}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *RegisterUserRequest) GetEmail() string {
@@ -286,7 +397,7 @@ type User struct {
 
 func (x *User) Reset() {
 	*x = User{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[3]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -298,7 +409,7 @@ func (x *User) String() string {
 func (*User) ProtoMessage() {}
 
 func (x *User) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[3]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -311,7 +422,7 @@ func (x *User) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use User.ProtoReflect.Descriptor instead.
 func (*User) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{3}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *User) GetId() string {
@@ -388,7 +499,7 @@ type RefreshSessionRequest struct {
 
 func (x *RefreshSessionRequest) Reset() {
 	*x = RefreshSessionRequest{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[4]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -400,7 +511,7 @@ func (x *RefreshSessionRequest) String() string {
 func (*RefreshSessionRequest) ProtoMessage() {}
 
 func (x *RefreshSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[4]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -413,7 +524,7 @@ func (x *RefreshSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshSessionRequest.ProtoReflect.Descriptor instead.
 func (*RefreshSessionRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{4}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *RefreshSessionRequest) GetRefreshToken() string {
@@ -440,7 +551,7 @@ type RefreshSessionResponse struct {
 
 func (x *RefreshSessionResponse) Reset() {
 	*x = RefreshSessionResponse{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[5]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -452,7 +563,7 @@ func (x *RefreshSessionResponse) String() string {
 func (*RefreshSessionResponse) ProtoMessage() {}
 
 func (x *RefreshSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[5]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -465,7 +576,7 @@ func (x *RefreshSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshSessionResponse.ProtoReflect.Descriptor instead.
 func (*RefreshSessionResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{5}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *RefreshSessionResponse) GetAccessToken() string {
@@ -507,7 +618,7 @@ type LogoutRequest struct {
 
 func (x *LogoutRequest) Reset() {
 	*x = LogoutRequest{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[6]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -519,7 +630,7 @@ func (x *LogoutRequest) String() string {
 func (*LogoutRequest) ProtoMessage() {}
 
 func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[6]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -532,7 +643,7 @@ func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutRequest.ProtoReflect.Descriptor instead.
 func (*LogoutRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{6}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *LogoutRequest) GetRefreshToken() string {
@@ -551,7 +662,7 @@ type LogoutResponse struct {
 
 func (x *LogoutResponse) Reset() {
 	*x = LogoutResponse{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[7]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -563,7 +674,7 @@ func (x *LogoutResponse) String() string {
 func (*LogoutResponse) ProtoMessage() {}
 
 func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[7]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -576,7 +687,7 @@ func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutResponse.ProtoReflect.Descriptor instead.
 func (*LogoutResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{7}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{8}
 }
 
 // Request message for Identity.GetCurrentUser.
@@ -588,7 +699,7 @@ type GetCurrentUserRequest struct {
 
 func (x *GetCurrentUserRequest) Reset() {
 	*x = GetCurrentUserRequest{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[8]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -600,7 +711,7 @@ func (x *GetCurrentUserRequest) String() string {
 func (*GetCurrentUserRequest) ProtoMessage() {}
 
 func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[8]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -613,7 +724,7 @@ func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCurrentUserRequest.ProtoReflect.Descriptor instead.
 func (*GetCurrentUserRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{8}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{9}
 }
 
 // UserSession represents an active user session resource.
@@ -635,7 +746,7 @@ type UserSession struct {
 
 func (x *UserSession) Reset() {
 	*x = UserSession{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[9]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -647,7 +758,7 @@ func (x *UserSession) String() string {
 func (*UserSession) ProtoMessage() {}
 
 func (x *UserSession) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[9]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -660,7 +771,7 @@ func (x *UserSession) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserSession.ProtoReflect.Descriptor instead.
 func (*UserSession) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{9}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UserSession) GetSessionId() string {
@@ -707,7 +818,7 @@ type ListActiveSessionsRequest struct {
 
 func (x *ListActiveSessionsRequest) Reset() {
 	*x = ListActiveSessionsRequest{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[10]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -719,7 +830,7 @@ func (x *ListActiveSessionsRequest) String() string {
 func (*ListActiveSessionsRequest) ProtoMessage() {}
 
 func (x *ListActiveSessionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[10]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -732,7 +843,7 @@ func (x *ListActiveSessionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListActiveSessionsRequest.ProtoReflect.Descriptor instead.
 func (*ListActiveSessionsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{10}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{11}
 }
 
 // Response message for Identity.ListActiveSessions.
@@ -746,7 +857,7 @@ type ListActiveSessionsResponse struct {
 
 func (x *ListActiveSessionsResponse) Reset() {
 	*x = ListActiveSessionsResponse{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[11]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -758,7 +869,7 @@ func (x *ListActiveSessionsResponse) String() string {
 func (*ListActiveSessionsResponse) ProtoMessage() {}
 
 func (x *ListActiveSessionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[11]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -771,7 +882,7 @@ func (x *ListActiveSessionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListActiveSessionsResponse.ProtoReflect.Descriptor instead.
 func (*ListActiveSessionsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{11}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListActiveSessionsResponse) GetSessions() []*UserSession {
@@ -792,7 +903,7 @@ type RevokeSessionRequest struct {
 
 func (x *RevokeSessionRequest) Reset() {
 	*x = RevokeSessionRequest{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[12]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -804,7 +915,7 @@ func (x *RevokeSessionRequest) String() string {
 func (*RevokeSessionRequest) ProtoMessage() {}
 
 func (x *RevokeSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[12]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -817,7 +928,7 @@ func (x *RevokeSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeSessionRequest.ProtoReflect.Descriptor instead.
 func (*RevokeSessionRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{12}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *RevokeSessionRequest) GetSessionId() string {
@@ -836,7 +947,7 @@ type RevokeSessionResponse struct {
 
 func (x *RevokeSessionResponse) Reset() {
 	*x = RevokeSessionResponse{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[13]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -848,7 +959,7 @@ func (x *RevokeSessionResponse) String() string {
 func (*RevokeSessionResponse) ProtoMessage() {}
 
 func (x *RevokeSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[13]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -861,7 +972,7 @@ func (x *RevokeSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeSessionResponse.ProtoReflect.Descriptor instead.
 func (*RevokeSessionResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{13}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{14}
 }
 
 // Request message for Identity.RevokeAllSessions.
@@ -873,7 +984,7 @@ type RevokeAllSessionsRequest struct {
 
 func (x *RevokeAllSessionsRequest) Reset() {
 	*x = RevokeAllSessionsRequest{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[14]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -885,7 +996,7 @@ func (x *RevokeAllSessionsRequest) String() string {
 func (*RevokeAllSessionsRequest) ProtoMessage() {}
 
 func (x *RevokeAllSessionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[14]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -898,7 +1009,7 @@ func (x *RevokeAllSessionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeAllSessionsRequest.ProtoReflect.Descriptor instead.
 func (*RevokeAllSessionsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{14}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{15}
 }
 
 // Response message for Identity.RevokeAllSessions.
@@ -910,7 +1021,7 @@ type RevokeAllSessionsResponse struct {
 
 func (x *RevokeAllSessionsResponse) Reset() {
 	*x = RevokeAllSessionsResponse{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[15]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -922,7 +1033,7 @@ func (x *RevokeAllSessionsResponse) String() string {
 func (*RevokeAllSessionsResponse) ProtoMessage() {}
 
 func (x *RevokeAllSessionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[15]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -935,7 +1046,7 @@ func (x *RevokeAllSessionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeAllSessionsResponse.ProtoReflect.Descriptor instead.
 func (*RevokeAllSessionsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{15}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{16}
 }
 
 // SecurityEvent represents a security audit log entry for the user account.
@@ -959,7 +1070,7 @@ type SecurityEvent struct {
 
 func (x *SecurityEvent) Reset() {
 	*x = SecurityEvent{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[16]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -971,7 +1082,7 @@ func (x *SecurityEvent) String() string {
 func (*SecurityEvent) ProtoMessage() {}
 
 func (x *SecurityEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[16]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -984,7 +1095,7 @@ func (x *SecurityEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SecurityEvent.ProtoReflect.Descriptor instead.
 func (*SecurityEvent) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{16}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *SecurityEvent) GetId() string {
@@ -1043,7 +1154,7 @@ type ListMySecurityEventsRequest struct {
 
 func (x *ListMySecurityEventsRequest) Reset() {
 	*x = ListMySecurityEventsRequest{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[17]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1055,7 +1166,7 @@ func (x *ListMySecurityEventsRequest) String() string {
 func (*ListMySecurityEventsRequest) ProtoMessage() {}
 
 func (x *ListMySecurityEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[17]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1068,7 +1179,7 @@ func (x *ListMySecurityEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMySecurityEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListMySecurityEventsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{17}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListMySecurityEventsRequest) GetLimit() int32 {
@@ -1099,7 +1210,7 @@ type ListMySecurityEventsResponse struct {
 
 func (x *ListMySecurityEventsResponse) Reset() {
 	*x = ListMySecurityEventsResponse{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[18]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1111,7 +1222,7 @@ func (x *ListMySecurityEventsResponse) String() string {
 func (*ListMySecurityEventsResponse) ProtoMessage() {}
 
 func (x *ListMySecurityEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[18]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1124,7 +1235,7 @@ func (x *ListMySecurityEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMySecurityEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListMySecurityEventsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{18}
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListMySecurityEventsResponse) GetEvents() []*SecurityEvent {
@@ -1141,6 +1252,517 @@ func (x *ListMySecurityEventsResponse) GetNextPageToken() string {
 	return ""
 }
 
+// Request message for Identity.ListMFAFactors.
+// Lists all enrolled, active multi-factor authentication methods for the authenticated caller.
+type ListMFAFactorsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMFAFactorsRequest) Reset() {
+	*x = ListMFAFactorsRequest{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMFAFactorsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMFAFactorsRequest) ProtoMessage() {}
+
+func (x *ListMFAFactorsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMFAFactorsRequest.ProtoReflect.Descriptor instead.
+func (*ListMFAFactorsRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{20}
+}
+
+// Response message for Identity.ListMFAFactors.
+type ListMFAFactorsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of active registered MFA factors for the authenticated user.
+	Factors []*MfaFactorDescriptor `protobuf:"bytes,1,rep,name=factors,proto3" json:"factors,omitempty"`
+	// Output only. Indicates whether emergency recovery backup codes have been generated for the account.
+	HasBackupCodes bool `protobuf:"varint,2,opt,name=has_backup_codes,json=hasBackupCodes,proto3" json:"has_backup_codes,omitempty"`
+	// Output only. The count of unconsumed, single-use recovery backup codes available.
+	RemainingBackupCodes int32 `protobuf:"varint,3,opt,name=remaining_backup_codes,json=remainingBackupCodes,proto3" json:"remaining_backup_codes,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ListMFAFactorsResponse) Reset() {
+	*x = ListMFAFactorsResponse{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMFAFactorsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMFAFactorsResponse) ProtoMessage() {}
+
+func (x *ListMFAFactorsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMFAFactorsResponse.ProtoReflect.Descriptor instead.
+func (*ListMFAFactorsResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ListMFAFactorsResponse) GetFactors() []*MfaFactorDescriptor {
+	if x != nil {
+		return x.Factors
+	}
+	return nil
+}
+
+func (x *ListMFAFactorsResponse) GetHasBackupCodes() bool {
+	if x != nil {
+		return x.HasBackupCodes
+	}
+	return false
+}
+
+func (x *ListMFAFactorsResponse) GetRemainingBackupCodes() int32 {
+	if x != nil {
+		return x.RemainingBackupCodes
+	}
+	return 0
+}
+
+// Request message for Identity.DeleteMFAFactor.
+type DeleteMFAFactorRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the MFA factor to revoke (e.g., `mfa_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+	FactorId      string `protobuf:"bytes,1,opt,name=factor_id,json=factorId,proto3" json:"factor_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteMFAFactorRequest) Reset() {
+	*x = DeleteMFAFactorRequest{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteMFAFactorRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteMFAFactorRequest) ProtoMessage() {}
+
+func (x *DeleteMFAFactorRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteMFAFactorRequest.ProtoReflect.Descriptor instead.
+func (*DeleteMFAFactorRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *DeleteMFAFactorRequest) GetFactorId() string {
+	if x != nil {
+		return x.FactorId
+	}
+	return ""
+}
+
+// Request message for Identity.SetPrimaryMFAFactor.
+type SetPrimaryMFAFactorRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the MFA factor to promote as the primary/default method.
+	FactorId      string `protobuf:"bytes,1,opt,name=factor_id,json=factorId,proto3" json:"factor_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetPrimaryMFAFactorRequest) Reset() {
+	*x = SetPrimaryMFAFactorRequest{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetPrimaryMFAFactorRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetPrimaryMFAFactorRequest) ProtoMessage() {}
+
+func (x *SetPrimaryMFAFactorRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetPrimaryMFAFactorRequest.ProtoReflect.Descriptor instead.
+func (*SetPrimaryMFAFactorRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *SetPrimaryMFAFactorRequest) GetFactorId() string {
+	if x != nil {
+		return x.FactorId
+	}
+	return ""
+}
+
+// Request message for Identity.SetupTOTP.
+// Initiates enrollment of an RFC 6238 Time-based One-Time Password (TOTP) authenticator application.
+type SetupTOTPRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. User-facing label or device name for the authenticator app (e.g. "Personal iPhone", "Google Authenticator").
+	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetupTOTPRequest) Reset() {
+	*x = SetupTOTPRequest{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetupTOTPRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetupTOTPRequest) ProtoMessage() {}
+
+func (x *SetupTOTPRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetupTOTPRequest.ProtoReflect.Descriptor instead.
+func (*SetupTOTPRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *SetupTOTPRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// Response message for Identity.SetupTOTP.
+// Returns the provisional credentials required to configure an authenticator app.
+type SetupTOTPResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The provisional factor ID staged for confirmation (e.g., `mfa_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+	FactorId string `protobuf:"bytes,1,opt,name=factor_id,json=factorId,proto3" json:"factor_id,omitempty"`
+	// Output only. Cryptographically random 160-bit Base32-encoded TOTP secret key for manual configuration.
+	Secret string `protobuf:"bytes,2,opt,name=secret,proto3" json:"secret,omitempty"`
+	// Output only. Fully qualified `otpauth://totp/...` URI suitable for generating QR codes.
+	OtpauthUri string `protobuf:"bytes,3,opt,name=otpauth_uri,json=otpauthUri,proto3" json:"otpauth_uri,omitempty"`
+	// Output only. Inline SVG markup encoding the `otpauth://` URI for client-side rendering without external dependencies.
+	QrCodeSvg     string `protobuf:"bytes,4,opt,name=qr_code_svg,json=qrCodeSvg,proto3" json:"qr_code_svg,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetupTOTPResponse) Reset() {
+	*x = SetupTOTPResponse{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetupTOTPResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetupTOTPResponse) ProtoMessage() {}
+
+func (x *SetupTOTPResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetupTOTPResponse.ProtoReflect.Descriptor instead.
+func (*SetupTOTPResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *SetupTOTPResponse) GetFactorId() string {
+	if x != nil {
+		return x.FactorId
+	}
+	return ""
+}
+
+func (x *SetupTOTPResponse) GetSecret() string {
+	if x != nil {
+		return x.Secret
+	}
+	return ""
+}
+
+func (x *SetupTOTPResponse) GetOtpauthUri() string {
+	if x != nil {
+		return x.OtpauthUri
+	}
+	return ""
+}
+
+func (x *SetupTOTPResponse) GetQrCodeSvg() string {
+	if x != nil {
+		return x.QrCodeSvg
+	}
+	return ""
+}
+
+// Request message for Identity.ConfirmTOTP.
+// Verifies the initial 6-digit TOTP code generated by the authenticator app to activate the factor.
+type ConfirmTOTPRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The provisional factor ID returned from SetupTOTP.
+	FactorId string `protobuf:"bytes,1,opt,name=factor_id,json=factorId,proto3" json:"factor_id,omitempty"`
+	// Required. The current 6-digit verification code from the authenticator app matching RFC 6238.
+	Code          string `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConfirmTOTPRequest) Reset() {
+	*x = ConfirmTOTPRequest{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfirmTOTPRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfirmTOTPRequest) ProtoMessage() {}
+
+func (x *ConfirmTOTPRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfirmTOTPRequest.ProtoReflect.Descriptor instead.
+func (*ConfirmTOTPRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *ConfirmTOTPRequest) GetFactorId() string {
+	if x != nil {
+		return x.FactorId
+	}
+	return ""
+}
+
+func (x *ConfirmTOTPRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+// Response message for Identity.ConfirmTOTP.
+type ConfirmTOTPResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. Set of 8 single-use recovery backup codes (`XXXX-XXXX`) generated upon first factor enrollment.
+	// Must be stored securely by the user; codes are hashed with SHA-256 at rest and cannot be retrieved again.
+	BackupCodes   []string `protobuf:"bytes,1,rep,name=backup_codes,json=backupCodes,proto3" json:"backup_codes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConfirmTOTPResponse) Reset() {
+	*x = ConfirmTOTPResponse{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfirmTOTPResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfirmTOTPResponse) ProtoMessage() {}
+
+func (x *ConfirmTOTPResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfirmTOTPResponse.ProtoReflect.Descriptor instead.
+func (*ConfirmTOTPResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *ConfirmTOTPResponse) GetBackupCodes() []string {
+	if x != nil {
+		return x.BackupCodes
+	}
+	return nil
+}
+
+// Request message for Identity.RegenerateBackupCodes.
+// Requests a fresh batch of emergency single-use recovery codes, invalidating all existing unused codes.
+type RegenerateBackupCodesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. Step-up 6-digit TOTP verification code from an active authenticator factor to authorize regeneration.
+	VerificationCode string `protobuf:"bytes,1,opt,name=verification_code,json=verificationCode,proto3" json:"verification_code,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *RegenerateBackupCodesRequest) Reset() {
+	*x = RegenerateBackupCodesRequest{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegenerateBackupCodesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegenerateBackupCodesRequest) ProtoMessage() {}
+
+func (x *RegenerateBackupCodesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegenerateBackupCodesRequest.ProtoReflect.Descriptor instead.
+func (*RegenerateBackupCodesRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *RegenerateBackupCodesRequest) GetVerificationCode() string {
+	if x != nil {
+		return x.VerificationCode
+	}
+	return ""
+}
+
+// Response message for Identity.RegenerateBackupCodes.
+type RegenerateBackupCodesResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. Newly generated set of 8 single-use recovery backup codes (`XXXX-XXXX`).
+	BackupCodes   []string `protobuf:"bytes,1,rep,name=backup_codes,json=backupCodes,proto3" json:"backup_codes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegenerateBackupCodesResponse) Reset() {
+	*x = RegenerateBackupCodesResponse{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegenerateBackupCodesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegenerateBackupCodesResponse) ProtoMessage() {}
+
+func (x *RegenerateBackupCodesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegenerateBackupCodesResponse.ProtoReflect.Descriptor instead.
+func (*RegenerateBackupCodesResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *RegenerateBackupCodesResponse) GetBackupCodes() []string {
+	if x != nil {
+		return x.BackupCodes
+	}
+	return nil
+}
+
 // UserPassword contains credentials for password authentication.
 type LoginUserRequest_UserPassword struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1154,7 +1776,7 @@ type LoginUserRequest_UserPassword struct {
 
 func (x *LoginUserRequest_UserPassword) Reset() {
 	*x = LoginUserRequest_UserPassword{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[19]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1166,7 +1788,7 @@ func (x *LoginUserRequest_UserPassword) String() string {
 func (*LoginUserRequest_UserPassword) ProtoMessage() {}
 
 func (x *LoginUserRequest_UserPassword) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[19]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1196,25 +1818,205 @@ func (x *LoginUserRequest_UserPassword) GetPassword() string {
 	return ""
 }
 
+// MfaAssertion contains Step 2 second-factor verification credentials.
+type LoginUserRequest_MfaAssertion struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. Ephemeral, single-use ticket received from Step 1.
+	MfaTicket string `protobuf:"bytes,1,opt,name=mfa_ticket,json=mfaTicket,proto3" json:"mfa_ticket,omitempty"`
+	// Required. The specific factor being satisfied (or "recovery" for backup codes).
+	FactorId string `protobuf:"bytes,2,opt,name=factor_id,json=factorId,proto3" json:"factor_id,omitempty"`
+	// Polymorphic assertion payload depending on the factor chosen.
+	//
+	// Types that are valid to be assigned to FactorPayload:
+	//
+	//	*LoginUserRequest_MfaAssertion_TotpCode
+	//	*LoginUserRequest_MfaAssertion_BackupCode
+	FactorPayload isLoginUserRequest_MfaAssertion_FactorPayload `protobuf_oneof:"factor_payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LoginUserRequest_MfaAssertion) Reset() {
+	*x = LoginUserRequest_MfaAssertion{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginUserRequest_MfaAssertion) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginUserRequest_MfaAssertion) ProtoMessage() {}
+
+func (x *LoginUserRequest_MfaAssertion) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginUserRequest_MfaAssertion.ProtoReflect.Descriptor instead.
+func (*LoginUserRequest_MfaAssertion) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{0, 1}
+}
+
+func (x *LoginUserRequest_MfaAssertion) GetMfaTicket() string {
+	if x != nil {
+		return x.MfaTicket
+	}
+	return ""
+}
+
+func (x *LoginUserRequest_MfaAssertion) GetFactorId() string {
+	if x != nil {
+		return x.FactorId
+	}
+	return ""
+}
+
+func (x *LoginUserRequest_MfaAssertion) GetFactorPayload() isLoginUserRequest_MfaAssertion_FactorPayload {
+	if x != nil {
+		return x.FactorPayload
+	}
+	return nil
+}
+
+func (x *LoginUserRequest_MfaAssertion) GetTotpCode() string {
+	if x != nil {
+		if x, ok := x.FactorPayload.(*LoginUserRequest_MfaAssertion_TotpCode); ok {
+			return x.TotpCode
+		}
+	}
+	return ""
+}
+
+func (x *LoginUserRequest_MfaAssertion) GetBackupCode() string {
+	if x != nil {
+		if x, ok := x.FactorPayload.(*LoginUserRequest_MfaAssertion_BackupCode); ok {
+			return x.BackupCode
+		}
+	}
+	return ""
+}
+
+type isLoginUserRequest_MfaAssertion_FactorPayload interface {
+	isLoginUserRequest_MfaAssertion_FactorPayload()
+}
+
+type LoginUserRequest_MfaAssertion_TotpCode struct {
+	// 6-digit TOTP code.
+	TotpCode string `protobuf:"bytes,3,opt,name=totp_code,json=totpCode,proto3,oneof"`
+}
+
+type LoginUserRequest_MfaAssertion_BackupCode struct {
+	// 8-character single-use recovery code.
+	BackupCode string `protobuf:"bytes,4,opt,name=backup_code,json=backupCode,proto3,oneof"`
+}
+
+func (*LoginUserRequest_MfaAssertion_TotpCode) isLoginUserRequest_MfaAssertion_FactorPayload() {}
+
+func (*LoginUserRequest_MfaAssertion_BackupCode) isLoginUserRequest_MfaAssertion_FactorPayload() {}
+
+// MfaChallenge contains challenge details when Step 2 verification is required.
+type LoginUserResponse_MfaChallenge struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. Ephemeral, single-use ticket to pass into Step 2 verification.
+	Ticket string `protobuf:"bytes,1,opt,name=ticket,proto3" json:"ticket,omitempty"`
+	// Output only. List of registered factors the user can select from.
+	AvailableFactors []*MfaFactorDescriptor `protobuf:"bytes,2,rep,name=available_factors,json=availableFactors,proto3" json:"available_factors,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *LoginUserResponse_MfaChallenge) Reset() {
+	*x = LoginUserResponse_MfaChallenge{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginUserResponse_MfaChallenge) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginUserResponse_MfaChallenge) ProtoMessage() {}
+
+func (x *LoginUserResponse_MfaChallenge) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginUserResponse_MfaChallenge.ProtoReflect.Descriptor instead.
+func (*LoginUserResponse_MfaChallenge) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{1, 0}
+}
+
+func (x *LoginUserResponse_MfaChallenge) GetTicket() string {
+	if x != nil {
+		return x.Ticket
+	}
+	return ""
+}
+
+func (x *LoginUserResponse_MfaChallenge) GetAvailableFactors() []*MfaFactorDescriptor {
+	if x != nil {
+		return x.AvailableFactors
+	}
+	return nil
+}
+
 var File_saturn_identity_v1_identity_proto protoreflect.FileDescriptor
 
 const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
-	"!saturn/identity/v1/identity.proto\x12\x12saturn.identity.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcc\x01\n" +
+	"!saturn/identity/v1/identity.proto\x12\x12saturn.identity.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd1\x03\n" +
 	"\x10LoginUserRequest\x12X\n" +
-	"\ruser_password\x18\x01 \x01(\v21.saturn.identity.v1.LoginUserRequest.UserPasswordH\x00R\fuserPassword\x1aT\n" +
+	"\ruser_password\x18\x01 \x01(\v21.saturn.identity.v1.LoginUserRequest.UserPasswordH\x00R\fuserPassword\x12X\n" +
+	"\rmfa_assertion\x18\x02 \x01(\v21.saturn.identity.v1.LoginUserRequest.MfaAssertionH\x00R\fmfaAssertion\x1aT\n" +
 	"\fUserPassword\x12#\n" +
 	"\n" +
 	"identifier\x18\x01 \x01(\tB\x03\xe0A\x02R\n" +
 	"identifier\x12\x1f\n" +
-	"\bpassword\x18\x02 \x01(\tB\x03\xe0A\x02R\bpasswordB\b\n" +
-	"\x06method\"\xfd\x01\n" +
-	"\x11LoginUserResponse\x12\x1c\n" +
-	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x03R\x06userId\x12&\n" +
-	"\faccess_token\x18\x02 \x01(\tB\x03\xe0A\x03R\vaccessToken\x12:\n" +
-	"\x17access_token_expires_at\x18\x03 \x01(\x03B\x03\xe0A\x03R\x14accessTokenExpiresAt\x12(\n" +
-	"\rrefresh_token\x18\x04 \x01(\tB\x03\xe0A\x03R\frefreshToken\x12<\n" +
-	"\x18refresh_token_expires_at\x18\x05 \x01(\x03B\x03\xe0A\x03R\x15refreshTokenExpiresAt\"\xaf\x01\n" +
+	"\bpassword\x18\x02 \x01(\tB\x03\xe0A\x02R\bpassword\x1a\xa8\x01\n" +
+	"\fMfaAssertion\x12\"\n" +
+	"\n" +
+	"mfa_ticket\x18\x01 \x01(\tB\x03\xe0A\x02R\tmfaTicket\x12 \n" +
+	"\tfactor_id\x18\x02 \x01(\tB\x03\xe0A\x02R\bfactorId\x12\x1d\n" +
+	"\ttotp_code\x18\x03 \x01(\tH\x00R\btotpCode\x12!\n" +
+	"\vbackup_code\x18\x04 \x01(\tH\x00R\n" +
+	"backupCodeB\x10\n" +
+	"\x0efactor_payloadB\b\n" +
+	"\x06method\"\xd1\x03\n" +
+	"\x11LoginUserResponse\x12I\n" +
+	"\x03mfa\x18\x01 \x01(\v22.saturn.identity.v1.LoginUserResponse.MfaChallengeB\x03\xe0A\x03R\x03mfa\x12\x1c\n" +
+	"\auser_id\x18\x02 \x01(\tB\x03\xe0A\x03R\x06userId\x12&\n" +
+	"\faccess_token\x18\x03 \x01(\tB\x03\xe0A\x03R\vaccessToken\x12:\n" +
+	"\x17access_token_expires_at\x18\x04 \x01(\x03B\x03\xe0A\x03R\x14accessTokenExpiresAt\x12(\n" +
+	"\rrefresh_token\x18\x05 \x01(\tB\x03\xe0A\x03R\frefreshToken\x12<\n" +
+	"\x18refresh_token_expires_at\x18\x06 \x01(\x03B\x03\xe0A\x03R\x15refreshTokenExpiresAt\x1a\x86\x01\n" +
+	"\fMfaChallenge\x12\x1b\n" +
+	"\x06ticket\x18\x01 \x01(\tB\x03\xe0A\x03R\x06ticket\x12Y\n" +
+	"\x11available_factors\x18\x02 \x03(\v2'.saturn.identity.v1.MfaFactorDescriptorB\x03\xe0A\x03R\x10availableFactors\"\xb0\x01\n" +
+	"\x13MfaFactorDescriptor\x12 \n" +
+	"\tfactor_id\x18\x01 \x01(\tB\x03\xe0A\x03R\bfactorId\x12\x17\n" +
+	"\x04type\x18\x02 \x01(\tB\x03\xe0A\x03R\x04type\x12\x17\n" +
+	"\x04name\x18\x03 \x01(\tB\x03\xe0A\x03R\x04name\x12\"\n" +
+	"\n" +
+	"is_primary\x18\x04 \x01(\bB\x03\xe0A\x03R\tisPrimary\x12!\n" +
+	"\tchallenge\x18\x05 \x01(\tB\x03\xe0A\x03R\tchallenge\"\xaf\x01\n" +
 	"\x13RegisterUserRequest\x12\x19\n" +
 	"\x05email\x18\x01 \x01(\tB\x03\xe0A\x02R\x05email\x12\x1f\n" +
 	"\busername\x18\x02 \x01(\tB\x03\xe0A\x02R\busername\x12\x17\n" +
@@ -1282,8 +2084,33 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x01R\rnextPageToken\"\x8b\x01\n" +
 	"\x1cListMySecurityEventsResponse\x12>\n" +
 	"\x06events\x18\x01 \x03(\v2!.saturn.identity.v1.SecurityEventB\x03\xe0A\x03R\x06events\x12+\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x03R\rnextPageToken2\xd3\n" +
-	"\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x03R\rnextPageToken\"\x17\n" +
+	"\x15ListMFAFactorsRequest\"\xca\x01\n" +
+	"\x16ListMFAFactorsResponse\x12F\n" +
+	"\afactors\x18\x01 \x03(\v2'.saturn.identity.v1.MfaFactorDescriptorB\x03\xe0A\x03R\afactors\x12-\n" +
+	"\x10has_backup_codes\x18\x02 \x01(\bB\x03\xe0A\x03R\x0ehasBackupCodes\x129\n" +
+	"\x16remaining_backup_codes\x18\x03 \x01(\x05B\x03\xe0A\x03R\x14remainingBackupCodes\":\n" +
+	"\x16DeleteMFAFactorRequest\x12 \n" +
+	"\tfactor_id\x18\x01 \x01(\tB\x03\xe0A\x02R\bfactorId\">\n" +
+	"\x1aSetPrimaryMFAFactorRequest\x12 \n" +
+	"\tfactor_id\x18\x01 \x01(\tB\x03\xe0A\x02R\bfactorId\"+\n" +
+	"\x10SetupTOTPRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"\x9d\x01\n" +
+	"\x11SetupTOTPResponse\x12 \n" +
+	"\tfactor_id\x18\x01 \x01(\tB\x03\xe0A\x03R\bfactorId\x12\x1b\n" +
+	"\x06secret\x18\x02 \x01(\tB\x03\xe0A\x03R\x06secret\x12$\n" +
+	"\votpauth_uri\x18\x03 \x01(\tB\x03\xe0A\x03R\n" +
+	"otpauthUri\x12#\n" +
+	"\vqr_code_svg\x18\x04 \x01(\tB\x03\xe0A\x03R\tqrCodeSvg\"O\n" +
+	"\x12ConfirmTOTPRequest\x12 \n" +
+	"\tfactor_id\x18\x01 \x01(\tB\x03\xe0A\x02R\bfactorId\x12\x17\n" +
+	"\x04code\x18\x02 \x01(\tB\x03\xe0A\x02R\x04code\"=\n" +
+	"\x13ConfirmTOTPResponse\x12&\n" +
+	"\fbackup_codes\x18\x01 \x03(\tB\x03\xe0A\x03R\vbackupCodes\"P\n" +
+	"\x1cRegenerateBackupCodesRequest\x120\n" +
+	"\x11verification_code\x18\x01 \x01(\tB\x03\xe0A\x02R\x10verificationCode\"G\n" +
+	"\x1dRegenerateBackupCodesResponse\x12&\n" +
+	"\fbackup_codes\x18\x01 \x03(\tB\x03\xe0A\x03R\vbackupCodes2\xdc\x11\n" +
 	"\bIdentity\x12}\n" +
 	"\tLoginUser\x12$.saturn.identity.v1.LoginUserRequest\x1a%.saturn.identity.v1.LoginUserResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/identity/users:login\x12\x98\x01\n" +
 	"\fRegisterUser\x12'.saturn.identity.v1.RegisterUserRequest\x1a\x18.saturn.identity.v1.User\"E\xdaA\x1cemail,username,name,password\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/identity/users:register\x12\xa1\x01\n" +
@@ -1294,7 +2121,13 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\rRevokeSession\x12(.saturn.identity.v1.RevokeSessionRequest\x1a).saturn.identity.v1.RevokeSessionResponse\"A\xdaA\n" +
 	"session_id\x82\xd3\xe4\x93\x02.:\x01*\")/v1/identity/sessions/{session_id}:revoke\x12\x9d\x01\n" +
 	"\x11RevokeAllSessions\x12,.saturn.identity.v1.RevokeAllSessionsRequest\x1a-.saturn.identity.v1.RevokeAllSessionsResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\" /v1/identity/sessions:revoke-all\x12\xa8\x01\n" +
-	"\x14ListMySecurityEvents\x12/.saturn.identity.v1.ListMySecurityEventsRequest\x1a0.saturn.identity.v1.ListMySecurityEventsResponse\"-\x82\xd3\xe4\x93\x02'\x12%/v1/identity/users/me/security-eventsBCZAgithub.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1b\x06proto3"
+	"\x14ListMySecurityEvents\x12/.saturn.identity.v1.ListMySecurityEventsRequest\x1a0.saturn.identity.v1.ListMySecurityEventsResponse\"-\x82\xd3\xe4\x93\x02'\x12%/v1/identity/users/me/security-events\x12\x89\x01\n" +
+	"\x0eListMFAFactors\x12).saturn.identity.v1.ListMFAFactorsRequest\x1a*.saturn.identity.v1.ListMFAFactorsResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/identity/mfa/factors\x12\x8f\x01\n" +
+	"\x0fDeleteMFAFactor\x12*.saturn.identity.v1.DeleteMFAFactorRequest\x1a\x16.google.protobuf.Empty\"8\xdaA\tfactor_id\x82\xd3\xe4\x93\x02&*$/v1/identity/mfa/factors/{factor_id}\x12\xa6\x01\n" +
+	"\x13SetPrimaryMFAFactor\x12..saturn.identity.v1.SetPrimaryMFAFactorRequest\x1a\x16.google.protobuf.Empty\"G\xdaA\tfactor_id\x82\xd3\xe4\x93\x025:\x01*\"0/v1/identity/mfa/factors/{factor_id}:set-primary\x12\x80\x01\n" +
+	"\tSetupTOTP\x12$.saturn.identity.v1.SetupTOTPRequest\x1a%.saturn.identity.v1.SetupTOTPResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/identity/mfa/totp:setup\x12\x88\x01\n" +
+	"\vConfirmTOTP\x12&.saturn.identity.v1.ConfirmTOTPRequest\x1a'.saturn.identity.v1.ConfirmTOTPResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/v1/identity/mfa/totp:confirm\x12\xb1\x01\n" +
+	"\x15RegenerateBackupCodes\x120.saturn.identity.v1.RegenerateBackupCodesRequest\x1a1.saturn.identity.v1.RegenerateBackupCodesResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/v1/identity/mfa/backup-codes:regenerateBCZAgithub.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1b\x06proto3"
 
 var (
 	file_saturn_identity_v1_identity_proto_rawDescOnce sync.Once
@@ -1308,62 +2141,92 @@ func file_saturn_identity_v1_identity_proto_rawDescGZIP() []byte {
 	return file_saturn_identity_v1_identity_proto_rawDescData
 }
 
-var file_saturn_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_saturn_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
 var file_saturn_identity_v1_identity_proto_goTypes = []any{
-	(*LoginUserRequest)(nil),              // 0: saturn.identity.v1.LoginUserRequest
-	(*LoginUserResponse)(nil),             // 1: saturn.identity.v1.LoginUserResponse
-	(*RegisterUserRequest)(nil),           // 2: saturn.identity.v1.RegisterUserRequest
-	(*User)(nil),                          // 3: saturn.identity.v1.User
-	(*RefreshSessionRequest)(nil),         // 4: saturn.identity.v1.RefreshSessionRequest
-	(*RefreshSessionResponse)(nil),        // 5: saturn.identity.v1.RefreshSessionResponse
-	(*LogoutRequest)(nil),                 // 6: saturn.identity.v1.LogoutRequest
-	(*LogoutResponse)(nil),                // 7: saturn.identity.v1.LogoutResponse
-	(*GetCurrentUserRequest)(nil),         // 8: saturn.identity.v1.GetCurrentUserRequest
-	(*UserSession)(nil),                   // 9: saturn.identity.v1.UserSession
-	(*ListActiveSessionsRequest)(nil),     // 10: saturn.identity.v1.ListActiveSessionsRequest
-	(*ListActiveSessionsResponse)(nil),    // 11: saturn.identity.v1.ListActiveSessionsResponse
-	(*RevokeSessionRequest)(nil),          // 12: saturn.identity.v1.RevokeSessionRequest
-	(*RevokeSessionResponse)(nil),         // 13: saturn.identity.v1.RevokeSessionResponse
-	(*RevokeAllSessionsRequest)(nil),      // 14: saturn.identity.v1.RevokeAllSessionsRequest
-	(*RevokeAllSessionsResponse)(nil),     // 15: saturn.identity.v1.RevokeAllSessionsResponse
-	(*SecurityEvent)(nil),                 // 16: saturn.identity.v1.SecurityEvent
-	(*ListMySecurityEventsRequest)(nil),   // 17: saturn.identity.v1.ListMySecurityEventsRequest
-	(*ListMySecurityEventsResponse)(nil),  // 18: saturn.identity.v1.ListMySecurityEventsResponse
-	(*LoginUserRequest_UserPassword)(nil), // 19: saturn.identity.v1.LoginUserRequest.UserPassword
-	(*timestamppb.Timestamp)(nil),         // 20: google.protobuf.Timestamp
+	(*LoginUserRequest)(nil),               // 0: saturn.identity.v1.LoginUserRequest
+	(*LoginUserResponse)(nil),              // 1: saturn.identity.v1.LoginUserResponse
+	(*MfaFactorDescriptor)(nil),            // 2: saturn.identity.v1.MfaFactorDescriptor
+	(*RegisterUserRequest)(nil),            // 3: saturn.identity.v1.RegisterUserRequest
+	(*User)(nil),                           // 4: saturn.identity.v1.User
+	(*RefreshSessionRequest)(nil),          // 5: saturn.identity.v1.RefreshSessionRequest
+	(*RefreshSessionResponse)(nil),         // 6: saturn.identity.v1.RefreshSessionResponse
+	(*LogoutRequest)(nil),                  // 7: saturn.identity.v1.LogoutRequest
+	(*LogoutResponse)(nil),                 // 8: saturn.identity.v1.LogoutResponse
+	(*GetCurrentUserRequest)(nil),          // 9: saturn.identity.v1.GetCurrentUserRequest
+	(*UserSession)(nil),                    // 10: saturn.identity.v1.UserSession
+	(*ListActiveSessionsRequest)(nil),      // 11: saturn.identity.v1.ListActiveSessionsRequest
+	(*ListActiveSessionsResponse)(nil),     // 12: saturn.identity.v1.ListActiveSessionsResponse
+	(*RevokeSessionRequest)(nil),           // 13: saturn.identity.v1.RevokeSessionRequest
+	(*RevokeSessionResponse)(nil),          // 14: saturn.identity.v1.RevokeSessionResponse
+	(*RevokeAllSessionsRequest)(nil),       // 15: saturn.identity.v1.RevokeAllSessionsRequest
+	(*RevokeAllSessionsResponse)(nil),      // 16: saturn.identity.v1.RevokeAllSessionsResponse
+	(*SecurityEvent)(nil),                  // 17: saturn.identity.v1.SecurityEvent
+	(*ListMySecurityEventsRequest)(nil),    // 18: saturn.identity.v1.ListMySecurityEventsRequest
+	(*ListMySecurityEventsResponse)(nil),   // 19: saturn.identity.v1.ListMySecurityEventsResponse
+	(*ListMFAFactorsRequest)(nil),          // 20: saturn.identity.v1.ListMFAFactorsRequest
+	(*ListMFAFactorsResponse)(nil),         // 21: saturn.identity.v1.ListMFAFactorsResponse
+	(*DeleteMFAFactorRequest)(nil),         // 22: saturn.identity.v1.DeleteMFAFactorRequest
+	(*SetPrimaryMFAFactorRequest)(nil),     // 23: saturn.identity.v1.SetPrimaryMFAFactorRequest
+	(*SetupTOTPRequest)(nil),               // 24: saturn.identity.v1.SetupTOTPRequest
+	(*SetupTOTPResponse)(nil),              // 25: saturn.identity.v1.SetupTOTPResponse
+	(*ConfirmTOTPRequest)(nil),             // 26: saturn.identity.v1.ConfirmTOTPRequest
+	(*ConfirmTOTPResponse)(nil),            // 27: saturn.identity.v1.ConfirmTOTPResponse
+	(*RegenerateBackupCodesRequest)(nil),   // 28: saturn.identity.v1.RegenerateBackupCodesRequest
+	(*RegenerateBackupCodesResponse)(nil),  // 29: saturn.identity.v1.RegenerateBackupCodesResponse
+	(*LoginUserRequest_UserPassword)(nil),  // 30: saturn.identity.v1.LoginUserRequest.UserPassword
+	(*LoginUserRequest_MfaAssertion)(nil),  // 31: saturn.identity.v1.LoginUserRequest.MfaAssertion
+	(*LoginUserResponse_MfaChallenge)(nil), // 32: saturn.identity.v1.LoginUserResponse.MfaChallenge
+	(*timestamppb.Timestamp)(nil),          // 33: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                  // 34: google.protobuf.Empty
 }
 var file_saturn_identity_v1_identity_proto_depIdxs = []int32{
-	19, // 0: saturn.identity.v1.LoginUserRequest.user_password:type_name -> saturn.identity.v1.LoginUserRequest.UserPassword
-	20, // 1: saturn.identity.v1.User.create_time:type_name -> google.protobuf.Timestamp
-	20, // 2: saturn.identity.v1.User.update_time:type_name -> google.protobuf.Timestamp
-	20, // 3: saturn.identity.v1.UserSession.create_time:type_name -> google.protobuf.Timestamp
-	20, // 4: saturn.identity.v1.UserSession.last_used_at:type_name -> google.protobuf.Timestamp
-	9,  // 5: saturn.identity.v1.ListActiveSessionsResponse.sessions:type_name -> saturn.identity.v1.UserSession
-	20, // 6: saturn.identity.v1.SecurityEvent.created_at:type_name -> google.protobuf.Timestamp
-	16, // 7: saturn.identity.v1.ListMySecurityEventsResponse.events:type_name -> saturn.identity.v1.SecurityEvent
-	0,  // 8: saturn.identity.v1.Identity.LoginUser:input_type -> saturn.identity.v1.LoginUserRequest
-	2,  // 9: saturn.identity.v1.Identity.RegisterUser:input_type -> saturn.identity.v1.RegisterUserRequest
-	4,  // 10: saturn.identity.v1.Identity.RefreshSession:input_type -> saturn.identity.v1.RefreshSessionRequest
-	6,  // 11: saturn.identity.v1.Identity.Logout:input_type -> saturn.identity.v1.LogoutRequest
-	8,  // 12: saturn.identity.v1.Identity.GetCurrentUser:input_type -> saturn.identity.v1.GetCurrentUserRequest
-	10, // 13: saturn.identity.v1.Identity.ListActiveSessions:input_type -> saturn.identity.v1.ListActiveSessionsRequest
-	12, // 14: saturn.identity.v1.Identity.RevokeSession:input_type -> saturn.identity.v1.RevokeSessionRequest
-	14, // 15: saturn.identity.v1.Identity.RevokeAllSessions:input_type -> saturn.identity.v1.RevokeAllSessionsRequest
-	17, // 16: saturn.identity.v1.Identity.ListMySecurityEvents:input_type -> saturn.identity.v1.ListMySecurityEventsRequest
-	1,  // 17: saturn.identity.v1.Identity.LoginUser:output_type -> saturn.identity.v1.LoginUserResponse
-	3,  // 18: saturn.identity.v1.Identity.RegisterUser:output_type -> saturn.identity.v1.User
-	5,  // 19: saturn.identity.v1.Identity.RefreshSession:output_type -> saturn.identity.v1.RefreshSessionResponse
-	7,  // 20: saturn.identity.v1.Identity.Logout:output_type -> saturn.identity.v1.LogoutResponse
-	3,  // 21: saturn.identity.v1.Identity.GetCurrentUser:output_type -> saturn.identity.v1.User
-	11, // 22: saturn.identity.v1.Identity.ListActiveSessions:output_type -> saturn.identity.v1.ListActiveSessionsResponse
-	13, // 23: saturn.identity.v1.Identity.RevokeSession:output_type -> saturn.identity.v1.RevokeSessionResponse
-	15, // 24: saturn.identity.v1.Identity.RevokeAllSessions:output_type -> saturn.identity.v1.RevokeAllSessionsResponse
-	18, // 25: saturn.identity.v1.Identity.ListMySecurityEvents:output_type -> saturn.identity.v1.ListMySecurityEventsResponse
-	17, // [17:26] is the sub-list for method output_type
-	8,  // [8:17] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	30, // 0: saturn.identity.v1.LoginUserRequest.user_password:type_name -> saturn.identity.v1.LoginUserRequest.UserPassword
+	31, // 1: saturn.identity.v1.LoginUserRequest.mfa_assertion:type_name -> saturn.identity.v1.LoginUserRequest.MfaAssertion
+	32, // 2: saturn.identity.v1.LoginUserResponse.mfa:type_name -> saturn.identity.v1.LoginUserResponse.MfaChallenge
+	33, // 3: saturn.identity.v1.User.create_time:type_name -> google.protobuf.Timestamp
+	33, // 4: saturn.identity.v1.User.update_time:type_name -> google.protobuf.Timestamp
+	33, // 5: saturn.identity.v1.UserSession.create_time:type_name -> google.protobuf.Timestamp
+	33, // 6: saturn.identity.v1.UserSession.last_used_at:type_name -> google.protobuf.Timestamp
+	10, // 7: saturn.identity.v1.ListActiveSessionsResponse.sessions:type_name -> saturn.identity.v1.UserSession
+	33, // 8: saturn.identity.v1.SecurityEvent.created_at:type_name -> google.protobuf.Timestamp
+	17, // 9: saturn.identity.v1.ListMySecurityEventsResponse.events:type_name -> saturn.identity.v1.SecurityEvent
+	2,  // 10: saturn.identity.v1.ListMFAFactorsResponse.factors:type_name -> saturn.identity.v1.MfaFactorDescriptor
+	2,  // 11: saturn.identity.v1.LoginUserResponse.MfaChallenge.available_factors:type_name -> saturn.identity.v1.MfaFactorDescriptor
+	0,  // 12: saturn.identity.v1.Identity.LoginUser:input_type -> saturn.identity.v1.LoginUserRequest
+	3,  // 13: saturn.identity.v1.Identity.RegisterUser:input_type -> saturn.identity.v1.RegisterUserRequest
+	5,  // 14: saturn.identity.v1.Identity.RefreshSession:input_type -> saturn.identity.v1.RefreshSessionRequest
+	7,  // 15: saturn.identity.v1.Identity.Logout:input_type -> saturn.identity.v1.LogoutRequest
+	9,  // 16: saturn.identity.v1.Identity.GetCurrentUser:input_type -> saturn.identity.v1.GetCurrentUserRequest
+	11, // 17: saturn.identity.v1.Identity.ListActiveSessions:input_type -> saturn.identity.v1.ListActiveSessionsRequest
+	13, // 18: saturn.identity.v1.Identity.RevokeSession:input_type -> saturn.identity.v1.RevokeSessionRequest
+	15, // 19: saturn.identity.v1.Identity.RevokeAllSessions:input_type -> saturn.identity.v1.RevokeAllSessionsRequest
+	18, // 20: saturn.identity.v1.Identity.ListMySecurityEvents:input_type -> saturn.identity.v1.ListMySecurityEventsRequest
+	20, // 21: saturn.identity.v1.Identity.ListMFAFactors:input_type -> saturn.identity.v1.ListMFAFactorsRequest
+	22, // 22: saturn.identity.v1.Identity.DeleteMFAFactor:input_type -> saturn.identity.v1.DeleteMFAFactorRequest
+	23, // 23: saturn.identity.v1.Identity.SetPrimaryMFAFactor:input_type -> saturn.identity.v1.SetPrimaryMFAFactorRequest
+	24, // 24: saturn.identity.v1.Identity.SetupTOTP:input_type -> saturn.identity.v1.SetupTOTPRequest
+	26, // 25: saturn.identity.v1.Identity.ConfirmTOTP:input_type -> saturn.identity.v1.ConfirmTOTPRequest
+	28, // 26: saturn.identity.v1.Identity.RegenerateBackupCodes:input_type -> saturn.identity.v1.RegenerateBackupCodesRequest
+	1,  // 27: saturn.identity.v1.Identity.LoginUser:output_type -> saturn.identity.v1.LoginUserResponse
+	4,  // 28: saturn.identity.v1.Identity.RegisterUser:output_type -> saturn.identity.v1.User
+	6,  // 29: saturn.identity.v1.Identity.RefreshSession:output_type -> saturn.identity.v1.RefreshSessionResponse
+	8,  // 30: saturn.identity.v1.Identity.Logout:output_type -> saturn.identity.v1.LogoutResponse
+	4,  // 31: saturn.identity.v1.Identity.GetCurrentUser:output_type -> saturn.identity.v1.User
+	12, // 32: saturn.identity.v1.Identity.ListActiveSessions:output_type -> saturn.identity.v1.ListActiveSessionsResponse
+	14, // 33: saturn.identity.v1.Identity.RevokeSession:output_type -> saturn.identity.v1.RevokeSessionResponse
+	16, // 34: saturn.identity.v1.Identity.RevokeAllSessions:output_type -> saturn.identity.v1.RevokeAllSessionsResponse
+	19, // 35: saturn.identity.v1.Identity.ListMySecurityEvents:output_type -> saturn.identity.v1.ListMySecurityEventsResponse
+	21, // 36: saturn.identity.v1.Identity.ListMFAFactors:output_type -> saturn.identity.v1.ListMFAFactorsResponse
+	34, // 37: saturn.identity.v1.Identity.DeleteMFAFactor:output_type -> google.protobuf.Empty
+	34, // 38: saturn.identity.v1.Identity.SetPrimaryMFAFactor:output_type -> google.protobuf.Empty
+	25, // 39: saturn.identity.v1.Identity.SetupTOTP:output_type -> saturn.identity.v1.SetupTOTPResponse
+	27, // 40: saturn.identity.v1.Identity.ConfirmTOTP:output_type -> saturn.identity.v1.ConfirmTOTPResponse
+	29, // 41: saturn.identity.v1.Identity.RegenerateBackupCodes:output_type -> saturn.identity.v1.RegenerateBackupCodesResponse
+	27, // [27:42] is the sub-list for method output_type
+	12, // [12:27] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_saturn_identity_v1_identity_proto_init() }
@@ -1373,6 +2236,11 @@ func file_saturn_identity_v1_identity_proto_init() {
 	}
 	file_saturn_identity_v1_identity_proto_msgTypes[0].OneofWrappers = []any{
 		(*LoginUserRequest_UserPassword_)(nil),
+		(*LoginUserRequest_MfaAssertion_)(nil),
+	}
+	file_saturn_identity_v1_identity_proto_msgTypes[31].OneofWrappers = []any{
+		(*LoginUserRequest_MfaAssertion_TotpCode)(nil),
+		(*LoginUserRequest_MfaAssertion_BackupCode)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1380,7 +2248,7 @@ func file_saturn_identity_v1_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_identity_v1_identity_proto_rawDesc), len(file_saturn_identity_v1_identity_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   20,
+			NumMessages:   33,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

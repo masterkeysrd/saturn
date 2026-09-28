@@ -10,6 +10,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -36,20 +37,45 @@ func NewHandler(iam *IAMApplication) *Handler {
 	return &Handler{IAM: iam}
 }
 
-// LoginUser authenticates a user and returns a session token.
+// LoginUser authenticates a user and returns a session token or an MFA challenge.
 func (h *Handler) LoginUser(ctx context.Context, req *identityv1.LoginUserRequest) (*identityv1.LoginUserResponse, error) {
-	ident := req.GetUserPassword().GetIdentifier()
-	pass := req.GetUserPassword().GetPassword()
 	ua, ip := extractClientInfo(ctx)
 
-	resp, err := h.IAM.Coordinator.Login(ctx, &iam.LoginRequest{
-		Identifier: ident,
-		Password:   pass,
-		UserAgent:  ua,
-		IPAddress:  ip,
-	})
+	var appReq iam.LoginRequest
+	appReq.UserAgent = ua
+	appReq.IPAddress = ip
+
+	if assertion := req.GetMfaAssertion(); assertion != nil {
+		appReq.MFATicket = assertion.GetMfaTicket()
+		appReq.FactorID = assertion.GetFactorId()
+		appReq.TOTPCode = assertion.GetTotpCode()
+		appReq.BackupCode = assertion.GetBackupCode()
+	} else if userPass := req.GetUserPassword(); userPass != nil {
+		appReq.Identifier = userPass.GetIdentifier()
+		appReq.Password = userPass.GetPassword()
+	}
+
+	resp, err := h.IAM.Coordinator.Login(ctx, &appReq)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.MFA != nil {
+		var factors []*identityv1.MfaFactorDescriptor
+		for _, f := range resp.MFA.AvailableFactors {
+			factors = append(factors, &identityv1.MfaFactorDescriptor{
+				FactorId:  string(f.ID),
+				Type:      string(f.Type),
+				Name:      f.Name,
+				IsPrimary: f.IsPrimary,
+			})
+		}
+		return &identityv1.LoginUserResponse{
+			Mfa: &identityv1.LoginUserResponse_MfaChallenge{
+				Ticket:           resp.MFA.Ticket,
+				AvailableFactors: factors,
+			},
+		}, nil
 	}
 
 	return &identityv1.LoginUserResponse{
@@ -269,6 +295,137 @@ func (h *Handler) ListMySecurityEvents(ctx context.Context, req *identityv1.List
 	return &identityv1.ListMySecurityEventsResponse{
 		Events:        pbEvents,
 		NextPageToken: page.NextPageToken,
+	}, nil
+}
+
+// ListMFAFactors lists all active MFA factors for the authenticated user.
+func (h *Handler) ListMFAFactors(ctx context.Context, req *identityv1.ListMFAFactorsRequest) (*identityv1.ListMFAFactorsResponse, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	resp, err := h.IAM.Coordinator.ListMFAFactors(ctx, &iam.ListMFAFactorsRequest{
+		UserID: identity.UserID(principal.Subject),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var factors []*identityv1.MfaFactorDescriptor
+	for _, f := range resp.Factors {
+		factors = append(factors, &identityv1.MfaFactorDescriptor{
+			FactorId:  string(f.ID),
+			Type:      string(f.Type),
+			Name:      f.Name,
+			IsPrimary: f.IsPrimary,
+		})
+	}
+
+	return &identityv1.ListMFAFactorsResponse{
+		Factors:              factors,
+		HasBackupCodes:       resp.HasBackupCodes,
+		RemainingBackupCodes: int32(resp.RemainingBackupCodes),
+	}, nil
+}
+
+// DeleteMFAFactor revokes an MFA factor for the authenticated user.
+func (h *Handler) DeleteMFAFactor(ctx context.Context, req *identityv1.DeleteMFAFactorRequest) (*emptypb.Empty, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	err := h.IAM.Coordinator.DeleteMFAFactor(ctx, &iam.DeleteMFAFactorRequest{
+		UserID:   identity.UserID(principal.Subject),
+		FactorID: identity.MFAFactorID(req.GetFactorId()),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+// SetPrimaryMFAFactor sets an active MFA factor as the primary factor.
+func (h *Handler) SetPrimaryMFAFactor(ctx context.Context, req *identityv1.SetPrimaryMFAFactorRequest) (*emptypb.Empty, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	err := h.IAM.Coordinator.SetPrimaryMFAFactor(ctx, &iam.SetPrimaryMFAFactorRequest{
+		UserID:   identity.UserID(principal.Subject),
+		FactorID: identity.MFAFactorID(req.GetFactorId()),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+// SetupTOTP initiates enrollment of a new authenticator app factor.
+func (h *Handler) SetupTOTP(ctx context.Context, req *identityv1.SetupTOTPRequest) (*identityv1.SetupTOTPResponse, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	resp, err := h.IAM.Coordinator.SetupTOTP(ctx, &iam.SetupTOTPRequest{
+		UserID: identity.UserID(principal.Subject),
+		Name:   req.GetName(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &identityv1.SetupTOTPResponse{
+		FactorId:   resp.FactorID,
+		Secret:     resp.Secret,
+		OtpauthUri: resp.OtpauthURI,
+		QrCodeSvg:  resp.QRCodeSVG,
+	}, nil
+}
+
+// ConfirmTOTP verifies the first code from an authenticator app and activates it.
+func (h *Handler) ConfirmTOTP(ctx context.Context, req *identityv1.ConfirmTOTPRequest) (*identityv1.ConfirmTOTPResponse, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	resp, err := h.IAM.Coordinator.ConfirmTOTP(ctx, &iam.ConfirmTOTPRequest{
+		UserID:   identity.UserID(principal.Subject),
+		FactorID: req.GetFactorId(),
+		Code:     req.GetCode(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &identityv1.ConfirmTOTPResponse{
+		BackupCodes: resp.BackupCodes,
+	}, nil
+}
+
+// RegenerateBackupCodes creates a fresh set of recovery codes after step-up verification.
+func (h *Handler) RegenerateBackupCodes(ctx context.Context, req *identityv1.RegenerateBackupCodesRequest) (*identityv1.RegenerateBackupCodesResponse, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	resp, err := h.IAM.Coordinator.RegenerateBackupCodes(ctx, &iam.RegenerateBackupCodesRequest{
+		UserID:           identity.UserID(principal.Subject),
+		VerificationCode: req.GetVerificationCode(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &identityv1.RegenerateBackupCodesResponse{
+		BackupCodes: resp.BackupCodes,
 	}, nil
 }
 

@@ -5,6 +5,7 @@ package saturn.identity.v1;
 import "google/api/annotations.proto";
 import "google/api/client.proto";
 import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1";
@@ -77,6 +78,50 @@ service Identity {
   rpc ListMySecurityEvents(ListMySecurityEventsRequest) returns (ListMySecurityEventsResponse) {
     option (google.api.http) = {get: "/v1/identity/users/me/security-events"};
   }
+
+  // Authenticated RPC: Lists all registered MFA factors for the caller.
+  rpc ListMFAFactors(ListMFAFactorsRequest) returns (ListMFAFactorsResponse) {
+    option (google.api.http) = {get: "/v1/identity/mfa/factors"};
+  }
+
+  // Authenticated RPC: Revokes a registered MFA factor.
+  rpc DeleteMFAFactor(DeleteMFAFactorRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/identity/mfa/factors/{factor_id}"};
+    option (google.api.method_signature) = "factor_id";
+  }
+
+  // Authenticated RPC: Sets a factor as the default/primary option.
+  rpc SetPrimaryMFAFactor(SetPrimaryMFAFactorRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/identity/mfa/factors/{factor_id}:set-primary"
+      body: "*"
+    };
+    option (google.api.method_signature) = "factor_id";
+  }
+
+  // Authenticated RPC: Generates a new pending TOTP secret and QR code URI.
+  rpc SetupTOTP(SetupTOTPRequest) returns (SetupTOTPResponse) {
+    option (google.api.http) = {
+      post: "/v1/identity/mfa/totp:setup"
+      body: "*"
+    };
+  }
+
+  // Authenticated RPC: Confirms setup of the TOTP factor with a verification code.
+  rpc ConfirmTOTP(ConfirmTOTPRequest) returns (ConfirmTOTPResponse) {
+    option (google.api.http) = {
+      post: "/v1/identity/mfa/totp:confirm"
+      body: "*"
+    };
+  }
+
+  // Authenticated RPC: Regenerates a fresh set of 8 single-use recovery codes.
+  rpc RegenerateBackupCodes(RegenerateBackupCodesRequest) returns (RegenerateBackupCodesResponse) {
+    option (google.api.http) = {
+      post: "/v1/identity/mfa/backup-codes:regenerate"
+      body: "*"
+    };
+  }
 }
 
 // Request message for Identity.LoginUser.
@@ -90,30 +135,83 @@ message LoginUserRequest {
     string password = 2 [(google.api.field_behavior) = REQUIRED];
   }
 
+  // MfaAssertion contains Step 2 second-factor verification credentials.
+  message MfaAssertion {
+    // Required. Ephemeral, single-use ticket received from Step 1.
+    string mfa_ticket = 1 [(google.api.field_behavior) = REQUIRED];
+
+    // Required. The specific factor being satisfied (or "recovery" for backup codes).
+    string factor_id = 2 [(google.api.field_behavior) = REQUIRED];
+
+    // Polymorphic assertion payload depending on the factor chosen.
+    oneof factor_payload {
+      // 6-digit TOTP code.
+      string totp_code = 3;
+
+      // 8-character single-use recovery code.
+      string backup_code = 4;
+    }
+  }
+
   // Required. The authentication method to use for signing in.
   oneof method {
     // Password-based authentication credentials.
     UserPassword user_password = 1;
+
+    // Second-factor authentication assertion.
+    MfaAssertion mfa_assertion = 2;
   }
 }
 
 // Response message for Identity.LoginUser.
 message LoginUserResponse {
+  // MfaChallenge contains challenge details when Step 2 verification is required.
+  message MfaChallenge {
+    // Output only. Ephemeral, single-use ticket to pass into Step 2 verification.
+    string ticket = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. List of registered factors the user can select from.
+    repeated MfaFactorDescriptor available_factors = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // Output only. Present when password authentication succeeded but Step 2 MFA verification is required.
+  // When this field is populated, access_token and refresh_token will be omitted.
+  MfaChallenge mfa = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // Output only. The user's unique identifier.
   // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
-  string user_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string user_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. The access token for authenticated requests.
-  string access_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string access_token = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. The expiration time of the access token in Unix seconds.
-  int64 access_token_expires_at = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int64 access_token_expires_at = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. The opaque refresh token.
-  string refresh_token = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string refresh_token = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. The expiration time of the refresh token in Unix seconds.
-  int64 refresh_token_expires_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int64 refresh_token_expires_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// MfaFactorDescriptor describes an enrolled multi-factor authentication (MFA) factor.
+message MfaFactorDescriptor {
+  // Output only. The unique identifier of the registered MFA factor.
+  // Formatted as `mfa_<ksuid>` (e.g., `mfa_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string factor_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The category or protocol of the factor (e.g., `totp`, `webauthn`, `mobile_push`).
+  string type = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. User-assigned label or device name (e.g., "Personal iPhone", "Hardware YubiKey").
+  string name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Indicates whether this factor is the default/primary choice presented on login.
+  bool is_primary = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Factor-specific challenge parameters or prompt description.
+  string challenge = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Request message for Identity.RegisterUser.
@@ -279,4 +377,85 @@ message ListMySecurityEventsResponse {
   // Output only. A token, which can be sent as `next_page_token` to retrieve the next page.
   // If this field is omitted, there are no subsequent pages.
   string next_page_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Identity.ListMFAFactors.
+// Lists all enrolled, active multi-factor authentication methods for the authenticated caller.
+message ListMFAFactorsRequest {}
+
+// Response message for Identity.ListMFAFactors.
+message ListMFAFactorsResponse {
+  // Output only. The list of active registered MFA factors for the authenticated user.
+  repeated MfaFactorDescriptor factors = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Indicates whether emergency recovery backup codes have been generated for the account.
+  bool has_backup_codes = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The count of unconsumed, single-use recovery backup codes available.
+  int32 remaining_backup_codes = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Identity.DeleteMFAFactor.
+message DeleteMFAFactorRequest {
+  // Required. The unique identifier of the MFA factor to revoke (e.g., `mfa_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string factor_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Identity.SetPrimaryMFAFactor.
+message SetPrimaryMFAFactorRequest {
+  // Required. The unique identifier of the MFA factor to promote as the primary/default method.
+  string factor_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Identity.SetupTOTP.
+// Initiates enrollment of an RFC 6238 Time-based One-Time Password (TOTP) authenticator application.
+message SetupTOTPRequest {
+  // Required. User-facing label or device name for the authenticator app (e.g. "Personal iPhone", "Google Authenticator").
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Response message for Identity.SetupTOTP.
+// Returns the provisional credentials required to configure an authenticator app.
+message SetupTOTPResponse {
+  // Output only. The provisional factor ID staged for confirmation (e.g., `mfa_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string factor_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Cryptographically random 160-bit Base32-encoded TOTP secret key for manual configuration.
+  string secret = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Fully qualified `otpauth://totp/...` URI suitable for generating QR codes.
+  string otpauth_uri = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Inline SVG markup encoding the `otpauth://` URI for client-side rendering without external dependencies.
+  string qr_code_svg = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Identity.ConfirmTOTP.
+// Verifies the initial 6-digit TOTP code generated by the authenticator app to activate the factor.
+message ConfirmTOTPRequest {
+  // Required. The provisional factor ID returned from SetupTOTP.
+  string factor_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The current 6-digit verification code from the authenticator app matching RFC 6238.
+  string code = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Response message for Identity.ConfirmTOTP.
+message ConfirmTOTPResponse {
+  // Output only. Set of 8 single-use recovery backup codes (`XXXX-XXXX`) generated upon first factor enrollment.
+  // Must be stored securely by the user; codes are hashed with SHA-256 at rest and cannot be retrieved again.
+  repeated string backup_codes = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Identity.RegenerateBackupCodes.
+// Requests a fresh batch of emergency single-use recovery codes, invalidating all existing unused codes.
+message RegenerateBackupCodesRequest {
+  // Required. Step-up 6-digit TOTP verification code from an active authenticator factor to authorize regeneration.
+  string verification_code = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Response message for Identity.RegenerateBackupCodes.
+message RegenerateBackupCodesResponse {
+  // Output only. Newly generated set of 8 single-use recovery backup codes (`XXXX-XXXX`).
+  repeated string backup_codes = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

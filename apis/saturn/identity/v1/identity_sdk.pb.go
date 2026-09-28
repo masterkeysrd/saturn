@@ -2,6 +2,10 @@
 package identityv1
 
 import (
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
+)
+
+import (
 	"context"
 	"fmt"
 	"strings"
@@ -151,6 +155,90 @@ func (c *Client) ListMySecurityEvents(ctx context.Context, req *ListMySecurityEv
 		path += "?" + strings.Join(query, "&")
 	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ListMFAFactors executes GET /api/v1/identity/mfa/factors.
+func (c *Client) ListMFAFactors(ctx context.Context, req *ListMFAFactorsRequest) (*ListMFAFactorsResponse, error) {
+	var resp ListMFAFactorsResponse
+	path := "/api/v1/identity/mfa/factors"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// DeleteMFAFactor executes DELETE /api/v1/identity/mfa/factors/{factor_id}.
+func (c *Client) DeleteMFAFactor(ctx context.Context, req *DeleteMFAFactorRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
+	path := fmt.Sprintf("/api/v1/identity/mfa/factors/%s", req.GetFactorId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// SetPrimaryMFAFactor executes POST /api/v1/identity/mfa/factors/{factor_id}:set-primary.
+func (c *Client) SetPrimaryMFAFactor(ctx context.Context, req *SetPrimaryMFAFactorRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
+	path := fmt.Sprintf("/api/v1/identity/mfa/factors/%s:set-primary", req.GetFactorId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// SetupTOTP executes POST /api/v1/identity/mfa/totp:setup.
+func (c *Client) SetupTOTP(ctx context.Context, req *SetupTOTPRequest) (*SetupTOTPResponse, error) {
+	var resp SetupTOTPResponse
+	path := "/api/v1/identity/mfa/totp:setup"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ConfirmTOTP executes POST /api/v1/identity/mfa/totp:confirm.
+func (c *Client) ConfirmTOTP(ctx context.Context, req *ConfirmTOTPRequest) (*ConfirmTOTPResponse, error) {
+	var resp ConfirmTOTPResponse
+	path := "/api/v1/identity/mfa/totp:confirm"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// RegenerateBackupCodes executes POST /api/v1/identity/mfa/backup-codes:regenerate.
+func (c *Client) RegenerateBackupCodes(ctx context.Context, req *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error) {
+	var resp RegenerateBackupCodesResponse
+	path := "/api/v1/identity/mfa/backup-codes:regenerate"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil

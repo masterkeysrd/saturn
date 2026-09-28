@@ -291,6 +291,9 @@ func TestCoordinator_Login(t *testing.T) {
 					return nil
 				},
 				CreateSessionFunc: tc.mockCreateSession,
+				HasActiveMFAFunc: func(ctx context.Context, userID identity.UserID) (bool, []*identity.MFAFactor, error) {
+					return false, nil, nil
+				},
 			}
 			tokenMock := &TokenServiceMock{
 				IssueAccessTokenFunc:  tc.mockIssueAccess,

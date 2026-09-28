@@ -34,6 +34,20 @@ type CredentialStoreProvider interface {
 	Update(ctx context.Context, credential *Credential) error
 }
 
+// Cipher defines encryption and decryption methods for sensitive credentials.
+type Cipher interface {
+	Encrypt(plaintext string) (string, error)
+	Decrypt(ciphertext string) (string, error)
+}
+
+// TOTPProvider defines the interface for TOTP secret generation, passcode validation, and backup code handling.
+type TOTPProvider interface {
+	GenerateSecret() (string, error)
+	ValidateCode(secret, code string, t time.Time) bool
+	GenerateBackupCodes() (plainCodes []string, hashedCodes []string, err error)
+	ValidateAndConsumeBackupCode(input string, hashedCodes []string) (remainingCodes []string, valid bool)
+}
+
 // Dependencies holds all storage and hashing interfaces required by the Service.
 type Dependencies struct {
 	UserStore          UserStoreProvider
@@ -41,6 +55,9 @@ type Dependencies struct {
 	SessionStore       SessionStoreProvider
 	SecurityEventStore SecurityEventStore
 	Hasher             Hasher
+	MFAStore           MFAFactorStore
+	Cipher             Cipher
+	TOTP               TOTPProvider
 }
 
 // Hasher is the password hashing interface used for authentication.
@@ -509,4 +526,372 @@ func (s *Service) ListSecurityEvents(ctx context.Context, filter SecurityEventFi
 		return nil, errors.E(op, err)
 	}
 	return page, nil
+}
+
+// HasActiveMFA checks if the user has any active enrolled MFA factors.
+func (s *Service) HasActiveMFA(ctx context.Context, userID UserID) (bool, []*MFAFactor, error) {
+	const op errors.Op = "domain/identity.HasActiveMFA"
+
+	if s.deps.MFAStore == nil {
+		return false, nil, nil
+	}
+
+	factors, err := s.deps.MFAStore.ListFactorsByUserID(ctx, userID)
+	if err != nil {
+		return false, nil, errors.E(op, err)
+	}
+
+	return len(factors) > 0, factors, nil
+}
+
+// SetupTOTP initiates enrollment of a new TOTP factor and stages it for confirmation.
+func (s *Service) SetupTOTP(ctx context.Context, req SetupTOTPRequest) (*SetupTOTPResult, error) {
+	const op errors.Op = "domain/identity.SetupTOTP"
+
+	if s.deps.MFAStore == nil || s.deps.TOTP == nil || s.deps.Cipher == nil {
+		return nil, errors.E(op, errors.Internal, "mfa dependencies not configured")
+	}
+
+	user, err := s.GetUserByID(ctx, req.UserID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	secret, err := s.deps.TOTP.GenerateSecret()
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	encryptedSecret, err := s.deps.Cipher.Encrypt(secret)
+	if err != nil {
+		return nil, errors.E(op, fmt.Errorf("encrypt secret: %w", err))
+	}
+
+	factorID, err := NewMFAFactorID()
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	now := time.Now()
+	factor := &MFAFactor{
+		ID:        factorID,
+		UserID:    req.UserID,
+		Type:      MFAFactorTypeTOTP,
+		Name:      req.Name,
+		Config:    &TOTPConfig{EncryptedSecret: encryptedSecret},
+		IsPrimary: false,
+		CreatedAt: now,
+		RevokedAt: &now, // Staged pending confirmation
+	}
+
+	if err := s.deps.MFAStore.CreateFactor(ctx, factor); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	accountName := user.Email
+	if accountName == "" {
+		accountName = user.Username
+	}
+
+	return &SetupTOTPResult{
+		FactorID:    factorID,
+		Secret:      secret,
+		AccountName: accountName,
+	}, nil
+}
+
+// ConfirmTOTP verifies the first code from an authenticator app and activates the factor.
+// If this is the user's first active MFA factor, it generates and returns 8 single-use backup recovery codes.
+func (s *Service) ConfirmTOTP(ctx context.Context, req ConfirmTOTPRequest) ([]string, error) {
+	const op errors.Op = "domain/identity.ConfirmTOTP"
+
+	if s.deps.MFAStore == nil || s.deps.TOTP == nil || s.deps.Cipher == nil {
+		return nil, errors.E(op, errors.Internal, "mfa dependencies not configured")
+	}
+
+	factor, err := s.deps.MFAStore.GetFactorByID(ctx, req.FactorID)
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.NotExist, MFANotFound, "mfa factor not found")
+		}
+		return nil, errors.E(op, err)
+	}
+
+	if factor.UserID != req.UserID {
+		return nil, errors.E(op, errors.Permission, "factor does not belong to user")
+	}
+
+	totpCfg := factor.TOTPConfig()
+	if totpCfg == nil {
+		return nil, errors.E(op, errors.Internal, "invalid factor config")
+	}
+
+	secret, err := s.deps.Cipher.Decrypt(totpCfg.EncryptedSecret)
+	if err != nil {
+		return nil, errors.E(op, errors.Internal, fmt.Errorf("decrypt secret: %w", err))
+	}
+
+	now := time.Now()
+	if !s.deps.TOTP.ValidateCode(secret, req.Code, now) {
+		return nil, errors.E(op, errors.Invalid, MFAInvalidCode, "invalid verification code")
+	}
+
+	// Check if user had existing active factors
+	existingFactors, err := s.deps.MFAStore.ListFactorsByUserID(ctx, req.UserID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	factor.RevokedAt = nil
+	if len(existingFactors) == 0 {
+		factor.IsPrimary = true
+	}
+	factor.LastUsedAt = &now
+
+	if err := s.deps.MFAStore.UpdateFactor(ctx, factor); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	// Generate backup recovery codes if not already present
+	var backupCodes []string
+	recovery, err := s.deps.MFAStore.GetRecovery(ctx, req.UserID)
+	if err != nil || recovery == nil || len(recovery.BackupCodes) == 0 {
+		plainCodes, hashedCodes, genErr := s.deps.TOTP.GenerateBackupCodes()
+		if genErr != nil {
+			return nil, errors.E(op, fmt.Errorf("generate backup codes: %w", genErr))
+		}
+		if err := s.deps.MFAStore.UpsertRecovery(ctx, &MFARecovery{
+			UserID:      req.UserID,
+			BackupCodes: hashedCodes,
+			UpdatedAt:   now,
+		}); err != nil {
+			return nil, errors.E(op, fmt.Errorf("save backup codes: %w", err))
+		}
+		backupCodes = plainCodes
+	}
+
+	return backupCodes, nil
+}
+
+// ListMFAFactors retrieves all active factors and recovery code status for a user.
+func (s *Service) ListMFAFactors(ctx context.Context, userID UserID) (*MFAFactorsSummary, error) {
+	const op errors.Op = "domain/identity.ListMFAFactors"
+
+	if s.deps.MFAStore == nil {
+		return &MFAFactorsSummary{}, nil
+	}
+
+	factors, err := s.deps.MFAStore.ListFactorsByUserID(ctx, userID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	var hasBackupCodes bool
+	var remainingCount int
+	recovery, err := s.deps.MFAStore.GetRecovery(ctx, userID)
+	if err == nil && recovery != nil {
+		remainingCount = len(recovery.BackupCodes)
+		hasBackupCodes = remainingCount > 0
+	}
+
+	return &MFAFactorsSummary{
+		Factors:              factors,
+		HasBackupCodes:       hasBackupCodes,
+		RemainingBackupCodes: remainingCount,
+	}, nil
+}
+
+// DeleteMFAFactor revokes an MFA factor. If it was primary, promotes another active factor.
+func (s *Service) DeleteMFAFactor(ctx context.Context, req DeleteMFAFactorRequest) error {
+	const op errors.Op = "domain/identity.DeleteMFAFactor"
+
+	if s.deps.MFAStore == nil {
+		return errors.E(op, errors.Internal, "mfa store not configured")
+	}
+
+	factor, err := s.deps.MFAStore.GetFactorByID(ctx, req.FactorID)
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.NotExist, MFANotFound, "mfa factor not found")
+		}
+		return errors.E(op, err)
+	}
+
+	if factor.UserID != req.UserID {
+		return errors.E(op, errors.Permission, "factor does not belong to user")
+	}
+
+	now := time.Now()
+	if err := s.deps.MFAStore.DeleteFactor(ctx, req.FactorID, now); err != nil {
+		return errors.E(op, err)
+	}
+
+	if factor.IsPrimary {
+		remaining, err := s.deps.MFAStore.ListFactorsByUserID(ctx, req.UserID)
+		if err == nil && len(remaining) > 0 {
+			_ = s.deps.MFAStore.SetPrimaryFactor(ctx, req.UserID, remaining[0].ID)
+		}
+	}
+
+	return nil
+}
+
+// SetPrimaryMFAFactor updates the user's default/primary factor.
+func (s *Service) SetPrimaryMFAFactor(ctx context.Context, req SetPrimaryMFAFactorRequest) error {
+	const op errors.Op = "domain/identity.SetPrimaryMFAFactor"
+
+	if s.deps.MFAStore == nil {
+		return errors.E(op, errors.Internal, "mfa store not configured")
+	}
+
+	factor, err := s.deps.MFAStore.GetFactorByID(ctx, req.FactorID)
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.NotExist, MFANotFound, "mfa factor not found")
+		}
+		return errors.E(op, err)
+	}
+
+	if factor.UserID != req.UserID {
+		return errors.E(op, errors.Permission, "factor does not belong to user")
+	}
+	if !factor.IsActive() {
+		return errors.E(op, errors.Invalid, "cannot set inactive factor as primary")
+	}
+
+	if err := s.deps.MFAStore.SetPrimaryFactor(ctx, req.UserID, req.FactorID); err != nil {
+		return errors.E(op, err)
+	}
+
+	return nil
+}
+
+// RegenerateBackupCodes regenerates a fresh set of 8 single-use recovery codes after step-up verification.
+func (s *Service) RegenerateBackupCodes(ctx context.Context, req RegenerateBackupCodesRequest) ([]string, error) {
+	const op errors.Op = "domain/identity.RegenerateBackupCodes"
+
+	if s.deps.MFAStore == nil || s.deps.TOTP == nil || s.deps.Cipher == nil {
+		return nil, errors.E(op, errors.Internal, "mfa dependencies not configured")
+	}
+
+	factors, err := s.deps.MFAStore.ListFactorsByUserID(ctx, req.UserID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	if len(factors) == 0 {
+		return nil, errors.E(op, errors.Precondition, "user does not have active MFA factors")
+	}
+
+	now := time.Now()
+	var codeValid bool
+	for _, factor := range factors {
+		if factor.Type == MFAFactorTypeTOTP {
+			if totpCfg := factor.TOTPConfig(); totpCfg != nil {
+				if secret, err := s.deps.Cipher.Decrypt(totpCfg.EncryptedSecret); err == nil {
+					if s.deps.TOTP.ValidateCode(secret, req.VerificationCode, now) {
+						codeValid = true
+						break
+					}
+				}
+			}
+		}
+	}
+
+	if !codeValid {
+		return nil, errors.E(op, errors.Invalid, MFAInvalidCode, "invalid verification code")
+	}
+
+	plainCodes, hashedCodes, err := s.deps.TOTP.GenerateBackupCodes()
+	if err != nil {
+		return nil, errors.E(op, fmt.Errorf("generate backup codes: %w", err))
+	}
+
+	if err := s.deps.MFAStore.UpsertRecovery(ctx, &MFARecovery{
+		UserID:      req.UserID,
+		BackupCodes: hashedCodes,
+		UpdatedAt:   now,
+	}); err != nil {
+		return nil, errors.E(op, fmt.Errorf("save backup codes: %w", err))
+	}
+
+	return plainCodes, nil
+}
+
+// VerifyMFAAssertion verifies a Step 2 second factor assertion (TOTP code or backup code).
+func (s *Service) VerifyMFAAssertion(ctx context.Context, req VerifyMFAAssertionRequest) error {
+	const op errors.Op = "domain/identity.VerifyMFAAssertion"
+
+	if s.deps.MFAStore == nil || s.deps.TOTP == nil || s.deps.Cipher == nil {
+		return errors.E(op, errors.Internal, "mfa dependencies not configured")
+	}
+
+	now := time.Now()
+
+	// Backup code assertion
+	if req.FactorID == "recovery" || req.BackupCode != "" {
+		if req.BackupCode == "" {
+			return errors.E(op, errors.Invalid, MFAInvalidCode, "missing backup code")
+		}
+		recovery, err := s.deps.MFAStore.GetRecovery(ctx, req.UserID)
+		if err != nil {
+			if errors.Is(err, errors.NotExist) {
+				return errors.E(op, errors.Invalid, MFAInvalidCode, "no backup recovery codes enrolled")
+			}
+			return errors.E(op, err)
+		}
+
+		remaining, valid := s.deps.TOTP.ValidateAndConsumeBackupCode(req.BackupCode, recovery.BackupCodes)
+		if !valid {
+			return errors.E(op, errors.Invalid, MFAInvalidCode, "invalid backup code")
+		}
+
+		if err := s.deps.MFAStore.UpsertRecovery(ctx, &MFARecovery{
+			UserID:      req.UserID,
+			BackupCodes: remaining,
+			UpdatedAt:   now,
+		}); err != nil {
+			return errors.E(op, fmt.Errorf("consume backup code: %w", err))
+		}
+
+		return nil
+	}
+
+	// TOTP assertion
+	if req.FactorID == "" {
+		return errors.E(op, errors.Invalid, "missing factor id")
+	}
+
+	factor, err := s.deps.MFAStore.GetFactorByID(ctx, MFAFactorID(req.FactorID))
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.NotExist, MFANotFound, "mfa factor not found")
+		}
+		return errors.E(op, err)
+	}
+
+	if factor.UserID != req.UserID {
+		return errors.E(op, errors.Permission, "factor does not belong to user")
+	}
+	if !factor.IsActive() {
+		return errors.E(op, errors.Invalid, "factor is not active")
+	}
+
+	totpCfg := factor.TOTPConfig()
+	if totpCfg == nil {
+		return errors.E(op, errors.Internal, "invalid factor config")
+	}
+
+	secret, err := s.deps.Cipher.Decrypt(totpCfg.EncryptedSecret)
+	if err != nil {
+		return errors.E(op, errors.Internal, fmt.Errorf("decrypt secret: %w", err))
+	}
+
+	if !s.deps.TOTP.ValidateCode(secret, req.TOTPCode, now) {
+		return errors.E(op, errors.Invalid, MFAInvalidCode, "invalid verification code")
+	}
+
+	factor.MarkUsed(now)
+	_ = s.deps.MFAStore.UpdateFactor(ctx, factor)
+
+	return nil
 }

@@ -100,11 +100,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await loginUser(req)
 
-      // Store tokens only — user profile is fetched from API
+      // Store tokens only if authentication was fully finalized
       if (res.accessToken) {
         authStorage.setSession(res.accessToken)
         setAccessToken(res.accessToken)
       }
+      return res
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to authenticate"

@@ -12,16 +12,34 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/token"
 )
 
-// LoginRequest represents the application input for the user authentication use case.
+// LoginRequest represents the application input for user authentication.
 type LoginRequest struct {
+	// Primary credentials (Step 1)
 	Identifier string
 	Password   string
-	UserAgent  string
-	IPAddress  string
+
+	// Second-factor assertion (Step 2)
+	MFATicket  string
+	FactorID   string
+	TOTPCode   string
+	BackupCode string
+
+	UserAgent string
+	IPAddress string
 }
 
-// LoginResponse represents the application output after successful user authentication.
+// MFAChallenge represents an active second-factor verification challenge.
+type MFAChallenge struct {
+	Ticket           string
+	AvailableFactors []*identity.MFAFactor
+}
+
+// LoginResponse represents the application output after successful user authentication or MFA challenge.
 type LoginResponse struct {
+	// MFA challenge details (when Step 2 verification is required)
+	MFA *MFAChallenge
+
+	// Finalized session fields
 	User                  *identity.User
 	AccessToken           string
 	AccessTokenExpiresAt  int64
@@ -29,19 +47,75 @@ type LoginResponse struct {
 	RefreshTokenExpiresAt int64
 }
 
-// Login authenticates credentials, issues access/refresh tokens, and persists the session.
+// Login authenticates credentials or MFA assertion, issues access/refresh tokens, and persists the session.
 func (c *coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error) {
-	const op errors.Op = "application/iam.Login"
 	now := time.Now()
 
-	// Look up user record first to manage failed attempts and lockout checks
+	if req.MFATicket != "" {
+		return c.loginWithMFATicket(ctx, req, now)
+	}
+
+	return c.loginWithCredentials(ctx, req, now)
+}
+
+// loginWithMFATicket verifies the second-factor assertion and finalizes the session.
+func (c *coordinator) loginWithMFATicket(ctx context.Context, req *LoginRequest, now time.Time) (*LoginResponse, error) {
+	const op errors.Op = "application/iam.loginWithMFATicket"
+
+	claims, err := c.tokenService.ValidateMFATicket(req.MFATicket, now)
+	if err != nil {
+		return nil, errors.E(op, errors.Unauthenticated, identity.MFAInvalidTicket, "invalid or expired mfa ticket")
+	}
+
+	userID := identity.UserID(claims.Subject)
+	user, err := c.identityService.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, errors.E(op, errors.Unauthenticated, identity.InvalidCredentials, "user not found")
+	}
+
+	if user.Status != identity.UserStatusActive || user.AuthVersion != claims.AuthVersion {
+		return nil, errors.E(op, errors.Unauthenticated, identity.InvalidCredentials, "account state changed")
+	}
+
+	if err := c.identityService.VerifyMFAAssertion(ctx, identity.VerifyMFAAssertionRequest{
+		UserID:     userID,
+		FactorID:   req.FactorID,
+		TOTPCode:   req.TOTPCode,
+		BackupCode: req.BackupCode,
+	}); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	// Security audit log for successful 2FA
+	eventID, _ := id.Generate("evt_")
+	_ = c.identityService.CreateSecurityEvent(ctx, &identity.SecurityEvent{
+		ID:        eventID,
+		UserID:    &user.ID,
+		Email:     user.Email,
+		EventType: identity.SecurityEventLoginSuccess,
+		IPAddress: req.IPAddress,
+		UserAgent: req.UserAgent,
+		CreatedAt: now,
+	})
+
+	return c.finalizeLoginSession(ctx, finalizeSessionParams{
+		User: user,
+		Req:  req,
+		Now:  now,
+	})
+}
+
+// loginWithCredentials verifies primary credentials, evaluates brute-force protection,
+// and issues either a second-factor challenge or a finalized authenticated session.
+func (c *coordinator) loginWithCredentials(ctx context.Context, req *LoginRequest, now time.Time) (*LoginResponse, error) {
+	const op errors.Op = "application/iam.loginWithCredentials"
+
 	user, err := c.identityService.GetUserByEmail(ctx, req.Identifier)
 	if err != nil {
-		// Fallback to username search
 		user, err = c.identityService.GetUserByUsername(ctx, req.Identifier)
 	}
 
-	// 1. If user does not exist, write fail event and abort (prevents timing side-channel leaks)
+	// 1. If user does not exist, write fail event and abort (prevents timing leaks)
 	if err != nil || user == nil {
 		eventID, _ := id.Generate("evt_")
 		_ = c.identityService.CreateSecurityEvent(ctx, &identity.SecurityEvent{
@@ -70,7 +144,7 @@ func (c *coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 		return nil, errors.E(op, errors.ResourceExhausted, identity.AccountLocked, "account is temporarily locked due to too many failed login attempts; please try again later")
 	}
 
-	// 3. Authenticate
+	// 3. Authenticate password
 	authUser, err := c.identityService.Authenticate(ctx, req.Identifier, req.Password)
 	if err != nil {
 		code := errors.CodeOf(err)
@@ -80,7 +154,6 @@ func (c *coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 			return nil, errors.E(op, err)
 		}
 
-		// Increment failed attempts
 		attempts := user.FailedLoginAttempts + 1
 		var lockedUntil *time.Time
 		var eventType = identity.SecurityEventLoginFailed
@@ -114,7 +187,7 @@ func (c *coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 		return nil, errors.E(op, errors.Unauthenticated, identity.InvalidCredentials, "invalid credentials")
 	}
 
-	// 4. On successful login, reset failed attempts & write success audit
+	// 4. On successful login, reset failed attempts
 	if user.FailedLoginAttempts > 0 || user.LockedUntil != nil {
 		_ = c.identityService.UpdateLockoutState(ctx, identity.UpdateLockoutRequest{
 			UserID:      user.ID,
@@ -123,6 +196,32 @@ func (c *coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 		})
 	}
 
+	// 5. Check if user has active enrolled MFA factors
+	hasMFA, factors, err := c.identityService.HasActiveMFA(ctx, authUser.ID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	if hasMFA {
+		ticket, _, err := c.tokenService.IssueMFATicket(token.IssueInput{
+			Subject:     string(authUser.ID),
+			AccessLevel: string(authUser.AccessLevel),
+			AuthVersion: authUser.AuthVersion,
+		}, now)
+		if err != nil {
+			return nil, errors.E(op, fmt.Errorf("issue mfa ticket: %w", err))
+		}
+
+		return &LoginResponse{
+			MFA: &MFAChallenge{
+				Ticket:           ticket,
+				AvailableFactors: factors,
+			},
+			User: authUser,
+		}, nil
+	}
+
+	// 6. Single-factor successful login: write audit event and finalize session
 	eventID, _ := id.Generate("evt_")
 	_ = c.identityService.CreateSecurityEvent(ctx, &identity.SecurityEvent{
 		ID:        eventID,
@@ -134,26 +233,41 @@ func (c *coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 		CreatedAt: now,
 	})
 
-	authVersion, err := c.identityService.GetAuthVersion(ctx, authUser.ID)
+	return c.finalizeLoginSession(ctx, finalizeSessionParams{
+		User: authUser,
+		Req:  req,
+		Now:  now,
+	})
+}
+
+type finalizeSessionParams struct {
+	User *identity.User
+	Req  *LoginRequest
+	Now  time.Time
+}
+
+func (c *coordinator) finalizeLoginSession(ctx context.Context, p finalizeSessionParams) (*LoginResponse, error) {
+	const op errors.Op = "iam.finalizeLoginSession"
+
+	authVersion, err := c.identityService.GetAuthVersion(ctx, p.User.ID)
 	if err != nil {
 		return nil, errors.E(op, fmt.Errorf("get auth version: %w", err))
 	}
 
 	accessToken, _, err := c.tokenService.IssueAccessToken(token.IssueInput{
-		Subject:     string(authUser.ID),
-		AccessLevel: string(authUser.AccessLevel),
+		Subject:     string(p.User.ID),
+		AccessLevel: string(p.User.AccessLevel),
 		AuthVersion: authVersion,
-	}, now)
+	}, p.Now)
 	if err != nil {
 		return nil, errors.E(op, fmt.Errorf("issue access token: %w", err))
 	}
 
-	// Session refresh token absolute expiry is 7 days, sliding window is 24 hours
 	refreshToken, _, err := c.tokenService.IssueRefreshToken(token.IssueInput{
-		Subject:     string(authUser.ID),
-		AccessLevel: string(authUser.AccessLevel),
+		Subject:     string(p.User.ID),
+		AccessLevel: string(p.User.AccessLevel),
 		AuthVersion: authVersion,
-	}, now, now.Add(7*24*time.Hour))
+	}, p.Now, p.Now.Add(7*24*time.Hour))
 	if err != nil {
 		return nil, errors.E(op, fmt.Errorf("issue refresh token: %w", err))
 	}
@@ -161,21 +275,21 @@ func (c *coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 	refreshTokenHash := hash.SHA256String(refreshToken)
 
 	if _, err := c.identityService.CreateSession(ctx, &identity.CreateSessionRequest{
-		UserID:            authUser.ID,
+		UserID:            p.User.ID,
 		RefreshTokenHash:  refreshTokenHash,
-		UserAgent:         req.UserAgent,
-		IPAddress:         req.IPAddress,
-		ExpiresAt:         now.Add(24 * time.Hour),
-		AbsoluteExpiresAt: now.Add(7 * 24 * time.Hour),
+		UserAgent:         p.Req.UserAgent,
+		IPAddress:         p.Req.IPAddress,
+		ExpiresAt:         p.Now.Add(24 * time.Hour),
+		AbsoluteExpiresAt: p.Now.Add(7 * 24 * time.Hour),
 	}); err != nil {
 		return nil, errors.E(op, fmt.Errorf("create session: %w", err))
 	}
 
 	return &LoginResponse{
-		User:                  authUser,
+		User:                  p.User,
 		AccessToken:           accessToken,
-		AccessTokenExpiresAt:  now.Add(15 * time.Minute).Unix(),
+		AccessTokenExpiresAt:  p.Now.Add(15 * time.Minute).Unix(),
 		RefreshToken:          refreshToken,
-		RefreshTokenExpiresAt: now.Add(24 * time.Hour).Unix(),
+		RefreshTokenExpiresAt: p.Now.Add(24 * time.Hour).Unix(),
 	}, nil
 }

@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -19,15 +20,21 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Identity_LoginUser_FullMethodName            = "/saturn.identity.v1.Identity/LoginUser"
-	Identity_RegisterUser_FullMethodName         = "/saturn.identity.v1.Identity/RegisterUser"
-	Identity_RefreshSession_FullMethodName       = "/saturn.identity.v1.Identity/RefreshSession"
-	Identity_Logout_FullMethodName               = "/saturn.identity.v1.Identity/Logout"
-	Identity_GetCurrentUser_FullMethodName       = "/saturn.identity.v1.Identity/GetCurrentUser"
-	Identity_ListActiveSessions_FullMethodName   = "/saturn.identity.v1.Identity/ListActiveSessions"
-	Identity_RevokeSession_FullMethodName        = "/saturn.identity.v1.Identity/RevokeSession"
-	Identity_RevokeAllSessions_FullMethodName    = "/saturn.identity.v1.Identity/RevokeAllSessions"
-	Identity_ListMySecurityEvents_FullMethodName = "/saturn.identity.v1.Identity/ListMySecurityEvents"
+	Identity_LoginUser_FullMethodName             = "/saturn.identity.v1.Identity/LoginUser"
+	Identity_RegisterUser_FullMethodName          = "/saturn.identity.v1.Identity/RegisterUser"
+	Identity_RefreshSession_FullMethodName        = "/saturn.identity.v1.Identity/RefreshSession"
+	Identity_Logout_FullMethodName                = "/saturn.identity.v1.Identity/Logout"
+	Identity_GetCurrentUser_FullMethodName        = "/saturn.identity.v1.Identity/GetCurrentUser"
+	Identity_ListActiveSessions_FullMethodName    = "/saturn.identity.v1.Identity/ListActiveSessions"
+	Identity_RevokeSession_FullMethodName         = "/saturn.identity.v1.Identity/RevokeSession"
+	Identity_RevokeAllSessions_FullMethodName     = "/saturn.identity.v1.Identity/RevokeAllSessions"
+	Identity_ListMySecurityEvents_FullMethodName  = "/saturn.identity.v1.Identity/ListMySecurityEvents"
+	Identity_ListMFAFactors_FullMethodName        = "/saturn.identity.v1.Identity/ListMFAFactors"
+	Identity_DeleteMFAFactor_FullMethodName       = "/saturn.identity.v1.Identity/DeleteMFAFactor"
+	Identity_SetPrimaryMFAFactor_FullMethodName   = "/saturn.identity.v1.Identity/SetPrimaryMFAFactor"
+	Identity_SetupTOTP_FullMethodName             = "/saturn.identity.v1.Identity/SetupTOTP"
+	Identity_ConfirmTOTP_FullMethodName           = "/saturn.identity.v1.Identity/ConfirmTOTP"
+	Identity_RegenerateBackupCodes_FullMethodName = "/saturn.identity.v1.Identity/RegenerateBackupCodes"
 )
 
 // IdentityClient is the client API for Identity service.
@@ -54,6 +61,18 @@ type IdentityClient interface {
 	RevokeAllSessions(ctx context.Context, in *RevokeAllSessionsRequest, opts ...grpc.CallOption) (*RevokeAllSessionsResponse, error)
 	// Lists security audit log events for the authenticated user.
 	ListMySecurityEvents(ctx context.Context, in *ListMySecurityEventsRequest, opts ...grpc.CallOption) (*ListMySecurityEventsResponse, error)
+	// Authenticated RPC: Lists all registered MFA factors for the caller.
+	ListMFAFactors(ctx context.Context, in *ListMFAFactorsRequest, opts ...grpc.CallOption) (*ListMFAFactorsResponse, error)
+	// Authenticated RPC: Revokes a registered MFA factor.
+	DeleteMFAFactor(ctx context.Context, in *DeleteMFAFactorRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Authenticated RPC: Sets a factor as the default/primary option.
+	SetPrimaryMFAFactor(ctx context.Context, in *SetPrimaryMFAFactorRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Authenticated RPC: Generates a new pending TOTP secret and QR code URI.
+	SetupTOTP(ctx context.Context, in *SetupTOTPRequest, opts ...grpc.CallOption) (*SetupTOTPResponse, error)
+	// Authenticated RPC: Confirms setup of the TOTP factor with a verification code.
+	ConfirmTOTP(ctx context.Context, in *ConfirmTOTPRequest, opts ...grpc.CallOption) (*ConfirmTOTPResponse, error)
+	// Authenticated RPC: Regenerates a fresh set of 8 single-use recovery codes.
+	RegenerateBackupCodes(ctx context.Context, in *RegenerateBackupCodesRequest, opts ...grpc.CallOption) (*RegenerateBackupCodesResponse, error)
 }
 
 type identityClient struct {
@@ -154,6 +173,66 @@ func (c *identityClient) ListMySecurityEvents(ctx context.Context, in *ListMySec
 	return out, nil
 }
 
+func (c *identityClient) ListMFAFactors(ctx context.Context, in *ListMFAFactorsRequest, opts ...grpc.CallOption) (*ListMFAFactorsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMFAFactorsResponse)
+	err := c.cc.Invoke(ctx, Identity_ListMFAFactors_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) DeleteMFAFactor(ctx context.Context, in *DeleteMFAFactorRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Identity_DeleteMFAFactor_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) SetPrimaryMFAFactor(ctx context.Context, in *SetPrimaryMFAFactorRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Identity_SetPrimaryMFAFactor_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) SetupTOTP(ctx context.Context, in *SetupTOTPRequest, opts ...grpc.CallOption) (*SetupTOTPResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetupTOTPResponse)
+	err := c.cc.Invoke(ctx, Identity_SetupTOTP_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) ConfirmTOTP(ctx context.Context, in *ConfirmTOTPRequest, opts ...grpc.CallOption) (*ConfirmTOTPResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConfirmTOTPResponse)
+	err := c.cc.Invoke(ctx, Identity_ConfirmTOTP_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) RegenerateBackupCodes(ctx context.Context, in *RegenerateBackupCodesRequest, opts ...grpc.CallOption) (*RegenerateBackupCodesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegenerateBackupCodesResponse)
+	err := c.cc.Invoke(ctx, Identity_RegenerateBackupCodes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IdentityServer is the server API for Identity service.
 // All implementations should embed UnimplementedIdentityServer
 // for forward compatibility.
@@ -178,6 +257,18 @@ type IdentityServer interface {
 	RevokeAllSessions(context.Context, *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error)
 	// Lists security audit log events for the authenticated user.
 	ListMySecurityEvents(context.Context, *ListMySecurityEventsRequest) (*ListMySecurityEventsResponse, error)
+	// Authenticated RPC: Lists all registered MFA factors for the caller.
+	ListMFAFactors(context.Context, *ListMFAFactorsRequest) (*ListMFAFactorsResponse, error)
+	// Authenticated RPC: Revokes a registered MFA factor.
+	DeleteMFAFactor(context.Context, *DeleteMFAFactorRequest) (*emptypb.Empty, error)
+	// Authenticated RPC: Sets a factor as the default/primary option.
+	SetPrimaryMFAFactor(context.Context, *SetPrimaryMFAFactorRequest) (*emptypb.Empty, error)
+	// Authenticated RPC: Generates a new pending TOTP secret and QR code URI.
+	SetupTOTP(context.Context, *SetupTOTPRequest) (*SetupTOTPResponse, error)
+	// Authenticated RPC: Confirms setup of the TOTP factor with a verification code.
+	ConfirmTOTP(context.Context, *ConfirmTOTPRequest) (*ConfirmTOTPResponse, error)
+	// Authenticated RPC: Regenerates a fresh set of 8 single-use recovery codes.
+	RegenerateBackupCodes(context.Context, *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error)
 }
 
 // UnimplementedIdentityServer should be embedded to have
@@ -213,6 +304,24 @@ func (UnimplementedIdentityServer) RevokeAllSessions(context.Context, *RevokeAll
 }
 func (UnimplementedIdentityServer) ListMySecurityEvents(context.Context, *ListMySecurityEventsRequest) (*ListMySecurityEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMySecurityEvents not implemented")
+}
+func (UnimplementedIdentityServer) ListMFAFactors(context.Context, *ListMFAFactorsRequest) (*ListMFAFactorsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMFAFactors not implemented")
+}
+func (UnimplementedIdentityServer) DeleteMFAFactor(context.Context, *DeleteMFAFactorRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteMFAFactor not implemented")
+}
+func (UnimplementedIdentityServer) SetPrimaryMFAFactor(context.Context, *SetPrimaryMFAFactorRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetPrimaryMFAFactor not implemented")
+}
+func (UnimplementedIdentityServer) SetupTOTP(context.Context, *SetupTOTPRequest) (*SetupTOTPResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetupTOTP not implemented")
+}
+func (UnimplementedIdentityServer) ConfirmTOTP(context.Context, *ConfirmTOTPRequest) (*ConfirmTOTPResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ConfirmTOTP not implemented")
+}
+func (UnimplementedIdentityServer) RegenerateBackupCodes(context.Context, *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RegenerateBackupCodes not implemented")
 }
 func (UnimplementedIdentityServer) testEmbeddedByValue() {}
 
@@ -396,6 +505,114 @@ func _Identity_ListMySecurityEvents_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Identity_ListMFAFactors_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMFAFactorsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).ListMFAFactors(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_ListMFAFactors_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).ListMFAFactors(ctx, req.(*ListMFAFactorsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_DeleteMFAFactor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteMFAFactorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).DeleteMFAFactor(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_DeleteMFAFactor_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).DeleteMFAFactor(ctx, req.(*DeleteMFAFactorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_SetPrimaryMFAFactor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPrimaryMFAFactorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).SetPrimaryMFAFactor(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_SetPrimaryMFAFactor_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).SetPrimaryMFAFactor(ctx, req.(*SetPrimaryMFAFactorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_SetupTOTP_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetupTOTPRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).SetupTOTP(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_SetupTOTP_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).SetupTOTP(ctx, req.(*SetupTOTPRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_ConfirmTOTP_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfirmTOTPRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).ConfirmTOTP(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_ConfirmTOTP_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).ConfirmTOTP(ctx, req.(*ConfirmTOTPRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_RegenerateBackupCodes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegenerateBackupCodesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).RegenerateBackupCodes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_RegenerateBackupCodes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).RegenerateBackupCodes(ctx, req.(*RegenerateBackupCodesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Identity_ServiceDesc is the grpc.ServiceDesc for Identity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -438,6 +655,30 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListMySecurityEvents",
 			Handler:    _Identity_ListMySecurityEvents_Handler,
+		},
+		{
+			MethodName: "ListMFAFactors",
+			Handler:    _Identity_ListMFAFactors_Handler,
+		},
+		{
+			MethodName: "DeleteMFAFactor",
+			Handler:    _Identity_DeleteMFAFactor_Handler,
+		},
+		{
+			MethodName: "SetPrimaryMFAFactor",
+			Handler:    _Identity_SetPrimaryMFAFactor_Handler,
+		},
+		{
+			MethodName: "SetupTOTP",
+			Handler:    _Identity_SetupTOTP_Handler,
+		},
+		{
+			MethodName: "ConfirmTOTP",
+			Handler:    _Identity_ConfirmTOTP_Handler,
+		},
+		{
+			MethodName: "RegenerateBackupCodes",
+			Handler:    _Identity_RegenerateBackupCodes_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
