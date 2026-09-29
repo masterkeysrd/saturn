@@ -24,176 +24,194 @@ export interface OTPInputProps {
   containerStyle?: StyleProp<ViewStyle>
 }
 
-export function OTPInput({
-  value,
-  onChangeText,
-  onComplete,
-  length = 6,
-  autoFocus = false,
-  error,
-  disabled = false,
-  label,
-  containerStyle,
-}: OTPInputProps) {
-  const inputRef = useRef<RNTextInput>(null)
-  const [isFocused, setIsFocused] = useState(false)
-  const blinkAnim = useRef(new Animated.Value(1)).current
+export const OTPInput = React.forwardRef<RNTextInput, OTPInputProps>(
+  function OTPInput(
+    {
+      value,
+      onChangeText,
+      onComplete,
+      length = 6,
+      autoFocus = false,
+      error,
+      disabled = false,
+      label,
+      containerStyle,
+    }: OTPInputProps,
+    ref
+  ) {
+    const internalRef = useRef<RNTextInput>(null)
+    const inputRef = (ref as React.RefObject<RNTextInput>) || internalRef
+    const [isFocused, setIsFocused] = useState(false)
+    const blinkAnim = useRef(new Animated.Value(1)).current
 
-  // Blinking cursor effect for current active slot
-  useEffect(() => {
-    if (isFocused) {
-      const animation = Animated.loop(
-        Animated.sequence([
-          Animated.timing(blinkAnim, {
-            toValue: 0,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(blinkAnim, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-        ])
-      )
-      animation.start()
-      return () => animation.stop()
-    } else {
-      blinkAnim.setValue(1)
+    // Delayed focus for Android & Modal transitions
+    useEffect(() => {
+      if (autoFocus && !disabled) {
+        const timer = setTimeout(() => {
+          inputRef.current?.focus()
+        }, 150)
+        return () => clearTimeout(timer)
+      }
+    }, [autoFocus, disabled])
+
+    // Blinking cursor effect for current active slot
+    useEffect(() => {
+      if (isFocused) {
+        const animation = Animated.loop(
+          Animated.sequence([
+            Animated.timing(blinkAnim, {
+              toValue: 0,
+              duration: 500,
+              useNativeDriver: true,
+            }),
+            Animated.timing(blinkAnim, {
+              toValue: 1,
+              duration: 500,
+              useNativeDriver: true,
+            }),
+          ])
+        )
+        animation.start()
+        return () => animation.stop()
+      } else {
+        blinkAnim.setValue(1)
+      }
+    }, [isFocused, blinkAnim])
+
+    const handlePress = () => {
+      if (!disabled) {
+        inputRef.current?.focus()
+      }
     }
-  }, [isFocused, blinkAnim])
 
-  const handlePress = () => {
-    if (!disabled) {
-      inputRef.current?.focus()
+    const handleChangeText = (text: string) => {
+      const clean = text.replace(/[^0-9]/g, "").slice(0, length)
+      onChangeText(clean)
+
+      if (clean.length === length) {
+        haptics.success()
+        onComplete?.(clean)
+      }
     }
-  }
 
-  const handleChangeText = (text: string) => {
-    const clean = text.replace(/[^0-9]/g, "").slice(0, length)
-    onChangeText(clean)
+    const half = Math.floor(length / 2)
+    const digits = value.split("")
 
-    if (clean.length === length) {
-      haptics.success()
-      onComplete?.(clean)
-    }
-  }
+    return (
+      <View style={[styles.container, containerStyle]}>
+        {label && <Text style={styles.label}>{label}</Text>}
 
-  const half = Math.floor(length / 2)
-  const digits = value.split("")
-
-  return (
-    <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
-
-      {/* Hidden underlying text input capturing keyboard, paste, and autofill */}
-      <RNTextInput
-        ref={inputRef}
-        value={value}
-        onChangeText={handleChangeText}
-        maxLength={length}
-        keyboardType="number-pad"
-        textContentType="oneTimeCode"
-        autoComplete="one-time-code"
-        autoFocus={autoFocus}
-        editable={!disabled}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        style={styles.hiddenInput}
-        caretHidden
-      />
-
-      {/* Visual Segmented 6-Box Display */}
-      <TouchableOpacity
-        activeOpacity={1}
-        onPress={handlePress}
-        style={styles.slotsRow}
-        disabled={disabled}
-      >
-        {/* First Half */}
-        <View style={styles.slotGroup}>
-          {Array.from({ length: half }, (_, i) => {
-            const digit = digits[i] || ""
-            const isCurrent =
-              isFocused &&
-              (i === digits.length ||
-                (i === length - 1 && digits.length === length))
-            const isFilled = Boolean(digit)
-
-            return (
-              <View
-                key={i}
-                style={[
-                  styles.slot,
-                  isFilled && styles.slotFilled,
-                  isCurrent && styles.slotActive,
-                  Boolean(error) && styles.slotError,
-                  disabled && styles.slotDisabled,
-                ]}
-              >
-                {digit ? (
-                  <Text style={styles.digitText}>{digit}</Text>
-                ) : isCurrent ? (
-                  <Animated.View
-                    style={[styles.cursor, { opacity: blinkAnim }]}
-                  />
-                ) : null}
-              </View>
-            )
-          })}
-        </View>
-
-        {/* Center Separator Dash */}
-        <View style={styles.separatorContainer}>
-          <View
-            style={[
-              styles.separatorDash,
-              Boolean(error) && styles.separatorDashError,
-            ]}
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={handlePress}
+          style={styles.inputWrapper}
+          disabled={disabled}
+        >
+          {/* Hidden underlying text input capturing keyboard, paste, and autofill */}
+          <RNTextInput
+            ref={inputRef}
+            value={value}
+            onChangeText={handleChangeText}
+            maxLength={length}
+            keyboardType="number-pad"
+            textContentType="oneTimeCode"
+            autoComplete="one-time-code"
+            autoFocus={autoFocus}
+            editable={!disabled}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            style={styles.hiddenInput}
+            caretHidden
           />
-        </View>
 
-        {/* Second Half */}
-        <View style={styles.slotGroup}>
-          {Array.from({ length: length - half }, (_, i) => {
-            const idx = half + i
-            const digit = digits[idx] || ""
-            const isCurrent =
-              isFocused &&
-              (idx === digits.length ||
-                (idx === length - 1 && digits.length === length))
-            const isFilled = Boolean(digit)
+          {/* Visual Segmented 6-Box Display */}
+          <View style={styles.slotsRow} pointerEvents="none">
+            {/* First Half */}
+            <View style={styles.slotGroup}>
+              {Array.from({ length: half }, (_, i) => {
+                const digit = digits[i] || ""
+                const isCurrent =
+                  isFocused &&
+                  (i === digits.length ||
+                    (i === length - 1 && digits.length === length))
+                const isFilled = Boolean(digit)
 
-            return (
+                return (
+                  <View
+                    key={i}
+                    style={[
+                      styles.slot,
+                      isFilled && styles.slotFilled,
+                      isCurrent && styles.slotActive,
+                      Boolean(error) && styles.slotError,
+                      disabled && styles.slotDisabled,
+                    ]}
+                  >
+                    {digit ? (
+                      <Text style={styles.digitText}>{digit}</Text>
+                    ) : isCurrent ? (
+                      <Animated.View
+                        style={[styles.cursor, { opacity: blinkAnim }]}
+                      />
+                    ) : null}
+                  </View>
+                )
+              })}
+            </View>
+
+            {/* Center Separator Dash */}
+            <View style={styles.separatorContainer}>
               <View
-                key={idx}
                 style={[
-                  styles.slot,
-                  isFilled && styles.slotFilled,
-                  isCurrent && styles.slotActive,
-                  Boolean(error) && styles.slotError,
-                  disabled && styles.slotDisabled,
+                  styles.separatorDash,
+                  Boolean(error) && styles.separatorDashError,
                 ]}
-              >
-                {digit ? (
-                  <Text style={styles.digitText}>{digit}</Text>
-                ) : isCurrent ? (
-                  <Animated.View
-                    style={[styles.cursor, { opacity: blinkAnim }]}
-                  />
-                ) : null}
-              </View>
-            )
-          })}
-        </View>
-      </TouchableOpacity>
+              />
+            </View>
 
-      {typeof error === "string" && error && (
-        <Text style={styles.errorText}>{error}</Text>
-      )}
-    </View>
-  )
-}
+            {/* Second Half */}
+            <View style={styles.slotGroup}>
+              {Array.from({ length: length - half }, (_, i) => {
+                const idx = half + i
+                const digit = digits[idx] || ""
+                const isCurrent =
+                  isFocused &&
+                  (idx === digits.length ||
+                    (idx === length - 1 && digits.length === length))
+                const isFilled = Boolean(digit)
+
+                return (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.slot,
+                      isFilled && styles.slotFilled,
+                      isCurrent && styles.slotActive,
+                      Boolean(error) && styles.slotError,
+                      disabled && styles.slotDisabled,
+                    ]}
+                  >
+                    {digit ? (
+                      <Text style={styles.digitText}>{digit}</Text>
+                    ) : isCurrent ? (
+                      <Animated.View
+                        style={[styles.cursor, { opacity: blinkAnim }]}
+                      />
+                    ) : null}
+                  </View>
+                )
+              })}
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {typeof error === "string" && error && (
+          <Text style={styles.errorText}>{error}</Text>
+        )}
+      </View>
+    )
+  }
+)
 
 const styles = StyleSheet.create({
   container: {
@@ -207,11 +225,17 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
     alignSelf: "center",
   },
+  inputWrapper: {
+    position: "relative",
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   hiddenInput: {
-    position: "absolute",
-    opacity: 0,
-    width: 1,
-    height: 1,
+    ...StyleSheet.absoluteFill,
+    opacity: 0.01,
+    color: "transparent",
+    backgroundColor: "transparent",
   },
   slotsRow: {
     flexDirection: "row",

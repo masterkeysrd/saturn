@@ -68,3 +68,23 @@ type MFAFactorStore interface {
 	GetRecovery(ctx context.Context, userID UserID) (*MFARecovery, error)
 	UpsertRecovery(ctx context.Context, recovery *MFARecovery) error
 }
+
+//go:generate go run github.com/masterkeysrd/saturn/tools/mockgen .
+
+// DeviceStore defines persistence operations for trusted hardware devices.
+// @Mock
+type DeviceStore interface {
+	CreateDevice(ctx context.Context, device *Device) error
+	GetDeviceByID(ctx context.Context, id DeviceID) (*Device, error)
+	ListDevicesByUserID(ctx context.Context, userID UserID) ([]*Device, error)
+	UpdateDeviceLastUsed(ctx context.Context, id DeviceID, lastUsedAt time.Time) error
+	RevokeDevice(ctx context.Context, id DeviceID, revokedAt time.Time) error
+	RevokeAllByUserID(ctx context.Context, userID UserID, revokedAt time.Time) error
+}
+
+// AuthChallengeStore defines persistence operations for ephemeral authentication challenges.
+// @Mock
+type AuthChallengeStore interface {
+	CreateChallenge(ctx context.Context, challenge *Challenge) error
+	ConsumeChallenge(ctx context.Context, nonce string, now time.Time) (bool, error)
+}

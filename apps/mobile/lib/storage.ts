@@ -11,6 +11,9 @@ const KEYS = {
   BIOMETRIC_ENABLED: "saturn_biometric_enabled",
   USER_PROFILE: "saturn_user_profile",
   REMEMBERED_IDENTIFIER: "saturn_remembered_identifier",
+  DEVICE_ID: "saturn_device_id",
+  DEVICE_PUBLIC_KEY: "saturn_device_public_key",
+  DEVICE_PRIVATE_KEY: "saturn_device_private_key",
 } as const
 
 async function secureGet(key: string): Promise<string | null> {
@@ -130,6 +133,55 @@ export async function setBiometricEnabled(enabled: boolean): Promise<void> {
   } else {
     await secureDelete(KEYS.BIOMETRIC_ENABLED)
   }
+}
+
+export async function getStoredDeviceId(): Promise<string | null> {
+  return secureGet(KEYS.DEVICE_ID)
+}
+
+export async function setStoredDeviceId(id: string | null): Promise<void> {
+  if (id) {
+    await secureSet(KEYS.DEVICE_ID, id)
+  } else {
+    await secureDelete(KEYS.DEVICE_ID)
+  }
+}
+
+export async function getStoredDevicePublicKey(): Promise<string | null> {
+  return secureGet(KEYS.DEVICE_PUBLIC_KEY)
+}
+
+export async function setStoredDevicePublicKey(
+  key: string | null
+): Promise<void> {
+  if (key) {
+    await secureSet(KEYS.DEVICE_PUBLIC_KEY, key)
+  } else {
+    await secureDelete(KEYS.DEVICE_PUBLIC_KEY)
+  }
+}
+
+export async function getStoredDevicePrivateKey(): Promise<string | null> {
+  return secureGet(KEYS.DEVICE_PRIVATE_KEY)
+}
+
+export async function setStoredDevicePrivateKey(
+  key: string | null
+): Promise<void> {
+  if (key) {
+    await secureSet(KEYS.DEVICE_PRIVATE_KEY, key)
+  } else {
+    await secureDelete(KEYS.DEVICE_PRIVATE_KEY)
+  }
+}
+
+export async function clearDeviceEnrollment(): Promise<void> {
+  await Promise.all([
+    secureDelete(KEYS.BIOMETRIC_ENABLED),
+    secureDelete(KEYS.DEVICE_ID),
+    secureDelete(KEYS.DEVICE_PUBLIC_KEY),
+    secureDelete(KEYS.DEVICE_PRIVATE_KEY),
+  ])
 }
 
 export interface StoredUserProfile {

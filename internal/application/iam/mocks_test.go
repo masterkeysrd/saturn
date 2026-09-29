@@ -84,6 +84,18 @@ type CoordinatorMock struct {
 	// RegenerateBackupCodesFunc mocks the RegenerateBackupCodes method.
 	RegenerateBackupCodesFunc func(ctx context.Context, req *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error)
 
+	// CreateAuthChallengeFunc mocks the CreateAuthChallenge method.
+	CreateAuthChallengeFunc func(ctx context.Context) (*CreateAuthChallengeResponse, error)
+
+	// CreateDeviceFunc mocks the CreateDevice method.
+	CreateDeviceFunc func(ctx context.Context, req *CreateDeviceRequest) (*identity.Device, error)
+
+	// ListDevicesFunc mocks the ListDevices method.
+	ListDevicesFunc func(ctx context.Context, req *ListDevicesRequest) (*ListDevicesResponse, error)
+
+	// RevokeDeviceFunc mocks the RevokeDevice method.
+	RevokeDeviceFunc func(ctx context.Context, req *RevokeDeviceRequest) error
+
 	// calls tracks calls to the methods.
 	calls struct {
 		Authenticate []struct {
@@ -175,6 +187,21 @@ type CoordinatorMock struct {
 			Ctx context.Context
 			Req *RegenerateBackupCodesRequest
 		}
+		CreateAuthChallenge []struct {
+			Ctx context.Context
+		}
+		CreateDevice []struct {
+			Ctx context.Context
+			Req *CreateDeviceRequest
+		}
+		ListDevices []struct {
+			Ctx context.Context
+			Req *ListDevicesRequest
+		}
+		RevokeDevice []struct {
+			Ctx context.Context
+			Req *RevokeDeviceRequest
+		}
 	}
 	lockAuthenticate          sync.RWMutex
 	lockGetAuthVersion        sync.RWMutex
@@ -198,6 +225,10 @@ type CoordinatorMock struct {
 	lockSetupTOTP             sync.RWMutex
 	lockConfirmTOTP           sync.RWMutex
 	lockRegenerateBackupCodes sync.RWMutex
+	lockCreateAuthChallenge   sync.RWMutex
+	lockCreateDevice          sync.RWMutex
+	lockListDevices           sync.RWMutex
+	lockRevokeDevice          sync.RWMutex
 }
 
 // Authenticate calls AuthenticateFunc.
@@ -797,6 +828,111 @@ func (mock *CoordinatorMock) RegenerateBackupCodesCalls() []struct {
 	return mock.calls.RegenerateBackupCodes
 }
 
+// CreateAuthChallenge calls CreateAuthChallengeFunc.
+func (mock *CoordinatorMock) CreateAuthChallenge(ctx context.Context) (*CreateAuthChallengeResponse, error) {
+	if mock.CreateAuthChallengeFunc == nil {
+		panic("CoordinatorMock.CreateAuthChallengeFunc: method is nil but Coordinator.CreateAuthChallenge was just called")
+	}
+	mock.lockCreateAuthChallenge.Lock()
+	mock.calls.CreateAuthChallenge = append(mock.calls.CreateAuthChallenge, struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	})
+	mock.lockCreateAuthChallenge.Unlock()
+	return mock.CreateAuthChallengeFunc(ctx)
+}
+
+// CreateAuthChallengeCalls returns all calls made to CreateAuthChallenge.
+func (mock *CoordinatorMock) CreateAuthChallengeCalls() []struct {
+	Ctx context.Context
+} {
+	mock.lockCreateAuthChallenge.RLock()
+	defer mock.lockCreateAuthChallenge.RUnlock()
+	return mock.calls.CreateAuthChallenge
+}
+
+// CreateDevice calls CreateDeviceFunc.
+func (mock *CoordinatorMock) CreateDevice(ctx context.Context, req *CreateDeviceRequest) (*identity.Device, error) {
+	if mock.CreateDeviceFunc == nil {
+		panic("CoordinatorMock.CreateDeviceFunc: method is nil but Coordinator.CreateDevice was just called")
+	}
+	mock.lockCreateDevice.Lock()
+	mock.calls.CreateDevice = append(mock.calls.CreateDevice, struct {
+		Ctx context.Context
+		Req *CreateDeviceRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockCreateDevice.Unlock()
+	return mock.CreateDeviceFunc(ctx, req)
+}
+
+// CreateDeviceCalls returns all calls made to CreateDevice.
+func (mock *CoordinatorMock) CreateDeviceCalls() []struct {
+	Ctx context.Context
+	Req *CreateDeviceRequest
+} {
+	mock.lockCreateDevice.RLock()
+	defer mock.lockCreateDevice.RUnlock()
+	return mock.calls.CreateDevice
+}
+
+// ListDevices calls ListDevicesFunc.
+func (mock *CoordinatorMock) ListDevices(ctx context.Context, req *ListDevicesRequest) (*ListDevicesResponse, error) {
+	if mock.ListDevicesFunc == nil {
+		panic("CoordinatorMock.ListDevicesFunc: method is nil but Coordinator.ListDevices was just called")
+	}
+	mock.lockListDevices.Lock()
+	mock.calls.ListDevices = append(mock.calls.ListDevices, struct {
+		Ctx context.Context
+		Req *ListDevicesRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockListDevices.Unlock()
+	return mock.ListDevicesFunc(ctx, req)
+}
+
+// ListDevicesCalls returns all calls made to ListDevices.
+func (mock *CoordinatorMock) ListDevicesCalls() []struct {
+	Ctx context.Context
+	Req *ListDevicesRequest
+} {
+	mock.lockListDevices.RLock()
+	defer mock.lockListDevices.RUnlock()
+	return mock.calls.ListDevices
+}
+
+// RevokeDevice calls RevokeDeviceFunc.
+func (mock *CoordinatorMock) RevokeDevice(ctx context.Context, req *RevokeDeviceRequest) error {
+	if mock.RevokeDeviceFunc == nil {
+		panic("CoordinatorMock.RevokeDeviceFunc: method is nil but Coordinator.RevokeDevice was just called")
+	}
+	mock.lockRevokeDevice.Lock()
+	mock.calls.RevokeDevice = append(mock.calls.RevokeDevice, struct {
+		Ctx context.Context
+		Req *RevokeDeviceRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockRevokeDevice.Unlock()
+	return mock.RevokeDeviceFunc(ctx, req)
+}
+
+// RevokeDeviceCalls returns all calls made to RevokeDevice.
+func (mock *CoordinatorMock) RevokeDeviceCalls() []struct {
+	Ctx context.Context
+	Req *RevokeDeviceRequest
+} {
+	mock.lockRevokeDevice.RLock()
+	defer mock.lockRevokeDevice.RUnlock()
+	return mock.calls.RevokeDevice
+}
+
 // Compile-time interface assertion.
 var _ PasswordHasher = (*PasswordHasherMock)(nil)
 
@@ -1198,6 +1334,21 @@ type IdentityServiceMock struct {
 	// VerifyMFAAssertionFunc mocks the VerifyMFAAssertion method.
 	VerifyMFAAssertionFunc func(ctx context.Context, req identity.VerifyMFAAssertionRequest) error
 
+	// CreateAuthChallengeFunc mocks the CreateAuthChallenge method.
+	CreateAuthChallengeFunc func(ctx context.Context) (*identity.Challenge, error)
+
+	// CreateDeviceFunc mocks the CreateDevice method.
+	CreateDeviceFunc func(ctx context.Context, req identity.CreateDeviceRequest) (*identity.Device, error)
+
+	// ListDevicesFunc mocks the ListDevices method.
+	ListDevicesFunc func(ctx context.Context, userID identity.UserID) ([]*identity.Device, error)
+
+	// RevokeDeviceFunc mocks the RevokeDevice method.
+	RevokeDeviceFunc func(ctx context.Context, userID identity.UserID, deviceID identity.DeviceID) error
+
+	// VerifyDeviceAssertionFunc mocks the VerifyDeviceAssertion method.
+	VerifyDeviceAssertionFunc func(ctx context.Context, req identity.VerifyDeviceAssertionRequest) (*identity.Device, *identity.User, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		CreateUser []struct {
@@ -1332,6 +1483,26 @@ type IdentityServiceMock struct {
 			Ctx context.Context
 			Req identity.VerifyMFAAssertionRequest
 		}
+		CreateAuthChallenge []struct {
+			Ctx context.Context
+		}
+		CreateDevice []struct {
+			Ctx context.Context
+			Req identity.CreateDeviceRequest
+		}
+		ListDevices []struct {
+			Ctx    context.Context
+			UserID identity.UserID
+		}
+		RevokeDevice []struct {
+			Ctx      context.Context
+			UserID   identity.UserID
+			DeviceID identity.DeviceID
+		}
+		VerifyDeviceAssertion []struct {
+			Ctx context.Context
+			Req identity.VerifyDeviceAssertionRequest
+		}
 	}
 	lockCreateUser                       sync.RWMutex
 	lockCreateCredential                 sync.RWMutex
@@ -1365,6 +1536,11 @@ type IdentityServiceMock struct {
 	lockSetPrimaryMFAFactor              sync.RWMutex
 	lockRegenerateBackupCodes            sync.RWMutex
 	lockVerifyMFAAssertion               sync.RWMutex
+	lockCreateAuthChallenge              sync.RWMutex
+	lockCreateDevice                     sync.RWMutex
+	lockListDevices                      sync.RWMutex
+	lockRevokeDevice                     sync.RWMutex
+	lockVerifyDeviceAssertion            sync.RWMutex
 }
 
 // CreateUser calls CreateUserFunc.
@@ -2241,6 +2417,141 @@ func (mock *IdentityServiceMock) VerifyMFAAssertionCalls() []struct {
 	mock.lockVerifyMFAAssertion.RLock()
 	defer mock.lockVerifyMFAAssertion.RUnlock()
 	return mock.calls.VerifyMFAAssertion
+}
+
+// CreateAuthChallenge calls CreateAuthChallengeFunc.
+func (mock *IdentityServiceMock) CreateAuthChallenge(ctx context.Context) (*identity.Challenge, error) {
+	if mock.CreateAuthChallengeFunc == nil {
+		panic("IdentityServiceMock.CreateAuthChallengeFunc: method is nil but IdentityService.CreateAuthChallenge was just called")
+	}
+	mock.lockCreateAuthChallenge.Lock()
+	mock.calls.CreateAuthChallenge = append(mock.calls.CreateAuthChallenge, struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	})
+	mock.lockCreateAuthChallenge.Unlock()
+	return mock.CreateAuthChallengeFunc(ctx)
+}
+
+// CreateAuthChallengeCalls returns all calls made to CreateAuthChallenge.
+func (mock *IdentityServiceMock) CreateAuthChallengeCalls() []struct {
+	Ctx context.Context
+} {
+	mock.lockCreateAuthChallenge.RLock()
+	defer mock.lockCreateAuthChallenge.RUnlock()
+	return mock.calls.CreateAuthChallenge
+}
+
+// CreateDevice calls CreateDeviceFunc.
+func (mock *IdentityServiceMock) CreateDevice(ctx context.Context, req identity.CreateDeviceRequest) (*identity.Device, error) {
+	if mock.CreateDeviceFunc == nil {
+		panic("IdentityServiceMock.CreateDeviceFunc: method is nil but IdentityService.CreateDevice was just called")
+	}
+	mock.lockCreateDevice.Lock()
+	mock.calls.CreateDevice = append(mock.calls.CreateDevice, struct {
+		Ctx context.Context
+		Req identity.CreateDeviceRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockCreateDevice.Unlock()
+	return mock.CreateDeviceFunc(ctx, req)
+}
+
+// CreateDeviceCalls returns all calls made to CreateDevice.
+func (mock *IdentityServiceMock) CreateDeviceCalls() []struct {
+	Ctx context.Context
+	Req identity.CreateDeviceRequest
+} {
+	mock.lockCreateDevice.RLock()
+	defer mock.lockCreateDevice.RUnlock()
+	return mock.calls.CreateDevice
+}
+
+// ListDevices calls ListDevicesFunc.
+func (mock *IdentityServiceMock) ListDevices(ctx context.Context, userID identity.UserID) ([]*identity.Device, error) {
+	if mock.ListDevicesFunc == nil {
+		panic("IdentityServiceMock.ListDevicesFunc: method is nil but IdentityService.ListDevices was just called")
+	}
+	mock.lockListDevices.Lock()
+	mock.calls.ListDevices = append(mock.calls.ListDevices, struct {
+		Ctx    context.Context
+		UserID identity.UserID
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+	})
+	mock.lockListDevices.Unlock()
+	return mock.ListDevicesFunc(ctx, userID)
+}
+
+// ListDevicesCalls returns all calls made to ListDevices.
+func (mock *IdentityServiceMock) ListDevicesCalls() []struct {
+	Ctx    context.Context
+	UserID identity.UserID
+} {
+	mock.lockListDevices.RLock()
+	defer mock.lockListDevices.RUnlock()
+	return mock.calls.ListDevices
+}
+
+// RevokeDevice calls RevokeDeviceFunc.
+func (mock *IdentityServiceMock) RevokeDevice(ctx context.Context, userID identity.UserID, deviceID identity.DeviceID) error {
+	if mock.RevokeDeviceFunc == nil {
+		panic("IdentityServiceMock.RevokeDeviceFunc: method is nil but IdentityService.RevokeDevice was just called")
+	}
+	mock.lockRevokeDevice.Lock()
+	mock.calls.RevokeDevice = append(mock.calls.RevokeDevice, struct {
+		Ctx      context.Context
+		UserID   identity.UserID
+		DeviceID identity.DeviceID
+	}{
+		Ctx:      ctx,
+		UserID:   userID,
+		DeviceID: deviceID,
+	})
+	mock.lockRevokeDevice.Unlock()
+	return mock.RevokeDeviceFunc(ctx, userID, deviceID)
+}
+
+// RevokeDeviceCalls returns all calls made to RevokeDevice.
+func (mock *IdentityServiceMock) RevokeDeviceCalls() []struct {
+	Ctx      context.Context
+	UserID   identity.UserID
+	DeviceID identity.DeviceID
+} {
+	mock.lockRevokeDevice.RLock()
+	defer mock.lockRevokeDevice.RUnlock()
+	return mock.calls.RevokeDevice
+}
+
+// VerifyDeviceAssertion calls VerifyDeviceAssertionFunc.
+func (mock *IdentityServiceMock) VerifyDeviceAssertion(ctx context.Context, req identity.VerifyDeviceAssertionRequest) (*identity.Device, *identity.User, error) {
+	if mock.VerifyDeviceAssertionFunc == nil {
+		panic("IdentityServiceMock.VerifyDeviceAssertionFunc: method is nil but IdentityService.VerifyDeviceAssertion was just called")
+	}
+	mock.lockVerifyDeviceAssertion.Lock()
+	mock.calls.VerifyDeviceAssertion = append(mock.calls.VerifyDeviceAssertion, struct {
+		Ctx context.Context
+		Req identity.VerifyDeviceAssertionRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockVerifyDeviceAssertion.Unlock()
+	return mock.VerifyDeviceAssertionFunc(ctx, req)
+}
+
+// VerifyDeviceAssertionCalls returns all calls made to VerifyDeviceAssertion.
+func (mock *IdentityServiceMock) VerifyDeviceAssertionCalls() []struct {
+	Ctx context.Context
+	Req identity.VerifyDeviceAssertionRequest
+} {
+	mock.lockVerifyDeviceAssertion.RLock()
+	defer mock.lockVerifyDeviceAssertion.RUnlock()
+	return mock.calls.VerifyDeviceAssertion
 }
 
 // Compile-time interface assertion.

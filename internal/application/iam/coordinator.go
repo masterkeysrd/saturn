@@ -43,6 +43,10 @@ type Coordinator interface {
 	SetupTOTP(ctx context.Context, req *SetupTOTPRequest) (*SetupTOTPResponse, error)
 	ConfirmTOTP(ctx context.Context, req *ConfirmTOTPRequest) (*ConfirmTOTPResponse, error)
 	RegenerateBackupCodes(ctx context.Context, req *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error)
+	CreateAuthChallenge(ctx context.Context) (*CreateAuthChallengeResponse, error)
+	CreateDevice(ctx context.Context, req *CreateDeviceRequest) (*identity.Device, error)
+	ListDevices(ctx context.Context, req *ListDevicesRequest) (*ListDevicesResponse, error)
+	RevokeDevice(ctx context.Context, req *RevokeDeviceRequest) error
 }
 
 // PasswordHasher defines the interface for computing and verifying password hashes.
@@ -146,6 +150,11 @@ type IdentityService interface {
 	SetPrimaryMFAFactor(ctx context.Context, req identity.SetPrimaryMFAFactorRequest) error
 	RegenerateBackupCodes(ctx context.Context, req identity.RegenerateBackupCodesRequest) ([]string, error)
 	VerifyMFAAssertion(ctx context.Context, req identity.VerifyMFAAssertionRequest) error
+	CreateAuthChallenge(ctx context.Context) (*identity.Challenge, error)
+	CreateDevice(ctx context.Context, req identity.CreateDeviceRequest) (*identity.Device, error)
+	ListDevices(ctx context.Context, userID identity.UserID) ([]*identity.Device, error)
+	RevokeDevice(ctx context.Context, userID identity.UserID, deviceID identity.DeviceID) error
+	VerifyDeviceAssertion(ctx context.Context, req identity.VerifyDeviceAssertionRequest) (*identity.Device, *identity.User, error)
 }
 
 // SpaceService defines the interface for space operations required by IAM application.

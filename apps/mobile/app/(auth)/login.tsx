@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   KeyRound,
   ArrowLeft,
+  Fingerprint,
 } from "lucide-react-native"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
@@ -34,13 +35,15 @@ import { haptics } from "@/lib/haptics"
 
 export default function LoginScreen() {
   const router = useRouter()
-  const { login } = useAuth()
+  const { login, isDeviceEnrolled, biometricLabel, loginWithBiometrics } =
+    useAuth()
   const toast = useToast()
   const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [biometricLoading, setBiometricLoading] = useState(false)
 
   // MFA Challenge State
   const [mfaStep, setMfaStep] = useState(false)
@@ -65,6 +68,50 @@ export default function LoginScreen() {
     }
     loadRemembered()
   }, [])
+
+  const handleBiometricLogin = async () => {
+    setBiometricLoading(true)
+    setError(null)
+    try {
+      await loginWithBiometrics()
+      toast.show({
+        type: "success",
+        title: "Welcome back!",
+        message: "Signed in with biometrics",
+      })
+      router.replace("/(app)/(tabs)")
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Biometric sign-in failed"
+      // If user dismissed the prompt, avoid intrusive error
+      if (!msg.toLowerCase().includes("cancel")) {
+        setError(msg)
+        toast.show({
+          type: "error",
+          title: "Biometric sign-in failed",
+          message: msg,
+        })
+      }
+    } finally {
+      setBiometricLoading(false)
+    }
+  }
+
+  // Offer automatic biometric prompt when enrolled device opens
+  useEffect(() => {
+    let mounted = true
+    if (isDeviceEnrolled && !mfaStep) {
+      const timer = setTimeout(() => {
+        if (mounted) {
+          handleBiometricLogin()
+        }
+      }, 400)
+      return () => {
+        mounted = false
+        clearTimeout(timer)
+      }
+    }
+  }, [isDeviceEnrolled])
 
   const handleLogin = async () => {
     if (!identifier.trim() || !password) {
@@ -327,6 +374,31 @@ export default function LoginScreen() {
               </View>
 
               <Card style={styles.formCard}>
+                {isDeviceEnrolled && (
+                  <View style={styles.biometricSection}>
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      loading={biometricLoading}
+                      onPress={handleBiometricLogin}
+                      leftIcon={
+                        <Fingerprint size={18} color={theme.colors.primary} />
+                      }
+                      style={styles.biometricButton}
+                    >
+                      {`Sign in with ${biometricLabel || "Biometrics"}`}
+                    </Button>
+
+                    <View style={styles.dividerRow}>
+                      <View style={styles.dividerLine} />
+                      <Text style={styles.dividerText}>
+                        or continue with password
+                      </Text>
+                      <View style={styles.dividerLine} />
+                    </View>
+                  </View>
+                )}
+
                 <TextInput
                   label="Username or Email"
                   placeholder="user@example.com or username"
@@ -554,5 +626,28 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: theme.colors.textSecondary,
     marginBottom: 12,
+  },
+  biometricSection: {
+    gap: 14,
+    marginBottom: 4,
+  },
+  biometricButton: {
+    borderColor: theme.colors.borderStrong,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginVertical: 4,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme.colors.border,
+  },
+  dividerText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    fontWeight: "500",
   },
 })

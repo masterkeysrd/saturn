@@ -11,7 +11,7 @@ documentation:
 
 authentication:
   rules:
-    # Public endpoints
+    # Public endpoints (all other endpoints inherit auth_required: true from global api.yaml)
     - selector: "saturn.identity.v1.Identity.LoginUser"
       auth_required: false
     - selector: "saturn.identity.v1.Identity.RegisterUser"
@@ -19,6 +19,8 @@ authentication:
     - selector: "saturn.identity.v1.Identity.RefreshSession"
       auth_required: false
     - selector: "saturn.identity.v1.Identity.Logout"
+      auth_required: false
+    - selector: "saturn.identity.v1.Identity.CreateAuthChallenge"
       auth_required: false
 
 space:

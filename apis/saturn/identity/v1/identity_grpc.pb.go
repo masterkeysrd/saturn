@@ -35,6 +35,10 @@ const (
 	Identity_SetupTOTP_FullMethodName             = "/saturn.identity.v1.Identity/SetupTOTP"
 	Identity_ConfirmTOTP_FullMethodName           = "/saturn.identity.v1.Identity/ConfirmTOTP"
 	Identity_RegenerateBackupCodes_FullMethodName = "/saturn.identity.v1.Identity/RegenerateBackupCodes"
+	Identity_CreateAuthChallenge_FullMethodName   = "/saturn.identity.v1.Identity/CreateAuthChallenge"
+	Identity_CreateDevice_FullMethodName          = "/saturn.identity.v1.Identity/CreateDevice"
+	Identity_ListDevices_FullMethodName           = "/saturn.identity.v1.Identity/ListDevices"
+	Identity_RevokeDevice_FullMethodName          = "/saturn.identity.v1.Identity/RevokeDevice"
 )
 
 // IdentityClient is the client API for Identity service.
@@ -73,6 +77,15 @@ type IdentityClient interface {
 	ConfirmTOTP(ctx context.Context, in *ConfirmTOTPRequest, opts ...grpc.CallOption) (*ConfirmTOTPResponse, error)
 	// Authenticated RPC: Regenerates a fresh set of 8 single-use recovery codes.
 	RegenerateBackupCodes(ctx context.Context, in *RegenerateBackupCodesRequest, opts ...grpc.CallOption) (*RegenerateBackupCodesResponse, error)
+	// Obtains a short-lived random nonce challenge for device registration or biometric login.
+	CreateAuthChallenge(ctx context.Context, in *CreateAuthChallengeRequest, opts ...grpc.CallOption) (*CreateAuthChallengeResponse, error)
+	// Authenticated RPC: Creates a new trusted hardware device for the caller.
+	// Requires TOTP code verification if the user has MFA enabled.
+	CreateDevice(ctx context.Context, in *CreateDeviceRequest, opts ...grpc.CallOption) (*Device, error)
+	// Authenticated RPC: Lists all registered devices for the caller.
+	ListDevices(ctx context.Context, in *ListDevicesRequest, opts ...grpc.CallOption) (*ListDevicesResponse, error)
+	// Authenticated RPC: Revokes a registered trusted device and terminates its sessions.
+	RevokeDevice(ctx context.Context, in *RevokeDeviceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type identityClient struct {
@@ -233,6 +246,46 @@ func (c *identityClient) RegenerateBackupCodes(ctx context.Context, in *Regenera
 	return out, nil
 }
 
+func (c *identityClient) CreateAuthChallenge(ctx context.Context, in *CreateAuthChallengeRequest, opts ...grpc.CallOption) (*CreateAuthChallengeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateAuthChallengeResponse)
+	err := c.cc.Invoke(ctx, Identity_CreateAuthChallenge_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) CreateDevice(ctx context.Context, in *CreateDeviceRequest, opts ...grpc.CallOption) (*Device, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Device)
+	err := c.cc.Invoke(ctx, Identity_CreateDevice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) ListDevices(ctx context.Context, in *ListDevicesRequest, opts ...grpc.CallOption) (*ListDevicesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDevicesResponse)
+	err := c.cc.Invoke(ctx, Identity_ListDevices_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) RevokeDevice(ctx context.Context, in *RevokeDeviceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Identity_RevokeDevice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IdentityServer is the server API for Identity service.
 // All implementations should embed UnimplementedIdentityServer
 // for forward compatibility.
@@ -269,6 +322,15 @@ type IdentityServer interface {
 	ConfirmTOTP(context.Context, *ConfirmTOTPRequest) (*ConfirmTOTPResponse, error)
 	// Authenticated RPC: Regenerates a fresh set of 8 single-use recovery codes.
 	RegenerateBackupCodes(context.Context, *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error)
+	// Obtains a short-lived random nonce challenge for device registration or biometric login.
+	CreateAuthChallenge(context.Context, *CreateAuthChallengeRequest) (*CreateAuthChallengeResponse, error)
+	// Authenticated RPC: Creates a new trusted hardware device for the caller.
+	// Requires TOTP code verification if the user has MFA enabled.
+	CreateDevice(context.Context, *CreateDeviceRequest) (*Device, error)
+	// Authenticated RPC: Lists all registered devices for the caller.
+	ListDevices(context.Context, *ListDevicesRequest) (*ListDevicesResponse, error)
+	// Authenticated RPC: Revokes a registered trusted device and terminates its sessions.
+	RevokeDevice(context.Context, *RevokeDeviceRequest) (*emptypb.Empty, error)
 }
 
 // UnimplementedIdentityServer should be embedded to have
@@ -322,6 +384,18 @@ func (UnimplementedIdentityServer) ConfirmTOTP(context.Context, *ConfirmTOTPRequ
 }
 func (UnimplementedIdentityServer) RegenerateBackupCodes(context.Context, *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RegenerateBackupCodes not implemented")
+}
+func (UnimplementedIdentityServer) CreateAuthChallenge(context.Context, *CreateAuthChallengeRequest) (*CreateAuthChallengeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateAuthChallenge not implemented")
+}
+func (UnimplementedIdentityServer) CreateDevice(context.Context, *CreateDeviceRequest) (*Device, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateDevice not implemented")
+}
+func (UnimplementedIdentityServer) ListDevices(context.Context, *ListDevicesRequest) (*ListDevicesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDevices not implemented")
+}
+func (UnimplementedIdentityServer) RevokeDevice(context.Context, *RevokeDeviceRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeDevice not implemented")
 }
 func (UnimplementedIdentityServer) testEmbeddedByValue() {}
 
@@ -613,6 +687,78 @@ func _Identity_RegenerateBackupCodes_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Identity_CreateAuthChallenge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAuthChallengeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).CreateAuthChallenge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_CreateAuthChallenge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).CreateAuthChallenge(ctx, req.(*CreateAuthChallengeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_CreateDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateDeviceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).CreateDevice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_CreateDevice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).CreateDevice(ctx, req.(*CreateDeviceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_ListDevices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDevicesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).ListDevices(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_ListDevices_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).ListDevices(ctx, req.(*ListDevicesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_RevokeDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeDeviceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).RevokeDevice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_RevokeDevice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).RevokeDevice(ctx, req.(*RevokeDeviceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Identity_ServiceDesc is the grpc.ServiceDesc for Identity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -679,6 +825,22 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RegenerateBackupCodes",
 			Handler:    _Identity_RegenerateBackupCodes_Handler,
+		},
+		{
+			MethodName: "CreateAuthChallenge",
+			Handler:    _Identity_CreateAuthChallenge_Handler,
+		},
+		{
+			MethodName: "CreateDevice",
+			Handler:    _Identity_CreateDevice_Handler,
+		},
+		{
+			MethodName: "ListDevices",
+			Handler:    _Identity_ListDevices_Handler,
+		},
+		{
+			MethodName: "RevokeDevice",
+			Handler:    _Identity_RevokeDevice_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -14,6 +14,7 @@ import (
 type sessionDB struct {
 	ID                string     `db:"id"`
 	UserID            string     `db:"user_id"`
+	DeviceID          *string    `db:"device_id"`
 	RefreshTokenHash  []byte     `db:"refresh_token_hash"`
 	TokenFamilyID     string     `db:"token_family_id"`
 	ParentSessionID   *string    `db:"parent_session_id"`
@@ -43,9 +44,15 @@ func toDomainSession(s *sessionDB) *identity.Session {
 		pid := identity.SessionID(*s.ParentSessionID)
 		parentID = &pid
 	}
+	var devID *identity.DeviceID
+	if s.DeviceID != nil {
+		did := identity.DeviceID(*s.DeviceID)
+		devID = &did
+	}
 	return &identity.Session{
 		ID:                identity.SessionID(s.ID),
 		UserID:            identity.UserID(s.UserID),
+		DeviceID:          devID,
 		RefreshTokenHash:  s.RefreshTokenHash,
 		TokenFamilyID:     identity.TokenFamilyID(s.TokenFamilyID),
 		ParentSessionID:   parentID,
@@ -66,9 +73,15 @@ func toDBSession(s *identity.Session) *sessionDB {
 		pid := string(*s.ParentSessionID)
 		parentID = &pid
 	}
+	var devID *string
+	if s.DeviceID != nil {
+		did := string(*s.DeviceID)
+		devID = &did
+	}
 	return &sessionDB{
 		ID:                string(s.ID),
 		UserID:            string(s.UserID),
+		DeviceID:          devID,
 		RefreshTokenHash:  s.RefreshTokenHash,
 		TokenFamilyID:     string(s.TokenFamilyID),
 		ParentSessionID:   parentID,
@@ -92,6 +105,7 @@ func (s *SessionStore) Create(ctx context.Context, session *identity.Session) er
 		Rows(goqu.Record{
 			"id":                  dbRecord.ID,
 			"user_id":             dbRecord.UserID,
+			"device_id":           dbRecord.DeviceID,
 			"refresh_token_hash":  dbRecord.RefreshTokenHash,
 			"token_family_id":     dbRecord.TokenFamilyID,
 			"parent_session_id":   dbRecord.ParentSessionID,
@@ -239,6 +253,28 @@ func (s *SessionStore) RevokeAllForUser(ctx context.Context, userID identity.Use
 		Set(goqu.Record{"revoked_at": now}).
 		Where(
 			goqu.C("user_id").Eq(string(userID)),
+			goqu.C("revoked_at").IsNull(),
+		).
+		Prepared(true).
+		ToSQL()
+	if err != nil {
+		return errors.E(op, err)
+	}
+
+	if _, err := s.db.Exec(ctx, q, args...); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
+}
+
+// RevokeByDeviceID marks all active sessions for a specific device as revoked.
+func (s *SessionStore) RevokeByDeviceID(ctx context.Context, deviceID identity.DeviceID, now time.Time) error {
+	const op errors.Op = "domain/identity/storage.RevokeByDeviceID"
+
+	q, args, err := pgDialect.Update(goqu.T("sessions").Schema("identity")).
+		Set(goqu.Record{"revoked_at": now}).
+		Where(
+			goqu.C("device_id").Eq(string(deviceID)),
 			goqu.C("revoked_at").IsNull(),
 		).
 		Prepared(true).

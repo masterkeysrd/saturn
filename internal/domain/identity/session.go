@@ -57,6 +57,7 @@ func ParseTokenFamilyID(s string) (TokenFamilyID, error) {
 type Session struct {
 	ID                SessionID
 	UserID            UserID
+	DeviceID          *DeviceID
 	RefreshTokenHash  []byte
 	TokenFamilyID     TokenFamilyID
 	ParentSessionID   *SessionID
@@ -73,6 +74,7 @@ type Session struct {
 // CreateSessionRequest encapsulates the fields required to create a new user session.
 type CreateSessionRequest struct {
 	UserID            UserID
+	DeviceID          *DeviceID
 	RefreshTokenHash  []byte
 	UserAgent         string
 	IPAddress         string
@@ -150,6 +152,7 @@ func (s *Session) Rotate(in RotateInput) (*Session, error) {
 	successor := &Session{
 		ID:                in.SuccessorID,
 		UserID:            s.UserID,
+		DeviceID:          s.DeviceID,
 		RefreshTokenHash:  in.SuccessorHash,
 		TokenFamilyID:     s.TokenFamilyID,
 		ParentSessionID:   &parentID,

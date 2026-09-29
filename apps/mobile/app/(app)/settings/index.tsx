@@ -27,7 +27,10 @@ import {
   CheckCircle2,
   Globe,
 } from "lucide-react-native"
-import { useListActiveSessionsQuery } from "@saturn/api/saturn/identity/v1/identity"
+import {
+  useListActiveSessionsQuery,
+  useListMFAFactorsQuery,
+} from "@saturn/api/saturn/identity/v1/identity"
 import { useGetFinanceSettingsQuery } from "@saturn/api/saturn/finance/v1/finance"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
@@ -37,6 +40,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { MfaStepUpModal } from "@/components/ui/mfa-stepup-modal"
 import { useToast } from "@/components/ui/toast"
 import { haptics } from "@/lib/haptics"
 
@@ -49,6 +53,7 @@ export default function SettingsScreen() {
     logout,
     isBiometricSupported,
     isBiometricActive,
+    isDeviceEnrolled,
     toggleBiometrics,
     serverUrl,
   } = useAuth()
@@ -58,7 +63,11 @@ export default function SettingsScreen() {
   const { data: sessionsData } = useListActiveSessionsQuery({})
   const sessionCount = sessionsData?.sessions?.length ?? 1
 
-  // 2. Query workspace finance settings for base currency
+  // 2. Query MFA factors to know if biometrics enrollment requires OTP upfront
+  const { data: mfaData, refetch: refetchMfa } = useListMFAFactorsQuery({})
+  const hasActiveMfa = Boolean(mfaData?.factors && mfaData.factors.length > 0)
+
+  // 3. Query workspace finance settings for base currency
   const { data: financeSettings } = useGetFinanceSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
@@ -68,6 +77,9 @@ export default function SettingsScreen() {
   const [signOutModalVisible, setSignOutModalVisible] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [clearingCache, setClearingCache] = useState(false)
+  const [mfaModalVisible, setMfaModalVisible] = useState(false)
+  const [enrollingWithMfa, setEnrollingWithMfa] = useState(false)
+  const [mfaError, setMfaError] = useState<string | null>(null)
 
   const handleConfirmSignOut = async () => {
     setSigningOut(true)
@@ -86,15 +98,119 @@ export default function SettingsScreen() {
   }
 
   const handleToggleBiometrics = async (val: boolean) => {
-    const success = await toggleBiometrics(val)
-    if (success) {
-      toast.show({
-        type: "success",
-        title: val ? "Biometrics Enabled" : "Biometrics Disabled",
-        message: val
-          ? "Face ID / Fingerprint will be required to unlock Saturn."
-          : "Biometric requirement removed.",
-      })
+    if (!val) {
+      try {
+        await toggleBiometrics(false)
+        haptics.light()
+        toast.show({
+          type: "info",
+          title: "Biometrics Disabled",
+          message: "Biometric requirement removed.",
+        })
+      } catch (err: any) {
+        toast.show({
+          type: "error",
+          title: "Action Failed",
+          message: err?.message || "Could not disable biometrics.",
+        })
+      }
+      return
+    }
+
+    // Enabling:
+    // If device is already enrolled, re-enabling requires no biometric prompts
+    if (isDeviceEnrolled) {
+      try {
+        await toggleBiometrics(true)
+        haptics.success()
+        toast.show({
+          type: "success",
+          title: "Biometrics Enabled",
+          message: "Face ID / Fingerprint will be required to unlock Saturn.",
+        })
+      } catch (err: any) {
+        toast.show({
+          type: "error",
+          title: "Biometrics Failed",
+          message: err?.message || "Could not enable biometrics.",
+        })
+      }
+      return
+    }
+
+    // If device is NOT enrolled and user has MFA active:
+    // Prompt for OTP BEFORE triggering native biometric sensor
+    if (hasActiveMfa) {
+      setMfaError(null)
+      setMfaModalVisible(true)
+      return
+    }
+
+    // User has no MFA: enroll directly (prompts biometrics once)
+    try {
+      const success = await toggleBiometrics(true)
+      if (success) {
+        haptics.success()
+        toast.show({
+          type: "success",
+          title: "Biometrics Enabled",
+          message: "Face ID / Fingerprint will be required to unlock Saturn.",
+        })
+        await refetchMfa()
+      }
+    } catch (err: any) {
+      const msg = err?.message || ""
+      if (
+        msg.toLowerCase().includes("mfa") ||
+        msg.toLowerCase().includes("totp") ||
+        msg.toLowerCase().includes("verification")
+      ) {
+        setMfaError(null)
+        setMfaModalVisible(true)
+      } else {
+        haptics.error()
+        toast.show({
+          type: "error",
+          title: "Biometrics Failed",
+          message: msg || "Could not toggle biometrics.",
+        })
+      }
+    }
+  }
+
+  const handleMfaEnroll = async (code: string) => {
+    setEnrollingWithMfa(true)
+    setMfaError(null)
+    try {
+      const success = await toggleBiometrics(true, code)
+      if (success) {
+        haptics.success()
+        setMfaModalVisible(false)
+        toast.show({
+          type: "success",
+          title: "Biometrics Enabled",
+          message: "Face ID / Fingerprint will be required to unlock Saturn.",
+        })
+        await refetchMfa()
+      }
+    } catch (err: any) {
+      const msg = err?.message || ""
+      if (
+        msg.toLowerCase().includes("mfa") ||
+        msg.toLowerCase().includes("totp") ||
+        msg.toLowerCase().includes("verification")
+      ) {
+        setMfaError("Invalid verification code. Please try again.")
+      } else {
+        haptics.error()
+        toast.show({
+          type: "error",
+          title: "Enrollment Failed",
+          message: msg || "Could not enable biometrics.",
+        })
+      }
+    } finally {
+      setEnrollingWithMfa(false)
     }
   }
 
@@ -112,7 +228,7 @@ export default function SettingsScreen() {
             setClearingCache(true)
             try {
               await AsyncStorage.removeItem("SATURN_QUERY_OFFLINE_CACHE")
-              await queryClient.clear()
+              queryClient.clear()
               await queryClient.invalidateQueries()
               haptics.success()
               toast.show({
@@ -370,6 +486,18 @@ export default function SettingsScreen() {
           loading={signingOut}
           onConfirm={handleConfirmSignOut}
           onCancel={() => setSignOutModalVisible(false)}
+        />
+
+        {/* MFA Step-up Modal */}
+        <MfaStepUpModal
+          visible={mfaModalVisible}
+          onClose={() => {
+            setMfaModalVisible(false)
+            setMfaError(null)
+          }}
+          onConfirm={handleMfaEnroll}
+          loading={enrollingWithMfa}
+          error={mfaError}
         />
       </ScrollView>
     </View>

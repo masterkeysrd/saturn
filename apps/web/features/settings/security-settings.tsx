@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { parseUserAgent } from "@/lib/utils"
 import { TwoFactorSettings } from "./two-factor-settings"
+import { TrustedDevicesSettings } from "./trusted-devices-settings"
 
 export function SecuritySettings() {
   const { data, isLoading, refetch } = useListMySecurityEventsQuery({
@@ -55,6 +56,8 @@ export function SecuritySettings() {
   return (
     <div className="space-y-10">
       <TwoFactorSettings />
+
+      <TrustedDevicesSettings />
 
       <div className="space-y-6">
         {/* Header and Sync */}

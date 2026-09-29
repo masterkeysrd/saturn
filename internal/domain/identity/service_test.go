@@ -144,6 +144,7 @@ type mockSessionStore struct {
 	listActiveSessionsFn    func(ctx context.Context, userID UserID) ([]*Session, error)
 	revokeFamilyFn          func(ctx context.Context, familyID TokenFamilyID, now time.Time) error
 	revokeAllForUserFn      func(ctx context.Context, userID UserID, now time.Time) error
+	revokeByDeviceIDFn      func(ctx context.Context, deviceID DeviceID, now time.Time) error
 }
 
 func (m *mockSessionStore) Create(ctx context.Context, session *Session) error {
@@ -191,6 +192,13 @@ func (m *mockSessionStore) RevokeFamily(ctx context.Context, familyID TokenFamil
 func (m *mockSessionStore) RevokeAllForUser(ctx context.Context, userID UserID, now time.Time) error {
 	if m.revokeAllForUserFn != nil {
 		return m.revokeAllForUserFn(ctx, userID, now)
+	}
+	return nil
+}
+
+func (m *mockSessionStore) RevokeByDeviceID(ctx context.Context, deviceID DeviceID, now time.Time) error {
+	if m.revokeByDeviceIDFn != nil {
+		return m.revokeByDeviceIDFn(ctx, deviceID, now)
 	}
 	return nil
 }
@@ -724,6 +732,39 @@ func TestService_RevokeSessionByID(t *testing.T) {
 			t.Error("expected no update call when already revoked")
 		}
 	})
+	t.Run("revokes linked device when session has device_id", func(t *testing.T) {
+		devID := DeviceID("dev_123")
+		deviceRevoked := false
+		sStore := &mockSessionStore{
+			getByIDFn: func(ctx context.Context, id SessionID) (*Session, error) {
+				return &Session{
+					ID:       id,
+					UserID:   "usr_1",
+					DeviceID: &devID,
+				}, nil
+			},
+			updateFn: func(ctx context.Context, session *Session) error {
+				return nil
+			},
+		}
+		dStore := &DeviceStoreMock{
+			RevokeDeviceFunc: func(ctx context.Context, id DeviceID, revokedAt time.Time) error {
+				if id == "dev_123" {
+					deviceRevoked = true
+				}
+				return nil
+			},
+		}
+
+		svc := NewService(Dependencies{SessionStore: sStore, DeviceStore: dStore})
+		err := svc.RevokeSessionByID(ctx, "ses_1", "usr_1")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !deviceRevoked {
+			t.Error("expected linked device to be revoked when session is revoked by ID")
+		}
+	})
 }
 
 func TestService_RevokeSessionByHash(t *testing.T) {
@@ -753,6 +794,93 @@ func TestService_RevokeSessionByHash(t *testing.T) {
 		}
 		if !familyRevoked {
 			t.Error("expected token family to be revoked")
+		}
+	})
+
+	t.Run("revokes linked device when session has device_id", func(t *testing.T) {
+		devID := DeviceID("dev_123")
+		deviceRevoked := false
+		sStore := &mockSessionStore{
+			getByRefreshTokenHashFn: func(ctx context.Context, hash []byte) (*Session, error) {
+				return &Session{
+					ID:            "ses_1",
+					TokenFamilyID: "tfm_1",
+					DeviceID:      &devID,
+				}, nil
+			},
+			revokeFamilyFn: func(ctx context.Context, familyID TokenFamilyID, now time.Time) error {
+				return nil
+			},
+		}
+		dStore := &DeviceStoreMock{
+			RevokeDeviceFunc: func(ctx context.Context, id DeviceID, revokedAt time.Time) error {
+				if id == "dev_123" {
+					deviceRevoked = true
+				}
+				return nil
+			},
+		}
+
+		svc := NewService(Dependencies{SessionStore: sStore, DeviceStore: dStore})
+		err := svc.RevokeSessionByHash(ctx, []byte("hash"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !deviceRevoked {
+			t.Error("expected linked device to be revoked when session is revoked by hash")
+		}
+	})
+}
+
+func TestService_RevokeAllSessions(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("revokes all sessions and all devices for user", func(t *testing.T) {
+		authVersionIncremented := false
+		sessionsRevoked := false
+		devicesRevoked := false
+
+		uStore := &mockUserStore{
+			incrementAuthVersionFn: func(ctx context.Context, id UserID) (int64, error) {
+				if id == "usr_1" {
+					authVersionIncremented = true
+				}
+				return 2, nil
+			},
+		}
+		sStore := &mockSessionStore{
+			revokeAllForUserFn: func(ctx context.Context, userID UserID, now time.Time) error {
+				if userID == "usr_1" {
+					sessionsRevoked = true
+				}
+				return nil
+			},
+		}
+		dStore := &DeviceStoreMock{
+			RevokeAllByUserIDFunc: func(ctx context.Context, userID UserID, revokedAt time.Time) error {
+				if userID == "usr_1" {
+					devicesRevoked = true
+				}
+				return nil
+			},
+		}
+
+		svc := NewService(Dependencies{UserStore: uStore, SessionStore: sStore, DeviceStore: dStore})
+		v, err := svc.RevokeAllSessions(ctx, "usr_1")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if v != 2 {
+			t.Errorf("expected version 2, got %d", v)
+		}
+		if !authVersionIncremented {
+			t.Error("expected auth version to be incremented")
+		}
+		if !sessionsRevoked {
+			t.Error("expected sessions to be revoked for user")
+		}
+		if !devicesRevoked {
+			t.Error("expected devices to be revoked for user")
 		}
 	})
 }

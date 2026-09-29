@@ -179,3 +179,19 @@ func (t *TransactionalCoordinator) ConfirmTOTP(ctx context.Context, req *Confirm
 func (t *TransactionalCoordinator) RegenerateBackupCodes(ctx context.Context, req *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error) {
 	return t.next.RegenerateBackupCodes(ctx, req)
 }
+
+func (t *TransactionalCoordinator) CreateAuthChallenge(ctx context.Context) (*CreateAuthChallengeResponse, error) {
+	return t.next.CreateAuthChallenge(ctx)
+}
+
+func (t *TransactionalCoordinator) CreateDevice(ctx context.Context, req *CreateDeviceRequest) (*identity.Device, error) {
+	return t.next.CreateDevice(ctx, req)
+}
+
+func (t *TransactionalCoordinator) ListDevices(ctx context.Context, req *ListDevicesRequest) (*ListDevicesResponse, error) {
+	return t.next.ListDevices(ctx, req)
+}
+
+func (t *TransactionalCoordinator) RevokeDevice(ctx context.Context, req *RevokeDeviceRequest) error {
+	return t.next.RevokeDevice(ctx, req)
+}

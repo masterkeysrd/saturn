@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   StyleSheet,
   Text,
@@ -20,12 +20,18 @@ import {
   Clock,
   MapPin,
   RefreshCw,
+  Fingerprint,
+  Shield,
 } from "lucide-react-native"
 import {
   useListActiveSessionsQuery,
   useRevokeSessionMutation,
   useRevokeAllSessionsMutation,
+  useListDevicesQuery,
+  useRevokeDeviceMutation,
+  useListMFAFactorsQuery,
   type UserSession,
+  type Device,
 } from "@saturn/api/saturn/identity/v1/identity"
 import { parseUserAgent } from "@saturn/core"
 import { useAuth } from "@/lib/auth-context"
@@ -33,14 +39,35 @@ import { theme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { MfaStepUpModal } from "@/components/ui/mfa-stepup-modal"
 import { useToast } from "@/components/ui/toast"
+import { getStoredDeviceId } from "@/lib/storage"
 import { haptics } from "@/lib/haptics"
 
 export default function SecuritySessionsScreen() {
   const router = useRouter()
   const toast = useToast()
-  const { logout } = useAuth()
+  const {
+    logout,
+    isDeviceEnrolled,
+    isBiometricSupported,
+    enrollBiometrics,
+    unenrollBiometrics,
+  } = useAuth()
   const [refreshing, setRefreshing] = useState(false)
+  const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null)
+  const [enrolling, setEnrolling] = useState(false)
+  const [mfaModalVisible, setMfaModalVisible] = useState(false)
+  const [mfaError, setMfaError] = useState<string | null>(null)
+
+  // Load current device ID from storage
+  useEffect(() => {
+    async function loadCurrentDevice() {
+      const id = await getStoredDeviceId()
+      setCurrentDeviceId(id)
+    }
+    loadCurrentDevice()
+  }, [isDeviceEnrolled])
 
   // 1. Query active user sessions
   const {
@@ -48,18 +75,30 @@ export default function SecuritySessionsScreen() {
     isLoading,
     refetch,
   } = useListActiveSessionsQuery({})
-
   const sessions = sessionsData?.sessions || []
 
-  // 2. Mutations
+  // 2. Query trusted hardware devices
+  const {
+    data: devicesData,
+    isLoading: isDevicesLoading,
+    refetch: refetchDevices,
+  } = useListDevicesQuery({})
+  const devices = devicesData?.devices || []
+
+  // 3. Query MFA factors to know if enrollment requires OTP upfront
+  const { data: mfaData, refetch: refetchMfa } = useListMFAFactorsQuery({})
+  const hasActiveMfa = Boolean(mfaData?.factors && mfaData.factors.length > 0)
+
+  // 4. Mutations
   const revokeSessionMutation = useRevokeSessionMutation()
   const revokeAllSessionsMutation = useRevokeAllSessionsMutation()
+  const revokeDeviceMutation = useRevokeDeviceMutation()
 
   const handleRefresh = async () => {
     haptics.light()
     setRefreshing(true)
     try {
-      await refetch()
+      await Promise.all([refetch(), refetchDevices(), refetchMfa()])
     } finally {
       setRefreshing(false)
     }
@@ -135,6 +174,100 @@ export default function SecuritySessionsScreen() {
     )
   }
 
+  const handleEnrollPress = () => {
+    if (hasActiveMfa) {
+      setMfaError(null)
+      setMfaModalVisible(true)
+    } else {
+      handleEnrollDevice()
+    }
+  }
+
+  const handleEnrollDevice = async (code?: string) => {
+    setEnrolling(true)
+    setMfaError(null)
+    try {
+      await enrollBiometrics(undefined, code)
+      haptics.success()
+      toast.show({
+        type: "success",
+        title: "Device Enrolled",
+        message: "Biometrics is now enabled on this device.",
+      })
+      setMfaModalVisible(false)
+      const storedId = await getStoredDeviceId()
+      setCurrentDeviceId(storedId)
+      await Promise.all([refetchDevices(), refetchMfa()])
+    } catch (err: any) {
+      const msg = err?.message || "Failed to enroll device"
+      if (
+        msg.toLowerCase().includes("mfa") ||
+        msg.toLowerCase().includes("totp") ||
+        msg.toLowerCase().includes("verification")
+      ) {
+        setMfaModalVisible(true)
+        if (code) {
+          setMfaError("Invalid verification code. Please try again.")
+        }
+      } else {
+        haptics.error()
+        toast.show({
+          type: "error",
+          title: "Enrollment Failed",
+          message: msg,
+        })
+      }
+    } finally {
+      setEnrolling(false)
+    }
+  }
+
+  const promptRevokeDevice = (device: Device) => {
+    if (!device.id) return
+    const isThisDevice = device.id === currentDeviceId
+    haptics.warning()
+
+    Alert.alert(
+      isThisDevice ? "Remove This Device?" : "Revoke Device?",
+      isThisDevice
+        ? `Are you sure you want to remove biometric authentication for this device ("${device.deviceName}")? You will need to re-enroll with your password.`
+        : `Are you sure you want to revoke "${device.deviceName}"? This device will no longer be able to use biometric sign-in.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Revoke",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              if (isThisDevice) {
+                await unenrollBiometrics()
+                setCurrentDeviceId(null)
+              }
+              await revokeDeviceMutation.mutateAsync({
+                device_id: device.id!,
+                req: { deviceId: device.id! },
+              })
+              haptics.success()
+              toast.show({
+                type: "success",
+                title: "Device Revoked",
+                message: `${device.deviceName} has been revoked.`,
+              })
+              await refetchDevices()
+            } catch (err: any) {
+              haptics.error()
+              toast.show({
+                type: "error",
+                title: "Revocation Failed",
+                message: err?.message || "Could not revoke device.",
+              })
+            }
+          },
+        },
+      ]
+    )
+  }
+
   const formatTimestamp = (ts?: string) => {
     if (!ts) return "Unknown"
     const d = new Date(ts)
@@ -179,14 +312,140 @@ export default function SecuritySessionsScreen() {
               <ShieldCheck size={20} color={theme.colors.success} />
             </View>
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoTitle}>Authorized Logins</Text>
+              <Text style={styles.infoTitle}>
+                Authorized Logins & Hardware Devices
+              </Text>
               <Text style={styles.infoSubtitle}>
-                These devices currently hold valid refresh tokens to access your
-                Saturn space.
+                Manage hardware-backed biometric authenticators and active
+                sign-in sessions for your Saturn account.
               </Text>
             </View>
           </View>
         </Card>
+
+        {/* Section: Trusted Hardware Devices */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeader}>
+            {devices.length > 0
+              ? `TRUSTED HARDWARE DEVICES (${devices.length})`
+              : "TRUSTED HARDWARE DEVICES"}
+          </Text>
+        </View>
+
+        {/* Enrollment Card if current device is not enrolled */}
+        {!isDeviceEnrolled && isBiometricSupported && (
+          <Card style={styles.enrollCard}>
+            <View style={styles.enrollHeader}>
+              <View style={styles.enrollIconBox}>
+                <Fingerprint size={22} color={theme.colors.primary} />
+              </View>
+              <View style={styles.enrollTextContainer}>
+                <Text style={styles.enrollTitle}>Enable Biometrics</Text>
+                <Text style={styles.enrollSubtitle}>
+                  Sign in securely with hardware-backed biometric verification
+                  without entering your password.
+                </Text>
+              </View>
+            </View>
+            <Button
+              variant="primary"
+              size="md"
+              loading={enrolling}
+              onPress={handleEnrollPress}
+              leftIcon={
+                <Fingerprint size={16} color={theme.colors.primaryForeground} />
+              }
+              style={styles.enrollBtn}
+            >
+              Enroll This Device
+            </Button>
+          </Card>
+        )}
+
+        {/* Devices List */}
+        {isDevicesLoading && devices.length === 0 ? (
+          <Card style={styles.emptyCard}>
+            <RefreshCw size={24} color={theme.colors.textMuted} />
+            <Text style={styles.emptyText}>Loading trusted devices...</Text>
+          </Card>
+        ) : devices.length === 0 && !isBiometricSupported ? (
+          <Card style={styles.emptyCard}>
+            <Shield size={28} color={theme.colors.textMuted} />
+            <Text style={styles.emptyText}>No trusted devices registered.</Text>
+            <Text style={styles.emptySubtext}>
+              Biometric hardware authentication is not available on this device.
+            </Text>
+          </Card>
+        ) : devices.length === 0 && isDeviceEnrolled ? (
+          <Card style={styles.emptyCard}>
+            <Shield size={28} color={theme.colors.textMuted} />
+            <Text style={styles.emptyText}>No registered devices found.</Text>
+            <Text style={styles.emptySubtext}>
+              Enrolled credentials may have expired or been revoked.
+            </Text>
+          </Card>
+        ) : devices.length > 0 ? (
+          <View style={styles.sessionsList}>
+            {devices.map((device) => {
+              const isThisDevice = device.id === currentDeviceId
+              return (
+                <Card key={device.id} style={styles.sessionCard}>
+                  <View style={styles.sessionHeaderRow}>
+                    <View style={styles.sessionLeft}>
+                      <View style={styles.deviceIconBox}>
+                        <Fingerprint size={20} color={theme.colors.primary} />
+                      </View>
+                      <View style={styles.sessionNameContainer}>
+                        <View style={styles.deviceNameRow}>
+                          <Text style={styles.deviceName} numberOfLines={1}>
+                            {device.deviceName}
+                          </Text>
+                          {isThisDevice && (
+                            <Badge
+                              variant="success"
+                              size="sm"
+                              label="This Device"
+                            />
+                          )}
+                        </View>
+                        <Text style={styles.sessionUa} numberOfLines={1}>
+                          Algorithm: {device.algorithm || "ES256"}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <TouchableOpacity
+                      style={styles.revokeBtn}
+                      activeOpacity={0.7}
+                      onPress={() => promptRevokeDevice(device)}
+                      disabled={revokeDeviceMutation.isPending}
+                      accessibilityLabel={`Revoke ${device.deviceName}`}
+                    >
+                      <Trash2 size={16} color={theme.colors.destructive} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <View style={styles.metaRow}>
+                    <View style={styles.metaItem}>
+                      <Clock size={13} color={theme.colors.textMuted} />
+                      <Text style={styles.metaText}>
+                        Enrolled: {formatTimestamp(device.createTime)}
+                      </Text>
+                    </View>
+                    <View style={styles.metaItem}>
+                      <Clock size={13} color={theme.colors.textMuted} />
+                      <Text style={styles.metaText}>
+                        Expires: {formatTimestamp(device.expireTime)}
+                      </Text>
+                    </View>
+                  </View>
+                </Card>
+              )
+            })}
+          </View>
+        ) : null}
 
         {/* Sessions List Header */}
         <View style={styles.sectionHeaderRow}>
@@ -296,6 +555,18 @@ export default function SecuritySessionsScreen() {
           </Button>
         )}
       </ScrollView>
+
+      {/* MFA Step-up Modal */}
+      <MfaStepUpModal
+        visible={mfaModalVisible}
+        onClose={() => {
+          setMfaModalVisible(false)
+          setMfaError(null)
+        }}
+        onConfirm={(code) => handleEnrollDevice(code)}
+        loading={enrolling}
+        error={mfaError}
+      />
     </View>
   )
 }
@@ -445,7 +716,49 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textMuted,
   },
+  emptySubtext: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    textAlign: "center",
+  },
   signOutAllBtn: {
     marginTop: 8,
+  },
+  enrollCard: {
+    padding: 16,
+    gap: 14,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderColor: theme.colors.primary,
+    borderWidth: 1,
+  },
+  enrollHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  enrollIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surfaceHighlight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  enrollTextContainer: {
+    flex: 1,
+    gap: 3,
+  },
+  enrollTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+  },
+  enrollSubtitle: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    lineHeight: 16,
+  },
+  enrollBtn: {
+    marginTop: 2,
   },
 })

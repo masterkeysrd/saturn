@@ -119,6 +119,8 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	if err != nil {
 		return fmt.Errorf("create mfa cipher: %w", err)
 	}
+	deviceStore := identitystorage.NewDeviceStore(dbClient)
+	ecdsaVerifier := crypto.NewECDSAVerifier()
 	identityService := identity.NewService(
 		identity.Dependencies{
 			UserStore:          userStore,
@@ -129,6 +131,9 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 			MFAStore:           mfaFactorStore,
 			Cipher:             mfaCipher,
 			TOTP:               totp.NewProvider(),
+			DeviceStore:        deviceStore,
+			ChallengeStore:     deviceStore,
+			DeviceVerifier:     ecdsaVerifier,
 		},
 	)
 

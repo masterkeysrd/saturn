@@ -45,14 +45,27 @@ func (h *Handler) LoginUser(ctx context.Context, req *identityv1.LoginUserReques
 	appReq.UserAgent = ua
 	appReq.IPAddress = ip
 
-	if assertion := req.GetMfaAssertion(); assertion != nil {
-		appReq.MFATicket = assertion.GetMfaTicket()
-		appReq.FactorID = assertion.GetFactorId()
-		appReq.TOTPCode = assertion.GetTotpCode()
-		appReq.BackupCode = assertion.GetBackupCode()
-	} else if userPass := req.GetUserPassword(); userPass != nil {
-		appReq.Identifier = userPass.GetIdentifier()
-		appReq.Password = userPass.GetPassword()
+	switch m := req.GetMethod().(type) {
+	case *identityv1.LoginUserRequest_DeviceAssertion_:
+		if assertion := m.DeviceAssertion; assertion != nil {
+			appReq.DeviceID = assertion.GetDeviceId()
+			appReq.Challenge = assertion.GetChallenge()
+			appReq.Signature = assertion.GetSignature()
+		}
+	case *identityv1.LoginUserRequest_MfaAssertion_:
+		if assertion := m.MfaAssertion; assertion != nil {
+			appReq.MFATicket = assertion.GetMfaTicket()
+			appReq.FactorID = assertion.GetFactorId()
+			appReq.TOTPCode = assertion.GetTotpCode()
+			appReq.BackupCode = assertion.GetBackupCode()
+		}
+	case *identityv1.LoginUserRequest_UserPassword_:
+		if userPass := m.UserPassword; userPass != nil {
+			appReq.Identifier = userPass.GetIdentifier()
+			appReq.Password = userPass.GetPassword()
+		}
+	default:
+		return nil, errors.E(errors.Invalid, "unsupported login method")
 	}
 
 	resp, err := h.IAM.Coordinator.Login(ctx, &appReq)
@@ -427,6 +440,109 @@ func (h *Handler) RegenerateBackupCodes(ctx context.Context, req *identityv1.Reg
 	return &identityv1.RegenerateBackupCodesResponse{
 		BackupCodes: resp.BackupCodes,
 	}, nil
+}
+
+// CreateAuthChallenge creates an ephemeral challenge nonce for device registration or biometric assertion.
+func (h *Handler) CreateAuthChallenge(ctx context.Context, req *identityv1.CreateAuthChallengeRequest) (*identityv1.CreateAuthChallengeResponse, error) {
+	resp, err := h.IAM.Coordinator.CreateAuthChallenge(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &identityv1.CreateAuthChallengeResponse{
+		Challenge: resp.Challenge,
+		ExpiresAt: resp.ExpiresAt,
+	}, nil
+}
+
+// CreateDevice registers a new trusted hardware device key for the authenticated user.
+func (h *Handler) CreateDevice(ctx context.Context, req *identityv1.CreateDeviceRequest) (*identityv1.Device, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	d := req.GetDevice()
+	if d == nil {
+		return nil, errors.E(errors.Invalid, "device is required")
+	}
+
+	dev, err := h.IAM.Coordinator.CreateDevice(ctx, &iam.CreateDeviceRequest{
+		UserID:     identity.UserID(principal.Subject),
+		DeviceName: d.GetDeviceName(),
+		PublicKey:  d.GetPublicKey(),
+		Algorithm:  d.GetAlgorithm(),
+		Challenge:  d.GetChallenge(),
+		Signature:  d.GetSignature(),
+		TOTPCode:   d.GetTotpCode(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return toProtoDevice(dev), nil
+}
+
+// ListDevices returns all active trusted devices for the authenticated caller.
+func (h *Handler) ListDevices(ctx context.Context, req *identityv1.ListDevicesRequest) (*identityv1.ListDevicesResponse, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	resp, err := h.IAM.Coordinator.ListDevices(ctx, &iam.ListDevicesRequest{
+		UserID: identity.UserID(principal.Subject),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	protoDevices := make([]*identityv1.Device, len(resp.Devices))
+	for i, d := range resp.Devices {
+		protoDevices[i] = toProtoDevice(d)
+	}
+
+	return &identityv1.ListDevicesResponse{
+		Devices: protoDevices,
+	}, nil
+}
+
+func toProtoDevice(d *identity.Device) *identityv1.Device {
+	if d == nil {
+		return nil
+	}
+	dev := &identityv1.Device{
+		Id:         string(d.ID),
+		DeviceName: d.DeviceName,
+		Algorithm:  d.KeyAlgorithm,
+		CreateTime: timestamppb.New(d.CreatedAt),
+		ExpireTime: timestamppb.New(d.ExpiresAt),
+	}
+	if d.LastUsedAt != nil {
+		dev.LastUsedTime = timestamppb.New(*d.LastUsedAt)
+	}
+	return dev
+}
+
+// RevokeDevice revokes a trusted device and terminates its associated active sessions.
+func (h *Handler) RevokeDevice(ctx context.Context, req *identityv1.RevokeDeviceRequest) (*emptypb.Empty, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	deviceID, err := identity.ParseDeviceID(req.GetDeviceId())
+	if err != nil {
+		return nil, errors.E(errors.Invalid, identity.DeviceNotFound, "invalid device id format")
+	}
+
+	if err := h.IAM.Coordinator.RevokeDevice(ctx, &iam.RevokeDeviceRequest{
+		UserID:   identity.UserID(principal.Subject),
+		DeviceID: deviceID,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 func extractClientInfo(ctx context.Context) (userAgent, ipAddress string) {

@@ -555,3 +555,99 @@ func (l *LoggingCoordinator) RegenerateBackupCodes(ctx context.Context, req *Reg
 	)
 	return res, nil
 }
+
+// CreateAuthChallenge executes next.CreateAuthChallenge and logs execution duration and errors.
+func (l *LoggingCoordinator) CreateAuthChallenge(ctx context.Context) (*CreateAuthChallengeResponse, error) {
+	start := time.Now()
+	res, err := l.next.CreateAuthChallenge(ctx)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.CreateAuthChallenge failed",
+			log.String("component", "iam"),
+			log.String("operation", "CreateAuthChallenge"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.CreateAuthChallenge completed",
+		log.String("component", "iam"),
+		log.String("operation", "CreateAuthChallenge"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// CreateDevice executes next.CreateDevice and logs execution duration and errors.
+func (l *LoggingCoordinator) CreateDevice(ctx context.Context, req *CreateDeviceRequest) (*identity.Device, error) {
+	start := time.Now()
+	res, err := l.next.CreateDevice(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.CreateDevice failed",
+			log.String("component", "iam"),
+			log.String("operation", "CreateDevice"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.CreateDevice completed",
+		log.String("component", "iam"),
+		log.String("operation", "CreateDevice"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// ListDevices executes next.ListDevices and logs execution duration and errors.
+func (l *LoggingCoordinator) ListDevices(ctx context.Context, req *ListDevicesRequest) (*ListDevicesResponse, error) {
+	start := time.Now()
+	res, err := l.next.ListDevices(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.ListDevices failed",
+			log.String("component", "iam"),
+			log.String("operation", "ListDevices"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.ListDevices completed",
+		log.String("component", "iam"),
+		log.String("operation", "ListDevices"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// RevokeDevice executes next.RevokeDevice and logs execution duration and errors.
+func (l *LoggingCoordinator) RevokeDevice(ctx context.Context, req *RevokeDeviceRequest) error {
+	start := time.Now()
+	err := l.next.RevokeDevice(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.RevokeDevice failed",
+			log.String("component", "iam"),
+			log.String("operation", "RevokeDevice"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return err
+	}
+
+	l.logger.Info(ctx, "iam.RevokeDevice completed",
+		log.String("component", "iam"),
+		log.String("operation", "RevokeDevice"),
+		log.Duration("duration", duration),
+	)
+	return nil
+}

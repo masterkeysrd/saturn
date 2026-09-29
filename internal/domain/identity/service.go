@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/platform/crypto"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
@@ -48,6 +50,12 @@ type TOTPProvider interface {
 	ValidateAndConsumeBackupCode(input string, hashedCodes []string) (remainingCodes []string, valid bool)
 }
 
+// DeviceVerifier defines cryptographic verification for hardware-bound device assertions.
+// @Mock
+type DeviceVerifier interface {
+	VerifyAssertion(params crypto.VerifyAssertionParams) error
+}
+
 // Dependencies holds all storage and hashing interfaces required by the Service.
 type Dependencies struct {
 	UserStore          UserStoreProvider
@@ -58,6 +66,9 @@ type Dependencies struct {
 	MFAStore           MFAFactorStore
 	Cipher             Cipher
 	TOTP               TOTPProvider
+	DeviceStore        DeviceStore
+	ChallengeStore     AuthChallengeStore
+	DeviceVerifier     DeviceVerifier
 }
 
 // Hasher is the password hashing interface used for authentication.
@@ -345,8 +356,13 @@ func (s *Service) RevokeAllSessions(ctx context.Context, userID UserID) (int64, 
 		return 0, errors.E(op, err)
 	}
 
-	if err := s.deps.SessionStore.RevokeAllForUser(ctx, userID, time.Now()); err != nil {
+	now := time.Now().UTC()
+	if err := s.deps.SessionStore.RevokeAllForUser(ctx, userID, now); err != nil {
 		return 0, errors.E(op, err)
+	}
+
+	if err := s.deps.DeviceStore.RevokeAllByUserID(ctx, userID, now); err != nil {
+		log.Warn(ctx, "failed to revoke all devices on RevokeAllSessions", log.String("user_id", string(userID)), log.Err(err))
 	}
 
 	return newAuthVersion, nil
@@ -369,6 +385,7 @@ func (s *Service) CreateSession(ctx context.Context, req *CreateSessionRequest) 
 	session := &Session{
 		ID:                sessionID,
 		UserID:            req.UserID,
+		DeviceID:          req.DeviceID,
 		RefreshTokenHash:  req.RefreshTokenHash,
 		TokenFamilyID:     familyID,
 		ExpiresAt:         req.ExpiresAt,
@@ -453,8 +470,15 @@ func (s *Service) RevokeSessionByHash(ctx context.Context, refreshTokenHash []by
 		return errors.E(op, err)
 	}
 
-	if err := s.deps.SessionStore.RevokeFamily(ctx, session.TokenFamilyID, time.Now()); err != nil {
+	now := time.Now().UTC()
+	if err := s.deps.SessionStore.RevokeFamily(ctx, session.TokenFamilyID, now); err != nil {
 		return errors.E(op, err)
+	}
+
+	if session.DeviceID != nil {
+		if err := s.deps.DeviceStore.RevokeDevice(ctx, *session.DeviceID, now); err != nil {
+			log.Warn(ctx, "failed to revoke device on session logout", log.String("device_id", string(*session.DeviceID)), log.Err(err))
+		}
 	}
 	return nil
 }
@@ -490,9 +514,16 @@ func (s *Service) RevokeSessionByID(ctx context.Context, sessionID SessionID, us
 		return nil
 	}
 
-	session.Revoke(time.Now())
+	now := time.Now().UTC()
+	session.Revoke(now)
 	if err := s.deps.SessionStore.Update(ctx, session); err != nil {
 		return errors.E(op, err)
+	}
+
+	if session.DeviceID != nil {
+		if err := s.deps.DeviceStore.RevokeDevice(ctx, *session.DeviceID, now); err != nil {
+			log.Warn(ctx, "failed to revoke device on session revoke", log.String("device_id", string(*session.DeviceID)), log.Err(err))
+		}
 	}
 	return nil
 }
@@ -894,4 +925,277 @@ func (s *Service) VerifyMFAAssertion(ctx context.Context, req VerifyMFAAssertion
 	_ = s.deps.MFAStore.UpdateFactor(ctx, factor)
 
 	return nil
+}
+
+// CreateAuthChallenge generates a cryptographically secure random challenge nonce valid for 5 minutes.
+func (s *Service) CreateAuthChallenge(ctx context.Context) (*Challenge, error) {
+	const op errors.Op = "identity.CreateAuthChallenge"
+
+	if s.deps.ChallengeStore == nil {
+		return nil, errors.E(op, errors.Internal, "challenge store not configured")
+	}
+
+	nonce, err := id.Generate("chg_")
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	now := time.Now().UTC()
+	challenge := &Challenge{
+		Nonce:     nonce,
+		CreatedAt: now,
+		ExpiresAt: now.Add(5 * time.Minute),
+	}
+
+	if err := s.deps.ChallengeStore.CreateChallenge(ctx, challenge); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	return challenge, nil
+}
+
+// CreateDeviceRequest encapsulates the parameters needed to enroll a new trusted hardware device.
+type CreateDeviceRequest struct {
+	UserID     UserID
+	DeviceName string
+	PublicKey  []byte
+	Algorithm  string
+	Challenge  string
+	Signature  []byte
+	TOTPCode   string
+	Now        time.Time
+}
+
+// CreateDevice registers a new trusted hardware device for an authenticated user, enforcing MFA step-up if enabled.
+func (s *Service) CreateDevice(ctx context.Context, req CreateDeviceRequest) (*Device, error) {
+	const op errors.Op = "identity.CreateDevice"
+
+	if s.deps.DeviceStore == nil || s.deps.ChallengeStore == nil || s.deps.DeviceVerifier == nil {
+		return nil, errors.E(op, errors.Internal, "device dependencies not configured")
+	}
+
+	if req.UserID == "" {
+		return nil, errors.E(op, errors.Invalid, InvalidUserID, "user id is required")
+	}
+	if req.DeviceName == "" {
+		return nil, errors.E(op, errors.Invalid, "device name is required")
+	}
+	if len(req.PublicKey) == 0 {
+		return nil, errors.E(op, errors.Invalid, "public key is required")
+	}
+	if req.Algorithm == "" {
+		return nil, errors.E(op, errors.Invalid, "algorithm is required")
+	}
+	if req.Challenge == "" {
+		return nil, errors.E(op, errors.Invalid, "challenge is required")
+	}
+	if len(req.Signature) == 0 {
+		return nil, errors.E(op, errors.Invalid, "signature is required")
+	}
+
+	now := req.Now
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+
+	// If user has active MFA factor(s), enforce step-up verification via TOTP
+	if s.deps.MFAStore != nil {
+		factors, err := s.deps.MFAStore.ListFactorsByUserID(ctx, req.UserID)
+		if err != nil {
+			return nil, errors.E(op, err)
+		}
+
+		var activeMFA bool
+		for _, f := range factors {
+			if !f.IsRevoked() {
+				activeMFA = true
+				break
+			}
+		}
+
+		if activeMFA {
+			if req.TOTPCode == "" {
+				return nil, errors.E(op, errors.Permission, MFARequired, "mfa verification required to register device")
+			}
+			if s.deps.Cipher == nil || s.deps.TOTP == nil {
+				return nil, errors.E(op, errors.Internal, "mfa cipher or totp not configured")
+			}
+			var totpVerified bool
+			for _, f := range factors {
+				if f.IsRevoked() || f.Type != MFAFactorTypeTOTP {
+					continue
+				}
+				totpCfg := f.TOTPConfig()
+				if totpCfg == nil {
+					continue
+				}
+				secret, err := s.deps.Cipher.Decrypt(totpCfg.EncryptedSecret)
+				if err != nil {
+					continue
+				}
+				if s.deps.TOTP.ValidateCode(secret, req.TOTPCode, now) {
+					totpVerified = true
+					break
+				}
+			}
+			if !totpVerified {
+				return nil, errors.E(op, errors.Permission, MFAInvalidCode, "invalid totp code")
+			}
+		}
+	}
+
+	// Consume challenge (enforcing replay protection and 5-min TTL)
+	consumed, err := s.deps.ChallengeStore.ConsumeChallenge(ctx, req.Challenge, now)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	if !consumed {
+		return nil, errors.E(op, errors.Unauthenticated, DeviceInvalidChallenge, "invalid or expired challenge")
+	}
+
+	// Verify cryptographic signature
+	if err := s.deps.DeviceVerifier.VerifyAssertion(crypto.VerifyAssertionParams{
+		PublicKey: req.PublicKey,
+		Algorithm: req.Algorithm,
+		Challenge: req.Challenge,
+		Signature: req.Signature,
+	}); err != nil {
+		return nil, errors.E(op, errors.Unauthenticated, DeviceInvalidSignature, fmt.Sprintf("invalid device signature: %v", err))
+	}
+
+	deviceID, err := NewDeviceID()
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	device := &Device{
+		ID:           deviceID,
+		UserID:       req.UserID,
+		PublicKey:    req.PublicKey,
+		KeyAlgorithm: req.Algorithm,
+		DeviceName:   req.DeviceName,
+		CreatedAt:    now,
+		ExpiresAt:    now.Add(DefaultDeviceExpiration),
+	}
+
+	if err := s.deps.DeviceStore.CreateDevice(ctx, device); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	return device, nil
+}
+
+// ListDevices returns all active, registered devices for the given user.
+func (s *Service) ListDevices(ctx context.Context, userID UserID) ([]*Device, error) {
+	const op errors.Op = "identity.ListDevices"
+
+	if s.deps.DeviceStore == nil {
+		return nil, errors.E(op, errors.Internal, "device store not configured")
+	}
+
+	devices, err := s.deps.DeviceStore.ListDevicesByUserID(ctx, userID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return devices, nil
+}
+
+// RevokeDevice revokes a trusted device and terminates all sessions originated from it.
+func (s *Service) RevokeDevice(ctx context.Context, userID UserID, deviceID DeviceID) error {
+	const op errors.Op = "identity.RevokeDevice"
+
+	if s.deps.DeviceStore == nil || s.deps.SessionStore == nil {
+		return errors.E(op, errors.Internal, "device or session store not configured")
+	}
+
+	device, err := s.deps.DeviceStore.GetDeviceByID(ctx, deviceID)
+	if err != nil {
+		return errors.E(op, errors.NotExist, DeviceNotFound, "device not found")
+	}
+	if device.UserID != userID {
+		return errors.E(op, errors.NotExist, DeviceNotFound, "device not found")
+	}
+	if device.IsRevoked() {
+		return nil
+	}
+
+	now := time.Now().UTC()
+	if err := s.deps.DeviceStore.RevokeDevice(ctx, deviceID, now); err != nil {
+		return errors.E(op, err)
+	}
+
+	// Revoke all sessions associated with this device
+	if err := s.deps.SessionStore.RevokeByDeviceID(ctx, deviceID, now); err != nil {
+		return errors.E(op, err)
+	}
+
+	return nil
+}
+
+// VerifyDeviceAssertionRequest encapsulates the fields for authenticating via trusted device.
+type VerifyDeviceAssertionRequest struct {
+	DeviceID  DeviceID
+	Challenge string
+	Signature []byte
+	Now       time.Time
+}
+
+// VerifyDeviceAssertion validates biometric device assertion, checking revocation, 60d expiration, 30d inactivity, challenge, and signature.
+func (s *Service) VerifyDeviceAssertion(ctx context.Context, req VerifyDeviceAssertionRequest) (*Device, *User, error) {
+	const op errors.Op = "identity.VerifyDeviceAssertion"
+
+	if s.deps.DeviceStore == nil || s.deps.ChallengeStore == nil || s.deps.DeviceVerifier == nil || s.deps.UserStore == nil {
+		return nil, nil, errors.E(op, errors.Internal, "device dependencies not configured")
+	}
+
+	now := req.Now
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+
+	device, err := s.deps.DeviceStore.GetDeviceByID(ctx, req.DeviceID)
+	if err != nil {
+		return nil, nil, errors.E(op, errors.Unauthenticated, DeviceNotFound, "device not found")
+	}
+
+	if device.IsRevoked() {
+		return nil, nil, errors.E(op, errors.Unauthenticated, DeviceRevoked, "device has been revoked")
+	}
+
+	if device.IsExpired(now) {
+		return nil, nil, errors.E(op, errors.Unauthenticated, DeviceExpired, "device registration expired (60-day limit reached)")
+	}
+
+	if device.IsInactive(now, DefaultDeviceInactivity) {
+		return nil, nil, errors.E(op, errors.Unauthenticated, DeviceInactive, "device registration inactive for over 30 days")
+	}
+
+	consumed, err := s.deps.ChallengeStore.ConsumeChallenge(ctx, req.Challenge, now)
+	if err != nil {
+		return nil, nil, errors.E(op, err)
+	}
+	if !consumed {
+		return nil, nil, errors.E(op, errors.Unauthenticated, DeviceInvalidChallenge, "invalid or expired challenge")
+	}
+
+	if err := s.deps.DeviceVerifier.VerifyAssertion(crypto.VerifyAssertionParams{
+		PublicKey: device.PublicKey,
+		Algorithm: device.KeyAlgorithm,
+		Challenge: req.Challenge,
+		Signature: req.Signature,
+	}); err != nil {
+		return nil, nil, errors.E(op, errors.Unauthenticated, DeviceInvalidSignature, "invalid device signature")
+	}
+
+	user, err := s.deps.UserStore.GetByID(ctx, device.UserID)
+	if err != nil {
+		return nil, nil, errors.E(op, errors.Unauthenticated, InvalidCredentials, "user not found")
+	}
+
+	if err := s.deps.DeviceStore.UpdateDeviceLastUsed(ctx, device.ID, now); err != nil {
+		log.Warn(ctx, "failed to update device last used timestamp", log.String("device_id", string(device.ID)), log.Err(err))
+	}
+	device.LastUsedAt = &now
+
+	return device, user, nil
 }

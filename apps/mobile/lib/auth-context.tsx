@@ -25,7 +25,15 @@ import {
   setBiometricEnabled,
   getStoredUserProfile,
   setStoredUserProfile,
+  clearDeviceEnrollment,
 } from "./storage"
+import {
+  checkBiometricStatus,
+  isDeviceBiometricsReady,
+  checkDeviceEnrolled,
+  loginWithBiometrics as apiLoginWithBiometrics,
+  enrollDeviceBiometrics,
+} from "./biometrics"
 import { decodeJwt, isTokenExpired } from "./jwt"
 import {
   getApiBaseUrl,
@@ -57,15 +65,23 @@ export interface AuthContextType {
   isAuthenticated: boolean
   isBiometricSupported: boolean
   isBiometricActive: boolean
+  isDeviceEnrolled: boolean
+  biometricLabel: string
   activeSpaceId: string | null
   serverUrl: string
   error: string | null
   login: (req: LoginUserRequest) => Promise<LoginUserResponse>
+  loginWithBiometrics: () => Promise<LoginUserResponse>
+  enrollBiometrics: (
+    deviceName?: string,
+    totpCode?: string
+  ) => Promise<{ deviceId: string }>
+  unenrollBiometrics: () => Promise<void>
   register: (req: RegisterUserRequest) => Promise<void>
   logout: () => Promise<void>
   switchSpace: (spaceId: string | null) => Promise<void>
   setActiveSpace: (spaceId: string | null) => Promise<void>
-  toggleBiometrics: (enabled: boolean) => Promise<boolean>
+  toggleBiometrics: (enabled: boolean, totpCode?: string) => Promise<boolean>
   authenticateWithBiometrics: () => Promise<boolean>
   updateServerUrl: (url: string) => Promise<string>
   resetServerUrl: () => Promise<string>
@@ -83,6 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [isBiometricSupported, setIsBiometricSupported] = useState(false)
   const [isBiometricActive, setIsBiometricActive] = useState(false)
+  const [isDeviceEnrolled, setIsDeviceEnrolled] = useState(false)
+  const [biometricLabel, setBiometricLabel] = useState("Biometrics")
 
   const [serverUrl, setServerUrl] = useState<string>(getApiBaseUrl())
 
@@ -99,6 +117,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSession({ accessToken: newAccessToken, hasSession: true })
         },
         onUnauthorized: () => {
+          clearDeviceEnrollment().catch(() => {})
+          setIsDeviceEnrolled(false)
+          setIsBiometricActive(false)
           mobileStorage.clearSession()
           setStoredUserProfile(null)
           setCachedUser(null)
@@ -110,16 +131,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initClient()
   }, [])
 
-  // Check hardware biometric capabilities
+  // Check hardware biometric capabilities and device enrollment
   useEffect(() => {
     async function checkBiometrics() {
       try {
-        const hasHardware = await LocalAuthentication.hasHardwareAsync()
-        const isEnrolled = await LocalAuthentication.isEnrolledAsync()
-        setIsBiometricSupported(hasHardware && isEnrolled)
-
-        const enabled = await isBiometricEnabled()
-        setIsBiometricActive(enabled)
+        const [status, ready, enrolled] = await Promise.all([
+          checkBiometricStatus(),
+          isDeviceBiometricsReady(),
+          checkDeviceEnrolled(),
+        ])
+        setIsBiometricSupported(status.hasHardware && status.isEnrolled)
+        setBiometricLabel(status.label)
+        setIsDeviceEnrolled(enrolled)
+        setIsBiometricActive(ready)
       } catch {
         setIsBiometricSupported(false)
       }
@@ -311,6 +335,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const loginWithBiometrics = async (): Promise<LoginUserResponse> => {
+    setError(null)
+    try {
+      const res = await apiLoginWithBiometrics()
+      if (res.accessToken) {
+        await mobileStorage.setSession(res.accessToken)
+        if (res.refreshToken && mobileStorage.setRefreshToken) {
+          await mobileStorage.setRefreshToken(res.refreshToken)
+        }
+
+        setAccessToken(res.accessToken)
+        setSession({ accessToken: res.accessToken, hasSession: true })
+      }
+      return res
+    } catch (err: unknown) {
+      const ready = await isDeviceBiometricsReady().catch(() => false)
+      if (!ready) {
+        setIsDeviceEnrolled(false)
+        setIsBiometricActive(false)
+      }
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to authenticate with biometrics"
+      setError(message)
+      throw err
+    }
+  }
+
+  const enrollBiometrics = async (
+    deviceName?: string,
+    totpCode?: string
+  ): Promise<{ deviceId: string }> => {
+    setError(null)
+    try {
+      const res = await enrollDeviceBiometrics({ deviceName, totpCode })
+      setIsDeviceEnrolled(true)
+      setIsBiometricActive(true)
+      return res
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to enroll device"
+      setError(message)
+      throw err
+    }
+  }
+
+  const unenrollBiometrics = async (): Promise<void> => {
+    setError(null)
+    try {
+      await clearDeviceEnrollment()
+      setIsDeviceEnrolled(false)
+      setIsBiometricActive(false)
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to unenroll device"
+      setError(message)
+      throw err
+    }
+  }
+
   const register = async (req: RegisterUserRequest) => {
     setError(null)
     try {
@@ -338,6 +423,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // Local logout proceeds even if remote server revocation fails
     } finally {
+      await clearDeviceEnrollment()
+      setIsDeviceEnrolled(false)
+      setIsBiometricActive(false)
       await mobileStorage.clearSession()
       await mobileStorage.setActiveSpaceId(null)
       await setStoredUserProfile(null)
@@ -355,18 +443,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.invalidateQueries()
   }
 
-  const toggleBiometrics = async (enabled: boolean): Promise<boolean> => {
-    if (enabled && isBiometricSupported) {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: "Authenticate to enable Biometric Unlock",
-      })
-      if (!result.success) {
-        return false
-      }
+  const toggleBiometrics = async (
+    enabled: boolean,
+    totpCode?: string
+  ): Promise<boolean> => {
+    if (!enabled) {
+      await setBiometricEnabled(false)
+      setIsBiometricActive(false)
+      return true
     }
 
-    await setBiometricEnabled(enabled)
-    setIsBiometricActive(enabled)
+    if (!isBiometricSupported) return false
+
+    const enrolled = isDeviceEnrolled || (await checkDeviceEnrolled())
+    if (enrolled) {
+      await setBiometricEnabled(true)
+      setIsDeviceEnrolled(true)
+      setIsBiometricActive(true)
+      return true
+    }
+
+    await enrollBiometrics(undefined, totpCode)
     return true
   }
 
@@ -405,10 +502,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isBiometricSupported,
         isBiometricActive,
+        isDeviceEnrolled,
+        biometricLabel,
         activeSpaceId,
         serverUrl,
         error,
         login,
+        loginWithBiometrics,
+        enrollBiometrics,
+        unenrollBiometrics,
         register,
         logout,
         switchSpace,

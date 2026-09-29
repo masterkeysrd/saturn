@@ -14,4 +14,5 @@ type SessionStoreProvider interface {
 	ListActiveSessions(ctx context.Context, userID UserID) ([]*Session, error)
 	RevokeFamily(ctx context.Context, familyID TokenFamilyID, now time.Time) error
 	RevokeAllForUser(ctx context.Context, userID UserID, now time.Time) error
+	RevokeByDeviceID(ctx context.Context, deviceID DeviceID, now time.Time) error
 }

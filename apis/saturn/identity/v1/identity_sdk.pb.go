@@ -243,3 +243,63 @@ func (c *Client) RegenerateBackupCodes(ctx context.Context, req *RegenerateBacku
 	}
 	return &resp, nil
 }
+
+// CreateAuthChallenge executes POST /api/v1/identity/devices/challenges.
+func (c *Client) CreateAuthChallenge(ctx context.Context, req *CreateAuthChallengeRequest) (*CreateAuthChallengeResponse, error) {
+	var resp CreateAuthChallengeResponse
+	path := "/api/v1/identity/devices/challenges"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// CreateDevice executes POST /api/v1/identity/devices.
+func (c *Client) CreateDevice(ctx context.Context, req *CreateDeviceRequest) (*Device, error) {
+	var resp Device
+	path := "/api/v1/identity/devices"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetDevice()
+	if payload == nil {
+		return nil, fmt.Errorf("device payload is required")
+	}
+	if err := c.base.Do(ctx, "POST", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ListDevices executes GET /api/v1/identity/devices.
+func (c *Client) ListDevices(ctx context.Context, req *ListDevicesRequest) (*ListDevicesResponse, error) {
+	var resp ListDevicesResponse
+	path := "/api/v1/identity/devices"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// RevokeDevice executes POST /api/v1/identity/devices/{device_id}:revoke.
+func (c *Client) RevokeDevice(ctx context.Context, req *RevokeDeviceRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
+	path := fmt.Sprintf("/api/v1/identity/devices/%s:revoke", req.GetDeviceId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}

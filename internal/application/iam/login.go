@@ -24,6 +24,11 @@ type LoginRequest struct {
 	TOTPCode   string
 	BackupCode string
 
+	// Device biometric assertion
+	DeviceID  string
+	Challenge string
+	Signature []byte
+
 	UserAgent string
 	IPAddress string
 }
@@ -50,6 +55,10 @@ type LoginResponse struct {
 // Login authenticates credentials or MFA assertion, issues access/refresh tokens, and persists the session.
 func (c *coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error) {
 	now := time.Now()
+
+	if req.DeviceID != "" {
+		return c.loginWithDeviceAssertion(ctx, req, now)
+	}
 
 	if req.MFATicket != "" {
 		return c.loginWithMFATicket(ctx, req, now)
@@ -240,10 +249,53 @@ func (c *coordinator) loginWithCredentials(ctx context.Context, req *LoginReques
 	})
 }
 
+// loginWithDeviceAssertion verifies a cryptographic assertion from an enrolled trusted hardware device and finalizes the session.
+func (c *coordinator) loginWithDeviceAssertion(ctx context.Context, req *LoginRequest, now time.Time) (*LoginResponse, error) {
+	const op errors.Op = "iam.loginWithDeviceAssertion"
+
+	deviceID, err := identity.ParseDeviceID(req.DeviceID)
+	if err != nil {
+		return nil, errors.E(op, errors.Invalid, identity.DeviceNotFound, "invalid device id format")
+	}
+
+	device, user, err := c.identityService.VerifyDeviceAssertion(ctx, identity.VerifyDeviceAssertionRequest{
+		DeviceID:  deviceID,
+		Challenge: req.Challenge,
+		Signature: req.Signature,
+	})
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	if user.Status != identity.UserStatusActive {
+		return nil, errors.E(op, errors.Unauthenticated, identity.AccountInactive, "account is not active")
+	}
+
+	// Security audit log for biometric sign-in
+	eventID, _ := id.Generate("evt_")
+	_ = c.identityService.CreateSecurityEvent(ctx, &identity.SecurityEvent{
+		ID:        eventID,
+		UserID:    &user.ID,
+		Email:     user.Email,
+		EventType: identity.SecurityEventLoginSuccess,
+		IPAddress: req.IPAddress,
+		UserAgent: req.UserAgent,
+		CreatedAt: now,
+	})
+
+	return c.finalizeLoginSession(ctx, finalizeSessionParams{
+		User:     user,
+		Req:      req,
+		Now:      now,
+		DeviceID: &device.ID,
+	})
+}
+
 type finalizeSessionParams struct {
-	User *identity.User
-	Req  *LoginRequest
-	Now  time.Time
+	User     *identity.User
+	Req      *LoginRequest
+	Now      time.Time
+	DeviceID *identity.DeviceID
 }
 
 func (c *coordinator) finalizeLoginSession(ctx context.Context, p finalizeSessionParams) (*LoginResponse, error) {
@@ -276,6 +328,7 @@ func (c *coordinator) finalizeLoginSession(ctx context.Context, p finalizeSessio
 
 	if _, err := c.identityService.CreateSession(ctx, &identity.CreateSessionRequest{
 		UserID:            p.User.ID,
+		DeviceID:          p.DeviceID,
 		RefreshTokenHash:  refreshTokenHash,
 		UserAgent:         p.Req.UserAgent,
 		IPAddress:         p.Req.IPAddress,
