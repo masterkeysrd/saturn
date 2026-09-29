@@ -8,7 +8,843 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/crypto"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
+
+// Compile-time interface assertion.
+var _ SecurityEventStore = (*SecurityEventStoreMock)(nil)
+
+// SecurityEventStoreMock is a mock implementation of SecurityEventStore.
+type SecurityEventStoreMock struct {
+	// CreateFunc mocks the Create method.
+	CreateFunc func(ctx context.Context, event *SecurityEvent) error
+
+	// ListFunc mocks the List method.
+	ListFunc func(ctx context.Context, filter SecurityEventFilter) (*paging.Page[*SecurityEvent], error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Create []struct {
+			Ctx   context.Context
+			Event *SecurityEvent
+		}
+		List []struct {
+			Ctx    context.Context
+			Filter SecurityEventFilter
+		}
+	}
+	lockCreate sync.RWMutex
+	lockList   sync.RWMutex
+}
+
+// Create calls CreateFunc.
+func (mock *SecurityEventStoreMock) Create(ctx context.Context, event *SecurityEvent) error {
+	if mock.CreateFunc == nil {
+		panic("SecurityEventStoreMock.CreateFunc: method is nil but SecurityEventStore.Create was just called")
+	}
+	mock.lockCreate.Lock()
+	mock.calls.Create = append(mock.calls.Create, struct {
+		Ctx   context.Context
+		Event *SecurityEvent
+	}{
+		Ctx:   ctx,
+		Event: event,
+	})
+	mock.lockCreate.Unlock()
+	return mock.CreateFunc(ctx, event)
+}
+
+// CreateCalls returns all calls made to Create.
+func (mock *SecurityEventStoreMock) CreateCalls() []struct {
+	Ctx   context.Context
+	Event *SecurityEvent
+} {
+	mock.lockCreate.RLock()
+	defer mock.lockCreate.RUnlock()
+	return mock.calls.Create
+}
+
+// List calls ListFunc.
+func (mock *SecurityEventStoreMock) List(ctx context.Context, filter SecurityEventFilter) (*paging.Page[*SecurityEvent], error) {
+	if mock.ListFunc == nil {
+		panic("SecurityEventStoreMock.ListFunc: method is nil but SecurityEventStore.List was just called")
+	}
+	mock.lockList.Lock()
+	mock.calls.List = append(mock.calls.List, struct {
+		Ctx    context.Context
+		Filter SecurityEventFilter
+	}{
+		Ctx:    ctx,
+		Filter: filter,
+	})
+	mock.lockList.Unlock()
+	return mock.ListFunc(ctx, filter)
+}
+
+// ListCalls returns all calls made to List.
+func (mock *SecurityEventStoreMock) ListCalls() []struct {
+	Ctx    context.Context
+	Filter SecurityEventFilter
+} {
+	mock.lockList.RLock()
+	defer mock.lockList.RUnlock()
+	return mock.calls.List
+}
+
+// Compile-time interface assertion.
+var _ UserStoreProvider = (*UserStoreProviderMock)(nil)
+
+// UserStoreProviderMock is a mock implementation of UserStoreProvider.
+type UserStoreProviderMock struct {
+	// CreateFunc mocks the Create method.
+	CreateFunc func(ctx context.Context, user *User) error
+
+	// GetByIDFunc mocks the GetByID method.
+	GetByIDFunc func(ctx context.Context, id UserID) (*User, error)
+
+	// GetByEmailFunc mocks the GetByEmail method.
+	GetByEmailFunc func(ctx context.Context, email string) (*User, error)
+
+	// GetByUsernameFunc mocks the GetByUsername method.
+	GetByUsernameFunc func(ctx context.Context, username string) (*User, error)
+
+	// UpdateFunc mocks the Update method.
+	UpdateFunc func(ctx context.Context, user *User) error
+
+	// DeleteFunc mocks the Delete method.
+	DeleteFunc func(ctx context.Context, id UserID) error
+
+	// GetUsersFunc mocks the GetUsers method.
+	GetUsersFunc func(ctx context.Context, filter *ListUsersFilter) (*paging.Page[*User], error)
+
+	// GetAuthVersionFunc mocks the GetAuthVersion method.
+	GetAuthVersionFunc func(ctx context.Context, id UserID) (int64, error)
+
+	// IncrementAuthVersionFunc mocks the IncrementAuthVersion method.
+	IncrementAuthVersionFunc func(ctx context.Context, id UserID) (int64, error)
+
+	// UpdateLockoutStateFunc mocks the UpdateLockoutState method.
+	UpdateLockoutStateFunc func(ctx context.Context, req UpdateLockoutRequest) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Create []struct {
+			Ctx  context.Context
+			User *User
+		}
+		GetByID []struct {
+			Ctx context.Context
+			Id  UserID
+		}
+		GetByEmail []struct {
+			Ctx   context.Context
+			Email string
+		}
+		GetByUsername []struct {
+			Ctx      context.Context
+			Username string
+		}
+		Update []struct {
+			Ctx  context.Context
+			User *User
+		}
+		Delete []struct {
+			Ctx context.Context
+			Id  UserID
+		}
+		GetUsers []struct {
+			Ctx    context.Context
+			Filter *ListUsersFilter
+		}
+		GetAuthVersion []struct {
+			Ctx context.Context
+			Id  UserID
+		}
+		IncrementAuthVersion []struct {
+			Ctx context.Context
+			Id  UserID
+		}
+		UpdateLockoutState []struct {
+			Ctx context.Context
+			Req UpdateLockoutRequest
+		}
+	}
+	lockCreate               sync.RWMutex
+	lockGetByID              sync.RWMutex
+	lockGetByEmail           sync.RWMutex
+	lockGetByUsername        sync.RWMutex
+	lockUpdate               sync.RWMutex
+	lockDelete               sync.RWMutex
+	lockGetUsers             sync.RWMutex
+	lockGetAuthVersion       sync.RWMutex
+	lockIncrementAuthVersion sync.RWMutex
+	lockUpdateLockoutState   sync.RWMutex
+}
+
+// Create calls CreateFunc.
+func (mock *UserStoreProviderMock) Create(ctx context.Context, user *User) error {
+	if mock.CreateFunc == nil {
+		panic("UserStoreProviderMock.CreateFunc: method is nil but UserStoreProvider.Create was just called")
+	}
+	mock.lockCreate.Lock()
+	mock.calls.Create = append(mock.calls.Create, struct {
+		Ctx  context.Context
+		User *User
+	}{
+		Ctx:  ctx,
+		User: user,
+	})
+	mock.lockCreate.Unlock()
+	return mock.CreateFunc(ctx, user)
+}
+
+// CreateCalls returns all calls made to Create.
+func (mock *UserStoreProviderMock) CreateCalls() []struct {
+	Ctx  context.Context
+	User *User
+} {
+	mock.lockCreate.RLock()
+	defer mock.lockCreate.RUnlock()
+	return mock.calls.Create
+}
+
+// GetByID calls GetByIDFunc.
+func (mock *UserStoreProviderMock) GetByID(ctx context.Context, id UserID) (*User, error) {
+	if mock.GetByIDFunc == nil {
+		panic("UserStoreProviderMock.GetByIDFunc: method is nil but UserStoreProvider.GetByID was just called")
+	}
+	mock.lockGetByID.Lock()
+	mock.calls.GetByID = append(mock.calls.GetByID, struct {
+		Ctx context.Context
+		Id  UserID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockGetByID.Unlock()
+	return mock.GetByIDFunc(ctx, id)
+}
+
+// GetByIDCalls returns all calls made to GetByID.
+func (mock *UserStoreProviderMock) GetByIDCalls() []struct {
+	Ctx context.Context
+	Id  UserID
+} {
+	mock.lockGetByID.RLock()
+	defer mock.lockGetByID.RUnlock()
+	return mock.calls.GetByID
+}
+
+// GetByEmail calls GetByEmailFunc.
+func (mock *UserStoreProviderMock) GetByEmail(ctx context.Context, email string) (*User, error) {
+	if mock.GetByEmailFunc == nil {
+		panic("UserStoreProviderMock.GetByEmailFunc: method is nil but UserStoreProvider.GetByEmail was just called")
+	}
+	mock.lockGetByEmail.Lock()
+	mock.calls.GetByEmail = append(mock.calls.GetByEmail, struct {
+		Ctx   context.Context
+		Email string
+	}{
+		Ctx:   ctx,
+		Email: email,
+	})
+	mock.lockGetByEmail.Unlock()
+	return mock.GetByEmailFunc(ctx, email)
+}
+
+// GetByEmailCalls returns all calls made to GetByEmail.
+func (mock *UserStoreProviderMock) GetByEmailCalls() []struct {
+	Ctx   context.Context
+	Email string
+} {
+	mock.lockGetByEmail.RLock()
+	defer mock.lockGetByEmail.RUnlock()
+	return mock.calls.GetByEmail
+}
+
+// GetByUsername calls GetByUsernameFunc.
+func (mock *UserStoreProviderMock) GetByUsername(ctx context.Context, username string) (*User, error) {
+	if mock.GetByUsernameFunc == nil {
+		panic("UserStoreProviderMock.GetByUsernameFunc: method is nil but UserStoreProvider.GetByUsername was just called")
+	}
+	mock.lockGetByUsername.Lock()
+	mock.calls.GetByUsername = append(mock.calls.GetByUsername, struct {
+		Ctx      context.Context
+		Username string
+	}{
+		Ctx:      ctx,
+		Username: username,
+	})
+	mock.lockGetByUsername.Unlock()
+	return mock.GetByUsernameFunc(ctx, username)
+}
+
+// GetByUsernameCalls returns all calls made to GetByUsername.
+func (mock *UserStoreProviderMock) GetByUsernameCalls() []struct {
+	Ctx      context.Context
+	Username string
+} {
+	mock.lockGetByUsername.RLock()
+	defer mock.lockGetByUsername.RUnlock()
+	return mock.calls.GetByUsername
+}
+
+// Update calls UpdateFunc.
+func (mock *UserStoreProviderMock) Update(ctx context.Context, user *User) error {
+	if mock.UpdateFunc == nil {
+		panic("UserStoreProviderMock.UpdateFunc: method is nil but UserStoreProvider.Update was just called")
+	}
+	mock.lockUpdate.Lock()
+	mock.calls.Update = append(mock.calls.Update, struct {
+		Ctx  context.Context
+		User *User
+	}{
+		Ctx:  ctx,
+		User: user,
+	})
+	mock.lockUpdate.Unlock()
+	return mock.UpdateFunc(ctx, user)
+}
+
+// UpdateCalls returns all calls made to Update.
+func (mock *UserStoreProviderMock) UpdateCalls() []struct {
+	Ctx  context.Context
+	User *User
+} {
+	mock.lockUpdate.RLock()
+	defer mock.lockUpdate.RUnlock()
+	return mock.calls.Update
+}
+
+// Delete calls DeleteFunc.
+func (mock *UserStoreProviderMock) Delete(ctx context.Context, id UserID) error {
+	if mock.DeleteFunc == nil {
+		panic("UserStoreProviderMock.DeleteFunc: method is nil but UserStoreProvider.Delete was just called")
+	}
+	mock.lockDelete.Lock()
+	mock.calls.Delete = append(mock.calls.Delete, struct {
+		Ctx context.Context
+		Id  UserID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockDelete.Unlock()
+	return mock.DeleteFunc(ctx, id)
+}
+
+// DeleteCalls returns all calls made to Delete.
+func (mock *UserStoreProviderMock) DeleteCalls() []struct {
+	Ctx context.Context
+	Id  UserID
+} {
+	mock.lockDelete.RLock()
+	defer mock.lockDelete.RUnlock()
+	return mock.calls.Delete
+}
+
+// GetUsers calls GetUsersFunc.
+func (mock *UserStoreProviderMock) GetUsers(ctx context.Context, filter *ListUsersFilter) (*paging.Page[*User], error) {
+	if mock.GetUsersFunc == nil {
+		panic("UserStoreProviderMock.GetUsersFunc: method is nil but UserStoreProvider.GetUsers was just called")
+	}
+	mock.lockGetUsers.Lock()
+	mock.calls.GetUsers = append(mock.calls.GetUsers, struct {
+		Ctx    context.Context
+		Filter *ListUsersFilter
+	}{
+		Ctx:    ctx,
+		Filter: filter,
+	})
+	mock.lockGetUsers.Unlock()
+	return mock.GetUsersFunc(ctx, filter)
+}
+
+// GetUsersCalls returns all calls made to GetUsers.
+func (mock *UserStoreProviderMock) GetUsersCalls() []struct {
+	Ctx    context.Context
+	Filter *ListUsersFilter
+} {
+	mock.lockGetUsers.RLock()
+	defer mock.lockGetUsers.RUnlock()
+	return mock.calls.GetUsers
+}
+
+// GetAuthVersion calls GetAuthVersionFunc.
+func (mock *UserStoreProviderMock) GetAuthVersion(ctx context.Context, id UserID) (int64, error) {
+	if mock.GetAuthVersionFunc == nil {
+		panic("UserStoreProviderMock.GetAuthVersionFunc: method is nil but UserStoreProvider.GetAuthVersion was just called")
+	}
+	mock.lockGetAuthVersion.Lock()
+	mock.calls.GetAuthVersion = append(mock.calls.GetAuthVersion, struct {
+		Ctx context.Context
+		Id  UserID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockGetAuthVersion.Unlock()
+	return mock.GetAuthVersionFunc(ctx, id)
+}
+
+// GetAuthVersionCalls returns all calls made to GetAuthVersion.
+func (mock *UserStoreProviderMock) GetAuthVersionCalls() []struct {
+	Ctx context.Context
+	Id  UserID
+} {
+	mock.lockGetAuthVersion.RLock()
+	defer mock.lockGetAuthVersion.RUnlock()
+	return mock.calls.GetAuthVersion
+}
+
+// IncrementAuthVersion calls IncrementAuthVersionFunc.
+func (mock *UserStoreProviderMock) IncrementAuthVersion(ctx context.Context, id UserID) (int64, error) {
+	if mock.IncrementAuthVersionFunc == nil {
+		panic("UserStoreProviderMock.IncrementAuthVersionFunc: method is nil but UserStoreProvider.IncrementAuthVersion was just called")
+	}
+	mock.lockIncrementAuthVersion.Lock()
+	mock.calls.IncrementAuthVersion = append(mock.calls.IncrementAuthVersion, struct {
+		Ctx context.Context
+		Id  UserID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockIncrementAuthVersion.Unlock()
+	return mock.IncrementAuthVersionFunc(ctx, id)
+}
+
+// IncrementAuthVersionCalls returns all calls made to IncrementAuthVersion.
+func (mock *UserStoreProviderMock) IncrementAuthVersionCalls() []struct {
+	Ctx context.Context
+	Id  UserID
+} {
+	mock.lockIncrementAuthVersion.RLock()
+	defer mock.lockIncrementAuthVersion.RUnlock()
+	return mock.calls.IncrementAuthVersion
+}
+
+// UpdateLockoutState calls UpdateLockoutStateFunc.
+func (mock *UserStoreProviderMock) UpdateLockoutState(ctx context.Context, req UpdateLockoutRequest) error {
+	if mock.UpdateLockoutStateFunc == nil {
+		panic("UserStoreProviderMock.UpdateLockoutStateFunc: method is nil but UserStoreProvider.UpdateLockoutState was just called")
+	}
+	mock.lockUpdateLockoutState.Lock()
+	mock.calls.UpdateLockoutState = append(mock.calls.UpdateLockoutState, struct {
+		Ctx context.Context
+		Req UpdateLockoutRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockUpdateLockoutState.Unlock()
+	return mock.UpdateLockoutStateFunc(ctx, req)
+}
+
+// UpdateLockoutStateCalls returns all calls made to UpdateLockoutState.
+func (mock *UserStoreProviderMock) UpdateLockoutStateCalls() []struct {
+	Ctx context.Context
+	Req UpdateLockoutRequest
+} {
+	mock.lockUpdateLockoutState.RLock()
+	defer mock.lockUpdateLockoutState.RUnlock()
+	return mock.calls.UpdateLockoutState
+}
+
+// Compile-time interface assertion.
+var _ CredentialStoreProvider = (*CredentialStoreProviderMock)(nil)
+
+// CredentialStoreProviderMock is a mock implementation of CredentialStoreProvider.
+type CredentialStoreProviderMock struct {
+	// CreateFunc mocks the Create method.
+	CreateFunc func(ctx context.Context, credential *Credential) error
+
+	// GetByUserIDFunc mocks the GetByUserID method.
+	GetByUserIDFunc func(ctx context.Context, userID UserID) ([]*Credential, error)
+
+	// GetByUserIDAndAuthTypeFunc mocks the GetByUserIDAndAuthType method.
+	GetByUserIDAndAuthTypeFunc func(ctx context.Context, userID UserID, authType string) (*Credential, error)
+
+	// DeleteFunc mocks the Delete method.
+	DeleteFunc func(ctx context.Context, userID UserID, authType string) error
+
+	// UpdateFunc mocks the Update method.
+	UpdateFunc func(ctx context.Context, credential *Credential) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Create []struct {
+			Ctx        context.Context
+			Credential *Credential
+		}
+		GetByUserID []struct {
+			Ctx    context.Context
+			UserID UserID
+		}
+		GetByUserIDAndAuthType []struct {
+			Ctx      context.Context
+			UserID   UserID
+			AuthType string
+		}
+		Delete []struct {
+			Ctx      context.Context
+			UserID   UserID
+			AuthType string
+		}
+		Update []struct {
+			Ctx        context.Context
+			Credential *Credential
+		}
+	}
+	lockCreate                 sync.RWMutex
+	lockGetByUserID            sync.RWMutex
+	lockGetByUserIDAndAuthType sync.RWMutex
+	lockDelete                 sync.RWMutex
+	lockUpdate                 sync.RWMutex
+}
+
+// Create calls CreateFunc.
+func (mock *CredentialStoreProviderMock) Create(ctx context.Context, credential *Credential) error {
+	if mock.CreateFunc == nil {
+		panic("CredentialStoreProviderMock.CreateFunc: method is nil but CredentialStoreProvider.Create was just called")
+	}
+	mock.lockCreate.Lock()
+	mock.calls.Create = append(mock.calls.Create, struct {
+		Ctx        context.Context
+		Credential *Credential
+	}{
+		Ctx:        ctx,
+		Credential: credential,
+	})
+	mock.lockCreate.Unlock()
+	return mock.CreateFunc(ctx, credential)
+}
+
+// CreateCalls returns all calls made to Create.
+func (mock *CredentialStoreProviderMock) CreateCalls() []struct {
+	Ctx        context.Context
+	Credential *Credential
+} {
+	mock.lockCreate.RLock()
+	defer mock.lockCreate.RUnlock()
+	return mock.calls.Create
+}
+
+// GetByUserID calls GetByUserIDFunc.
+func (mock *CredentialStoreProviderMock) GetByUserID(ctx context.Context, userID UserID) ([]*Credential, error) {
+	if mock.GetByUserIDFunc == nil {
+		panic("CredentialStoreProviderMock.GetByUserIDFunc: method is nil but CredentialStoreProvider.GetByUserID was just called")
+	}
+	mock.lockGetByUserID.Lock()
+	mock.calls.GetByUserID = append(mock.calls.GetByUserID, struct {
+		Ctx    context.Context
+		UserID UserID
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+	})
+	mock.lockGetByUserID.Unlock()
+	return mock.GetByUserIDFunc(ctx, userID)
+}
+
+// GetByUserIDCalls returns all calls made to GetByUserID.
+func (mock *CredentialStoreProviderMock) GetByUserIDCalls() []struct {
+	Ctx    context.Context
+	UserID UserID
+} {
+	mock.lockGetByUserID.RLock()
+	defer mock.lockGetByUserID.RUnlock()
+	return mock.calls.GetByUserID
+}
+
+// GetByUserIDAndAuthType calls GetByUserIDAndAuthTypeFunc.
+func (mock *CredentialStoreProviderMock) GetByUserIDAndAuthType(ctx context.Context, userID UserID, authType string) (*Credential, error) {
+	if mock.GetByUserIDAndAuthTypeFunc == nil {
+		panic("CredentialStoreProviderMock.GetByUserIDAndAuthTypeFunc: method is nil but CredentialStoreProvider.GetByUserIDAndAuthType was just called")
+	}
+	mock.lockGetByUserIDAndAuthType.Lock()
+	mock.calls.GetByUserIDAndAuthType = append(mock.calls.GetByUserIDAndAuthType, struct {
+		Ctx      context.Context
+		UserID   UserID
+		AuthType string
+	}{
+		Ctx:      ctx,
+		UserID:   userID,
+		AuthType: authType,
+	})
+	mock.lockGetByUserIDAndAuthType.Unlock()
+	return mock.GetByUserIDAndAuthTypeFunc(ctx, userID, authType)
+}
+
+// GetByUserIDAndAuthTypeCalls returns all calls made to GetByUserIDAndAuthType.
+func (mock *CredentialStoreProviderMock) GetByUserIDAndAuthTypeCalls() []struct {
+	Ctx      context.Context
+	UserID   UserID
+	AuthType string
+} {
+	mock.lockGetByUserIDAndAuthType.RLock()
+	defer mock.lockGetByUserIDAndAuthType.RUnlock()
+	return mock.calls.GetByUserIDAndAuthType
+}
+
+// Delete calls DeleteFunc.
+func (mock *CredentialStoreProviderMock) Delete(ctx context.Context, userID UserID, authType string) error {
+	if mock.DeleteFunc == nil {
+		panic("CredentialStoreProviderMock.DeleteFunc: method is nil but CredentialStoreProvider.Delete was just called")
+	}
+	mock.lockDelete.Lock()
+	mock.calls.Delete = append(mock.calls.Delete, struct {
+		Ctx      context.Context
+		UserID   UserID
+		AuthType string
+	}{
+		Ctx:      ctx,
+		UserID:   userID,
+		AuthType: authType,
+	})
+	mock.lockDelete.Unlock()
+	return mock.DeleteFunc(ctx, userID, authType)
+}
+
+// DeleteCalls returns all calls made to Delete.
+func (mock *CredentialStoreProviderMock) DeleteCalls() []struct {
+	Ctx      context.Context
+	UserID   UserID
+	AuthType string
+} {
+	mock.lockDelete.RLock()
+	defer mock.lockDelete.RUnlock()
+	return mock.calls.Delete
+}
+
+// Update calls UpdateFunc.
+func (mock *CredentialStoreProviderMock) Update(ctx context.Context, credential *Credential) error {
+	if mock.UpdateFunc == nil {
+		panic("CredentialStoreProviderMock.UpdateFunc: method is nil but CredentialStoreProvider.Update was just called")
+	}
+	mock.lockUpdate.Lock()
+	mock.calls.Update = append(mock.calls.Update, struct {
+		Ctx        context.Context
+		Credential *Credential
+	}{
+		Ctx:        ctx,
+		Credential: credential,
+	})
+	mock.lockUpdate.Unlock()
+	return mock.UpdateFunc(ctx, credential)
+}
+
+// UpdateCalls returns all calls made to Update.
+func (mock *CredentialStoreProviderMock) UpdateCalls() []struct {
+	Ctx        context.Context
+	Credential *Credential
+} {
+	mock.lockUpdate.RLock()
+	defer mock.lockUpdate.RUnlock()
+	return mock.calls.Update
+}
+
+// Compile-time interface assertion.
+var _ Cipher = (*CipherMock)(nil)
+
+// CipherMock is a mock implementation of Cipher.
+type CipherMock struct {
+	// EncryptFunc mocks the Encrypt method.
+	EncryptFunc func(plaintext string) (string, error)
+
+	// DecryptFunc mocks the Decrypt method.
+	DecryptFunc func(ciphertext string) (string, error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Encrypt []struct {
+			Plaintext string
+		}
+		Decrypt []struct {
+			Ciphertext string
+		}
+	}
+	lockEncrypt sync.RWMutex
+	lockDecrypt sync.RWMutex
+}
+
+// Encrypt calls EncryptFunc.
+func (mock *CipherMock) Encrypt(plaintext string) (string, error) {
+	if mock.EncryptFunc == nil {
+		panic("CipherMock.EncryptFunc: method is nil but Cipher.Encrypt was just called")
+	}
+	mock.lockEncrypt.Lock()
+	mock.calls.Encrypt = append(mock.calls.Encrypt, struct {
+		Plaintext string
+	}{
+		Plaintext: plaintext,
+	})
+	mock.lockEncrypt.Unlock()
+	return mock.EncryptFunc(plaintext)
+}
+
+// EncryptCalls returns all calls made to Encrypt.
+func (mock *CipherMock) EncryptCalls() []struct {
+	Plaintext string
+} {
+	mock.lockEncrypt.RLock()
+	defer mock.lockEncrypt.RUnlock()
+	return mock.calls.Encrypt
+}
+
+// Decrypt calls DecryptFunc.
+func (mock *CipherMock) Decrypt(ciphertext string) (string, error) {
+	if mock.DecryptFunc == nil {
+		panic("CipherMock.DecryptFunc: method is nil but Cipher.Decrypt was just called")
+	}
+	mock.lockDecrypt.Lock()
+	mock.calls.Decrypt = append(mock.calls.Decrypt, struct {
+		Ciphertext string
+	}{
+		Ciphertext: ciphertext,
+	})
+	mock.lockDecrypt.Unlock()
+	return mock.DecryptFunc(ciphertext)
+}
+
+// DecryptCalls returns all calls made to Decrypt.
+func (mock *CipherMock) DecryptCalls() []struct {
+	Ciphertext string
+} {
+	mock.lockDecrypt.RLock()
+	defer mock.lockDecrypt.RUnlock()
+	return mock.calls.Decrypt
+}
+
+// Compile-time interface assertion.
+var _ TOTPProvider = (*TOTPProviderMock)(nil)
+
+// TOTPProviderMock is a mock implementation of TOTPProvider.
+type TOTPProviderMock struct {
+	// GenerateSecretFunc mocks the GenerateSecret method.
+	GenerateSecretFunc func() (string, error)
+
+	// ValidateCodeFunc mocks the ValidateCode method.
+	ValidateCodeFunc func(secret string, code string, t time.Time) bool
+
+	// GenerateBackupCodesFunc mocks the GenerateBackupCodes method.
+	GenerateBackupCodesFunc func() ([]string, []string, error)
+
+	// ValidateAndConsumeBackupCodeFunc mocks the ValidateAndConsumeBackupCode method.
+	ValidateAndConsumeBackupCodeFunc func(input string, hashedCodes []string) ([]string, bool)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		GenerateSecret []struct{}
+		ValidateCode   []struct {
+			Secret string
+			Code   string
+			T      time.Time
+		}
+		GenerateBackupCodes          []struct{}
+		ValidateAndConsumeBackupCode []struct {
+			Input       string
+			HashedCodes []string
+		}
+	}
+	lockGenerateSecret               sync.RWMutex
+	lockValidateCode                 sync.RWMutex
+	lockGenerateBackupCodes          sync.RWMutex
+	lockValidateAndConsumeBackupCode sync.RWMutex
+}
+
+// GenerateSecret calls GenerateSecretFunc.
+func (mock *TOTPProviderMock) GenerateSecret() (string, error) {
+	if mock.GenerateSecretFunc == nil {
+		panic("TOTPProviderMock.GenerateSecretFunc: method is nil but TOTPProvider.GenerateSecret was just called")
+	}
+	mock.lockGenerateSecret.Lock()
+	mock.calls.GenerateSecret = append(mock.calls.GenerateSecret, struct{}{})
+	mock.lockGenerateSecret.Unlock()
+	return mock.GenerateSecretFunc()
+}
+
+// GenerateSecretCalls returns all calls made to GenerateSecret.
+func (mock *TOTPProviderMock) GenerateSecretCalls() []struct{} {
+	mock.lockGenerateSecret.RLock()
+	defer mock.lockGenerateSecret.RUnlock()
+	return mock.calls.GenerateSecret
+}
+
+// ValidateCode calls ValidateCodeFunc.
+func (mock *TOTPProviderMock) ValidateCode(secret string, code string, t time.Time) bool {
+	if mock.ValidateCodeFunc == nil {
+		panic("TOTPProviderMock.ValidateCodeFunc: method is nil but TOTPProvider.ValidateCode was just called")
+	}
+	mock.lockValidateCode.Lock()
+	mock.calls.ValidateCode = append(mock.calls.ValidateCode, struct {
+		Secret string
+		Code   string
+		T      time.Time
+	}{
+		Secret: secret,
+		Code:   code,
+		T:      t,
+	})
+	mock.lockValidateCode.Unlock()
+	return mock.ValidateCodeFunc(secret, code, t)
+}
+
+// ValidateCodeCalls returns all calls made to ValidateCode.
+func (mock *TOTPProviderMock) ValidateCodeCalls() []struct {
+	Secret string
+	Code   string
+	T      time.Time
+} {
+	mock.lockValidateCode.RLock()
+	defer mock.lockValidateCode.RUnlock()
+	return mock.calls.ValidateCode
+}
+
+// GenerateBackupCodes calls GenerateBackupCodesFunc.
+func (mock *TOTPProviderMock) GenerateBackupCodes() ([]string, []string, error) {
+	if mock.GenerateBackupCodesFunc == nil {
+		panic("TOTPProviderMock.GenerateBackupCodesFunc: method is nil but TOTPProvider.GenerateBackupCodes was just called")
+	}
+	mock.lockGenerateBackupCodes.Lock()
+	mock.calls.GenerateBackupCodes = append(mock.calls.GenerateBackupCodes, struct{}{})
+	mock.lockGenerateBackupCodes.Unlock()
+	return mock.GenerateBackupCodesFunc()
+}
+
+// GenerateBackupCodesCalls returns all calls made to GenerateBackupCodes.
+func (mock *TOTPProviderMock) GenerateBackupCodesCalls() []struct{} {
+	mock.lockGenerateBackupCodes.RLock()
+	defer mock.lockGenerateBackupCodes.RUnlock()
+	return mock.calls.GenerateBackupCodes
+}
+
+// ValidateAndConsumeBackupCode calls ValidateAndConsumeBackupCodeFunc.
+func (mock *TOTPProviderMock) ValidateAndConsumeBackupCode(input string, hashedCodes []string) ([]string, bool) {
+	if mock.ValidateAndConsumeBackupCodeFunc == nil {
+		panic("TOTPProviderMock.ValidateAndConsumeBackupCodeFunc: method is nil but TOTPProvider.ValidateAndConsumeBackupCode was just called")
+	}
+	mock.lockValidateAndConsumeBackupCode.Lock()
+	mock.calls.ValidateAndConsumeBackupCode = append(mock.calls.ValidateAndConsumeBackupCode, struct {
+		Input       string
+		HashedCodes []string
+	}{
+		Input:       input,
+		HashedCodes: hashedCodes,
+	})
+	mock.lockValidateAndConsumeBackupCode.Unlock()
+	return mock.ValidateAndConsumeBackupCodeFunc(input, hashedCodes)
+}
+
+// ValidateAndConsumeBackupCodeCalls returns all calls made to ValidateAndConsumeBackupCode.
+func (mock *TOTPProviderMock) ValidateAndConsumeBackupCodeCalls() []struct {
+	Input       string
+	HashedCodes []string
+} {
+	mock.lockValidateAndConsumeBackupCode.RLock()
+	defer mock.lockValidateAndConsumeBackupCode.RUnlock()
+	return mock.calls.ValidateAndConsumeBackupCode
+}
 
 // Compile-time interface assertion.
 var _ DeviceVerifier = (*DeviceVerifierMock)(nil)
@@ -49,6 +885,349 @@ func (mock *DeviceVerifierMock) VerifyAssertionCalls() []struct {
 	mock.lockVerifyAssertion.RLock()
 	defer mock.lockVerifyAssertion.RUnlock()
 	return mock.calls.VerifyAssertion
+}
+
+// Compile-time interface assertion.
+var _ Hasher = (*HasherMock)(nil)
+
+// HasherMock is a mock implementation of Hasher.
+type HasherMock struct {
+	// VerifyFunc mocks the Verify method.
+	VerifyFunc func(encodedHash string, raw string) (bool, error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Verify []struct {
+			EncodedHash string
+			Raw         string
+		}
+	}
+	lockVerify sync.RWMutex
+}
+
+// Verify calls VerifyFunc.
+func (mock *HasherMock) Verify(encodedHash string, raw string) (bool, error) {
+	if mock.VerifyFunc == nil {
+		panic("HasherMock.VerifyFunc: method is nil but Hasher.Verify was just called")
+	}
+	mock.lockVerify.Lock()
+	mock.calls.Verify = append(mock.calls.Verify, struct {
+		EncodedHash string
+		Raw         string
+	}{
+		EncodedHash: encodedHash,
+		Raw:         raw,
+	})
+	mock.lockVerify.Unlock()
+	return mock.VerifyFunc(encodedHash, raw)
+}
+
+// VerifyCalls returns all calls made to Verify.
+func (mock *HasherMock) VerifyCalls() []struct {
+	EncodedHash string
+	Raw         string
+} {
+	mock.lockVerify.RLock()
+	defer mock.lockVerify.RUnlock()
+	return mock.calls.Verify
+}
+
+// Compile-time interface assertion.
+var _ MFAFactorStore = (*MFAFactorStoreMock)(nil)
+
+// MFAFactorStoreMock is a mock implementation of MFAFactorStore.
+type MFAFactorStoreMock struct {
+	// CreateFactorFunc mocks the CreateFactor method.
+	CreateFactorFunc func(ctx context.Context, factor *MFAFactor) error
+
+	// GetFactorByIDFunc mocks the GetFactorByID method.
+	GetFactorByIDFunc func(ctx context.Context, id MFAFactorID) (*MFAFactor, error)
+
+	// ListFactorsByUserIDFunc mocks the ListFactorsByUserID method.
+	ListFactorsByUserIDFunc func(ctx context.Context, userID UserID) ([]*MFAFactor, error)
+
+	// UpdateFactorFunc mocks the UpdateFactor method.
+	UpdateFactorFunc func(ctx context.Context, factor *MFAFactor) error
+
+	// DeleteFactorFunc mocks the DeleteFactor method.
+	DeleteFactorFunc func(ctx context.Context, id MFAFactorID, now time.Time) error
+
+	// SetPrimaryFactorFunc mocks the SetPrimaryFactor method.
+	SetPrimaryFactorFunc func(ctx context.Context, userID UserID, factorID MFAFactorID) error
+
+	// GetRecoveryFunc mocks the GetRecovery method.
+	GetRecoveryFunc func(ctx context.Context, userID UserID) (*MFARecovery, error)
+
+	// UpsertRecoveryFunc mocks the UpsertRecovery method.
+	UpsertRecoveryFunc func(ctx context.Context, recovery *MFARecovery) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		CreateFactor []struct {
+			Ctx    context.Context
+			Factor *MFAFactor
+		}
+		GetFactorByID []struct {
+			Ctx context.Context
+			Id  MFAFactorID
+		}
+		ListFactorsByUserID []struct {
+			Ctx    context.Context
+			UserID UserID
+		}
+		UpdateFactor []struct {
+			Ctx    context.Context
+			Factor *MFAFactor
+		}
+		DeleteFactor []struct {
+			Ctx context.Context
+			Id  MFAFactorID
+			Now time.Time
+		}
+		SetPrimaryFactor []struct {
+			Ctx      context.Context
+			UserID   UserID
+			FactorID MFAFactorID
+		}
+		GetRecovery []struct {
+			Ctx    context.Context
+			UserID UserID
+		}
+		UpsertRecovery []struct {
+			Ctx      context.Context
+			Recovery *MFARecovery
+		}
+	}
+	lockCreateFactor        sync.RWMutex
+	lockGetFactorByID       sync.RWMutex
+	lockListFactorsByUserID sync.RWMutex
+	lockUpdateFactor        sync.RWMutex
+	lockDeleteFactor        sync.RWMutex
+	lockSetPrimaryFactor    sync.RWMutex
+	lockGetRecovery         sync.RWMutex
+	lockUpsertRecovery      sync.RWMutex
+}
+
+// CreateFactor calls CreateFactorFunc.
+func (mock *MFAFactorStoreMock) CreateFactor(ctx context.Context, factor *MFAFactor) error {
+	if mock.CreateFactorFunc == nil {
+		panic("MFAFactorStoreMock.CreateFactorFunc: method is nil but MFAFactorStore.CreateFactor was just called")
+	}
+	mock.lockCreateFactor.Lock()
+	mock.calls.CreateFactor = append(mock.calls.CreateFactor, struct {
+		Ctx    context.Context
+		Factor *MFAFactor
+	}{
+		Ctx:    ctx,
+		Factor: factor,
+	})
+	mock.lockCreateFactor.Unlock()
+	return mock.CreateFactorFunc(ctx, factor)
+}
+
+// CreateFactorCalls returns all calls made to CreateFactor.
+func (mock *MFAFactorStoreMock) CreateFactorCalls() []struct {
+	Ctx    context.Context
+	Factor *MFAFactor
+} {
+	mock.lockCreateFactor.RLock()
+	defer mock.lockCreateFactor.RUnlock()
+	return mock.calls.CreateFactor
+}
+
+// GetFactorByID calls GetFactorByIDFunc.
+func (mock *MFAFactorStoreMock) GetFactorByID(ctx context.Context, id MFAFactorID) (*MFAFactor, error) {
+	if mock.GetFactorByIDFunc == nil {
+		panic("MFAFactorStoreMock.GetFactorByIDFunc: method is nil but MFAFactorStore.GetFactorByID was just called")
+	}
+	mock.lockGetFactorByID.Lock()
+	mock.calls.GetFactorByID = append(mock.calls.GetFactorByID, struct {
+		Ctx context.Context
+		Id  MFAFactorID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockGetFactorByID.Unlock()
+	return mock.GetFactorByIDFunc(ctx, id)
+}
+
+// GetFactorByIDCalls returns all calls made to GetFactorByID.
+func (mock *MFAFactorStoreMock) GetFactorByIDCalls() []struct {
+	Ctx context.Context
+	Id  MFAFactorID
+} {
+	mock.lockGetFactorByID.RLock()
+	defer mock.lockGetFactorByID.RUnlock()
+	return mock.calls.GetFactorByID
+}
+
+// ListFactorsByUserID calls ListFactorsByUserIDFunc.
+func (mock *MFAFactorStoreMock) ListFactorsByUserID(ctx context.Context, userID UserID) ([]*MFAFactor, error) {
+	if mock.ListFactorsByUserIDFunc == nil {
+		panic("MFAFactorStoreMock.ListFactorsByUserIDFunc: method is nil but MFAFactorStore.ListFactorsByUserID was just called")
+	}
+	mock.lockListFactorsByUserID.Lock()
+	mock.calls.ListFactorsByUserID = append(mock.calls.ListFactorsByUserID, struct {
+		Ctx    context.Context
+		UserID UserID
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+	})
+	mock.lockListFactorsByUserID.Unlock()
+	return mock.ListFactorsByUserIDFunc(ctx, userID)
+}
+
+// ListFactorsByUserIDCalls returns all calls made to ListFactorsByUserID.
+func (mock *MFAFactorStoreMock) ListFactorsByUserIDCalls() []struct {
+	Ctx    context.Context
+	UserID UserID
+} {
+	mock.lockListFactorsByUserID.RLock()
+	defer mock.lockListFactorsByUserID.RUnlock()
+	return mock.calls.ListFactorsByUserID
+}
+
+// UpdateFactor calls UpdateFactorFunc.
+func (mock *MFAFactorStoreMock) UpdateFactor(ctx context.Context, factor *MFAFactor) error {
+	if mock.UpdateFactorFunc == nil {
+		panic("MFAFactorStoreMock.UpdateFactorFunc: method is nil but MFAFactorStore.UpdateFactor was just called")
+	}
+	mock.lockUpdateFactor.Lock()
+	mock.calls.UpdateFactor = append(mock.calls.UpdateFactor, struct {
+		Ctx    context.Context
+		Factor *MFAFactor
+	}{
+		Ctx:    ctx,
+		Factor: factor,
+	})
+	mock.lockUpdateFactor.Unlock()
+	return mock.UpdateFactorFunc(ctx, factor)
+}
+
+// UpdateFactorCalls returns all calls made to UpdateFactor.
+func (mock *MFAFactorStoreMock) UpdateFactorCalls() []struct {
+	Ctx    context.Context
+	Factor *MFAFactor
+} {
+	mock.lockUpdateFactor.RLock()
+	defer mock.lockUpdateFactor.RUnlock()
+	return mock.calls.UpdateFactor
+}
+
+// DeleteFactor calls DeleteFactorFunc.
+func (mock *MFAFactorStoreMock) DeleteFactor(ctx context.Context, id MFAFactorID, now time.Time) error {
+	if mock.DeleteFactorFunc == nil {
+		panic("MFAFactorStoreMock.DeleteFactorFunc: method is nil but MFAFactorStore.DeleteFactor was just called")
+	}
+	mock.lockDeleteFactor.Lock()
+	mock.calls.DeleteFactor = append(mock.calls.DeleteFactor, struct {
+		Ctx context.Context
+		Id  MFAFactorID
+		Now time.Time
+	}{
+		Ctx: ctx,
+		Id:  id,
+		Now: now,
+	})
+	mock.lockDeleteFactor.Unlock()
+	return mock.DeleteFactorFunc(ctx, id, now)
+}
+
+// DeleteFactorCalls returns all calls made to DeleteFactor.
+func (mock *MFAFactorStoreMock) DeleteFactorCalls() []struct {
+	Ctx context.Context
+	Id  MFAFactorID
+	Now time.Time
+} {
+	mock.lockDeleteFactor.RLock()
+	defer mock.lockDeleteFactor.RUnlock()
+	return mock.calls.DeleteFactor
+}
+
+// SetPrimaryFactor calls SetPrimaryFactorFunc.
+func (mock *MFAFactorStoreMock) SetPrimaryFactor(ctx context.Context, userID UserID, factorID MFAFactorID) error {
+	if mock.SetPrimaryFactorFunc == nil {
+		panic("MFAFactorStoreMock.SetPrimaryFactorFunc: method is nil but MFAFactorStore.SetPrimaryFactor was just called")
+	}
+	mock.lockSetPrimaryFactor.Lock()
+	mock.calls.SetPrimaryFactor = append(mock.calls.SetPrimaryFactor, struct {
+		Ctx      context.Context
+		UserID   UserID
+		FactorID MFAFactorID
+	}{
+		Ctx:      ctx,
+		UserID:   userID,
+		FactorID: factorID,
+	})
+	mock.lockSetPrimaryFactor.Unlock()
+	return mock.SetPrimaryFactorFunc(ctx, userID, factorID)
+}
+
+// SetPrimaryFactorCalls returns all calls made to SetPrimaryFactor.
+func (mock *MFAFactorStoreMock) SetPrimaryFactorCalls() []struct {
+	Ctx      context.Context
+	UserID   UserID
+	FactorID MFAFactorID
+} {
+	mock.lockSetPrimaryFactor.RLock()
+	defer mock.lockSetPrimaryFactor.RUnlock()
+	return mock.calls.SetPrimaryFactor
+}
+
+// GetRecovery calls GetRecoveryFunc.
+func (mock *MFAFactorStoreMock) GetRecovery(ctx context.Context, userID UserID) (*MFARecovery, error) {
+	if mock.GetRecoveryFunc == nil {
+		panic("MFAFactorStoreMock.GetRecoveryFunc: method is nil but MFAFactorStore.GetRecovery was just called")
+	}
+	mock.lockGetRecovery.Lock()
+	mock.calls.GetRecovery = append(mock.calls.GetRecovery, struct {
+		Ctx    context.Context
+		UserID UserID
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+	})
+	mock.lockGetRecovery.Unlock()
+	return mock.GetRecoveryFunc(ctx, userID)
+}
+
+// GetRecoveryCalls returns all calls made to GetRecovery.
+func (mock *MFAFactorStoreMock) GetRecoveryCalls() []struct {
+	Ctx    context.Context
+	UserID UserID
+} {
+	mock.lockGetRecovery.RLock()
+	defer mock.lockGetRecovery.RUnlock()
+	return mock.calls.GetRecovery
+}
+
+// UpsertRecovery calls UpsertRecoveryFunc.
+func (mock *MFAFactorStoreMock) UpsertRecovery(ctx context.Context, recovery *MFARecovery) error {
+	if mock.UpsertRecoveryFunc == nil {
+		panic("MFAFactorStoreMock.UpsertRecoveryFunc: method is nil but MFAFactorStore.UpsertRecovery was just called")
+	}
+	mock.lockUpsertRecovery.Lock()
+	mock.calls.UpsertRecovery = append(mock.calls.UpsertRecovery, struct {
+		Ctx      context.Context
+		Recovery *MFARecovery
+	}{
+		Ctx:      ctx,
+		Recovery: recovery,
+	})
+	mock.lockUpsertRecovery.Unlock()
+	return mock.UpsertRecoveryFunc(ctx, recovery)
+}
+
+// UpsertRecoveryCalls returns all calls made to UpsertRecovery.
+func (mock *MFAFactorStoreMock) UpsertRecoveryCalls() []struct {
+	Ctx      context.Context
+	Recovery *MFARecovery
+} {
+	mock.lockUpsertRecovery.RLock()
+	defer mock.lockUpsertRecovery.RUnlock()
+	return mock.calls.UpsertRecovery
 }
 
 // Compile-time interface assertion.
@@ -365,4 +1544,306 @@ func (mock *AuthChallengeStoreMock) ConsumeChallengeCalls() []struct {
 	mock.lockConsumeChallenge.RLock()
 	defer mock.lockConsumeChallenge.RUnlock()
 	return mock.calls.ConsumeChallenge
+}
+
+// Compile-time interface assertion.
+var _ SessionStoreProvider = (*SessionStoreProviderMock)(nil)
+
+// SessionStoreProviderMock is a mock implementation of SessionStoreProvider.
+type SessionStoreProviderMock struct {
+	// CreateFunc mocks the Create method.
+	CreateFunc func(ctx context.Context, session *Session) error
+
+	// GetByIDFunc mocks the GetByID method.
+	GetByIDFunc func(ctx context.Context, id SessionID) (*Session, error)
+
+	// GetByRefreshTokenHashFunc mocks the GetByRefreshTokenHash method.
+	GetByRefreshTokenHashFunc func(ctx context.Context, hash []byte) (*Session, error)
+
+	// UpdateFunc mocks the Update method.
+	UpdateFunc func(ctx context.Context, session *Session) error
+
+	// ListActiveSessionsFunc mocks the ListActiveSessions method.
+	ListActiveSessionsFunc func(ctx context.Context, userID UserID) ([]*Session, error)
+
+	// RevokeFamilyFunc mocks the RevokeFamily method.
+	RevokeFamilyFunc func(ctx context.Context, familyID TokenFamilyID, now time.Time) error
+
+	// RevokeAllForUserFunc mocks the RevokeAllForUser method.
+	RevokeAllForUserFunc func(ctx context.Context, userID UserID, now time.Time) error
+
+	// RevokeByDeviceIDFunc mocks the RevokeByDeviceID method.
+	RevokeByDeviceIDFunc func(ctx context.Context, deviceID DeviceID, now time.Time) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Create []struct {
+			Ctx     context.Context
+			Session *Session
+		}
+		GetByID []struct {
+			Ctx context.Context
+			Id  SessionID
+		}
+		GetByRefreshTokenHash []struct {
+			Ctx  context.Context
+			Hash []byte
+		}
+		Update []struct {
+			Ctx     context.Context
+			Session *Session
+		}
+		ListActiveSessions []struct {
+			Ctx    context.Context
+			UserID UserID
+		}
+		RevokeFamily []struct {
+			Ctx      context.Context
+			FamilyID TokenFamilyID
+			Now      time.Time
+		}
+		RevokeAllForUser []struct {
+			Ctx    context.Context
+			UserID UserID
+			Now    time.Time
+		}
+		RevokeByDeviceID []struct {
+			Ctx      context.Context
+			DeviceID DeviceID
+			Now      time.Time
+		}
+	}
+	lockCreate                sync.RWMutex
+	lockGetByID               sync.RWMutex
+	lockGetByRefreshTokenHash sync.RWMutex
+	lockUpdate                sync.RWMutex
+	lockListActiveSessions    sync.RWMutex
+	lockRevokeFamily          sync.RWMutex
+	lockRevokeAllForUser      sync.RWMutex
+	lockRevokeByDeviceID      sync.RWMutex
+}
+
+// Create calls CreateFunc.
+func (mock *SessionStoreProviderMock) Create(ctx context.Context, session *Session) error {
+	if mock.CreateFunc == nil {
+		panic("SessionStoreProviderMock.CreateFunc: method is nil but SessionStoreProvider.Create was just called")
+	}
+	mock.lockCreate.Lock()
+	mock.calls.Create = append(mock.calls.Create, struct {
+		Ctx     context.Context
+		Session *Session
+	}{
+		Ctx:     ctx,
+		Session: session,
+	})
+	mock.lockCreate.Unlock()
+	return mock.CreateFunc(ctx, session)
+}
+
+// CreateCalls returns all calls made to Create.
+func (mock *SessionStoreProviderMock) CreateCalls() []struct {
+	Ctx     context.Context
+	Session *Session
+} {
+	mock.lockCreate.RLock()
+	defer mock.lockCreate.RUnlock()
+	return mock.calls.Create
+}
+
+// GetByID calls GetByIDFunc.
+func (mock *SessionStoreProviderMock) GetByID(ctx context.Context, id SessionID) (*Session, error) {
+	if mock.GetByIDFunc == nil {
+		panic("SessionStoreProviderMock.GetByIDFunc: method is nil but SessionStoreProvider.GetByID was just called")
+	}
+	mock.lockGetByID.Lock()
+	mock.calls.GetByID = append(mock.calls.GetByID, struct {
+		Ctx context.Context
+		Id  SessionID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockGetByID.Unlock()
+	return mock.GetByIDFunc(ctx, id)
+}
+
+// GetByIDCalls returns all calls made to GetByID.
+func (mock *SessionStoreProviderMock) GetByIDCalls() []struct {
+	Ctx context.Context
+	Id  SessionID
+} {
+	mock.lockGetByID.RLock()
+	defer mock.lockGetByID.RUnlock()
+	return mock.calls.GetByID
+}
+
+// GetByRefreshTokenHash calls GetByRefreshTokenHashFunc.
+func (mock *SessionStoreProviderMock) GetByRefreshTokenHash(ctx context.Context, hash []byte) (*Session, error) {
+	if mock.GetByRefreshTokenHashFunc == nil {
+		panic("SessionStoreProviderMock.GetByRefreshTokenHashFunc: method is nil but SessionStoreProvider.GetByRefreshTokenHash was just called")
+	}
+	mock.lockGetByRefreshTokenHash.Lock()
+	mock.calls.GetByRefreshTokenHash = append(mock.calls.GetByRefreshTokenHash, struct {
+		Ctx  context.Context
+		Hash []byte
+	}{
+		Ctx:  ctx,
+		Hash: hash,
+	})
+	mock.lockGetByRefreshTokenHash.Unlock()
+	return mock.GetByRefreshTokenHashFunc(ctx, hash)
+}
+
+// GetByRefreshTokenHashCalls returns all calls made to GetByRefreshTokenHash.
+func (mock *SessionStoreProviderMock) GetByRefreshTokenHashCalls() []struct {
+	Ctx  context.Context
+	Hash []byte
+} {
+	mock.lockGetByRefreshTokenHash.RLock()
+	defer mock.lockGetByRefreshTokenHash.RUnlock()
+	return mock.calls.GetByRefreshTokenHash
+}
+
+// Update calls UpdateFunc.
+func (mock *SessionStoreProviderMock) Update(ctx context.Context, session *Session) error {
+	if mock.UpdateFunc == nil {
+		panic("SessionStoreProviderMock.UpdateFunc: method is nil but SessionStoreProvider.Update was just called")
+	}
+	mock.lockUpdate.Lock()
+	mock.calls.Update = append(mock.calls.Update, struct {
+		Ctx     context.Context
+		Session *Session
+	}{
+		Ctx:     ctx,
+		Session: session,
+	})
+	mock.lockUpdate.Unlock()
+	return mock.UpdateFunc(ctx, session)
+}
+
+// UpdateCalls returns all calls made to Update.
+func (mock *SessionStoreProviderMock) UpdateCalls() []struct {
+	Ctx     context.Context
+	Session *Session
+} {
+	mock.lockUpdate.RLock()
+	defer mock.lockUpdate.RUnlock()
+	return mock.calls.Update
+}
+
+// ListActiveSessions calls ListActiveSessionsFunc.
+func (mock *SessionStoreProviderMock) ListActiveSessions(ctx context.Context, userID UserID) ([]*Session, error) {
+	if mock.ListActiveSessionsFunc == nil {
+		panic("SessionStoreProviderMock.ListActiveSessionsFunc: method is nil but SessionStoreProvider.ListActiveSessions was just called")
+	}
+	mock.lockListActiveSessions.Lock()
+	mock.calls.ListActiveSessions = append(mock.calls.ListActiveSessions, struct {
+		Ctx    context.Context
+		UserID UserID
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+	})
+	mock.lockListActiveSessions.Unlock()
+	return mock.ListActiveSessionsFunc(ctx, userID)
+}
+
+// ListActiveSessionsCalls returns all calls made to ListActiveSessions.
+func (mock *SessionStoreProviderMock) ListActiveSessionsCalls() []struct {
+	Ctx    context.Context
+	UserID UserID
+} {
+	mock.lockListActiveSessions.RLock()
+	defer mock.lockListActiveSessions.RUnlock()
+	return mock.calls.ListActiveSessions
+}
+
+// RevokeFamily calls RevokeFamilyFunc.
+func (mock *SessionStoreProviderMock) RevokeFamily(ctx context.Context, familyID TokenFamilyID, now time.Time) error {
+	if mock.RevokeFamilyFunc == nil {
+		panic("SessionStoreProviderMock.RevokeFamilyFunc: method is nil but SessionStoreProvider.RevokeFamily was just called")
+	}
+	mock.lockRevokeFamily.Lock()
+	mock.calls.RevokeFamily = append(mock.calls.RevokeFamily, struct {
+		Ctx      context.Context
+		FamilyID TokenFamilyID
+		Now      time.Time
+	}{
+		Ctx:      ctx,
+		FamilyID: familyID,
+		Now:      now,
+	})
+	mock.lockRevokeFamily.Unlock()
+	return mock.RevokeFamilyFunc(ctx, familyID, now)
+}
+
+// RevokeFamilyCalls returns all calls made to RevokeFamily.
+func (mock *SessionStoreProviderMock) RevokeFamilyCalls() []struct {
+	Ctx      context.Context
+	FamilyID TokenFamilyID
+	Now      time.Time
+} {
+	mock.lockRevokeFamily.RLock()
+	defer mock.lockRevokeFamily.RUnlock()
+	return mock.calls.RevokeFamily
+}
+
+// RevokeAllForUser calls RevokeAllForUserFunc.
+func (mock *SessionStoreProviderMock) RevokeAllForUser(ctx context.Context, userID UserID, now time.Time) error {
+	if mock.RevokeAllForUserFunc == nil {
+		panic("SessionStoreProviderMock.RevokeAllForUserFunc: method is nil but SessionStoreProvider.RevokeAllForUser was just called")
+	}
+	mock.lockRevokeAllForUser.Lock()
+	mock.calls.RevokeAllForUser = append(mock.calls.RevokeAllForUser, struct {
+		Ctx    context.Context
+		UserID UserID
+		Now    time.Time
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+		Now:    now,
+	})
+	mock.lockRevokeAllForUser.Unlock()
+	return mock.RevokeAllForUserFunc(ctx, userID, now)
+}
+
+// RevokeAllForUserCalls returns all calls made to RevokeAllForUser.
+func (mock *SessionStoreProviderMock) RevokeAllForUserCalls() []struct {
+	Ctx    context.Context
+	UserID UserID
+	Now    time.Time
+} {
+	mock.lockRevokeAllForUser.RLock()
+	defer mock.lockRevokeAllForUser.RUnlock()
+	return mock.calls.RevokeAllForUser
+}
+
+// RevokeByDeviceID calls RevokeByDeviceIDFunc.
+func (mock *SessionStoreProviderMock) RevokeByDeviceID(ctx context.Context, deviceID DeviceID, now time.Time) error {
+	if mock.RevokeByDeviceIDFunc == nil {
+		panic("SessionStoreProviderMock.RevokeByDeviceIDFunc: method is nil but SessionStoreProvider.RevokeByDeviceID was just called")
+	}
+	mock.lockRevokeByDeviceID.Lock()
+	mock.calls.RevokeByDeviceID = append(mock.calls.RevokeByDeviceID, struct {
+		Ctx      context.Context
+		DeviceID DeviceID
+		Now      time.Time
+	}{
+		Ctx:      ctx,
+		DeviceID: deviceID,
+		Now:      now,
+	})
+	mock.lockRevokeByDeviceID.Unlock()
+	return mock.RevokeByDeviceIDFunc(ctx, deviceID, now)
+}
+
+// RevokeByDeviceIDCalls returns all calls made to RevokeByDeviceID.
+func (mock *SessionStoreProviderMock) RevokeByDeviceIDCalls() []struct {
+	Ctx      context.Context
+	DeviceID DeviceID
+	Now      time.Time
+} {
+	mock.lockRevokeByDeviceID.RLock()
+	defer mock.lockRevokeByDeviceID.RUnlock()
+	return mock.calls.RevokeByDeviceID
 }

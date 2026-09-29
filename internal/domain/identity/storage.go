@@ -58,6 +58,7 @@ type UserCredentialStore interface {
 }
 
 // MFAFactorStore defines persistence operations for MFA factors and recovery backup codes.
+// @Mock
 type MFAFactorStore interface {
 	CreateFactor(ctx context.Context, factor *MFAFactor) error
 	GetFactorByID(ctx context.Context, id MFAFactorID) (*MFAFactor, error)
@@ -87,4 +88,17 @@ type DeviceStore interface {
 type AuthChallengeStore interface {
 	CreateChallenge(ctx context.Context, challenge *Challenge) error
 	ConsumeChallenge(ctx context.Context, nonce string, now time.Time) (bool, error)
+}
+
+// SessionStoreProvider provides access to session persistence operations.
+// @Mock
+type SessionStoreProvider interface {
+	Create(ctx context.Context, session *Session) error
+	GetByID(ctx context.Context, id SessionID) (*Session, error)
+	GetByRefreshTokenHash(ctx context.Context, hash []byte) (*Session, error)
+	Update(ctx context.Context, session *Session) error
+	ListActiveSessions(ctx context.Context, userID UserID) ([]*Session, error)
+	RevokeFamily(ctx context.Context, familyID TokenFamilyID, now time.Time) error
+	RevokeAllForUser(ctx context.Context, userID UserID, now time.Time) error
+	RevokeByDeviceID(ctx context.Context, deviceID DeviceID, now time.Time) error
 }

@@ -58,3 +58,41 @@ func TestMFAFactorEntity(t *testing.T) {
 		t.Error("expected lastUsedAt to match timestamp")
 	}
 }
+
+type dummyOtherConfig struct{}
+
+func (dummyOtherConfig) FactorType() MFAFactorType {
+	return "other"
+}
+
+func TestTOTPConfig(t *testing.T) {
+	cfg := TOTPConfig{EncryptedSecret: "encrypted"}
+	if cfg.FactorType() != MFAFactorTypeTOTP {
+		t.Errorf("expected %s, got %s", MFAFactorTypeTOTP, cfg.FactorType())
+	}
+
+	var nilFactor *MFAFactor
+	if nilFactor.TOTPConfig() != nil {
+		t.Error("expected nil factor to return nil TOTPConfig")
+	}
+
+	factorWithNilConfig := &MFAFactor{Config: nil}
+	if factorWithNilConfig.TOTPConfig() != nil {
+		t.Error("expected factor with nil config to return nil TOTPConfig")
+	}
+
+	factorWithPtr := &MFAFactor{Config: &TOTPConfig{EncryptedSecret: "sec1"}}
+	if factorWithPtr.TOTPConfig() == nil || factorWithPtr.TOTPConfig().EncryptedSecret != "sec1" {
+		t.Errorf("expected valid TOTPConfig pointer, got %+v", factorWithPtr.TOTPConfig())
+	}
+
+	factorWithValue := &MFAFactor{Config: TOTPConfig{EncryptedSecret: "sec2"}}
+	if factorWithValue.TOTPConfig() == nil || factorWithValue.TOTPConfig().EncryptedSecret != "sec2" {
+		t.Errorf("expected valid TOTPConfig from value, got %+v", factorWithValue.TOTPConfig())
+	}
+
+	factorWithOtherConfig := &MFAFactor{Config: dummyOtherConfig{}}
+	if factorWithOtherConfig.TOTPConfig() != nil {
+		t.Error("expected other config to return nil TOTPConfig")
+	}
+}

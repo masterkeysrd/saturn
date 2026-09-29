@@ -327,3 +327,147 @@ func TestCoordinator_Login(t *testing.T) {
 		})
 	}
 }
+
+func TestCoordinator_Login_DeviceAssertion(t *testing.T) {
+	ctx := context.Background()
+
+	validDeviceID, _ := identity.NewDeviceID()
+
+	tests := []struct {
+		name              string
+		req               *LoginRequest
+		setupIdentity     func(m *IdentityServiceMock)
+		setupToken        func(m *TokenServiceMock)
+		expectedErr       bool
+		expectedErrorCode platErrors.Code
+		validate          func(t *testing.T, res *LoginResponse)
+	}{
+		{
+			name: "Invalid device ID format",
+			req: &LoginRequest{
+				DeviceID:  "invalid_dev_id",
+				Challenge: "chg_1",
+				Signature: []byte("sig"),
+			},
+			expectedErr:       true,
+			expectedErrorCode: identity.DeviceNotFound,
+		},
+		{
+			name: "VerifyDeviceAssertion failure",
+			req: &LoginRequest{
+				DeviceID:  string(validDeviceID),
+				Challenge: "chg_1",
+				Signature: []byte("sig"),
+			},
+			setupIdentity: func(m *IdentityServiceMock) {
+				m.VerifyDeviceAssertionFunc = func(ctx context.Context, req identity.VerifyDeviceAssertionRequest) (*identity.Device, *identity.User, error) {
+					return nil, nil, platErrors.E(identity.DeviceInvalidSignature, "invalid sig")
+				}
+			},
+			expectedErr:       true,
+			expectedErrorCode: identity.DeviceInvalidSignature,
+		},
+		{
+			name: "User status inactive",
+			req: &LoginRequest{
+				DeviceID:  string(validDeviceID),
+				Challenge: "chg_1",
+				Signature: []byte("sig"),
+			},
+			setupIdentity: func(m *IdentityServiceMock) {
+				m.VerifyDeviceAssertionFunc = func(ctx context.Context, req identity.VerifyDeviceAssertionRequest) (*identity.Device, *identity.User, error) {
+					return &identity.Device{ID: validDeviceID}, &identity.User{
+						ID:     "usr_1",
+						Status: identity.UserStatusInactive,
+					}, nil
+				}
+			},
+			expectedErr:       true,
+			expectedErrorCode: identity.AccountInactive,
+		},
+		{
+			name: "Success",
+			req: &LoginRequest{
+				DeviceID:  string(validDeviceID),
+				Challenge: "chg_1",
+				Signature: []byte("sig"),
+			},
+			setupIdentity: func(m *IdentityServiceMock) {
+				m.VerifyDeviceAssertionFunc = func(ctx context.Context, req identity.VerifyDeviceAssertionRequest) (*identity.Device, *identity.User, error) {
+					return &identity.Device{ID: validDeviceID}, &identity.User{
+						ID:          "usr_1",
+						Email:       "user@example.com",
+						Status:      identity.UserStatusActive,
+						AccessLevel: identity.AccessLevelUser,
+					}, nil
+				}
+				m.CreateSecurityEventFunc = func(ctx context.Context, event *identity.SecurityEvent) error {
+					return nil
+				}
+				m.GetAuthVersionFunc = func(ctx context.Context, id identity.UserID) (int64, error) {
+					return 1, nil
+				}
+				m.CreateSessionFunc = func(ctx context.Context, req *identity.CreateSessionRequest) (*identity.Session, error) {
+					return &identity.Session{ID: "ses_1"}, nil
+				}
+			},
+			setupToken: func(m *TokenServiceMock) {
+				m.IssueAccessTokenFunc = func(input token.IssueInput, now time.Time) (string, time.Time, error) {
+					return "access_jwt", now.Add(15 * time.Minute), nil
+				}
+				m.IssueRefreshTokenFunc = func(input token.IssueInput, now, abs time.Time) (string, time.Time, error) {
+					return "refresh_jwt", now.Add(24 * time.Hour), nil
+				}
+			},
+			expectedErr: false,
+			validate: func(t *testing.T, res *LoginResponse) {
+				if res.AccessToken != "access_jwt" {
+					t.Errorf("expected access_jwt, got %s", res.AccessToken)
+				}
+				if res.RefreshToken != "refresh_jwt" {
+					t.Errorf("expected refresh_jwt, got %s", res.RefreshToken)
+				}
+				if res.User.ID != "usr_1" {
+					t.Errorf("expected user usr_1, got %+v", res.User)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			idMock := &IdentityServiceMock{}
+			if tc.setupIdentity != nil {
+				tc.setupIdentity(idMock)
+			}
+			tokenMock := &TokenServiceMock{}
+			if tc.setupToken != nil {
+				tc.setupToken(tokenMock)
+			}
+			coord := NewCoordinator(Dependencies{
+				IdentityService: idMock,
+				TokenService:    tokenMock,
+			})
+
+			res, err := coord.Login(ctx, tc.req)
+			if tc.expectedErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if tc.expectedErrorCode != "" {
+					code := platErrors.CodeOf(err)
+					if code != tc.expectedErrorCode {
+						t.Errorf("expected error code %v, got %v (%v)", tc.expectedErrorCode, code, err)
+					}
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tc.validate != nil {
+				tc.validate(t, res)
+			}
+		})
+	}
+}

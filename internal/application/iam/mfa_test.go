@@ -91,6 +91,159 @@ func TestCoordinator_MFA(t *testing.T) {
 			t.Errorf("unexpected response: %+v", resp)
 		}
 	})
+
+	t.Run("DeleteMFAFactor", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			req         *DeleteMFAFactorRequest
+			setupMock   func(m *IdentityServiceMock)
+			expectedErr bool
+		}{
+			{
+				name: "Success",
+				req:  &DeleteMFAFactorRequest{UserID: "usr_1", FactorID: "mfa_1"},
+				setupMock: func(m *IdentityServiceMock) {
+					m.DeleteMFAFactorFunc = func(ctx context.Context, req identity.DeleteMFAFactorRequest) error {
+						return nil
+					}
+				},
+				expectedErr: false,
+			},
+			{
+				name: "Error",
+				req:  &DeleteMFAFactorRequest{UserID: "usr_1", FactorID: "mfa_1"},
+				setupMock: func(m *IdentityServiceMock) {
+					m.DeleteMFAFactorFunc = func(ctx context.Context, req identity.DeleteMFAFactorRequest) error {
+						return errors.New("delete error")
+					}
+				},
+				expectedErr: true,
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				idSvc := &IdentityServiceMock{}
+				if tc.setupMock != nil {
+					tc.setupMock(idSvc)
+				}
+				coord := NewCoordinator(Dependencies{IdentityService: idSvc})
+				err := coord.DeleteMFAFactor(ctx, tc.req)
+				if tc.expectedErr && err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !tc.expectedErr && err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			})
+		}
+	})
+
+	t.Run("SetPrimaryMFAFactor", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			req         *SetPrimaryMFAFactorRequest
+			setupMock   func(m *IdentityServiceMock)
+			expectedErr bool
+		}{
+			{
+				name: "Success",
+				req:  &SetPrimaryMFAFactorRequest{UserID: "usr_1", FactorID: "mfa_1"},
+				setupMock: func(m *IdentityServiceMock) {
+					m.SetPrimaryMFAFactorFunc = func(ctx context.Context, req identity.SetPrimaryMFAFactorRequest) error {
+						return nil
+					}
+				},
+				expectedErr: false,
+			},
+			{
+				name: "Error",
+				req:  &SetPrimaryMFAFactorRequest{UserID: "usr_1", FactorID: "mfa_1"},
+				setupMock: func(m *IdentityServiceMock) {
+					m.SetPrimaryMFAFactorFunc = func(ctx context.Context, req identity.SetPrimaryMFAFactorRequest) error {
+						return errors.New("set primary error")
+					}
+				},
+				expectedErr: true,
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				idSvc := &IdentityServiceMock{}
+				if tc.setupMock != nil {
+					tc.setupMock(idSvc)
+				}
+				coord := NewCoordinator(Dependencies{IdentityService: idSvc})
+				err := coord.SetPrimaryMFAFactor(ctx, tc.req)
+				if tc.expectedErr && err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !tc.expectedErr && err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			})
+		}
+	})
+
+	t.Run("Error propagation in MFA methods", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			execute func(coord *coordinator) error
+		}{
+			{
+				name: "ListMFAFactors error",
+				execute: func(coord *coordinator) error {
+					_, err := coord.ListMFAFactors(ctx, &ListMFAFactorsRequest{UserID: "usr_1"})
+					return err
+				},
+			},
+			{
+				name: "SetupTOTP error",
+				execute: func(coord *coordinator) error {
+					_, err := coord.SetupTOTP(ctx, &SetupTOTPRequest{UserID: "usr_1", Name: "Phone"})
+					return err
+				},
+			},
+			{
+				name: "ConfirmTOTP error",
+				execute: func(coord *coordinator) error {
+					_, err := coord.ConfirmTOTP(ctx, &ConfirmTOTPRequest{UserID: "usr_1", FactorID: "mfa_1", Code: "123456"})
+					return err
+				},
+			},
+			{
+				name: "RegenerateBackupCodes error",
+				execute: func(coord *coordinator) error {
+					_, err := coord.RegenerateBackupCodes(ctx, &RegenerateBackupCodesRequest{UserID: "usr_1", VerificationCode: "123456"})
+					return err
+				},
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				idSvc := &IdentityServiceMock{
+					ListMFAFactorsFunc: func(ctx context.Context, userID identity.UserID) (*identity.MFAFactorsSummary, error) {
+						return nil, errors.New("db error")
+					},
+					SetupTOTPFunc: func(ctx context.Context, req identity.SetupTOTPRequest) (*identity.SetupTOTPResult, error) {
+						return nil, errors.New("db error")
+					},
+					ConfirmTOTPFunc: func(ctx context.Context, req identity.ConfirmTOTPRequest) ([]string, error) {
+						return nil, errors.New("db error")
+					},
+					RegenerateBackupCodesFunc: func(ctx context.Context, req identity.RegenerateBackupCodesRequest) ([]string, error) {
+						return nil, errors.New("db error")
+					},
+				}
+				coord := NewCoordinator(Dependencies{IdentityService: idSvc}).(*coordinator)
+				if err := tc.execute(coord); err == nil {
+					t.Fatal("expected error, got nil")
+				}
+			})
+		}
+	})
 }
 
 func TestCoordinator_Login_MFA(t *testing.T) {
@@ -240,6 +393,88 @@ func TestCoordinator_Login_MFA(t *testing.T) {
 		}
 		if errors.CodeOf(err) != identity.MFAInvalidTicket {
 			t.Errorf("expected MFAInvalidTicket, got %v", errors.CodeOf(err))
+		}
+	})
+
+	t.Run("Step 2 failure branches", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			setup      func(idSvc *IdentityServiceMock, tokSvc *TokenServiceMock)
+			expectCode errors.Code
+		}{
+			{
+				name: "User not found",
+				setup: func(idSvc *IdentityServiceMock, tokSvc *TokenServiceMock) {
+					tokSvc.ValidateMFATicketFunc = func(raw string, now time.Time) (*token.Claims, error) {
+						return &token.Claims{RegisteredClaims: jwt.RegisteredClaims{Subject: "usr_1"}}, nil
+					}
+					idSvc.GetUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
+						return nil, errors.New("user not found")
+					}
+				},
+				expectCode: identity.InvalidCredentials,
+			},
+			{
+				name: "User not active",
+				setup: func(idSvc *IdentityServiceMock, tokSvc *TokenServiceMock) {
+					tokSvc.ValidateMFATicketFunc = func(raw string, now time.Time) (*token.Claims, error) {
+						return &token.Claims{RegisteredClaims: jwt.RegisteredClaims{Subject: "usr_1"}, AuthVersion: 1}, nil
+					}
+					idSvc.GetUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
+						return &identity.User{ID: id, Status: identity.UserStatusInactive, AuthVersion: 1}, nil
+					}
+				},
+				expectCode: identity.InvalidCredentials,
+			},
+			{
+				name: "AuthVersion changed",
+				setup: func(idSvc *IdentityServiceMock, tokSvc *TokenServiceMock) {
+					tokSvc.ValidateMFATicketFunc = func(raw string, now time.Time) (*token.Claims, error) {
+						return &token.Claims{RegisteredClaims: jwt.RegisteredClaims{Subject: "usr_1"}, AuthVersion: 1}, nil
+					}
+					idSvc.GetUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
+						return &identity.User{ID: id, Status: identity.UserStatusActive, AuthVersion: 2}, nil
+					}
+				},
+				expectCode: identity.InvalidCredentials,
+			},
+			{
+				name: "VerifyMFAAssertion error",
+				setup: func(idSvc *IdentityServiceMock, tokSvc *TokenServiceMock) {
+					tokSvc.ValidateMFATicketFunc = func(raw string, now time.Time) (*token.Claims, error) {
+						return &token.Claims{RegisteredClaims: jwt.RegisteredClaims{Subject: "usr_1"}, AuthVersion: 1}, nil
+					}
+					idSvc.GetUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
+						return &identity.User{ID: id, Status: identity.UserStatusActive, AuthVersion: 1}, nil
+					}
+					idSvc.VerifyMFAAssertionFunc = func(ctx context.Context, req identity.VerifyMFAAssertionRequest) error {
+						return errors.E(errors.Invalid, identity.MFAInvalidCode, "invalid code")
+					}
+				},
+				expectCode: identity.MFAInvalidCode,
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				idSvc := &IdentityServiceMock{}
+				tokSvc := &TokenServiceMock{}
+				if tc.setup != nil {
+					tc.setup(idSvc, tokSvc)
+				}
+				coord := NewCoordinator(Dependencies{IdentityService: idSvc, TokenService: tokSvc})
+				_, err := coord.Login(ctx, &LoginRequest{
+					MFATicket: "ticket_jwt_123",
+					FactorID:  "mfa_1",
+					TOTPCode:  "123456",
+				})
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if tc.expectCode != "" && errors.CodeOf(err) != tc.expectCode {
+					t.Errorf("expected code %v, got %v", tc.expectCode, errors.CodeOf(err))
+				}
+			})
 		}
 	})
 }

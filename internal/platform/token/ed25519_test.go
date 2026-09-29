@@ -786,3 +786,356 @@ func TestGenerateJTI(t *testing.T) {
 		t.Error("consecutive generateJTI calls returned identical JTIs")
 	}
 }
+
+func TestEd25519Service_IssueMFATicket(t *testing.T) {
+	svc, err := NewTestService()
+	if err != nil {
+		t.Fatalf("failed to create test service: %v", err)
+	}
+
+	now := time.Now().Truncate(time.Second)
+
+	tests := []struct {
+		name        string
+		input       IssueInput
+		expectedTTL time.Duration
+	}{
+		{
+			name: "Standard MFA ticket",
+			input: IssueInput{
+				Subject:     "usr_12345",
+				AccessLevel: "user",
+				AuthVersion: 1,
+			},
+			expectedTTL: 5 * time.Minute,
+		},
+		{
+			name: "Admin MFA ticket with higher auth version",
+			input: IssueInput{
+				Subject:     "usr_admin",
+				AccessLevel: "admin",
+				AuthVersion: 42,
+			},
+			expectedTTL: 5 * time.Minute,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			raw, exp, err := svc.IssueMFATicket(tc.input, now)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if raw == "" {
+				t.Error("expected non-empty ticket string")
+			}
+			if !exp.Equal(now.Add(tc.expectedTTL)) {
+				t.Errorf("expected expiry %v, got %v", now.Add(tc.expectedTTL), exp)
+			}
+
+			claims, err := svc.ValidateMFATicket(raw, now)
+			if err != nil {
+				t.Fatalf("issued ticket failed validation: %v", err)
+			}
+			if claims.Subject != tc.input.Subject {
+				t.Errorf("expected subject %s, got %s", tc.input.Subject, claims.Subject)
+			}
+			if claims.AccessLevel != tc.input.AccessLevel {
+				t.Errorf("expected access level %s, got %s", tc.input.AccessLevel, claims.AccessLevel)
+			}
+			if claims.AuthVersion != tc.input.AuthVersion {
+				t.Errorf("expected auth version %d, got %d", tc.input.AuthVersion, claims.AuthVersion)
+			}
+			if claims.TokenUse != "mfa_ticket" {
+				t.Errorf("expected token use mfa_ticket, got %s", claims.TokenUse)
+			}
+		})
+	}
+}
+
+func TestEd25519Service_ValidateMFATicket(t *testing.T) {
+	svc, err := NewTestService()
+	if err != nil {
+		t.Fatalf("failed to create test service: %v", err)
+	}
+
+	now := time.Now().Truncate(time.Second)
+	input := IssueInput{
+		Subject:     "usr_12345",
+		AccessLevel: "user",
+		AuthVersion: 1,
+	}
+
+	validRaw, _, err := svc.IssueMFATicket(input, now)
+	if err != nil {
+		t.Fatalf("failed to issue valid MFA ticket: %v", err)
+	}
+
+	accessRaw, _, _ := svc.IssueAccessToken(input, now)
+	refreshRaw, _, _ := svc.IssueRefreshToken(input, now, now.Add(24*time.Hour))
+
+	tamperedRaw := validRaw[:len(validRaw)-4] + "AAAA"
+
+	// Create ticket without kid
+	noKidToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    svc.config.Issuer,
+			Subject:   input.Subject,
+			Audience:  []string{svc.config.Audience},
+			ExpiresAt: jwt.NewNumericDate(now.Add(5 * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			ID:        "jti_test",
+		},
+		TokenUse:    "mfa_ticket",
+		AuthVersion: 1,
+	})
+	noKidRaw, _ := noKidToken.SignedString(svc.activePriv)
+
+	// Create ticket with unknown kid
+	unknownKidToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    svc.config.Issuer,
+			Subject:   input.Subject,
+			Audience:  []string{svc.config.Audience},
+			ExpiresAt: jwt.NewNumericDate(now.Add(5 * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			ID:        "jti_test",
+		},
+		TokenUse:    "mfa_ticket",
+		AuthVersion: 1,
+	})
+	unknownKidToken.Header["kid"] = "unknown-key-id"
+	unknownKidRaw, _ := unknownKidToken.SignedString(svc.activePriv)
+
+	// Create ticket signed with wrong key
+	_, otherPriv, _ := ed25519.GenerateKey(rand.Reader)
+	wrongKeyToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    svc.config.Issuer,
+			Subject:   input.Subject,
+			Audience:  []string{svc.config.Audience},
+			ExpiresAt: jwt.NewNumericDate(now.Add(5 * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			ID:        "jti_test",
+		},
+		TokenUse:    "mfa_ticket",
+		AuthVersion: 1,
+	})
+	wrongKeyToken.Header["kid"] = svc.activeKeyID
+	wrongKeyRaw, _ := wrongKeyToken.SignedString(otherPriv)
+
+	// Create ticket without JTI
+	noJTIToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    svc.config.Issuer,
+			Subject:   input.Subject,
+			Audience:  []string{svc.config.Audience},
+			ExpiresAt: jwt.NewNumericDate(now.Add(5 * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+		},
+		TokenUse:    "mfa_ticket",
+		AuthVersion: 1,
+	})
+	noJTIToken.Header["kid"] = svc.activeKeyID
+	noJTIRaw, _ := noJTIToken.SignedString(svc.activePriv)
+
+	// Create ticket with missing subject (ValidateBasic failure)
+	noSubToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    svc.config.Issuer,
+			Subject:   "",
+			Audience:  []string{svc.config.Audience},
+			ExpiresAt: jwt.NewNumericDate(now.Add(5 * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			ID:        "jti_test",
+		},
+		TokenUse:    "mfa_ticket",
+		AuthVersion: 1,
+	})
+	noSubToken.Header["kid"] = svc.activeKeyID
+	noSubRaw, _ := noSubToken.SignedString(svc.activePriv)
+
+	// Create ticket with wrong HMAC signing method
+	hsToken := jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    svc.config.Issuer,
+			Subject:   input.Subject,
+			Audience:  []string{svc.config.Audience},
+			ExpiresAt: jwt.NewNumericDate(now.Add(5 * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			ID:        "jti_test",
+		},
+		TokenUse:    "mfa_ticket",
+		AuthVersion: 1,
+	})
+	hsToken.Header["kid"] = svc.activeKeyID
+	hsRaw, _ := hsToken.SignedString([]byte("secret"))
+
+	tests := []struct {
+		name        string
+		token       string
+		evalTime    time.Time
+		expectedErr error
+	}{
+		{
+			name:        "Valid ticket",
+			token:       validRaw,
+			evalTime:    now,
+			expectedErr: nil,
+		},
+		{
+			name:        "Empty string",
+			token:       "",
+			evalTime:    now,
+			expectedErr: ErrInvalidToken,
+		},
+		{
+			name:        "Whitespace string",
+			token:       "   ",
+			evalTime:    now,
+			expectedErr: ErrInvalidToken,
+		},
+		{
+			name:        "Tampered token",
+			token:       tamperedRaw,
+			evalTime:    now,
+			expectedErr: ErrInvalidToken,
+		},
+		{
+			name:        "Access token passed as MFA ticket",
+			token:       accessRaw,
+			evalTime:    now,
+			expectedErr: ErrInvalidToken,
+		},
+		{
+			name:        "Refresh token passed as MFA ticket",
+			token:       refreshRaw,
+			evalTime:    now,
+			expectedErr: ErrInvalidToken,
+		},
+		{
+			name:        "Expired token beyond 5m",
+			token:       validRaw,
+			evalTime:    now.Add(6 * time.Minute),
+			expectedErr: ErrExpiredToken,
+		},
+		{
+			name:        "NotBefore in future beyond clock skew",
+			token:       validRaw,
+			evalTime:    now.Add(-2 * time.Minute),
+			expectedErr: ErrExpiredToken,
+		},
+		{
+			name:        "Missing kid",
+			token:       noKidRaw,
+			evalTime:    now,
+			expectedErr: ErrInvalidToken,
+		},
+		{
+			name:        "Unknown kid",
+			token:       unknownKidRaw,
+			evalTime:    now,
+			expectedErr: ErrInvalidToken,
+		},
+		{
+			name:        "Wrong signing key",
+			token:       wrongKeyRaw,
+			evalTime:    now,
+			expectedErr: ErrInvalidToken,
+		},
+		{
+			name:        "Missing JTI",
+			token:       noJTIRaw,
+			evalTime:    now,
+			expectedErr: ErrInvalidToken,
+		},
+		{
+			name:        "Invalid basic claims (missing subject)",
+			token:       noSubRaw,
+			evalTime:    now,
+			expectedErr: ErrInvalidToken,
+		},
+		{
+			name:        "Non-EdDSA signing method",
+			token:       hsRaw,
+			evalTime:    now,
+			expectedErr: ErrInvalidToken,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			claims, err := svc.ValidateMFATicket(tc.token, tc.evalTime)
+			if tc.expectedErr != nil {
+				if err != tc.expectedErr {
+					t.Fatalf("expected error %v, got %v", tc.expectedErr, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if claims.Subject != input.Subject {
+				t.Errorf("expected subject %s, got %s", input.Subject, claims.Subject)
+			}
+		})
+	}
+}
+
+func TestLoadOrGeneratePrivateKey(t *testing.T) {
+	tmpDir := t.TempDir()
+	keyPath := filepath.Join(tmpDir, "subdir", "ed25519.key")
+
+	// 1. Non-existent key: generates new key
+	priv1, err := LoadOrGeneratePrivateKey(keyPath)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+	if priv1 == nil {
+		t.Fatal("expected non-nil private key")
+	}
+
+	// Verify file was written with 0600 permissions
+	info, err := os.Stat(keyPath)
+	if err != nil {
+		t.Fatalf("key file does not exist: %v", err)
+	}
+	if info.Mode().Perm() != 0600 {
+		t.Errorf("expected mode 0600, got %v", info.Mode().Perm())
+	}
+
+	// 2. Existing key: subsequent call loads the generated key
+	priv2, err := LoadOrGeneratePrivateKey(keyPath)
+	if err != nil {
+		t.Fatalf("failed to load existing key: %v", err)
+	}
+	if !priv1.Equal(priv2) {
+		t.Error("loaded key does not match previously generated key")
+	}
+
+	// 3. Corrupt key: returns error
+	corruptPath := filepath.Join(tmpDir, "corrupt.key")
+	if err := os.WriteFile(corruptPath, []byte("garbage"), 0600); err != nil {
+		t.Fatalf("failed to write corrupt file: %v", err)
+	}
+	if _, err := LoadOrGeneratePrivateKey(corruptPath); err == nil {
+		t.Error("expected error for corrupt key, got nil")
+	}
+
+	// 4. Directory creation error
+	blockingFilePath := filepath.Join(tmpDir, "blocking_file")
+	if err := os.WriteFile(blockingFilePath, []byte("block"), 0600); err != nil {
+		t.Fatalf("failed to write blocking file: %v", err)
+	}
+	blockedPath := filepath.Join(blockingFilePath, "cannot_create_dir", "ed25519.key")
+	if _, err := LoadOrGeneratePrivateKey(blockedPath); err == nil {
+		t.Error("expected error when path directory creation fails, got nil")
+	}
+}
+

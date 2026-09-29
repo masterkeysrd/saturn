@@ -14,6 +14,7 @@ import (
 )
 
 // UserStoreProvider provides access to the UserStore.
+// @Mock
 type UserStoreProvider interface {
 	Create(ctx context.Context, user *User) error
 	GetByID(ctx context.Context, id UserID) (*User, error)
@@ -28,6 +29,7 @@ type UserStoreProvider interface {
 }
 
 // CredentialStoreProvider provides access to the CredentialStore.
+// @Mock
 type CredentialStoreProvider interface {
 	Create(ctx context.Context, credential *Credential) error
 	GetByUserID(ctx context.Context, userID UserID) ([]*Credential, error)
@@ -37,12 +39,14 @@ type CredentialStoreProvider interface {
 }
 
 // Cipher defines encryption and decryption methods for sensitive credentials.
+// @Mock
 type Cipher interface {
 	Encrypt(plaintext string) (string, error)
 	Decrypt(ciphertext string) (string, error)
 }
 
 // TOTPProvider defines the interface for TOTP secret generation, passcode validation, and backup code handling.
+// @Mock
 type TOTPProvider interface {
 	GenerateSecret() (string, error)
 	ValidateCode(secret, code string, t time.Time) bool
@@ -72,6 +76,7 @@ type Dependencies struct {
 }
 
 // Hasher is the password hashing interface used for authentication.
+// @Mock
 type Hasher interface {
 	Verify(encodedHash, raw string) (needsRehash bool, err error)
 }
