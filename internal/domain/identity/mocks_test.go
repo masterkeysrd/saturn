@@ -1470,8 +1470,8 @@ type AuthChallengeStoreMock struct {
 	// CreateChallengeFunc mocks the CreateChallenge method.
 	CreateChallengeFunc func(ctx context.Context, challenge *Challenge) error
 
-	// ConsumeChallengeFunc mocks the ConsumeChallenge method.
-	ConsumeChallengeFunc func(ctx context.Context, nonce string, now time.Time) (bool, error)
+	// DeleteChallengeFunc mocks the DeleteChallenge method.
+	DeleteChallengeFunc func(ctx context.Context, nonce string) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -1479,14 +1479,13 @@ type AuthChallengeStoreMock struct {
 			Ctx       context.Context
 			Challenge *Challenge
 		}
-		ConsumeChallenge []struct {
+		DeleteChallenge []struct {
 			Ctx   context.Context
 			Nonce string
-			Now   time.Time
 		}
 	}
-	lockCreateChallenge  sync.RWMutex
-	lockConsumeChallenge sync.RWMutex
+	lockCreateChallenge sync.RWMutex
+	lockDeleteChallenge sync.RWMutex
 }
 
 // CreateChallenge calls CreateChallengeFunc.
@@ -1516,34 +1515,31 @@ func (mock *AuthChallengeStoreMock) CreateChallengeCalls() []struct {
 	return mock.calls.CreateChallenge
 }
 
-// ConsumeChallenge calls ConsumeChallengeFunc.
-func (mock *AuthChallengeStoreMock) ConsumeChallenge(ctx context.Context, nonce string, now time.Time) (bool, error) {
-	if mock.ConsumeChallengeFunc == nil {
-		panic("AuthChallengeStoreMock.ConsumeChallengeFunc: method is nil but AuthChallengeStore.ConsumeChallenge was just called")
+// DeleteChallenge calls DeleteChallengeFunc.
+func (mock *AuthChallengeStoreMock) DeleteChallenge(ctx context.Context, nonce string) error {
+	if mock.DeleteChallengeFunc == nil {
+		panic("AuthChallengeStoreMock.DeleteChallengeFunc: method is nil but AuthChallengeStore.DeleteChallenge was just called")
 	}
-	mock.lockConsumeChallenge.Lock()
-	mock.calls.ConsumeChallenge = append(mock.calls.ConsumeChallenge, struct {
+	mock.lockDeleteChallenge.Lock()
+	mock.calls.DeleteChallenge = append(mock.calls.DeleteChallenge, struct {
 		Ctx   context.Context
 		Nonce string
-		Now   time.Time
 	}{
 		Ctx:   ctx,
 		Nonce: nonce,
-		Now:   now,
 	})
-	mock.lockConsumeChallenge.Unlock()
-	return mock.ConsumeChallengeFunc(ctx, nonce, now)
+	mock.lockDeleteChallenge.Unlock()
+	return mock.DeleteChallengeFunc(ctx, nonce)
 }
 
-// ConsumeChallengeCalls returns all calls made to ConsumeChallenge.
-func (mock *AuthChallengeStoreMock) ConsumeChallengeCalls() []struct {
+// DeleteChallengeCalls returns all calls made to DeleteChallenge.
+func (mock *AuthChallengeStoreMock) DeleteChallengeCalls() []struct {
 	Ctx   context.Context
 	Nonce string
-	Now   time.Time
 } {
-	mock.lockConsumeChallenge.RLock()
-	defer mock.lockConsumeChallenge.RUnlock()
-	return mock.calls.ConsumeChallenge
+	mock.lockDeleteChallenge.RLock()
+	defer mock.lockDeleteChallenge.RUnlock()
+	return mock.calls.DeleteChallenge
 }
 
 // Compile-time interface assertion.
@@ -1846,4 +1842,119 @@ func (mock *SessionStoreProviderMock) RevokeByDeviceIDCalls() []struct {
 	mock.lockRevokeByDeviceID.RLock()
 	defer mock.lockRevokeByDeviceID.RUnlock()
 	return mock.calls.RevokeByDeviceID
+}
+
+// Compile-time interface assertion.
+var _ PasswordResetStore = (*PasswordResetStoreMock)(nil)
+
+// PasswordResetStoreMock is a mock implementation of PasswordResetStore.
+type PasswordResetStoreMock struct {
+	// CreateFunc mocks the Create method.
+	CreateFunc func(ctx context.Context, token *PasswordResetToken) error
+
+	// GetByTokenHashFunc mocks the GetByTokenHash method.
+	GetByTokenHashFunc func(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error)
+
+	// UpdateFunc mocks the Update method.
+	UpdateFunc func(ctx context.Context, token *PasswordResetToken) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Create []struct {
+			Ctx   context.Context
+			Token *PasswordResetToken
+		}
+		GetByTokenHash []struct {
+			Ctx       context.Context
+			TokenHash []byte
+		}
+		Update []struct {
+			Ctx   context.Context
+			Token *PasswordResetToken
+		}
+	}
+	lockCreate         sync.RWMutex
+	lockGetByTokenHash sync.RWMutex
+	lockUpdate         sync.RWMutex
+}
+
+// Create calls CreateFunc.
+func (mock *PasswordResetStoreMock) Create(ctx context.Context, token *PasswordResetToken) error {
+	if mock.CreateFunc == nil {
+		panic("PasswordResetStoreMock.CreateFunc: method is nil but PasswordResetStore.Create was just called")
+	}
+	mock.lockCreate.Lock()
+	mock.calls.Create = append(mock.calls.Create, struct {
+		Ctx   context.Context
+		Token *PasswordResetToken
+	}{
+		Ctx:   ctx,
+		Token: token,
+	})
+	mock.lockCreate.Unlock()
+	return mock.CreateFunc(ctx, token)
+}
+
+// CreateCalls returns all calls made to Create.
+func (mock *PasswordResetStoreMock) CreateCalls() []struct {
+	Ctx   context.Context
+	Token *PasswordResetToken
+} {
+	mock.lockCreate.RLock()
+	defer mock.lockCreate.RUnlock()
+	return mock.calls.Create
+}
+
+// GetByTokenHash calls GetByTokenHashFunc.
+func (mock *PasswordResetStoreMock) GetByTokenHash(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error) {
+	if mock.GetByTokenHashFunc == nil {
+		panic("PasswordResetStoreMock.GetByTokenHashFunc: method is nil but PasswordResetStore.GetByTokenHash was just called")
+	}
+	mock.lockGetByTokenHash.Lock()
+	mock.calls.GetByTokenHash = append(mock.calls.GetByTokenHash, struct {
+		Ctx       context.Context
+		TokenHash []byte
+	}{
+		Ctx:       ctx,
+		TokenHash: tokenHash,
+	})
+	mock.lockGetByTokenHash.Unlock()
+	return mock.GetByTokenHashFunc(ctx, tokenHash)
+}
+
+// GetByTokenHashCalls returns all calls made to GetByTokenHash.
+func (mock *PasswordResetStoreMock) GetByTokenHashCalls() []struct {
+	Ctx       context.Context
+	TokenHash []byte
+} {
+	mock.lockGetByTokenHash.RLock()
+	defer mock.lockGetByTokenHash.RUnlock()
+	return mock.calls.GetByTokenHash
+}
+
+// Update calls UpdateFunc.
+func (mock *PasswordResetStoreMock) Update(ctx context.Context, token *PasswordResetToken) error {
+	if mock.UpdateFunc == nil {
+		panic("PasswordResetStoreMock.UpdateFunc: method is nil but PasswordResetStore.Update was just called")
+	}
+	mock.lockUpdate.Lock()
+	mock.calls.Update = append(mock.calls.Update, struct {
+		Ctx   context.Context
+		Token *PasswordResetToken
+	}{
+		Ctx:   ctx,
+		Token: token,
+	})
+	mock.lockUpdate.Unlock()
+	return mock.UpdateFunc(ctx, token)
+}
+
+// UpdateCalls returns all calls made to Update.
+func (mock *PasswordResetStoreMock) UpdateCalls() []struct {
+	Ctx   context.Context
+	Token *PasswordResetToken
+} {
+	mock.lockUpdate.RLock()
+	defer mock.lockUpdate.RUnlock()
+	return mock.calls.Update
 }

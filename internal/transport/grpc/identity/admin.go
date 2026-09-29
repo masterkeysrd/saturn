@@ -6,6 +6,8 @@ import (
 	adminidentityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -187,5 +189,28 @@ func (h *AdminHandler) ListSecurityEvents(ctx context.Context, req *adminidentit
 	return &adminidentityv1.ListSecurityEventsResponse{
 		Events:        pbEvents,
 		NextPageToken: page.NextPageToken,
+	}, nil
+}
+
+// ResetPassword initiates a single-use password reset link for the target user.
+func (h *AdminHandler) ResetPassword(ctx context.Context, req *adminidentityv1.ResetPasswordRequest) (*adminidentityv1.ResetPasswordResponse, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "unauthenticated")
+	}
+
+	resp, err := h.Coordinator.ResetPassword(ctx, &iam.ResetPasswordRequest{
+		AdminUserID:  principal.Subject,
+		TargetUserID: req.GetUserId(),
+		TTLMinutes:   req.GetTtlMinutes(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &adminidentityv1.ResetPasswordResponse{
+		ResetUrl:  resp.ResetURL,
+		Token:     resp.Token,
+		ExpiresAt: timestamppb.New(resp.ExpiresAt),
 	}, nil
 }

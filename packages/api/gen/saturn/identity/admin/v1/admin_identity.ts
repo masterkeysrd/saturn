@@ -300,6 +300,38 @@ export interface ListSecurityEventsResponse {
 }
 
 /**
+ * Request message for AdminIdentity.ResetPassword.
+ */
+export interface ResetPasswordRequest {
+  /**
+   * Required. The target user ID to reset password for.
+   */
+  userId: string
+  /**
+   * Optional. Custom validity window in minutes (default 15, max 60).
+   */
+  ttlMinutes: number
+}
+
+/**
+ * Response message for AdminIdentity.ResetPassword.
+ */
+export interface ResetPasswordResponse {
+  /**
+   * Full reset URL: https://<domain>/reset-password?token=<raw_token>
+   */
+  resetUrl: string
+  /**
+   * Raw single-use token.
+   */
+  token: string
+  /**
+   * Expiration timestamp.
+   */
+  expiresAt: string
+}
+
+/**
  * AdminIdentity provides administrative operations for user and session management.
  */
 /**
@@ -478,6 +510,37 @@ export function useListSecurityEventsQuery(
   return useQuery<ListSecurityEventsResponse, Error>({
     queryKey: ["/api/v1/admin/identity/security-events", req],
     queryFn: () => listSecurityEvents(req),
+    ...options,
+  })
+}
+
+/**
+ * Initiates a password reset for a user by generating a single-use reset URL.
+ */
+export async function resetPassword(
+  user_id: string,
+  req: ResetPasswordRequest
+): Promise<ResetPasswordResponse> {
+  return request<ResetPasswordResponse>({
+    method: "POST",
+    url: `/api/v1/admin/identity/users/${user_id}:reset-password`,
+    data: req,
+  })
+}
+
+export function useResetPasswordMutation(
+  options?: UseMutationOptions<
+    ResetPasswordResponse,
+    Error,
+    { user_id: string; req: ResetPasswordRequest }
+  >
+) {
+  return useMutation<
+    ResetPasswordResponse,
+    Error,
+    { user_id: string; req: ResetPasswordRequest }
+  >({
+    mutationFn: ({ user_id, req }) => resetPassword(user_id, req),
     ...options,
   })
 }

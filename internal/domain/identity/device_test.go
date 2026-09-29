@@ -2,12 +2,12 @@ package identity
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/crypto"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
 
 func TestDeviceID(t *testing.T) {
@@ -128,8 +128,8 @@ func TestDevice_ServiceMethods(t *testing.T) {
 	})
 
 	t.Run("CreateDevice succeeds and creates device when valid", func(t *testing.T) {
-		chgStore.ConsumeChallengeFunc = func(ctx context.Context, challenge string, now time.Time) (bool, error) {
-			return true, nil
+		chgStore.DeleteChallengeFunc = func(ctx context.Context, challenge string) error {
+			return nil
 		}
 		verifier.VerifyAssertionFunc = func(params crypto.VerifyAssertionParams) error {
 			return nil
@@ -165,8 +165,8 @@ func TestDevice_ServiceMethods(t *testing.T) {
 	})
 
 	t.Run("CreateDevice fails if challenge is consumed or expired", func(t *testing.T) {
-		chgStore.ConsumeChallengeFunc = func(ctx context.Context, challenge string, now time.Time) (bool, error) {
-			return false, nil
+		chgStore.DeleteChallengeFunc = func(ctx context.Context, challenge string) error {
+			return errors.E(errors.NotExist)
 		}
 
 		_, err := svc.CreateDevice(ctx, CreateDeviceRequest{
@@ -185,8 +185,8 @@ func TestDevice_ServiceMethods(t *testing.T) {
 	})
 
 	t.Run("CreateDevice fails if signature verifier fails", func(t *testing.T) {
-		chgStore.ConsumeChallengeFunc = func(ctx context.Context, challenge string, now time.Time) (bool, error) {
-			return true, nil
+		chgStore.DeleteChallengeFunc = func(ctx context.Context, challenge string) error {
+			return nil
 		}
 		verifier.VerifyAssertionFunc = func(params crypto.VerifyAssertionParams) error {
 			return errors.New("bad signature")

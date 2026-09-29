@@ -131,3 +131,17 @@ func (c *Client) ListSecurityEvents(ctx context.Context, req *ListSecurityEvents
 	}
 	return &resp, nil
 }
+
+// ResetPassword executes POST /api/v1/admin/identity/users/{user_id}:reset-password.
+func (c *Client) ResetPassword(ctx context.Context, req *ResetPasswordRequest) (*ResetPasswordResponse, error) {
+	var resp ResetPasswordResponse
+	path := fmt.Sprintf("/api/v1/admin/identity/users/%s:reset-password", req.GetUserId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}

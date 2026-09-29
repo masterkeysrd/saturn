@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"bytes"
 	"context"
 	"testing"
 	"time"
@@ -3005,8 +3006,8 @@ func TestService_Device(t *testing.T) {
 					m.ListFactorsByUserIDFunc = func(ctx context.Context, userID UserID) ([]*MFAFactor, error) {
 						return []*MFAFactor{}, nil
 					}
-					chg.ConsumeChallengeFunc = func(ctx context.Context, nonce string, now time.Time) (bool, error) {
-						return false, nil
+					chg.DeleteChallengeFunc = func(ctx context.Context, nonce string) error {
+						return errors.E(errors.NotExist)
 					}
 				},
 				expectedErr: true,
@@ -3027,8 +3028,8 @@ func TestService_Device(t *testing.T) {
 					m.ListFactorsByUserIDFunc = func(ctx context.Context, userID UserID) ([]*MFAFactor, error) {
 						return []*MFAFactor{}, nil
 					}
-					chg.ConsumeChallengeFunc = func(ctx context.Context, nonce string, now time.Time) (bool, error) {
-						return true, nil
+					chg.DeleteChallengeFunc = func(ctx context.Context, nonce string) error {
+						return nil
 					}
 					v.VerifyAssertionFunc = func(params crypto.VerifyAssertionParams) error {
 						return errors.New("bad sig")
@@ -3055,8 +3056,8 @@ func TestService_Device(t *testing.T) {
 					}
 					c.DecryptFunc = func(ciphertext string) (string, error) { return "SECRET", nil }
 					totp.ValidateCodeFunc = func(secret, code string, t time.Time) bool { return true }
-					chg.ConsumeChallengeFunc = func(ctx context.Context, nonce string, now time.Time) (bool, error) {
-						return true, nil
+					chg.DeleteChallengeFunc = func(ctx context.Context, nonce string) error {
+						return nil
 					}
 					v.VerifyAssertionFunc = func(params crypto.VerifyAssertionParams) error { return nil }
 					d.CreateDeviceFunc = func(ctx context.Context, device *Device) error { return nil }
@@ -3341,8 +3342,8 @@ func TestService_Device(t *testing.T) {
 							ExpiresAt: now.Add(40 * 24 * time.Hour),
 						}, nil
 					}
-					chg.ConsumeChallengeFunc = func(ctx context.Context, nonce string, now time.Time) (bool, error) {
-						return false, nil
+					chg.DeleteChallengeFunc = func(ctx context.Context, nonce string) error {
+						return errors.E(errors.NotExist)
 					}
 				},
 				expectedErr: true,
@@ -3362,8 +3363,8 @@ func TestService_Device(t *testing.T) {
 							PublicKey:    []byte("pk"),
 						}, nil
 					}
-					chg.ConsumeChallengeFunc = func(ctx context.Context, nonce string, now time.Time) (bool, error) {
-						return true, nil
+					chg.DeleteChallengeFunc = func(ctx context.Context, nonce string) error {
+						return nil
 					}
 					v.VerifyAssertionFunc = func(params crypto.VerifyAssertionParams) error {
 						return errors.New("bad sig")
@@ -3386,8 +3387,8 @@ func TestService_Device(t *testing.T) {
 							PublicKey:    []byte("pk"),
 						}, nil
 					}
-					chg.ConsumeChallengeFunc = func(ctx context.Context, nonce string, now time.Time) (bool, error) {
-						return true, nil
+					chg.DeleteChallengeFunc = func(ctx context.Context, nonce string) error {
+						return nil
 					}
 					v.VerifyAssertionFunc = func(params crypto.VerifyAssertionParams) error { return nil }
 					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
@@ -3411,8 +3412,8 @@ func TestService_Device(t *testing.T) {
 							PublicKey:    []byte("pk"),
 						}, nil
 					}
-					chg.ConsumeChallengeFunc = func(ctx context.Context, nonce string, now time.Time) (bool, error) {
-						return true, nil
+					chg.DeleteChallengeFunc = func(ctx context.Context, nonce string) error {
+						return nil
 					}
 					v.VerifyAssertionFunc = func(params crypto.VerifyAssertionParams) error { return nil }
 					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
@@ -3461,6 +3462,485 @@ func TestService_Device(t *testing.T) {
 				}
 				if err != nil || dev == nil || user == nil {
 					t.Fatalf("unexpected result: dev=%v, user=%v, err=%v", dev, user, err)
+				}
+			})
+		}
+	})
+}
+
+func TestService_PasswordReset(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("CreatePasswordResetToken", func(t *testing.T) {
+		now := time.Now().UTC()
+		tests := []struct {
+			name        string
+			adminID     UserID
+			targetID    UserID
+			tokenHash   []byte
+			ttl         time.Duration
+			setup       func(u *UserStoreProviderMock, r *PasswordResetStoreMock)
+			expectedErr bool
+			expectCode  errors.Code
+		}{
+			{
+				name:      "Target user not found",
+				adminID:   "usr_admin",
+				targetID:  "usr_unknown",
+				tokenHash: []byte("hash_123"),
+				setup: func(u *UserStoreProviderMock, r *PasswordResetStoreMock) {
+					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return nil, errors.E(errors.NotExist)
+					}
+				},
+				expectedErr: true,
+				expectCode:  NotFound,
+			},
+			{
+				name:      "Target user is not active",
+				adminID:   "usr_admin",
+				targetID:  "usr_inactive",
+				tokenHash: []byte("hash_123"),
+				setup: func(u *UserStoreProviderMock, r *PasswordResetStoreMock) {
+					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return &User{ID: id, Status: UserStatusSuspended}, nil
+					}
+				},
+				expectedErr: true,
+			},
+			{
+				name:      "Empty token hash",
+				adminID:   "usr_admin",
+				targetID:  "usr_active",
+				tokenHash: nil,
+				setup: func(u *UserStoreProviderMock, r *PasswordResetStoreMock) {
+					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return &User{ID: id, Status: UserStatusActive}, nil
+					}
+				},
+				expectedErr: true,
+			},
+			{
+				name:      "Store create failure",
+				adminID:   "usr_admin",
+				targetID:  "usr_active",
+				tokenHash: []byte("hash_123"),
+				setup: func(u *UserStoreProviderMock, r *PasswordResetStoreMock) {
+					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return &User{ID: id, Status: UserStatusActive}, nil
+					}
+					r.CreateFunc = func(ctx context.Context, token *PasswordResetToken) error {
+						return errors.New("db error")
+					}
+				},
+				expectedErr: true,
+			},
+			{
+				name:      "Success with default TTL",
+				adminID:   "usr_admin",
+				targetID:  "usr_active",
+				tokenHash: []byte("hash_123"),
+				ttl:       0,
+				setup: func(u *UserStoreProviderMock, r *PasswordResetStoreMock) {
+					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return &User{ID: id, Status: UserStatusActive}, nil
+					}
+					r.CreateFunc = func(ctx context.Context, token *PasswordResetToken) error {
+						if token.ExpiresAt.Before(now) {
+							t.Errorf("expected future expiration, got %v", token.ExpiresAt)
+						}
+						return nil
+					}
+				},
+				expectedErr: false,
+			},
+			{
+				name:      "Success with clamped max TTL",
+				adminID:   "usr_admin",
+				targetID:  "usr_active",
+				tokenHash: []byte("hash_123"),
+				ttl:       120 * time.Minute,
+				setup: func(u *UserStoreProviderMock, r *PasswordResetStoreMock) {
+					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return &User{ID: id, Status: UserStatusActive}, nil
+					}
+					r.CreateFunc = func(ctx context.Context, token *PasswordResetToken) error {
+						return nil
+					}
+				},
+				expectedErr: false,
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				uStore := &UserStoreProviderMock{}
+				rStore := &PasswordResetStoreMock{}
+				if tc.setup != nil {
+					tc.setup(uStore, rStore)
+				}
+				svc := NewService(Dependencies{
+					UserStore:          uStore,
+					PasswordResetStore: rStore,
+				})
+				record, err := svc.CreatePasswordResetToken(ctx, CreatePasswordResetTokenRequest{
+					AdminID:      tc.adminID,
+					TargetUserID: tc.targetID,
+					TokenHash:    tc.tokenHash,
+					TTL:          tc.ttl,
+				})
+				if tc.expectedErr {
+					if err == nil {
+						t.Fatal("expected error, got nil")
+					}
+					if tc.expectCode != "" && errors.CodeOf(err) != tc.expectCode {
+						t.Errorf("expected code %v, got %v", tc.expectCode, errors.CodeOf(err))
+					}
+					return
+				}
+				if err != nil || record == nil {
+					t.Fatalf("unexpected result: record=%v, err=%v", record, err)
+				}
+				if !bytes.Equal(record.TokenHash, tc.tokenHash) {
+					t.Errorf("expected tokenHash %v, got %v", tc.tokenHash, record.TokenHash)
+				}
+			})
+		}
+	})
+
+	t.Run("ValidatePasswordResetToken", func(t *testing.T) {
+		now := time.Now().UTC()
+		tests := []struct {
+			name        string
+			tokenHash   []byte
+			setup       func(r *PasswordResetStoreMock, u *UserStoreProviderMock)
+			expectedErr bool
+			expectCode  errors.Code
+		}{
+			{
+				name:        "Empty token hash",
+				tokenHash:   nil,
+				expectedErr: true,
+				expectCode:  ResetTokenNotFound,
+			},
+			{
+				name:      "Token not found in store",
+				tokenHash: []byte("non_existent_token_123"),
+				setup: func(r *PasswordResetStoreMock, u *UserStoreProviderMock) {
+					r.GetByTokenHashFunc = func(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error) {
+						return nil, errors.E(errors.NotExist)
+					}
+				},
+				expectedErr: true,
+				expectCode:  ResetTokenNotFound,
+			},
+			{
+				name:      "Token already used",
+				tokenHash: []byte("used_token_123"),
+				setup: func(r *PasswordResetStoreMock, u *UserStoreProviderMock) {
+					usedTime := now.Add(-5 * time.Minute)
+					r.GetByTokenHashFunc = func(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error) {
+						return &PasswordResetToken{
+							ID:        "rst_1",
+							UserID:    "usr_1",
+							ExpiresAt: now.Add(10 * time.Minute),
+							UsedAt:    &usedTime,
+						}, nil
+					}
+				},
+				expectedErr: true,
+				expectCode:  ResetTokenUsed,
+			},
+			{
+				name:      "Token expired",
+				tokenHash: []byte("expired_token_123"),
+				setup: func(r *PasswordResetStoreMock, u *UserStoreProviderMock) {
+					r.GetByTokenHashFunc = func(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error) {
+						return &PasswordResetToken{
+							ID:        "rst_1",
+							UserID:    "usr_1",
+							ExpiresAt: now.Add(-5 * time.Minute),
+						}, nil
+					}
+				},
+				expectedErr: true,
+				expectCode:  ResetTokenExpired,
+			},
+			{
+				name:      "User not found",
+				tokenHash: []byte("valid_token_123"),
+				setup: func(r *PasswordResetStoreMock, u *UserStoreProviderMock) {
+					r.GetByTokenHashFunc = func(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error) {
+						return &PasswordResetToken{
+							ID:        "rst_1",
+							UserID:    "usr_unknown",
+							ExpiresAt: now.Add(10 * time.Minute),
+						}, nil
+					}
+					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return nil, errors.E(errors.NotExist)
+					}
+				},
+				expectedErr: true,
+				expectCode:  NotFound,
+			},
+			{
+				name:      "User inactive",
+				tokenHash: []byte("valid_token_123"),
+				setup: func(r *PasswordResetStoreMock, u *UserStoreProviderMock) {
+					r.GetByTokenHashFunc = func(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error) {
+						return &PasswordResetToken{
+							ID:        "rst_1",
+							UserID:    "usr_inactive",
+							ExpiresAt: now.Add(10 * time.Minute),
+						}, nil
+					}
+					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return &User{ID: id, Status: UserStatusSuspended}, nil
+					}
+				},
+				expectedErr: true,
+			},
+			{
+				name:      "Success",
+				tokenHash: []byte("valid_token_123"),
+				setup: func(r *PasswordResetStoreMock, u *UserStoreProviderMock) {
+					r.GetByTokenHashFunc = func(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error) {
+						return &PasswordResetToken{
+							ID:        "rst_1",
+							UserID:    "usr_active",
+							ExpiresAt: now.Add(10 * time.Minute),
+						}, nil
+					}
+					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return &User{ID: id, Status: UserStatusActive, Username: "alice"}, nil
+					}
+				},
+				expectedErr: false,
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				rStore := &PasswordResetStoreMock{}
+				uStore := &UserStoreProviderMock{}
+				if tc.setup != nil {
+					tc.setup(rStore, uStore)
+				}
+				svc := NewService(Dependencies{
+					PasswordResetStore: rStore,
+					UserStore:          uStore,
+				})
+				user, record, err := svc.ValidatePasswordResetToken(ctx, ValidatePasswordResetTokenRequest{
+					TokenHash: tc.tokenHash,
+					Now:       now,
+				})
+				if tc.expectedErr {
+					if err == nil {
+						t.Fatal("expected error, got nil")
+					}
+					if tc.expectCode != "" && errors.CodeOf(err) != tc.expectCode {
+						t.Errorf("expected code %v, got %v", tc.expectCode, errors.CodeOf(err))
+					}
+					return
+				}
+				if err != nil || user == nil || record == nil {
+					t.Fatalf("unexpected result: user=%v, record=%v, err=%v", user, record, err)
+				}
+			})
+		}
+	})
+
+	t.Run("CompletePasswordReset", func(t *testing.T) {
+		now := time.Now().UTC()
+		tests := []struct {
+			name        string
+			tokenHash   []byte
+			hashedPass  string
+			setup       func(r *PasswordResetStoreMock, u *UserStoreProviderMock, c *CredentialStoreProviderMock, s *SessionStoreProviderMock, e *SecurityEventStoreMock)
+			expectedErr bool
+		}{
+			{
+				name:       "Token validation failure",
+				tokenHash:  []byte("bad_token"),
+				hashedPass: "hashed_pass",
+				setup: func(r *PasswordResetStoreMock, u *UserStoreProviderMock, c *CredentialStoreProviderMock, s *SessionStoreProviderMock, e *SecurityEventStoreMock) {
+					r.GetByTokenHashFunc = func(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error) {
+						return nil, errors.E(errors.NotExist)
+					}
+				},
+				expectedErr: true,
+			},
+			{
+				name:       "Success updating existing credential",
+				tokenHash:  []byte("valid_token"),
+				hashedPass: "new_hashed_password",
+				setup: func(r *PasswordResetStoreMock, u *UserStoreProviderMock, c *CredentialStoreProviderMock, s *SessionStoreProviderMock, e *SecurityEventStoreMock) {
+					r.GetByTokenHashFunc = func(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error) {
+						return &PasswordResetToken{
+							ID:        "rst_1",
+							UserID:    "usr_1",
+							ExpiresAt: now.Add(10 * time.Minute),
+						}, nil
+					}
+					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return &User{ID: id, Status: UserStatusActive, Email: "alice@example.com"}, nil
+					}
+					c.GetByUserIDAndAuthTypeFunc = func(ctx context.Context, userID UserID, authType string) (*Credential, error) {
+						return &Credential{UserID: userID, AuthType: authType, SecretData: "old_hash"}, nil
+					}
+					c.UpdateFunc = func(ctx context.Context, cred *Credential) error {
+						if cred.SecretData != "new_hashed_password" {
+							t.Errorf("expected new hash, got %s", cred.SecretData)
+						}
+						return nil
+					}
+					u.IncrementAuthVersionFunc = func(ctx context.Context, id UserID) (int64, error) {
+						return 2, nil
+					}
+					r.UpdateFunc = func(ctx context.Context, token *PasswordResetToken) error {
+						if token.UsedAt == nil {
+							t.Errorf("expected token.UsedAt to be set")
+						}
+						return nil
+					}
+					s.RevokeAllForUserFunc = func(ctx context.Context, userID UserID, now time.Time) error {
+						return nil
+					}
+					e.CreateFunc = func(ctx context.Context, event *SecurityEvent) error {
+						return nil
+					}
+				},
+				expectedErr: false,
+			},
+			{
+				name:       "Success creating credential when none exists",
+				tokenHash:  []byte("valid_token"),
+				hashedPass: "new_hashed_password",
+				setup: func(r *PasswordResetStoreMock, u *UserStoreProviderMock, c *CredentialStoreProviderMock, s *SessionStoreProviderMock, e *SecurityEventStoreMock) {
+					r.GetByTokenHashFunc = func(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error) {
+						return &PasswordResetToken{
+							ID:        "rst_1",
+							UserID:    "usr_1",
+							ExpiresAt: now.Add(10 * time.Minute),
+						}, nil
+					}
+					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return &User{ID: id, Status: UserStatusActive, Email: "alice@example.com"}, nil
+					}
+					c.GetByUserIDAndAuthTypeFunc = func(ctx context.Context, userID UserID, authType string) (*Credential, error) {
+						return nil, errors.E(errors.NotExist)
+					}
+					c.CreateFunc = func(ctx context.Context, cred *Credential) error {
+						if cred.SecretData != "new_hashed_password" {
+							t.Errorf("expected new hash, got %s", cred.SecretData)
+						}
+						return nil
+					}
+					u.IncrementAuthVersionFunc = func(ctx context.Context, id UserID) (int64, error) {
+						return 2, nil
+					}
+					r.UpdateFunc = func(ctx context.Context, token *PasswordResetToken) error {
+						return nil
+					}
+					s.RevokeAllForUserFunc = func(ctx context.Context, userID UserID, now time.Time) error {
+						return nil
+					}
+					e.CreateFunc = func(ctx context.Context, event *SecurityEvent) error {
+						return nil
+					}
+				},
+				expectedErr: false,
+			},
+			{
+				name:       "IncrementAuthVersion failure",
+				tokenHash:  []byte("valid_token"),
+				hashedPass: "new_hashed_password",
+				setup: func(r *PasswordResetStoreMock, u *UserStoreProviderMock, c *CredentialStoreProviderMock, s *SessionStoreProviderMock, e *SecurityEventStoreMock) {
+					r.GetByTokenHashFunc = func(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error) {
+						return &PasswordResetToken{
+							ID:        "rst_1",
+							UserID:    "usr_1",
+							ExpiresAt: now.Add(10 * time.Minute),
+						}, nil
+					}
+					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return &User{ID: id, Status: UserStatusActive}, nil
+					}
+					c.GetByUserIDAndAuthTypeFunc = func(ctx context.Context, userID UserID, authType string) (*Credential, error) {
+						return &Credential{UserID: userID, AuthType: authType}, nil
+					}
+					c.UpdateFunc = func(ctx context.Context, cred *Credential) error {
+						return nil
+					}
+					u.IncrementAuthVersionFunc = func(ctx context.Context, id UserID) (int64, error) {
+						return 0, errors.New("auth version error")
+					}
+				},
+				expectedErr: true,
+			},
+			{
+				name:       "Update failure",
+				tokenHash:  []byte("valid_token"),
+				hashedPass: "new_hashed_password",
+				setup: func(r *PasswordResetStoreMock, u *UserStoreProviderMock, c *CredentialStoreProviderMock, s *SessionStoreProviderMock, e *SecurityEventStoreMock) {
+					r.GetByTokenHashFunc = func(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error) {
+						return &PasswordResetToken{
+							ID:        "rst_1",
+							UserID:    "usr_1",
+							ExpiresAt: now.Add(10 * time.Minute),
+						}, nil
+					}
+					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return &User{ID: id, Status: UserStatusActive}, nil
+					}
+					c.GetByUserIDAndAuthTypeFunc = func(ctx context.Context, userID UserID, authType string) (*Credential, error) {
+						return &Credential{UserID: userID, AuthType: authType}, nil
+					}
+					c.UpdateFunc = func(ctx context.Context, cred *Credential) error {
+						return nil
+					}
+					u.IncrementAuthVersionFunc = func(ctx context.Context, id UserID) (int64, error) {
+						return 2, nil
+					}
+					r.UpdateFunc = func(ctx context.Context, token *PasswordResetToken) error {
+						return errors.New("update used error")
+					}
+				},
+				expectedErr: true,
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				rStore := &PasswordResetStoreMock{}
+				uStore := &UserStoreProviderMock{}
+				cStore := &CredentialStoreProviderMock{}
+				sStore := &SessionStoreProviderMock{}
+				eStore := &SecurityEventStoreMock{}
+				if tc.setup != nil {
+					tc.setup(rStore, uStore, cStore, sStore, eStore)
+				}
+				svc := NewService(Dependencies{
+					PasswordResetStore: rStore,
+					UserStore:          uStore,
+					CredentialStore:    cStore,
+					SessionStore:       sStore,
+					SecurityEventStore: eStore,
+				})
+				user, err := svc.CompletePasswordReset(ctx, CompletePasswordResetRequest{
+					TokenHash:      tc.tokenHash,
+					HashedPassword: tc.hashedPass,
+					Now:            now,
+				})
+				if tc.expectedErr {
+					if err == nil {
+						t.Fatal("expected error, got nil")
+					}
+					return
+				}
+				if err != nil || user == nil {
+					t.Fatalf("unexpected result: user=%v, err=%v", user, err)
 				}
 			})
 		}

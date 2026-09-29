@@ -4,15 +4,30 @@ import {
   useListUsersQuery,
   useApproveUserMutation,
   useRejectUserMutation,
+  useResetPasswordMutation,
   type ListUsersRequest_StatusFilter,
+  type User,
 } from "@saturn/api/gen/saturn/identity/admin/v1/admin_identity"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import {
   BadgeCheckIcon,
   XCircleIcon,
   ShieldAlertIcon,
   RefreshCwIcon,
   UserIcon,
+  KeyRoundIcon,
+  CopyIcon,
+  CheckIcon,
+  ClockIcon,
 } from "lucide-react"
 import { PageLayout } from "@/components/ui/page-layout"
 
@@ -21,6 +36,15 @@ export function AdminView() {
   const [statusFilter, setStatusFilter] =
     useState<ListUsersRequest_StatusFilter>("PENDING_APPROVAL")
   const [searchQuery, setSearchQuery] = useState("")
+
+  // Password reset modal state
+  const [resetModalOpen, setResetModalOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [ttlMinutes, setTtlMinutes] = useState(15)
+  const [generatedUrl, setGeneratedUrl] = useState("")
+  const [copied, setCopied] = useState(false)
+
+  const resetPasswordMutation = useResetPasswordMutation()
 
   // Fetch the users list based on filters
   const { data, isLoading, isError, refetch } = useListUsersQuery({
@@ -61,6 +85,40 @@ export function AdminView() {
     } catch (err) {
       console.error("Failed to reject user:", err)
     }
+  }
+
+  const handleOpenResetModal = (user: User) => {
+    setSelectedUser(user)
+    setGeneratedUrl("")
+    setTtlMinutes(15)
+    setCopied(false)
+    setResetModalOpen(true)
+  }
+
+  const handleGenerateResetLink = async () => {
+    if (!selectedUser?.id) return
+    try {
+      const res = await resetPasswordMutation.mutateAsync({
+        user_id: selectedUser.id,
+        req: {
+          userId: selectedUser.id,
+          ttlMinutes,
+        },
+      })
+      const fullUrl = res.resetUrl?.startsWith("http")
+        ? res.resetUrl
+        : `${window.location.origin}${res.resetUrl}`
+      setGeneratedUrl(fullUrl)
+    } catch (err) {
+      console.error("Failed to generate reset link:", err)
+    }
+  }
+
+  const handleCopy = () => {
+    if (!generatedUrl) return
+    navigator.clipboard.writeText(generatedUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   const refreshButton = (
@@ -273,6 +331,18 @@ export function AdminView() {
                               Approve
                             </Button>
                           </div>
+                        ) : account.status === "active" ? (
+                          <div className="flex items-center justify-end">
+                            <Button
+                              onClick={() => handleOpenResetModal(account)}
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 cursor-pointer rounded-xl px-3 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                            >
+                              <KeyRoundIcon className="mr-1.5 h-3.5 w-3.5" />
+                              Reset Password
+                            </Button>
+                          </div>
                         ) : (
                           <span className="text-xs text-muted-foreground/60 select-none">
                             No actions
@@ -287,6 +357,118 @@ export function AdminView() {
           </div>
         )}
       </div>
+
+      {/* Password Reset Modal */}
+      <Dialog open={resetModalOpen} onOpenChange={setResetModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Generate a single-use password reset link for{" "}
+              <span className="font-semibold text-foreground">
+                @{selectedUser?.username}
+              </span>
+              .
+            </DialogDescription>
+          </DialogHeader>
+
+          {!generatedUrl ? (
+            <div className="space-y-4 py-2">
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                This link will expire after the selected duration and can only
+                be used once. Consuming the link will immediately sign out all
+                active sessions for this user.
+              </p>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-foreground">
+                  Link Validity Window
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[15, 30, 60].map((mins) => (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => setTtlMinutes(mins)}
+                      className={`cursor-pointer rounded-xl border p-2 text-xs font-medium transition-all ${
+                        ttlMinutes === mins
+                          ? "border-primary bg-primary/10 font-semibold text-primary"
+                          : "border-border/50 bg-muted/20 text-muted-foreground hover:border-border hover:text-foreground"
+                      }`}
+                    >
+                      {mins} minutes
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  onClick={handleGenerateResetLink}
+                  disabled={resetPasswordMutation.isPending}
+                  className="w-full cursor-pointer rounded-xl bg-primary font-semibold text-primary-foreground"
+                >
+                  {resetPasswordMutation.isPending ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                      <span>Generating link...</span>
+                    </div>
+                  ) : (
+                    "Generate Reset Link"
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center gap-2 rounded-xl border border-green-500/20 bg-green-500/10 p-3 text-xs text-green-500">
+                <ClockIcon className="h-4 w-4 shrink-0" />
+                <span>Link generated! Valid for {ttlMinutes} minutes.</span>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-foreground">
+                  Reset URL
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={generatedUrl}
+                    className="font-mono text-xs select-all"
+                  />
+                  <Button
+                    onClick={handleCopy}
+                    size="sm"
+                    className="shrink-0 cursor-pointer gap-1.5 rounded-xl"
+                  >
+                    {copied ? (
+                      <>
+                        <CheckIcon className="h-4 w-4 text-green-400" />
+                        <span>Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <CopyIcon className="h-4 w-4" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setResetModalOpen(false)}
+                  className="w-full cursor-pointer rounded-xl"
+                >
+                  Done
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </PageLayout>
   )
 }

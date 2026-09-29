@@ -47,6 +47,11 @@ type Coordinator interface {
 	CreateDevice(ctx context.Context, req *CreateDeviceRequest) (*identity.Device, error)
 	ListDevices(ctx context.Context, req *ListDevicesRequest) (*ListDevicesResponse, error)
 	RevokeDevice(ctx context.Context, req *RevokeDeviceRequest) error
+	// @transactional
+	ResetPassword(ctx context.Context, req *ResetPasswordRequest) (*ResetPasswordResponse, error)
+	ValidateResetToken(ctx context.Context, req *ValidateResetTokenRequest) (*ValidateResetTokenResponse, error)
+	// @transactional
+	CompleteResetPassword(ctx context.Context, req *CompleteResetPasswordRequest) error
 }
 
 // PasswordHasher defines the interface for computing and verifying password hashes.
@@ -155,6 +160,9 @@ type IdentityService interface {
 	ListDevices(ctx context.Context, userID identity.UserID) ([]*identity.Device, error)
 	RevokeDevice(ctx context.Context, userID identity.UserID, deviceID identity.DeviceID) error
 	VerifyDeviceAssertion(ctx context.Context, req identity.VerifyDeviceAssertionRequest) (*identity.Device, *identity.User, error)
+	CreatePasswordResetToken(ctx context.Context, req identity.CreatePasswordResetTokenRequest) (*identity.PasswordResetToken, error)
+	ValidatePasswordResetToken(ctx context.Context, req identity.ValidatePasswordResetTokenRequest) (*identity.User, *identity.PasswordResetToken, error)
+	CompletePasswordReset(ctx context.Context, req identity.CompletePasswordResetRequest) (*identity.User, error)
 }
 
 // SpaceService defines the interface for space operations required by IAM application.

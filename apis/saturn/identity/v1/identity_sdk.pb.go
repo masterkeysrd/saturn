@@ -303,3 +303,31 @@ func (c *Client) RevokeDevice(ctx context.Context, req *RevokeDeviceRequest) (*e
 	}
 	return &resp, nil
 }
+
+// ValidateResetToken executes POST /api/v1/identity/users:validate-reset-token.
+func (c *Client) ValidateResetToken(ctx context.Context, req *ValidateResetTokenRequest) (*ValidateResetTokenResponse, error) {
+	var resp ValidateResetTokenResponse
+	path := "/api/v1/identity/users:validate-reset-token"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// CompleteResetPassword executes POST /api/v1/identity/users:complete-reset-password.
+func (c *Client) CompleteResetPassword(ctx context.Context, req *CompleteResetPasswordRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
+	path := "/api/v1/identity/users:complete-reset-password"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}

@@ -15,6 +15,7 @@ import (
 	"github.com/masterkeysrd/saturn/apis/saturn"
 	adminidentityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1"
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // AuthDriver provides composable fluent methods for user registration, admin approval, and authentication.
@@ -415,4 +416,33 @@ func GenerateTestDeviceKeypair(tb testing.TB) ([]byte, func(challenge string) []
 		return sig
 	}
 	return pubBytes, signFn
+}
+
+// AdminResetPassword generates a password reset link and token for the specified user ID.
+func (a *AuthDriver) AdminResetPassword(tb testing.TB, userID string, ttlMinutes int32) (*adminidentityv1.ResetPasswordResponse, error) {
+	tb.Helper()
+	adminClient := a.getAdminClient(tb)
+	return adminClient.ResetPassword(tb.Context(), &adminidentityv1.ResetPasswordRequest{
+		UserId:     userID,
+		TtlMinutes: ttlMinutes,
+	})
+}
+
+// ValidateResetToken validates a password reset token publicly.
+func (a *AuthDriver) ValidateResetToken(tb testing.TB, token string) (*identityv1.ValidateResetTokenResponse, error) {
+	tb.Helper()
+	client := a.getClient()
+	return client.ValidateResetToken(tb.Context(), &identityv1.ValidateResetTokenRequest{
+		Token: token,
+	})
+}
+
+// CompleteResetPassword consumes a reset token and sets a new password.
+func (a *AuthDriver) CompleteResetPassword(tb testing.TB, token, newPassword string) (*emptypb.Empty, error) {
+	tb.Helper()
+	client := a.getClient()
+	return client.CompleteResetPassword(tb.Context(), &identityv1.CompleteResetPasswordRequest{
+		Token:       token,
+		NewPassword: newPassword,
+	})
 }

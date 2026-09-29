@@ -195,3 +195,46 @@ func (t *TransactionalCoordinator) ListDevices(ctx context.Context, req *ListDev
 func (t *TransactionalCoordinator) RevokeDevice(ctx context.Context, req *RevokeDeviceRequest) error {
 	return t.next.RevokeDevice(ctx, req)
 }
+
+// ResetPassword executes next.ResetPassword inside a database transaction.
+func (t *TransactionalCoordinator) ResetPassword(ctx context.Context, req *ResetPasswordRequest) (*ResetPasswordResponse, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.ResetPassword(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (t *TransactionalCoordinator) ValidateResetToken(ctx context.Context, req *ValidateResetTokenRequest) (*ValidateResetTokenResponse, error) {
+	return t.next.ValidateResetToken(ctx, req)
+}
+
+// CompleteResetPassword executes next.CompleteResetPassword inside a database transaction.
+func (t *TransactionalCoordinator) CompleteResetPassword(ctx context.Context, req *CompleteResetPasswordRequest) error {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := t.next.CompleteResetPassword(ctx, req); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}

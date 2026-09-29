@@ -22,6 +22,10 @@ authentication:
       auth_required: false
     - selector: "saturn.identity.v1.Identity.CreateAuthChallenge"
       auth_required: false
+    - selector: "saturn.identity.v1.Identity.ValidateResetToken"
+      auth_required: false
+    - selector: "saturn.identity.v1.Identity.CompleteResetPassword"
+      auth_required: false
 
 space:
   rules:

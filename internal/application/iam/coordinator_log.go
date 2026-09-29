@@ -651,3 +651,75 @@ func (l *LoggingCoordinator) RevokeDevice(ctx context.Context, req *RevokeDevice
 	)
 	return nil
 }
+
+// ResetPassword executes next.ResetPassword and logs execution duration and errors.
+func (l *LoggingCoordinator) ResetPassword(ctx context.Context, req *ResetPasswordRequest) (*ResetPasswordResponse, error) {
+	start := time.Now()
+	res, err := l.next.ResetPassword(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.ResetPassword failed",
+			log.String("component", "iam"),
+			log.String("operation", "ResetPassword"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.ResetPassword completed",
+		log.String("component", "iam"),
+		log.String("operation", "ResetPassword"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// ValidateResetToken executes next.ValidateResetToken and logs execution duration and errors.
+func (l *LoggingCoordinator) ValidateResetToken(ctx context.Context, req *ValidateResetTokenRequest) (*ValidateResetTokenResponse, error) {
+	start := time.Now()
+	res, err := l.next.ValidateResetToken(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.ValidateResetToken failed",
+			log.String("component", "iam"),
+			log.String("operation", "ValidateResetToken"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.ValidateResetToken completed",
+		log.String("component", "iam"),
+		log.String("operation", "ValidateResetToken"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// CompleteResetPassword executes next.CompleteResetPassword and logs execution duration and errors.
+func (l *LoggingCoordinator) CompleteResetPassword(ctx context.Context, req *CompleteResetPasswordRequest) error {
+	start := time.Now()
+	err := l.next.CompleteResetPassword(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.CompleteResetPassword failed",
+			log.String("component", "iam"),
+			log.String("operation", "CompleteResetPassword"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return err
+	}
+
+	l.logger.Info(ctx, "iam.CompleteResetPassword completed",
+		log.String("component", "iam"),
+		log.String("operation", "CompleteResetPassword"),
+		log.Duration("duration", duration),
+	)
+	return nil
+}

@@ -39,6 +39,8 @@ const (
 	Identity_CreateDevice_FullMethodName          = "/saturn.identity.v1.Identity/CreateDevice"
 	Identity_ListDevices_FullMethodName           = "/saturn.identity.v1.Identity/ListDevices"
 	Identity_RevokeDevice_FullMethodName          = "/saturn.identity.v1.Identity/RevokeDevice"
+	Identity_ValidateResetToken_FullMethodName    = "/saturn.identity.v1.Identity/ValidateResetToken"
+	Identity_CompleteResetPassword_FullMethodName = "/saturn.identity.v1.Identity/CompleteResetPassword"
 )
 
 // IdentityClient is the client API for Identity service.
@@ -86,6 +88,10 @@ type IdentityClient interface {
 	ListDevices(ctx context.Context, in *ListDevicesRequest, opts ...grpc.CallOption) (*ListDevicesResponse, error)
 	// Authenticated RPC: Revokes a registered trusted device and terminates its sessions.
 	RevokeDevice(ctx context.Context, in *RevokeDeviceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Public RPC: Validates a password reset token before displaying the reset form.
+	ValidateResetToken(ctx context.Context, in *ValidateResetTokenRequest, opts ...grpc.CallOption) (*ValidateResetTokenResponse, error)
+	// Public RPC: Completes a password reset by consuming a valid token and setting a new password.
+	CompleteResetPassword(ctx context.Context, in *CompleteResetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type identityClient struct {
@@ -286,6 +292,26 @@ func (c *identityClient) RevokeDevice(ctx context.Context, in *RevokeDeviceReque
 	return out, nil
 }
 
+func (c *identityClient) ValidateResetToken(ctx context.Context, in *ValidateResetTokenRequest, opts ...grpc.CallOption) (*ValidateResetTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateResetTokenResponse)
+	err := c.cc.Invoke(ctx, Identity_ValidateResetToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) CompleteResetPassword(ctx context.Context, in *CompleteResetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Identity_CompleteResetPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IdentityServer is the server API for Identity service.
 // All implementations should embed UnimplementedIdentityServer
 // for forward compatibility.
@@ -331,6 +357,10 @@ type IdentityServer interface {
 	ListDevices(context.Context, *ListDevicesRequest) (*ListDevicesResponse, error)
 	// Authenticated RPC: Revokes a registered trusted device and terminates its sessions.
 	RevokeDevice(context.Context, *RevokeDeviceRequest) (*emptypb.Empty, error)
+	// Public RPC: Validates a password reset token before displaying the reset form.
+	ValidateResetToken(context.Context, *ValidateResetTokenRequest) (*ValidateResetTokenResponse, error)
+	// Public RPC: Completes a password reset by consuming a valid token and setting a new password.
+	CompleteResetPassword(context.Context, *CompleteResetPasswordRequest) (*emptypb.Empty, error)
 }
 
 // UnimplementedIdentityServer should be embedded to have
@@ -396,6 +426,12 @@ func (UnimplementedIdentityServer) ListDevices(context.Context, *ListDevicesRequ
 }
 func (UnimplementedIdentityServer) RevokeDevice(context.Context, *RevokeDeviceRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeDevice not implemented")
+}
+func (UnimplementedIdentityServer) ValidateResetToken(context.Context, *ValidateResetTokenRequest) (*ValidateResetTokenResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ValidateResetToken not implemented")
+}
+func (UnimplementedIdentityServer) CompleteResetPassword(context.Context, *CompleteResetPasswordRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method CompleteResetPassword not implemented")
 }
 func (UnimplementedIdentityServer) testEmbeddedByValue() {}
 
@@ -759,6 +795,42 @@ func _Identity_RevokeDevice_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Identity_ValidateResetToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateResetTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).ValidateResetToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_ValidateResetToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).ValidateResetToken(ctx, req.(*ValidateResetTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_CompleteResetPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompleteResetPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).CompleteResetPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_CompleteResetPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).CompleteResetPassword(ctx, req.(*CompleteResetPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Identity_ServiceDesc is the grpc.ServiceDesc for Identity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -841,6 +913,14 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RevokeDevice",
 			Handler:    _Identity_RevokeDevice_Handler,
+		},
+		{
+			MethodName: "ValidateResetToken",
+			Handler:    _Identity_ValidateResetToken_Handler,
+		},
+		{
+			MethodName: "CompleteResetPassword",
+			Handler:    _Identity_CompleteResetPassword_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

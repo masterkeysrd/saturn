@@ -73,6 +73,7 @@ type Dependencies struct {
 	DeviceStore        DeviceStore
 	ChallengeStore     AuthChallengeStore
 	DeviceVerifier     DeviceVerifier
+	PasswordResetStore PasswordResetStore
 }
 
 // Hasher is the password hashing interface used for authentication.
@@ -1050,12 +1051,11 @@ func (s *Service) CreateDevice(ctx context.Context, req CreateDeviceRequest) (*D
 	}
 
 	// Consume challenge (enforcing replay protection and 5-min TTL)
-	consumed, err := s.deps.ChallengeStore.ConsumeChallenge(ctx, req.Challenge, now)
-	if err != nil {
+	if err := s.deps.ChallengeStore.DeleteChallenge(ctx, req.Challenge); err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.Unauthenticated, DeviceInvalidChallenge, "invalid or expired challenge")
+		}
 		return nil, errors.E(op, err)
-	}
-	if !consumed {
-		return nil, errors.E(op, errors.Unauthenticated, DeviceInvalidChallenge, "invalid or expired challenge")
 	}
 
 	// Verify cryptographic signature
@@ -1175,12 +1175,11 @@ func (s *Service) VerifyDeviceAssertion(ctx context.Context, req VerifyDeviceAss
 		return nil, nil, errors.E(op, errors.Unauthenticated, DeviceInactive, "device registration inactive for over 30 days")
 	}
 
-	consumed, err := s.deps.ChallengeStore.ConsumeChallenge(ctx, req.Challenge, now)
-	if err != nil {
+	if err := s.deps.ChallengeStore.DeleteChallenge(ctx, req.Challenge); err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return nil, nil, errors.E(op, errors.Unauthenticated, DeviceInvalidChallenge, "invalid or expired challenge")
+		}
 		return nil, nil, errors.E(op, err)
-	}
-	if !consumed {
-		return nil, nil, errors.E(op, errors.Unauthenticated, DeviceInvalidChallenge, "invalid or expired challenge")
 	}
 
 	if err := s.deps.DeviceVerifier.VerifyAssertion(crypto.VerifyAssertionParams{
@@ -1203,4 +1202,157 @@ func (s *Service) VerifyDeviceAssertion(ctx context.Context, req VerifyDeviceAss
 	device.LastUsedAt = &now
 
 	return device, user, nil
+}
+
+// CreatePasswordResetToken stores a password reset token record with the given tokenHash.
+func (s *Service) CreatePasswordResetToken(ctx context.Context, req CreatePasswordResetTokenRequest) (*PasswordResetToken, error) {
+	const op errors.Op = "domain/identity.CreatePasswordResetToken"
+
+	targetUser, err := s.deps.UserStore.GetByID(ctx, req.TargetUserID)
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.NotExist, NotFound, "target user not found")
+		}
+		return nil, errors.E(op, err)
+	}
+	if targetUser.Status != UserStatusActive {
+		return nil, errors.E(op, errors.Precondition, "target user is not active")
+	}
+
+	if len(req.TokenHash) == 0 {
+		return nil, errors.E(op, errors.Invalid, "token hash is required")
+	}
+
+	ttl := req.TTL
+	if ttl <= 0 {
+		ttl = DefaultResetTokenTTL
+	} else if ttl > MaxResetTokenTTL {
+		ttl = MaxResetTokenTTL
+	}
+
+	tokenID, err := NewResetTokenID()
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	now := time.Now().UTC()
+	record := &PasswordResetToken{
+		ID:         tokenID,
+		UserID:     req.TargetUserID,
+		TokenHash:  req.TokenHash,
+		ExpiresAt:  now.Add(ttl),
+		CreatedBy:  req.AdminID,
+		CreateTime: now,
+	}
+
+	if err := s.deps.PasswordResetStore.Create(ctx, record); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	return record, nil
+}
+
+// ValidatePasswordResetToken verifies that a password reset token exists for the given hash, is unconsumed, and is not expired.
+// Returns the associated user and token record.
+func (s *Service) ValidatePasswordResetToken(ctx context.Context, req ValidatePasswordResetTokenRequest) (*User, *PasswordResetToken, error) {
+	const op errors.Op = "domain/identity.ValidatePasswordResetToken"
+
+	if len(req.TokenHash) == 0 {
+		return nil, nil, errors.E(op, errors.Invalid, ResetTokenNotFound, "reset token hash is required")
+	}
+
+	record, err := s.deps.PasswordResetStore.GetByTokenHash(ctx, req.TokenHash)
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return nil, nil, errors.E(op, errors.Invalid, ResetTokenNotFound, "reset token is invalid or does not exist")
+		}
+		return nil, nil, errors.E(op, err)
+	}
+
+	if record.IsUsed() {
+		return nil, nil, errors.E(op, errors.Precondition, ResetTokenUsed, "reset token has already been used")
+	}
+
+	if record.IsExpired(req.Now) {
+		return nil, nil, errors.E(op, errors.Precondition, ResetTokenExpired, "reset token has expired")
+	}
+
+	user, err := s.deps.UserStore.GetByID(ctx, record.UserID)
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return nil, nil, errors.E(op, errors.Precondition, NotFound, "user not found")
+		}
+		return nil, nil, errors.E(op, err)
+	}
+	if user.Status != UserStatusActive {
+		return nil, nil, errors.E(op, errors.Precondition, "user account is not active")
+	}
+
+	return user, record, nil
+}
+
+// CompletePasswordReset consumes a valid password reset token by hash, updates the user's password credential,
+// increments auth_version to invalidate all outstanding sessions, marks the token used, and logs a security event.
+func (s *Service) CompletePasswordReset(ctx context.Context, req CompletePasswordResetRequest) (*User, error) {
+	const op errors.Op = "domain/identity.CompletePasswordReset"
+
+	user, record, err := s.ValidatePasswordResetToken(ctx, ValidatePasswordResetTokenRequest{
+		TokenHash: req.TokenHash,
+		Now:       req.Now,
+	})
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	// 1. Update or create password credential
+	cred, err := s.deps.CredentialStore.GetByUserIDAndAuthType(ctx, user.ID, "password")
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			newCred := &Credential{
+				UserID:     user.ID,
+				AuthType:   "password",
+				SecretData: req.HashedPassword,
+			}
+			if err := s.deps.CredentialStore.Create(ctx, newCred); err != nil {
+				return nil, errors.E(op, err)
+			}
+		} else {
+			return nil, errors.E(op, err)
+		}
+	} else {
+		cred.SecretData = req.HashedPassword
+		if err := s.deps.CredentialStore.Update(ctx, cred); err != nil {
+			return nil, errors.E(op, err)
+		}
+	}
+
+	// 2. Increment auth_version to revoke all active refresh tokens globally
+	newAuthVersion, err := s.IncrementAuthVersion(ctx, user.ID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	user.AuthVersion = newAuthVersion
+
+	// 3. Mark reset token as used
+	record.UsedAt = &req.Now
+	if err := s.deps.PasswordResetStore.Update(ctx, record); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	// 4. Revoke all active sessions
+	if err := s.deps.SessionStore.RevokeAllForUser(ctx, user.ID, req.Now); err != nil {
+		log.Warn(ctx, "failed to revoke all sessions during password reset", log.String("user_id", string(user.ID)), log.Err(err))
+	}
+
+	// 5. Audit security event
+	eventID, _ := id.Generate("evt_")
+	_ = s.deps.SecurityEventStore.Create(ctx, &SecurityEvent{
+		ID:        eventID,
+		UserID:    &user.ID,
+		Email:     user.Email,
+		EventType: SecurityEventPasswordReset,
+		CreatedAt: req.Now,
+	})
+
+	return user, nil
 }

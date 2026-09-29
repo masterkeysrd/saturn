@@ -96,6 +96,15 @@ type CoordinatorMock struct {
 	// RevokeDeviceFunc mocks the RevokeDevice method.
 	RevokeDeviceFunc func(ctx context.Context, req *RevokeDeviceRequest) error
 
+	// ResetPasswordFunc mocks the ResetPassword method.
+	ResetPasswordFunc func(ctx context.Context, req *ResetPasswordRequest) (*ResetPasswordResponse, error)
+
+	// ValidateResetTokenFunc mocks the ValidateResetToken method.
+	ValidateResetTokenFunc func(ctx context.Context, req *ValidateResetTokenRequest) (*ValidateResetTokenResponse, error)
+
+	// CompleteResetPasswordFunc mocks the CompleteResetPassword method.
+	CompleteResetPasswordFunc func(ctx context.Context, req *CompleteResetPasswordRequest) error
+
 	// calls tracks calls to the methods.
 	calls struct {
 		Authenticate []struct {
@@ -202,6 +211,18 @@ type CoordinatorMock struct {
 			Ctx context.Context
 			Req *RevokeDeviceRequest
 		}
+		ResetPassword []struct {
+			Ctx context.Context
+			Req *ResetPasswordRequest
+		}
+		ValidateResetToken []struct {
+			Ctx context.Context
+			Req *ValidateResetTokenRequest
+		}
+		CompleteResetPassword []struct {
+			Ctx context.Context
+			Req *CompleteResetPasswordRequest
+		}
 	}
 	lockAuthenticate          sync.RWMutex
 	lockGetAuthVersion        sync.RWMutex
@@ -229,6 +250,9 @@ type CoordinatorMock struct {
 	lockCreateDevice          sync.RWMutex
 	lockListDevices           sync.RWMutex
 	lockRevokeDevice          sync.RWMutex
+	lockResetPassword         sync.RWMutex
+	lockValidateResetToken    sync.RWMutex
+	lockCompleteResetPassword sync.RWMutex
 }
 
 // Authenticate calls AuthenticateFunc.
@@ -933,6 +957,87 @@ func (mock *CoordinatorMock) RevokeDeviceCalls() []struct {
 	return mock.calls.RevokeDevice
 }
 
+// ResetPassword calls ResetPasswordFunc.
+func (mock *CoordinatorMock) ResetPassword(ctx context.Context, req *ResetPasswordRequest) (*ResetPasswordResponse, error) {
+	if mock.ResetPasswordFunc == nil {
+		panic("CoordinatorMock.ResetPasswordFunc: method is nil but Coordinator.ResetPassword was just called")
+	}
+	mock.lockResetPassword.Lock()
+	mock.calls.ResetPassword = append(mock.calls.ResetPassword, struct {
+		Ctx context.Context
+		Req *ResetPasswordRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockResetPassword.Unlock()
+	return mock.ResetPasswordFunc(ctx, req)
+}
+
+// ResetPasswordCalls returns all calls made to ResetPassword.
+func (mock *CoordinatorMock) ResetPasswordCalls() []struct {
+	Ctx context.Context
+	Req *ResetPasswordRequest
+} {
+	mock.lockResetPassword.RLock()
+	defer mock.lockResetPassword.RUnlock()
+	return mock.calls.ResetPassword
+}
+
+// ValidateResetToken calls ValidateResetTokenFunc.
+func (mock *CoordinatorMock) ValidateResetToken(ctx context.Context, req *ValidateResetTokenRequest) (*ValidateResetTokenResponse, error) {
+	if mock.ValidateResetTokenFunc == nil {
+		panic("CoordinatorMock.ValidateResetTokenFunc: method is nil but Coordinator.ValidateResetToken was just called")
+	}
+	mock.lockValidateResetToken.Lock()
+	mock.calls.ValidateResetToken = append(mock.calls.ValidateResetToken, struct {
+		Ctx context.Context
+		Req *ValidateResetTokenRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockValidateResetToken.Unlock()
+	return mock.ValidateResetTokenFunc(ctx, req)
+}
+
+// ValidateResetTokenCalls returns all calls made to ValidateResetToken.
+func (mock *CoordinatorMock) ValidateResetTokenCalls() []struct {
+	Ctx context.Context
+	Req *ValidateResetTokenRequest
+} {
+	mock.lockValidateResetToken.RLock()
+	defer mock.lockValidateResetToken.RUnlock()
+	return mock.calls.ValidateResetToken
+}
+
+// CompleteResetPassword calls CompleteResetPasswordFunc.
+func (mock *CoordinatorMock) CompleteResetPassword(ctx context.Context, req *CompleteResetPasswordRequest) error {
+	if mock.CompleteResetPasswordFunc == nil {
+		panic("CoordinatorMock.CompleteResetPasswordFunc: method is nil but Coordinator.CompleteResetPassword was just called")
+	}
+	mock.lockCompleteResetPassword.Lock()
+	mock.calls.CompleteResetPassword = append(mock.calls.CompleteResetPassword, struct {
+		Ctx context.Context
+		Req *CompleteResetPasswordRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockCompleteResetPassword.Unlock()
+	return mock.CompleteResetPasswordFunc(ctx, req)
+}
+
+// CompleteResetPasswordCalls returns all calls made to CompleteResetPassword.
+func (mock *CoordinatorMock) CompleteResetPasswordCalls() []struct {
+	Ctx context.Context
+	Req *CompleteResetPasswordRequest
+} {
+	mock.lockCompleteResetPassword.RLock()
+	defer mock.lockCompleteResetPassword.RUnlock()
+	return mock.calls.CompleteResetPassword
+}
+
 // Compile-time interface assertion.
 var _ PasswordHasher = (*PasswordHasherMock)(nil)
 
@@ -1349,6 +1454,15 @@ type IdentityServiceMock struct {
 	// VerifyDeviceAssertionFunc mocks the VerifyDeviceAssertion method.
 	VerifyDeviceAssertionFunc func(ctx context.Context, req identity.VerifyDeviceAssertionRequest) (*identity.Device, *identity.User, error)
 
+	// CreatePasswordResetTokenFunc mocks the CreatePasswordResetToken method.
+	CreatePasswordResetTokenFunc func(ctx context.Context, req identity.CreatePasswordResetTokenRequest) (*identity.PasswordResetToken, error)
+
+	// ValidatePasswordResetTokenFunc mocks the ValidatePasswordResetToken method.
+	ValidatePasswordResetTokenFunc func(ctx context.Context, req identity.ValidatePasswordResetTokenRequest) (*identity.User, *identity.PasswordResetToken, error)
+
+	// CompletePasswordResetFunc mocks the CompletePasswordReset method.
+	CompletePasswordResetFunc func(ctx context.Context, req identity.CompletePasswordResetRequest) (*identity.User, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		CreateUser []struct {
@@ -1503,6 +1617,18 @@ type IdentityServiceMock struct {
 			Ctx context.Context
 			Req identity.VerifyDeviceAssertionRequest
 		}
+		CreatePasswordResetToken []struct {
+			Ctx context.Context
+			Req identity.CreatePasswordResetTokenRequest
+		}
+		ValidatePasswordResetToken []struct {
+			Ctx context.Context
+			Req identity.ValidatePasswordResetTokenRequest
+		}
+		CompletePasswordReset []struct {
+			Ctx context.Context
+			Req identity.CompletePasswordResetRequest
+		}
 	}
 	lockCreateUser                       sync.RWMutex
 	lockCreateCredential                 sync.RWMutex
@@ -1541,6 +1667,9 @@ type IdentityServiceMock struct {
 	lockListDevices                      sync.RWMutex
 	lockRevokeDevice                     sync.RWMutex
 	lockVerifyDeviceAssertion            sync.RWMutex
+	lockCreatePasswordResetToken         sync.RWMutex
+	lockValidatePasswordResetToken       sync.RWMutex
+	lockCompletePasswordReset            sync.RWMutex
 }
 
 // CreateUser calls CreateUserFunc.
@@ -2552,6 +2681,87 @@ func (mock *IdentityServiceMock) VerifyDeviceAssertionCalls() []struct {
 	mock.lockVerifyDeviceAssertion.RLock()
 	defer mock.lockVerifyDeviceAssertion.RUnlock()
 	return mock.calls.VerifyDeviceAssertion
+}
+
+// CreatePasswordResetToken calls CreatePasswordResetTokenFunc.
+func (mock *IdentityServiceMock) CreatePasswordResetToken(ctx context.Context, req identity.CreatePasswordResetTokenRequest) (*identity.PasswordResetToken, error) {
+	if mock.CreatePasswordResetTokenFunc == nil {
+		panic("IdentityServiceMock.CreatePasswordResetTokenFunc: method is nil but IdentityService.CreatePasswordResetToken was just called")
+	}
+	mock.lockCreatePasswordResetToken.Lock()
+	mock.calls.CreatePasswordResetToken = append(mock.calls.CreatePasswordResetToken, struct {
+		Ctx context.Context
+		Req identity.CreatePasswordResetTokenRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockCreatePasswordResetToken.Unlock()
+	return mock.CreatePasswordResetTokenFunc(ctx, req)
+}
+
+// CreatePasswordResetTokenCalls returns all calls made to CreatePasswordResetToken.
+func (mock *IdentityServiceMock) CreatePasswordResetTokenCalls() []struct {
+	Ctx context.Context
+	Req identity.CreatePasswordResetTokenRequest
+} {
+	mock.lockCreatePasswordResetToken.RLock()
+	defer mock.lockCreatePasswordResetToken.RUnlock()
+	return mock.calls.CreatePasswordResetToken
+}
+
+// ValidatePasswordResetToken calls ValidatePasswordResetTokenFunc.
+func (mock *IdentityServiceMock) ValidatePasswordResetToken(ctx context.Context, req identity.ValidatePasswordResetTokenRequest) (*identity.User, *identity.PasswordResetToken, error) {
+	if mock.ValidatePasswordResetTokenFunc == nil {
+		panic("IdentityServiceMock.ValidatePasswordResetTokenFunc: method is nil but IdentityService.ValidatePasswordResetToken was just called")
+	}
+	mock.lockValidatePasswordResetToken.Lock()
+	mock.calls.ValidatePasswordResetToken = append(mock.calls.ValidatePasswordResetToken, struct {
+		Ctx context.Context
+		Req identity.ValidatePasswordResetTokenRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockValidatePasswordResetToken.Unlock()
+	return mock.ValidatePasswordResetTokenFunc(ctx, req)
+}
+
+// ValidatePasswordResetTokenCalls returns all calls made to ValidatePasswordResetToken.
+func (mock *IdentityServiceMock) ValidatePasswordResetTokenCalls() []struct {
+	Ctx context.Context
+	Req identity.ValidatePasswordResetTokenRequest
+} {
+	mock.lockValidatePasswordResetToken.RLock()
+	defer mock.lockValidatePasswordResetToken.RUnlock()
+	return mock.calls.ValidatePasswordResetToken
+}
+
+// CompletePasswordReset calls CompletePasswordResetFunc.
+func (mock *IdentityServiceMock) CompletePasswordReset(ctx context.Context, req identity.CompletePasswordResetRequest) (*identity.User, error) {
+	if mock.CompletePasswordResetFunc == nil {
+		panic("IdentityServiceMock.CompletePasswordResetFunc: method is nil but IdentityService.CompletePasswordReset was just called")
+	}
+	mock.lockCompletePasswordReset.Lock()
+	mock.calls.CompletePasswordReset = append(mock.calls.CompletePasswordReset, struct {
+		Ctx context.Context
+		Req identity.CompletePasswordResetRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockCompletePasswordReset.Unlock()
+	return mock.CompletePasswordResetFunc(ctx, req)
+}
+
+// CompletePasswordResetCalls returns all calls made to CompletePasswordReset.
+func (mock *IdentityServiceMock) CompletePasswordResetCalls() []struct {
+	Ctx context.Context
+	Req identity.CompletePasswordResetRequest
+} {
+	mock.lockCompletePasswordReset.RLock()
+	defer mock.lockCompletePasswordReset.RUnlock()
+	return mock.calls.CompletePasswordReset
 }
 
 // Compile-time interface assertion.

@@ -628,6 +628,40 @@ export interface RevokeDeviceRequest {
 }
 
 /**
+ * Request message for Identity.ValidateResetToken.
+ */
+export interface ValidateResetTokenRequest {
+  /**
+   * Required. The raw token from the reset URL.
+   */
+  token: string
+}
+
+/**
+ * Response message for Identity.ValidateResetToken.
+ */
+export interface ValidateResetTokenResponse {
+  /**
+   * The username for which the password will be reset.
+   */
+  username: string
+}
+
+/**
+ * Request message for Identity.CompleteResetPassword.
+ */
+export interface CompleteResetPasswordRequest {
+  /**
+   * Required. The raw token from the reset URL.
+   */
+  token: string
+  /**
+   * Required. The new password satisfying security complexity rules.
+   */
+  newPassword: string
+}
+
+/**
  * Identity provides user authentication and session management.
  */
 /**
@@ -1121,6 +1155,66 @@ export function useRevokeDeviceMutation(
     { device_id: string; req: RevokeDeviceRequest }
   >({
     mutationFn: ({ device_id, req }) => revokeDevice(device_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Public RPC: Validates a password reset token before displaying the reset form.
+ */
+export async function validateResetToken(
+  req: ValidateResetTokenRequest
+): Promise<ValidateResetTokenResponse> {
+  return request<ValidateResetTokenResponse>({
+    method: "POST",
+    url: "/api/v1/identity/users:validate-reset-token",
+    data: req,
+  })
+}
+
+export function useValidateResetTokenMutation(
+  options?: UseMutationOptions<
+    ValidateResetTokenResponse,
+    Error,
+    ValidateResetTokenRequest
+  >
+) {
+  return useMutation<
+    ValidateResetTokenResponse,
+    Error,
+    ValidateResetTokenRequest
+  >({
+    mutationFn: (req) => validateResetToken(req),
+    ...options,
+  })
+}
+
+/**
+ * Public RPC: Completes a password reset by consuming a valid token and setting a new password.
+ */
+export async function completeResetPassword(
+  req: CompleteResetPasswordRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
+    method: "POST",
+    url: "/api/v1/identity/users:complete-reset-password",
+    data: req,
+  })
+}
+
+export function useCompleteResetPasswordMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    CompleteResetPasswordRequest
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    CompleteResetPasswordRequest
+  >({
+    mutationFn: (req) => completeResetPassword(req),
     ...options,
   })
 }

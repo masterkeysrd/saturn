@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { AuthLayout } from "@/layouts/auth-layout"
 import { LoginView } from "@/features/auth/login-view"
 import { RegisterView } from "@/features/auth/register-view"
+import { ResetPasswordView } from "@/features/auth/reset-password-view"
 import { ProtectedRoute } from "@/components/protected-route"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -141,6 +142,7 @@ export function App() {
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginView />} />
         <Route path="/register" element={<RegisterView />} />
+        <Route path="/reset-password" element={<ResetPasswordView />} />
       </Route>
 
       {/* Protected Routes with Sidebar Layout */}

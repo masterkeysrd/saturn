@@ -30,4 +30,7 @@ const (
 	DeviceInactive         errors.Code = "DEVICE_INACTIVE"
 	DeviceInvalidSignature errors.Code = "DEVICE_INVALID_SIGNATURE"
 	DeviceInvalidChallenge errors.Code = "DEVICE_INVALID_CHALLENGE"
+	ResetTokenNotFound     errors.Code = "RESET_TOKEN_NOT_FOUND"
+	ResetTokenExpired      errors.Code = "RESET_TOKEN_EXPIRED"
+	ResetTokenUsed         errors.Code = "RESET_TOKEN_USED"
 )

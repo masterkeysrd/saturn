@@ -1138,4 +1138,3 @@ func TestLoadOrGeneratePrivateKey(t *testing.T) {
 		t.Error("expected error when path directory creation fails, got nil")
 	}
 }
-

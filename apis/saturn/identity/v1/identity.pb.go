@@ -2175,6 +2175,153 @@ func (x *RevokeDeviceRequest) GetDeviceId() string {
 	return ""
 }
 
+// Request message for Identity.ValidateResetToken.
+type ValidateResetTokenRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The raw token from the reset URL.
+	Token         string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateResetTokenRequest) Reset() {
+	*x = ValidateResetTokenRequest{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateResetTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateResetTokenRequest) ProtoMessage() {}
+
+func (x *ValidateResetTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateResetTokenRequest.ProtoReflect.Descriptor instead.
+func (*ValidateResetTokenRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *ValidateResetTokenRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+// Response message for Identity.ValidateResetToken.
+type ValidateResetTokenResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The username for which the password will be reset.
+	Username      string `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateResetTokenResponse) Reset() {
+	*x = ValidateResetTokenResponse{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateResetTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateResetTokenResponse) ProtoMessage() {}
+
+func (x *ValidateResetTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateResetTokenResponse.ProtoReflect.Descriptor instead.
+func (*ValidateResetTokenResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *ValidateResetTokenResponse) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+// Request message for Identity.CompleteResetPassword.
+type CompleteResetPasswordRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The raw token from the reset URL.
+	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	// Required. The new password satisfying security complexity rules.
+	NewPassword   string `protobuf:"bytes,2,opt,name=new_password,json=newPassword,proto3" json:"new_password,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompleteResetPasswordRequest) Reset() {
+	*x = CompleteResetPasswordRequest{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteResetPasswordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteResetPasswordRequest) ProtoMessage() {}
+
+func (x *CompleteResetPasswordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteResetPasswordRequest.ProtoReflect.Descriptor instead.
+func (*CompleteResetPasswordRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *CompleteResetPasswordRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *CompleteResetPasswordRequest) GetNewPassword() string {
+	if x != nil {
+		return x.NewPassword
+	}
+	return ""
+}
+
 // UserPassword contains credentials for password authentication.
 type LoginUserRequest_UserPassword struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -2188,7 +2335,7 @@ type LoginUserRequest_UserPassword struct {
 
 func (x *LoginUserRequest_UserPassword) Reset() {
 	*x = LoginUserRequest_UserPassword{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[37]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2200,7 +2347,7 @@ func (x *LoginUserRequest_UserPassword) String() string {
 func (*LoginUserRequest_UserPassword) ProtoMessage() {}
 
 func (x *LoginUserRequest_UserPassword) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[37]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2250,7 +2397,7 @@ type LoginUserRequest_MfaAssertion struct {
 
 func (x *LoginUserRequest_MfaAssertion) Reset() {
 	*x = LoginUserRequest_MfaAssertion{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[38]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2262,7 +2409,7 @@ func (x *LoginUserRequest_MfaAssertion) String() string {
 func (*LoginUserRequest_MfaAssertion) ProtoMessage() {}
 
 func (x *LoginUserRequest_MfaAssertion) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[38]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2350,7 +2497,7 @@ type LoginUserRequest_DeviceAssertion struct {
 
 func (x *LoginUserRequest_DeviceAssertion) Reset() {
 	*x = LoginUserRequest_DeviceAssertion{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[39]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2362,7 +2509,7 @@ func (x *LoginUserRequest_DeviceAssertion) String() string {
 func (*LoginUserRequest_DeviceAssertion) ProtoMessage() {}
 
 func (x *LoginUserRequest_DeviceAssertion) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[39]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2412,7 +2559,7 @@ type LoginUserResponse_MfaChallenge struct {
 
 func (x *LoginUserResponse_MfaChallenge) Reset() {
 	*x = LoginUserResponse_MfaChallenge{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[40]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2424,7 +2571,7 @@ func (x *LoginUserResponse_MfaChallenge) String() string {
 func (*LoginUserResponse_MfaChallenge) ProtoMessage() {}
 
 func (x *LoginUserResponse_MfaChallenge) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[40]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2619,7 +2766,14 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\x13ListDevicesResponse\x129\n" +
 	"\adevices\x18\x01 \x03(\v2\x1a.saturn.identity.v1.DeviceB\x03\xe0A\x03R\adevices\"7\n" +
 	"\x13RevokeDeviceRequest\x12 \n" +
-	"\tdevice_id\x18\x01 \x01(\tB\x03\xe0A\x02R\bdeviceId2\x8c\x16\n" +
+	"\tdevice_id\x18\x01 \x01(\tB\x03\xe0A\x02R\bdeviceId\"6\n" +
+	"\x19ValidateResetTokenRequest\x12\x19\n" +
+	"\x05token\x18\x01 \x01(\tB\x03\xe0A\x02R\x05token\"8\n" +
+	"\x1aValidateResetTokenResponse\x12\x1a\n" +
+	"\busername\x18\x01 \x01(\tR\busername\"a\n" +
+	"\x1cCompleteResetPasswordRequest\x12\x19\n" +
+	"\x05token\x18\x01 \x01(\tB\x03\xe0A\x02R\x05token\x12&\n" +
+	"\fnew_password\x18\x02 \x01(\tB\x03\xe0A\x02R\vnewPassword2\xd9\x18\n" +
 	"\bIdentity\x12}\n" +
 	"\tLoginUser\x12$.saturn.identity.v1.LoginUserRequest\x1a%.saturn.identity.v1.LoginUserResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/identity/users:login\x12\x98\x01\n" +
 	"\fRegisterUser\x12'.saturn.identity.v1.RegisterUserRequest\x1a\x18.saturn.identity.v1.User\"E\xdaA\x1cemail,username,name,password\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/identity/users:register\x12\xa1\x01\n" +
@@ -2640,7 +2794,9 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\x13CreateAuthChallenge\x12..saturn.identity.v1.CreateAuthChallengeRequest\x1a/.saturn.identity.v1.CreateAuthChallengeResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/v1/identity/devices/challenges\x12y\n" +
 	"\fCreateDevice\x12'.saturn.identity.v1.CreateDeviceRequest\x1a\x1a.saturn.identity.v1.Device\"$\x82\xd3\xe4\x93\x02\x1e:\x06device\"\x14/v1/identity/devices\x12|\n" +
 	"\vListDevices\x12&.saturn.identity.v1.ListDevicesRequest\x1a'.saturn.identity.v1.ListDevicesResponse\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/identity/devices\x12\x8f\x01\n" +
-	"\fRevokeDevice\x12'.saturn.identity.v1.RevokeDeviceRequest\x1a\x16.google.protobuf.Empty\">\xdaA\tdevice_id\x82\xd3\xe4\x93\x02,:\x01*\"'/v1/identity/devices/{device_id}:revokeBCZAgithub.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1b\x06proto3"
+	"\fRevokeDevice\x12'.saturn.identity.v1.RevokeDeviceRequest\x1a\x16.google.protobuf.Empty\">\xdaA\tdevice_id\x82\xd3\xe4\x93\x02,:\x01*\"'/v1/identity/devices/{device_id}:revoke\x12\xaf\x01\n" +
+	"\x12ValidateResetToken\x12-.saturn.identity.v1.ValidateResetTokenRequest\x1a..saturn.identity.v1.ValidateResetTokenResponse\":\xdaA\x05token\x82\xd3\xe4\x93\x02,:\x01*\"'/v1/identity/users:validate-reset-token\x12\x98\x01\n" +
+	"\x15CompleteResetPassword\x120.saturn.identity.v1.CompleteResetPasswordRequest\x1a\x16.google.protobuf.Empty\"5\x82\xd3\xe4\x93\x02/:\x01*\"*/v1/identity/users:complete-reset-passwordBCZAgithub.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1b\x06proto3"
 
 var (
 	file_saturn_identity_v1_identity_proto_rawDescOnce sync.Once
@@ -2654,7 +2810,7 @@ func file_saturn_identity_v1_identity_proto_rawDescGZIP() []byte {
 	return file_saturn_identity_v1_identity_proto_rawDescData
 }
 
-var file_saturn_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
+var file_saturn_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 44)
 var file_saturn_identity_v1_identity_proto_goTypes = []any{
 	(*LoginUserRequest)(nil),                 // 0: saturn.identity.v1.LoginUserRequest
 	(*LoginUserResponse)(nil),                // 1: saturn.identity.v1.LoginUserResponse
@@ -2693,30 +2849,33 @@ var file_saturn_identity_v1_identity_proto_goTypes = []any{
 	(*ListDevicesRequest)(nil),               // 34: saturn.identity.v1.ListDevicesRequest
 	(*ListDevicesResponse)(nil),              // 35: saturn.identity.v1.ListDevicesResponse
 	(*RevokeDeviceRequest)(nil),              // 36: saturn.identity.v1.RevokeDeviceRequest
-	(*LoginUserRequest_UserPassword)(nil),    // 37: saturn.identity.v1.LoginUserRequest.UserPassword
-	(*LoginUserRequest_MfaAssertion)(nil),    // 38: saturn.identity.v1.LoginUserRequest.MfaAssertion
-	(*LoginUserRequest_DeviceAssertion)(nil), // 39: saturn.identity.v1.LoginUserRequest.DeviceAssertion
-	(*LoginUserResponse_MfaChallenge)(nil),   // 40: saturn.identity.v1.LoginUserResponse.MfaChallenge
-	(*timestamppb.Timestamp)(nil),            // 41: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                    // 42: google.protobuf.Empty
+	(*ValidateResetTokenRequest)(nil),        // 37: saturn.identity.v1.ValidateResetTokenRequest
+	(*ValidateResetTokenResponse)(nil),       // 38: saturn.identity.v1.ValidateResetTokenResponse
+	(*CompleteResetPasswordRequest)(nil),     // 39: saturn.identity.v1.CompleteResetPasswordRequest
+	(*LoginUserRequest_UserPassword)(nil),    // 40: saturn.identity.v1.LoginUserRequest.UserPassword
+	(*LoginUserRequest_MfaAssertion)(nil),    // 41: saturn.identity.v1.LoginUserRequest.MfaAssertion
+	(*LoginUserRequest_DeviceAssertion)(nil), // 42: saturn.identity.v1.LoginUserRequest.DeviceAssertion
+	(*LoginUserResponse_MfaChallenge)(nil),   // 43: saturn.identity.v1.LoginUserResponse.MfaChallenge
+	(*timestamppb.Timestamp)(nil),            // 44: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                    // 45: google.protobuf.Empty
 }
 var file_saturn_identity_v1_identity_proto_depIdxs = []int32{
-	37, // 0: saturn.identity.v1.LoginUserRequest.user_password:type_name -> saturn.identity.v1.LoginUserRequest.UserPassword
-	38, // 1: saturn.identity.v1.LoginUserRequest.mfa_assertion:type_name -> saturn.identity.v1.LoginUserRequest.MfaAssertion
-	39, // 2: saturn.identity.v1.LoginUserRequest.device_assertion:type_name -> saturn.identity.v1.LoginUserRequest.DeviceAssertion
-	40, // 3: saturn.identity.v1.LoginUserResponse.mfa:type_name -> saturn.identity.v1.LoginUserResponse.MfaChallenge
-	41, // 4: saturn.identity.v1.User.create_time:type_name -> google.protobuf.Timestamp
-	41, // 5: saturn.identity.v1.User.update_time:type_name -> google.protobuf.Timestamp
-	41, // 6: saturn.identity.v1.UserSession.create_time:type_name -> google.protobuf.Timestamp
-	41, // 7: saturn.identity.v1.UserSession.last_used_at:type_name -> google.protobuf.Timestamp
+	40, // 0: saturn.identity.v1.LoginUserRequest.user_password:type_name -> saturn.identity.v1.LoginUserRequest.UserPassword
+	41, // 1: saturn.identity.v1.LoginUserRequest.mfa_assertion:type_name -> saturn.identity.v1.LoginUserRequest.MfaAssertion
+	42, // 2: saturn.identity.v1.LoginUserRequest.device_assertion:type_name -> saturn.identity.v1.LoginUserRequest.DeviceAssertion
+	43, // 3: saturn.identity.v1.LoginUserResponse.mfa:type_name -> saturn.identity.v1.LoginUserResponse.MfaChallenge
+	44, // 4: saturn.identity.v1.User.create_time:type_name -> google.protobuf.Timestamp
+	44, // 5: saturn.identity.v1.User.update_time:type_name -> google.protobuf.Timestamp
+	44, // 6: saturn.identity.v1.UserSession.create_time:type_name -> google.protobuf.Timestamp
+	44, // 7: saturn.identity.v1.UserSession.last_used_at:type_name -> google.protobuf.Timestamp
 	10, // 8: saturn.identity.v1.ListActiveSessionsResponse.sessions:type_name -> saturn.identity.v1.UserSession
-	41, // 9: saturn.identity.v1.SecurityEvent.created_at:type_name -> google.protobuf.Timestamp
+	44, // 9: saturn.identity.v1.SecurityEvent.created_at:type_name -> google.protobuf.Timestamp
 	17, // 10: saturn.identity.v1.ListMySecurityEventsResponse.events:type_name -> saturn.identity.v1.SecurityEvent
 	2,  // 11: saturn.identity.v1.ListMFAFactorsResponse.factors:type_name -> saturn.identity.v1.MfaFactorDescriptor
 	33, // 12: saturn.identity.v1.CreateDeviceRequest.device:type_name -> saturn.identity.v1.Device
-	41, // 13: saturn.identity.v1.Device.create_time:type_name -> google.protobuf.Timestamp
-	41, // 14: saturn.identity.v1.Device.last_used_time:type_name -> google.protobuf.Timestamp
-	41, // 15: saturn.identity.v1.Device.expire_time:type_name -> google.protobuf.Timestamp
+	44, // 13: saturn.identity.v1.Device.create_time:type_name -> google.protobuf.Timestamp
+	44, // 14: saturn.identity.v1.Device.last_used_time:type_name -> google.protobuf.Timestamp
+	44, // 15: saturn.identity.v1.Device.expire_time:type_name -> google.protobuf.Timestamp
 	33, // 16: saturn.identity.v1.ListDevicesResponse.devices:type_name -> saturn.identity.v1.Device
 	2,  // 17: saturn.identity.v1.LoginUserResponse.MfaChallenge.available_factors:type_name -> saturn.identity.v1.MfaFactorDescriptor
 	0,  // 18: saturn.identity.v1.Identity.LoginUser:input_type -> saturn.identity.v1.LoginUserRequest
@@ -2738,27 +2897,31 @@ var file_saturn_identity_v1_identity_proto_depIdxs = []int32{
 	32, // 34: saturn.identity.v1.Identity.CreateDevice:input_type -> saturn.identity.v1.CreateDeviceRequest
 	34, // 35: saturn.identity.v1.Identity.ListDevices:input_type -> saturn.identity.v1.ListDevicesRequest
 	36, // 36: saturn.identity.v1.Identity.RevokeDevice:input_type -> saturn.identity.v1.RevokeDeviceRequest
-	1,  // 37: saturn.identity.v1.Identity.LoginUser:output_type -> saturn.identity.v1.LoginUserResponse
-	4,  // 38: saturn.identity.v1.Identity.RegisterUser:output_type -> saturn.identity.v1.User
-	6,  // 39: saturn.identity.v1.Identity.RefreshSession:output_type -> saturn.identity.v1.RefreshSessionResponse
-	8,  // 40: saturn.identity.v1.Identity.Logout:output_type -> saturn.identity.v1.LogoutResponse
-	4,  // 41: saturn.identity.v1.Identity.GetCurrentUser:output_type -> saturn.identity.v1.User
-	12, // 42: saturn.identity.v1.Identity.ListActiveSessions:output_type -> saturn.identity.v1.ListActiveSessionsResponse
-	14, // 43: saturn.identity.v1.Identity.RevokeSession:output_type -> saturn.identity.v1.RevokeSessionResponse
-	16, // 44: saturn.identity.v1.Identity.RevokeAllSessions:output_type -> saturn.identity.v1.RevokeAllSessionsResponse
-	19, // 45: saturn.identity.v1.Identity.ListMySecurityEvents:output_type -> saturn.identity.v1.ListMySecurityEventsResponse
-	21, // 46: saturn.identity.v1.Identity.ListMFAFactors:output_type -> saturn.identity.v1.ListMFAFactorsResponse
-	42, // 47: saturn.identity.v1.Identity.DeleteMFAFactor:output_type -> google.protobuf.Empty
-	42, // 48: saturn.identity.v1.Identity.SetPrimaryMFAFactor:output_type -> google.protobuf.Empty
-	25, // 49: saturn.identity.v1.Identity.SetupTOTP:output_type -> saturn.identity.v1.SetupTOTPResponse
-	27, // 50: saturn.identity.v1.Identity.ConfirmTOTP:output_type -> saturn.identity.v1.ConfirmTOTPResponse
-	29, // 51: saturn.identity.v1.Identity.RegenerateBackupCodes:output_type -> saturn.identity.v1.RegenerateBackupCodesResponse
-	31, // 52: saturn.identity.v1.Identity.CreateAuthChallenge:output_type -> saturn.identity.v1.CreateAuthChallengeResponse
-	33, // 53: saturn.identity.v1.Identity.CreateDevice:output_type -> saturn.identity.v1.Device
-	35, // 54: saturn.identity.v1.Identity.ListDevices:output_type -> saturn.identity.v1.ListDevicesResponse
-	42, // 55: saturn.identity.v1.Identity.RevokeDevice:output_type -> google.protobuf.Empty
-	37, // [37:56] is the sub-list for method output_type
-	18, // [18:37] is the sub-list for method input_type
+	37, // 37: saturn.identity.v1.Identity.ValidateResetToken:input_type -> saturn.identity.v1.ValidateResetTokenRequest
+	39, // 38: saturn.identity.v1.Identity.CompleteResetPassword:input_type -> saturn.identity.v1.CompleteResetPasswordRequest
+	1,  // 39: saturn.identity.v1.Identity.LoginUser:output_type -> saturn.identity.v1.LoginUserResponse
+	4,  // 40: saturn.identity.v1.Identity.RegisterUser:output_type -> saturn.identity.v1.User
+	6,  // 41: saturn.identity.v1.Identity.RefreshSession:output_type -> saturn.identity.v1.RefreshSessionResponse
+	8,  // 42: saturn.identity.v1.Identity.Logout:output_type -> saturn.identity.v1.LogoutResponse
+	4,  // 43: saturn.identity.v1.Identity.GetCurrentUser:output_type -> saturn.identity.v1.User
+	12, // 44: saturn.identity.v1.Identity.ListActiveSessions:output_type -> saturn.identity.v1.ListActiveSessionsResponse
+	14, // 45: saturn.identity.v1.Identity.RevokeSession:output_type -> saturn.identity.v1.RevokeSessionResponse
+	16, // 46: saturn.identity.v1.Identity.RevokeAllSessions:output_type -> saturn.identity.v1.RevokeAllSessionsResponse
+	19, // 47: saturn.identity.v1.Identity.ListMySecurityEvents:output_type -> saturn.identity.v1.ListMySecurityEventsResponse
+	21, // 48: saturn.identity.v1.Identity.ListMFAFactors:output_type -> saturn.identity.v1.ListMFAFactorsResponse
+	45, // 49: saturn.identity.v1.Identity.DeleteMFAFactor:output_type -> google.protobuf.Empty
+	45, // 50: saturn.identity.v1.Identity.SetPrimaryMFAFactor:output_type -> google.protobuf.Empty
+	25, // 51: saturn.identity.v1.Identity.SetupTOTP:output_type -> saturn.identity.v1.SetupTOTPResponse
+	27, // 52: saturn.identity.v1.Identity.ConfirmTOTP:output_type -> saturn.identity.v1.ConfirmTOTPResponse
+	29, // 53: saturn.identity.v1.Identity.RegenerateBackupCodes:output_type -> saturn.identity.v1.RegenerateBackupCodesResponse
+	31, // 54: saturn.identity.v1.Identity.CreateAuthChallenge:output_type -> saturn.identity.v1.CreateAuthChallengeResponse
+	33, // 55: saturn.identity.v1.Identity.CreateDevice:output_type -> saturn.identity.v1.Device
+	35, // 56: saturn.identity.v1.Identity.ListDevices:output_type -> saturn.identity.v1.ListDevicesResponse
+	45, // 57: saturn.identity.v1.Identity.RevokeDevice:output_type -> google.protobuf.Empty
+	38, // 58: saturn.identity.v1.Identity.ValidateResetToken:output_type -> saturn.identity.v1.ValidateResetTokenResponse
+	45, // 59: saturn.identity.v1.Identity.CompleteResetPassword:output_type -> google.protobuf.Empty
+	39, // [39:60] is the sub-list for method output_type
+	18, // [18:39] is the sub-list for method input_type
 	18, // [18:18] is the sub-list for extension type_name
 	18, // [18:18] is the sub-list for extension extendee
 	0,  // [0:18] is the sub-list for field type_name
@@ -2774,7 +2937,7 @@ func file_saturn_identity_v1_identity_proto_init() {
 		(*LoginUserRequest_MfaAssertion_)(nil),
 		(*LoginUserRequest_DeviceAssertion_)(nil),
 	}
-	file_saturn_identity_v1_identity_proto_msgTypes[38].OneofWrappers = []any{
+	file_saturn_identity_v1_identity_proto_msgTypes[41].OneofWrappers = []any{
 		(*LoginUserRequest_MfaAssertion_TotpCode)(nil),
 		(*LoginUserRequest_MfaAssertion_BackupCode)(nil),
 	}
@@ -2784,7 +2947,7 @@ func file_saturn_identity_v1_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_identity_v1_identity_proto_rawDesc), len(file_saturn_identity_v1_identity_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   41,
+			NumMessages:   44,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

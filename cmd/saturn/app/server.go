@@ -121,6 +121,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	}
 	deviceStore := identitystorage.NewDeviceStore(dbClient)
 	ecdsaVerifier := crypto.NewECDSAVerifier()
+	passwordResetStore := identitystorage.NewPasswordResetStore(dbClient)
 	identityService := identity.NewService(
 		identity.Dependencies{
 			UserStore:          userStore,
@@ -134,6 +135,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 			DeviceStore:        deviceStore,
 			ChallengeStore:     deviceStore,
 			DeviceVerifier:     ecdsaVerifier,
+			PasswordResetStore: passwordResetStore,
 		},
 	)
 

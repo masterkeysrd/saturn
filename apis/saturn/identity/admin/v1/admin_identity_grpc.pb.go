@@ -25,6 +25,7 @@ const (
 	AdminIdentity_UpdateUserRole_FullMethodName     = "/saturn.identity.admin.v1.AdminIdentity/UpdateUserRole"
 	AdminIdentity_RevokeAllSessions_FullMethodName  = "/saturn.identity.admin.v1.AdminIdentity/RevokeAllSessions"
 	AdminIdentity_ListSecurityEvents_FullMethodName = "/saturn.identity.admin.v1.AdminIdentity/ListSecurityEvents"
+	AdminIdentity_ResetPassword_FullMethodName      = "/saturn.identity.admin.v1.AdminIdentity/ResetPassword"
 )
 
 // AdminIdentityClient is the client API for AdminIdentity service.
@@ -45,6 +46,8 @@ type AdminIdentityClient interface {
 	RevokeAllSessions(ctx context.Context, in *RevokeAllSessionsRequest, opts ...grpc.CallOption) (*RevokeAllSessionsResponse, error)
 	// Lists security audit log events.
 	ListSecurityEvents(ctx context.Context, in *ListSecurityEventsRequest, opts ...grpc.CallOption) (*ListSecurityEventsResponse, error)
+	// Initiates a password reset for a user by generating a single-use reset URL.
+	ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error)
 }
 
 type adminIdentityClient struct {
@@ -115,6 +118,16 @@ func (c *adminIdentityClient) ListSecurityEvents(ctx context.Context, in *ListSe
 	return out, nil
 }
 
+func (c *adminIdentityClient) ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResetPasswordResponse)
+	err := c.cc.Invoke(ctx, AdminIdentity_ResetPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminIdentityServer is the server API for AdminIdentity service.
 // All implementations should embed UnimplementedAdminIdentityServer
 // for forward compatibility.
@@ -133,6 +146,8 @@ type AdminIdentityServer interface {
 	RevokeAllSessions(context.Context, *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error)
 	// Lists security audit log events.
 	ListSecurityEvents(context.Context, *ListSecurityEventsRequest) (*ListSecurityEventsResponse, error)
+	// Initiates a password reset for a user by generating a single-use reset URL.
+	ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error)
 }
 
 // UnimplementedAdminIdentityServer should be embedded to have
@@ -159,6 +174,9 @@ func (UnimplementedAdminIdentityServer) RevokeAllSessions(context.Context, *Revo
 }
 func (UnimplementedAdminIdentityServer) ListSecurityEvents(context.Context, *ListSecurityEventsRequest) (*ListSecurityEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSecurityEvents not implemented")
+}
+func (UnimplementedAdminIdentityServer) ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResetPassword not implemented")
 }
 func (UnimplementedAdminIdentityServer) testEmbeddedByValue() {}
 
@@ -288,6 +306,24 @@ func _AdminIdentity_ListSecurityEvents_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminIdentity_ResetPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminIdentityServer).ResetPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminIdentity_ResetPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminIdentityServer).ResetPassword(ctx, req.(*ResetPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminIdentity_ServiceDesc is the grpc.ServiceDesc for AdminIdentity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -318,6 +354,10 @@ var AdminIdentity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListSecurityEvents",
 			Handler:    _AdminIdentity_ListSecurityEvents_Handler,
+		},
+		{
+			MethodName: "ResetPassword",
+			Handler:    _AdminIdentity_ResetPassword_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

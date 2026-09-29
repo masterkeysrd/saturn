@@ -56,6 +56,15 @@ service AdminIdentity {
   rpc ListSecurityEvents(ListSecurityEventsRequest) returns (ListSecurityEventsResponse) {
     option (google.api.http) = {get: "/v1/admin/identity/security-events"};
   }
+
+  // Initiates a password reset for a user by generating a single-use reset URL.
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse) {
+    option (google.api.http) = {
+      post: "/v1/admin/identity/users/{user_id}:reset-password"
+      body: "*"
+    };
+    option (google.api.method_signature) = "user_id";
+  }
 }
 
 // Request message for AdminIdentity.ListUsers.
@@ -254,4 +263,25 @@ message ListSecurityEventsResponse {
   // Output only. A token, which can be sent as `next_page_token` to retrieve the next page.
   // If this field is omitted, there are no subsequent pages.
   string next_page_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AdminIdentity.ResetPassword.
+message ResetPasswordRequest {
+  // Required. The target user ID to reset password for.
+  string user_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Custom validity window in minutes (default 15, max 60).
+  int32 ttl_minutes = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for AdminIdentity.ResetPassword.
+message ResetPasswordResponse {
+  // Full reset URL: https://<domain>/reset-password?token=<raw_token>
+  string reset_url = 1;
+
+  // Raw single-use token.
+  string token = 2;
+
+  // Expiration timestamp.
+  google.protobuf.Timestamp expires_at = 3;
 }

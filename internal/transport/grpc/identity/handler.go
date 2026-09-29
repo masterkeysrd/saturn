@@ -545,6 +545,33 @@ func (h *Handler) RevokeDevice(ctx context.Context, req *identityv1.RevokeDevice
 	return &emptypb.Empty{}, nil
 }
 
+// ValidateResetToken checks whether a password reset token is valid before displaying the form.
+func (h *Handler) ValidateResetToken(ctx context.Context, req *identityv1.ValidateResetTokenRequest) (*identityv1.ValidateResetTokenResponse, error) {
+	resp, err := h.IAM.Coordinator.ValidateResetToken(ctx, &iam.ValidateResetTokenRequest{
+		Token: req.GetToken(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &identityv1.ValidateResetTokenResponse{
+		Username: resp.Username,
+	}, nil
+}
+
+// CompleteResetPassword consumes a reset token and sets the new password.
+func (h *Handler) CompleteResetPassword(ctx context.Context, req *identityv1.CompleteResetPasswordRequest) (*emptypb.Empty, error) {
+	err := h.IAM.Coordinator.CompleteResetPassword(ctx, &iam.CompleteResetPasswordRequest{
+		Token:       req.GetToken(),
+		NewPassword: req.GetNewPassword(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
 func extractClientInfo(ctx context.Context) (userAgent, ipAddress string) {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if ua := md.Get("grpcgateway-user-agent"); len(ua) > 0 {

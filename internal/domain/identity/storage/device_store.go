@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
@@ -89,9 +88,6 @@ func (s *DeviceStore) GetDeviceByID(ctx context.Context, id identity.DeviceID) (
 
 	var record deviceDB
 	if err := s.db.Get(ctx, &record, q, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.E(op, errors.NotExist, identity.DeviceNotFound, "device not found")
-		}
 		return nil, errors.E(op, err)
 	}
 
@@ -211,21 +207,25 @@ func (s *DeviceStore) CreateChallenge(ctx context.Context, challenge *identity.C
 	return nil
 }
 
-// ConsumeChallenge atomically verifies, consumes, and deletes an active challenge nonce.
-// Returns true if the challenge was present, not expired, and successfully deleted.
-func (s *DeviceStore) ConsumeChallenge(ctx context.Context, challenge string, now time.Time) (bool, error) {
-	const op errors.Op = "domain/identity/storage.ConsumeChallenge"
+// DeleteChallenge removes an active challenge nonce from storage.
+// Returns errors.NotExist if the challenge was not found or has expired.
+func (s *DeviceStore) DeleteChallenge(ctx context.Context, challenge string) error {
+	const op errors.Op = "domain/identity/storage.DeleteChallenge"
 
-	// Delete and return the challenge atomically
-	query := "DELETE FROM identity.auth_challenges WHERE challenge = $1 AND expires_at > $2 RETURNING challenge;"
-	var deleted string
-	err := s.db.Get(ctx, &deleted, query, challenge, now)
+	q, args, err := pgDialect.Delete(goqu.T("auth_challenges").Schema("identity")).
+		Where(
+			goqu.C("challenge").Eq(challenge),
+			goqu.C("expires_at").Gt(time.Now().UTC()),
+		).
+		Prepared(true).
+		ToSQL()
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, nil
-		}
-		return false, errors.E(op, err)
+		return errors.E(op, err)
 	}
 
-	return true, nil
+	if err := s.db.ExecOne(ctx, q, args...); err != nil {
+		return errors.E(op, err)
+	}
+
+	return nil
 }

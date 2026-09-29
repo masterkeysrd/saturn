@@ -153,6 +153,23 @@ service Identity {
     };
     option (google.api.method_signature) = "device_id";
   }
+
+  // Public RPC: Validates a password reset token before displaying the reset form.
+  rpc ValidateResetToken(ValidateResetTokenRequest) returns (ValidateResetTokenResponse) {
+    option (google.api.http) = {
+      post: "/v1/identity/users:validate-reset-token"
+      body: "*"
+    };
+    option (google.api.method_signature) = "token";
+  }
+
+  // Public RPC: Completes a password reset by consuming a valid token and setting a new password.
+  rpc CompleteResetPassword(CompleteResetPasswordRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/identity/users:complete-reset-password"
+      body: "*"
+    };
+  }
 }
 
 // Request message for Identity.LoginUser.
@@ -583,4 +600,25 @@ message ListDevicesResponse {
 message RevokeDeviceRequest {
   // Required. The unique identifier of the trusted device to revoke (e.g. `dev_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string device_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Identity.ValidateResetToken.
+message ValidateResetTokenRequest {
+  // Required. The raw token from the reset URL.
+  string token = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Response message for Identity.ValidateResetToken.
+message ValidateResetTokenResponse {
+  // The username for which the password will be reset.
+  string username = 1;
+}
+
+// Request message for Identity.CompleteResetPassword.
+message CompleteResetPasswordRequest {
+  // Required. The raw token from the reset URL.
+  string token = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The new password satisfying security complexity rules.
+  string new_password = 2 [(google.api.field_behavior) = REQUIRED];
 }

@@ -87,7 +87,7 @@ type DeviceStore interface {
 // @Mock
 type AuthChallengeStore interface {
 	CreateChallenge(ctx context.Context, challenge *Challenge) error
-	ConsumeChallenge(ctx context.Context, nonce string, now time.Time) (bool, error)
+	DeleteChallenge(ctx context.Context, nonce string) error
 }
 
 // SessionStoreProvider provides access to session persistence operations.
@@ -101,4 +101,12 @@ type SessionStoreProvider interface {
 	RevokeFamily(ctx context.Context, familyID TokenFamilyID, now time.Time) error
 	RevokeAllForUser(ctx context.Context, userID UserID, now time.Time) error
 	RevokeByDeviceID(ctx context.Context, deviceID DeviceID, now time.Time) error
+}
+
+// PasswordResetStore defines persistence operations for single-use password reset tokens.
+// @Mock
+type PasswordResetStore interface {
+	Create(ctx context.Context, token *PasswordResetToken) error
+	GetByTokenHash(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error)
+	Update(ctx context.Context, token *PasswordResetToken) error
 }

@@ -1009,6 +1009,125 @@ func (x *ListSecurityEventsResponse) GetNextPageToken() string {
 	return ""
 }
 
+// Request message for AdminIdentity.ResetPassword.
+type ResetPasswordRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The target user ID to reset password for.
+	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Optional. Custom validity window in minutes (default 15, max 60).
+	TtlMinutes    int32 `protobuf:"varint,2,opt,name=ttl_minutes,json=ttlMinutes,proto3" json:"ttl_minutes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResetPasswordRequest) Reset() {
+	*x = ResetPasswordRequest{}
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetPasswordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetPasswordRequest) ProtoMessage() {}
+
+func (x *ResetPasswordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetPasswordRequest.ProtoReflect.Descriptor instead.
+func (*ResetPasswordRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ResetPasswordRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *ResetPasswordRequest) GetTtlMinutes() int32 {
+	if x != nil {
+		return x.TtlMinutes
+	}
+	return 0
+}
+
+// Response message for AdminIdentity.ResetPassword.
+type ResetPasswordResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Full reset URL: https://<domain>/reset-password?token=<raw_token>
+	ResetUrl string `protobuf:"bytes,1,opt,name=reset_url,json=resetUrl,proto3" json:"reset_url,omitempty"`
+	// Raw single-use token.
+	Token string `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	// Expiration timestamp.
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResetPasswordResponse) Reset() {
+	*x = ResetPasswordResponse{}
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetPasswordResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetPasswordResponse) ProtoMessage() {}
+
+func (x *ResetPasswordResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetPasswordResponse.ProtoReflect.Descriptor instead.
+func (*ResetPasswordResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ResetPasswordResponse) GetResetUrl() string {
+	if x != nil {
+		return x.ResetUrl
+	}
+	return ""
+}
+
+func (x *ResetPasswordResponse) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *ResetPasswordResponse) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
 var File_saturn_identity_admin_v1_admin_identity_proto protoreflect.FileDescriptor
 
 const file_saturn_identity_admin_v1_admin_identity_proto_rawDesc = "" +
@@ -1081,11 +1200,20 @@ const file_saturn_identity_admin_v1_admin_identity_proto_rawDesc = "" +
 	"\x0fnext_page_token\x18\x04 \x01(\tB\x03\xe0A\x01R\rnextPageToken\"\x8f\x01\n" +
 	"\x1aListSecurityEventsResponse\x12D\n" +
 	"\x06events\x18\x01 \x03(\v2'.saturn.identity.admin.v1.SecurityEventB\x03\xe0A\x03R\x06events\x12+\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x03R\rnextPageToken*Z\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x03R\rnextPageToken\"Z\n" +
+	"\x14ResetPasswordRequest\x12\x1c\n" +
+	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06userId\x12$\n" +
+	"\vttl_minutes\x18\x02 \x01(\x05B\x03\xe0A\x01R\n" +
+	"ttlMinutes\"\x85\x01\n" +
+	"\x15ResetPasswordResponse\x12\x1b\n" +
+	"\treset_url\x18\x01 \x01(\tR\bresetUrl\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\x129\n" +
+	"\n" +
+	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt*Z\n" +
 	"\vAccessLevel\x12\x1c\n" +
 	"\x18ACCESS_LEVEL_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11ACCESS_LEVEL_USER\x10\x01\x12\x16\n" +
-	"\x12ACCESS_LEVEL_ADMIN\x10\x022\xa2\b\n" +
+	"\x12ACCESS_LEVEL_ADMIN\x10\x022\xdd\t\n" +
 	"\rAdminIdentity\x12\x86\x01\n" +
 	"\tListUsers\x12*.saturn.identity.admin.v1.ListUsersRequest\x1a+.saturn.identity.admin.v1.ListUsersResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/admin/identity/users\x12\xab\x01\n" +
 	"\vApproveUser\x12,.saturn.identity.admin.v1.ApproveUserRequest\x1a-.saturn.identity.admin.v1.ApproveUserResponse\"?\xdaA\auser_id\x82\xd3\xe4\x93\x02/:\x01*\"*/v1/admin/identity/users/{user_id}:approve\x12\xa7\x01\n" +
@@ -1093,7 +1221,8 @@ const file_saturn_identity_admin_v1_admin_identity_proto_rawDesc = "" +
 	"RejectUser\x12+.saturn.identity.admin.v1.RejectUserRequest\x1a,.saturn.identity.admin.v1.RejectUserResponse\">\xdaA\auser_id\x82\xd3\xe4\x93\x02.:\x01*\")/v1/admin/identity/users/{user_id}:reject\x12\xb9\x01\n" +
 	"\x0eUpdateUserRole\x12/.saturn.identity.admin.v1.UpdateUserRoleRequest\x1a0.saturn.identity.admin.v1.UpdateUserRoleResponse\"D\xdaA\x14user_id,access_level\x82\xd3\xe4\x93\x02':\x01*2\"/v1/admin/identity/users/{user_id}\x12\xc5\x01\n" +
 	"\x11RevokeAllSessions\x122.saturn.identity.admin.v1.RevokeAllSessionsRequest\x1a3.saturn.identity.admin.v1.RevokeAllSessionsResponse\"G\xdaA\auser_id\x82\xd3\xe4\x93\x027:\x01*\"2/v1/admin/identity/users/{user_id}:revoke-sessions\x12\xab\x01\n" +
-	"\x12ListSecurityEvents\x123.saturn.identity.admin.v1.ListSecurityEventsRequest\x1a4.saturn.identity.admin.v1.ListSecurityEventsResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/v1/admin/identity/security-eventsBNZLgithub.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1;adminidentityv1b\x06proto3"
+	"\x12ListSecurityEvents\x123.saturn.identity.admin.v1.ListSecurityEventsRequest\x1a4.saturn.identity.admin.v1.ListSecurityEventsResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/v1/admin/identity/security-events\x12\xb8\x01\n" +
+	"\rResetPassword\x12..saturn.identity.admin.v1.ResetPasswordRequest\x1a/.saturn.identity.admin.v1.ResetPasswordResponse\"F\xdaA\auser_id\x82\xd3\xe4\x93\x026:\x01*\"1/v1/admin/identity/users/{user_id}:reset-passwordBNZLgithub.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1;adminidentityv1b\x06proto3"
 
 var (
 	file_saturn_identity_admin_v1_admin_identity_proto_rawDescOnce sync.Once
@@ -1108,7 +1237,7 @@ func file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP() []byte {
 }
 
 var file_saturn_identity_admin_v1_admin_identity_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_saturn_identity_admin_v1_admin_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_saturn_identity_admin_v1_admin_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_saturn_identity_admin_v1_admin_identity_proto_goTypes = []any{
 	(AccessLevel)(0),                   // 0: saturn.identity.admin.v1.AccessLevel
 	(ListUsersRequest_StatusFilter)(0), // 1: saturn.identity.admin.v1.ListUsersRequest.StatusFilter
@@ -1126,7 +1255,9 @@ var file_saturn_identity_admin_v1_admin_identity_proto_goTypes = []any{
 	(*SecurityEvent)(nil),              // 13: saturn.identity.admin.v1.SecurityEvent
 	(*ListSecurityEventsRequest)(nil),  // 14: saturn.identity.admin.v1.ListSecurityEventsRequest
 	(*ListSecurityEventsResponse)(nil), // 15: saturn.identity.admin.v1.ListSecurityEventsResponse
-	(*timestamppb.Timestamp)(nil),      // 16: google.protobuf.Timestamp
+	(*ResetPasswordRequest)(nil),       // 16: saturn.identity.admin.v1.ResetPasswordRequest
+	(*ResetPasswordResponse)(nil),      // 17: saturn.identity.admin.v1.ResetPasswordResponse
+	(*timestamppb.Timestamp)(nil),      // 18: google.protobuf.Timestamp
 }
 var file_saturn_identity_admin_v1_admin_identity_proto_depIdxs = []int32{
 	1,  // 0: saturn.identity.admin.v1.ListUsersRequest.status_filter:type_name -> saturn.identity.admin.v1.ListUsersRequest.StatusFilter
@@ -1136,27 +1267,30 @@ var file_saturn_identity_admin_v1_admin_identity_proto_depIdxs = []int32{
 	0,  // 4: saturn.identity.admin.v1.UpdateUserRoleRequest.access_level:type_name -> saturn.identity.admin.v1.AccessLevel
 	12, // 5: saturn.identity.admin.v1.UpdateUserRoleResponse.user:type_name -> saturn.identity.admin.v1.User
 	0,  // 6: saturn.identity.admin.v1.User.access_level:type_name -> saturn.identity.admin.v1.AccessLevel
-	16, // 7: saturn.identity.admin.v1.User.create_time:type_name -> google.protobuf.Timestamp
-	16, // 8: saturn.identity.admin.v1.User.update_time:type_name -> google.protobuf.Timestamp
-	16, // 9: saturn.identity.admin.v1.SecurityEvent.created_at:type_name -> google.protobuf.Timestamp
+	18, // 7: saturn.identity.admin.v1.User.create_time:type_name -> google.protobuf.Timestamp
+	18, // 8: saturn.identity.admin.v1.User.update_time:type_name -> google.protobuf.Timestamp
+	18, // 9: saturn.identity.admin.v1.SecurityEvent.created_at:type_name -> google.protobuf.Timestamp
 	13, // 10: saturn.identity.admin.v1.ListSecurityEventsResponse.events:type_name -> saturn.identity.admin.v1.SecurityEvent
-	2,  // 11: saturn.identity.admin.v1.AdminIdentity.ListUsers:input_type -> saturn.identity.admin.v1.ListUsersRequest
-	4,  // 12: saturn.identity.admin.v1.AdminIdentity.ApproveUser:input_type -> saturn.identity.admin.v1.ApproveUserRequest
-	6,  // 13: saturn.identity.admin.v1.AdminIdentity.RejectUser:input_type -> saturn.identity.admin.v1.RejectUserRequest
-	8,  // 14: saturn.identity.admin.v1.AdminIdentity.UpdateUserRole:input_type -> saturn.identity.admin.v1.UpdateUserRoleRequest
-	10, // 15: saturn.identity.admin.v1.AdminIdentity.RevokeAllSessions:input_type -> saturn.identity.admin.v1.RevokeAllSessionsRequest
-	14, // 16: saturn.identity.admin.v1.AdminIdentity.ListSecurityEvents:input_type -> saturn.identity.admin.v1.ListSecurityEventsRequest
-	3,  // 17: saturn.identity.admin.v1.AdminIdentity.ListUsers:output_type -> saturn.identity.admin.v1.ListUsersResponse
-	5,  // 18: saturn.identity.admin.v1.AdminIdentity.ApproveUser:output_type -> saturn.identity.admin.v1.ApproveUserResponse
-	7,  // 19: saturn.identity.admin.v1.AdminIdentity.RejectUser:output_type -> saturn.identity.admin.v1.RejectUserResponse
-	9,  // 20: saturn.identity.admin.v1.AdminIdentity.UpdateUserRole:output_type -> saturn.identity.admin.v1.UpdateUserRoleResponse
-	11, // 21: saturn.identity.admin.v1.AdminIdentity.RevokeAllSessions:output_type -> saturn.identity.admin.v1.RevokeAllSessionsResponse
-	15, // 22: saturn.identity.admin.v1.AdminIdentity.ListSecurityEvents:output_type -> saturn.identity.admin.v1.ListSecurityEventsResponse
-	17, // [17:23] is the sub-list for method output_type
-	11, // [11:17] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	18, // 11: saturn.identity.admin.v1.ResetPasswordResponse.expires_at:type_name -> google.protobuf.Timestamp
+	2,  // 12: saturn.identity.admin.v1.AdminIdentity.ListUsers:input_type -> saturn.identity.admin.v1.ListUsersRequest
+	4,  // 13: saturn.identity.admin.v1.AdminIdentity.ApproveUser:input_type -> saturn.identity.admin.v1.ApproveUserRequest
+	6,  // 14: saturn.identity.admin.v1.AdminIdentity.RejectUser:input_type -> saturn.identity.admin.v1.RejectUserRequest
+	8,  // 15: saturn.identity.admin.v1.AdminIdentity.UpdateUserRole:input_type -> saturn.identity.admin.v1.UpdateUserRoleRequest
+	10, // 16: saturn.identity.admin.v1.AdminIdentity.RevokeAllSessions:input_type -> saturn.identity.admin.v1.RevokeAllSessionsRequest
+	14, // 17: saturn.identity.admin.v1.AdminIdentity.ListSecurityEvents:input_type -> saturn.identity.admin.v1.ListSecurityEventsRequest
+	16, // 18: saturn.identity.admin.v1.AdminIdentity.ResetPassword:input_type -> saturn.identity.admin.v1.ResetPasswordRequest
+	3,  // 19: saturn.identity.admin.v1.AdminIdentity.ListUsers:output_type -> saturn.identity.admin.v1.ListUsersResponse
+	5,  // 20: saturn.identity.admin.v1.AdminIdentity.ApproveUser:output_type -> saturn.identity.admin.v1.ApproveUserResponse
+	7,  // 21: saturn.identity.admin.v1.AdminIdentity.RejectUser:output_type -> saturn.identity.admin.v1.RejectUserResponse
+	9,  // 22: saturn.identity.admin.v1.AdminIdentity.UpdateUserRole:output_type -> saturn.identity.admin.v1.UpdateUserRoleResponse
+	11, // 23: saturn.identity.admin.v1.AdminIdentity.RevokeAllSessions:output_type -> saturn.identity.admin.v1.RevokeAllSessionsResponse
+	15, // 24: saturn.identity.admin.v1.AdminIdentity.ListSecurityEvents:output_type -> saturn.identity.admin.v1.ListSecurityEventsResponse
+	17, // 25: saturn.identity.admin.v1.AdminIdentity.ResetPassword:output_type -> saturn.identity.admin.v1.ResetPasswordResponse
+	19, // [19:26] is the sub-list for method output_type
+	12, // [12:19] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_saturn_identity_admin_v1_admin_identity_proto_init() }
@@ -1170,7 +1304,7 @@ func file_saturn_identity_admin_v1_admin_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_identity_admin_v1_admin_identity_proto_rawDesc), len(file_saturn_identity_admin_v1_admin_identity_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   14,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
