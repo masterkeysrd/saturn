@@ -77,6 +77,21 @@ service Spaces {
     option (google.api.http) = {get: "/v1/spaces/{space_id}/members"};
     option (google.api.method_signature) = "space_id";
   }
+
+  // Retrieves the configuration settings for a workspace.
+  rpc GetSettings(GetSettingsRequest) returns (Settings) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/settings"};
+    option (google.api.method_signature) = "space_id";
+  }
+
+  // Updates the configuration settings for a workspace.
+  rpc UpdateSettings(UpdateSettingsRequest) returns (Settings) {
+    option (google.api.http) = {
+      patch: "/v1/spaces/{space_id}/settings"
+      body: "settings"
+    };
+    option (google.api.method_signature) = "space_id,settings,update_mask";
+  }
 }
 
 // Space represents a workspace resource.
@@ -296,4 +311,48 @@ message ListSpaceMembersResponse {
   // A token, which can be sent as `page_token` to retrieve the next page.
   // If this field is omitted, there are no subsequent pages.
   string next_page_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Settings represents workspace-level configuration.
+message Settings {
+  // Output only. The workspace's unique identifier.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string space_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. The IANA timezone identifier for the workspace (e.g. "America/Santo_Domingo", "UTC").
+  // If unspecified or empty, defaults to "UTC".
+  string timezone = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. The optimistic concurrency control version number.
+  int64 version = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the settings were created.
+  google.protobuf.Timestamp create_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the settings were last updated.
+  google.protobuf.Timestamp update_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Spaces.GetSettings.
+message GetSettingsRequest {
+  // Required. The unique identifier of the workspace whose settings are retrieved.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Spaces.UpdateSettings.
+message UpdateSettingsRequest {
+  // Required. The unique identifier of the workspace whose settings are updated.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The settings resource containing updated values.
+  Settings settings = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The list of fields to update.
+  // A mask specifying which fields (e.g. `timezone`) in the `settings` field should be updated.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. The optimistic concurrency control version expected for this update.
+  optional int64 version = 4 [(google.api.field_behavior) = OPTIONAL];
 }

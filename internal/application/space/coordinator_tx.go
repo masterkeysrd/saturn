@@ -7,6 +7,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
 // TransactionalCoordinator wraps a Coordinator and manages database transactions
@@ -134,6 +135,46 @@ func (t *TransactionalCoordinator) UpdateSpaceMember(ctx context.Context, req *U
 	defer tx.Rollback()
 
 	res, err := t.next.UpdateSpaceMember(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// GetSettings executes next.GetSettings inside a database transaction.
+func (t *TransactionalCoordinator) GetSettings(ctx context.Context, req *GetSettingsRequest) (*settings.Entry[space.Settings], error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.GetSettings(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// UpdateSettings executes next.UpdateSettings inside a database transaction.
+func (t *TransactionalCoordinator) UpdateSettings(ctx context.Context, req *UpdateSettingsRequest) (*settings.Entry[space.Settings], error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.UpdateSettings(ctx, req)
 	if err != nil {
 		return nil, err
 	}

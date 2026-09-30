@@ -144,3 +144,95 @@ func TestMultiTenantSpaceIsolation(t *testing.T) {
 		}
 	}
 }
+
+func TestSpaceSettings_Lifecycle(t *testing.T) {
+	d := driver.New(t, testEnv)
+
+	d.Auth().
+		CreateApprovedUser(t).
+		Login(t)
+
+	nano := time.Now().UnixNano()
+	sp, err := d.Space().CreateSpace(t, fmt.Sprintf("Settings_Space_%d", nano), "Space for settings test")
+	if err != nil {
+		t.Fatalf("failed to create space: %v", err)
+	}
+	spaceID := sp.GetId()
+
+	// 1. Initial settings should default to "UTC"
+	initialSettings, err := d.Space().GetSettings(t, spaceID)
+	if err != nil {
+		t.Fatalf("failed to get initial space settings: %v", err)
+	}
+	if initialSettings.GetTimezone() != "UTC" {
+		t.Errorf("expected initial timezone UTC, got %s", initialSettings.GetTimezone())
+	}
+	if initialSettings.GetSpaceId() != spaceID {
+		t.Errorf("expected space_id %s, got %s", spaceID, initialSettings.GetSpaceId())
+	}
+
+	// 2. Update timezone to "America/Santo_Domingo"
+	v0 := initialSettings.GetVersion()
+	updatedSettings, err := d.Space().UpdateSettings(t, spaceID, "America/Santo_Domingo", []string{"timezone"}, &v0)
+	if err != nil {
+		t.Fatalf("failed to update space settings: %v", err)
+	}
+	if updatedSettings.GetTimezone() != "America/Santo_Domingo" {
+		t.Errorf("expected updated timezone America/Santo_Domingo, got %s", updatedSettings.GetTimezone())
+	}
+	if updatedSettings.GetVersion() != 1 {
+		t.Errorf("expected version 1, got %d", updatedSettings.GetVersion())
+	}
+
+	// 3. Refetch to verify persistence
+	refetched, err := d.Space().GetSettings(t, spaceID)
+	if err != nil {
+		t.Fatalf("failed to refetch space settings: %v", err)
+	}
+	if refetched.GetTimezone() != "America/Santo_Domingo" {
+		t.Errorf("expected refetched timezone America/Santo_Domingo, got %s", refetched.GetTimezone())
+	}
+	if refetched.GetVersion() != 1 {
+		t.Errorf("expected refetched version 1, got %d", refetched.GetVersion())
+	}
+
+	// 4. Concurrency conflict with stale version
+	staleVersion := int64(99)
+	_, err = d.Space().UpdateSettings(t, spaceID, "Europe/London", []string{"timezone"}, &staleVersion)
+	if err == nil {
+		t.Fatalf("expected conflict error with stale version, but got nil")
+	}
+
+	// 5. User B (non-member) cannot read or write settings
+	userBEmail := fmt.Sprintf("userb_%d@test.com", nano)
+	userBPass := "Password123!"
+	uB, err := d.Auth().RegisterUser(t, driver.RegisterUserOptions{
+		Name:     "User B",
+		Email:    userBEmail,
+		Username: fmt.Sprintf("ub_%d", nano),
+		Password: userBPass,
+	})
+	if err != nil {
+		t.Fatalf("failed to register user B: %v", err)
+	}
+	if _, err := d.Auth().ApproveUser(t, uB.GetId()); err != nil {
+		t.Fatalf("failed to approve user B: %v", err)
+	}
+
+	loginB, err := d.Auth().LoginAs(t, userBEmail, userBPass)
+	if err != nil {
+		t.Fatalf("user B login failed: %v", err)
+	}
+
+	d.State().AccessToken = loginB.GetAccessToken()
+
+	_, err = d.Space().GetSettings(t, spaceID)
+	if err == nil {
+		t.Fatalf("expected user B to be denied getting space settings, but got success")
+	}
+
+	_, err = d.Space().UpdateSettings(t, spaceID, "Asia/Tokyo", []string{"timezone"}, nil)
+	if err == nil {
+		t.Fatalf("expected user B to be denied updating space settings, but got success")
+	}
+}

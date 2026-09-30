@@ -29,6 +29,8 @@ const (
 	Spaces_DeleteSpaceMember_FullMethodName = "/saturn.space.v1.Spaces/DeleteSpaceMember"
 	Spaces_UpdateSpaceMember_FullMethodName = "/saturn.space.v1.Spaces/UpdateSpaceMember"
 	Spaces_ListSpaceMembers_FullMethodName  = "/saturn.space.v1.Spaces/ListSpaceMembers"
+	Spaces_GetSettings_FullMethodName       = "/saturn.space.v1.Spaces/GetSettings"
+	Spaces_UpdateSettings_FullMethodName    = "/saturn.space.v1.Spaces/UpdateSettings"
 )
 
 // SpacesClient is the client API for Spaces service.
@@ -55,6 +57,10 @@ type SpacesClient interface {
 	UpdateSpaceMember(ctx context.Context, in *UpdateSpaceMemberRequest, opts ...grpc.CallOption) (*SpaceMember, error)
 	// Lists all members belonging to a workspace.
 	ListSpaceMembers(ctx context.Context, in *ListSpaceMembersRequest, opts ...grpc.CallOption) (*ListSpaceMembersResponse, error)
+	// Retrieves the configuration settings for a workspace.
+	GetSettings(ctx context.Context, in *GetSettingsRequest, opts ...grpc.CallOption) (*Settings, error)
+	// Updates the configuration settings for a workspace.
+	UpdateSettings(ctx context.Context, in *UpdateSettingsRequest, opts ...grpc.CallOption) (*Settings, error)
 }
 
 type spacesClient struct {
@@ -155,6 +161,26 @@ func (c *spacesClient) ListSpaceMembers(ctx context.Context, in *ListSpaceMember
 	return out, nil
 }
 
+func (c *spacesClient) GetSettings(ctx context.Context, in *GetSettingsRequest, opts ...grpc.CallOption) (*Settings, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Settings)
+	err := c.cc.Invoke(ctx, Spaces_GetSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *spacesClient) UpdateSettings(ctx context.Context, in *UpdateSettingsRequest, opts ...grpc.CallOption) (*Settings, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Settings)
+	err := c.cc.Invoke(ctx, Spaces_UpdateSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SpacesServer is the server API for Spaces service.
 // All implementations should embed UnimplementedSpacesServer
 // for forward compatibility.
@@ -179,6 +205,10 @@ type SpacesServer interface {
 	UpdateSpaceMember(context.Context, *UpdateSpaceMemberRequest) (*SpaceMember, error)
 	// Lists all members belonging to a workspace.
 	ListSpaceMembers(context.Context, *ListSpaceMembersRequest) (*ListSpaceMembersResponse, error)
+	// Retrieves the configuration settings for a workspace.
+	GetSettings(context.Context, *GetSettingsRequest) (*Settings, error)
+	// Updates the configuration settings for a workspace.
+	UpdateSettings(context.Context, *UpdateSettingsRequest) (*Settings, error)
 }
 
 // UnimplementedSpacesServer should be embedded to have
@@ -214,6 +244,12 @@ func (UnimplementedSpacesServer) UpdateSpaceMember(context.Context, *UpdateSpace
 }
 func (UnimplementedSpacesServer) ListSpaceMembers(context.Context, *ListSpaceMembersRequest) (*ListSpaceMembersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSpaceMembers not implemented")
+}
+func (UnimplementedSpacesServer) GetSettings(context.Context, *GetSettingsRequest) (*Settings, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSettings not implemented")
+}
+func (UnimplementedSpacesServer) UpdateSettings(context.Context, *UpdateSettingsRequest) (*Settings, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateSettings not implemented")
 }
 func (UnimplementedSpacesServer) testEmbeddedByValue() {}
 
@@ -397,6 +433,42 @@ func _Spaces_ListSpaceMembers_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Spaces_GetSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpacesServer).GetSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Spaces_GetSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpacesServer).GetSettings(ctx, req.(*GetSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Spaces_UpdateSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpacesServer).UpdateSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Spaces_UpdateSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpacesServer).UpdateSettings(ctx, req.(*UpdateSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Spaces_ServiceDesc is the grpc.ServiceDesc for Spaces service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -439,6 +511,14 @@ var Spaces_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListSpaceMembers",
 			Handler:    _Spaces_ListSpaceMembers_Handler,
+		},
+		{
+			MethodName: "GetSettings",
+			Handler:    _Spaces_GetSettings_Handler,
+		},
+		{
+			MethodName: "UpdateSettings",
+			Handler:    _Spaces_UpdateSettings_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

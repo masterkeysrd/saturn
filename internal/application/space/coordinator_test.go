@@ -8,6 +8,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
 func TestCoordinator_CreateSpace(t *testing.T) {
@@ -563,4 +564,100 @@ func TestCoordinator_UpdateSpaceMember(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCoordinator_GetSettings(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Success", func(t *testing.T) {
+		mockSpace := &SpaceServiceMock{
+			GetSettingsFunc: func(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error) {
+				return &settings.Entry[space.Settings]{
+					Target:  space.SettingsKey.For(string(session.SpaceID)),
+					Value:   space.Settings{Timezone: "America/Santo_Domingo"},
+					Version: 1,
+				}, nil
+			},
+		}
+
+		coord := NewCoordinator(Dependencies{SpaceService: mockSpace})
+		entry, err := coord.GetSettings(ctx, &GetSettingsRequest{
+			SpaceID: "spc_123",
+			UserID:  "usr_456",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if entry.Value.Timezone != "America/Santo_Domingo" {
+			t.Errorf("expected timezone America/Santo_Domingo, got %s", entry.Value.Timezone)
+		}
+	})
+
+	t.Run("Failure", func(t *testing.T) {
+		mockSpace := &SpaceServiceMock{
+			GetSettingsFunc: func(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error) {
+				return nil, errors.E(errors.Permission, "denied")
+			},
+		}
+
+		coord := NewCoordinator(Dependencies{SpaceService: mockSpace})
+		_, err := coord.GetSettings(ctx, &GetSettingsRequest{
+			SpaceID: "spc_123",
+			UserID:  "usr_456",
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+}
+
+func TestCoordinator_UpdateSettings(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Success", func(t *testing.T) {
+		mockSpace := &SpaceServiceMock{
+			UpdateSettingsFunc: func(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error) {
+				return &settings.Entry[space.Settings]{
+					Target:  space.SettingsKey.For(string(session.SpaceID)),
+					Value:   space.Settings{Timezone: incoming.Timezone},
+					Version: 2,
+				}, nil
+			},
+		}
+
+		coord := NewCoordinator(Dependencies{SpaceService: mockSpace})
+		entry, err := coord.UpdateSettings(ctx, &UpdateSettingsRequest{
+			SpaceID:    "spc_123",
+			UserID:     "usr_456",
+			Settings:   &space.Settings{Timezone: "UTC"},
+			UpdateMask: []string{"timezone"},
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if entry.Value.Timezone != "UTC" {
+			t.Errorf("expected timezone UTC, got %s", entry.Value.Timezone)
+		}
+		if entry.Version != 2 {
+			t.Errorf("expected version 2, got %d", entry.Version)
+		}
+	})
+
+	t.Run("Failure", func(t *testing.T) {
+		mockSpace := &SpaceServiceMock{
+			UpdateSettingsFunc: func(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error) {
+				return nil, errors.E(errors.Conflict, "modified concurrently")
+			},
+		}
+
+		coord := NewCoordinator(Dependencies{SpaceService: mockSpace})
+		_, err := coord.UpdateSettings(ctx, &UpdateSettingsRequest{
+			SpaceID:  "spc_123",
+			UserID:   "usr_456",
+			Settings: &space.Settings{Timezone: "UTC"},
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
 }

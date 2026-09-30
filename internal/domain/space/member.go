@@ -36,6 +36,11 @@ func (m *Member) CanDeleteSpace() bool {
 	return m.Role == RoleOwner
 }
 
+// CanManageSettings returns true if the member can update space settings.
+func (m *Member) CanManageSettings() bool {
+	return m.IsAdmin()
+}
+
 // MemberPatchSchema defines all patchable fields for a Member entity.
 var MemberPatchSchema = patch.NewSchema[Member]().
 	Register("role", patch.Field(func(m *Member) *SpaceRole { return &m.Role }))

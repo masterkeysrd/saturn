@@ -6,6 +6,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
 // Error codes for coordinator operations.
@@ -31,6 +32,10 @@ type Coordinator interface {
 	RemoveSpaceMember(ctx context.Context, req *RemoveSpaceMemberRequest) error
 	// @transactional
 	UpdateSpaceMember(ctx context.Context, req *UpdateSpaceMemberRequest) (*space.Member, error)
+	// @transactional
+	GetSettings(ctx context.Context, req *GetSettingsRequest) (*settings.Entry[space.Settings], error)
+	// @transactional
+	UpdateSettings(ctx context.Context, req *UpdateSettingsRequest) (*settings.Entry[space.Settings], error)
 }
 
 // Dependencies defines the inputs for creating a new Coordinator.
@@ -96,6 +101,21 @@ type UpdateSpaceMemberRequest struct {
 	UserID     string
 	Member     *space.Member
 	UpdateMask []string
+}
+
+// GetSettingsRequest represents the input for retrieving space settings.
+type GetSettingsRequest struct {
+	SpaceID string
+	UserID  string
+}
+
+// UpdateSettingsRequest represents the input for updating space settings.
+type UpdateSettingsRequest struct {
+	SpaceID         string
+	UserID          string
+	Settings        *space.Settings
+	UpdateMask      []string
+	ExpectedVersion *int64
 }
 
 // CreateSpace orchestrates space creation.
@@ -195,6 +215,34 @@ func (c *coordinator) UpdateSpaceMember(ctx context.Context, req *UpdateSpaceMem
 	return res, nil
 }
 
+// GetSettings orchestrates workspace settings retrieval.
+func (c *coordinator) GetSettings(ctx context.Context, req *GetSettingsRequest) (*settings.Entry[space.Settings], error) {
+	const op errors.Op = "application/space.GetSettings"
+	session := space.Session{
+		SpaceID: space.SpaceID(req.SpaceID),
+		UserID:  space.SpaceID(req.UserID),
+	}
+	res, err := c.spaceService.GetSettings(ctx, session)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return res, nil
+}
+
+// UpdateSettings orchestrates workspace settings modification.
+func (c *coordinator) UpdateSettings(ctx context.Context, req *UpdateSettingsRequest) (*settings.Entry[space.Settings], error) {
+	const op errors.Op = "application/space.UpdateSettings"
+	session := space.Session{
+		SpaceID: space.SpaceID(req.SpaceID),
+		UserID:  space.SpaceID(req.UserID),
+	}
+	res, err := c.spaceService.UpdateSettings(ctx, session, req.Settings, req.UpdateMask, req.ExpectedVersion)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return res, nil
+}
+
 // SpaceService defines the interface for space domain operations.
 // @Mock
 type SpaceService interface {
@@ -204,6 +252,8 @@ type SpaceService interface {
 	AddSpaceMember(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
 	RemoveSpaceMember(ctx context.Context, session space.Session, targetUserID space.SpaceID) error
 	UpdateSpaceMember(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error)
+	GetSettings(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error)
+	UpdateSettings(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error)
 }
 
 // IdentityService defines the interface for required identity operations.

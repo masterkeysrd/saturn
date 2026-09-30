@@ -9,6 +9,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -386,4 +387,67 @@ func (h *Handler) ListSpaceMembers(ctx context.Context, req *spacev1.ListSpaceMe
 		Members:       protoMembers,
 		NextPageToken: page.NextPageToken,
 	}, nil
+}
+
+// toProtoSettings converts a settings Entry to a proto Settings.
+func toProtoSettings(entry *settings.Entry[space.Settings]) *spacev1.Settings {
+	if entry == nil {
+		return nil
+	}
+	return &spacev1.Settings{
+		SpaceId:    entry.Target.ScopeID(),
+		Timezone:   entry.Value.Timezone,
+		Version:    entry.Version,
+		CreateTime: timestamppb.New(entry.CreateTime),
+		UpdateTime: timestamppb.New(entry.UpdateTime),
+	}
+}
+
+// GetSettings retrieves workspace configuration settings.
+func (h *Handler) GetSettings(ctx context.Context, req *spacev1.GetSettingsRequest) (*spacev1.Settings, error) {
+	const op errors.Op = "transport/grpc/space.GetSettings"
+	userID, err := h.getSpaceUserID(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	entry, err := h.Coordinator.GetSettings(ctx, &spaceapp.GetSettingsRequest{
+		SpaceID: req.GetSpaceId(),
+		UserID:  userID,
+	})
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	return toProtoSettings(entry), nil
+}
+
+// UpdateSettings updates workspace configuration settings.
+func (h *Handler) UpdateSettings(ctx context.Context, req *spacev1.UpdateSettingsRequest) (*spacev1.Settings, error) {
+	const op errors.Op = "transport/grpc/space.UpdateSettings"
+	userID, err := h.getSpaceUserID(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	var expectedVersion *int64
+	if req.Version != nil {
+		v := req.GetVersion()
+		expectedVersion = &v
+	}
+
+	entry, err := h.Coordinator.UpdateSettings(ctx, &spaceapp.UpdateSettingsRequest{
+		SpaceID: req.GetSpaceId(),
+		UserID:  userID,
+		Settings: &space.Settings{
+			Timezone: req.GetSettings().GetTimezone(),
+		},
+		UpdateMask:      req.GetUpdateMask().GetPaths(),
+		ExpectedVersion: expectedVersion,
+	})
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	return toProtoSettings(entry), nil
 }

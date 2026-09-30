@@ -8,6 +8,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
 // LoggingCoordinator wraps a Coordinator and logs operation durations and errors.
@@ -166,6 +167,54 @@ func (l *LoggingCoordinator) UpdateSpaceMember(ctx context.Context, req *UpdateS
 	l.logger.Info(ctx, "space.UpdateSpaceMember completed",
 		log.String("component", "space"),
 		log.String("operation", "UpdateSpaceMember"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// GetSettings executes next.GetSettings and logs execution duration and errors.
+func (l *LoggingCoordinator) GetSettings(ctx context.Context, req *GetSettingsRequest) (*settings.Entry[space.Settings], error) {
+	start := time.Now()
+	res, err := l.next.GetSettings(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "space.GetSettings failed",
+			log.String("component", "space"),
+			log.String("operation", "GetSettings"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "space.GetSettings completed",
+		log.String("component", "space"),
+		log.String("operation", "GetSettings"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// UpdateSettings executes next.UpdateSettings and logs execution duration and errors.
+func (l *LoggingCoordinator) UpdateSettings(ctx context.Context, req *UpdateSettingsRequest) (*settings.Entry[space.Settings], error) {
+	start := time.Now()
+	res, err := l.next.UpdateSettings(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "space.UpdateSettings failed",
+			log.String("component", "space"),
+			log.String("operation", "UpdateSettings"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "space.UpdateSettings completed",
+		log.String("component", "space"),
+		log.String("operation", "UpdateSettings"),
 		log.Duration("duration", duration),
 	)
 	return res, nil

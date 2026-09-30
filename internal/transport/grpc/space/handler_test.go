@@ -13,6 +13,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 	"github.com/masterkeysrd/saturn/internal/transport/grpc/interceptors"
 	spacegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/space"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -33,6 +34,8 @@ type mockSpaceService struct {
 	updateSpaceMemberRoleFunc func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
 	updateSpaceMemberFunc     func(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error)
 	listSpaceMembersFunc      func(ctx context.Context, session space.Session, filter *space.ListMembersFilter) (*paging.Page[*space.Member], error)
+	getSettingsFunc           func(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error)
+	updateSettingsFunc        func(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error)
 }
 
 func (m *mockSpaceService) CreateSpace(ctx context.Context, sp *space.Space) (*space.Space, error) {
@@ -120,6 +123,28 @@ func (m *mockSpaceService) ListSpaceMembers(ctx context.Context, session space.S
 		return m.listSpaceMembersFunc(ctx, session, filter)
 	}
 	return &paging.Page[*space.Member]{}, nil
+}
+
+func (m *mockSpaceService) GetSettings(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error) {
+	if m.getSettingsFunc != nil {
+		return m.getSettingsFunc(ctx, session)
+	}
+	return &settings.Entry[space.Settings]{
+		Target:  space.SettingsKey.For(string(session.SpaceID)),
+		Value:   space.Settings{Timezone: "UTC"},
+		Version: 1,
+	}, nil
+}
+
+func (m *mockSpaceService) UpdateSettings(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error) {
+	if m.updateSettingsFunc != nil {
+		return m.updateSettingsFunc(ctx, session, incoming, mask, expectedVersion)
+	}
+	return &settings.Entry[space.Settings]{
+		Target:  space.SettingsKey.For(string(session.SpaceID)),
+		Value:   *incoming,
+		Version: 2,
+	}, nil
 }
 
 type mockIdentityService struct {
@@ -584,6 +609,129 @@ func TestHandler_UpdateSpace(t *testing.T) {
 		ei := extractErrorInfo(st)
 		if ei == nil || ei.Reason != string(space.VersionMismatch) {
 			t.Errorf("expected Reason %q, got %v", space.VersionMismatch, ei)
+		}
+	})
+}
+
+func TestHandler_GetSettings(t *testing.T) {
+	mockSpace := &mockSpaceService{}
+	mockID := &mockIdentityService{}
+	coordinator := spaceapp.NewCoordinator(spaceapp.Dependencies{
+		SpaceService:    mockSpace,
+		IdentityService: mockID,
+	})
+	aggregator := spaceaggregator.NewService(mockSpace, mockID)
+	handler := spacegrpc.NewHandler(coordinator, aggregator)
+	interceptor := interceptors.ErrorUnaryInterceptor()
+
+	invokeGet := func(ctx context.Context, req *spacev1.GetSettingsRequest) (*spacev1.Settings, error) {
+		info := &grpc.UnaryServerInfo{FullMethod: "/saturn.space.v1.Spaces/GetSettings"}
+		resp, err := interceptor(ctx, req, info, func(c context.Context, r any) (any, error) {
+			return handler.GetSettings(c, r.(*spacev1.GetSettingsRequest))
+		})
+		if err != nil {
+			return nil, err
+		}
+		return resp.(*spacev1.Settings), nil
+	}
+
+	ctx := auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_member"})
+
+	t.Run("success", func(t *testing.T) {
+		mockSpace.getSettingsFunc = func(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error) {
+			return &settings.Entry[space.Settings]{
+				Target:     space.SettingsKey.For(string(session.SpaceID)),
+				Value:      space.Settings{Timezone: "America/Santo_Domingo"},
+				Version:    1,
+				CreateTime: time.Now(),
+				UpdateTime: time.Now(),
+			}, nil
+		}
+
+		res, err := invokeGet(ctx, &spacev1.GetSettingsRequest{SpaceId: "sp_1"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.GetTimezone() != "America/Santo_Domingo" {
+			t.Errorf("expected timezone America/Santo_Domingo, got %s", res.GetTimezone())
+		}
+		if res.GetVersion() != 1 {
+			t.Errorf("expected version 1, got %d", res.GetVersion())
+		}
+	})
+
+	t.Run("unauthenticated when principal missing", func(t *testing.T) {
+		_, err := invokeGet(context.Background(), &spacev1.GetSettingsRequest{SpaceId: "sp_1"})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+}
+
+func TestHandler_UpdateSettings(t *testing.T) {
+	mockSpace := &mockSpaceService{}
+	mockID := &mockIdentityService{}
+	coordinator := spaceapp.NewCoordinator(spaceapp.Dependencies{
+		SpaceService:    mockSpace,
+		IdentityService: mockID,
+	})
+	aggregator := spaceaggregator.NewService(mockSpace, mockID)
+	handler := spacegrpc.NewHandler(coordinator, aggregator)
+	interceptor := interceptors.ErrorUnaryInterceptor()
+
+	invokeUpdate := func(ctx context.Context, req *spacev1.UpdateSettingsRequest) (*spacev1.Settings, error) {
+		info := &grpc.UnaryServerInfo{FullMethod: "/saturn.space.v1.Spaces/UpdateSettings"}
+		resp, err := interceptor(ctx, req, info, func(c context.Context, r any) (any, error) {
+			return handler.UpdateSettings(c, r.(*spacev1.UpdateSettingsRequest))
+		})
+		if err != nil {
+			return nil, err
+		}
+		return resp.(*spacev1.Settings), nil
+	}
+
+	ctx := auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_owner"})
+
+	t.Run("success", func(t *testing.T) {
+		mockSpace.updateSettingsFunc = func(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error) {
+			return &settings.Entry[space.Settings]{
+				Target:     space.SettingsKey.For(string(session.SpaceID)),
+				Value:      *incoming,
+				Version:    2,
+				CreateTime: time.Now(),
+				UpdateTime: time.Now(),
+			}, nil
+		}
+
+		v := int64(1)
+		res, err := invokeUpdate(ctx, &spacev1.UpdateSettingsRequest{
+			SpaceId: "sp_1",
+			Settings: &spacev1.Settings{
+				Timezone: "UTC",
+			},
+			UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"timezone"}},
+			Version:    &v,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.GetTimezone() != "UTC" {
+			t.Errorf("expected timezone UTC, got %s", res.GetTimezone())
+		}
+		if res.GetVersion() != 2 {
+			t.Errorf("expected version 2, got %d", res.GetVersion())
+		}
+	})
+
+	t.Run("unauthenticated when principal missing", func(t *testing.T) {
+		_, err := invokeUpdate(context.Background(), &spacev1.UpdateSettingsRequest{
+			SpaceId: "sp_1",
+			Settings: &spacev1.Settings{
+				Timezone: "UTC",
+			},
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
 		}
 	})
 }

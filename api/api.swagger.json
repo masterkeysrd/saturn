@@ -5855,6 +5855,85 @@
           "Spaces"
         ]
       }
+    },
+    "/v1/spaces/{spaceId}/settings": {
+      "get": {
+        "summary": "Retrieves the configuration settings for a workspace.",
+        "operationId": "Spaces_GetSettings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Settings"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace whose settings are retrieved.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      },
+      "patch": {
+        "summary": "Updates the configuration settings for a workspace.",
+        "operationId": "Spaces_UpdateSettings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Settings"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace whose settings are updated.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "settings",
+            "description": "Required. The settings resource containing updated values.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Settings"
+            }
+          },
+          {
+            "name": "version",
+            "description": "Optional. The optimistic concurrency control version expected for this update.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      }
     }
   },
   "definitions": {
@@ -10524,6 +10603,39 @@
         }
       },
       "description": "SectionValidationReport summarizes the mathematical verification of an extracted currency section."
+    },
+    "v1Settings": {
+      "type": "object",
+      "properties": {
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. The workspace's unique identifier.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+          "readOnly": true
+        },
+        "timezone": {
+          "type": "string",
+          "description": "Optional. The IANA timezone identifier for the workspace (e.g. \"America/Santo_Domingo\", \"UTC\").\nIf unspecified or empty, defaults to \"UTC\"."
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. The optimistic concurrency control version number.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. The timestamp when the settings were created.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. The timestamp when the settings were last updated.",
+          "readOnly": true
+        }
+      },
+      "description": "Settings represents workspace-level configuration."
     },
     "v1SetupTOTPRequest": {
       "type": "object",

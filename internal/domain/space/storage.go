@@ -6,7 +6,11 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
+//go:generate go run github.com/masterkeysrd/saturn/tools/mockgen .
+
 // SpaceStore defines the interface for space persistence operations.
+//
+// @Mock
 type SpaceStore interface {
 	// Create inserts a new space and returns the created record.
 	Create(ctx context.Context, space *Space) error
@@ -28,6 +32,8 @@ type SpaceStore interface {
 }
 
 // MemberStore defines the interface for member persistence operations.
+//
+// @Mock
 type MemberStore interface {
 	// Create inserts a new membership record.
 	Create(ctx context.Context, member *Member) error

@@ -6,12 +6,14 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
-// Dependencies holds all storage interfaces required by the Service.
+// Dependencies holds all storage interfaces and clients required by the Service.
 type Dependencies struct {
 	SpaceStore  SpaceStore
 	MemberStore MemberStore
+	Settings    SettingsClient
 }
 
 // Service handles space business logic.
@@ -22,6 +24,57 @@ type Service struct {
 // NewService creates a new Service.
 func NewService(deps Dependencies) *Service {
 	return &Service{deps: deps}
+}
+
+// Guard defines a validation rule executed against the authenticated caller's membership.
+type Guard func(m *Member) error
+
+// requireOwner ensures the caller is the space owner.
+func requireOwner(m *Member) error {
+	if m == nil || !m.IsOwner() {
+		return errors.E(errors.Permission, OwnerOnly, "only the owner can perform this operation")
+	}
+	return nil
+}
+
+// requireManageMembers ensures the caller is an admin or owner.
+func requireManageMembers(m *Member) error {
+	if m == nil || !m.CanManageMembers() {
+		return errors.E(errors.Permission, InsufficientRole, "insufficient role to manage members")
+	}
+	return nil
+}
+
+// requireManageSettings ensures the caller is an admin or owner.
+func requireManageSettings(m *Member) error {
+	if m == nil || !m.CanManageSettings() {
+		return errors.E(errors.Permission, InsufficientRole, "only space admins and owners can update space settings")
+	}
+	return nil
+}
+
+// authorize checks caller membership and evaluates any provided guards.
+// If no guards are provided, simple active membership is required.
+func (s *Service) authorize(ctx context.Context, session Session, guards ...Guard) (*Member, error) {
+	member, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID)
+	if err != nil && !errors.Is(err, errors.NotExist) {
+		return nil, errors.E(err)
+	}
+
+	if len(guards) == 0 {
+		if member == nil {
+			return nil, errors.E(errors.Permission, InsufficientRole, "access denied to this space")
+		}
+		return member, nil
+	}
+
+	for _, guard := range guards {
+		if err := guard(member); err != nil {
+			return nil, err
+		}
+	}
+
+	return member, nil
 }
 
 // CreateSpace creates a new workspace with the caller as owner.
@@ -77,11 +130,7 @@ func (s *Service) CreateSpace(ctx context.Context, space *Space) (*Space, error)
 func (s *Service) GetSpace(ctx context.Context, session Session) (*Space, error) {
 	const op errors.Op = "domain/space.GetSpace"
 
-	// Verify membership
-	if _, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID); err != nil {
-		if errors.Is(err, errors.NotExist) {
-			return nil, errors.E(op, errors.Permission, InsufficientRole, "access denied to this space")
-		}
+	if _, err := s.authorize(ctx, session); err != nil {
 		return nil, errors.E(op, err)
 	}
 
@@ -107,16 +156,8 @@ func (s *Service) UpdateSpace(ctx context.Context, session Session, updated *Spa
 		return nil, errors.E(op, err)
 	}
 
-	// Check if requestor is the owner
-	member, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID)
-	if err != nil {
-		if errors.Is(err, errors.NotExist) {
-			return nil, errors.E(op, errors.Permission, OwnerOnly, "only the owner can update this space")
-		}
+	if _, err := s.authorize(ctx, session, requireOwner); err != nil {
 		return nil, errors.E(op, err)
-	}
-	if !member.CanDeleteSpace() {
-		return nil, errors.E(op, errors.Permission, OwnerOnly, "only the owner can update this space")
 	}
 
 	if updated.Version > 0 && updated.Version != space.Version {
@@ -138,15 +179,8 @@ func (s *Service) UpdateSpace(ctx context.Context, session Session, updated *Spa
 func (s *Service) DeleteSpace(ctx context.Context, session Session) error {
 	const op errors.Op = "domain/space.DeleteSpace"
 
-	member, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID)
-	if err != nil {
-		if errors.Is(err, errors.NotExist) {
-			return errors.E(op, errors.Permission, OwnerOnly, "only the owner can delete this space")
-		}
+	if _, err := s.authorize(ctx, session, requireOwner); err != nil {
 		return errors.E(op, err)
-	}
-	if !member.CanDeleteSpace() {
-		return errors.E(op, errors.Permission, OwnerOnly, "only the owner can delete this space")
 	}
 
 	if err := s.deps.SpaceStore.Delete(ctx, session.SpaceID); err != nil {
@@ -181,20 +215,12 @@ func (s *Service) AddSpaceMember(ctx context.Context, session Session, member *M
 		return nil, errors.E(op, errors.Permission, OwnerOnly, "cannot assign owner role")
 	}
 
-	// Check requestor has permission
-	reqMember, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID)
-	if err != nil {
-		if errors.Is(err, errors.NotExist) {
-			return nil, errors.E(op, errors.Permission, InsufficientRole, "insufficient role to add members")
-		}
+	if _, err := s.authorize(ctx, session, requireManageMembers); err != nil {
 		return nil, errors.E(op, err)
-	}
-	if !reqMember.CanManageMembers() {
-		return nil, errors.E(op, errors.Permission, InsufficientRole, "insufficient role to add members")
 	}
 
 	// Check space exists
-	_, err = s.deps.SpaceStore.GetByID(ctx, session.SpaceID)
+	_, err := s.deps.SpaceStore.GetByID(ctx, session.SpaceID)
 	if err != nil {
 		if errors.Is(err, errors.NotExist) {
 			return nil, errors.E(op, errors.NotExist, NotFound, "space not found")
@@ -226,16 +252,8 @@ func (s *Service) AddSpaceMember(ctx context.Context, session Session, member *M
 func (s *Service) RemoveSpaceMember(ctx context.Context, session Session, userID SpaceID) error {
 	const op errors.Op = "domain/space.RemoveSpaceMember"
 
-	// Check requestor has permission
-	member, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID)
-	if err != nil {
-		if errors.Is(err, errors.NotExist) {
-			return errors.E(op, errors.Permission, InsufficientRole, "insufficient role to remove members")
-		}
+	if _, err := s.authorize(ctx, session, requireManageMembers); err != nil {
 		return errors.E(op, err)
-	}
-	if !member.CanManageMembers() {
-		return errors.E(op, errors.Permission, InsufficientRole, "insufficient role to remove members")
 	}
 
 	// Fetch target member
@@ -267,16 +285,8 @@ func (s *Service) UpdateSpaceMember(ctx context.Context, session Session, update
 		return nil, errors.E(op, err)
 	}
 
-	// Check requestor has permission
-	reqMember, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID)
-	if err != nil {
-		if errors.Is(err, errors.NotExist) {
-			return nil, errors.E(op, errors.Permission, InsufficientRole, "insufficient role to update member roles")
-		}
+	if _, err := s.authorize(ctx, session, requireManageMembers); err != nil {
 		return nil, errors.E(op, err)
-	}
-	if !reqMember.CanManageMembers() {
-		return nil, errors.E(op, errors.Permission, InsufficientRole, "insufficient role to update member roles")
 	}
 
 	// Check membership exists
@@ -324,11 +334,7 @@ func (s *Service) UpdateSpaceMemberRole(ctx context.Context, session Session, up
 func (s *Service) ListSpaceMembers(ctx context.Context, session Session, filter *ListMembersFilter) (*paging.Page[*Member], error) {
 	const op errors.Op = "domain/space.ListSpaceMembers"
 
-	// Verify membership
-	if _, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID); err != nil {
-		if errors.Is(err, errors.NotExist) {
-			return nil, errors.E(op, errors.Permission, InsufficientRole, "access denied to this space")
-		}
+	if _, err := s.authorize(ctx, session); err != nil {
 		return nil, errors.E(op, err)
 	}
 
@@ -365,4 +371,52 @@ func (s *Service) IsSpaceMember(ctx context.Context, spaceID SpaceID, userID Spa
 		return false, nil
 	}
 	return true, nil
+}
+
+// GetSettings retrieves the workspace settings. Requestor must be a member of the space.
+func (s *Service) GetSettings(ctx context.Context, session Session) (*settings.Entry[Settings], error) {
+	const op errors.Op = "domain/space.GetSettings"
+
+	if _, err := s.authorize(ctx, session); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	entry, err := s.deps.Settings.GetOrDefault(ctx, string(session.SpaceID), DefaultSettings())
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	if entry.Value.Timezone == "" {
+		entry.Value.Timezone = "UTC"
+	}
+
+	return entry, nil
+}
+
+// UpdateSettings updates the workspace settings. Requestor must be an owner or admin.
+func (s *Service) UpdateSettings(ctx context.Context, session Session, incoming *Settings, mask []string, expectedVersion *int64) (*settings.Entry[Settings], error) {
+	const op errors.Op = "domain/space.UpdateSettings"
+
+	if _, err := s.authorize(ctx, session, requireManageSettings); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	entry, err := s.deps.Settings.GetOrDefault(ctx, string(session.SpaceID), DefaultSettings())
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	if expectedVersion != nil && *expectedVersion > 0 && *expectedVersion != entry.Version {
+		return nil, errors.E(op, errors.Conflict, VersionMismatch, "space settings were modified concurrently")
+	}
+
+	if err := entry.Value.ApplyPatch(incoming, mask); err != nil {
+		return nil, errors.E(op, errors.Invalid, err)
+	}
+
+	if err := s.deps.Settings.Save(ctx, entry); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	return entry, nil
 }

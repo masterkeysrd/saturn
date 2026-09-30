@@ -55,6 +55,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/requestid"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 	"github.com/masterkeysrd/saturn/internal/platform/shutdown"
 	"github.com/masterkeysrd/saturn/internal/platform/totp"
 	"github.com/masterkeysrd/saturn/internal/transport/event"
@@ -140,6 +141,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	)
 
 	// Wire Space stores
+	platformSettingsStore := settings.NewPostgresStore(dbClient)
 	spaceStore := spacestorage.NewSpaceStore(dbClient)
 	memberStore := spacestorage.NewMemberStore(dbClient)
 
@@ -147,6 +149,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	spaceService := space.NewService(space.Dependencies{
 		SpaceStore:  spaceStore,
 		MemberStore: memberStore,
+		Settings:    settings.Bind(platformSettingsStore, space.SettingsKey),
 	})
 
 	// Wire JWT token service

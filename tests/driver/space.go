@@ -166,3 +166,27 @@ func (s *SpaceDriver) ListSpaceMembers(tb testing.TB, spaceID string, pageSize i
 		PageToken: pageToken,
 	})
 }
+
+// GetSettings retrieves configuration settings for a workspace.
+func (s *SpaceDriver) GetSettings(tb testing.TB, spaceID string) (*spacev1.Settings, error) {
+	tb.Helper()
+	client := s.getClient()
+	return client.GetSettings(tb.Context(), &spacev1.GetSettingsRequest{
+		SpaceId: spaceID,
+	})
+}
+
+// UpdateSettings updates configuration settings for a workspace.
+func (s *SpaceDriver) UpdateSettings(tb testing.TB, spaceID, timezone string, mask []string, version *int64) (*spacev1.Settings, error) {
+	tb.Helper()
+	client := s.getClient()
+	return client.UpdateSettings(tb.Context(), &spacev1.UpdateSettingsRequest{
+		SpaceId: spaceID,
+		Settings: &spacev1.Settings{
+			Timezone: timezone,
+		},
+		UpdateMask: &fieldmaskpb.FieldMask{Paths: mask},
+		Version:    version,
+	})
+}
+

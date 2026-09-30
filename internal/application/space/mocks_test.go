@@ -8,6 +8,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
 // Compile-time interface assertion.
@@ -32,6 +33,12 @@ type SpaceServiceMock struct {
 
 	// UpdateSpaceMemberFunc mocks the UpdateSpaceMember method.
 	UpdateSpaceMemberFunc func(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error)
+
+	// GetSettingsFunc mocks the GetSettings method.
+	GetSettingsFunc func(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error)
+
+	// UpdateSettingsFunc mocks the UpdateSettings method.
+	UpdateSettingsFunc func(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -65,6 +72,17 @@ type SpaceServiceMock struct {
 			Member  *space.Member
 			Mask    []string
 		}
+		GetSettings []struct {
+			Ctx     context.Context
+			Session space.Session
+		}
+		UpdateSettings []struct {
+			Ctx             context.Context
+			Session         space.Session
+			Incoming        *space.Settings
+			Mask            []string
+			ExpectedVersion *int64
+		}
 	}
 	lockCreateSpace       sync.RWMutex
 	lockUpdateSpace       sync.RWMutex
@@ -72,6 +90,8 @@ type SpaceServiceMock struct {
 	lockAddSpaceMember    sync.RWMutex
 	lockRemoveSpaceMember sync.RWMutex
 	lockUpdateSpaceMember sync.RWMutex
+	lockGetSettings       sync.RWMutex
+	lockUpdateSettings    sync.RWMutex
 }
 
 // CreateSpace calls CreateSpaceFunc.
@@ -252,6 +272,69 @@ func (mock *SpaceServiceMock) UpdateSpaceMemberCalls() []struct {
 	mock.lockUpdateSpaceMember.RLock()
 	defer mock.lockUpdateSpaceMember.RUnlock()
 	return mock.calls.UpdateSpaceMember
+}
+
+// GetSettings calls GetSettingsFunc.
+func (mock *SpaceServiceMock) GetSettings(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error) {
+	if mock.GetSettingsFunc == nil {
+		panic("SpaceServiceMock.GetSettingsFunc: method is nil but SpaceService.GetSettings was just called")
+	}
+	mock.lockGetSettings.Lock()
+	mock.calls.GetSettings = append(mock.calls.GetSettings, struct {
+		Ctx     context.Context
+		Session space.Session
+	}{
+		Ctx:     ctx,
+		Session: session,
+	})
+	mock.lockGetSettings.Unlock()
+	return mock.GetSettingsFunc(ctx, session)
+}
+
+// GetSettingsCalls returns all calls made to GetSettings.
+func (mock *SpaceServiceMock) GetSettingsCalls() []struct {
+	Ctx     context.Context
+	Session space.Session
+} {
+	mock.lockGetSettings.RLock()
+	defer mock.lockGetSettings.RUnlock()
+	return mock.calls.GetSettings
+}
+
+// UpdateSettings calls UpdateSettingsFunc.
+func (mock *SpaceServiceMock) UpdateSettings(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error) {
+	if mock.UpdateSettingsFunc == nil {
+		panic("SpaceServiceMock.UpdateSettingsFunc: method is nil but SpaceService.UpdateSettings was just called")
+	}
+	mock.lockUpdateSettings.Lock()
+	mock.calls.UpdateSettings = append(mock.calls.UpdateSettings, struct {
+		Ctx             context.Context
+		Session         space.Session
+		Incoming        *space.Settings
+		Mask            []string
+		ExpectedVersion *int64
+	}{
+		Ctx:             ctx,
+		Session:         session,
+		Incoming:        incoming,
+		Mask:            mask,
+		ExpectedVersion: expectedVersion,
+	})
+	mock.lockUpdateSettings.Unlock()
+	return mock.UpdateSettingsFunc(ctx, session, incoming, mask, expectedVersion)
+}
+
+// UpdateSettingsCalls returns all calls made to UpdateSettings.
+func (mock *SpaceServiceMock) UpdateSettingsCalls() []struct {
+	Ctx             context.Context
+	Session         space.Session
+	Incoming        *space.Settings
+	Mask            []string
+	ExpectedVersion *int64
+} {
+	mock.lockUpdateSettings.RLock()
+	defer mock.lockUpdateSettings.RUnlock()
+	return mock.calls.UpdateSettings
 }
 
 // Compile-time interface assertion.

@@ -315,6 +315,69 @@ export interface ListSpaceMembersResponse {
 }
 
 /**
+ * Settings represents workspace-level configuration.
+ */
+export interface Settings {
+  /**
+   * Output only. The workspace's unique identifier.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  spaceId?: string
+  /**
+   * Optional. The IANA timezone identifier for the workspace (e.g. "America/Santo_Domingo", "UTC").
+   * If unspecified or empty, defaults to "UTC".
+   */
+  timezone: string
+  /**
+   * Output only. The optimistic concurrency control version number.
+   */
+  version?: string
+  /**
+   * Output only. The timestamp when the settings were created.
+   */
+  createTime?: string
+  /**
+   * Output only. The timestamp when the settings were last updated.
+   */
+  updateTime?: string
+}
+
+/**
+ * Request message for Spaces.GetSettings.
+ */
+export interface GetSettingsRequest {
+  /**
+   * Required. The unique identifier of the workspace whose settings are retrieved.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  spaceId: string
+}
+
+/**
+ * Request message for Spaces.UpdateSettings.
+ */
+export interface UpdateSettingsRequest {
+  /**
+   * Required. The unique identifier of the workspace whose settings are updated.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  spaceId: string
+  /**
+   * Required. The settings resource containing updated values.
+   */
+  settings: Settings
+  /**
+   * Required. The list of fields to update.
+   * A mask specifying which fields (e.g. `timezone`) in the `settings` field should be updated.
+   */
+  updateMask: { paths?: string[] }
+  /**
+   * Optional. The optimistic concurrency control version expected for this update.
+   */
+  version?: string
+}
+
+/**
  * Spaces provides workspace management including CRUD operations and member administration.
  */
 /**
@@ -581,6 +644,65 @@ export function useListSpaceMembersQuery(
   return useQuery<ListSpaceMembersResponse, Error>({
     queryKey: [`/api/v1/spaces/${req.spaceId}/members`, req],
     queryFn: () => listSpaceMembers(req.spaceId, req),
+    ...options,
+  })
+}
+
+/**
+ * Retrieves the configuration settings for a workspace.
+ */
+export async function getSettings(
+  space_id: string,
+  _req: GetSettingsRequest
+): Promise<Settings> {
+  return request<Settings>({
+    method: "GET",
+    url: `/api/v1/spaces/${space_id}/settings`,
+  })
+}
+
+export function useGetSettingsQuery(
+  req: GetSettingsRequest,
+  options?: Omit<UseQueryOptions<Settings, Error>, "queryKey" | "queryFn">
+) {
+  return useQuery<Settings, Error>({
+    queryKey: [`/api/v1/spaces/${req.spaceId}/settings`, req],
+    queryFn: () => getSettings(req.spaceId, req),
+    ...options,
+  })
+}
+
+/**
+ * Updates the configuration settings for a workspace.
+ */
+export async function updateSettings(
+  space_id: string,
+  req: UpdateSettingsRequest
+): Promise<Settings> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).spaceId
+  delete (params as Record<string, unknown>).settings
+  return request<Settings>({
+    method: "PATCH",
+    url: `/api/v1/spaces/${space_id}/settings`,
+    params: params,
+    data: req.settings,
+  })
+}
+
+export function useUpdateSettingsMutation(
+  options?: UseMutationOptions<
+    Settings,
+    Error,
+    { space_id: string; req: UpdateSettingsRequest }
+  >
+) {
+  return useMutation<
+    Settings,
+    Error,
+    { space_id: string; req: UpdateSettingsRequest }
+  >({
+    mutationFn: ({ space_id, req }) => updateSettings(space_id, req),
     ...options,
   })
 }

@@ -190,3 +190,43 @@ func (c *Client) ListSpaceMembers(ctx context.Context, req *ListSpaceMembersRequ
 	}
 	return &resp, nil
 }
+
+// GetSettings executes GET /api/v1/spaces/{space_id}/settings.
+func (c *Client) GetSettings(ctx context.Context, req *GetSettingsRequest) (*Settings, error) {
+	var resp Settings
+	path := fmt.Sprintf("/api/v1/spaces/%s/settings", req.GetSpaceId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// UpdateSettings executes PATCH /api/v1/spaces/{space_id}/settings.
+func (c *Client) UpdateSettings(ctx context.Context, req *UpdateSettingsRequest) (*Settings, error) {
+	var resp Settings
+	path := fmt.Sprintf("/api/v1/spaces/%s/settings", req.GetSpaceId())
+	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetSettings()
+	if payload == nil {
+		return nil, fmt.Errorf("settings payload is required")
+	}
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
