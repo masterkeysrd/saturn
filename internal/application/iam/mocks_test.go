@@ -108,6 +108,15 @@ type CoordinatorMock struct {
 	// ChangePasswordFunc mocks the ChangePassword method.
 	ChangePasswordFunc func(ctx context.Context, req *ChangePasswordRequest) (*ChangePasswordResponse, error)
 
+	// UpdateProfileFunc mocks the UpdateProfile method.
+	UpdateProfileFunc func(ctx context.Context, req *UpdateProfileRequest) (*identity.User, error)
+
+	// ChangeEmailFunc mocks the ChangeEmail method.
+	ChangeEmailFunc func(ctx context.Context, req *ChangeEmailRequest) (*identity.User, error)
+
+	// DeleteAccountFunc mocks the DeleteAccount method.
+	DeleteAccountFunc func(ctx context.Context, req *DeleteAccountRequest) error
+
 	// calls tracks calls to the methods.
 	calls struct {
 		Authenticate []struct {
@@ -230,6 +239,18 @@ type CoordinatorMock struct {
 			Ctx context.Context
 			Req *ChangePasswordRequest
 		}
+		UpdateProfile []struct {
+			Ctx context.Context
+			Req *UpdateProfileRequest
+		}
+		ChangeEmail []struct {
+			Ctx context.Context
+			Req *ChangeEmailRequest
+		}
+		DeleteAccount []struct {
+			Ctx context.Context
+			Req *DeleteAccountRequest
+		}
 	}
 	lockAuthenticate          sync.RWMutex
 	lockGetAuthVersion        sync.RWMutex
@@ -261,6 +282,9 @@ type CoordinatorMock struct {
 	lockValidateResetToken    sync.RWMutex
 	lockCompleteResetPassword sync.RWMutex
 	lockChangePassword        sync.RWMutex
+	lockUpdateProfile         sync.RWMutex
+	lockChangeEmail           sync.RWMutex
+	lockDeleteAccount         sync.RWMutex
 }
 
 // Authenticate calls AuthenticateFunc.
@@ -1073,6 +1097,87 @@ func (mock *CoordinatorMock) ChangePasswordCalls() []struct {
 	return mock.calls.ChangePassword
 }
 
+// UpdateProfile calls UpdateProfileFunc.
+func (mock *CoordinatorMock) UpdateProfile(ctx context.Context, req *UpdateProfileRequest) (*identity.User, error) {
+	if mock.UpdateProfileFunc == nil {
+		panic("CoordinatorMock.UpdateProfileFunc: method is nil but Coordinator.UpdateProfile was just called")
+	}
+	mock.lockUpdateProfile.Lock()
+	mock.calls.UpdateProfile = append(mock.calls.UpdateProfile, struct {
+		Ctx context.Context
+		Req *UpdateProfileRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockUpdateProfile.Unlock()
+	return mock.UpdateProfileFunc(ctx, req)
+}
+
+// UpdateProfileCalls returns all calls made to UpdateProfile.
+func (mock *CoordinatorMock) UpdateProfileCalls() []struct {
+	Ctx context.Context
+	Req *UpdateProfileRequest
+} {
+	mock.lockUpdateProfile.RLock()
+	defer mock.lockUpdateProfile.RUnlock()
+	return mock.calls.UpdateProfile
+}
+
+// ChangeEmail calls ChangeEmailFunc.
+func (mock *CoordinatorMock) ChangeEmail(ctx context.Context, req *ChangeEmailRequest) (*identity.User, error) {
+	if mock.ChangeEmailFunc == nil {
+		panic("CoordinatorMock.ChangeEmailFunc: method is nil but Coordinator.ChangeEmail was just called")
+	}
+	mock.lockChangeEmail.Lock()
+	mock.calls.ChangeEmail = append(mock.calls.ChangeEmail, struct {
+		Ctx context.Context
+		Req *ChangeEmailRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockChangeEmail.Unlock()
+	return mock.ChangeEmailFunc(ctx, req)
+}
+
+// ChangeEmailCalls returns all calls made to ChangeEmail.
+func (mock *CoordinatorMock) ChangeEmailCalls() []struct {
+	Ctx context.Context
+	Req *ChangeEmailRequest
+} {
+	mock.lockChangeEmail.RLock()
+	defer mock.lockChangeEmail.RUnlock()
+	return mock.calls.ChangeEmail
+}
+
+// DeleteAccount calls DeleteAccountFunc.
+func (mock *CoordinatorMock) DeleteAccount(ctx context.Context, req *DeleteAccountRequest) error {
+	if mock.DeleteAccountFunc == nil {
+		panic("CoordinatorMock.DeleteAccountFunc: method is nil but Coordinator.DeleteAccount was just called")
+	}
+	mock.lockDeleteAccount.Lock()
+	mock.calls.DeleteAccount = append(mock.calls.DeleteAccount, struct {
+		Ctx context.Context
+		Req *DeleteAccountRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockDeleteAccount.Unlock()
+	return mock.DeleteAccountFunc(ctx, req)
+}
+
+// DeleteAccountCalls returns all calls made to DeleteAccount.
+func (mock *CoordinatorMock) DeleteAccountCalls() []struct {
+	Ctx context.Context
+	Req *DeleteAccountRequest
+} {
+	mock.lockDeleteAccount.RLock()
+	defer mock.lockDeleteAccount.RUnlock()
+	return mock.calls.DeleteAccount
+}
+
 // Compile-time interface assertion.
 var _ PasswordHasher = (*PasswordHasherMock)(nil)
 
@@ -1501,6 +1606,15 @@ type IdentityServiceMock struct {
 	// ChangePasswordFunc mocks the ChangePassword method.
 	ChangePasswordFunc func(ctx context.Context, req identity.ChangePasswordRequest) (*identity.User, error)
 
+	// UpdateProfileFunc mocks the UpdateProfile method.
+	UpdateProfileFunc func(ctx context.Context, params identity.UpdateProfileParams) (*identity.User, error)
+
+	// ChangeEmailFunc mocks the ChangeEmail method.
+	ChangeEmailFunc func(ctx context.Context, params identity.ChangeEmailParams) (*identity.User, error)
+
+	// DeleteAccountFunc mocks the DeleteAccount method.
+	DeleteAccountFunc func(ctx context.Context, params identity.DeleteAccountParams) error
+
 	// calls tracks calls to the methods.
 	calls struct {
 		CreateUser []struct {
@@ -1671,6 +1785,18 @@ type IdentityServiceMock struct {
 			Ctx context.Context
 			Req identity.ChangePasswordRequest
 		}
+		UpdateProfile []struct {
+			Ctx    context.Context
+			Params identity.UpdateProfileParams
+		}
+		ChangeEmail []struct {
+			Ctx    context.Context
+			Params identity.ChangeEmailParams
+		}
+		DeleteAccount []struct {
+			Ctx    context.Context
+			Params identity.DeleteAccountParams
+		}
 	}
 	lockCreateUser                       sync.RWMutex
 	lockCreateCredential                 sync.RWMutex
@@ -1713,6 +1839,9 @@ type IdentityServiceMock struct {
 	lockValidatePasswordResetToken       sync.RWMutex
 	lockCompletePasswordReset            sync.RWMutex
 	lockChangePassword                   sync.RWMutex
+	lockUpdateProfile                    sync.RWMutex
+	lockChangeEmail                      sync.RWMutex
+	lockDeleteAccount                    sync.RWMutex
 }
 
 // CreateUser calls CreateUserFunc.
@@ -2832,6 +2961,87 @@ func (mock *IdentityServiceMock) ChangePasswordCalls() []struct {
 	mock.lockChangePassword.RLock()
 	defer mock.lockChangePassword.RUnlock()
 	return mock.calls.ChangePassword
+}
+
+// UpdateProfile calls UpdateProfileFunc.
+func (mock *IdentityServiceMock) UpdateProfile(ctx context.Context, params identity.UpdateProfileParams) (*identity.User, error) {
+	if mock.UpdateProfileFunc == nil {
+		panic("IdentityServiceMock.UpdateProfileFunc: method is nil but IdentityService.UpdateProfile was just called")
+	}
+	mock.lockUpdateProfile.Lock()
+	mock.calls.UpdateProfile = append(mock.calls.UpdateProfile, struct {
+		Ctx    context.Context
+		Params identity.UpdateProfileParams
+	}{
+		Ctx:    ctx,
+		Params: params,
+	})
+	mock.lockUpdateProfile.Unlock()
+	return mock.UpdateProfileFunc(ctx, params)
+}
+
+// UpdateProfileCalls returns all calls made to UpdateProfile.
+func (mock *IdentityServiceMock) UpdateProfileCalls() []struct {
+	Ctx    context.Context
+	Params identity.UpdateProfileParams
+} {
+	mock.lockUpdateProfile.RLock()
+	defer mock.lockUpdateProfile.RUnlock()
+	return mock.calls.UpdateProfile
+}
+
+// ChangeEmail calls ChangeEmailFunc.
+func (mock *IdentityServiceMock) ChangeEmail(ctx context.Context, params identity.ChangeEmailParams) (*identity.User, error) {
+	if mock.ChangeEmailFunc == nil {
+		panic("IdentityServiceMock.ChangeEmailFunc: method is nil but IdentityService.ChangeEmail was just called")
+	}
+	mock.lockChangeEmail.Lock()
+	mock.calls.ChangeEmail = append(mock.calls.ChangeEmail, struct {
+		Ctx    context.Context
+		Params identity.ChangeEmailParams
+	}{
+		Ctx:    ctx,
+		Params: params,
+	})
+	mock.lockChangeEmail.Unlock()
+	return mock.ChangeEmailFunc(ctx, params)
+}
+
+// ChangeEmailCalls returns all calls made to ChangeEmail.
+func (mock *IdentityServiceMock) ChangeEmailCalls() []struct {
+	Ctx    context.Context
+	Params identity.ChangeEmailParams
+} {
+	mock.lockChangeEmail.RLock()
+	defer mock.lockChangeEmail.RUnlock()
+	return mock.calls.ChangeEmail
+}
+
+// DeleteAccount calls DeleteAccountFunc.
+func (mock *IdentityServiceMock) DeleteAccount(ctx context.Context, params identity.DeleteAccountParams) error {
+	if mock.DeleteAccountFunc == nil {
+		panic("IdentityServiceMock.DeleteAccountFunc: method is nil but IdentityService.DeleteAccount was just called")
+	}
+	mock.lockDeleteAccount.Lock()
+	mock.calls.DeleteAccount = append(mock.calls.DeleteAccount, struct {
+		Ctx    context.Context
+		Params identity.DeleteAccountParams
+	}{
+		Ctx:    ctx,
+		Params: params,
+	})
+	mock.lockDeleteAccount.Unlock()
+	return mock.DeleteAccountFunc(ctx, params)
+}
+
+// DeleteAccountCalls returns all calls made to DeleteAccount.
+func (mock *IdentityServiceMock) DeleteAccountCalls() []struct {
+	Ctx    context.Context
+	Params identity.DeleteAccountParams
+} {
+	mock.lockDeleteAccount.RLock()
+	defer mock.lockDeleteAccount.RUnlock()
+	return mock.calls.DeleteAccount
 }
 
 // Compile-time interface assertion.

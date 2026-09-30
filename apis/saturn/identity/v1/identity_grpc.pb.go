@@ -42,6 +42,9 @@ const (
 	Identity_ValidateResetToken_FullMethodName    = "/saturn.identity.v1.Identity/ValidateResetToken"
 	Identity_CompleteResetPassword_FullMethodName = "/saturn.identity.v1.Identity/CompleteResetPassword"
 	Identity_ChangePassword_FullMethodName        = "/saturn.identity.v1.Identity/ChangePassword"
+	Identity_UpdateProfile_FullMethodName         = "/saturn.identity.v1.Identity/UpdateProfile"
+	Identity_ChangeEmail_FullMethodName           = "/saturn.identity.v1.Identity/ChangeEmail"
+	Identity_DeleteAccount_FullMethodName         = "/saturn.identity.v1.Identity/DeleteAccount"
 )
 
 // IdentityClient is the client API for Identity service.
@@ -95,6 +98,12 @@ type IdentityClient interface {
 	CompleteResetPassword(ctx context.Context, in *CompleteResetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Authenticated RPC: Changes the current user's password, invalidates other sessions, and returns fresh tokens.
 	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error)
+	// Authenticated RPC: Updates profile information for the current user.
+	UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*User, error)
+	// Authenticated RPC: Updates the primary email for the current user, requiring re-authentication.
+	ChangeEmail(ctx context.Context, in *ChangeEmailRequest, opts ...grpc.CallOption) (*User, error)
+	// Authenticated RPC: Permanently deactivates and deletes personal credentials for the current user account.
+	DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type identityClient struct {
@@ -325,6 +334,36 @@ func (c *identityClient) ChangePassword(ctx context.Context, in *ChangePasswordR
 	return out, nil
 }
 
+func (c *identityClient) UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*User, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(User)
+	err := c.cc.Invoke(ctx, Identity_UpdateProfile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) ChangeEmail(ctx context.Context, in *ChangeEmailRequest, opts ...grpc.CallOption) (*User, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(User)
+	err := c.cc.Invoke(ctx, Identity_ChangeEmail_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Identity_DeleteAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IdentityServer is the server API for Identity service.
 // All implementations should embed UnimplementedIdentityServer
 // for forward compatibility.
@@ -376,6 +415,12 @@ type IdentityServer interface {
 	CompleteResetPassword(context.Context, *CompleteResetPasswordRequest) (*emptypb.Empty, error)
 	// Authenticated RPC: Changes the current user's password, invalidates other sessions, and returns fresh tokens.
 	ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error)
+	// Authenticated RPC: Updates profile information for the current user.
+	UpdateProfile(context.Context, *UpdateProfileRequest) (*User, error)
+	// Authenticated RPC: Updates the primary email for the current user, requiring re-authentication.
+	ChangeEmail(context.Context, *ChangeEmailRequest) (*User, error)
+	// Authenticated RPC: Permanently deactivates and deletes personal credentials for the current user account.
+	DeleteAccount(context.Context, *DeleteAccountRequest) (*emptypb.Empty, error)
 }
 
 // UnimplementedIdentityServer should be embedded to have
@@ -450,6 +495,15 @@ func (UnimplementedIdentityServer) CompleteResetPassword(context.Context, *Compl
 }
 func (UnimplementedIdentityServer) ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ChangePassword not implemented")
+}
+func (UnimplementedIdentityServer) UpdateProfile(context.Context, *UpdateProfileRequest) (*User, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateProfile not implemented")
+}
+func (UnimplementedIdentityServer) ChangeEmail(context.Context, *ChangeEmailRequest) (*User, error) {
+	return nil, status.Error(codes.Unimplemented, "method ChangeEmail not implemented")
+}
+func (UnimplementedIdentityServer) DeleteAccount(context.Context, *DeleteAccountRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteAccount not implemented")
 }
 func (UnimplementedIdentityServer) testEmbeddedByValue() {}
 
@@ -867,6 +921,60 @@ func _Identity_ChangePassword_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Identity_UpdateProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateProfileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).UpdateProfile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_UpdateProfile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).UpdateProfile(ctx, req.(*UpdateProfileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_ChangeEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangeEmailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).ChangeEmail(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_ChangeEmail_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).ChangeEmail(ctx, req.(*ChangeEmailRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_DeleteAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).DeleteAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_DeleteAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).DeleteAccount(ctx, req.(*DeleteAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Identity_ServiceDesc is the grpc.ServiceDesc for Identity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -961,6 +1069,18 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ChangePassword",
 			Handler:    _Identity_ChangePassword_Handler,
+		},
+		{
+			MethodName: "UpdateProfile",
+			Handler:    _Identity_UpdateProfile_Handler,
+		},
+		{
+			MethodName: "ChangeEmail",
+			Handler:    _Identity_ChangeEmail_Handler,
+		},
+		{
+			MethodName: "DeleteAccount",
+			Handler:    _Identity_DeleteAccount_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -178,6 +178,30 @@ service Identity {
       body: "*"
     };
   }
+
+  // Authenticated RPC: Updates profile information for the current user.
+  rpc UpdateProfile(UpdateProfileRequest) returns (User) {
+    option (google.api.http) = {
+      patch: "/v1/identity/users/me"
+      body: "*"
+    };
+  }
+
+  // Authenticated RPC: Updates the primary email for the current user, requiring re-authentication.
+  rpc ChangeEmail(ChangeEmailRequest) returns (User) {
+    option (google.api.http) = {
+      post: "/v1/identity/users/me:change-email"
+      body: "*"
+    };
+  }
+
+  // Authenticated RPC: Permanently deactivates and deletes personal credentials for the current user account.
+  rpc DeleteAccount(DeleteAccountRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/identity/users/me:delete"
+      body: "*"
+    };
+  }
 }
 
 // Request message for Identity.LoginUser.
@@ -659,4 +683,34 @@ message ChangePasswordResponse {
 
   // Output only. The expiration time of the new refresh token in Unix seconds.
   int64 refresh_token_expires_at = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Identity.UpdateProfile.
+message UpdateProfileRequest {
+  // Optional. The updated full or display name for the user.
+  optional string name = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. The updated avatar URL for the user.
+  optional string avatar_url = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for Identity.ChangeEmail.
+message ChangeEmailRequest {
+  // Required. The new primary email address.
+  string new_email = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Current password for re-authentication.
+  string current_password = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional/Conditional. Current 6-digit TOTP code (required if MFA is enabled).
+  string totp_code = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for Identity.DeleteAccount.
+message DeleteAccountRequest {
+  // Required. Current password for re-authentication.
+  string current_password = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional/Conditional. Current 6-digit TOTP code (required if MFA is enabled).
+  string totp_code = 2 [(google.api.field_behavior) = OPTIONAL];
 }

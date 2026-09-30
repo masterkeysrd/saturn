@@ -602,6 +602,97 @@ func (h *Handler) ChangePassword(ctx context.Context, req *identityv1.ChangePass
 	}, nil
 }
 
+// UpdateProfile updates profile information for the authenticated user.
+func (h *Handler) UpdateProfile(ctx context.Context, req *identityv1.UpdateProfileRequest) (*identityv1.User, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	appReq := &iam.UpdateProfileRequest{
+		UserID: principal.Subject,
+	}
+	if req.Name != nil {
+		appReq.Name = req.Name
+	}
+	if req.AvatarUrl != nil {
+		appReq.AvatarURL = req.AvatarUrl
+	}
+
+	user, err := h.IAM.Coordinator.UpdateProfile(ctx, appReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &identityv1.User{
+		Id:         string(user.ID),
+		Email:      user.Email,
+		Username:   user.Username,
+		Name:       user.Name,
+		AvatarUrl:  user.AvatarURL,
+		Status:     string(user.Status),
+		Version:    user.Version,
+		CreateTime: timestamppb.New(user.CreateTime),
+		UpdateTime: timestamppb.New(user.UpdateTime),
+	}, nil
+}
+
+// ChangeEmail updates the primary email for the authenticated user, requiring re-authentication.
+func (h *Handler) ChangeEmail(ctx context.Context, req *identityv1.ChangeEmailRequest) (*identityv1.User, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	ua, ip := extractClientInfo(ctx)
+
+	user, err := h.IAM.Coordinator.ChangeEmail(ctx, &iam.ChangeEmailRequest{
+		UserID:          principal.Subject,
+		NewEmail:        req.GetNewEmail(),
+		CurrentPassword: req.GetCurrentPassword(),
+		TOTPCode:        req.GetTotpCode(),
+		UserAgent:       ua,
+		IPAddress:       ip,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &identityv1.User{
+		Id:         string(user.ID),
+		Email:      user.Email,
+		Username:   user.Username,
+		Name:       user.Name,
+		AvatarUrl:  user.AvatarURL,
+		Status:     string(user.Status),
+		Version:    user.Version,
+		CreateTime: timestamppb.New(user.CreateTime),
+		UpdateTime: timestamppb.New(user.UpdateTime),
+	}, nil
+}
+
+// DeleteAccount permanently deactivates the user account and revokes all credentials.
+func (h *Handler) DeleteAccount(ctx context.Context, req *identityv1.DeleteAccountRequest) (*emptypb.Empty, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	ua, ip := extractClientInfo(ctx)
+
+	if err := h.IAM.Coordinator.DeleteAccount(ctx, &iam.DeleteAccountRequest{
+		UserID:          principal.Subject,
+		CurrentPassword: req.GetCurrentPassword(),
+		TOTPCode:        req.GetTotpCode(),
+		UserAgent:       ua,
+		IPAddress:       ip,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
 func extractClientInfo(ctx context.Context) (userAgent, ipAddress string) {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if ua := md.Get("grpcgateway-user-agent"); len(ua) > 0 {

@@ -54,6 +54,12 @@ type Coordinator interface {
 	CompleteResetPassword(ctx context.Context, req *CompleteResetPasswordRequest) error
 	// @transactional
 	ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*ChangePasswordResponse, error)
+	// @transactional
+	UpdateProfile(ctx context.Context, req *UpdateProfileRequest) (*identity.User, error)
+	// @transactional
+	ChangeEmail(ctx context.Context, req *ChangeEmailRequest) (*identity.User, error)
+	// @transactional
+	DeleteAccount(ctx context.Context, req *DeleteAccountRequest) error
 }
 
 // PasswordHasher defines the interface for computing and verifying password hashes.
@@ -166,6 +172,9 @@ type IdentityService interface {
 	ValidatePasswordResetToken(ctx context.Context, req identity.ValidatePasswordResetTokenRequest) (*identity.User, *identity.PasswordResetToken, error)
 	CompletePasswordReset(ctx context.Context, req identity.CompletePasswordResetRequest) (*identity.User, error)
 	ChangePassword(ctx context.Context, req identity.ChangePasswordRequest) (*identity.User, error)
+	UpdateProfile(ctx context.Context, params identity.UpdateProfileParams) (*identity.User, error)
+	ChangeEmail(ctx context.Context, params identity.ChangeEmailParams) (*identity.User, error)
+	DeleteAccount(ctx context.Context, params identity.DeleteAccountParams) error
 }
 
 // SpaceService defines the interface for space operations required by IAM application.

@@ -3,6 +3,7 @@ package identity
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/crypto"
@@ -569,10 +570,6 @@ func (s *Service) ListSecurityEvents(ctx context.Context, filter SecurityEventFi
 func (s *Service) HasActiveMFA(ctx context.Context, userID UserID) (bool, []*MFAFactor, error) {
 	const op errors.Op = "domain/identity.HasActiveMFA"
 
-	if s.deps.MFAStore == nil {
-		return false, nil, nil
-	}
-
 	factors, err := s.deps.MFAStore.ListFactorsByUserID(ctx, userID)
 	if err != nil {
 		return false, nil, errors.E(op, err)
@@ -584,10 +581,6 @@ func (s *Service) HasActiveMFA(ctx context.Context, userID UserID) (bool, []*MFA
 // SetupTOTP initiates enrollment of a new TOTP factor and stages it for confirmation.
 func (s *Service) SetupTOTP(ctx context.Context, req SetupTOTPRequest) (*SetupTOTPResult, error) {
 	const op errors.Op = "domain/identity.SetupTOTP"
-
-	if s.deps.MFAStore == nil || s.deps.TOTP == nil || s.deps.Cipher == nil {
-		return nil, errors.E(op, errors.Internal, "mfa dependencies not configured")
-	}
 
 	user, err := s.GetUserByID(ctx, req.UserID)
 	if err != nil {
@@ -641,10 +634,6 @@ func (s *Service) SetupTOTP(ctx context.Context, req SetupTOTPRequest) (*SetupTO
 // If this is the user's first active MFA factor, it generates and returns 8 single-use backup recovery codes.
 func (s *Service) ConfirmTOTP(ctx context.Context, req ConfirmTOTPRequest) ([]string, error) {
 	const op errors.Op = "domain/identity.ConfirmTOTP"
-
-	if s.deps.MFAStore == nil || s.deps.TOTP == nil || s.deps.Cipher == nil {
-		return nil, errors.E(op, errors.Internal, "mfa dependencies not configured")
-	}
 
 	factor, err := s.deps.MFAStore.GetFactorByID(ctx, req.FactorID)
 	if err != nil {
@@ -714,10 +703,6 @@ func (s *Service) ConfirmTOTP(ctx context.Context, req ConfirmTOTPRequest) ([]st
 func (s *Service) ListMFAFactors(ctx context.Context, userID UserID) (*MFAFactorsSummary, error) {
 	const op errors.Op = "domain/identity.ListMFAFactors"
 
-	if s.deps.MFAStore == nil {
-		return &MFAFactorsSummary{}, nil
-	}
-
 	factors, err := s.deps.MFAStore.ListFactorsByUserID(ctx, userID)
 	if err != nil {
 		return nil, errors.E(op, err)
@@ -741,10 +726,6 @@ func (s *Service) ListMFAFactors(ctx context.Context, userID UserID) (*MFAFactor
 // DeleteMFAFactor revokes an MFA factor. If it was primary, promotes another active factor.
 func (s *Service) DeleteMFAFactor(ctx context.Context, req DeleteMFAFactorRequest) error {
 	const op errors.Op = "domain/identity.DeleteMFAFactor"
-
-	if s.deps.MFAStore == nil {
-		return errors.E(op, errors.Internal, "mfa store not configured")
-	}
 
 	factor, err := s.deps.MFAStore.GetFactorByID(ctx, req.FactorID)
 	if err != nil {
@@ -777,10 +758,6 @@ func (s *Service) DeleteMFAFactor(ctx context.Context, req DeleteMFAFactorReques
 func (s *Service) SetPrimaryMFAFactor(ctx context.Context, req SetPrimaryMFAFactorRequest) error {
 	const op errors.Op = "domain/identity.SetPrimaryMFAFactor"
 
-	if s.deps.MFAStore == nil {
-		return errors.E(op, errors.Internal, "mfa store not configured")
-	}
-
 	factor, err := s.deps.MFAStore.GetFactorByID(ctx, req.FactorID)
 	if err != nil {
 		if errors.Is(err, errors.NotExist) {
@@ -806,10 +783,6 @@ func (s *Service) SetPrimaryMFAFactor(ctx context.Context, req SetPrimaryMFAFact
 // RegenerateBackupCodes regenerates a fresh set of 8 single-use recovery codes after step-up verification.
 func (s *Service) RegenerateBackupCodes(ctx context.Context, req RegenerateBackupCodesRequest) ([]string, error) {
 	const op errors.Op = "domain/identity.RegenerateBackupCodes"
-
-	if s.deps.MFAStore == nil || s.deps.TOTP == nil || s.deps.Cipher == nil {
-		return nil, errors.E(op, errors.Internal, "mfa dependencies not configured")
-	}
 
 	factors, err := s.deps.MFAStore.ListFactorsByUserID(ctx, req.UserID)
 	if err != nil {
@@ -857,10 +830,6 @@ func (s *Service) RegenerateBackupCodes(ctx context.Context, req RegenerateBacku
 // VerifyMFAAssertion verifies a Step 2 second factor assertion (TOTP code or backup code).
 func (s *Service) VerifyMFAAssertion(ctx context.Context, req VerifyMFAAssertionRequest) error {
 	const op errors.Op = "domain/identity.VerifyMFAAssertion"
-
-	if s.deps.MFAStore == nil || s.deps.TOTP == nil || s.deps.Cipher == nil {
-		return errors.E(op, errors.Internal, "mfa dependencies not configured")
-	}
 
 	now := time.Now()
 
@@ -937,10 +906,6 @@ func (s *Service) VerifyMFAAssertion(ctx context.Context, req VerifyMFAAssertion
 func (s *Service) CreateAuthChallenge(ctx context.Context) (*Challenge, error) {
 	const op errors.Op = "identity.CreateAuthChallenge"
 
-	if s.deps.ChallengeStore == nil {
-		return nil, errors.E(op, errors.Internal, "challenge store not configured")
-	}
-
 	nonce, err := id.Generate("chg_")
 	if err != nil {
 		return nil, errors.E(op, err)
@@ -976,10 +941,6 @@ type CreateDeviceRequest struct {
 func (s *Service) CreateDevice(ctx context.Context, req CreateDeviceRequest) (*Device, error) {
 	const op errors.Op = "identity.CreateDevice"
 
-	if s.deps.DeviceStore == nil || s.deps.ChallengeStore == nil || s.deps.DeviceVerifier == nil {
-		return nil, errors.E(op, errors.Internal, "device dependencies not configured")
-	}
-
 	if req.UserID == "" {
 		return nil, errors.E(op, errors.Invalid, InvalidUserID, "user id is required")
 	}
@@ -1005,49 +966,8 @@ func (s *Service) CreateDevice(ctx context.Context, req CreateDeviceRequest) (*D
 	}
 
 	// If user has active MFA factor(s), enforce step-up verification via TOTP
-	if s.deps.MFAStore != nil {
-		factors, err := s.deps.MFAStore.ListFactorsByUserID(ctx, req.UserID)
-		if err != nil {
-			return nil, errors.E(op, err)
-		}
-
-		var activeMFA bool
-		for _, f := range factors {
-			if !f.IsRevoked() {
-				activeMFA = true
-				break
-			}
-		}
-
-		if activeMFA {
-			if req.TOTPCode == "" {
-				return nil, errors.E(op, errors.Permission, MFARequired, "mfa verification required to register device")
-			}
-			if s.deps.Cipher == nil || s.deps.TOTP == nil {
-				return nil, errors.E(op, errors.Internal, "mfa cipher or totp not configured")
-			}
-			var totpVerified bool
-			for _, f := range factors {
-				if f.IsRevoked() || f.Type != MFAFactorTypeTOTP {
-					continue
-				}
-				totpCfg := f.TOTPConfig()
-				if totpCfg == nil {
-					continue
-				}
-				secret, err := s.deps.Cipher.Decrypt(totpCfg.EncryptedSecret)
-				if err != nil {
-					continue
-				}
-				if s.deps.TOTP.ValidateCode(secret, req.TOTPCode, now) {
-					totpVerified = true
-					break
-				}
-			}
-			if !totpVerified {
-				return nil, errors.E(op, errors.Permission, MFAInvalidCode, "invalid totp code")
-			}
-		}
+	if err := s.verifyStepUpTOTP(ctx, req.UserID, req.TOTPCode, now, "register device"); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	// Consume challenge (enforcing replay protection and 5-min TTL)
@@ -1094,10 +1014,6 @@ func (s *Service) CreateDevice(ctx context.Context, req CreateDeviceRequest) (*D
 func (s *Service) ListDevices(ctx context.Context, userID UserID) ([]*Device, error) {
 	const op errors.Op = "identity.ListDevices"
 
-	if s.deps.DeviceStore == nil {
-		return nil, errors.E(op, errors.Internal, "device store not configured")
-	}
-
 	devices, err := s.deps.DeviceStore.ListDevicesByUserID(ctx, userID)
 	if err != nil {
 		return nil, errors.E(op, err)
@@ -1108,10 +1024,6 @@ func (s *Service) ListDevices(ctx context.Context, userID UserID) ([]*Device, er
 // RevokeDevice revokes a trusted device and terminates all sessions originated from it.
 func (s *Service) RevokeDevice(ctx context.Context, userID UserID, deviceID DeviceID) error {
 	const op errors.Op = "identity.RevokeDevice"
-
-	if s.deps.DeviceStore == nil || s.deps.SessionStore == nil {
-		return errors.E(op, errors.Internal, "device or session store not configured")
-	}
 
 	device, err := s.deps.DeviceStore.GetDeviceByID(ctx, deviceID)
 	if err != nil {
@@ -1148,10 +1060,6 @@ type VerifyDeviceAssertionRequest struct {
 // VerifyDeviceAssertion validates biometric device assertion, checking revocation, 60d expiration, 30d inactivity, challenge, and signature.
 func (s *Service) VerifyDeviceAssertion(ctx context.Context, req VerifyDeviceAssertionRequest) (*Device, *User, error) {
 	const op errors.Op = "identity.VerifyDeviceAssertion"
-
-	if s.deps.DeviceStore == nil || s.deps.ChallengeStore == nil || s.deps.DeviceVerifier == nil || s.deps.UserStore == nil {
-		return nil, nil, errors.E(op, errors.Internal, "device dependencies not configured")
-	}
 
 	now := req.Now
 	if now.IsZero() {
@@ -1414,47 +1322,8 @@ func (s *Service) ChangePassword(ctx context.Context, req ChangePasswordRequest)
 	}
 
 	// 2. Step-up MFA verification if user has active TOTP factors
-	if s.deps.MFAStore != nil {
-		factors, err := s.deps.MFAStore.ListFactorsByUserID(ctx, user.ID)
-		if err != nil {
-			return nil, errors.E(op, err)
-		}
-		var hasActiveTOTP bool
-		for _, f := range factors {
-			if !f.IsRevoked() && f.Type == MFAFactorTypeTOTP {
-				hasActiveTOTP = true
-				break
-			}
-		}
-		if hasActiveTOTP {
-			if req.TOTPCode == "" {
-				return nil, errors.E(op, errors.Permission, MFARequired, "mfa verification required to change password")
-			}
-			if s.deps.Cipher == nil || s.deps.TOTP == nil {
-				return nil, errors.E(op, errors.Internal, "mfa cipher or totp not configured")
-			}
-			var totpVerified bool
-			for _, f := range factors {
-				if f.IsRevoked() || f.Type != MFAFactorTypeTOTP {
-					continue
-				}
-				totpCfg := f.TOTPConfig()
-				if totpCfg == nil {
-					continue
-				}
-				secret, err := s.deps.Cipher.Decrypt(totpCfg.EncryptedSecret)
-				if err != nil {
-					continue
-				}
-				if s.deps.TOTP.ValidateCode(secret, req.TOTPCode, now) {
-					totpVerified = true
-					break
-				}
-			}
-			if !totpVerified {
-				return nil, errors.E(op, errors.Permission, MFAInvalidCode, "invalid totp code")
-			}
-		}
+	if err := s.verifyStepUpTOTP(ctx, user.ID, req.TOTPCode, now, "change password"); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	// 3. Update password credential
@@ -1495,4 +1364,286 @@ func (s *Service) ChangePassword(ctx context.Context, req ChangePasswordRequest)
 	}
 
 	return user, nil
+}
+
+// verifyStepUpTOTP validates a TOTP code if the user has at least one active TOTP MFA factor.
+func (s *Service) verifyStepUpTOTP(ctx context.Context, userID UserID, totpCode string, now time.Time, actionDescription string) error {
+	factors, err := s.deps.MFAStore.ListFactorsByUserID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	var hasActiveTOTP bool
+	for _, f := range factors {
+		if !f.IsRevoked() && f.Type == MFAFactorTypeTOTP {
+			hasActiveTOTP = true
+			break
+		}
+	}
+	if !hasActiveTOTP {
+		return nil
+	}
+	if totpCode == "" {
+		return errors.E(errors.Permission, MFARequired, fmt.Sprintf("mfa verification required to %s", actionDescription))
+	}
+
+	var totpVerified bool
+	for _, f := range factors {
+		if f.IsRevoked() || f.Type != MFAFactorTypeTOTP {
+			continue
+		}
+		totpCfg := f.TOTPConfig()
+		if totpCfg == nil {
+			continue
+		}
+		secret, err := s.deps.Cipher.Decrypt(totpCfg.EncryptedSecret)
+		if err != nil {
+			continue
+		}
+		if s.deps.TOTP.ValidateCode(secret, totpCode, now) {
+			totpVerified = true
+			break
+		}
+	}
+	if !totpVerified {
+		return errors.E(errors.Permission, MFAInvalidCode, "invalid totp code")
+	}
+	return nil
+}
+
+// UpdateProfileParams contains parameters for modifying a user profile.
+type UpdateProfileParams struct {
+	UserID    UserID
+	Name      *string
+	AvatarURL *string
+}
+
+// UpdateProfile updates the display name and avatar URL of a user.
+func (s *Service) UpdateProfile(ctx context.Context, params UpdateProfileParams) (*User, error) {
+	const op errors.Op = "domain/identity.UpdateProfile"
+
+	if !params.UserID.IsValid() {
+		return nil, errors.E(op, errors.Invalid, InvalidUserID, "invalid user id")
+	}
+
+	user, err := s.GetUserByID(ctx, params.UserID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	if user.Status != UserStatusActive {
+		return nil, errors.E(op, errors.Precondition, "user is not active")
+	}
+
+	changed := false
+	if params.Name != nil && *params.Name != user.Name {
+		user.Name = *params.Name
+		changed = true
+	}
+	if params.AvatarURL != nil && *params.AvatarURL != user.AvatarURL {
+		user.AvatarURL = *params.AvatarURL
+		changed = true
+	}
+
+	if changed {
+		if err := s.UpdateUser(ctx, user); err != nil {
+			return nil, errors.E(op, err)
+		}
+	}
+
+	return user, nil
+}
+
+// ChangeEmailParams contains parameters for updating a user's primary email.
+type ChangeEmailParams struct {
+	UserID          UserID
+	NewEmail        string
+	CurrentPassword string
+	TOTPCode        string
+	IPAddress       string
+	UserAgent       string
+}
+
+// ChangeEmail updates a user's primary email after re-authenticating with current password and step-up MFA.
+func (s *Service) ChangeEmail(ctx context.Context, params ChangeEmailParams) (*User, error) {
+	const op errors.Op = "domain/identity.ChangeEmail"
+	now := time.Now().UTC()
+
+	if !params.UserID.IsValid() {
+		return nil, errors.E(op, errors.Invalid, InvalidUserID, "invalid user id")
+	}
+	if params.NewEmail == "" {
+		return nil, errors.E(op, errors.Invalid, "new email is required")
+	}
+	if params.CurrentPassword == "" {
+		return nil, errors.E(op, errors.Invalid, "current password is required")
+	}
+
+	user, err := s.GetUserByID(ctx, params.UserID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	if user.Status != UserStatusActive {
+		return nil, errors.E(op, errors.Precondition, "user is not active")
+	}
+
+	if strings.EqualFold(user.Email, params.NewEmail) {
+		return user, nil
+	}
+
+	// Check if new email is already taken
+	existingUser, err := s.deps.UserStore.GetByEmail(ctx, params.NewEmail)
+	if err == nil && existingUser != nil && existingUser.ID != user.ID {
+		return nil, errors.E(op, errors.Conflict, EmailExists, "email address is already in use")
+	} else if err != nil && !errors.Is(err, errors.NotExist) {
+		return nil, errors.E(op, err)
+	}
+
+	// 1. Verify current password
+	cred, err := s.deps.CredentialStore.GetByUserIDAndAuthType(ctx, user.ID, "password")
+	if err != nil {
+		return nil, errors.E(op, errors.Unauthenticated, InvalidCredentials, "invalid credentials")
+	}
+	if _, err := s.deps.Hasher.Verify(string(cred.SecretData), params.CurrentPassword); err != nil {
+		return nil, errors.E(op, errors.Unauthenticated, InvalidCredentials, "current password is incorrect")
+	}
+
+	// 2. Step-up MFA verification
+	if err := s.verifyStepUpTOTP(ctx, user.ID, params.TOTPCode, now, "change email"); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	// 3. Update user email
+	user.Email = params.NewEmail
+	if err := s.UpdateUser(ctx, user); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	// 4. Record audit security event
+	if s.deps.SecurityEventStore != nil {
+		eventID, _ := id.Generate("evt_")
+		_ = s.deps.SecurityEventStore.Create(ctx, &SecurityEvent{
+			ID:        eventID,
+			UserID:    &user.ID,
+			Email:     user.Email,
+			EventType: SecurityEventEmailChange,
+			IPAddress: params.IPAddress,
+			UserAgent: params.UserAgent,
+			CreatedAt: now,
+		})
+	}
+
+	return user, nil
+}
+
+// DeleteAccountParams contains parameters for deactivating and anonymizing an account.
+type DeleteAccountParams struct {
+	UserID          UserID
+	CurrentPassword string
+	TOTPCode        string
+	IPAddress       string
+	UserAgent       string
+}
+
+// DeleteAccount permanently revokes credentials, sessions, MFA factors, and anonymizes user profile identifiers.
+func (s *Service) DeleteAccount(ctx context.Context, params DeleteAccountParams) error {
+	const op errors.Op = "domain/identity.DeleteAccount"
+	now := time.Now().UTC()
+
+	if !params.UserID.IsValid() {
+		return errors.E(op, errors.Invalid, InvalidUserID, "invalid user id")
+	}
+	if params.CurrentPassword == "" {
+		return errors.E(op, errors.Invalid, "current password is required")
+	}
+
+	user, err := s.GetUserByID(ctx, params.UserID)
+	if err != nil {
+		return errors.E(op, err)
+	}
+	if user.Status != UserStatusActive {
+		return errors.E(op, errors.Precondition, "user is not active")
+	}
+
+	// 1. Verify current password
+	cred, err := s.deps.CredentialStore.GetByUserIDAndAuthType(ctx, user.ID, "password")
+	if err != nil {
+		return errors.E(op, errors.Unauthenticated, InvalidCredentials, "invalid credentials")
+	}
+	if _, err := s.deps.Hasher.Verify(string(cred.SecretData), params.CurrentPassword); err != nil {
+		return errors.E(op, errors.Unauthenticated, InvalidCredentials, "current password is incorrect")
+	}
+
+	// 2. Step-up MFA verification
+	if err := s.verifyStepUpTOTP(ctx, user.ID, params.TOTPCode, now, "delete account"); err != nil {
+		return errors.E(op, err)
+	}
+
+	// 3. Delete credentials
+	if err := s.deps.CredentialStore.Delete(ctx, user.ID, "password"); err != nil {
+		log.Warn(ctx, "failed to delete credential during account deletion",
+			log.String("user_id", string(user.ID)),
+			log.Err(err),
+		)
+	}
+
+	// 4. Revoke all active sessions
+	if s.deps.SessionStore != nil {
+		if err := s.deps.SessionStore.RevokeAllForUser(ctx, user.ID, now); err != nil {
+			log.Warn(ctx, "failed to revoke all sessions during account deletion",
+				log.String("user_id", string(user.ID)),
+				log.Err(err),
+			)
+		}
+	}
+
+	// 5. Revoke all trusted devices
+	if s.deps.DeviceStore != nil {
+		if err := s.deps.DeviceStore.RevokeAllByUserID(ctx, user.ID, now); err != nil {
+			log.Warn(ctx, "failed to revoke all devices during account deletion",
+				log.String("user_id", string(user.ID)),
+				log.Err(err),
+			)
+		}
+	}
+
+	// 6. Delete all MFA factors
+	factors, err := s.deps.MFAStore.ListFactorsByUserID(ctx, user.ID)
+	if err == nil {
+		for _, f := range factors {
+			_ = s.deps.MFAStore.DeleteFactor(ctx, f.ID, now)
+		}
+	}
+
+	// 7. Increment auth_version to invalidate tokens
+	newAuthVersion, err := s.IncrementAuthVersion(ctx, user.ID)
+	if err == nil {
+		user.AuthVersion = newAuthVersion
+	}
+
+	// 8. Record audit event
+	if s.deps.SecurityEventStore != nil {
+		eventID, _ := id.Generate("evt_")
+		_ = s.deps.SecurityEventStore.Create(ctx, &SecurityEvent{
+			ID:        eventID,
+			UserID:    &user.ID,
+			Email:     user.Email,
+			EventType: SecurityEventAccountDelete,
+			IPAddress: params.IPAddress,
+			UserAgent: params.UserAgent,
+			CreatedAt: now,
+		})
+	}
+
+	// 9. Anonymize user record
+	user.Name = "Deleted User"
+	user.Email = fmt.Sprintf("deleted_%s@deleted.saturn.local", user.ID)
+	user.Username = fmt.Sprintf("deleted_%s", user.ID)
+	user.AvatarURL = ""
+	user.Status = UserStatusInactive
+
+	if err := s.UpdateUser(ctx, user); err != nil {
+		return errors.E(op, err)
+	}
+
+	return nil
 }

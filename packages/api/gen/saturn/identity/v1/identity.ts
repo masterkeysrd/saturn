@@ -706,6 +706,52 @@ export interface ChangePasswordResponse {
 }
 
 /**
+ * Request message for Identity.UpdateProfile.
+ */
+export interface UpdateProfileRequest {
+  /**
+   * Optional. The updated full or display name for the user.
+   */
+  name?: string
+  /**
+   * Optional. The updated avatar URL for the user.
+   */
+  avatarUrl?: string
+}
+
+/**
+ * Request message for Identity.ChangeEmail.
+ */
+export interface ChangeEmailRequest {
+  /**
+   * Required. The new primary email address.
+   */
+  newEmail: string
+  /**
+   * Required. Current password for re-authentication.
+   */
+  currentPassword: string
+  /**
+   * Optional/Conditional. Current 6-digit TOTP code (required if MFA is enabled).
+   */
+  totpCode: string
+}
+
+/**
+ * Request message for Identity.DeleteAccount.
+ */
+export interface DeleteAccountRequest {
+  /**
+   * Required. Current password for re-authentication.
+   */
+  currentPassword: string
+  /**
+   * Optional/Conditional. Current 6-digit TOTP code (required if MFA is enabled).
+   */
+  totpCode: string
+}
+
+/**
  * Identity provides user authentication and session management.
  */
 /**
@@ -1285,6 +1331,72 @@ export function useChangePasswordMutation(
 ) {
   return useMutation<ChangePasswordResponse, Error, ChangePasswordRequest>({
     mutationFn: (req) => changePassword(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Updates profile information for the current user.
+ */
+export async function updateProfile(req: UpdateProfileRequest): Promise<User> {
+  return request<User>({
+    method: "PATCH",
+    url: "/api/v1/identity/users/me",
+    data: req,
+  })
+}
+
+export function useUpdateProfileMutation(
+  options?: UseMutationOptions<User, Error, UpdateProfileRequest>
+) {
+  return useMutation<User, Error, UpdateProfileRequest>({
+    mutationFn: (req) => updateProfile(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Updates the primary email for the current user, requiring re-authentication.
+ */
+export async function changeEmail(req: ChangeEmailRequest): Promise<User> {
+  return request<User>({
+    method: "POST",
+    url: "/api/v1/identity/users/me:change-email",
+    data: req,
+  })
+}
+
+export function useChangeEmailMutation(
+  options?: UseMutationOptions<User, Error, ChangeEmailRequest>
+) {
+  return useMutation<User, Error, ChangeEmailRequest>({
+    mutationFn: (req) => changeEmail(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Permanently deactivates and deletes personal credentials for the current user account.
+ */
+export async function deleteAccount(
+  req: DeleteAccountRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
+    method: "POST",
+    url: "/api/v1/identity/users/me:delete",
+    data: req,
+  })
+}
+
+export function useDeleteAccountMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    DeleteAccountRequest
+  >
+) {
+  return useMutation<Record<string, never>, Error, DeleteAccountRequest>({
+    mutationFn: (req) => deleteAccount(req),
     ...options,
   })
 }

@@ -345,3 +345,45 @@ func (c *Client) ChangePassword(ctx context.Context, req *ChangePasswordRequest)
 	}
 	return &resp, nil
 }
+
+// UpdateProfile executes PATCH /api/v1/identity/users/me.
+func (c *Client) UpdateProfile(ctx context.Context, req *UpdateProfileRequest) (*User, error) {
+	var resp User
+	path := "/api/v1/identity/users/me"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "PATCH", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ChangeEmail executes POST /api/v1/identity/users/me:change-email.
+func (c *Client) ChangeEmail(ctx context.Context, req *ChangeEmailRequest) (*User, error) {
+	var resp User
+	path := "/api/v1/identity/users/me:change-email"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// DeleteAccount executes POST /api/v1/identity/users/me:delete.
+func (c *Client) DeleteAccount(ctx context.Context, req *DeleteAccountRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
+	path := "/api/v1/identity/users/me:delete"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}

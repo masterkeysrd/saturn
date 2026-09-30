@@ -89,11 +89,17 @@ func TestDevice_ServiceMethods(t *testing.T) {
 	devStore := &DeviceStoreMock{}
 	chgStore := &AuthChallengeStoreMock{}
 	verifier := &DeviceVerifierMock{}
+	mfaStore := &MFAFactorStoreMock{
+		ListFactorsByUserIDFunc: func(ctx context.Context, userID UserID) ([]*MFAFactor, error) {
+			return nil, nil
+		},
+	}
 
 	svc := NewService(Dependencies{
 		DeviceStore:    devStore,
 		ChallengeStore: chgStore,
 		DeviceVerifier: verifier,
+		MFAStore:       mfaStore,
 	})
 
 	t.Run("CreateAuthChallenge generates challenge and persists with 5m TTL", func(t *testing.T) {

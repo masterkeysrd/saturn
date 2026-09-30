@@ -747,3 +747,75 @@ func (l *LoggingCoordinator) ChangePassword(ctx context.Context, req *ChangePass
 	)
 	return res, nil
 }
+
+// UpdateProfile executes next.UpdateProfile and logs execution duration and errors.
+func (l *LoggingCoordinator) UpdateProfile(ctx context.Context, req *UpdateProfileRequest) (*identity.User, error) {
+	start := time.Now()
+	res, err := l.next.UpdateProfile(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.UpdateProfile failed",
+			log.String("component", "iam"),
+			log.String("operation", "UpdateProfile"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.UpdateProfile completed",
+		log.String("component", "iam"),
+		log.String("operation", "UpdateProfile"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// ChangeEmail executes next.ChangeEmail and logs execution duration and errors.
+func (l *LoggingCoordinator) ChangeEmail(ctx context.Context, req *ChangeEmailRequest) (*identity.User, error) {
+	start := time.Now()
+	res, err := l.next.ChangeEmail(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.ChangeEmail failed",
+			log.String("component", "iam"),
+			log.String("operation", "ChangeEmail"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.ChangeEmail completed",
+		log.String("component", "iam"),
+		log.String("operation", "ChangeEmail"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// DeleteAccount executes next.DeleteAccount and logs execution duration and errors.
+func (l *LoggingCoordinator) DeleteAccount(ctx context.Context, req *DeleteAccountRequest) error {
+	start := time.Now()
+	err := l.next.DeleteAccount(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.DeleteAccount failed",
+			log.String("component", "iam"),
+			log.String("operation", "DeleteAccount"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return err
+	}
+
+	l.logger.Info(ctx, "iam.DeleteAccount completed",
+		log.String("component", "iam"),
+		log.String("operation", "DeleteAccount"),
+		log.Duration("duration", duration),
+	)
+	return nil
+}

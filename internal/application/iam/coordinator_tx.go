@@ -258,3 +258,62 @@ func (t *TransactionalCoordinator) ChangePassword(ctx context.Context, req *Chan
 
 	return res, nil
 }
+
+// UpdateProfile executes next.UpdateProfile inside a database transaction.
+func (t *TransactionalCoordinator) UpdateProfile(ctx context.Context, req *UpdateProfileRequest) (*identity.User, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.UpdateProfile(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// ChangeEmail executes next.ChangeEmail inside a database transaction.
+func (t *TransactionalCoordinator) ChangeEmail(ctx context.Context, req *ChangeEmailRequest) (*identity.User, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.ChangeEmail(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// DeleteAccount executes next.DeleteAccount inside a database transaction.
+func (t *TransactionalCoordinator) DeleteAccount(ctx context.Context, req *DeleteAccountRequest) error {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := t.next.DeleteAccount(ctx, req); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}

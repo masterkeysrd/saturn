@@ -187,7 +187,9 @@ export function SecurityActivityLogSettings() {
                             ) : (
                               <MonitorIcon className="h-3 w-3" />
                             )}
-                            <span>{parsedDevice.device || "Unknown Device"}</span>
+                            <span>
+                              {parsedDevice.device || "Unknown Device"}
+                            </span>
                           </span>
 
                           {ev.ipAddress && (
@@ -195,7 +197,9 @@ export function SecurityActivityLogSettings() {
                               <span>•</span>
                               <span className="inline-flex items-center gap-1">
                                 <GlobeIcon className="h-3 w-3" />
-                                <span className="font-mono">{ev.ipAddress}</span>
+                                <span className="font-mono">
+                                  {ev.ipAddress}
+                                </span>
                               </span>
                             </>
                           )}

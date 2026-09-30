@@ -34,4 +34,5 @@ const (
 	ResetTokenExpired      errors.Code = "RESET_TOKEN_EXPIRED"
 	ResetTokenUsed         errors.Code = "RESET_TOKEN_USED"
 	PasswordMatchesCurrent errors.Code = "PASSWORD_MATCHES_CURRENT"
+	EmailExists            errors.Code = "EMAIL_EXISTS"
 )

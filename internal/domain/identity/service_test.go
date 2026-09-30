@@ -3,6 +3,7 @@ package identity
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -2035,13 +2036,6 @@ func TestService_MFA(t *testing.T) {
 			expectedErr    bool
 		}{
 			{
-				name:           "Nil MFAStore",
-				mStore:         nil,
-				expectedActive: false,
-				expectedCount:  0,
-				expectedErr:    false,
-			},
-			{
 				name: "Store error",
 				mStore: &MFAFactorStoreMock{
 					ListFactorsByUserIDFunc: func(ctx context.Context, userID UserID) ([]*MFAFactor, error) {
@@ -2103,16 +2097,9 @@ func TestService_MFA(t *testing.T) {
 			name        string
 			req         SetupTOTPRequest
 			setup       func(u *UserStoreProviderMock, m *MFAFactorStoreMock, c *CipherMock, totp *TOTPProviderMock)
-			missingDeps bool
 			expectedErr bool
 			expectName  string
 		}{
-			{
-				name:        "Missing dependencies",
-				req:         SetupTOTPRequest{UserID: "usr_1"},
-				missingDeps: true,
-				expectedErr: true,
-			},
 			{
 				name: "User not found",
 				req:  SetupTOTPRequest{UserID: "usr_unknown"},
@@ -2199,15 +2186,6 @@ func TestService_MFA(t *testing.T) {
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				if tc.missingDeps {
-					svc := NewService(Dependencies{})
-					_, err := svc.SetupTOTP(ctx, tc.req)
-					if err == nil {
-						t.Fatal("expected error, got nil")
-					}
-					return
-				}
-
 				uStore := &UserStoreProviderMock{}
 				mStore := &MFAFactorStoreMock{}
 				cipher := &CipherMock{}
@@ -2243,16 +2221,10 @@ func TestService_MFA(t *testing.T) {
 			name        string
 			req         ConfirmTOTPRequest
 			setup       func(m *MFAFactorStoreMock, c *CipherMock, totp *TOTPProviderMock)
-			missingDeps bool
 			expectedErr bool
 			expectCode  errors.Code
 			expectCodes int
 		}{
-			{
-				name:        "Missing dependencies",
-				missingDeps: true,
-				expectedErr: true,
-			},
 			{
 				name: "Factor not found",
 				req:  ConfirmTOTPRequest{UserID: "usr_1", FactorID: "mfa_1"},
@@ -2358,15 +2330,6 @@ func TestService_MFA(t *testing.T) {
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				if tc.missingDeps {
-					svc := NewService(Dependencies{})
-					_, err := svc.ConfirmTOTP(ctx, tc.req)
-					if err == nil {
-						t.Fatal("expected error, got nil")
-					}
-					return
-				}
-
 				mStore := &MFAFactorStoreMock{}
 				cipher := &CipherMock{}
 				totp := &TOTPProviderMock{}
@@ -2398,17 +2361,11 @@ func TestService_MFA(t *testing.T) {
 		tests := []struct {
 			name                 string
 			setup                func(m *MFAFactorStoreMock)
-			missingDeps          bool
 			expectedFactorsCount int
 			expectedHasBackup    bool
 			expectedRemaining    int
 			expectedErr          bool
 		}{
-			{
-				name:        "Missing store",
-				missingDeps: true,
-				expectedErr: false,
-			},
 			{
 				name: "Store list factors error",
 				setup: func(m *MFAFactorStoreMock) {
@@ -2452,14 +2409,6 @@ func TestService_MFA(t *testing.T) {
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				if tc.missingDeps {
-					svc := NewService(Dependencies{})
-					summary, err := svc.ListMFAFactors(ctx, "usr_1")
-					if err != nil || summary == nil || len(summary.Factors) != 0 {
-						t.Fatalf("unexpected summary for missing store: %+v (err: %v)", summary, err)
-					}
-					return
-				}
 				mStore := &MFAFactorStoreMock{}
 				if tc.setup != nil {
 					tc.setup(mStore)
@@ -2487,15 +2436,9 @@ func TestService_MFA(t *testing.T) {
 			name        string
 			req         DeleteMFAFactorRequest
 			setup       func(m *MFAFactorStoreMock)
-			missingDeps bool
 			expectedErr bool
 			expectCode  errors.Code
 		}{
-			{
-				name:        "Missing store",
-				missingDeps: true,
-				expectedErr: true,
-			},
 			{
 				name: "Factor not found",
 				req:  DeleteMFAFactorRequest{UserID: "usr_1", FactorID: "mfa_1"},
@@ -2551,13 +2494,6 @@ func TestService_MFA(t *testing.T) {
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				if tc.missingDeps {
-					svc := NewService(Dependencies{})
-					if err := svc.DeleteMFAFactor(ctx, tc.req); err == nil {
-						t.Fatal("expected error, got nil")
-					}
-					return
-				}
 				mStore := &MFAFactorStoreMock{}
 				if tc.setup != nil {
 					tc.setup(mStore)
@@ -2586,15 +2522,9 @@ func TestService_MFA(t *testing.T) {
 			name        string
 			req         SetPrimaryMFAFactorRequest
 			setup       func(m *MFAFactorStoreMock)
-			missingDeps bool
 			expectedErr bool
 			expectCode  errors.Code
 		}{
-			{
-				name:        "Missing store",
-				missingDeps: true,
-				expectedErr: true,
-			},
 			{
 				name: "Factor not found",
 				req:  SetPrimaryMFAFactorRequest{UserID: "usr_1", FactorID: "mfa_1"},
@@ -2643,13 +2573,6 @@ func TestService_MFA(t *testing.T) {
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				if tc.missingDeps {
-					svc := NewService(Dependencies{})
-					if err := svc.SetPrimaryMFAFactor(ctx, tc.req); err == nil {
-						t.Fatal("expected error, got nil")
-					}
-					return
-				}
 				mStore := &MFAFactorStoreMock{}
 				if tc.setup != nil {
 					tc.setup(mStore)
@@ -2677,15 +2600,9 @@ func TestService_MFA(t *testing.T) {
 			name        string
 			req         RegenerateBackupCodesRequest
 			setup       func(m *MFAFactorStoreMock, c *CipherMock, totp *TOTPProviderMock)
-			missingDeps bool
 			expectedErr bool
 			expectCode  errors.Code
 		}{
-			{
-				name:        "Missing dependencies",
-				missingDeps: true,
-				expectedErr: true,
-			},
 			{
 				name: "No active factors",
 				req:  RegenerateBackupCodesRequest{UserID: "usr_1"},
@@ -2729,14 +2646,6 @@ func TestService_MFA(t *testing.T) {
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				if tc.missingDeps {
-					svc := NewService(Dependencies{})
-					_, err := svc.RegenerateBackupCodes(ctx, tc.req)
-					if err == nil {
-						t.Fatal("expected error, got nil")
-					}
-					return
-				}
 				mStore := &MFAFactorStoreMock{}
 				cipher := &CipherMock{}
 				totp := &TOTPProviderMock{}
@@ -2767,15 +2676,9 @@ func TestService_MFA(t *testing.T) {
 			name        string
 			req         VerifyMFAAssertionRequest
 			setup       func(m *MFAFactorStoreMock, c *CipherMock, totp *TOTPProviderMock)
-			missingDeps bool
 			expectedErr bool
 			expectCode  errors.Code
 		}{
-			{
-				name:        "Missing dependencies",
-				missingDeps: true,
-				expectedErr: true,
-			},
 			{
 				name: "Backup code: missing code",
 				req:  VerifyMFAAssertionRequest{FactorID: "recovery", BackupCode: ""},
@@ -2914,13 +2817,6 @@ func TestService_MFA(t *testing.T) {
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				if tc.missingDeps {
-					svc := NewService(Dependencies{})
-					if err := svc.VerifyMFAAssertion(ctx, tc.req); err == nil {
-						t.Fatal("expected error, got nil")
-					}
-					return
-				}
 				mStore := &MFAFactorStoreMock{}
 				cipher := &CipherMock{}
 				totp := &TOTPProviderMock{}
@@ -2955,15 +2851,9 @@ func TestService_Device(t *testing.T) {
 			name        string
 			req         CreateDeviceRequest
 			setup       func(d *DeviceStoreMock, chg *AuthChallengeStoreMock, v *DeviceVerifierMock, m *MFAFactorStoreMock, c *CipherMock, totp *TOTPProviderMock)
-			missingDeps bool
 			expectedErr bool
 			expectCode  errors.Code
 		}{
-			{
-				name:        "Missing dependencies",
-				missingDeps: true,
-				expectedErr: true,
-			},
 			{
 				name: "Missing UserID",
 				req:  CreateDeviceRequest{},
@@ -3068,15 +2958,6 @@ func TestService_Device(t *testing.T) {
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				if tc.missingDeps {
-					svc := NewService(Dependencies{})
-					_, err := svc.CreateDevice(ctx, tc.req)
-					if err == nil {
-						t.Fatal("expected error, got nil")
-					}
-					return
-				}
-
 				dStore := &DeviceStoreMock{}
 				chgStore := &AuthChallengeStoreMock{}
 				verifier := &DeviceVerifierMock{}
@@ -3115,14 +2996,8 @@ func TestService_Device(t *testing.T) {
 		tests := []struct {
 			name        string
 			setupStore  func(d *DeviceStoreMock)
-			missingDeps bool
 			expectedErr bool
 		}{
-			{
-				name:        "Missing store",
-				missingDeps: true,
-				expectedErr: true,
-			},
 			{
 				name: "Store error",
 				setupStore: func(d *DeviceStoreMock) {
@@ -3145,14 +3020,6 @@ func TestService_Device(t *testing.T) {
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				if tc.missingDeps {
-					svc := NewService(Dependencies{})
-					_, err := svc.ListDevices(ctx, "usr_1")
-					if err == nil {
-						t.Fatal("expected error, got nil")
-					}
-					return
-				}
 				dStore := &DeviceStoreMock{}
 				if tc.setupStore != nil {
 					tc.setupStore(dStore)
@@ -3177,15 +3044,9 @@ func TestService_Device(t *testing.T) {
 		tests := []struct {
 			name        string
 			setup       func(d *DeviceStoreMock, s *SessionStoreProviderMock)
-			missingDeps bool
 			expectedErr bool
 			expectCode  errors.Code
 		}{
-			{
-				name:        "Missing deps",
-				missingDeps: true,
-				expectedErr: true,
-			},
 			{
 				name: "Device not found",
 				setup: func(d *DeviceStoreMock, s *SessionStoreProviderMock) {
@@ -3234,13 +3095,6 @@ func TestService_Device(t *testing.T) {
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				if tc.missingDeps {
-					svc := NewService(Dependencies{})
-					if err := svc.RevokeDevice(ctx, "usr_1", "dev_1"); err == nil {
-						t.Fatal("expected error, got nil")
-					}
-					return
-				}
 				dStore := &DeviceStoreMock{}
 				sStore := &SessionStoreProviderMock{}
 				if tc.setup != nil {
@@ -3271,15 +3125,9 @@ func TestService_Device(t *testing.T) {
 			name        string
 			req         VerifyDeviceAssertionRequest
 			setup       func(d *DeviceStoreMock, chg *AuthChallengeStoreMock, v *DeviceVerifierMock, u *UserStoreProviderMock)
-			missingDeps bool
 			expectedErr bool
 			expectCode  errors.Code
 		}{
-			{
-				name:        "Missing dependencies",
-				missingDeps: true,
-				expectedErr: true,
-			},
 			{
 				name: "Device not found",
 				req:  VerifyDeviceAssertionRequest{DeviceID: "dev_1", Now: now},
@@ -3429,14 +3277,6 @@ func TestService_Device(t *testing.T) {
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				if tc.missingDeps {
-					svc := NewService(Dependencies{})
-					_, _, err := svc.VerifyDeviceAssertion(ctx, tc.req)
-					if err == nil {
-						t.Fatal("expected error, got nil")
-					}
-					return
-				}
 				dStore := &DeviceStoreMock{}
 				chgStore := &AuthChallengeStoreMock{}
 				verifier := &DeviceVerifierMock{}
@@ -4237,5 +4077,421 @@ func TestService_ChangePassword(t *testing.T) {
 		if !securityEventCreated {
 			t.Errorf("expected security event password_change to be created")
 		}
+	})
+
+	t.Run("UpdateProfile", func(t *testing.T) {
+		ctx := context.Background()
+
+		t.Run("invalid user ID", func(t *testing.T) {
+			svc := NewService(Dependencies{})
+			_, err := svc.UpdateProfile(ctx, UpdateProfileParams{UserID: ""})
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+		})
+
+		t.Run("user not found", func(t *testing.T) {
+			uStore := &UserStoreProviderMock{
+				GetByIDFunc: func(ctx context.Context, id UserID) (*User, error) {
+					return nil, errors.E(errors.NotExist)
+				},
+			}
+			svc := NewService(Dependencies{UserStore: uStore})
+			_, err := svc.UpdateProfile(ctx, UpdateProfileParams{UserID: "usr_test123"})
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+		})
+
+		t.Run("user not active", func(t *testing.T) {
+			uStore := &UserStoreProviderMock{
+				GetByIDFunc: func(ctx context.Context, id UserID) (*User, error) {
+					return &User{ID: id, Status: UserStatusInactive}, nil
+				},
+			}
+			svc := NewService(Dependencies{UserStore: uStore})
+			_, err := svc.UpdateProfile(ctx, UpdateProfileParams{UserID: "usr_test123"})
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+		})
+
+		t.Run("success updates name and avatar", func(t *testing.T) {
+			origUser := &User{
+				ID:        "usr_test123",
+				Name:      "Old Name",
+				AvatarURL: "https://old.com/avatar.png",
+				Status:    UserStatusActive,
+			}
+			var updated *User
+			uStore := &UserStoreProviderMock{
+				GetByIDFunc: func(ctx context.Context, id UserID) (*User, error) {
+					return origUser, nil
+				},
+				UpdateFunc: func(ctx context.Context, user *User) error {
+					updated = user
+					return nil
+				},
+			}
+			svc := NewService(Dependencies{UserStore: uStore})
+			newName := "New Name"
+			newAvatar := "https://new.com/avatar.png"
+			u, err := svc.UpdateProfile(ctx, UpdateProfileParams{
+				UserID:    "usr_test123",
+				Name:      &newName,
+				AvatarURL: &newAvatar,
+			})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if u.Name != "New Name" || u.AvatarURL != "https://new.com/avatar.png" {
+				t.Errorf("expected updated fields, got name=%q, avatar=%q", u.Name, u.AvatarURL)
+			}
+			if updated == nil || updated.Name != "New Name" {
+				t.Errorf("expected store update to be called with new name")
+			}
+		})
+	})
+
+	t.Run("ChangeEmail", func(t *testing.T) {
+		ctx := context.Background()
+
+		t.Run("invalid parameters", func(t *testing.T) {
+			svc := NewService(Dependencies{})
+			_, err := svc.ChangeEmail(ctx, ChangeEmailParams{})
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+		})
+
+		t.Run("email already in use", func(t *testing.T) {
+			uStore := &UserStoreProviderMock{
+				GetByIDFunc: func(ctx context.Context, id UserID) (*User, error) {
+					return &User{ID: id, Email: "curr@test.com", Status: UserStatusActive}, nil
+				},
+				GetByEmailFunc: func(ctx context.Context, email string) (*User, error) {
+					return &User{ID: "usr_other", Email: email}, nil
+				},
+			}
+			svc := NewService(Dependencies{UserStore: uStore})
+			_, err := svc.ChangeEmail(ctx, ChangeEmailParams{
+				UserID:          "usr_test123",
+				NewEmail:        "taken@test.com",
+				CurrentPassword: "pass",
+			})
+			if err == nil || errors.CodeOf(err) != EmailExists {
+				t.Fatalf("expected EmailExists error, got %v", err)
+			}
+		})
+
+		t.Run("invalid current password", func(t *testing.T) {
+			uStore := &UserStoreProviderMock{
+				GetByIDFunc: func(ctx context.Context, id UserID) (*User, error) {
+					return &User{ID: id, Email: "curr@test.com", Status: UserStatusActive}, nil
+				},
+				GetByEmailFunc: func(ctx context.Context, email string) (*User, error) {
+					return nil, errors.E(errors.NotExist)
+				},
+			}
+			cStore := &CredentialStoreProviderMock{
+				GetByUserIDAndAuthTypeFunc: func(ctx context.Context, userID UserID, authType string) (*Credential, error) {
+					return &Credential{SecretData: "hash"}, nil
+				},
+			}
+			hasher := &HasherMock{
+				VerifyFunc: func(encodedHash, raw string) (bool, error) {
+					return false, fmt.Errorf("wrong password")
+				},
+			}
+			svc := NewService(Dependencies{
+				UserStore:       uStore,
+				CredentialStore: cStore,
+				Hasher:          hasher,
+			})
+			_, err := svc.ChangeEmail(ctx, ChangeEmailParams{
+				UserID:          "usr_test123",
+				NewEmail:        "new@test.com",
+				CurrentPassword: "wrong",
+			})
+			if err == nil || errors.CodeOf(err) != InvalidCredentials {
+				t.Fatalf("expected InvalidCredentials, got %v", err)
+			}
+		})
+
+		t.Run("mfa required when totp factor exists", func(t *testing.T) {
+			uStore := &UserStoreProviderMock{
+				GetByIDFunc: func(ctx context.Context, id UserID) (*User, error) {
+					return &User{ID: id, Email: "curr@test.com", Status: UserStatusActive}, nil
+				},
+				GetByEmailFunc: func(ctx context.Context, email string) (*User, error) {
+					return nil, errors.E(errors.NotExist)
+				},
+			}
+			cStore := &CredentialStoreProviderMock{
+				GetByUserIDAndAuthTypeFunc: func(ctx context.Context, userID UserID, authType string) (*Credential, error) {
+					return &Credential{SecretData: "hash"}, nil
+				},
+			}
+			hasher := &HasherMock{
+				VerifyFunc: func(encodedHash, raw string) (bool, error) {
+					return false, nil
+				},
+			}
+			mfaStore := &MFAFactorStoreMock{
+				ListFactorsByUserIDFunc: func(ctx context.Context, userID UserID) ([]*MFAFactor, error) {
+					return []*MFAFactor{{ID: "mfa_1", Type: MFAFactorTypeTOTP}}, nil
+				},
+			}
+			svc := NewService(Dependencies{
+				UserStore:       uStore,
+				CredentialStore: cStore,
+				Hasher:          hasher,
+				MFAStore:        mfaStore,
+			})
+			_, err := svc.ChangeEmail(ctx, ChangeEmailParams{
+				UserID:          "usr_test123",
+				NewEmail:        "new@test.com",
+				CurrentPassword: "pass",
+				TOTPCode:        "",
+			})
+			if err == nil || errors.CodeOf(err) != MFARequired {
+				t.Fatalf("expected MFARequired error, got %v", err)
+			}
+		})
+
+		t.Run("success changes email and records event", func(t *testing.T) {
+			uStore := &UserStoreProviderMock{
+				GetByIDFunc: func(ctx context.Context, id UserID) (*User, error) {
+					return &User{ID: id, Email: "curr@test.com", Status: UserStatusActive}, nil
+				},
+				GetByEmailFunc: func(ctx context.Context, email string) (*User, error) {
+					return nil, errors.E(errors.NotExist)
+				},
+				UpdateFunc: func(ctx context.Context, user *User) error {
+					return nil
+				},
+			}
+			cStore := &CredentialStoreProviderMock{
+				GetByUserIDAndAuthTypeFunc: func(ctx context.Context, userID UserID, authType string) (*Credential, error) {
+					return &Credential{SecretData: "hash"}, nil
+				},
+			}
+			hasher := &HasherMock{
+				VerifyFunc: func(encodedHash, raw string) (bool, error) {
+					return false, nil
+				},
+			}
+			var eventRecorded bool
+			secStore := &SecurityEventStoreMock{
+				CreateFunc: func(ctx context.Context, event *SecurityEvent) error {
+					if event.EventType == SecurityEventEmailChange {
+						eventRecorded = true
+					}
+					return nil
+				},
+			}
+			mfaStore := &MFAFactorStoreMock{
+				ListFactorsByUserIDFunc: func(ctx context.Context, userID UserID) ([]*MFAFactor, error) {
+					return nil, nil
+				},
+			}
+			svc := NewService(Dependencies{
+				UserStore:          uStore,
+				CredentialStore:    cStore,
+				Hasher:             hasher,
+				MFAStore:           mfaStore,
+				SecurityEventStore: secStore,
+			})
+			user, err := svc.ChangeEmail(ctx, ChangeEmailParams{
+				UserID:          "usr_test123",
+				NewEmail:        "new@test.com",
+				CurrentPassword: "pass",
+			})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if user.Email != "new@test.com" {
+				t.Errorf("expected new email, got %s", user.Email)
+			}
+			if !eventRecorded {
+				t.Errorf("expected email_change security event")
+			}
+		})
+	})
+
+	t.Run("DeleteAccount", func(t *testing.T) {
+		ctx := context.Background()
+
+		t.Run("invalid current password", func(t *testing.T) {
+			uStore := &UserStoreProviderMock{
+				GetByIDFunc: func(ctx context.Context, id UserID) (*User, error) {
+					return &User{ID: id, Email: "user@test.com", Status: UserStatusActive}, nil
+				},
+			}
+			cStore := &CredentialStoreProviderMock{
+				GetByUserIDAndAuthTypeFunc: func(ctx context.Context, userID UserID, authType string) (*Credential, error) {
+					return &Credential{SecretData: "hash"}, nil
+				},
+			}
+			hasher := &HasherMock{
+				VerifyFunc: func(encodedHash, raw string) (bool, error) {
+					return false, fmt.Errorf("wrong password")
+				},
+			}
+			svc := NewService(Dependencies{
+				UserStore:       uStore,
+				CredentialStore: cStore,
+				Hasher:          hasher,
+			})
+			err := svc.DeleteAccount(ctx, DeleteAccountParams{
+				UserID:          "usr_test123",
+				CurrentPassword: "wrong",
+			})
+			if err == nil || errors.CodeOf(err) != InvalidCredentials {
+				t.Fatalf("expected InvalidCredentials, got %v", err)
+			}
+		})
+
+		t.Run("success anonymizes user and revokes all credentials", func(t *testing.T) {
+			origUser := &User{
+				ID:          "usr_del123",
+				Email:       "user@test.com",
+				Username:    "active_user",
+				Name:        "Active User",
+				AvatarURL:   "https://avatar.png",
+				Status:      UserStatusActive,
+				AuthVersion: 1,
+			}
+			var updatedUser *User
+			uStore := &UserStoreProviderMock{
+				GetByIDFunc: func(ctx context.Context, id UserID) (*User, error) {
+					return origUser, nil
+				},
+				UpdateFunc: func(ctx context.Context, user *User) error {
+					updatedUser = user
+					return nil
+				},
+				IncrementAuthVersionFunc: func(ctx context.Context, id UserID) (int64, error) {
+					return 2, nil
+				},
+			}
+			var credDeleted bool
+			cStore := &CredentialStoreProviderMock{
+				GetByUserIDAndAuthTypeFunc: func(ctx context.Context, userID UserID, authType string) (*Credential, error) {
+					return &Credential{SecretData: "hash"}, nil
+				},
+				DeleteFunc: func(ctx context.Context, userID UserID, authType string) error {
+					credDeleted = true
+					return nil
+				},
+			}
+			hasher := &HasherMock{
+				VerifyFunc: func(encodedHash, raw string) (bool, error) {
+					return false, nil
+				},
+			}
+			var sessionsRevoked bool
+			sessStore := &SessionStoreProviderMock{
+				RevokeAllForUserFunc: func(ctx context.Context, userID UserID, now time.Time) error {
+					sessionsRevoked = true
+					return nil
+				},
+			}
+			var devicesRevoked bool
+			devStore := &DeviceStoreMock{
+				RevokeAllByUserIDFunc: func(ctx context.Context, userID UserID, revokedAt time.Time) error {
+					devicesRevoked = true
+					return nil
+				},
+			}
+			var mfaDeleted bool
+			mfaStore := &MFAFactorStoreMock{
+				ListFactorsByUserIDFunc: func(ctx context.Context, userID UserID) ([]*MFAFactor, error) {
+					return []*MFAFactor{{ID: "mfa_1", Type: MFAFactorTypeTOTP, Config: &TOTPConfig{EncryptedSecret: "enc_secret"}}}, nil
+				},
+				DeleteFactorFunc: func(ctx context.Context, id MFAFactorID, now time.Time) error {
+					mfaDeleted = true
+					return nil
+				},
+			}
+			var eventLogged bool
+			secStore := &SecurityEventStoreMock{
+				CreateFunc: func(ctx context.Context, event *SecurityEvent) error {
+					if event.EventType == SecurityEventAccountDelete {
+						eventLogged = true
+					}
+					return nil
+				},
+			}
+
+			svc := NewService(Dependencies{
+				UserStore:          uStore,
+				CredentialStore:    cStore,
+				Hasher:             hasher,
+				SessionStore:       sessStore,
+				DeviceStore:        devStore,
+				MFAStore:           mfaStore,
+				SecurityEventStore: secStore,
+			})
+
+			err := svc.DeleteAccount(ctx, DeleteAccountParams{
+				UserID:          "usr_del123",
+				CurrentPassword: "pass",
+				TOTPCode:        "",
+			})
+			if err == nil || errors.CodeOf(err) != MFARequired {
+				t.Fatalf("expected MFARequired, got %v", err)
+			}
+
+			cipher := &CipherMock{
+				DecryptFunc: func(ciphertext string) (string, error) {
+					return "secret", nil
+				},
+			}
+			totp := &TOTPProviderMock{
+				ValidateCodeFunc: func(secret, code string, t time.Time) bool {
+					return code == "123456"
+				},
+			}
+			svc.deps.Cipher = cipher
+			svc.deps.TOTP = totp
+
+			err = svc.DeleteAccount(ctx, DeleteAccountParams{
+				UserID:          "usr_del123",
+				CurrentPassword: "pass",
+				TOTPCode:        "123456",
+			})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if !credDeleted {
+				t.Errorf("expected credential to be deleted")
+			}
+			if !sessionsRevoked {
+				t.Errorf("expected sessions to be revoked")
+			}
+			if !devicesRevoked {
+				t.Errorf("expected devices to be revoked")
+			}
+			if !mfaDeleted {
+				t.Errorf("expected mfa factors to be deleted")
+			}
+			if !eventLogged {
+				t.Errorf("expected account_deleted event to be logged")
+			}
+			if updatedUser == nil {
+				t.Fatal("expected user to be updated")
+			}
+			if updatedUser.Status != UserStatusInactive {
+				t.Errorf("expected user status inactive, got %s", updatedUser.Status)
+			}
+			if updatedUser.Name != "Deleted User" {
+				t.Errorf("expected anonymized name, got %s", updatedUser.Name)
+			}
+			if updatedUser.Email != "deleted_usr_del123@deleted.saturn.local" {
+				t.Errorf("expected anonymized email, got %s", updatedUser.Email)
+			}
+		})
 	})
 }
