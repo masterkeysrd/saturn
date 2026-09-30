@@ -473,3 +473,39 @@ func (a *AuthDriver) ChangePassword(tb testing.TB, currentPassword, newPassword,
 	}
 	return resp, err
 }
+
+// UpdateProfile updates the current user's profile information.
+func (a *AuthDriver) UpdateProfile(tb testing.TB, name, avatarURL *string) (*identityv1.User, error) {
+	tb.Helper()
+	client := a.getClient()
+	return client.UpdateProfile(tb.Context(), &identityv1.UpdateProfileRequest{
+		Name:      name,
+		AvatarUrl: avatarURL,
+	})
+}
+
+// ChangeEmail changes the current user's email address with password and optional MFA confirmation.
+func (a *AuthDriver) ChangeEmail(tb testing.TB, newEmail, currentPassword, totpCode string) (*identityv1.User, error) {
+	tb.Helper()
+	client := a.getClient()
+	resp, err := client.ChangeEmail(tb.Context(), &identityv1.ChangeEmailRequest{
+		NewEmail:        newEmail,
+		CurrentPassword: currentPassword,
+		TotpCode:        totpCode,
+	})
+	if err == nil && resp != nil {
+		a.driver.state.UserEmail = newEmail
+	}
+	return resp, err
+}
+
+// DeleteAccount permanently deletes the current user's account with password and optional MFA confirmation.
+func (a *AuthDriver) DeleteAccount(tb testing.TB, currentPassword, totpCode string) (*emptypb.Empty, error) {
+	tb.Helper()
+	client := a.getClient()
+	return client.DeleteAccount(tb.Context(), &identityv1.DeleteAccountRequest{
+		CurrentPassword: currentPassword,
+		TotpCode:        totpCode,
+	})
+}
+
