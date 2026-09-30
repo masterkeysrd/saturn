@@ -170,6 +170,14 @@ service Identity {
       body: "*"
     };
   }
+
+  // Authenticated RPC: Changes the current user's password, invalidates other sessions, and returns fresh tokens.
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse) {
+    option (google.api.http) = {
+      post: "/v1/identity/users:change-password"
+      body: "*"
+    };
+  }
 }
 
 // Request message for Identity.LoginUser.
@@ -621,4 +629,34 @@ message CompleteResetPasswordRequest {
 
   // Required. The new password satisfying security complexity rules.
   string new_password = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Identity.ChangePassword.
+message ChangePasswordRequest {
+  // Required. Current password for re-authentication.
+  string current_password = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. New password satisfying security complexity rules.
+  string new_password = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional/Conditional. Current 6-digit TOTP code (required if MFA is enabled).
+  string totp_code = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. If true (default), revokes all other sessions.
+  bool revoke_other_sessions = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for Identity.ChangePassword.
+message ChangePasswordResponse {
+  // Output only. The fresh access token for authenticated requests.
+  string access_token = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The expiration time of the new access token in Unix seconds.
+  int64 access_token_expires_at = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The new opaque refresh token.
+  string refresh_token = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The expiration time of the new refresh token in Unix seconds.
+  int64 refresh_token_expires_at = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

@@ -4,7 +4,7 @@ import type { RouteObject } from "react-router-dom"
 export const routes: RouteObject[] = [
   {
     path: "/spaces",
-    element: <Navigate to="/settings?tab=spaces" replace />,
+    element: <Navigate to="/settings/spaces" replace />,
   },
 ]
 export default routes

@@ -1356,3 +1356,143 @@ func (s *Service) CompletePasswordReset(ctx context.Context, req CompletePasswor
 
 	return user, nil
 }
+
+// ChangePasswordRequest contains inputs for an authenticated password change.
+type ChangePasswordRequest struct {
+	UserID              UserID
+	CurrentPassword     string
+	NewPassword         string
+	HashedNewPassword   string
+	TOTPCode            string
+	RevokeOtherSessions bool
+	IPAddress           string
+	UserAgent           string
+}
+
+// ChangePassword verifies the user's current password, verifies step-up TOTP if MFA is enabled,
+// checks that new password != current password, updates the password credential,
+// increments auth_version, revokes existing sessions if requested, and emits an audit event.
+func (s *Service) ChangePassword(ctx context.Context, req ChangePasswordRequest) (*User, error) {
+	const op errors.Op = "domain/identity.ChangePassword"
+
+	now := time.Now().UTC()
+
+	if req.UserID == "" {
+		return nil, errors.E(op, errors.Invalid, InvalidUserID, "user id is required")
+	}
+	if req.CurrentPassword == "" {
+		return nil, errors.E(op, errors.Invalid, "current password is required")
+	}
+	if req.NewPassword == "" {
+		return nil, errors.E(op, errors.Invalid, "new password is required")
+	}
+	if req.CurrentPassword == req.NewPassword {
+		return nil, errors.E(op, errors.Invalid, PasswordMatchesCurrent, "new password cannot be the same as current password")
+	}
+	if req.HashedNewPassword == "" {
+		return nil, errors.E(op, errors.Invalid, "hashed new password is required")
+	}
+
+	user, err := s.deps.UserStore.GetByID(ctx, req.UserID)
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.NotExist, NotFound, "user not found")
+		}
+		return nil, errors.E(op, err)
+	}
+	if user.Status != UserStatusActive {
+		return nil, errors.E(op, errors.Precondition, "user is not active")
+	}
+
+	// 1. Verify current password
+	cred, err := s.deps.CredentialStore.GetByUserIDAndAuthType(ctx, user.ID, "password")
+	if err != nil {
+		return nil, errors.E(op, errors.Unauthenticated, InvalidCredentials, "invalid credentials")
+	}
+	if _, err := s.deps.Hasher.Verify(string(cred.SecretData), req.CurrentPassword); err != nil {
+		return nil, errors.E(op, errors.Unauthenticated, InvalidCredentials, "current password is incorrect")
+	}
+
+	// 2. Step-up MFA verification if user has active TOTP factors
+	if s.deps.MFAStore != nil {
+		factors, err := s.deps.MFAStore.ListFactorsByUserID(ctx, user.ID)
+		if err != nil {
+			return nil, errors.E(op, err)
+		}
+		var hasActiveTOTP bool
+		for _, f := range factors {
+			if !f.IsRevoked() && f.Type == MFAFactorTypeTOTP {
+				hasActiveTOTP = true
+				break
+			}
+		}
+		if hasActiveTOTP {
+			if req.TOTPCode == "" {
+				return nil, errors.E(op, errors.Permission, MFARequired, "mfa verification required to change password")
+			}
+			if s.deps.Cipher == nil || s.deps.TOTP == nil {
+				return nil, errors.E(op, errors.Internal, "mfa cipher or totp not configured")
+			}
+			var totpVerified bool
+			for _, f := range factors {
+				if f.IsRevoked() || f.Type != MFAFactorTypeTOTP {
+					continue
+				}
+				totpCfg := f.TOTPConfig()
+				if totpCfg == nil {
+					continue
+				}
+				secret, err := s.deps.Cipher.Decrypt(totpCfg.EncryptedSecret)
+				if err != nil {
+					continue
+				}
+				if s.deps.TOTP.ValidateCode(secret, req.TOTPCode, now) {
+					totpVerified = true
+					break
+				}
+			}
+			if !totpVerified {
+				return nil, errors.E(op, errors.Permission, MFAInvalidCode, "invalid totp code")
+			}
+		}
+	}
+
+	// 3. Update password credential
+	cred.SecretData = req.HashedNewPassword
+	if err := s.deps.CredentialStore.Update(ctx, cred); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	// 4. Increment auth_version to invalidate all existing tokens globally
+	newAuthVersion, err := s.IncrementAuthVersion(ctx, user.ID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	user.AuthVersion = newAuthVersion
+
+	// 5. Revoke existing sessions if requested
+	if req.RevokeOtherSessions && s.deps.SessionStore != nil {
+		if err := s.deps.SessionStore.RevokeAllForUser(ctx, user.ID, now); err != nil {
+			log.Warn(ctx, "failed to revoke all sessions during password change",
+				log.String("user_id", string(user.ID)),
+				log.Err(err),
+			)
+		}
+	}
+
+	// 6. Record audit security event
+	if s.deps.SecurityEventStore != nil {
+		eventID, _ := id.Generate("evt_")
+		_ = s.deps.SecurityEventStore.Create(ctx, &SecurityEvent{
+			ID:        eventID,
+			UserID:    &user.ID,
+			Email:     user.Email,
+			EventType: SecurityEventPasswordChange,
+			IPAddress: req.IPAddress,
+			UserAgent: req.UserAgent,
+			CreatedAt: now,
+		})
+	}
+
+	return user, nil
+}

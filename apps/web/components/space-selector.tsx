@@ -99,7 +99,7 @@ export function SpaceSelector() {
         <DropdownMenuItem
           onClick={() => {
             setOpen(false)
-            navigate("/settings?tab=spaces")
+            navigate("/settings/spaces")
             if (isMobile) setOpenMobile(false)
           }}
           className="justify-between"

@@ -16,6 +16,7 @@ const (
 	SecurityEventAccountLocked   SecurityEventType = "account_locked"
 	SecurityEventAccountUnlocked SecurityEventType = "account_unlocked"
 	SecurityEventPasswordReset   SecurityEventType = "password_reset"
+	SecurityEventPasswordChange  SecurityEventType = "password_change"
 )
 
 // SecurityEvent represents a recorded authentication or authorization event.

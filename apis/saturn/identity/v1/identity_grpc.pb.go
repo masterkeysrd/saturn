@@ -41,6 +41,7 @@ const (
 	Identity_RevokeDevice_FullMethodName          = "/saturn.identity.v1.Identity/RevokeDevice"
 	Identity_ValidateResetToken_FullMethodName    = "/saturn.identity.v1.Identity/ValidateResetToken"
 	Identity_CompleteResetPassword_FullMethodName = "/saturn.identity.v1.Identity/CompleteResetPassword"
+	Identity_ChangePassword_FullMethodName        = "/saturn.identity.v1.Identity/ChangePassword"
 )
 
 // IdentityClient is the client API for Identity service.
@@ -92,6 +93,8 @@ type IdentityClient interface {
 	ValidateResetToken(ctx context.Context, in *ValidateResetTokenRequest, opts ...grpc.CallOption) (*ValidateResetTokenResponse, error)
 	// Public RPC: Completes a password reset by consuming a valid token and setting a new password.
 	CompleteResetPassword(ctx context.Context, in *CompleteResetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Authenticated RPC: Changes the current user's password, invalidates other sessions, and returns fresh tokens.
+	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error)
 }
 
 type identityClient struct {
@@ -312,6 +315,16 @@ func (c *identityClient) CompleteResetPassword(ctx context.Context, in *Complete
 	return out, nil
 }
 
+func (c *identityClient) ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChangePasswordResponse)
+	err := c.cc.Invoke(ctx, Identity_ChangePassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IdentityServer is the server API for Identity service.
 // All implementations should embed UnimplementedIdentityServer
 // for forward compatibility.
@@ -361,6 +374,8 @@ type IdentityServer interface {
 	ValidateResetToken(context.Context, *ValidateResetTokenRequest) (*ValidateResetTokenResponse, error)
 	// Public RPC: Completes a password reset by consuming a valid token and setting a new password.
 	CompleteResetPassword(context.Context, *CompleteResetPasswordRequest) (*emptypb.Empty, error)
+	// Authenticated RPC: Changes the current user's password, invalidates other sessions, and returns fresh tokens.
+	ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error)
 }
 
 // UnimplementedIdentityServer should be embedded to have
@@ -432,6 +447,9 @@ func (UnimplementedIdentityServer) ValidateResetToken(context.Context, *Validate
 }
 func (UnimplementedIdentityServer) CompleteResetPassword(context.Context, *CompleteResetPasswordRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method CompleteResetPassword not implemented")
+}
+func (UnimplementedIdentityServer) ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ChangePassword not implemented")
 }
 func (UnimplementedIdentityServer) testEmbeddedByValue() {}
 
@@ -831,6 +849,24 @@ func _Identity_CompleteResetPassword_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Identity_ChangePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangePasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).ChangePassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_ChangePassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).ChangePassword(ctx, req.(*ChangePasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Identity_ServiceDesc is the grpc.ServiceDesc for Identity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -921,6 +957,10 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CompleteResetPassword",
 			Handler:    _Identity_CompleteResetPassword_Handler,
+		},
+		{
+			MethodName: "ChangePassword",
+			Handler:    _Identity_ChangePassword_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

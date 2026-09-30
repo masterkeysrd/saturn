@@ -723,3 +723,27 @@ func (l *LoggingCoordinator) CompleteResetPassword(ctx context.Context, req *Com
 	)
 	return nil
 }
+
+// ChangePassword executes next.ChangePassword and logs execution duration and errors.
+func (l *LoggingCoordinator) ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*ChangePasswordResponse, error) {
+	start := time.Now()
+	res, err := l.next.ChangePassword(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.ChangePassword failed",
+			log.String("component", "iam"),
+			log.String("operation", "ChangePassword"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.ChangePassword completed",
+		log.String("component", "iam"),
+		log.String("operation", "ChangePassword"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}

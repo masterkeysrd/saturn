@@ -446,3 +446,21 @@ func (a *AuthDriver) CompleteResetPassword(tb testing.TB, token, newPassword str
 		NewPassword: newPassword,
 	})
 }
+
+// ChangePassword changes the authenticated user's password.
+func (a *AuthDriver) ChangePassword(tb testing.TB, currentPassword, newPassword, totpCode string, revokeOtherSessions bool) (*identityv1.ChangePasswordResponse, error) {
+	tb.Helper()
+	client := a.getClient()
+	resp, err := client.ChangePassword(tb.Context(), &identityv1.ChangePasswordRequest{
+		CurrentPassword:     currentPassword,
+		NewPassword:         newPassword,
+		TotpCode:            totpCode,
+		RevokeOtherSessions: revokeOtherSessions,
+	})
+	if err == nil && resp != nil {
+		a.driver.state.AccessToken = resp.GetAccessToken()
+		a.driver.state.RefreshToken = resp.GetRefreshToken()
+		a.driver.state.UserPassword = newPassword
+	}
+	return resp, err
+}

@@ -249,18 +249,18 @@ export function TwoFactorSettings() {
         {/* Factors List */}
         {hasActiveMFA && (
           <div className="mt-6 border-t border-border/40 pt-5">
-            <h4 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+            <h4 className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
               Registered Devices & Factors
             </h4>
-            <div className="divide-y divide-border/30 rounded-xl border border-border/40 bg-muted/20">
+            <div className="divide-y divide-border/30">
               {factors.map((f) => (
                 <div
                   key={f.factorId}
-                  className="flex items-center justify-between p-4 transition-colors hover:bg-muted/30"
+                  className="flex items-center justify-between py-3.5 transition-colors first:pt-2"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/50 bg-card text-foreground">
-                      <SmartphoneIcon className="h-4 w-4" />
+                  <div className="flex items-center gap-3.5">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/50 text-foreground">
+                      <SmartphoneIcon className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -305,10 +305,10 @@ export function TwoFactorSettings() {
             </div>
 
             {/* Recovery Codes Section */}
-            <div className="mt-6 flex flex-col gap-3 rounded-xl border border-border/40 bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/50 bg-card text-foreground">
-                  <KeyRoundIcon className="h-4 w-4" />
+            <div className="mt-4 flex flex-col gap-3 border-t border-border/30 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/50 text-foreground">
+                  <KeyRoundIcon className="h-4.5 w-4.5 text-muted-foreground" />
                 </div>
                 <div>
                   <h5 className="text-sm font-medium text-foreground">
@@ -331,7 +331,7 @@ export function TwoFactorSettings() {
                   setRegenSuccessCodes([])
                   setRegenOpen(true)
                 }}
-                className="shrink-0 cursor-pointer rounded-lg text-xs"
+                className="shrink-0 cursor-pointer self-start rounded-lg text-xs sm:self-center"
               >
                 <RefreshCwIcon className="mr-1.5 h-3.5 w-3.5" />
                 Regenerate Codes

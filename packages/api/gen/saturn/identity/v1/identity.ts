@@ -662,6 +662,50 @@ export interface CompleteResetPasswordRequest {
 }
 
 /**
+ * Request message for Identity.ChangePassword.
+ */
+export interface ChangePasswordRequest {
+  /**
+   * Required. Current password for re-authentication.
+   */
+  currentPassword: string
+  /**
+   * Required. New password satisfying security complexity rules.
+   */
+  newPassword: string
+  /**
+   * Optional/Conditional. Current 6-digit TOTP code (required if MFA is enabled).
+   */
+  totpCode: string
+  /**
+   * Optional. If true (default), revokes all other sessions.
+   */
+  revokeOtherSessions: boolean
+}
+
+/**
+ * Response message for Identity.ChangePassword.
+ */
+export interface ChangePasswordResponse {
+  /**
+   * Output only. The fresh access token for authenticated requests.
+   */
+  accessToken?: string
+  /**
+   * Output only. The expiration time of the new access token in Unix seconds.
+   */
+  accessTokenExpiresAt?: string
+  /**
+   * Output only. The new opaque refresh token.
+   */
+  refreshToken?: string
+  /**
+   * Output only. The expiration time of the new refresh token in Unix seconds.
+   */
+  refreshTokenExpiresAt?: string
+}
+
+/**
  * Identity provides user authentication and session management.
  */
 /**
@@ -1215,6 +1259,32 @@ export function useCompleteResetPasswordMutation(
     CompleteResetPasswordRequest
   >({
     mutationFn: (req) => completeResetPassword(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Changes the current user's password, invalidates other sessions, and returns fresh tokens.
+ */
+export async function changePassword(
+  req: ChangePasswordRequest
+): Promise<ChangePasswordResponse> {
+  return request<ChangePasswordResponse>({
+    method: "POST",
+    url: "/api/v1/identity/users:change-password",
+    data: req,
+  })
+}
+
+export function useChangePasswordMutation(
+  options?: UseMutationOptions<
+    ChangePasswordResponse,
+    Error,
+    ChangePasswordRequest
+  >
+) {
+  return useMutation<ChangePasswordResponse, Error, ChangePasswordRequest>({
+    mutationFn: (req) => changePassword(req),
     ...options,
   })
 }

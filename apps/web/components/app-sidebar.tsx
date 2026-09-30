@@ -252,7 +252,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltip="Profile"
-              isActive={location.pathname === "/settings"}
+              isActive={location.pathname.startsWith("/settings")}
               onClick={() => setProfileOpen(!profileOpen)}
               className="cursor-pointer"
             >
@@ -300,7 +300,7 @@ export function AppSidebar() {
 
               {/* Menu Items */}
               <Link
-                to="/settings?tab=account"
+                to="/settings/account"
                 onClick={() => {
                   setProfileOpen(false)
                   if (isMobile) setOpenMobile(false)
@@ -312,7 +312,7 @@ export function AppSidebar() {
               </Link>
 
               <Link
-                to="/settings?tab=security"
+                to="/settings/security"
                 onClick={() => {
                   setProfileOpen(false)
                   if (isMobile) setOpenMobile(false)
@@ -324,7 +324,7 @@ export function AppSidebar() {
               </Link>
 
               <Link
-                to="/settings?tab=spaces"
+                to="/settings/spaces"
                 onClick={() => {
                   setProfileOpen(false)
                   if (isMobile) setOpenMobile(false)

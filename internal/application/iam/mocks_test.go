@@ -105,6 +105,9 @@ type CoordinatorMock struct {
 	// CompleteResetPasswordFunc mocks the CompleteResetPassword method.
 	CompleteResetPasswordFunc func(ctx context.Context, req *CompleteResetPasswordRequest) error
 
+	// ChangePasswordFunc mocks the ChangePassword method.
+	ChangePasswordFunc func(ctx context.Context, req *ChangePasswordRequest) (*ChangePasswordResponse, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		Authenticate []struct {
@@ -223,6 +226,10 @@ type CoordinatorMock struct {
 			Ctx context.Context
 			Req *CompleteResetPasswordRequest
 		}
+		ChangePassword []struct {
+			Ctx context.Context
+			Req *ChangePasswordRequest
+		}
 	}
 	lockAuthenticate          sync.RWMutex
 	lockGetAuthVersion        sync.RWMutex
@@ -253,6 +260,7 @@ type CoordinatorMock struct {
 	lockResetPassword         sync.RWMutex
 	lockValidateResetToken    sync.RWMutex
 	lockCompleteResetPassword sync.RWMutex
+	lockChangePassword        sync.RWMutex
 }
 
 // Authenticate calls AuthenticateFunc.
@@ -1038,6 +1046,33 @@ func (mock *CoordinatorMock) CompleteResetPasswordCalls() []struct {
 	return mock.calls.CompleteResetPassword
 }
 
+// ChangePassword calls ChangePasswordFunc.
+func (mock *CoordinatorMock) ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*ChangePasswordResponse, error) {
+	if mock.ChangePasswordFunc == nil {
+		panic("CoordinatorMock.ChangePasswordFunc: method is nil but Coordinator.ChangePassword was just called")
+	}
+	mock.lockChangePassword.Lock()
+	mock.calls.ChangePassword = append(mock.calls.ChangePassword, struct {
+		Ctx context.Context
+		Req *ChangePasswordRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockChangePassword.Unlock()
+	return mock.ChangePasswordFunc(ctx, req)
+}
+
+// ChangePasswordCalls returns all calls made to ChangePassword.
+func (mock *CoordinatorMock) ChangePasswordCalls() []struct {
+	Ctx context.Context
+	Req *ChangePasswordRequest
+} {
+	mock.lockChangePassword.RLock()
+	defer mock.lockChangePassword.RUnlock()
+	return mock.calls.ChangePassword
+}
+
 // Compile-time interface assertion.
 var _ PasswordHasher = (*PasswordHasherMock)(nil)
 
@@ -1463,6 +1498,9 @@ type IdentityServiceMock struct {
 	// CompletePasswordResetFunc mocks the CompletePasswordReset method.
 	CompletePasswordResetFunc func(ctx context.Context, req identity.CompletePasswordResetRequest) (*identity.User, error)
 
+	// ChangePasswordFunc mocks the ChangePassword method.
+	ChangePasswordFunc func(ctx context.Context, req identity.ChangePasswordRequest) (*identity.User, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		CreateUser []struct {
@@ -1629,6 +1667,10 @@ type IdentityServiceMock struct {
 			Ctx context.Context
 			Req identity.CompletePasswordResetRequest
 		}
+		ChangePassword []struct {
+			Ctx context.Context
+			Req identity.ChangePasswordRequest
+		}
 	}
 	lockCreateUser                       sync.RWMutex
 	lockCreateCredential                 sync.RWMutex
@@ -1670,6 +1712,7 @@ type IdentityServiceMock struct {
 	lockCreatePasswordResetToken         sync.RWMutex
 	lockValidatePasswordResetToken       sync.RWMutex
 	lockCompletePasswordReset            sync.RWMutex
+	lockChangePassword                   sync.RWMutex
 }
 
 // CreateUser calls CreateUserFunc.
@@ -2762,6 +2805,33 @@ func (mock *IdentityServiceMock) CompletePasswordResetCalls() []struct {
 	mock.lockCompletePasswordReset.RLock()
 	defer mock.lockCompletePasswordReset.RUnlock()
 	return mock.calls.CompletePasswordReset
+}
+
+// ChangePassword calls ChangePasswordFunc.
+func (mock *IdentityServiceMock) ChangePassword(ctx context.Context, req identity.ChangePasswordRequest) (*identity.User, error) {
+	if mock.ChangePasswordFunc == nil {
+		panic("IdentityServiceMock.ChangePasswordFunc: method is nil but IdentityService.ChangePassword was just called")
+	}
+	mock.lockChangePassword.Lock()
+	mock.calls.ChangePassword = append(mock.calls.ChangePassword, struct {
+		Ctx context.Context
+		Req identity.ChangePasswordRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockChangePassword.Unlock()
+	return mock.ChangePasswordFunc(ctx, req)
+}
+
+// ChangePasswordCalls returns all calls made to ChangePassword.
+func (mock *IdentityServiceMock) ChangePasswordCalls() []struct {
+	Ctx context.Context
+	Req identity.ChangePasswordRequest
+} {
+	mock.lockChangePassword.RLock()
+	defer mock.lockChangePassword.RUnlock()
+	return mock.calls.ChangePassword
 }
 
 // Compile-time interface assertion.

@@ -85,6 +85,10 @@ export interface AuthContextType {
   authenticateWithBiometrics: () => Promise<boolean>
   updateServerUrl: (url: string) => Promise<string>
   resetServerUrl: () => Promise<string>
+  updateSessionTokens: (tokens: {
+    accessToken: string
+    refreshToken?: string
+  }) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -490,6 +494,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return reset
   }
 
+  const updateSessionTokens = async (tokens: {
+    accessToken: string
+    refreshToken?: string
+  }) => {
+    await mobileStorage.setSession(tokens.accessToken)
+    if (tokens.refreshToken && mobileStorage.setRefreshToken) {
+      await mobileStorage.setRefreshToken(tokens.refreshToken)
+    }
+    setAccessToken(tokens.accessToken)
+    setSession({ accessToken: tokens.accessToken, hasSession: true })
+  }
+
   const isAuthenticated = Boolean(session?.hasSession && accessToken)
 
   return (
@@ -519,6 +535,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         authenticateWithBiometrics,
         updateServerUrl,
         resetServerUrl,
+        updateSessionTokens,
       }}
     >
       {children}

@@ -3946,3 +3946,296 @@ func TestService_PasswordReset(t *testing.T) {
 		}
 	})
 }
+
+func TestService_ChangePassword(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Validation errors", func(t *testing.T) {
+		svc := NewService(Dependencies{})
+
+		// Missing UserID
+		_, err := svc.ChangePassword(ctx, ChangePasswordRequest{})
+		if err == nil || !errors.Is(err, InvalidUserID) {
+			t.Fatalf("expected InvalidUserID, got %v", err)
+		}
+
+		// Missing CurrentPassword
+		_, err = svc.ChangePassword(ctx, ChangePasswordRequest{UserID: "usr_1"})
+		if err == nil || errors.CodeOf(err) != "" && !errors.Is(err, errors.Invalid) {
+			t.Fatalf("expected Invalid error for missing current password, got %v", err)
+		}
+
+		// Missing NewPassword
+		_, err = svc.ChangePassword(ctx, ChangePasswordRequest{UserID: "usr_1", CurrentPassword: "cur"})
+		if err == nil {
+			t.Fatalf("expected error for missing new password")
+		}
+
+		// Password matches current
+		_, err = svc.ChangePassword(ctx, ChangePasswordRequest{UserID: "usr_1", CurrentPassword: "pass", NewPassword: "pass", HashedNewPassword: "hash"})
+		if err == nil || !errors.Is(err, PasswordMatchesCurrent) {
+			t.Fatalf("expected PasswordMatchesCurrent, got %v", err)
+		}
+
+		// Missing HashedNewPassword
+		_, err = svc.ChangePassword(ctx, ChangePasswordRequest{UserID: "usr_1", CurrentPassword: "cur", NewPassword: "new"})
+		if err == nil {
+			t.Fatalf("expected error for missing hashed new password")
+		}
+	})
+
+	t.Run("User not found or inactive", func(t *testing.T) {
+		uStore := &UserStoreProviderMock{
+			GetByIDFunc: func(ctx context.Context, id UserID) (*User, error) {
+				return nil, errors.E(errors.NotExist)
+			},
+		}
+		svc := NewService(Dependencies{UserStore: uStore})
+
+		_, err := svc.ChangePassword(ctx, ChangePasswordRequest{
+			UserID:            "usr_nonexistent",
+			CurrentPassword:   "old",
+			NewPassword:       "new",
+			HashedNewPassword: "new_hash",
+		})
+		if err == nil || !errors.Is(err, NotFound) {
+			t.Fatalf("expected NotFound, got %v", err)
+		}
+
+		// Inactive user
+		uStore.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+			return &User{ID: id, Status: UserStatusPendingApproval}, nil
+		}
+		_, err = svc.ChangePassword(ctx, ChangePasswordRequest{
+			UserID:            "usr_pending",
+			CurrentPassword:   "old",
+			NewPassword:       "new",
+			HashedNewPassword: "new_hash",
+		})
+		if err == nil || errors.KindOf(err) != errors.Precondition {
+			t.Fatalf("expected Precondition error, got %v", err)
+		}
+	})
+
+	t.Run("Invalid current password", func(t *testing.T) {
+		uStore := &UserStoreProviderMock{
+			GetByIDFunc: func(ctx context.Context, id UserID) (*User, error) {
+				return &User{ID: id, Status: UserStatusActive}, nil
+			},
+		}
+		cStore := &CredentialStoreProviderMock{
+			GetByUserIDAndAuthTypeFunc: func(ctx context.Context, userID UserID, authType string) (*Credential, error) {
+				return &Credential{UserID: userID, AuthType: authType, SecretData: "correct_hash"}, nil
+			},
+		}
+		hasher := &HasherMock{
+			VerifyFunc: func(encodedHash, raw string) (bool, error) {
+				return false, errors.New("mismatch")
+			},
+		}
+		svc := NewService(Dependencies{
+			UserStore:       uStore,
+			CredentialStore: cStore,
+			Hasher:          hasher,
+		})
+
+		_, err := svc.ChangePassword(ctx, ChangePasswordRequest{
+			UserID:            "usr_1",
+			CurrentPassword:   "wrong_password",
+			NewPassword:       "new_password",
+			HashedNewPassword: "new_hash",
+		})
+		if err == nil || !errors.Is(err, InvalidCredentials) {
+			t.Fatalf("expected InvalidCredentials, got %v", err)
+		}
+	})
+
+	t.Run("MFA step-up required and verified", func(t *testing.T) {
+		uStore := &UserStoreProviderMock{
+			GetByIDFunc: func(ctx context.Context, id UserID) (*User, error) {
+				return &User{ID: id, Status: UserStatusActive, Email: "test@example.com"}, nil
+			},
+			IncrementAuthVersionFunc: func(ctx context.Context, id UserID) (int64, error) {
+				return 2, nil
+			},
+		}
+		cStore := &CredentialStoreProviderMock{
+			GetByUserIDAndAuthTypeFunc: func(ctx context.Context, userID UserID, authType string) (*Credential, error) {
+				return &Credential{UserID: userID, AuthType: authType, SecretData: "hash"}, nil
+			},
+			UpdateFunc: func(ctx context.Context, cred *Credential) error {
+				return nil
+			},
+		}
+		hasher := &HasherMock{
+			VerifyFunc: func(encodedHash, raw string) (bool, error) {
+				return false, nil
+			},
+		}
+		mfaStore := &MFAFactorStoreMock{
+			ListFactorsByUserIDFunc: func(ctx context.Context, userID UserID) ([]*MFAFactor, error) {
+				return []*MFAFactor{
+					{
+						ID:     "mfa_1",
+						UserID: userID,
+						Type:   MFAFactorTypeTOTP,
+						Config: &TOTPConfig{
+							EncryptedSecret: "enc_secret",
+						},
+					},
+				}, nil
+			},
+		}
+		cipher := &CipherMock{
+			DecryptFunc: func(ciphertext string) (string, error) {
+				return "plain_secret", nil
+			},
+		}
+		totp := &TOTPProviderMock{
+			ValidateCodeFunc: func(secret, code string, at time.Time) bool {
+				return code == "123456"
+			},
+		}
+		sessStore := &SessionStoreProviderMock{
+			RevokeAllForUserFunc: func(ctx context.Context, userID UserID, now time.Time) error {
+				return nil
+			},
+		}
+		secStore := &SecurityEventStoreMock{
+			CreateFunc: func(ctx context.Context, event *SecurityEvent) error {
+				return nil
+			},
+		}
+
+		svc := NewService(Dependencies{
+			UserStore:          uStore,
+			CredentialStore:    cStore,
+			Hasher:             hasher,
+			MFAStore:           mfaStore,
+			Cipher:             cipher,
+			TOTP:               totp,
+			SessionStore:       sessStore,
+			SecurityEventStore: secStore,
+		})
+
+		// Missing TOTP code
+		_, err := svc.ChangePassword(ctx, ChangePasswordRequest{
+			UserID:            "usr_1",
+			CurrentPassword:   "old_pass",
+			NewPassword:       "new_pass",
+			HashedNewPassword: "new_hash",
+			TOTPCode:          "",
+		})
+		if err == nil || !errors.Is(err, MFARequired) {
+			t.Fatalf("expected MFARequired, got %v", err)
+		}
+
+		// Wrong TOTP code
+		_, err = svc.ChangePassword(ctx, ChangePasswordRequest{
+			UserID:            "usr_1",
+			CurrentPassword:   "old_pass",
+			NewPassword:       "new_pass",
+			HashedNewPassword: "new_hash",
+			TOTPCode:          "000000",
+		})
+		if err == nil || !errors.Is(err, MFAInvalidCode) {
+			t.Fatalf("expected MFAInvalidCode, got %v", err)
+		}
+
+		// Correct TOTP code
+		user, err := svc.ChangePassword(ctx, ChangePasswordRequest{
+			UserID:              "usr_1",
+			CurrentPassword:     "old_pass",
+			NewPassword:         "new_pass",
+			HashedNewPassword:   "new_hash",
+			TOTPCode:            "123456",
+			RevokeOtherSessions: true,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if user.AuthVersion != 2 {
+			t.Errorf("expected AuthVersion 2, got %d", user.AuthVersion)
+		}
+	})
+
+	t.Run("Success without MFA", func(t *testing.T) {
+		var updatedCred *Credential
+		var revokedSessions bool
+		var securityEventCreated bool
+
+		uStore := &UserStoreProviderMock{
+			GetByIDFunc: func(ctx context.Context, id UserID) (*User, error) {
+				return &User{ID: id, Status: UserStatusActive, Email: "user@example.com"}, nil
+			},
+			IncrementAuthVersionFunc: func(ctx context.Context, id UserID) (int64, error) {
+				return 3, nil
+			},
+		}
+		cStore := &CredentialStoreProviderMock{
+			GetByUserIDAndAuthTypeFunc: func(ctx context.Context, userID UserID, authType string) (*Credential, error) {
+				return &Credential{UserID: userID, AuthType: authType, SecretData: "old_hashed_password"}, nil
+			},
+			UpdateFunc: func(ctx context.Context, cred *Credential) error {
+				updatedCred = cred
+				return nil
+			},
+		}
+		hasher := &HasherMock{
+			VerifyFunc: func(encodedHash, raw string) (bool, error) {
+				return false, nil
+			},
+		}
+		mfaStore := &MFAFactorStoreMock{
+			ListFactorsByUserIDFunc: func(ctx context.Context, userID UserID) ([]*MFAFactor, error) {
+				return nil, nil // No MFA factors
+			},
+		}
+		sessStore := &SessionStoreProviderMock{
+			RevokeAllForUserFunc: func(ctx context.Context, userID UserID, now time.Time) error {
+				revokedSessions = true
+				return nil
+			},
+		}
+		secStore := &SecurityEventStoreMock{
+			CreateFunc: func(ctx context.Context, event *SecurityEvent) error {
+				if event.EventType == SecurityEventPasswordChange {
+					securityEventCreated = true
+				}
+				return nil
+			},
+		}
+
+		svc := NewService(Dependencies{
+			UserStore:          uStore,
+			CredentialStore:    cStore,
+			Hasher:             hasher,
+			MFAStore:           mfaStore,
+			SessionStore:       sessStore,
+			SecurityEventStore: secStore,
+		})
+
+		user, err := svc.ChangePassword(ctx, ChangePasswordRequest{
+			UserID:              "usr_1",
+			CurrentPassword:     "correct_current",
+			NewPassword:         "new_secure_pass",
+			HashedNewPassword:   "new_argon2id_hash",
+			RevokeOtherSessions: true,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if user.AuthVersion != 3 {
+			t.Errorf("expected AuthVersion 3, got %d", user.AuthVersion)
+		}
+		if updatedCred == nil || updatedCred.SecretData != "new_argon2id_hash" {
+			t.Errorf("expected credential updated with new hash")
+		}
+		if !revokedSessions {
+			t.Errorf("expected sessions to be revoked")
+		}
+		if !securityEventCreated {
+			t.Errorf("expected security event password_change to be created")
+		}
+	})
+}

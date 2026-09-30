@@ -18,6 +18,7 @@ export interface AuthContextType {
   login: (req: LoginUserRequest) => Promise<LoginUserResponse>
   register: (req: RegisterUserRequest) => Promise<void>
   logoutUser: () => Promise<void>
+  updateAccessToken: (token: string) => void
   error: string | null
   setError: (err: string | null) => void
 }

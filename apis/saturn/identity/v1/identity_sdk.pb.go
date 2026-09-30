@@ -331,3 +331,17 @@ func (c *Client) CompleteResetPassword(ctx context.Context, req *CompleteResetPa
 	}
 	return &resp, nil
 }
+
+// ChangePassword executes POST /api/v1/identity/users:change-password.
+func (c *Client) ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*ChangePasswordResponse, error) {
+	var resp ChangePasswordResponse
+	path := "/api/v1/identity/users:change-password"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}

@@ -165,6 +165,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [logoutUser])
 
+  const updateAccessToken = useCallback((token: string) => {
+    authStorage.setSession(token)
+    setAccessToken(token)
+    window.dispatchEvent(
+      new CustomEvent("auth:refreshed", { detail: { accessToken: token } })
+    )
+  }, [])
+
   return (
     <AuthContext.Provider
       value={{
@@ -175,6 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logoutUser,
+        updateAccessToken,
         error,
         setError,
       }}

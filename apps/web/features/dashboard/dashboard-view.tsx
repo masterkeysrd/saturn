@@ -70,7 +70,7 @@ export function DashboardView() {
                 your first space!
               </p>
               <div className="mt-4 flex justify-center">
-                <Link to="/settings?tab=spaces">
+                <Link to="/settings/spaces">
                   <Button
                     size="sm"
                     className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-md shadow-primary/10 hover:opacity-95"

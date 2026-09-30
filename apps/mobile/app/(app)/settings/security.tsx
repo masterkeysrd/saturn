@@ -22,6 +22,7 @@ import {
   RefreshCw,
   Fingerprint,
   Shield,
+  KeyRound,
 } from "lucide-react-native"
 import {
   useListActiveSessionsQuery,
@@ -40,6 +41,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { MfaStepUpModal } from "@/components/ui/mfa-stepup-modal"
+import { ChangePasswordModal } from "@/components/ui/change-password-modal"
 import { useToast } from "@/components/ui/toast"
 import { getStoredDeviceId } from "@/lib/storage"
 import { haptics } from "@/lib/haptics"
@@ -59,6 +61,7 @@ export default function SecuritySessionsScreen() {
   const [enrolling, setEnrolling] = useState(false)
   const [mfaModalVisible, setMfaModalVisible] = useState(false)
   const [mfaError, setMfaError] = useState<string | null>(null)
+  const [changePasswordVisible, setChangePasswordVisible] = useState(false)
 
   // Load current device ID from storage
   useEffect(() => {
@@ -323,6 +326,33 @@ export default function SecuritySessionsScreen() {
           </View>
         </Card>
 
+        {/* Section: Password & Credentials */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeader}>PASSWORD & CREDENTIALS</Text>
+        </View>
+
+        <Card style={styles.actionCard}>
+          <View style={styles.actionHeader}>
+            <View style={styles.actionIconBox}>
+              <KeyRound size={20} color={theme.colors.primary} />
+            </View>
+            <View style={styles.actionTextContainer}>
+              <Text style={styles.actionTitle}>Password</Text>
+              <Text style={styles.actionSubtitle}>
+                Update your account password across all devices.
+              </Text>
+            </View>
+          </View>
+          <Button
+            variant="outline"
+            size="sm"
+            onPress={() => setChangePasswordVisible(true)}
+            style={styles.changePasswordBtn}
+          >
+            Change Password
+          </Button>
+        </Card>
+
         {/* Section: Trusted Hardware Devices */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionHeader}>
@@ -567,6 +597,13 @@ export default function SecuritySessionsScreen() {
         loading={enrolling}
         error={mfaError}
       />
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        visible={changePasswordVisible}
+        onClose={() => setChangePasswordVisible(false)}
+        hasActiveMfa={hasActiveMfa}
+      />
     </View>
   )
 }
@@ -760,5 +797,39 @@ const styles = StyleSheet.create({
   },
   enrollBtn: {
     marginTop: 2,
+  },
+  actionCard: {
+    padding: 16,
+    gap: 12,
+  },
+  actionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  actionIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surfaceHighlight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionTextContainer: {
+    flex: 1,
+    gap: 3,
+  },
+  actionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+  },
+  actionSubtitle: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    lineHeight: 16,
+  },
+  changePasswordBtn: {
+    alignSelf: "flex-start",
   },
 })

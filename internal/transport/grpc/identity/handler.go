@@ -572,6 +572,36 @@ func (h *Handler) CompleteResetPassword(ctx context.Context, req *identityv1.Com
 	return &emptypb.Empty{}, nil
 }
 
+// ChangePassword updates the authenticated user's password, invalidates sessions, and returns fresh tokens.
+func (h *Handler) ChangePassword(ctx context.Context, req *identityv1.ChangePasswordRequest) (*identityv1.ChangePasswordResponse, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	ua, ip := extractClientInfo(ctx)
+
+	resp, err := h.IAM.Coordinator.ChangePassword(ctx, &iam.ChangePasswordRequest{
+		UserID:              principal.Subject,
+		CurrentPassword:     req.GetCurrentPassword(),
+		NewPassword:         req.GetNewPassword(),
+		TOTPCode:            req.GetTotpCode(),
+		RevokeOtherSessions: req.GetRevokeOtherSessions(),
+		UserAgent:           ua,
+		IPAddress:           ip,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &identityv1.ChangePasswordResponse{
+		AccessToken:           resp.AccessToken,
+		AccessTokenExpiresAt:  resp.AccessTokenExpiresAt,
+		RefreshToken:          resp.RefreshToken,
+		RefreshTokenExpiresAt: resp.RefreshTokenExpiresAt,
+	}, nil
+}
+
 func extractClientInfo(ctx context.Context) (userAgent, ipAddress string) {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if ua := md.Get("grpcgateway-user-agent"); len(ua) > 0 {

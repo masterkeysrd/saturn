@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { SpaceSettings } from "./space-settings"
-import { IntegrationSettings } from "./integration-settings"
+import { SpaceSettings } from "./components/space-settings"
+import { IntegrationSettings } from "./components/integration-settings"
 import { PageLayout } from "@/components/ui/page-layout"
 import { Wrench } from "lucide-react"
 

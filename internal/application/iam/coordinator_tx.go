@@ -238,3 +238,23 @@ func (t *TransactionalCoordinator) CompleteResetPassword(ctx context.Context, re
 
 	return nil
 }
+
+// ChangePassword executes next.ChangePassword inside a database transaction.
+func (t *TransactionalCoordinator) ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*ChangePasswordResponse, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.ChangePassword(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
