@@ -113,7 +113,7 @@ func (a *AuthDriver) Approve(tb testing.TB) *AuthDriver {
 }
 
 // ApproveUser approves a specific user by ID.
-func (a *AuthDriver) ApproveUser(tb testing.TB, userID string) (*adminidentityv1.ApproveUserResponse, error) {
+func (a *AuthDriver) ApproveUser(tb testing.TB, userID string) (*adminidentityv1.User, error) {
 	tb.Helper()
 	adminClient := a.getAdminClient(tb)
 	return adminClient.ApproveUser(tb.Context(), &adminidentityv1.ApproveUserRequest{
@@ -122,7 +122,7 @@ func (a *AuthDriver) ApproveUser(tb testing.TB, userID string) (*adminidentityv1
 }
 
 // RejectUser rejects a specific user by ID.
-func (a *AuthDriver) RejectUser(tb testing.TB, userID string) (*adminidentityv1.RejectUserResponse, error) {
+func (a *AuthDriver) RejectUser(tb testing.TB, userID string) (*adminidentityv1.User, error) {
 	tb.Helper()
 	adminClient := a.getAdminClient(tb)
 	return adminClient.RejectUser(tb.Context(), &adminidentityv1.RejectUserRequest{
@@ -131,7 +131,7 @@ func (a *AuthDriver) RejectUser(tb testing.TB, userID string) (*adminidentityv1.
 }
 
 // UpdateUserRole updates a user's access level.
-func (a *AuthDriver) UpdateUserRole(tb testing.TB, userID string, accessLevel adminidentityv1.AccessLevel) (*adminidentityv1.UpdateUserRoleResponse, error) {
+func (a *AuthDriver) UpdateUserRole(tb testing.TB, userID string, accessLevel adminidentityv1.AccessLevel) (*adminidentityv1.User, error) {
 	tb.Helper()
 	adminClient := a.getAdminClient(tb)
 	return adminClient.UpdateUserRole(tb.Context(), &adminidentityv1.UpdateUserRoleRequest{

@@ -47,8 +47,8 @@ func TestUserRegistrationAndApprovalLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to approve user: %v", err)
 	}
-	if approveResp.GetUser().GetStatus() != "active" {
-		t.Errorf("approved user status = %s, want active", approveResp.GetUser().GetStatus())
+	if approveResp.GetStatus() != "active" {
+		t.Errorf("approved user status = %s, want active", approveResp.GetStatus())
 	}
 
 	// 4. User can now login successfully
@@ -100,8 +100,8 @@ func TestUserRegistrationAndRejection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to reject user: %v", err)
 	}
-	if rejectResp.GetUser().GetStatus() != "rejected" && rejectResp.GetUser().GetStatus() != "inactive" {
-		t.Logf("rejected user status = %s", rejectResp.GetUser().GetStatus())
+	if rejectResp.GetStatus() != "rejected" && rejectResp.GetStatus() != "inactive" {
+		t.Logf("rejected user status = %s", rejectResp.GetStatus())
 	}
 
 	// Login must fail
@@ -139,8 +139,8 @@ func TestAdminUserRoleUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to update user role to admin: %v", err)
 	}
-	if updateResp.GetUser().GetAccessLevel() != adminidentityv1.AccessLevel_ACCESS_LEVEL_ADMIN {
-		t.Errorf("updated access level = %v, want ACCESS_LEVEL_ADMIN", updateResp.GetUser().GetAccessLevel())
+	if updateResp.GetAccessLevel() != adminidentityv1.AccessLevel_ACCESS_LEVEL_ADMIN {
+		t.Errorf("updated access level = %v, want ACCESS_LEVEL_ADMIN", updateResp.GetAccessLevel())
 	}
 
 	// Login and verify access token issued

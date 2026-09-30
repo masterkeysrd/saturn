@@ -51,8 +51,8 @@ func (c *Client) ListUsers(ctx context.Context, req *ListUsersRequest) (*ListUse
 }
 
 // ApproveUser executes POST /api/v1/admin/identity/users/{user_id}:approve.
-func (c *Client) ApproveUser(ctx context.Context, req *ApproveUserRequest) (*ApproveUserResponse, error) {
-	var resp ApproveUserResponse
+func (c *Client) ApproveUser(ctx context.Context, req *ApproveUserRequest) (*User, error) {
+	var resp User
 	path := fmt.Sprintf("/api/v1/admin/identity/users/%s:approve", req.GetUserId())
 	var query []string
 	if len(query) > 0 {
@@ -65,8 +65,8 @@ func (c *Client) ApproveUser(ctx context.Context, req *ApproveUserRequest) (*App
 }
 
 // RejectUser executes POST /api/v1/admin/identity/users/{user_id}:reject.
-func (c *Client) RejectUser(ctx context.Context, req *RejectUserRequest) (*RejectUserResponse, error) {
-	var resp RejectUserResponse
+func (c *Client) RejectUser(ctx context.Context, req *RejectUserRequest) (*User, error) {
+	var resp User
 	path := fmt.Sprintf("/api/v1/admin/identity/users/%s:reject", req.GetUserId())
 	var query []string
 	if len(query) > 0 {
@@ -79,8 +79,8 @@ func (c *Client) RejectUser(ctx context.Context, req *RejectUserRequest) (*Rejec
 }
 
 // UpdateUserRole executes PATCH /api/v1/admin/identity/users/{user_id}.
-func (c *Client) UpdateUserRole(ctx context.Context, req *UpdateUserRoleRequest) (*UpdateUserRoleResponse, error) {
-	var resp UpdateUserRoleResponse
+func (c *Client) UpdateUserRole(ctx context.Context, req *UpdateUserRoleRequest) (*User, error) {
+	var resp User
 	path := fmt.Sprintf("/api/v1/admin/identity/users/%s", req.GetUserId())
 	var query []string
 	if len(query) > 0 {

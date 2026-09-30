@@ -38,11 +38,11 @@ type AdminIdentityClient interface {
 	// Lists users with optional filtering by status or search query.
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
 	// Approves and activates a pending user account.
-	ApproveUser(ctx context.Context, in *ApproveUserRequest, opts ...grpc.CallOption) (*ApproveUserResponse, error)
+	ApproveUser(ctx context.Context, in *ApproveUserRequest, opts ...grpc.CallOption) (*User, error)
 	// Rejects and deactivates a pending user account.
-	RejectUser(ctx context.Context, in *RejectUserRequest, opts ...grpc.CallOption) (*RejectUserResponse, error)
+	RejectUser(ctx context.Context, in *RejectUserRequest, opts ...grpc.CallOption) (*User, error)
 	// Updates a user's access level.
-	UpdateUserRole(ctx context.Context, in *UpdateUserRoleRequest, opts ...grpc.CallOption) (*UpdateUserRoleResponse, error)
+	UpdateUserRole(ctx context.Context, in *UpdateUserRoleRequest, opts ...grpc.CallOption) (*User, error)
 	// Revokes all active sessions for a user globally and increments the authentication version.
 	RevokeAllSessions(ctx context.Context, in *RevokeAllSessionsRequest, opts ...grpc.CallOption) (*RevokeAllSessionsResponse, error)
 	// Lists security audit log events.
@@ -71,9 +71,9 @@ func (c *adminIdentityClient) ListUsers(ctx context.Context, in *ListUsersReques
 	return out, nil
 }
 
-func (c *adminIdentityClient) ApproveUser(ctx context.Context, in *ApproveUserRequest, opts ...grpc.CallOption) (*ApproveUserResponse, error) {
+func (c *adminIdentityClient) ApproveUser(ctx context.Context, in *ApproveUserRequest, opts ...grpc.CallOption) (*User, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ApproveUserResponse)
+	out := new(User)
 	err := c.cc.Invoke(ctx, AdminIdentity_ApproveUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -81,9 +81,9 @@ func (c *adminIdentityClient) ApproveUser(ctx context.Context, in *ApproveUserRe
 	return out, nil
 }
 
-func (c *adminIdentityClient) RejectUser(ctx context.Context, in *RejectUserRequest, opts ...grpc.CallOption) (*RejectUserResponse, error) {
+func (c *adminIdentityClient) RejectUser(ctx context.Context, in *RejectUserRequest, opts ...grpc.CallOption) (*User, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RejectUserResponse)
+	out := new(User)
 	err := c.cc.Invoke(ctx, AdminIdentity_RejectUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -91,9 +91,9 @@ func (c *adminIdentityClient) RejectUser(ctx context.Context, in *RejectUserRequ
 	return out, nil
 }
 
-func (c *adminIdentityClient) UpdateUserRole(ctx context.Context, in *UpdateUserRoleRequest, opts ...grpc.CallOption) (*UpdateUserRoleResponse, error) {
+func (c *adminIdentityClient) UpdateUserRole(ctx context.Context, in *UpdateUserRoleRequest, opts ...grpc.CallOption) (*User, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateUserRoleResponse)
+	out := new(User)
 	err := c.cc.Invoke(ctx, AdminIdentity_UpdateUserRole_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -150,11 +150,11 @@ type AdminIdentityServer interface {
 	// Lists users with optional filtering by status or search query.
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 	// Approves and activates a pending user account.
-	ApproveUser(context.Context, *ApproveUserRequest) (*ApproveUserResponse, error)
+	ApproveUser(context.Context, *ApproveUserRequest) (*User, error)
 	// Rejects and deactivates a pending user account.
-	RejectUser(context.Context, *RejectUserRequest) (*RejectUserResponse, error)
+	RejectUser(context.Context, *RejectUserRequest) (*User, error)
 	// Updates a user's access level.
-	UpdateUserRole(context.Context, *UpdateUserRoleRequest) (*UpdateUserRoleResponse, error)
+	UpdateUserRole(context.Context, *UpdateUserRoleRequest) (*User, error)
 	// Revokes all active sessions for a user globally and increments the authentication version.
 	RevokeAllSessions(context.Context, *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error)
 	// Lists security audit log events.
@@ -175,13 +175,13 @@ type UnimplementedAdminIdentityServer struct{}
 func (UnimplementedAdminIdentityServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListUsers not implemented")
 }
-func (UnimplementedAdminIdentityServer) ApproveUser(context.Context, *ApproveUserRequest) (*ApproveUserResponse, error) {
+func (UnimplementedAdminIdentityServer) ApproveUser(context.Context, *ApproveUserRequest) (*User, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApproveUser not implemented")
 }
-func (UnimplementedAdminIdentityServer) RejectUser(context.Context, *RejectUserRequest) (*RejectUserResponse, error) {
+func (UnimplementedAdminIdentityServer) RejectUser(context.Context, *RejectUserRequest) (*User, error) {
 	return nil, status.Error(codes.Unimplemented, "method RejectUser not implemented")
 }
-func (UnimplementedAdminIdentityServer) UpdateUserRole(context.Context, *UpdateUserRoleRequest) (*UpdateUserRoleResponse, error) {
+func (UnimplementedAdminIdentityServer) UpdateUserRole(context.Context, *UpdateUserRoleRequest) (*User, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateUserRole not implemented")
 }
 func (UnimplementedAdminIdentityServer) RevokeAllSessions(context.Context, *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error) {

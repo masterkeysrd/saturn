@@ -226,7 +226,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1UpdateUserRoleResponse"
+              "$ref": "#/definitions/identityAdminV1User"
             }
           },
           "default": {
@@ -266,7 +266,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ApproveUserResponse"
+              "$ref": "#/definitions/identityAdminV1User"
             }
           },
           "default": {
@@ -306,7 +306,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1RejectUserResponse"
+              "$ref": "#/definitions/identityAdminV1User"
             }
           },
           "default": {
@@ -7528,17 +7528,6 @@
       },
       "description": "The response for\n[AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument]."
     },
-    "v1ApproveUserResponse": {
-      "type": "object",
-      "properties": {
-        "user": {
-          "$ref": "#/definitions/identityAdminV1User",
-          "description": "Output only. The approved user resource.",
-          "readOnly": true
-        }
-      },
-      "description": "Response message for AdminIdentity.ApproveUser."
-    },
     "v1BackupEntry": {
       "type": "object",
       "properties": {
@@ -10250,17 +10239,6 @@
         "password"
       ]
     },
-    "v1RejectUserResponse": {
-      "type": "object",
-      "properties": {
-        "user": {
-          "$ref": "#/definitions/identityAdminV1User",
-          "description": "Output only. The rejected user resource.",
-          "readOnly": true
-        }
-      },
-      "description": "Response message for AdminIdentity.RejectUser."
-    },
     "v1ResetPasswordResponse": {
       "type": "object",
       "properties": {
@@ -11263,17 +11241,6 @@
         }
       },
       "description": "Request message for Identity.UpdateProfile."
-    },
-    "v1UpdateUserRoleResponse": {
-      "type": "object",
-      "properties": {
-        "user": {
-          "$ref": "#/definitions/identityAdminV1User",
-          "description": "Output only. The updated user resource reflecting the new access level.",
-          "readOnly": true
-        }
-      },
-      "description": "Response message for AdminIdentity.UpdateUserRole."
     },
     "v1UserSession": {
       "type": "object",

@@ -17,7 +17,7 @@ service AdminIdentity {
   }
 
   // Approves and activates a pending user account.
-  rpc ApproveUser(ApproveUserRequest) returns (ApproveUserResponse) {
+  rpc ApproveUser(ApproveUserRequest) returns (User) {
     option (google.api.http) = {
       post: "/v1/admin/identity/users/{user_id}:approve"
       body: "*"
@@ -26,7 +26,7 @@ service AdminIdentity {
   }
 
   // Rejects and deactivates a pending user account.
-  rpc RejectUser(RejectUserRequest) returns (RejectUserResponse) {
+  rpc RejectUser(RejectUserRequest) returns (User) {
     option (google.api.http) = {
       post: "/v1/admin/identity/users/{user_id}:reject"
       body: "*"
@@ -35,7 +35,7 @@ service AdminIdentity {
   }
 
   // Updates a user's access level.
-  rpc UpdateUserRole(UpdateUserRoleRequest) returns (UpdateUserRoleResponse) {
+  rpc UpdateUserRole(UpdateUserRoleRequest) returns (User) {
     option (google.api.http) = {
       patch: "/v1/admin/identity/users/{user_id}"
       body: "*"
@@ -129,23 +129,11 @@ message ApproveUserRequest {
   string user_id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// Response message for AdminIdentity.ApproveUser.
-message ApproveUserResponse {
-  // Output only. The approved user resource.
-  User user = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-}
-
 // Request message for AdminIdentity.RejectUser.
 message RejectUserRequest {
   // Required. The unique identifier of the user to reject.
   // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string user_id = 1 [(google.api.field_behavior) = REQUIRED];
-}
-
-// Response message for AdminIdentity.RejectUser.
-message RejectUserResponse {
-  // Output only. The rejected user resource.
-  User user = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Request message for AdminIdentity.UpdateUserRole.
@@ -156,12 +144,6 @@ message UpdateUserRoleRequest {
 
   // Required. The new access level for the user.
   AccessLevel access_level = 2 [(google.api.field_behavior) = REQUIRED];
-}
-
-// Response message for AdminIdentity.UpdateUserRole.
-message UpdateUserRoleResponse {
-  // Output only. The updated user resource reflecting the new access level.
-  User user = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Request message for AdminIdentity.RevokeAllSessions.

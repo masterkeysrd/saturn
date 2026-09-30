@@ -110,7 +110,7 @@ func (h *AdminHandler) ListUsers(ctx context.Context, req *adminidentityv1.ListU
 }
 
 // ApproveUser activates a pending user account.
-func (h *AdminHandler) ApproveUser(ctx context.Context, req *adminidentityv1.ApproveUserRequest) (*adminidentityv1.ApproveUserResponse, error) {
+func (h *AdminHandler) ApproveUser(ctx context.Context, req *adminidentityv1.ApproveUserRequest) (*adminidentityv1.User, error) {
 	resp, err := h.Coordinator.ApproveUser(ctx, &iam.ApproveUserRequest{
 		UserID: req.GetUserId(),
 	})
@@ -118,13 +118,11 @@ func (h *AdminHandler) ApproveUser(ctx context.Context, req *adminidentityv1.App
 		return nil, err
 	}
 
-	return &adminidentityv1.ApproveUserResponse{
-		User: toAdminUser(resp.User),
-	}, nil
+	return toAdminUser(resp.User), nil
 }
 
 // RejectUser deactivates a pending user account.
-func (h *AdminHandler) RejectUser(ctx context.Context, req *adminidentityv1.RejectUserRequest) (*adminidentityv1.RejectUserResponse, error) {
+func (h *AdminHandler) RejectUser(ctx context.Context, req *adminidentityv1.RejectUserRequest) (*adminidentityv1.User, error) {
 	resp, err := h.Coordinator.RejectUser(ctx, &iam.RejectUserRequest{
 		UserID: req.GetUserId(),
 	})
@@ -132,13 +130,11 @@ func (h *AdminHandler) RejectUser(ctx context.Context, req *adminidentityv1.Reje
 		return nil, err
 	}
 
-	return &adminidentityv1.RejectUserResponse{
-		User: toAdminUser(resp.User),
-	}, nil
+	return toAdminUser(resp.User), nil
 }
 
 // UpdateUserRole changes a user's access level.
-func (h *AdminHandler) UpdateUserRole(ctx context.Context, req *adminidentityv1.UpdateUserRoleRequest) (*adminidentityv1.UpdateUserRoleResponse, error) {
+func (h *AdminHandler) UpdateUserRole(ctx context.Context, req *adminidentityv1.UpdateUserRoleRequest) (*adminidentityv1.User, error) {
 	resp, err := h.Coordinator.UpdateUserRole(ctx, &iam.UpdateUserRoleRequest{
 		UserID:      req.GetUserId(),
 		AccessLevel: adminProtoToDomainAccessLevel(req.GetAccessLevel()),
@@ -147,9 +143,7 @@ func (h *AdminHandler) UpdateUserRole(ctx context.Context, req *adminidentityv1.
 		return nil, err
 	}
 
-	return &adminidentityv1.UpdateUserRoleResponse{
-		User: toAdminUser(resp.User),
-	}, nil
+	return toAdminUser(resp.User), nil
 }
 
 // RevokeAllSessions revokes all sessions for a user globally.

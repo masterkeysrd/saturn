@@ -16,12 +16,36 @@ import (
 type mockCoordinator struct {
 	iam.Coordinator
 	unlockUserFunc         func(ctx context.Context, req *iam.UnlockUserRequest) (*iam.UnlockUserResponse, error)
+	approveUserFunc        func(ctx context.Context, req *iam.ApproveUserRequest) (*iam.ApproveUserResponse, error)
+	rejectUserFunc         func(ctx context.Context, req *iam.RejectUserRequest) (*iam.RejectUserResponse, error)
+	updateUserRoleFunc     func(ctx context.Context, req *iam.UpdateUserRoleRequest) (*iam.UpdateUserRoleResponse, error)
 	listActiveSessionsFunc func(ctx context.Context, req *iam.ListActiveSessionsRequest) (*iam.ListActiveSessionsResponse, error)
 }
 
 func (m *mockCoordinator) UnlockUser(ctx context.Context, req *iam.UnlockUserRequest) (*iam.UnlockUserResponse, error) {
 	if m.unlockUserFunc != nil {
 		return m.unlockUserFunc(ctx, req)
+	}
+	return nil, nil
+}
+
+func (m *mockCoordinator) ApproveUser(ctx context.Context, req *iam.ApproveUserRequest) (*iam.ApproveUserResponse, error) {
+	if m.approveUserFunc != nil {
+		return m.approveUserFunc(ctx, req)
+	}
+	return nil, nil
+}
+
+func (m *mockCoordinator) RejectUser(ctx context.Context, req *iam.RejectUserRequest) (*iam.RejectUserResponse, error) {
+	if m.rejectUserFunc != nil {
+		return m.rejectUserFunc(ctx, req)
+	}
+	return nil, nil
+}
+
+func (m *mockCoordinator) UpdateUserRole(ctx context.Context, req *iam.UpdateUserRoleRequest) (*iam.UpdateUserRoleResponse, error) {
+	if m.updateUserRoleFunc != nil {
+		return m.updateUserRoleFunc(ctx, req)
 	}
 	return nil, nil
 }
@@ -110,6 +134,78 @@ func TestAdminHandler_UnlockUser(t *testing.T) {
 		}
 		if adminU.AccessLevel != adminidentityv1.AccessLevel_ACCESS_LEVEL_ADMIN {
 			t.Errorf("expected ACCESS_LEVEL_ADMIN, got %v", adminU.AccessLevel)
+		}
+	})
+}
+
+func TestAdminHandler_Mutations(t *testing.T) {
+	ctx := context.Background()
+
+	testUser := &identity.User{
+		ID:          "usr_target",
+		Email:       "target@example.com",
+		Username:    "target",
+		Name:        "Target User",
+		Status:      identity.UserStatusActive,
+		AccessLevel: identity.AccessLevelAdmin,
+	}
+
+	t.Run("ApproveUser returns User", func(t *testing.T) {
+		coord := &mockCoordinator{
+			approveUserFunc: func(ctx context.Context, req *iam.ApproveUserRequest) (*iam.ApproveUserResponse, error) {
+				return &iam.ApproveUserResponse{User: testUser}, nil
+			},
+		}
+		h := NewAdminHandler(coord)
+		u, err := h.ApproveUser(ctx, &adminidentityv1.ApproveUserRequest{UserId: "usr_target"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if u.GetId() != "usr_target" || u.GetStatus() != "active" {
+			t.Errorf("unexpected user: %+v", u)
+		}
+	})
+
+	t.Run("RejectUser returns User", func(t *testing.T) {
+		rejectedUser := &identity.User{
+			ID:          "usr_target",
+			Email:       "target@example.com",
+			Username:    "target",
+			Name:        "Target User",
+			Status:      identity.UserStatusInactive,
+			AccessLevel: identity.AccessLevelUser,
+		}
+		coord := &mockCoordinator{
+			rejectUserFunc: func(ctx context.Context, req *iam.RejectUserRequest) (*iam.RejectUserResponse, error) {
+				return &iam.RejectUserResponse{User: rejectedUser}, nil
+			},
+		}
+		h := NewAdminHandler(coord)
+		u, err := h.RejectUser(ctx, &adminidentityv1.RejectUserRequest{UserId: "usr_target"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if u.GetId() != "usr_target" || u.GetStatus() != "inactive" {
+			t.Errorf("unexpected user: %+v", u)
+		}
+	})
+
+	t.Run("UpdateUserRole returns User", func(t *testing.T) {
+		coord := &mockCoordinator{
+			updateUserRoleFunc: func(ctx context.Context, req *iam.UpdateUserRoleRequest) (*iam.UpdateUserRoleResponse, error) {
+				return &iam.UpdateUserRoleResponse{User: testUser}, nil
+			},
+		}
+		h := NewAdminHandler(coord)
+		u, err := h.UpdateUserRole(ctx, &adminidentityv1.UpdateUserRoleRequest{
+			UserId:      "usr_target",
+			AccessLevel: adminidentityv1.AccessLevel_ACCESS_LEVEL_ADMIN,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if u.GetId() != "usr_target" || u.GetAccessLevel() != adminidentityv1.AccessLevel_ACCESS_LEVEL_ADMIN {
+			t.Errorf("unexpected user: %+v", u)
 		}
 	})
 }

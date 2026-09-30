@@ -103,16 +103,6 @@ export interface ApproveUserRequest {
 }
 
 /**
- * Response message for AdminIdentity.ApproveUser.
- */
-export interface ApproveUserResponse {
-  /**
-   * Output only. The approved user resource.
-   */
-  user?: User
-}
-
-/**
  * Request message for AdminIdentity.RejectUser.
  */
 export interface RejectUserRequest {
@@ -121,16 +111,6 @@ export interface RejectUserRequest {
    * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
   userId: string
-}
-
-/**
- * Response message for AdminIdentity.RejectUser.
- */
-export interface RejectUserResponse {
-  /**
-   * Output only. The rejected user resource.
-   */
-  user?: User
 }
 
 /**
@@ -146,16 +126,6 @@ export interface UpdateUserRoleRequest {
    * Required. The new access level for the user.
    */
   accessLevel: AccessLevel
-}
-
-/**
- * Response message for AdminIdentity.UpdateUserRole.
- */
-export interface UpdateUserRoleResponse {
-  /**
-   * Output only. The updated user resource reflecting the new access level.
-   */
-  user?: User
 }
 
 /**
@@ -387,8 +357,8 @@ export function useListUsersQuery(
 export async function approveUser(
   user_id: string,
   req: ApproveUserRequest
-): Promise<ApproveUserResponse> {
-  return request<ApproveUserResponse>({
+): Promise<User> {
+  return request<User>({
     method: "POST",
     url: `/api/v1/admin/identity/users/${user_id}:approve`,
     data: req,
@@ -397,19 +367,17 @@ export async function approveUser(
 
 export function useApproveUserMutation(
   options?: UseMutationOptions<
-    ApproveUserResponse,
+    User,
     Error,
     { user_id: string; req: ApproveUserRequest }
   >
 ) {
-  return useMutation<
-    ApproveUserResponse,
-    Error,
-    { user_id: string; req: ApproveUserRequest }
-  >({
-    mutationFn: ({ user_id, req }) => approveUser(user_id, req),
-    ...options,
-  })
+  return useMutation<User, Error, { user_id: string; req: ApproveUserRequest }>(
+    {
+      mutationFn: ({ user_id, req }) => approveUser(user_id, req),
+      ...options,
+    }
+  )
 }
 
 /**
@@ -418,8 +386,8 @@ export function useApproveUserMutation(
 export async function rejectUser(
   user_id: string,
   req: RejectUserRequest
-): Promise<RejectUserResponse> {
-  return request<RejectUserResponse>({
+): Promise<User> {
+  return request<User>({
     method: "POST",
     url: `/api/v1/admin/identity/users/${user_id}:reject`,
     data: req,
@@ -428,16 +396,12 @@ export async function rejectUser(
 
 export function useRejectUserMutation(
   options?: UseMutationOptions<
-    RejectUserResponse,
+    User,
     Error,
     { user_id: string; req: RejectUserRequest }
   >
 ) {
-  return useMutation<
-    RejectUserResponse,
-    Error,
-    { user_id: string; req: RejectUserRequest }
-  >({
+  return useMutation<User, Error, { user_id: string; req: RejectUserRequest }>({
     mutationFn: ({ user_id, req }) => rejectUser(user_id, req),
     ...options,
   })
@@ -449,8 +413,8 @@ export function useRejectUserMutation(
 export async function updateUserRole(
   user_id: string,
   req: UpdateUserRoleRequest
-): Promise<UpdateUserRoleResponse> {
-  return request<UpdateUserRoleResponse>({
+): Promise<User> {
+  return request<User>({
     method: "PATCH",
     url: `/api/v1/admin/identity/users/${user_id}`,
     data: req,
@@ -459,13 +423,13 @@ export async function updateUserRole(
 
 export function useUpdateUserRoleMutation(
   options?: UseMutationOptions<
-    UpdateUserRoleResponse,
+    User,
     Error,
     { user_id: string; req: UpdateUserRoleRequest }
   >
 ) {
   return useMutation<
-    UpdateUserRoleResponse,
+    User,
     Error,
     { user_id: string; req: UpdateUserRoleRequest }
   >({
