@@ -51,6 +51,9 @@ type CoordinatorMock struct {
 	// RejectUserFunc mocks the RejectUser method.
 	RejectUserFunc func(ctx context.Context, req *RejectUserRequest) (*RejectUserResponse, error)
 
+	// UnlockUserFunc mocks the UnlockUser method.
+	UnlockUserFunc func(ctx context.Context, req *UnlockUserRequest) (*UnlockUserResponse, error)
+
 	// ListUsersFunc mocks the ListUsers method.
 	ListUsersFunc func(ctx context.Context, filter *ListUsersFilter) (*paging.Page[*identity.User], error)
 
@@ -164,6 +167,10 @@ type CoordinatorMock struct {
 			Ctx context.Context
 			Req *RejectUserRequest
 		}
+		UnlockUser []struct {
+			Ctx context.Context
+			Req *UnlockUserRequest
+		}
 		ListUsers []struct {
 			Ctx    context.Context
 			Filter *ListUsersFilter
@@ -263,6 +270,7 @@ type CoordinatorMock struct {
 	lockAdminCreateUser       sync.RWMutex
 	lockApproveUser           sync.RWMutex
 	lockRejectUser            sync.RWMutex
+	lockUnlockUser            sync.RWMutex
 	lockListUsers             sync.RWMutex
 	lockUpdateUserRole        sync.RWMutex
 	lockListActiveSessions    sync.RWMutex
@@ -585,6 +593,33 @@ func (mock *CoordinatorMock) RejectUserCalls() []struct {
 	mock.lockRejectUser.RLock()
 	defer mock.lockRejectUser.RUnlock()
 	return mock.calls.RejectUser
+}
+
+// UnlockUser calls UnlockUserFunc.
+func (mock *CoordinatorMock) UnlockUser(ctx context.Context, req *UnlockUserRequest) (*UnlockUserResponse, error) {
+	if mock.UnlockUserFunc == nil {
+		panic("CoordinatorMock.UnlockUserFunc: method is nil but Coordinator.UnlockUser was just called")
+	}
+	mock.lockUnlockUser.Lock()
+	mock.calls.UnlockUser = append(mock.calls.UnlockUser, struct {
+		Ctx context.Context
+		Req *UnlockUserRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockUnlockUser.Unlock()
+	return mock.UnlockUserFunc(ctx, req)
+}
+
+// UnlockUserCalls returns all calls made to UnlockUser.
+func (mock *CoordinatorMock) UnlockUserCalls() []struct {
+	Ctx context.Context
+	Req *UnlockUserRequest
+} {
+	mock.lockUnlockUser.RLock()
+	defer mock.lockUnlockUser.RUnlock()
+	return mock.calls.UnlockUser
 }
 
 // ListUsers calls ListUsersFunc.
@@ -1516,6 +1551,9 @@ type IdentityServiceMock struct {
 	// RejectUserFunc mocks the RejectUser method.
 	RejectUserFunc func(ctx context.Context, userID identity.UserID) (*identity.User, error)
 
+	// UnlockUserFunc mocks the UnlockUser method.
+	UnlockUserFunc func(ctx context.Context, userID identity.UserID) (*identity.User, error)
+
 	// UpdateUserRoleFunc mocks the UpdateUserRole method.
 	UpdateUserRoleFunc func(ctx context.Context, userID identity.UserID, accessLevel identity.AccessLevel) (*identity.User, error)
 
@@ -1659,6 +1697,10 @@ type IdentityServiceMock struct {
 			UserID identity.UserID
 		}
 		RejectUser []struct {
+			Ctx    context.Context
+			UserID identity.UserID
+		}
+		UnlockUser []struct {
 			Ctx    context.Context
 			UserID identity.UserID
 		}
@@ -1809,6 +1851,7 @@ type IdentityServiceMock struct {
 	lockListUsers                        sync.RWMutex
 	lockApproveUser                      sync.RWMutex
 	lockRejectUser                       sync.RWMutex
+	lockUnlockUser                       sync.RWMutex
 	lockUpdateUserRole                   sync.RWMutex
 	lockGetAuthVersion                   sync.RWMutex
 	lockIncrementAuthVersion             sync.RWMutex
@@ -2142,6 +2185,33 @@ func (mock *IdentityServiceMock) RejectUserCalls() []struct {
 	mock.lockRejectUser.RLock()
 	defer mock.lockRejectUser.RUnlock()
 	return mock.calls.RejectUser
+}
+
+// UnlockUser calls UnlockUserFunc.
+func (mock *IdentityServiceMock) UnlockUser(ctx context.Context, userID identity.UserID) (*identity.User, error) {
+	if mock.UnlockUserFunc == nil {
+		panic("IdentityServiceMock.UnlockUserFunc: method is nil but IdentityService.UnlockUser was just called")
+	}
+	mock.lockUnlockUser.Lock()
+	mock.calls.UnlockUser = append(mock.calls.UnlockUser, struct {
+		Ctx    context.Context
+		UserID identity.UserID
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+	})
+	mock.lockUnlockUser.Unlock()
+	return mock.UnlockUserFunc(ctx, userID)
+}
+
+// UnlockUserCalls returns all calls made to UnlockUser.
+func (mock *IdentityServiceMock) UnlockUserCalls() []struct {
+	Ctx    context.Context
+	UserID identity.UserID
+} {
+	mock.lockUnlockUser.RLock()
+	defer mock.lockUnlockUser.RUnlock()
+	return mock.calls.UnlockUser
 }
 
 // UpdateUserRole calls UpdateUserRoleFunc.

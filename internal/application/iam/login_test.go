@@ -215,6 +215,12 @@ func TestCoordinator_Login(t *testing.T) {
 			mockGetAuthVersion: func(ctx context.Context, id identity.UserID) (int64, error) {
 				return 1, nil
 			},
+			mockIssueRefresh: func(input token.IssueInput, now time.Time, absoluteExpiry time.Time) (string, time.Time, error) {
+				return "refresh", now, nil
+			},
+			mockCreateSession: func(ctx context.Context, req *identity.CreateSessionRequest) (*identity.Session, error) {
+				return &identity.Session{ID: "sess_1"}, nil
+			},
 			mockIssueAccess: func(input token.IssueInput, now time.Time) (string, time.Time, error) {
 				return "", time.Time{}, errors.New("key signing error")
 			},

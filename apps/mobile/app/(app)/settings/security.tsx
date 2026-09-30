@@ -508,7 +508,7 @@ export default function SecuritySessionsScreen() {
           <View style={styles.sessionsList}>
             {sessions.map((session, idx) => {
               const parsed = parseUserAgent(session.userAgent || "")
-              const isFirst = idx === 0 // Server typically returns current session first
+              const isCurrent = Boolean(session.isCurrent ?? idx === 0)
 
               return (
                 <Card key={session.sessionId || idx} style={styles.sessionCard}>
@@ -522,7 +522,7 @@ export default function SecuritySessionsScreen() {
                           <Text style={styles.deviceName} numberOfLines={1}>
                             {parsed.device}
                           </Text>
-                          {isFirst && (
+                          {isCurrent && (
                             <Badge
                               variant="success"
                               size="sm"
@@ -537,14 +537,16 @@ export default function SecuritySessionsScreen() {
                     </View>
 
                     {/* Revoke single session button */}
-                    <TouchableOpacity
-                      style={styles.revokeBtn}
-                      activeOpacity={0.7}
-                      onPress={() => promptRevokeSession(session)}
-                      disabled={revokeSessionMutation.isPending}
-                    >
-                      <Trash2 size={16} color={theme.colors.destructive} />
-                    </TouchableOpacity>
+                    {!isCurrent && (
+                      <TouchableOpacity
+                        style={styles.revokeBtn}
+                        activeOpacity={0.7}
+                        onPress={() => promptRevokeSession(session)}
+                        disabled={revokeSessionMutation.isPending}
+                      >
+                        <Trash2 size={16} color={theme.colors.destructive} />
+                      </TouchableOpacity>
+                    )}
                   </View>
 
                   <View style={styles.divider} />

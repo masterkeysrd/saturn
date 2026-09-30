@@ -545,6 +545,40 @@ func (s *Service) UpdateLockoutState(ctx context.Context, req UpdateLockoutReque
 	return nil
 }
 
+// UnlockUser clears the lockout state and resets failed login attempts for a user.
+func (s *Service) UnlockUser(ctx context.Context, userID UserID) (*User, error) {
+	const op errors.Op = "domain/identity.UnlockUser"
+
+	user, err := s.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	if err := s.deps.UserStore.UpdateLockoutState(ctx, UpdateLockoutRequest{
+		UserID:      userID,
+		Attempts:    0,
+		LockedUntil: nil,
+	}); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	user.FailedLoginAttempts = 0
+	user.LockedUntil = nil
+
+	if s.deps.SecurityEventStore != nil {
+		eventID, _ := id.Generate("evt_")
+		_ = s.deps.SecurityEventStore.Create(ctx, &SecurityEvent{
+			ID:        eventID,
+			UserID:    &user.ID,
+			Email:     user.Email,
+			EventType: SecurityEventAccountUnlocked,
+			CreatedAt: time.Now(),
+		})
+	}
+
+	return user, nil
+}
+
 // CreateSecurityEvent records a security audit log event.
 func (s *Service) CreateSecurityEvent(ctx context.Context, event *SecurityEvent) error {
 	const op errors.Op = "domain/identity.CreateSecurityEvent"

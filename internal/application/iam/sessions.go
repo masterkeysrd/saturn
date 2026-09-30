@@ -14,11 +14,13 @@ type ActiveSession struct {
 	IPAddress  string    `json:"ip_address"`
 	CreateTime time.Time `json:"create_time"`
 	LastUsedAt time.Time `json:"last_used_at"`
+	IsCurrent  bool      `json:"is_current"`
 }
 
 // ListActiveSessionsRequest is the input for listing active sessions.
 type ListActiveSessionsRequest struct {
-	UserID string
+	UserID           string
+	CurrentSessionID string
 }
 
 // ListActiveSessionsResponse is the output containing the list of active sessions.
@@ -56,12 +58,14 @@ func (c *coordinator) ListActiveSessions(ctx context.Context, req *ListActiveSes
 		if s.LastUsedAt != nil {
 			lastUsed = *s.LastUsedAt
 		}
+		isCurrent := req.CurrentSessionID != "" && string(s.ID) == req.CurrentSessionID
 		sessions[i] = &ActiveSession{
 			SessionID:  string(s.ID),
 			UserAgent:  s.UserAgent,
 			IPAddress:  s.IPAddress,
 			CreateTime: s.CreateTime,
 			LastUsedAt: lastUsed,
+			IsCurrent:  isCurrent,
 		}
 	}
 

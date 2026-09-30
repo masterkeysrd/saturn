@@ -229,3 +229,130 @@ func TestSecurityAuditEventsRecorded(t *testing.T) {
 		t.Errorf("expected security event for user email %s", email)
 	}
 }
+
+func TestActiveSessionIsCurrent(t *testing.T) {
+	d := driver.New(t, testEnv)
+
+	nano := time.Now().UnixNano()
+	email := fmt.Sprintf("iscurrent_%d@saturn.local", nano)
+	password := "Password123!"
+	username := fmt.Sprintf("curr_%d", nano)
+
+	user, err := d.Auth().RegisterUser(t, driver.RegisterUserOptions{
+		Name:     "Current Session User",
+		Email:    email,
+		Username: username,
+		Password: password,
+	})
+	if err != nil {
+		t.Fatalf("failed to register user: %v", err)
+	}
+	if _, err := d.Auth().ApproveUser(t, user.GetId()); err != nil {
+		t.Fatalf("failed to approve user: %v", err)
+	}
+
+	// 1. Client 1 login
+	loginResp1, err := d.Auth().LoginAs(t, email, password)
+	if err != nil {
+		t.Fatalf("client 1 login failed: %v", err)
+	}
+	accToken1 := loginResp1.GetAccessToken()
+	rfToken1 := loginResp1.GetRefreshToken()
+
+	// 2. Client 2 login
+	loginResp2, err := d.Auth().LoginAs(t, email, password)
+	if err != nil {
+		t.Fatalf("client 2 login failed: %v", err)
+	}
+	accToken2 := loginResp2.GetAccessToken()
+
+	// 3. Query active sessions using Client 1 token
+	d.State().AccessToken = accToken1
+	sessionsResp1, err := d.Auth().ListActiveSessions(t)
+	if err != nil {
+		t.Fatalf("failed to list active sessions for client 1: %v", err)
+	}
+	if len(sessionsResp1.GetSessions()) < 2 {
+		t.Fatalf("expected at least 2 active sessions, got %d", len(sessionsResp1.GetSessions()))
+	}
+
+	var client1SessionID string
+	var client1CurrentCount int
+	for _, s := range sessionsResp1.GetSessions() {
+		if s.GetIsCurrent() {
+			client1CurrentCount++
+			client1SessionID = s.GetSessionId()
+		}
+	}
+	if client1CurrentCount != 1 {
+		t.Fatalf("client 1: expected exactly 1 current session, got %d", client1CurrentCount)
+	}
+	if client1SessionID == "" {
+		t.Fatalf("client 1: current session ID should not be empty")
+	}
+
+	// 4. Query active sessions using Client 2 token
+	d.State().AccessToken = accToken2
+	sessionsResp2, err := d.Auth().ListActiveSessions(t)
+	if err != nil {
+		t.Fatalf("failed to list active sessions for client 2: %v", err)
+	}
+
+	var client2SessionID string
+	var client2CurrentCount int
+	for _, s := range sessionsResp2.GetSessions() {
+		if s.GetIsCurrent() {
+			client2CurrentCount++
+			client2SessionID = s.GetSessionId()
+		}
+	}
+	if client2CurrentCount != 1 {
+		t.Fatalf("client 2: expected exactly 1 current session, got %d", client2CurrentCount)
+	}
+	if client2SessionID == "" {
+		t.Fatalf("client 2: current session ID should not be empty")
+	}
+
+	if client1SessionID == client2SessionID {
+		t.Fatalf("expected different session IDs for client 1 and client 2, got same: %s", client1SessionID)
+	}
+
+	// Verify that Client 1's session was NOT marked current for Client 2
+	for _, s := range sessionsResp2.GetSessions() {
+		if s.GetSessionId() == client1SessionID && s.GetIsCurrent() {
+			t.Errorf("client 1 session %s was marked is_current=true when requested by client 2", client1SessionID)
+		}
+	}
+
+	// 5. Rotate Client 1 session via refresh token and verify new current session
+	refreshResp1, err := d.Auth().RefreshSession(t, rfToken1)
+	if err != nil {
+		t.Fatalf("client 1 session rotation failed: %v", err)
+	}
+	accToken1Rotated := refreshResp1.GetAccessToken()
+
+	d.State().AccessToken = accToken1Rotated
+	sessionsResp3, err := d.Auth().ListActiveSessions(t)
+	if err != nil {
+		t.Fatalf("failed to list active sessions after refresh: %v", err)
+	}
+
+	var rotatedCurrentCount int
+	var rotatedSessionID string
+	for _, s := range sessionsResp3.GetSessions() {
+		if s.GetIsCurrent() {
+			rotatedCurrentCount++
+			rotatedSessionID = s.GetSessionId()
+		}
+	}
+	if rotatedCurrentCount != 1 {
+		t.Fatalf("rotated client 1: expected exactly 1 current session, got %d", rotatedCurrentCount)
+	}
+	if rotatedSessionID == "" {
+		t.Fatalf("rotated client 1: session ID should not be empty")
+	}
+	if rotatedSessionID == client2SessionID {
+		t.Errorf("rotated client 1 session matches client 2 session ID %s", client2SessionID)
+	}
+}
+

@@ -26,6 +26,7 @@ const (
 	AdminIdentity_RevokeAllSessions_FullMethodName  = "/saturn.identity.admin.v1.AdminIdentity/RevokeAllSessions"
 	AdminIdentity_ListSecurityEvents_FullMethodName = "/saturn.identity.admin.v1.AdminIdentity/ListSecurityEvents"
 	AdminIdentity_ResetPassword_FullMethodName      = "/saturn.identity.admin.v1.AdminIdentity/ResetPassword"
+	AdminIdentity_UnlockUser_FullMethodName         = "/saturn.identity.admin.v1.AdminIdentity/UnlockUser"
 )
 
 // AdminIdentityClient is the client API for AdminIdentity service.
@@ -48,6 +49,8 @@ type AdminIdentityClient interface {
 	ListSecurityEvents(ctx context.Context, in *ListSecurityEventsRequest, opts ...grpc.CallOption) (*ListSecurityEventsResponse, error)
 	// Initiates a password reset for a user by generating a single-use reset URL.
 	ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error)
+	// Unlocks a locked user account by clearing lockout timestamp and resetting failed login attempts.
+	UnlockUser(ctx context.Context, in *UnlockUserRequest, opts ...grpc.CallOption) (*User, error)
 }
 
 type adminIdentityClient struct {
@@ -128,6 +131,16 @@ func (c *adminIdentityClient) ResetPassword(ctx context.Context, in *ResetPasswo
 	return out, nil
 }
 
+func (c *adminIdentityClient) UnlockUser(ctx context.Context, in *UnlockUserRequest, opts ...grpc.CallOption) (*User, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(User)
+	err := c.cc.Invoke(ctx, AdminIdentity_UnlockUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminIdentityServer is the server API for AdminIdentity service.
 // All implementations should embed UnimplementedAdminIdentityServer
 // for forward compatibility.
@@ -148,6 +161,8 @@ type AdminIdentityServer interface {
 	ListSecurityEvents(context.Context, *ListSecurityEventsRequest) (*ListSecurityEventsResponse, error)
 	// Initiates a password reset for a user by generating a single-use reset URL.
 	ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error)
+	// Unlocks a locked user account by clearing lockout timestamp and resetting failed login attempts.
+	UnlockUser(context.Context, *UnlockUserRequest) (*User, error)
 }
 
 // UnimplementedAdminIdentityServer should be embedded to have
@@ -177,6 +192,9 @@ func (UnimplementedAdminIdentityServer) ListSecurityEvents(context.Context, *Lis
 }
 func (UnimplementedAdminIdentityServer) ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResetPassword not implemented")
+}
+func (UnimplementedAdminIdentityServer) UnlockUser(context.Context, *UnlockUserRequest) (*User, error) {
+	return nil, status.Error(codes.Unimplemented, "method UnlockUser not implemented")
 }
 func (UnimplementedAdminIdentityServer) testEmbeddedByValue() {}
 
@@ -324,6 +342,24 @@ func _AdminIdentity_ResetPassword_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminIdentity_UnlockUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnlockUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminIdentityServer).UnlockUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminIdentity_UnlockUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminIdentityServer).UnlockUser(ctx, req.(*UnlockUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminIdentity_ServiceDesc is the grpc.ServiceDesc for AdminIdentity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -358,6 +394,10 @@ var AdminIdentity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResetPassword",
 			Handler:    _AdminIdentity_ResetPassword_Handler,
+		},
+		{
+			MethodName: "UnlockUser",
+			Handler:    _AdminIdentity_UnlockUser_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

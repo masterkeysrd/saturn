@@ -145,3 +145,17 @@ func (c *Client) ResetPassword(ctx context.Context, req *ResetPasswordRequest) (
 	}
 	return &resp, nil
 }
+
+// UnlockUser executes POST /api/v1/admin/identity/users/{user_id}:unlock.
+func (c *Client) UnlockUser(ctx context.Context, req *UnlockUserRequest) (*User, error) {
+	var resp User
+	path := fmt.Sprintf("/api/v1/admin/identity/users/%s:unlock", req.GetUserId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}

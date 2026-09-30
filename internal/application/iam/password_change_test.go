@@ -114,6 +114,12 @@ func TestCoordinator_ChangePassword(t *testing.T) {
 						AuthVersion: 2,
 					}, nil
 				}
+				tokMock.IssueRefreshTokenFunc = func(input token.IssueInput, now, absoluteExpiry time.Time) (string, time.Time, error) {
+					return "fresh-refresh-token", now.Add(24 * time.Hour), nil
+				}
+				idMock.CreateSessionFunc = func(ctx context.Context, req *identity.CreateSessionRequest) (*identity.Session, error) {
+					return &identity.Session{ID: "ses_123"}, nil
+				}
 				tokMock.IssueAccessTokenFunc = func(input token.IssueInput, now time.Time) (string, time.Time, error) {
 					return "", time.Time{}, errors.New("sign token error")
 				}

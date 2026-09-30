@@ -312,7 +312,7 @@ export function AppSidebar() {
               </Link>
 
               <Link
-                to="/settings/security"
+                to="/settings/security/credentials"
                 onClick={() => {
                   setProfileOpen(false)
                   if (isMobile) setOpenMobile(false)

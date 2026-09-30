@@ -155,6 +155,7 @@ func (ai *AuthInterceptor) authenticate(ctx context.Context, accessLevels []stri
 		AccessLevel: claims.AccessLevel,
 		TokenID:     claims.ID,
 		AuthVersion: claims.AuthVersion,
+		SessionID:   claims.SessionID,
 	}
 
 	// Check access level restrictions

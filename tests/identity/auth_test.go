@@ -262,3 +262,155 @@ func TestAdminListUsersWithFiltersAndPagination(t *testing.T) {
 		t.Errorf("page 2 returned duplicate user from page 1: %s", page2.GetUsers()[0].GetId())
 	}
 }
+
+func TestAccountLockoutAndAdminUnlock(t *testing.T) {
+	d := driver.New(t, testEnv)
+
+	nano := time.Now().UnixNano()
+	email := fmt.Sprintf("lockout_%d@saturn.local", nano)
+	password := "SecretPass123!"
+	username := fmt.Sprintf("lock_%d", nano)
+
+	user, err := d.Auth().RegisterUser(t, driver.RegisterUserOptions{
+		Name:     "Lockout User",
+		Email:    email,
+		Username: username,
+		Password: password,
+	})
+	if err != nil {
+		t.Fatalf("failed to register user: %v", err)
+	}
+
+	_, err = d.Auth().ApproveUser(t, user.GetId())
+	if err != nil {
+		t.Fatalf("failed to approve user: %v", err)
+	}
+
+	// 1. Fail login 4 times with bad password
+	for i := 1; i <= 4; i++ {
+		_, err := d.Auth().LoginAs(t, email, "WrongPassword!")
+		if err == nil {
+			t.Fatalf("attempt %d: expected login to fail with bad password", i)
+		}
+	}
+
+	// Verify failed login attempts = 4 and locked_until is nil
+	adminList1, err := d.Auth().ListUsers(t, &adminidentityv1.ListUsersRequest{
+		SearchQuery: email,
+	})
+	if err != nil {
+		t.Fatalf("failed to list users: %v", err)
+	}
+	var targetUser *adminidentityv1.User
+	for _, u := range adminList1.GetUsers() {
+		if u.GetId() == user.GetId() {
+			targetUser = u
+			break
+		}
+	}
+	if targetUser == nil {
+		t.Fatalf("user %s not found in admin user list", user.GetId())
+	}
+	if targetUser.GetFailedLoginAttempts() != 4 {
+		t.Errorf("failed login attempts = %d, want 4", targetUser.GetFailedLoginAttempts())
+	}
+	if targetUser.GetLockedUntil() != nil {
+		t.Errorf("expected locked_until to be nil after 4 attempts, got %v", targetUser.GetLockedUntil())
+	}
+
+	// 2. 5th failed attempt locks the account
+	_, err = d.Auth().LoginAs(t, email, "WrongPassword!")
+	if err == nil {
+		t.Fatalf("attempt 5: expected login to fail with bad password")
+	}
+
+	adminList2, err := d.Auth().ListUsers(t, &adminidentityv1.ListUsersRequest{
+		SearchQuery: email,
+	})
+	if err != nil {
+		t.Fatalf("failed to list users: %v", err)
+	}
+	targetUser = nil
+	for _, u := range adminList2.GetUsers() {
+		if u.GetId() == user.GetId() {
+			targetUser = u
+			break
+		}
+	}
+	if targetUser == nil {
+		t.Fatalf("user %s not found in admin user list", user.GetId())
+	}
+	if targetUser.GetFailedLoginAttempts() != 5 {
+		t.Errorf("failed login attempts = %d, want 5", targetUser.GetFailedLoginAttempts())
+	}
+	if targetUser.GetLockedUntil() == nil {
+		t.Fatalf("expected locked_until to be set after 5 attempts, got nil")
+	}
+	if !targetUser.GetLockedUntil().AsTime().After(time.Now()) {
+		t.Errorf("expected locked_until %v to be in the future", targetUser.GetLockedUntil().AsTime())
+	}
+
+	// 3. Attempt login with the CORRECT password while locked - must fail
+	_, err = d.Auth().LoginAs(t, email, password)
+	if err == nil {
+		t.Fatalf("expected login with correct password to fail while account is locked")
+	}
+
+	// 4. Admin unlocks the user account
+	unlockedUser, err := d.Auth().UnlockUser(t, user.GetId())
+	if err != nil {
+		t.Fatalf("admin UnlockUser failed: %v", err)
+	}
+	if unlockedUser.GetId() != user.GetId() {
+		t.Errorf("unlocked user ID = %s, want %s", unlockedUser.GetId(), user.GetId())
+	}
+	if unlockedUser.GetFailedLoginAttempts() != 0 {
+		t.Errorf("unlocked user failed login attempts = %d, want 0", unlockedUser.GetFailedLoginAttempts())
+	}
+	if unlockedUser.GetLockedUntil() != nil {
+		t.Errorf("unlocked user locked_until = %v, want nil", unlockedUser.GetLockedUntil())
+	}
+
+	// Verify persistence in admin list
+	adminList3, err := d.Auth().ListUsers(t, &adminidentityv1.ListUsersRequest{
+		SearchQuery: email,
+	})
+	if err != nil {
+		t.Fatalf("failed to list users after unlock: %v", err)
+	}
+	targetUser = nil
+	for _, u := range adminList3.GetUsers() {
+		if u.GetId() == user.GetId() {
+			targetUser = u
+			break
+		}
+	}
+	if targetUser == nil {
+		t.Fatalf("user %s not found in admin user list", user.GetId())
+	}
+	if targetUser.GetFailedLoginAttempts() != 0 {
+		t.Errorf("persisted failed login attempts = %d, want 0", targetUser.GetFailedLoginAttempts())
+	}
+	if targetUser.GetLockedUntil() != nil {
+		t.Errorf("persisted locked_until = %v, want nil", targetUser.GetLockedUntil())
+	}
+
+	// 5. Login with correct password now succeeds
+	loginResp, err := d.Auth().LoginAs(t, email, password)
+	if err != nil {
+		t.Fatalf("login failed after account was unlocked: %v", err)
+	}
+	if loginResp.GetAccessToken() == "" {
+		t.Fatalf("expected non-empty access token after unlocking")
+	}
+
+	d.State().AccessToken = loginResp.GetAccessToken()
+	me, err := d.Auth().GetCurrentUser(t)
+	if err != nil {
+		t.Fatalf("failed to get current user after unlocking: %v", err)
+	}
+	if me.GetId() != user.GetId() {
+		t.Errorf("me id = %s, want %s", me.GetId(), user.GetId())
+	}
+}
+

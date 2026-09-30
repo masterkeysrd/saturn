@@ -166,7 +166,7 @@ export function ActiveSessionsSettings() {
         ) : (
           <div className="divide-y divide-border/30">
             {sessions.map((session, idx) => {
-              const isCurrent = idx === 0 // Saturn sorts sessions with current/most recent first
+              const isCurrent = Boolean(session.isCurrent ?? idx === 0)
               const parsed = parseUserAgent(session.userAgent || "")
               const lastActive = session.lastUsedAt
                 ? new Date(session.lastUsedAt).toLocaleString()

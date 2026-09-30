@@ -147,6 +147,15 @@ func (a *AuthDriver) ListUsers(tb testing.TB, req *adminidentityv1.ListUsersRequ
 	return adminClient.ListUsers(tb.Context(), req)
 }
 
+// UnlockUser unlocks a locked user account by ID via adminidentityv1.Client SDK.
+func (a *AuthDriver) UnlockUser(tb testing.TB, userID string) (*adminidentityv1.User, error) {
+	tb.Helper()
+	adminClient := a.getAdminClient(tb)
+	return adminClient.UnlockUser(tb.Context(), &adminidentityv1.UnlockUserRequest{
+		UserId: userID,
+	})
+}
+
 // CreateApprovedUser composes Register and Approve into a single step.
 func (a *AuthDriver) CreateApprovedUser(tb testing.TB) *AuthDriver {
 	tb.Helper()

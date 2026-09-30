@@ -1963,6 +1963,86 @@ func TestService_SessionsAndEvents(t *testing.T) {
 		}
 	})
 
+	t.Run("UnlockUser", func(t *testing.T) {
+		lockedTime := time.Now().Add(10 * time.Minute)
+		tests := []struct {
+			name        string
+			setupStore  func(m *UserStoreProviderMock, s *SecurityEventStoreMock)
+			expectedErr bool
+		}{
+			{
+				name: "Success",
+				setupStore: func(m *UserStoreProviderMock, s *SecurityEventStoreMock) {
+					m.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return &User{
+							ID:                  "usr_1",
+							Email:               "user@example.com",
+							FailedLoginAttempts: 5,
+							LockedUntil:         &lockedTime,
+						}, nil
+					}
+					m.UpdateLockoutStateFunc = func(ctx context.Context, req UpdateLockoutRequest) error {
+						if req.UserID != "usr_1" || req.Attempts != 0 || req.LockedUntil != nil {
+							t.Fatalf("unexpected lockout update: %+v", req)
+						}
+						return nil
+					}
+					s.CreateFunc = func(ctx context.Context, event *SecurityEvent) error {
+						if event.EventType != SecurityEventAccountUnlocked {
+							t.Fatalf("unexpected event type: %s", event.EventType)
+						}
+						return nil
+					}
+				},
+				expectedErr: false,
+			},
+			{
+				name: "User Not Found",
+				setupStore: func(m *UserStoreProviderMock, s *SecurityEventStoreMock) {
+					m.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return nil, errors.New("user not found")
+					}
+				},
+				expectedErr: true,
+			},
+			{
+				name: "UpdateLockoutState Failure",
+				setupStore: func(m *UserStoreProviderMock, s *SecurityEventStoreMock) {
+					m.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return &User{ID: "usr_1", Email: "user@example.com"}, nil
+					}
+					m.UpdateLockoutStateFunc = func(ctx context.Context, req UpdateLockoutRequest) error {
+						return errors.New("db error")
+					}
+				},
+				expectedErr: true,
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				uStore := &UserStoreProviderMock{}
+				sStore := &SecurityEventStoreMock{}
+				if tc.setupStore != nil {
+					tc.setupStore(uStore, sStore)
+				}
+				svc := NewService(Dependencies{UserStore: uStore, SecurityEventStore: sStore})
+				u, err := svc.UnlockUser(ctx, "usr_1")
+				if tc.expectedErr && err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !tc.expectedErr {
+					if err != nil {
+						t.Fatalf("unexpected error: %v", err)
+					}
+					if u.FailedLoginAttempts != 0 || u.LockedUntil != nil {
+						t.Fatalf("expected cleared lockout fields, got attempts=%d, lockedUntil=%v", u.FailedLoginAttempts, u.LockedUntil)
+					}
+				}
+			})
+		}
+	})
+
 	t.Run("CreateSecurityEvent and ListSecurityEvents", func(t *testing.T) {
 		tests := []struct {
 			name        string

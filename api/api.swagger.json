@@ -418,6 +418,46 @@
         ]
       }
     },
+    "/v1/admin/identity/users/{userId}:unlock": {
+      "post": {
+        "summary": "Unlocks a locked user account by clearing lockout timestamp and resetting failed login attempts.",
+        "operationId": "AdminIdentity_UnlockUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/identityAdminV1User"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "Required. The unique identifier of the user to unlock.\nFormatted as `usr_\u003cksuid\u003e` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AdminIdentityUnlockUserBody"
+            }
+          }
+        ],
+        "tags": [
+          "AdminIdentity"
+        ]
+      }
+    },
     "/v1/admin/messages/deliveries": {
       "get": {
         "summary": "Lists message delivery records filtered by topic or status.",
@@ -5885,6 +5925,10 @@
       },
       "description": "Request message for AdminIdentity.ResetPassword."
     },
+    "AdminIdentityUnlockUserBody": {
+      "type": "object",
+      "description": "Request message for AdminIdentity.UnlockUser."
+    },
     "AdminIdentityUpdateUserRoleBody": {
       "type": "object",
       "properties": {
@@ -6975,6 +7019,18 @@
           "type": "string",
           "format": "date-time",
           "description": "Output only. The timestamp when the user account was last updated.",
+          "readOnly": true
+        },
+        "lockedUntil": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. The timestamp until which the user account is locked due to repeated failed login attempts.",
+          "readOnly": true
+        },
+        "failedLoginAttempts": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Number of consecutive failed login attempts.",
           "readOnly": true
         }
       },
@@ -11247,6 +11303,11 @@
           "type": "string",
           "format": "date-time",
           "description": "Output only. The timestamp when the session was last utilized.",
+          "readOnly": true
+        },
+        "isCurrent": {
+          "type": "boolean",
+          "description": "Output only. Whether this session corresponds to the caller's current active session.",
           "readOnly": true
         }
       },

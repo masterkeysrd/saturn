@@ -17,6 +17,7 @@ type Principal struct {
 	AccessLevel string
 	TokenID     string
 	AuthVersion int64
+	SessionID   string
 }
 
 // CurrentUser contains current profile and account data for RPCs that explicitly require it.

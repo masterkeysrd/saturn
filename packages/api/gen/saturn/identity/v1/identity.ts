@@ -299,6 +299,10 @@ export interface UserSession {
    * Output only. The timestamp when the session was last utilized.
    */
   lastUsedAt?: string
+  /**
+   * Output only. Whether this session corresponds to the caller's current active session.
+   */
+  isCurrent?: boolean
 }
 
 /**

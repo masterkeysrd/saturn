@@ -756,7 +756,9 @@ type UserSession struct {
 	// Output only. The timestamp when the session was initialized.
 	CreateTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	// Output only. The timestamp when the session was last utilized.
-	LastUsedAt    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=last_used_at,json=lastUsedAt,proto3" json:"last_used_at,omitempty"`
+	LastUsedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=last_used_at,json=lastUsedAt,proto3" json:"last_used_at,omitempty"`
+	// Output only. Whether this session corresponds to the caller's current active session.
+	IsCurrent     bool `protobuf:"varint,6,opt,name=is_current,json=isCurrent,proto3" json:"is_current,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -824,6 +826,13 @@ func (x *UserSession) GetLastUsedAt() *timestamppb.Timestamp {
 		return x.LastUsedAt
 	}
 	return nil
+}
+
+func (x *UserSession) GetIsCurrent() bool {
+	if x != nil {
+		return x.IsCurrent
+	}
+	return false
 }
 
 // Request message for Identity.ListActiveSessions.
@@ -2995,7 +3004,7 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\rLogoutRequest\x12(\n" +
 	"\rrefresh_token\x18\x01 \x01(\tB\x03\xe0A\x02R\frefreshToken\"\x10\n" +
 	"\x0eLogoutResponse\"\x17\n" +
-	"\x15GetCurrentUserRequest\"\xfe\x01\n" +
+	"\x15GetCurrentUserRequest\"\xa2\x02\n" +
 	"\vUserSession\x12\"\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tB\x03\xe0A\x03R\tsessionId\x12\"\n" +
@@ -3006,7 +3015,9 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\vcreate_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime\x12A\n" +
 	"\flast_used_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
-	"lastUsedAt\"\x1b\n" +
+	"lastUsedAt\x12\"\n" +
+	"\n" +
+	"is_current\x18\x06 \x01(\bB\x03\xe0A\x03R\tisCurrent\"\x1b\n" +
 	"\x19ListActiveSessionsRequest\"^\n" +
 	"\x1aListActiveSessionsResponse\x12@\n" +
 	"\bsessions\x18\x01 \x03(\v2\x1f.saturn.identity.v1.UserSessionB\x03\xe0A\x03R\bsessions\":\n" +

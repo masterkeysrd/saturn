@@ -24,17 +24,24 @@ func NewAdminHandler(coordinator iam.Coordinator) *AdminHandler {
 
 // toAdminUser converts a domain identity.User to an admin proto User.
 func toAdminUser(u *identity.User) *adminidentityv1.User {
+	var lockedUntil *timestamppb.Timestamp
+	if u.LockedUntil != nil {
+		lockedUntil = timestamppb.New(*u.LockedUntil)
+	}
+
 	return &adminidentityv1.User{
-		Id:          string(u.ID),
-		Email:       u.Email,
-		Username:    u.Username,
-		Name:        u.Name,
-		AvatarUrl:   u.AvatarURL,
-		Status:      string(u.Status),
-		AccessLevel: adminAccessLevel(u.AccessLevel),
-		Version:     u.Version,
-		CreateTime:  timestamppb.New(u.CreateTime),
-		UpdateTime:  timestamppb.New(u.UpdateTime),
+		Id:                  string(u.ID),
+		Email:               u.Email,
+		Username:            u.Username,
+		Name:                u.Name,
+		AvatarUrl:           u.AvatarURL,
+		Status:              string(u.Status),
+		AccessLevel:         adminAccessLevel(u.AccessLevel),
+		Version:             u.Version,
+		CreateTime:          timestamppb.New(u.CreateTime),
+		UpdateTime:          timestamppb.New(u.UpdateTime),
+		LockedUntil:         lockedUntil,
+		FailedLoginAttempts: int32(u.FailedLoginAttempts),
 	}
 }
 
@@ -213,4 +220,16 @@ func (h *AdminHandler) ResetPassword(ctx context.Context, req *adminidentityv1.R
 		Token:     resp.Token,
 		ExpiresAt: timestamppb.New(resp.ExpiresAt),
 	}, nil
+}
+
+// UnlockUser unlocks a locked user account and clears failed login attempts.
+func (h *AdminHandler) UnlockUser(ctx context.Context, req *adminidentityv1.UnlockUserRequest) (*adminidentityv1.User, error) {
+	resp, err := h.Coordinator.UnlockUser(ctx, &iam.UnlockUserRequest{
+		UserID: req.GetUserId(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return toAdminUser(resp.User), nil
 }

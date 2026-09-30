@@ -120,6 +120,10 @@ func (t *TransactionalCoordinator) RejectUser(ctx context.Context, req *RejectUs
 	return t.next.RejectUser(ctx, req)
 }
 
+func (t *TransactionalCoordinator) UnlockUser(ctx context.Context, req *UnlockUserRequest) (*UnlockUserResponse, error) {
+	return t.next.UnlockUser(ctx, req)
+}
+
 func (t *TransactionalCoordinator) ListUsers(ctx context.Context, filter *ListUsersFilter) (*paging.Page[*identity.User], error) {
 	return t.next.ListUsers(ctx, filter)
 }

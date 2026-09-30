@@ -306,15 +306,6 @@ func (c *coordinator) finalizeLoginSession(ctx context.Context, p finalizeSessio
 		return nil, errors.E(op, fmt.Errorf("get auth version: %w", err))
 	}
 
-	accessToken, _, err := c.tokenService.IssueAccessToken(token.IssueInput{
-		Subject:     string(p.User.ID),
-		AccessLevel: string(p.User.AccessLevel),
-		AuthVersion: authVersion,
-	}, p.Now)
-	if err != nil {
-		return nil, errors.E(op, fmt.Errorf("issue access token: %w", err))
-	}
-
 	refreshToken, _, err := c.tokenService.IssueRefreshToken(token.IssueInput{
 		Subject:     string(p.User.ID),
 		AccessLevel: string(p.User.AccessLevel),
@@ -326,7 +317,7 @@ func (c *coordinator) finalizeLoginSession(ctx context.Context, p finalizeSessio
 
 	refreshTokenHash := hash.SHA256String(refreshToken)
 
-	if _, err := c.identityService.CreateSession(ctx, &identity.CreateSessionRequest{
+	session, err := c.identityService.CreateSession(ctx, &identity.CreateSessionRequest{
 		UserID:            p.User.ID,
 		DeviceID:          p.DeviceID,
 		RefreshTokenHash:  refreshTokenHash,
@@ -334,8 +325,19 @@ func (c *coordinator) finalizeLoginSession(ctx context.Context, p finalizeSessio
 		IPAddress:         p.Req.IPAddress,
 		ExpiresAt:         p.Now.Add(24 * time.Hour),
 		AbsoluteExpiresAt: p.Now.Add(7 * 24 * time.Hour),
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, errors.E(op, fmt.Errorf("create session: %w", err))
+	}
+
+	accessToken, _, err := c.tokenService.IssueAccessToken(token.IssueInput{
+		Subject:     string(p.User.ID),
+		AccessLevel: string(p.User.AccessLevel),
+		AuthVersion: authVersion,
+		SessionID:   string(session.ID),
+	}, p.Now)
+	if err != nil {
+		return nil, errors.E(op, fmt.Errorf("issue access token: %w", err))
 	}
 
 	return &LoginResponse{

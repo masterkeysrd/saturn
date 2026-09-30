@@ -44,15 +44,6 @@ func (c *coordinator) RefreshSession(ctx context.Context, req *RefreshSessionReq
 		return nil, errors.E(op, errors.Unauthenticated, identity.SessionRevoked, "session revoked")
 	}
 
-	accessToken, _, err := c.tokenService.IssueAccessToken(token.IssueInput{
-		Subject:     claims.Subject,
-		AccessLevel: claims.AccessLevel,
-		AuthVersion: authVersion,
-	}, now)
-	if err != nil {
-		return nil, errors.E(op, fmt.Errorf("issue access token: %w", err))
-	}
-
 	successorRefreshToken, _, err := c.tokenService.IssueRefreshToken(token.IssueInput{
 		Subject:     claims.Subject,
 		AccessLevel: claims.AccessLevel,
@@ -65,7 +56,7 @@ func (c *coordinator) RefreshSession(ctx context.Context, req *RefreshSessionReq
 	rawTokenHash := hash.SHA256String(req.RefreshToken)
 	successorTokenHash := hash.SHA256String(successorRefreshToken)
 
-	_, err = c.identityService.RotateSession(ctx, &identity.RotateSessionRequest{
+	rotatedSession, err := c.identityService.RotateSession(ctx, &identity.RotateSessionRequest{
 		RefreshTokenHash: rawTokenHash,
 		SuccessorHash:    successorTokenHash,
 		UserAgent:        req.UserAgent,
@@ -74,6 +65,16 @@ func (c *coordinator) RefreshSession(ctx context.Context, req *RefreshSessionReq
 	})
 	if err != nil {
 		return nil, errors.E(op, err)
+	}
+
+	accessToken, _, err := c.tokenService.IssueAccessToken(token.IssueInput{
+		Subject:     claims.Subject,
+		AccessLevel: claims.AccessLevel,
+		AuthVersion: authVersion,
+		SessionID:   string(rotatedSession.ID),
+	}, now)
+	if err != nil {
+		return nil, errors.E(op, fmt.Errorf("issue access token: %w", err))
 	}
 
 	return &RefreshSessionResponse{

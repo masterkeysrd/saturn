@@ -71,15 +71,6 @@ func (c *coordinator) ChangePassword(ctx context.Context, req *ChangePasswordReq
 		return nil, errors.E(op, err)
 	}
 
-	accessToken, _, err := c.tokenService.IssueAccessToken(token.IssueInput{
-		Subject:     string(user.ID),
-		AccessLevel: string(user.AccessLevel),
-		AuthVersion: user.AuthVersion,
-	}, now)
-	if err != nil {
-		return nil, errors.E(op, fmt.Errorf("issue access token: %w", err))
-	}
-
 	refreshToken, _, err := c.tokenService.IssueRefreshToken(token.IssueInput{
 		Subject:     string(user.ID),
 		AccessLevel: string(user.AccessLevel),
@@ -91,15 +82,26 @@ func (c *coordinator) ChangePassword(ctx context.Context, req *ChangePasswordReq
 
 	refreshTokenHash := hash.SHA256String(refreshToken)
 
-	if _, err := c.identityService.CreateSession(ctx, &identity.CreateSessionRequest{
+	session, err := c.identityService.CreateSession(ctx, &identity.CreateSessionRequest{
 		UserID:            user.ID,
 		RefreshTokenHash:  refreshTokenHash,
 		UserAgent:         req.UserAgent,
 		IPAddress:         req.IPAddress,
 		ExpiresAt:         now.Add(24 * time.Hour),
 		AbsoluteExpiresAt: now.Add(7 * 24 * time.Hour),
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, errors.E(op, fmt.Errorf("create session: %w", err))
+	}
+
+	accessToken, _, err := c.tokenService.IssueAccessToken(token.IssueInput{
+		Subject:     string(user.ID),
+		AccessLevel: string(user.AccessLevel),
+		AuthVersion: user.AuthVersion,
+		SessionID:   string(session.ID),
+	}, now)
+	if err != nil {
+		return nil, errors.E(op, fmt.Errorf("issue access token: %w", err))
 	}
 
 	return &ChangePasswordResponse{

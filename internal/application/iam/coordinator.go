@@ -31,6 +31,7 @@ type Coordinator interface {
 	// @transactional
 	ApproveUser(ctx context.Context, req *ApproveUserRequest) (*ApproveUserResponse, error)
 	RejectUser(ctx context.Context, req *RejectUserRequest) (*RejectUserResponse, error)
+	UnlockUser(ctx context.Context, req *UnlockUserRequest) (*UnlockUserResponse, error)
 	ListUsers(ctx context.Context, filter *ListUsersFilter) (*paging.Page[*identity.User], error)
 	UpdateUserRole(ctx context.Context, req *UpdateUserRoleRequest) (*UpdateUserRoleResponse, error)
 	ListActiveSessions(ctx context.Context, req *ListActiveSessionsRequest) (*ListActiveSessionsResponse, error)
@@ -142,6 +143,7 @@ type IdentityService interface {
 	ListUsers(ctx context.Context, filter *identity.ListUsersFilter) (*paging.Page[*identity.User], error)
 	ApproveUser(ctx context.Context, userID identity.UserID) (*identity.User, error)
 	RejectUser(ctx context.Context, userID identity.UserID) (*identity.User, error)
+	UnlockUser(ctx context.Context, userID identity.UserID) (*identity.User, error)
 	UpdateUserRole(ctx context.Context, userID identity.UserID, accessLevel identity.AccessLevel) (*identity.User, error)
 	GetAuthVersion(ctx context.Context, id identity.UserID) (int64, error)
 	IncrementAuthVersion(ctx context.Context, id identity.UserID) (int64, error)

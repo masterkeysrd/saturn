@@ -65,6 +65,15 @@ service AdminIdentity {
     };
     option (google.api.method_signature) = "user_id";
   }
+
+  // Unlocks a locked user account by clearing lockout timestamp and resetting failed login attempts.
+  rpc UnlockUser(UnlockUserRequest) returns (User) {
+    option (google.api.http) = {
+      post: "/v1/admin/identity/users/{user_id}:unlock"
+      body: "*"
+    };
+    option (google.api.method_signature) = "user_id";
+  }
 }
 
 // Request message for AdminIdentity.ListUsers.
@@ -212,6 +221,12 @@ message User {
 
   // Output only. The timestamp when the user account was last updated.
   google.protobuf.Timestamp update_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp until which the user account is locked due to repeated failed login attempts.
+  google.protobuf.Timestamp locked_until = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Number of consecutive failed login attempts.
+  int32 failed_login_attempts = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // SecurityEvent represents a security audit event in the admin context.
@@ -284,4 +299,11 @@ message ResetPasswordResponse {
 
   // Expiration timestamp.
   google.protobuf.Timestamp expires_at = 3;
+}
+
+// Request message for AdminIdentity.UnlockUser.
+message UnlockUserRequest {
+  // Required. The unique identifier of the user to unlock.
+  // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string user_id = 1 [(google.api.field_behavior) = REQUIRED];
 }

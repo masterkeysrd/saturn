@@ -292,6 +292,30 @@ func (l *LoggingCoordinator) RejectUser(ctx context.Context, req *RejectUserRequ
 	return res, nil
 }
 
+// UnlockUser executes next.UnlockUser and logs execution duration and errors.
+func (l *LoggingCoordinator) UnlockUser(ctx context.Context, req *UnlockUserRequest) (*UnlockUserResponse, error) {
+	start := time.Now()
+	res, err := l.next.UnlockUser(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.UnlockUser failed",
+			log.String("component", "iam"),
+			log.String("operation", "UnlockUser"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.UnlockUser completed",
+		log.String("component", "iam"),
+		log.String("operation", "UnlockUser"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
 // ListUsers executes next.ListUsers and logs execution duration and errors.
 func (l *LoggingCoordinator) ListUsers(ctx context.Context, filter *ListUsersFilter) (*paging.Page[*identity.User], error) {
 	start := time.Now()

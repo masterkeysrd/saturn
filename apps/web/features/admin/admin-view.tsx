@@ -5,11 +5,13 @@ import {
   useApproveUserMutation,
   useRejectUserMutation,
   useResetPasswordMutation,
+  useUnlockUserMutation,
   type ListUsersRequest_StatusFilter,
   type User,
 } from "@saturn/api/gen/saturn/identity/admin/v1/admin_identity"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { toast } from "@/components/ui/toast"
 import {
   Dialog,
   DialogContent,
@@ -28,6 +30,7 @@ import {
   CopyIcon,
   CheckIcon,
   ClockIcon,
+  UnlockIcon,
 } from "lucide-react"
 import { PageLayout } from "@/components/ui/page-layout"
 
@@ -71,6 +74,27 @@ export function AdminView() {
     },
   })
 
+  const unlockMutation = useUnlockUserMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/v1/admin/identity/users"],
+      })
+      toast.add({
+        type: "success",
+        title: "Account Unlocked",
+        description: "The user account has been unlocked successfully.",
+      })
+    },
+    onError: (err) => {
+      toast.add({
+        type: "error",
+        title: "Unlock Failed",
+        description:
+          err instanceof Error ? err.message : "Failed to unlock user account",
+      })
+    },
+  })
+
   const handleApprove = async (userId: string) => {
     try {
       await approveMutation.mutateAsync({ user_id: userId, req: { userId } })
@@ -84,6 +108,14 @@ export function AdminView() {
       await rejectMutation.mutateAsync({ user_id: userId, req: { userId } })
     } catch (err) {
       console.error("Failed to reject user:", err)
+    }
+  }
+
+  const handleUnlock = async (userId: string) => {
+    try {
+      await unlockMutation.mutateAsync({ user_id: userId, req: { userId } })
+    } catch {
+      // handled in onError
     }
   }
 
@@ -248,6 +280,10 @@ export function AdminView() {
                   const isPending = account.status === "pending_approval"
                   const isPendingOperation =
                     approveMutation.isPending || rejectMutation.isPending
+                  const isLocked = Boolean(
+                    account.lockedUntil &&
+                    new Date(account.lockedUntil).getTime() > Date.now()
+                  )
 
                   return (
                     <tr
@@ -291,17 +327,26 @@ export function AdminView() {
 
                       {/* Status Column */}
                       <td className="px-6 py-4.5">
-                        <span
-                          className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${
-                            account.status === "active"
-                              ? "border-green-500/20 bg-green-500/10 text-green-400"
-                              : account.status === "pending_approval"
-                                ? "border-amber-500/20 bg-amber-500/10 text-amber-400"
-                                : "border-destructive/20 bg-destructive/10 text-destructive"
-                          }`}
-                        >
-                          {(account.status || "").replace("_", " ")}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          {isLocked ? (
+                            <span className="inline-flex w-fit items-center gap-1 rounded-md border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-500">
+                              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+                              Locked
+                            </span>
+                          ) : (
+                            <span
+                              className={`inline-flex w-fit items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${
+                                account.status === "active"
+                                  ? "border-green-500/20 bg-green-500/10 text-green-400"
+                                  : account.status === "pending_approval"
+                                    ? "border-amber-500/20 bg-amber-500/10 text-amber-400"
+                                    : "border-destructive/20 bg-destructive/10 text-destructive"
+                              }`}
+                            >
+                              {(account.status || "").replace("_", " ")}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Actions Column */}
@@ -332,7 +377,21 @@ export function AdminView() {
                             </Button>
                           </div>
                         ) : account.status === "active" ? (
-                          <div className="flex items-center justify-end">
+                          <div className="flex items-center justify-end gap-2">
+                            {isLocked && (
+                              <Button
+                                onClick={() =>
+                                  account.id && handleUnlock(account.id)
+                                }
+                                disabled={unlockMutation.isPending}
+                                variant="outline"
+                                size="sm"
+                                className="h-8 cursor-pointer rounded-xl border-amber-500/30 px-3 text-amber-500 hover:bg-amber-500/10 hover:text-amber-400"
+                              >
+                                <UnlockIcon className="mr-1.5 h-3.5 w-3.5" />
+                                Unlock Account
+                              </Button>
+                            )}
                             <Button
                               onClick={() => handleOpenResetModal(account)}
                               variant="ghost"
@@ -341,6 +400,21 @@ export function AdminView() {
                             >
                               <KeyRoundIcon className="mr-1.5 h-3.5 w-3.5" />
                               Reset Password
+                            </Button>
+                          </div>
+                        ) : isLocked ? (
+                          <div className="flex items-center justify-end">
+                            <Button
+                              onClick={() =>
+                                account.id && handleUnlock(account.id)
+                              }
+                              disabled={unlockMutation.isPending}
+                              variant="outline"
+                              size="sm"
+                              className="h-8 cursor-pointer rounded-xl border-amber-500/30 px-3 text-amber-500 hover:bg-amber-500/10 hover:text-amber-400"
+                            >
+                              <UnlockIcon className="mr-1.5 h-3.5 w-3.5" />
+                              Unlock Account
                             </Button>
                           </div>
                         ) : (

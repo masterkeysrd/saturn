@@ -384,3 +384,57 @@ func TestCoordinator_UpdateUserRole(t *testing.T) {
 		})
 	}
 }
+
+func TestCoordinator_UnlockUser(t *testing.T) {
+	tests := []struct {
+		name          string
+		req           *UnlockUserRequest
+		mockUnlock    func(ctx context.Context, userID identity.UserID) (*identity.User, error)
+		expectedError bool
+	}{
+		{
+			name: "Success unlocking user",
+			req:  &UnlockUserRequest{UserID: "usr_1"},
+			mockUnlock: func(ctx context.Context, userID identity.UserID) (*identity.User, error) {
+				return &identity.User{
+					ID:                  userID,
+					FailedLoginAttempts: 0,
+					LockedUntil:         nil,
+				}, nil
+			},
+			expectedError: false,
+		},
+		{
+			name: "IdentityService error",
+			req:  &UnlockUserRequest{UserID: "usr_not_found"},
+			mockUnlock: func(ctx context.Context, userID identity.UserID) (*identity.User, error) {
+				return nil, errors.New("user not found")
+			},
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			coord := NewCoordinator(Dependencies{
+				IdentityService: &IdentityServiceMock{UnlockUserFunc: tc.mockUnlock},
+			})
+			res, err := coord.UnlockUser(context.Background(), tc.req)
+			if tc.expectedError {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if res.User.ID != identity.UserID(tc.req.UserID) {
+				t.Errorf("expected user ID %s, got %s", tc.req.UserID, res.User.ID)
+			}
+			if res.User.FailedLoginAttempts != 0 || res.User.LockedUntil != nil {
+				t.Errorf("expected unlocked user, got attempts=%d, lockedUntil=%v", res.User.FailedLoginAttempts, res.User.LockedUntil)
+			}
+		})
+	}
+}

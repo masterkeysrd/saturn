@@ -13,6 +13,7 @@ type Claims struct {
 	AccessLevel string `json:"role"`
 	TokenUse    string `json:"token_use"`
 	AuthVersion int64  `json:"auth_version"`
+	SessionID   string `json:"session_id,omitempty"`
 }
 
 // IsAccess returns true if the token is an access token.

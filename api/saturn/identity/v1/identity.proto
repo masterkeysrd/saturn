@@ -407,6 +407,9 @@ message UserSession {
 
   // Output only. The timestamp when the session was last utilized.
   google.protobuf.Timestamp last_used_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Whether this session corresponds to the caller's current active session.
+  bool is_current = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Request message for Identity.ListActiveSessions.

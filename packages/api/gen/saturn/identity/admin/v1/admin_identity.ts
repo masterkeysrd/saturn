@@ -224,6 +224,14 @@ export interface User {
    * Output only. The timestamp when the user account was last updated.
    */
   updateTime?: string
+  /**
+   * Output only. The timestamp until which the user account is locked due to repeated failed login attempts.
+   */
+  lockedUntil?: string
+  /**
+   * Output only. Number of consecutive failed login attempts.
+   */
+  failedLoginAttempts?: number
 }
 
 /**
@@ -329,6 +337,17 @@ export interface ResetPasswordResponse {
    * Expiration timestamp.
    */
   expiresAt: string
+}
+
+/**
+ * Request message for AdminIdentity.UnlockUser.
+ */
+export interface UnlockUserRequest {
+  /**
+   * Required. The unique identifier of the user to unlock.
+   * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  userId: string
 }
 
 /**
@@ -541,6 +560,33 @@ export function useResetPasswordMutation(
     { user_id: string; req: ResetPasswordRequest }
   >({
     mutationFn: ({ user_id, req }) => resetPassword(user_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Unlocks a locked user account by clearing lockout timestamp and resetting failed login attempts.
+ */
+export async function unlockUser(
+  user_id: string,
+  req: UnlockUserRequest
+): Promise<User> {
+  return request<User>({
+    method: "POST",
+    url: `/api/v1/admin/identity/users/${user_id}:unlock`,
+    data: req,
+  })
+}
+
+export function useUnlockUserMutation(
+  options?: UseMutationOptions<
+    User,
+    Error,
+    { user_id: string; req: UnlockUserRequest }
+  >
+) {
+  return useMutation<User, Error, { user_id: string; req: UnlockUserRequest }>({
+    mutationFn: ({ user_id, req }) => unlockUser(user_id, req),
     ...options,
   })
 }

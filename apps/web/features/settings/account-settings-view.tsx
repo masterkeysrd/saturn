@@ -453,7 +453,7 @@ export function AccountSettingsView() {
             </p>
           </div>
         </div>
-        <Link to="/settings/security" className="shrink-0">
+        <Link to="/settings/security/credentials" className="shrink-0">
           <Button variant="outline" size="sm" className="cursor-pointer">
             Manage Security & Logins
             <ArrowRightIcon className="ml-1.5 h-3.5 w-3.5" />

@@ -109,6 +109,7 @@ func (s *Ed25519Service) IssueAccessToken(input IssueInput, now time.Time) (stri
 		AccessLevel: input.AccessLevel,
 		TokenUse:    "access",
 		AuthVersion: input.AuthVersion,
+		SessionID:   input.SessionID,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
@@ -398,6 +399,7 @@ type IssueInput struct {
 	Subject     string
 	AccessLevel string
 	AuthVersion int64
+	SessionID   string
 }
 
 // Service provides JWT token issuance and validation.

@@ -121,6 +121,12 @@ func TestCoordinator_RefreshSession(t *testing.T) {
 			mockGetAuthVersion: func(ctx context.Context, id identity.UserID) (int64, error) {
 				return 2, nil
 			},
+			mockIssueRefresh: func(input token.IssueInput, now time.Time, absoluteExpiry time.Time) (string, time.Time, error) {
+				return "refresh_new", now, nil
+			},
+			mockRotateSession: func(ctx context.Context, req *identity.RotateSessionRequest) (*identity.Session, error) {
+				return &identity.Session{ID: "sess_rotated"}, nil
+			},
 			mockIssueAccess: func(input token.IssueInput, now time.Time) (string, time.Time, error) {
 				return "", time.Time{}, errors.New("issue access error")
 			},

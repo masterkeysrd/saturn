@@ -182,13 +182,16 @@ export function SettingsView() {
         {/* Content Panel Area driven by React Router Routes */}
         <main className="min-w-0 flex-1">
           <Routes>
-            <Route index element={<Navigate to="account" replace />} />
+            <Route
+              index
+              element={<Navigate to="/settings/account" replace />}
+            />
             <Route path="account" element={<AccountSettingsView />} />
 
             {/* Access & Security Sections */}
             <Route
               path="security"
-              element={<Navigate to="security/credentials" replace />}
+              element={<Navigate to="/settings/security/credentials" replace />}
             />
             <Route
               path="security/credentials"
@@ -221,7 +224,10 @@ export function SettingsView() {
             <Route path="spaces" element={<SpaceSettings />} />
 
             {/* Fallback */}
-            <Route path="*" element={<Navigate to="account" replace />} />
+            <Route
+              path="*"
+              element={<Navigate to="/settings/account" replace />}
+            />
           </Routes>
         </main>
       </div>

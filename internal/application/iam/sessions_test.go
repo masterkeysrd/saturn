@@ -24,7 +24,7 @@ func TestCoordinator_Sessions(t *testing.T) {
 		}{
 			{
 				name: "Success with LastUsedAt populated and nil fallback",
-				req:  &ListActiveSessionsRequest{UserID: "usr_1"},
+				req:  &ListActiveSessionsRequest{UserID: "usr_1", CurrentSessionID: "sess_1"},
 				mockList: func(ctx context.Context, userID identity.UserID) ([]*identity.Session, error) {
 					return []*identity.Session{
 						{
@@ -48,6 +48,9 @@ func TestCoordinator_Sessions(t *testing.T) {
 				validateFirst: func(t *testing.T, s *ActiveSession) {
 					if s.SessionID != "sess_1" || s.LastUsedAt != usedAt {
 						t.Errorf("unexpected session: %+v", s)
+					}
+					if !s.IsCurrent {
+						t.Errorf("expected sess_1 to have IsCurrent=true")
 					}
 				},
 			},

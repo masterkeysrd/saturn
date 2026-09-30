@@ -221,7 +221,8 @@ func (h *Handler) ListActiveSessions(ctx context.Context, req *identityv1.ListAc
 	}
 
 	resp, err := h.IAM.Coordinator.ListActiveSessions(ctx, &iam.ListActiveSessionsRequest{
-		UserID: principal.Subject,
+		UserID:           principal.Subject,
+		CurrentSessionID: principal.SessionID,
 	})
 	if err != nil {
 		return nil, err
@@ -235,6 +236,7 @@ func (h *Handler) ListActiveSessions(ctx context.Context, req *identityv1.ListAc
 			IpAddress:  s.IPAddress,
 			CreateTime: timestamppb.New(s.CreateTime),
 			LastUsedAt: timestamppb.New(s.LastUsedAt),
+			IsCurrent:  s.IsCurrent,
 		}
 	}
 
