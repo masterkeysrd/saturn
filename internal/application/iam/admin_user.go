@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 // AdminCreateUserRequest represents the input for admin user creation.
@@ -90,4 +92,134 @@ func (c *coordinator) AdminCreateUser(ctx context.Context, req *AdminCreateUserR
 		CreateTime:  user.CreateTime,
 		UpdateTime:  user.UpdateTime,
 	}, nil
+}
+
+// ApproveUserRequest represents the input for approving a user.
+type ApproveUserRequest struct {
+	UserID string
+}
+
+// ApproveUserResponse represents the output after approving a user.
+type ApproveUserResponse struct {
+	User *identity.User
+}
+
+// ApproveUser activates a pending user account.
+func (c *coordinator) ApproveUser(ctx context.Context, req *ApproveUserRequest) (*ApproveUserResponse, error) {
+	userID := identity.UserID(req.UserID)
+
+	// Delegate to service layer for validation and execution
+	user, err := c.identityService.ApproveUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create default workspace for approved user if space service is wired
+	if c.spaceService != nil {
+		defaultSpace := &space.Space{
+			Name:        fmt.Sprintf("%s's Workspace", user.Username),
+			Description: "My personal workspace",
+			OwnerID:     space.SpaceID(userID),
+		}
+		if _, err := c.spaceService.CreateSpace(ctx, defaultSpace); err != nil {
+			return nil, err
+		}
+	}
+
+	return &ApproveUserResponse{
+		User: user,
+	}, nil
+}
+
+// RejectUserRequest represents the input for rejecting a user.
+type RejectUserRequest struct {
+	UserID string
+}
+
+// RejectUserResponse represents the output after rejecting a user.
+type RejectUserResponse struct {
+	User *identity.User
+}
+
+// RejectUser deactivates a pending user account by setting status to inactive.
+func (c *coordinator) RejectUser(ctx context.Context, req *RejectUserRequest) (*RejectUserResponse, error) {
+	userID := identity.UserID(req.UserID)
+
+	// Delegate to service layer for validation and execution
+	user, err := c.identityService.RejectUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RejectUserResponse{
+		User: user,
+	}, nil
+}
+
+// UpdateUserRoleRequest represents the input for updating a user's role.
+type UpdateUserRoleRequest struct {
+	UserID      string
+	AccessLevel identity.AccessLevel
+}
+
+// UpdateUserRoleResponse represents the output after updating a user's role.
+type UpdateUserRoleResponse struct {
+	User *identity.User
+}
+
+// UpdateUserRole changes a user's access level by delegating to the service layer for validation and execution.
+func (c *coordinator) UpdateUserRole(ctx context.Context, req *UpdateUserRoleRequest) (*UpdateUserRoleResponse, error) {
+	userID := identity.UserID(req.UserID)
+
+	// Delegate to service layer for validation and execution
+	user, err := c.identityService.UpdateUserRole(ctx, userID, req.AccessLevel)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UpdateUserRoleResponse{
+		User: user,
+	}, nil
+}
+
+// UnlockUserRequest represents the input for unlocking a user account.
+type UnlockUserRequest struct {
+	UserID string
+}
+
+// UnlockUserResponse represents the output after unlocking a user account.
+type UnlockUserResponse struct {
+	User *identity.User
+}
+
+// UnlockUser unlocks a locked user account and clears failed login attempts.
+func (c *coordinator) UnlockUser(ctx context.Context, req *UnlockUserRequest) (*UnlockUserResponse, error) {
+	userID := identity.UserID(req.UserID)
+
+	user, err := c.identityService.UnlockUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UnlockUserResponse{
+		User: user,
+	}, nil
+}
+
+// ListUsersFilter encapsulates the filtering and pagination parameters for listing users.
+type ListUsersFilter struct {
+	PageSize      int32
+	NextPageToken string
+	StatusFilter  identity.UserStatus
+	SearchQuery   string
+}
+
+// ListUsers returns users with optional filtering by status and search query, delegating validation to the service layer.
+func (c *coordinator) ListUsers(ctx context.Context, filter *ListUsersFilter) (*paging.Page[*identity.User], error) {
+	return c.identityService.ListUsers(ctx, &identity.ListUsersFilter{
+		PageSize:      filter.PageSize,
+		NextPageToken: filter.NextPageToken,
+		StatusFilter:  filter.StatusFilter,
+		SearchQuery:   filter.SearchQuery,
+	})
 }
