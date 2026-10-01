@@ -47,7 +47,9 @@ func (c *coordinator) IngestEmail(ctx context.Context, spaceID string, integrati
 		},
 	}
 
-	state, err := c.ProcessSignalPipeline(ctx, spaceID, req)
+	fCtx := c.systemContext(ctx, spaceID)
+
+	state, err := c.ProcessSignalPipeline(ctx, fCtx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +65,7 @@ func (c *coordinator) IngestEmail(ctx context.Context, spaceID string, integrati
 		rawPayload = state.Request.TextContent
 	}
 
-	staged, err := c.financeService.StageInboxItem(ctx, finance.SpaceID(spaceID), &finance.StageInboxItem{
+	staged, err := c.financeService.StageInboxItem(ctx, fCtx, &finance.StageInboxItem{
 		IntegrationID:   integrationID,
 		DocType:         docType,
 		Vendor:          state.Vendor,
@@ -89,7 +91,7 @@ func (c *coordinator) DiscardInboxItem(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	return c.financeService.DiscardInboxItem(ctx, rctx.SpaceID, id)
+	return c.financeService.DiscardInboxItem(ctx, rctx, id)
 }
 
 // GetTransactionSuggestions analyzes raw signal payloads and returns real-time form prefill suggestions.
@@ -98,7 +100,7 @@ func (c *coordinator) GetTransactionSuggestions(ctx context.Context, req *Ingest
 	if err != nil {
 		return nil, err
 	}
-	return c.GetSignalSuggestions(ctx, string(rctx.SpaceID), req)
+	return c.GetSignalSuggestions(ctx, rctx, req)
 }
 
 // ProcessSuggestions implements agentapp.SuggestionProcessor for transaction_extractor purpose.
@@ -115,7 +117,8 @@ func (c *coordinator) ProcessSuggestions(ctx context.Context, spaceID string, re
 		})
 	}
 
-	sug, err := c.GetSignalSuggestions(ctx, spaceID, ingReq)
+	fCtx := c.systemContext(ctx, spaceID)
+	sug, err := c.GetSignalSuggestions(ctx, fCtx, ingReq)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +154,7 @@ func (c *coordinator) UpdateInboxItem(ctx context.Context, item *finance.InboxIt
 	if err != nil {
 		return nil, err
 	}
-	return c.financeService.UpdateInboxItem(ctx, rctx.SpaceID, item)
+	return c.financeService.UpdateInboxItem(ctx, rctx, item)
 }
 
 // ApproveInboxItem commits a staged inbox item to the main transaction ledger, returning the updated item.
@@ -160,5 +163,5 @@ func (c *coordinator) ApproveInboxItem(ctx context.Context, id string) (*finance
 	if err != nil {
 		return nil, err
 	}
-	return c.financeService.ApproveInboxItem(ctx, rctx.SpaceID, id)
+	return c.financeService.ApproveInboxItem(ctx, rctx, id)
 }

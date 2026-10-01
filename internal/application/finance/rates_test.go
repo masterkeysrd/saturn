@@ -55,7 +55,7 @@ func TestCoordinator_CreateExchangeRate(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *CreateExchangeRateRequest
-		mockFn        func(ctx context.Context, rate *finance.ExchangeRate) (*finance.ExchangeRate, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, rate *finance.ExchangeRate) (*finance.ExchangeRate, error)
 		expectedID    string
 		expectedError bool
 	}{
@@ -68,11 +68,11 @@ func TestCoordinator_CreateExchangeRate(t *testing.T) {
 				Rate:         0.92,
 				RateDate:     now,
 			},
-			mockFn: func(ctx context.Context, rate *finance.ExchangeRate) (*finance.ExchangeRate, error) {
-				if rate.SpaceID != "spc_1" || rate.FromCurrency != "USD" || rate.ToCurrency != "EUR" {
-					t.Errorf("unexpected rate payload: %+v", rate)
+			mockFn: func(ctx context.Context, rCtx finance.Context, rate *finance.ExchangeRate) (*finance.ExchangeRate, error) {
+				if rCtx.SpaceID() != "spc_1" || rate.FromCurrency != "USD" || rate.ToCurrency != "EUR" {
+					t.Errorf("unexpected rate payload: space=%v rate=%+v", rCtx.SpaceID(), rate)
 				}
-				return &finance.ExchangeRate{ID: "rate_1", SpaceID: rate.SpaceID, Rate: 0.92}, nil
+				return &finance.ExchangeRate{ID: "rate_1", Rate: 0.92}, nil
 			},
 			expectedID:    "rate_1",
 			expectedError: false,
@@ -87,7 +87,7 @@ func TestCoordinator_CreateExchangeRate(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &CreateExchangeRateRequest{FromCurrency: "USD", ToCurrency: "EUR"},
-			mockFn: func(ctx context.Context, rate *finance.ExchangeRate) (*finance.ExchangeRate, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, rate *finance.ExchangeRate) (*finance.ExchangeRate, error) {
 				return nil, errors.New("rate creation failed")
 			},
 			expectedError: true,
@@ -120,7 +120,7 @@ func TestCoordinator_GetExchangeRate(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *GetExchangeRateRequest
-		mockFn        func(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.ExchangeRate, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, id string) (*finance.ExchangeRate, error)
 		expectedID    string
 		expectedError bool
 	}{
@@ -128,11 +128,11 @@ func TestCoordinator_GetExchangeRate(t *testing.T) {
 			name: "Success",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &GetExchangeRateRequest{ID: "rate_1"},
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.ExchangeRate, error) {
-				if spaceID != "spc_1" || id != "rate_1" {
-					t.Errorf("unexpected get rate args: space=%v id=%v", spaceID, id)
+			mockFn: func(ctx context.Context, rCtx finance.Context, id string) (*finance.ExchangeRate, error) {
+				if rCtx.SpaceID() != "spc_1" || id != "rate_1" {
+					t.Errorf("unexpected get rate args: space=%v id=%v", rCtx.SpaceID(), id)
 				}
-				return &finance.ExchangeRate{ID: id, SpaceID: spaceID}, nil
+				return &finance.ExchangeRate{ID: id}, nil
 			},
 			expectedID:    "rate_1",
 			expectedError: false,
@@ -147,7 +147,7 @@ func TestCoordinator_GetExchangeRate(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &GetExchangeRateRequest{ID: "rate_1"},
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.ExchangeRate, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, id string) (*finance.ExchangeRate, error) {
 				return nil, errors.New("rate not found")
 			},
 			expectedError: true,
@@ -180,7 +180,7 @@ func TestCoordinator_UpdateExchangeRate(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *UpdateExchangeRateRequest
-		mockFn        func(ctx context.Context, spaceID finance.SpaceID, id string, rate *finance.ExchangeRate) (*finance.ExchangeRate, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate) (*finance.ExchangeRate, error)
 		expectedID    string
 		expectedError bool
 	}{
@@ -188,9 +188,9 @@ func TestCoordinator_UpdateExchangeRate(t *testing.T) {
 			name: "Success",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &UpdateExchangeRateRequest{ID: "rate_1", Rate: 0.95},
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id string, rate *finance.ExchangeRate) (*finance.ExchangeRate, error) {
-				if spaceID != "spc_1" || id != "rate_1" || rate.Rate != 0.95 {
-					t.Errorf("unexpected update args: space=%v id=%v rate=%+v", spaceID, id, rate)
+			mockFn: func(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate) (*finance.ExchangeRate, error) {
+				if rCtx.SpaceID() != "spc_1" || id != "rate_1" || rate.Rate != 0.95 {
+					t.Errorf("unexpected update args: space=%v id=%v rate=%+v", rCtx.SpaceID(), id, rate)
 				}
 				return &finance.ExchangeRate{ID: id, Rate: rate.Rate}, nil
 			},
@@ -207,7 +207,7 @@ func TestCoordinator_UpdateExchangeRate(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &UpdateExchangeRateRequest{ID: "rate_1"},
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id string, rate *finance.ExchangeRate) (*finance.ExchangeRate, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate) (*finance.ExchangeRate, error) {
 				return nil, errors.New("update rate failed")
 			},
 			expectedError: true,
@@ -244,7 +244,7 @@ func TestCoordinator_ListExchangeRates(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *ListExchangeRatesRequest
-		mockFn        func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error)
 		expectedCount int
 		expectedToken string
 		expectedError bool
@@ -261,9 +261,9 @@ func TestCoordinator_ListExchangeRates(t *testing.T) {
 				EndDate:      &now,
 				OrderBy:      "rate_date desc",
 			},
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error) {
-				if spaceID != "spc_1" || filter.PageSize != 10 || filter.NextPageToken != "tok_1" {
-					t.Errorf("unexpected filter: space=%v filter=%+v", spaceID, filter)
+			mockFn: func(ctx context.Context, rCtx finance.Context, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error) {
+				if rCtx.SpaceID() != "spc_1" || filter.PageSize != 10 || filter.NextPageToken != "tok_1" {
+					t.Errorf("unexpected filter: space=%v filter=%+v", rCtx.SpaceID(), filter)
 				}
 				return []*finance.ExchangeRate{{ID: "rate_1"}}, "next_tok", nil
 			},
@@ -281,7 +281,7 @@ func TestCoordinator_ListExchangeRates(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &ListExchangeRatesRequest{},
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error) {
 				return nil, "", errors.New("query failed")
 			},
 			expectedError: true,
@@ -314,16 +314,16 @@ func TestCoordinator_DeleteExchangeRate(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *DeleteExchangeRateRequest
-		mockFn        func(ctx context.Context, spaceID finance.SpaceID, id string) error
+		mockFn        func(ctx context.Context, rCtx finance.Context, id string) error
 		expectedError bool
 	}{
 		{
 			name: "Success",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &DeleteExchangeRateRequest{ID: "rate_1"},
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id string) error {
-				if spaceID != "spc_1" || id != "rate_1" {
-					t.Errorf("unexpected delete args: space=%v id=%v", spaceID, id)
+			mockFn: func(ctx context.Context, rCtx finance.Context, id string) error {
+				if rCtx.SpaceID() != "spc_1" || id != "rate_1" {
+					t.Errorf("unexpected delete args: space=%v id=%v", rCtx.SpaceID(), id)
 				}
 				return nil
 			},
@@ -339,7 +339,7 @@ func TestCoordinator_DeleteExchangeRate(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &DeleteExchangeRateRequest{ID: "rate_1"},
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id string) error {
+			mockFn: func(ctx context.Context, rCtx finance.Context, id string) error {
 				return errors.New("delete rate failed")
 			},
 			expectedError: true,

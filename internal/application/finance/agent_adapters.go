@@ -83,14 +83,14 @@ func NewAgentDocumentClassifier(c agentapp.Coordinator) *AgentDocumentClassifier
 	return &AgentDocumentClassifier{coordinator: c}
 }
 
-func (a *AgentDocumentClassifier) Classify(ctx context.Context, spaceID string, doc string) (string, error) {
+func (a *AgentDocumentClassifier) Classify(ctx context.Context, fCtx finance.Context, doc string) (string, error) {
 	rawJSON, err := a.coordinator.ExecuteAgent(ctx, agentapp.ExecutionRequest{
-		SpaceID: spaceID,
+		SpaceID: string(fCtx.SpaceID()),
 		Purpose: "INBOX_PARSER",
 		Params: map[string]any{
 			"email_body":         doc,
 			"classify":           true,
-			"reference_date_utc": time.Now().UTC().Format(time.RFC3339),
+			"reference_date_utc": fCtx.Now().Format(time.RFC3339),
 		},
 	})
 	if err != nil {
@@ -115,7 +115,7 @@ func NewAgentIngestionParser(c agentapp.Coordinator) *AgentIngestionParser {
 	return &AgentIngestionParser{coordinator: c}
 }
 
-func (a *AgentIngestionParser) Parse(ctx context.Context, spaceID string, doc string, ingestionCtx IngestionContext) (*ParsedTransaction, error) {
+func (a *AgentIngestionParser) Parse(ctx context.Context, fCtx finance.Context, doc string, ingestionCtx IngestionContext) (*ParsedTransaction, error) {
 	type accountTxInfo struct {
 		ID          string `json:"id"`
 		Name        string `json:"name"`
@@ -212,12 +212,17 @@ func (a *AgentIngestionParser) Parse(ctx context.Context, spaceID string, doc st
 		})
 	}
 
+	refDate := ingestionCtx.ReferenceDate
+	if refDate.IsZero() {
+		refDate = fCtx.Now()
+	}
+
 	rawJSON, err := a.coordinator.ExecuteAgent(ctx, agentapp.ExecutionRequest{
-		SpaceID: spaceID,
+		SpaceID: string(fCtx.SpaceID()),
 		Purpose: "INBOX_PARSER",
 		Params: map[string]any{
 			"extract":                true,
-			"reference_date_utc":     ingestionCtx.ReferenceDate.UTC().Format(time.RFC3339),
+			"reference_date_utc":     refDate.Format(time.RFC3339),
 			"budgets":                ingestionCtx.Budgets,
 			"accounts":               accountInfos,
 			"scheduled_transactions": paymentInfos,
@@ -299,7 +304,7 @@ func NewAgentIngestionDeduplicator(c agentapp.Coordinator) *AgentIngestionDedupl
 	return &AgentIngestionDeduplicator{coordinator: c}
 }
 
-func (d *AgentIngestionDeduplicator) Deduplicate(ctx context.Context, spaceID string, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error) {
+func (d *AgentIngestionDeduplicator) Deduplicate(ctx context.Context, fCtx finance.Context, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error) {
 	type recentTxInfo struct {
 		ID              string
 		Amount          float64
@@ -319,7 +324,7 @@ func (d *AgentIngestionDeduplicator) Deduplicate(ctx context.Context, spaceID st
 	}
 
 	rawJSON, err := d.coordinator.ExecuteAgent(ctx, agentapp.ExecutionRequest{
-		SpaceID: spaceID,
+		SpaceID: string(fCtx.SpaceID()),
 		Purpose: "INBOX_PARSER",
 		Params: map[string]any{
 			"dedup": true,
@@ -330,7 +335,7 @@ func (d *AgentIngestionDeduplicator) Deduplicate(ctx context.Context, spaceID st
 				"Date":     tx.Date,
 			},
 			"recent_transactions": recentInfos,
-			"reference_date_utc":  time.Now().UTC().Format(time.RFC3339),
+			"reference_date_utc":  fCtx.Now().Format(time.RFC3339),
 		},
 	})
 	if err != nil {

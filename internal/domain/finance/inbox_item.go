@@ -53,7 +53,6 @@ func ParseInboxItemDocType(s string) InboxItemDocType {
 // InboxItem represents a parsed inbound signal waiting in the staging queue.
 type InboxItem struct {
 	ID                     string             `json:"id"`
-	SpaceID                string             `json:"spaceId"`
 	IntegrationID          string             `json:"integrationId"`
 	Status                 InboxItemStatus    `json:"status"`
 	DocType                InboxItemDocType   `json:"docType"`
@@ -109,7 +108,6 @@ func (i *InboxItem) MarkResolved(txnID *TransactionID) {
 // NewReceiptIngestedEvent constructs a RECEIPT_INGESTED transaction event.
 func (i *InboxItem) NewReceiptIngestedEvent(txnID TransactionID) *TransactionEvent {
 	return &TransactionEvent{
-		SpaceID:       SpaceID(i.SpaceID),
 		TransactionID: txnID,
 		EventType:     "RECEIPT_INGESTED",
 		Metadata: map[string]any{
@@ -129,7 +127,6 @@ func (i *InboxItem) NewTransactionLinkedEvent(txnID TransactionID, overwrite boo
 		linkedDesc = "Staged document linked to existing ledger entry and updated transaction details"
 	}
 	return &TransactionEvent{
-		SpaceID:       SpaceID(i.SpaceID),
 		TransactionID: txnID,
 		EventType:     "TRANSACTION_LINKED",
 		Metadata: map[string]any{
@@ -158,7 +155,6 @@ func (i *InboxItem) NewScheduledTransactionFromInvoice(spaceID SpaceID) (*Schedu
 	}
 
 	payment := &ScheduledTransaction{
-		SpaceID:    spaceID,
 		BudgetID:   bID,
 		SourceType: "invoice",
 		SourceID:   i.ID,
@@ -200,7 +196,6 @@ func (i *InboxItem) NewTransfer(spaceID SpaceID, destAccountID AccountID) (*Tran
 		tDate = time.Now().UTC()
 	}
 	return &Transfer{
-		SpaceID:              spaceID,
 		SourceAccountID:      srcAccID,
 		DestinationAccountID: destAccountID,
 		SourceAmount:         i.Amount,
@@ -250,7 +245,6 @@ func (i *InboxItem) NewTransaction(spaceID SpaceID) (*Transaction, error) {
 	}
 
 	return &Transaction{
-		SpaceID:         spaceID,
 		Type:            txnType,
 		BudgetID:        bID,
 		AccountID:       accID,

@@ -22,12 +22,12 @@ type mockSettingsStore struct {
 	settings map[finance.SpaceID]*finance.FinanceSettings
 }
 
-func (m *mockSettingsStore) Create(ctx context.Context, s *finance.FinanceSettings) error {
-	m.settings[s.SpaceID] = s
+func (m *mockSettingsStore) Create(ctx context.Context, fCtx finance.Context, s *finance.FinanceSettings) error {
+	m.settings[fCtx.SpaceID()] = s
 	return nil
 }
-func (m *mockSettingsStore) GetByID(ctx context.Context, spaceID finance.SpaceID) (*finance.FinanceSettings, error) {
-	s, ok := m.settings[spaceID]
+func (m *mockSettingsStore) GetByID(ctx context.Context, fCtx finance.Context) (*finance.FinanceSettings, error) {
+	s, ok := m.settings[fCtx.SpaceID()]
 	if !ok {
 		return nil, errors.E(errors.NotExist, finance.SettingsNotFound, "finance settings not found")
 	}
@@ -35,43 +35,55 @@ func (m *mockSettingsStore) GetByID(ctx context.Context, spaceID finance.SpaceID
 }
 
 type mockBudgetStore struct {
-	budgets map[finance.BudgetID]*finance.Budget
+	budgets map[finance.SpaceID]map[finance.BudgetID]*finance.Budget
 }
 
-func (m *mockBudgetStore) Create(ctx context.Context, b *finance.Budget) error {
-	m.budgets[b.ID] = b
+func (m *mockBudgetStore) Create(ctx context.Context, fCtx finance.Context, b *finance.Budget) error {
+	if m.budgets[fCtx.SpaceID()] == nil {
+		m.budgets[fCtx.SpaceID()] = make(map[finance.BudgetID]*finance.Budget)
+	}
+	m.budgets[fCtx.SpaceID()][b.ID] = b
 	return nil
 }
-func (m *mockBudgetStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID) (*finance.Budget, error) {
-	b, ok := m.budgets[id]
+func (m *mockBudgetStore) GetByID(ctx context.Context, fCtx finance.Context, id finance.BudgetID) (*finance.Budget, error) {
+	spaceBudgets := m.budgets[fCtx.SpaceID()]
+	if spaceBudgets == nil {
+		return nil, errors.E(errors.NotExist, finance.BudgetNotFound, "budget not found")
+	}
+	b, ok := spaceBudgets[id]
 	if !ok {
 		return nil, errors.E(errors.NotExist, finance.BudgetNotFound, "budget not found")
 	}
 	return b, nil
 }
-func (m *mockBudgetStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, ids []finance.BudgetID) ([]*finance.Budget, error) {
+func (m *mockBudgetStore) GetByIDs(ctx context.Context, fCtx finance.Context, ids []finance.BudgetID) ([]*finance.Budget, error) {
+	spaceBudgets := m.budgets[fCtx.SpaceID()]
 	var list []*finance.Budget
-	for _, id := range ids {
-		if b, ok := m.budgets[id]; ok {
-			list = append(list, b)
+	if spaceBudgets != nil {
+		for _, id := range ids {
+			if b, ok := spaceBudgets[id]; ok {
+				list = append(list, b)
+			}
 		}
 	}
 	return list, nil
 }
-func (m *mockBudgetStore) Update(ctx context.Context, b *finance.Budget) error {
-	m.budgets[b.ID] = b
+func (m *mockBudgetStore) Update(ctx context.Context, fCtx finance.Context, b *finance.Budget) error {
+	if m.budgets[fCtx.SpaceID()] == nil {
+		m.budgets[fCtx.SpaceID()] = make(map[finance.BudgetID]*finance.Budget)
+	}
+	m.budgets[fCtx.SpaceID()][b.ID] = b
 	return nil
 }
-func (m *mockBudgetStore) Delete(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID, opts finance.DeleteOptions) error {
-	delete(m.budgets, id)
+func (m *mockBudgetStore) Delete(ctx context.Context, fCtx finance.Context, id finance.BudgetID, opts finance.DeleteOptions) error {
+	if m.budgets[fCtx.SpaceID()] != nil {
+		delete(m.budgets[fCtx.SpaceID()], id)
+	}
 	return nil
 }
-func (m *mockBudgetStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
+func (m *mockBudgetStore) ListBySpace(ctx context.Context, fCtx finance.Context, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
 	var list []*finance.Budget
-	for _, b := range m.budgets {
-		if b.SpaceID != spaceID {
-			continue
-		}
+	for _, b := range m.budgets[fCtx.SpaceID()] {
 		if len(filter.Statuses) > 0 {
 			matched := false
 			for _, st := range filter.Statuses {
@@ -169,56 +181,60 @@ type mockPeriodStore struct {
 	periods map[string]*finance.BudgetPeriod
 }
 
-func (m *mockPeriodStore) Create(ctx context.Context, p *finance.BudgetPeriod) error {
-	key := string(p.BudgetID) + "_" + p.StartDate.Format(time.RFC3339) + "_" + p.EndDate.Format(time.RFC3339)
+func (m *mockPeriodStore) Create(ctx context.Context, fCtx finance.Context, p *finance.BudgetPeriod) error {
+	key := string(fCtx.SpaceID()) + "_" + string(p.BudgetID) + "_" + p.StartDate.Format(time.RFC3339) + "_" + p.EndDate.Format(time.RFC3339)
 	m.periods[key] = p
 	return nil
 }
-func (m *mockPeriodStore) GetByRange(ctx context.Context, budgetID finance.BudgetID, startDate, endDate time.Time) (*finance.BudgetPeriod, error) {
-	key := string(budgetID) + "_" + startDate.Format(time.RFC3339) + "_" + endDate.Format(time.RFC3339)
-	p, ok := m.periods[key]
+func (m *mockPeriodStore) GetByRange(ctx context.Context, fCtx finance.Context, key finance.PeriodRangeKey) (*finance.BudgetPeriod, error) {
+	k := string(fCtx.SpaceID()) + "_" + string(key.BudgetID) + "_" + key.StartDate.Format(time.RFC3339) + "_" + key.EndDate.Format(time.RFC3339)
+	p, ok := m.periods[k]
 	if !ok {
 		return nil, errors.E(errors.NotExist, finance.PeriodNotFound, "budget period not found")
 	}
 	return p, nil
 }
-func (m *mockPeriodStore) GetByRanges(ctx context.Context, keys []finance.PeriodRangeKey) ([]*finance.BudgetPeriod, error) {
+func (m *mockPeriodStore) GetByRanges(ctx context.Context, fCtx finance.Context, keys []finance.PeriodRangeKey) ([]*finance.BudgetPeriod, error) {
 	var list []*finance.BudgetPeriod
 	for _, key := range keys {
-		k := string(key.BudgetID) + "_" + key.StartDate.Format(time.RFC3339) + "_" + key.EndDate.Format(time.RFC3339)
+		k := string(fCtx.SpaceID()) + "_" + string(key.BudgetID) + "_" + key.StartDate.Format(time.RFC3339) + "_" + key.EndDate.Format(time.RFC3339)
 		if p, ok := m.periods[k]; ok {
 			list = append(list, p)
 		}
 	}
 	return list, nil
 }
-func (m *mockPeriodStore) UpdateLimit(ctx context.Context, periodID finance.PeriodID, limitAmount int64) error {
+func (m *mockPeriodStore) UpdateLimit(ctx context.Context, fCtx finance.Context, periodID finance.PeriodID, limitAmount int64) error {
 	return nil
 }
-func (m *mockPeriodStore) ListByBudget(ctx context.Context, budgetID finance.BudgetID) ([]*finance.BudgetPeriod, error) {
+func (m *mockPeriodStore) ListByBudget(ctx context.Context, fCtx finance.Context, budgetID finance.BudgetID) ([]*finance.BudgetPeriod, error) {
 	return nil, nil
 }
 
 type mockTransactionStore struct{}
 
-func (m *mockTransactionStore) Create(ctx context.Context, t *finance.Transaction) error { return nil }
-func (m *mockTransactionStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.TransactionID) (*finance.Transaction, error) {
-	return nil, nil
-}
-func (m *mockTransactionStore) Update(ctx context.Context, t *finance.Transaction) error { return nil }
-func (m *mockTransactionStore) Delete(ctx context.Context, id finance.TransactionID) error {
+func (m *mockTransactionStore) Create(ctx context.Context, fCtx finance.Context, t *finance.Transaction) error {
 	return nil
 }
-func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
+func (m *mockTransactionStore) GetByID(ctx context.Context, fCtx finance.Context, id finance.TransactionID) (*finance.Transaction, error) {
 	return nil, nil
 }
-func (m *mockTransactionStore) HasTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (bool, error) {
+func (m *mockTransactionStore) Update(ctx context.Context, fCtx finance.Context, t *finance.Transaction) error {
+	return nil
+}
+func (m *mockTransactionStore) Delete(ctx context.Context, fCtx finance.Context, id finance.TransactionID) error {
+	return nil
+}
+func (m *mockTransactionStore) ListBySpace(ctx context.Context, fCtx finance.Context, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
+	return nil, nil
+}
+func (m *mockTransactionStore) HasTransactions(ctx context.Context, fCtx finance.Context, filter *finance.TransactionFilter) (bool, error) {
 	return false, nil
 }
-func (m *mockTransactionStore) AggregateSpent(ctx context.Context, periodID finance.PeriodID, budgetCurrency finance.Currency, exchangeRateToBase float64) (int64, int64, error) {
+func (m *mockTransactionStore) AggregateSpent(ctx context.Context, fCtx finance.Context, periodID finance.PeriodID, budgetCurrency finance.Currency, exchangeRateToBase float64) (int64, int64, error) {
 	return 1500, 1500, nil // Mock $15.00 spent
 }
-func (m *mockTransactionStore) AggregateSpentBatch(ctx context.Context, periodIDs []finance.PeriodID) ([]finance.PeriodSpent, error) {
+func (m *mockTransactionStore) AggregateSpentBatch(ctx context.Context, fCtx finance.Context, periodIDs []finance.PeriodID) ([]finance.PeriodSpent, error) {
 	res := make([]finance.PeriodSpent, len(periodIDs))
 	for i, id := range periodIDs {
 		res[i] = finance.PeriodSpent{
@@ -233,15 +249,15 @@ func (m *mockTransactionStore) AggregateSpentBatch(ctx context.Context, periodID
 func TestListAggregatedBudgets(t *testing.T) {
 	ctx := context.Background()
 	spaceID := finance.SpaceID("spc_" + ksuid.New().String())
+	rCtx := finance.NewContext(spaceID, "usr_test", time.UTC, "USD")
 
 	// Setup domain service with mocks
 	settings := &finance.FinanceSettings{
-		SpaceID:      spaceID,
 		BaseCurrency: finance.Currency("USD"),
 	}
 
 	ss := &mockSettingsStore{settings: map[finance.SpaceID]*finance.FinanceSettings{spaceID: settings}}
-	bs := &mockBudgetStore{budgets: make(map[finance.BudgetID]*finance.Budget)}
+	bs := &mockBudgetStore{budgets: make(map[finance.SpaceID]map[finance.BudgetID]*finance.Budget)}
 	ps := &mockPeriodStore{periods: make(map[string]*finance.BudgetPeriod)}
 	ts := &mockTransactionStore{}
 
@@ -261,7 +277,6 @@ func TestListAggregatedBudgets(t *testing.T) {
 
 	b1 := &finance.Budget{
 		ID:          b1ID,
-		SpaceID:     spaceID,
 		Name:        "Food",
 		LimitAmount: 5000,
 		Currency:    finance.Currency("USD"),
@@ -270,7 +285,6 @@ func TestListAggregatedBudgets(t *testing.T) {
 	}
 	b2 := &finance.Budget{
 		ID:          b2ID,
-		SpaceID:     spaceID,
 		Name:        "Travel",
 		LimitAmount: 10000,
 		Currency:    finance.Currency("USD"),
@@ -279,7 +293,6 @@ func TestListAggregatedBudgets(t *testing.T) {
 	}
 	b3 := &finance.Budget{
 		ID:          b3ID,
-		SpaceID:     spaceID,
 		Name:        "Books",
 		LimitAmount: 2000,
 		Currency:    finance.Currency("USD"),
@@ -287,16 +300,15 @@ func TestListAggregatedBudgets(t *testing.T) {
 		Status:      finance.BudgetStatusPaused, // Inactive
 	}
 
-	_ = bs.Create(ctx, b1)
-	_ = bs.Create(ctx, b2)
-	_ = bs.Create(ctx, b3)
+	_ = bs.Create(ctx, rCtx, b1)
+	_ = bs.Create(ctx, rCtx, b2)
+	_ = bs.Create(ctx, rCtx, b3)
 
 	// Pre-create periods in mock database so GetOrCreatePeriod retrieves them and updates spent metrics
 	startDate, endDate := b1.CalculateBounds(time.Now())
 	p1 := &finance.BudgetPeriod{
 		ID:                 finance.PeriodID("prd_" + ksuid.New().String()),
 		BudgetID:           b1ID,
-		SpaceID:            spaceID,
 		StartDate:          startDate,
 		EndDate:            endDate,
 		LimitAmount:        5000,
@@ -307,7 +319,6 @@ func TestListAggregatedBudgets(t *testing.T) {
 	p2 := &finance.BudgetPeriod{
 		ID:                 finance.PeriodID("prd_" + ksuid.New().String()),
 		BudgetID:           b2ID,
-		SpaceID:            spaceID,
 		StartDate:          startDate,
 		EndDate:            endDate,
 		LimitAmount:        10000,
@@ -315,8 +326,8 @@ func TestListAggregatedBudgets(t *testing.T) {
 		BaseCurrency:       finance.Currency("USD"),
 		ExchangeRateToBase: 1.0,
 	}
-	_ = ps.Create(ctx, p1)
-	_ = ps.Create(ctx, p2)
+	_ = ps.Create(ctx, rCtx, p1)
+	_ = ps.Create(ctx, rCtx, p2)
 
 	t.Run("Basic View - Active Only", func(t *testing.T) {
 		filter := ListBudgetsFilter{
@@ -328,7 +339,7 @@ func TestListAggregatedBudgets(t *testing.T) {
 			View: ViewBasic,
 		}
 
-		page, err := aggService.ListBudgets(ctx, spaceID, filter)
+		page, err := aggService.ListBudgets(ctx, rCtx, filter)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -354,7 +365,7 @@ func TestListAggregatedBudgets(t *testing.T) {
 			View: ViewFull,
 		}
 
-		page, err := aggService.ListBudgets(ctx, spaceID, filter)
+		page, err := aggService.ListBudgets(ctx, rCtx, filter)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -386,7 +397,7 @@ func TestListAggregatedBudgets(t *testing.T) {
 			View: ViewBasic,
 		}
 
-		page1, err := aggService.ListBudgets(ctx, spaceID, filter)
+		page1, err := aggService.ListBudgets(ctx, rCtx, filter)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -403,7 +414,7 @@ func TestListAggregatedBudgets(t *testing.T) {
 
 		// Fetch second page
 		filter.NextPageToken = page1.NextPageToken
-		page2, err := aggService.ListBudgets(ctx, spaceID, filter)
+		page2, err := aggService.ListBudgets(ctx, rCtx, filter)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

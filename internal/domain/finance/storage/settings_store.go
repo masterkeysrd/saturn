@@ -25,10 +25,10 @@ func NewSettingsStore(database db.DB) *SettingsStore {
 	return &SettingsStore{db: database}
 }
 
-func (s *SettingsStore) Create(ctx context.Context, settings *finance.FinanceSettings) error {
+func (s *SettingsStore) Create(ctx context.Context, rCtx finance.Context, settings *finance.FinanceSettings) error {
 	const op errors.Op = "domain/finance/storage.CreateSettings"
 	ds := pgDialect.Insert(goqu.S("finance").Table("settings")).Rows(goqu.Record{
-		"space_id":      string(settings.SpaceID),
+		"space_id":      string(rCtx.SpaceID()),
 		"base_currency": string(settings.BaseCurrency),
 		"create_time":   settings.CreateTime,
 		"update_time":   settings.UpdateTime,
@@ -43,11 +43,11 @@ func (s *SettingsStore) Create(ctx context.Context, settings *finance.FinanceSet
 	return nil
 }
 
-func (s *SettingsStore) GetByID(ctx context.Context, spaceID finance.SpaceID) (*finance.FinanceSettings, error) {
+func (s *SettingsStore) GetByID(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error) {
 	const op errors.Op = "domain/finance/storage.GetSettingsByID"
 	ds := pgDialect.From(goqu.S("finance").Table("settings")).
 		Select("space_id", "base_currency", "create_time", "update_time").
-		Where(goqu.Ex{"space_id": string(spaceID)})
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID())})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, errors.E(op, err)
@@ -57,7 +57,6 @@ func (s *SettingsStore) GetByID(ctx context.Context, spaceID finance.SpaceID) (*
 		return nil, errors.E(op, err)
 	}
 	return &finance.FinanceSettings{
-		SpaceID:      finance.SpaceID(row.SpaceID),
 		BaseCurrency: finance.Currency(row.BaseCurrency),
 		CreateTime:   nullTimeToTime(row.CreateTime),
 		UpdateTime:   nullTimeToTime(row.UpdateTime),

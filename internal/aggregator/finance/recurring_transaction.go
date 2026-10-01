@@ -9,11 +9,11 @@ import (
 )
 
 // ListRecurringTransactions retrieves space templates, optionally hydrating associated budget categories.
-func (s *Service) ListRecurringTransactions(ctx context.Context, spaceID finance.SpaceID, view ViewType, filter finance.ListRecurringTransactionsFilter) (*paging.Page[*AggregatedRecurringTransaction], error) {
+func (s *Service) ListRecurringTransactions(ctx context.Context, rCtx finance.Context, view ViewType, filter finance.ListRecurringTransactionsFilter) (*paging.Page[*AggregatedRecurringTransaction], error) {
 	if filter.PageSize <= 0 {
 		filter.PageSize = 20
 	}
-	page, err := s.financeService.ListRecurringTransactions(ctx, spaceID, &filter)
+	page, err := s.financeService.ListRecurringTransactions(ctx, rCtx, &filter)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (s *Service) ListRecurringTransactions(ctx context.Context, spaceID finance
 	budgetIDs := budgetIDsSet.ToSlice()
 	budgetsMap := make(map[finance.BudgetID]*AggregatedBudget)
 	if len(budgetIDs) > 0 {
-		budgetsList, err := s.financeService.GetBudgets(ctx, spaceID, budgetIDs)
+		budgetsList, err := s.financeService.GetBudgets(ctx, rCtx, budgetIDs)
 		if err == nil {
 			for _, b := range budgetsList {
 				budgetsMap[b.ID] = &AggregatedBudget{
@@ -76,11 +76,11 @@ func (s *Service) ListRecurringTransactions(ctx context.Context, spaceID finance
 }
 
 // ListScheduledTransactions retrieves space scheduled transaction obligations, optionally hydrating category and parent templates.
-func (s *Service) ListScheduledTransactions(ctx context.Context, spaceID finance.SpaceID, view ViewType, filter finance.ListScheduledTransactionsFilter) (*paging.Page[*AggregatedScheduledTransaction], error) {
+func (s *Service) ListScheduledTransactions(ctx context.Context, rCtx finance.Context, view ViewType, filter finance.ListScheduledTransactionsFilter) (*paging.Page[*AggregatedScheduledTransaction], error) {
 	if filter.PageSize <= 0 {
 		filter.PageSize = 20
 	}
-	page, err := s.financeService.ListScheduledTransactions(ctx, spaceID, &filter)
+	page, err := s.financeService.ListScheduledTransactions(ctx, rCtx, &filter)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (s *Service) ListScheduledTransactions(ctx context.Context, spaceID finance
 	budgetIDs := budgetIDsSet.ToSlice()
 	budgetsMap := make(map[finance.BudgetID]*AggregatedBudget)
 	if len(budgetIDs) > 0 {
-		budgetsList, err := s.financeService.GetBudgets(ctx, spaceID, budgetIDs)
+		budgetsList, err := s.financeService.GetBudgets(ctx, rCtx, budgetIDs)
 		if err == nil {
 			for _, b := range budgetsList {
 				budgetsMap[b.ID] = &AggregatedBudget{
@@ -134,7 +134,7 @@ func (s *Service) ListScheduledTransactions(ctx context.Context, spaceID finance
 	recurringIDs := recurringIDsSet.ToSlice()
 	recurringMap := make(map[finance.RecurringTransactionID]*AggregatedRecurringTransaction)
 	if len(recurringIDs) > 0 {
-		recurringList, err := s.financeService.GetRecurringTransactions(ctx, spaceID, recurringIDs)
+		recurringList, err := s.financeService.GetRecurringTransactions(ctx, rCtx, recurringIDs)
 		if err == nil {
 			for _, re := range recurringList {
 				recurringMap[re.ID] = &AggregatedRecurringTransaction{

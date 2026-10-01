@@ -9,14 +9,11 @@ import (
 
 func TestScheduledTransaction_StateTransitions(t *testing.T) {
 	spID, _ := NewScheduledTransactionID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	rawBudget, _ := id.Generate("bgt_")
 	budgetID := BudgetID(rawBudget)
 
 	sp := &ScheduledTransaction{
 		ID:         spID,
-		SpaceID:    spaceID,
 		BudgetID:   &budgetID,
 		SourceType: "recurrent_transaction",
 		SourceID:   "rec_123",
@@ -54,8 +51,6 @@ func TestScheduledTransaction_StateTransitions(t *testing.T) {
 
 func TestScheduledTransaction_NewConfirmationTransaction(t *testing.T) {
 	spID, _ := NewScheduledTransactionID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	rawBudget, _ := id.Generate("bgt_")
 	budgetID := BudgetID(rawBudget)
 	accID, _ := NewAccountID()
@@ -63,7 +58,6 @@ func TestScheduledTransaction_NewConfirmationTransaction(t *testing.T) {
 
 	sp := &ScheduledTransaction{
 		ID:         spID,
-		SpaceID:    spaceID,
 		BudgetID:   &budgetID,
 		SourceType: "recurrent_transaction",
 		SourceID:   "rec_123",
@@ -185,7 +179,6 @@ func TestScheduledTransaction_ResolveDescription(t *testing.T) {
 
 func TestScheduledTransaction_NewScheduledEvent(t *testing.T) {
 	stID, _ := NewScheduledTransactionID()
-	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	txnID, _ := NewTransactionID()
 
 	tests := []struct {
@@ -208,9 +201,8 @@ func TestScheduledTransaction_NewScheduledEvent(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sp := &ScheduledTransaction{
-				ID:      stID,
-				SpaceID: spaceID,
-				Type:    tt.stType,
+				ID:   stID,
+				Type: tt.stType,
 			}
 			event := sp.NewScheduledEvent(txnID)
 			if event.EventType != tt.wantEvent {
@@ -268,8 +260,6 @@ func TestScheduledTransaction_MarkSkipped_PaidError(t *testing.T) {
 
 func TestScheduledTransaction_Validate_Table(t *testing.T) {
 	stID, _ := NewScheduledTransactionID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	budID, _ := NewBudgetID()
 	accID, _ := NewAccountID()
 	now := time.Now().UTC()
@@ -283,7 +273,6 @@ func TestScheduledTransaction_Validate_Table(t *testing.T) {
 			name: "valid expense with budget",
 			scheduled: ScheduledTransaction{
 				ID:         stID,
-				SpaceID:    spaceID,
 				Type:       TransactionTypeExpense,
 				BudgetID:   &budID,
 				SourceType: "RECURRING",
@@ -298,7 +287,6 @@ func TestScheduledTransaction_Validate_Table(t *testing.T) {
 			name: "valid income without budget",
 			scheduled: ScheduledTransaction{
 				ID:         stID,
-				SpaceID:    spaceID,
 				Type:       TransactionTypeIncome,
 				SourceType: "INVOICE",
 				SourceID:   "ibx_123",
@@ -313,7 +301,6 @@ func TestScheduledTransaction_Validate_Table(t *testing.T) {
 			name: "expense requires budget ID",
 			scheduled: ScheduledTransaction{
 				ID:         stID,
-				SpaceID:    spaceID,
 				Type:       TransactionTypeExpense,
 				BudgetID:   nil,
 				SourceType: "RECURRING",
@@ -328,7 +315,6 @@ func TestScheduledTransaction_Validate_Table(t *testing.T) {
 			name: "invalid transaction type",
 			scheduled: ScheduledTransaction{
 				ID:         stID,
-				SpaceID:    spaceID,
 				Type:       TransactionTypeTransferOut,
 				SourceType: "RECURRING",
 				SourceID:   "rec_123",
@@ -342,7 +328,6 @@ func TestScheduledTransaction_Validate_Table(t *testing.T) {
 			name: "missing source type",
 			scheduled: ScheduledTransaction{
 				ID:         stID,
-				SpaceID:    spaceID,
 				Type:       TransactionTypeIncome,
 				SourceType: "",
 				SourceID:   "rec_123",
@@ -356,7 +341,6 @@ func TestScheduledTransaction_Validate_Table(t *testing.T) {
 			name: "missing source ID",
 			scheduled: ScheduledTransaction{
 				ID:         stID,
-				SpaceID:    spaceID,
 				Type:       TransactionTypeIncome,
 				SourceType: "RECURRING",
 				SourceID:   "",
@@ -370,7 +354,6 @@ func TestScheduledTransaction_Validate_Table(t *testing.T) {
 			name: "zero amount",
 			scheduled: ScheduledTransaction{
 				ID:         stID,
-				SpaceID:    spaceID,
 				Type:       TransactionTypeIncome,
 				SourceType: "RECURRING",
 				SourceID:   "rec_123",
@@ -384,7 +367,6 @@ func TestScheduledTransaction_Validate_Table(t *testing.T) {
 			name: "invalid currency",
 			scheduled: ScheduledTransaction{
 				ID:         stID,
-				SpaceID:    spaceID,
 				Type:       TransactionTypeIncome,
 				SourceType: "RECURRING",
 				SourceID:   "rec_123",
@@ -398,7 +380,6 @@ func TestScheduledTransaction_Validate_Table(t *testing.T) {
 			name: "zero due date",
 			scheduled: ScheduledTransaction{
 				ID:         stID,
-				SpaceID:    spaceID,
 				Type:       TransactionTypeIncome,
 				SourceType: "RECURRING",
 				SourceID:   "rec_123",

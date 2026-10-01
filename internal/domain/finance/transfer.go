@@ -53,7 +53,6 @@ const transferPrefix = "trsf_"
 // Transfer represents an account-to-account funds movement.
 type Transfer struct {
 	ID                   TransferID
-	SpaceID              SpaceID
 	SourceAccountID      AccountID
 	DestinationAccountID AccountID
 	SourceAmount         int64
@@ -64,13 +63,25 @@ type Transfer struct {
 	UpdateTime           time.Time
 }
 
+func (t *Transfer) Init() error {
+	if t.ID == "" {
+		newID, err := NewTransferID()
+		if err != nil {
+			return fmt.Errorf("generate transfer ID: %w", err)
+		}
+		t.ID = newID
+	}
+	if t.CreateTime.IsZero() {
+		t.CreateTime = time.Now().UTC()
+	}
+	t.UpdateTime = time.Now().UTC()
+	return nil
+}
+
 // Validate checks basic properties of a transfer.
 func (t *Transfer) Validate() error {
 	if err := t.ID.Validate(); err != nil {
 		return fmt.Errorf("validate transfer ID: %w", err)
-	}
-	if err := t.SpaceID.Validate(); err != nil {
-		return fmt.Errorf("validate space ID: %w", err)
 	}
 	if err := t.SourceAccountID.Validate(); err != nil {
 		return fmt.Errorf("validate source account ID: %w", err)
@@ -144,7 +155,6 @@ func (t *Transfer) NewLegTransactions(opts TransferLegOpts) (sourceTxn *Transact
 	transferID := t.ID
 	sourceTxn = &Transaction{
 		ID:              sourceID,
-		SpaceID:         t.SpaceID,
 		Type:            TransactionTypeTransferOut,
 		AccountID:       &t.SourceAccountID,
 		Amount:          t.SourceAmount,
@@ -166,7 +176,6 @@ func (t *Transfer) NewLegTransactions(opts TransferLegOpts) (sourceTxn *Transact
 
 	destTxn = &Transaction{
 		ID:              destID,
-		SpaceID:         t.SpaceID,
 		Type:            TransactionTypeTransferIn,
 		AccountID:       &t.DestinationAccountID,
 		Amount:          t.DestinationAmount,

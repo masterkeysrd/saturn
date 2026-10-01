@@ -63,7 +63,6 @@ const accountPrefix = "acc_"
 // Account represents a physical or digital location where funds are held.
 type Account struct {
 	ID             AccountID
-	SpaceID        SpaceID
 	Name           string
 	Type           AccountType
 	Currency       Currency
@@ -156,16 +155,13 @@ func (a *Account) Validate() error {
 	if err := a.ID.Validate(); err != nil {
 		return fmt.Errorf("validate account ID: %w", err)
 	}
-	if err := a.SpaceID.Validate(); err != nil {
-		return fmt.Errorf("validate space ID: %w", err)
-	}
 	return nil
 }
 
 // ApplyTransaction Impact adjusts the current account balance according to transaction type and account rules.
-func (a *Account) ApplyTransaction(tType TransactionType, impactAmount int64) {
+func (a *Account) ApplyTransaction(tType TransactionType, amount int64) {
 	if tType == TransactionTypeBalanceAdjustment {
-		a.CurrentBalance += impactAmount
+		a.CurrentBalance += amount
 		a.UpdateTime = time.Now().UTC()
 		return
 	}
@@ -178,18 +174,18 @@ func (a *Account) ApplyTransaction(tType TransactionType, impactAmount int64) {
 		// Outflow (Purchase/Expense/TransferOut) INCREASES debt (+amount)
 		// Inflow (Card Payment/Refund/TransferIn) DECREASES debt (-amount)
 		if isOutflow {
-			a.CurrentBalance += impactAmount
+			a.CurrentBalance += amount
 		} else if isInflow {
-			a.CurrentBalance -= impactAmount
+			a.CurrentBalance -= amount
 		}
 	} else {
 		// Asset Account Rules (Positive = Money Owned):
 		// Outflow (Withdrawal/Expense/TransferOut) DECREASES asset (-amount)
 		// Inflow (Deposit/Income/TransferIn) INCREASES asset (+amount)
 		if isOutflow {
-			a.CurrentBalance -= impactAmount
+			a.CurrentBalance -= amount
 		} else if isInflow {
-			a.CurrentBalance += impactAmount
+			a.CurrentBalance += amount
 		}
 	}
 
@@ -197,9 +193,9 @@ func (a *Account) ApplyTransaction(tType TransactionType, impactAmount int64) {
 }
 
 // RollbackTransaction Impact reverts a previously applied transaction impact on current balance.
-func (a *Account) RollbackTransaction(tType TransactionType, impactAmount int64) {
+func (a *Account) RollbackTransaction(tType TransactionType, amount int64) {
 	if tType == TransactionTypeBalanceAdjustment {
-		a.CurrentBalance -= impactAmount
+		a.CurrentBalance -= amount
 		a.UpdateTime = time.Now().UTC()
 		return
 	}
@@ -209,15 +205,15 @@ func (a *Account) RollbackTransaction(tType TransactionType, impactAmount int64)
 
 	if a.Type == AccountTypeCreditCard {
 		if isOutflow {
-			a.CurrentBalance -= impactAmount
+			a.CurrentBalance -= amount
 		} else if isInflow {
-			a.CurrentBalance += impactAmount
+			a.CurrentBalance += amount
 		}
 	} else {
 		if isOutflow {
-			a.CurrentBalance += impactAmount
+			a.CurrentBalance += amount
 		} else if isInflow {
-			a.CurrentBalance -= impactAmount
+			a.CurrentBalance -= amount
 		}
 	}
 
@@ -250,7 +246,6 @@ func (a *Account) ReconcileBalance(opts ReconcileAccountOpts) (*Transaction, err
 
 	accID := a.ID
 	t := &Transaction{
-		SpaceID:         a.SpaceID,
 		AccountID:       &accID,
 		Type:            TransactionTypeBalanceAdjustment,
 		Amount:          delta,
@@ -285,12 +280,6 @@ func (a *Account) Deactivate() error {
 	return nil
 }
 
-// Activate sets IsActive = true.
-func (a *Account) Activate() {
-	a.IsActive = true
-	a.UpdateTime = time.Now().UTC()
-}
-
 // ValidateTransferTo verifies that a transfer can occur from this account to the destination account.
 func (a *Account) ValidateTransferTo(dest *Account, amount int64) error {
 	if dest == nil {
@@ -298,9 +287,6 @@ func (a *Account) ValidateTransferTo(dest *Account, amount int64) error {
 	}
 	if a.ID == dest.ID {
 		return errors.New("source and destination accounts must be different")
-	}
-	if a.SpaceID != dest.SpaceID {
-		return errors.New("source and destination accounts must belong to the same space")
 	}
 	if !a.IsActive {
 		return errors.New("source account is inactive")

@@ -7,9 +7,11 @@ import (
 
 	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
 func TestCoordinator_SettingsAndCurrencies(t *testing.T) {
@@ -18,18 +20,18 @@ func TestCoordinator_SettingsAndCurrencies(t *testing.T) {
 			name          string
 			ctx           context.Context
 			req           *ConfigureFinanceRequest
-			mockFn        func(ctx context.Context, settings *finance.FinanceSettings) (*finance.FinanceSettings, error)
+			mockFn        func(ctx context.Context, rCtx finance.Context, settings *finance.FinanceSettings) (*finance.FinanceSettings, error)
 			expectedError bool
 		}{
 			{
 				name: "Success",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				req:  &ConfigureFinanceRequest{BaseCurrency: "USD"},
-				mockFn: func(ctx context.Context, settings *finance.FinanceSettings) (*finance.FinanceSettings, error) {
-					if settings.SpaceID != "spc_1" || settings.BaseCurrency != "USD" {
-						t.Errorf("unexpected settings payload: %+v", settings)
+				mockFn: func(ctx context.Context, rCtx finance.Context, settings *finance.FinanceSettings) (*finance.FinanceSettings, error) {
+					if rCtx.SpaceID() != "spc_1" || settings.BaseCurrency != "USD" {
+						t.Errorf("unexpected settings payload: space=%v settings=%+v", rCtx.SpaceID(), settings)
 					}
-					return &finance.FinanceSettings{SpaceID: settings.SpaceID, BaseCurrency: settings.BaseCurrency}, nil
+					return &finance.FinanceSettings{BaseCurrency: settings.BaseCurrency}, nil
 				},
 				expectedError: false,
 			},
@@ -43,7 +45,7 @@ func TestCoordinator_SettingsAndCurrencies(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				req:  &ConfigureFinanceRequest{BaseCurrency: "USD"},
-				mockFn: func(ctx context.Context, settings *finance.FinanceSettings) (*finance.FinanceSettings, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, settings *finance.FinanceSettings) (*finance.FinanceSettings, error) {
 					return nil, errors.New("cannot configure finance")
 				},
 				expectedError: true,
@@ -75,17 +77,17 @@ func TestCoordinator_SettingsAndCurrencies(t *testing.T) {
 		tests := []struct {
 			name          string
 			ctx           context.Context
-			mockFn        func(ctx context.Context, spaceID finance.SpaceID) (*finance.FinanceSettings, error)
+			mockFn        func(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error)
 			expectedError bool
 		}{
 			{
 				name: "Success",
 				ctx:  newTestContext("spc_1", "usr_1"),
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID) (*finance.FinanceSettings, error) {
-					if spaceID != "spc_1" {
-						t.Errorf("unexpected space ID: %v", spaceID)
+				mockFn: func(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error) {
+					if rCtx.SpaceID() != "spc_1" {
+						t.Errorf("unexpected space ID: %v", rCtx.SpaceID())
 					}
-					return &finance.FinanceSettings{SpaceID: spaceID, BaseCurrency: "EUR"}, nil
+					return &finance.FinanceSettings{BaseCurrency: "EUR"}, nil
 				},
 				expectedError: false,
 			},
@@ -97,7 +99,7 @@ func TestCoordinator_SettingsAndCurrencies(t *testing.T) {
 			{
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID) (*finance.FinanceSettings, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error) {
 					return nil, errors.New("settings not found")
 				},
 				expectedError: true,
@@ -193,17 +195,17 @@ func TestCoordinator_GetInsights(t *testing.T) {
 	tests := []struct {
 		name          string
 		ctx           context.Context
-		mockSpentFn   func(ctx context.Context, req *finance.GetSpentInsightsRequest) (*finance.SpentInsights, error)
-		mockIncomeFn  func(ctx context.Context, req *finance.GetSpentInsightsRequest) (*finance.IncomeInsights, error)
+		mockSpentFn   func(ctx context.Context, rCtx finance.Context, req *finance.GetSpentInsightsRequest) (*finance.SpentInsights, error)
+		mockIncomeFn  func(ctx context.Context, rCtx finance.Context, req *finance.GetSpentInsightsRequest) (*finance.IncomeInsights, error)
 		expectedError bool
 	}{
 		{
 			name: "Success",
 			ctx:  newTestContext("spc_1", "usr_1"),
-			mockSpentFn: func(ctx context.Context, req *finance.GetSpentInsightsRequest) (*finance.SpentInsights, error) {
+			mockSpentFn: func(ctx context.Context, rCtx finance.Context, req *finance.GetSpentInsightsRequest) (*finance.SpentInsights, error) {
 				return &finance.SpentInsights{TotalSpent: 50000}, nil
 			},
-			mockIncomeFn: func(ctx context.Context, req *finance.GetSpentInsightsRequest) (*finance.IncomeInsights, error) {
+			mockIncomeFn: func(ctx context.Context, rCtx finance.Context, req *finance.GetSpentInsightsRequest) (*finance.IncomeInsights, error) {
 				return &finance.IncomeInsights{TotalIncome: 80000}, nil
 			},
 			expectedError: false,
@@ -216,7 +218,7 @@ func TestCoordinator_GetInsights(t *testing.T) {
 		{
 			name: "Spent insights error",
 			ctx:  newTestContext("spc_1", "usr_1"),
-			mockSpentFn: func(ctx context.Context, req *finance.GetSpentInsightsRequest) (*finance.SpentInsights, error) {
+			mockSpentFn: func(ctx context.Context, rCtx finance.Context, req *finance.GetSpentInsightsRequest) (*finance.SpentInsights, error) {
 				return nil, errors.New("spent error")
 			},
 			expectedError: true,
@@ -224,10 +226,10 @@ func TestCoordinator_GetInsights(t *testing.T) {
 		{
 			name: "Income insights error",
 			ctx:  newTestContext("spc_1", "usr_1"),
-			mockSpentFn: func(ctx context.Context, req *finance.GetSpentInsightsRequest) (*finance.SpentInsights, error) {
+			mockSpentFn: func(ctx context.Context, rCtx finance.Context, req *finance.GetSpentInsightsRequest) (*finance.SpentInsights, error) {
 				return &finance.SpentInsights{TotalSpent: 50000}, nil
 			},
-			mockIncomeFn: func(ctx context.Context, req *finance.GetSpentInsightsRequest) (*finance.IncomeInsights, error) {
+			mockIncomeFn: func(ctx context.Context, rCtx finance.Context, req *finance.GetSpentInsightsRequest) (*finance.IncomeInsights, error) {
 				return nil, errors.New("income error")
 			},
 			expectedError: true,
@@ -264,7 +266,7 @@ func TestCoordinator_Institutions(t *testing.T) {
 			name          string
 			ctx           context.Context
 			inst          *finance.Institution
-			mockFn        func(ctx context.Context, inst *finance.Institution) (*finance.Institution, error)
+			mockFn        func(ctx context.Context, rCtx finance.Context, inst *finance.Institution) (*finance.Institution, error)
 			expectedID    finance.InstitutionID
 			expectedError bool
 		}{
@@ -272,11 +274,11 @@ func TestCoordinator_Institutions(t *testing.T) {
 				name: "Success",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				inst: &finance.Institution{Name: "Chase"},
-				mockFn: func(ctx context.Context, inst *finance.Institution) (*finance.Institution, error) {
-					if inst.SpaceID != "spc_1" || inst.Name != "Chase" {
-						t.Errorf("unexpected institution: %+v", inst)
+				mockFn: func(ctx context.Context, rCtx finance.Context, inst *finance.Institution) (*finance.Institution, error) {
+					if rCtx.SpaceID() != "spc_1" || inst.Name != "Chase" {
+						t.Errorf("unexpected institution: space=%v inst=%+v", rCtx.SpaceID(), inst)
 					}
-					return &finance.Institution{ID: "inst_1", SpaceID: inst.SpaceID, Name: inst.Name}, nil
+					return &finance.Institution{ID: "inst_1", Name: inst.Name}, nil
 				},
 				expectedID:    "inst_1",
 				expectedError: false,
@@ -291,7 +293,7 @@ func TestCoordinator_Institutions(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				inst: &finance.Institution{Name: "Chase"},
-				mockFn: func(ctx context.Context, inst *finance.Institution) (*finance.Institution, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, inst *finance.Institution) (*finance.Institution, error) {
 					return nil, errors.New("institution exists")
 				},
 				expectedError: true,
@@ -325,7 +327,7 @@ func TestCoordinator_Institutions(t *testing.T) {
 			ctx           context.Context
 			inst          *finance.Institution
 			mask          []string
-			mockFn        func(ctx context.Context, inst *finance.Institution, mask []string) (*finance.Institution, error)
+			mockFn        func(ctx context.Context, rCtx finance.Context, inst *finance.Institution, mask []string) (*finance.Institution, error)
 			expectedID    finance.InstitutionID
 			expectedError bool
 		}{
@@ -334,9 +336,9 @@ func TestCoordinator_Institutions(t *testing.T) {
 				ctx:  newTestContext("spc_1", "usr_1"),
 				inst: &finance.Institution{ID: "inst_1", Name: "Chase Bank"},
 				mask: []string{"name"},
-				mockFn: func(ctx context.Context, inst *finance.Institution, mask []string) (*finance.Institution, error) {
-					if inst.SpaceID != "spc_1" || len(mask) != 1 {
-						t.Errorf("unexpected update args: %+v, mask=%v", inst, mask)
+				mockFn: func(ctx context.Context, rCtx finance.Context, inst *finance.Institution, mask []string) (*finance.Institution, error) {
+					if rCtx.SpaceID() != "spc_1" || len(mask) != 1 {
+						t.Errorf("unexpected update args: space=%v inst=%+v, mask=%v", rCtx.SpaceID(), inst, mask)
 					}
 					return &finance.Institution{ID: inst.ID}, nil
 				},
@@ -353,7 +355,7 @@ func TestCoordinator_Institutions(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				inst: &finance.Institution{ID: "inst_1"},
-				mockFn: func(ctx context.Context, inst *finance.Institution, mask []string) (*finance.Institution, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, inst *finance.Institution, mask []string) (*finance.Institution, error) {
 					return nil, errors.New("update error")
 				},
 				expectedError: true,
@@ -387,7 +389,7 @@ func TestCoordinator_Institutions(t *testing.T) {
 			ctx           context.Context
 			id            finance.InstitutionID
 			opts          finance.DeleteOptions
-			mockFn        func(ctx context.Context, spaceID finance.SpaceID, id finance.InstitutionID, opts finance.DeleteOptions) error
+			mockFn        func(ctx context.Context, rCtx finance.Context, id finance.InstitutionID, opts finance.DeleteOptions) error
 			expectedError bool
 		}{
 			{
@@ -395,9 +397,9 @@ func TestCoordinator_Institutions(t *testing.T) {
 				ctx:  newTestContext("spc_1", "usr_1"),
 				id:   "inst_1",
 				opts: finance.DeleteOptions{Version: 1},
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.InstitutionID, opts finance.DeleteOptions) error {
-					if spaceID != "spc_1" || id != "inst_1" {
-						t.Errorf("unexpected delete args: space=%v id=%v", spaceID, id)
+				mockFn: func(ctx context.Context, rCtx finance.Context, id finance.InstitutionID, opts finance.DeleteOptions) error {
+					if rCtx.SpaceID() != "spc_1" || id != "inst_1" {
+						t.Errorf("unexpected delete args: space=%v id=%v", rCtx.SpaceID(), id)
 					}
 					return nil
 				},
@@ -413,7 +415,7 @@ func TestCoordinator_Institutions(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				id:   "inst_1",
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.InstitutionID, opts finance.DeleteOptions) error {
+				mockFn: func(ctx context.Context, rCtx finance.Context, id finance.InstitutionID, opts finance.DeleteOptions) error {
 					return errors.New("cannot delete institution")
 				},
 				expectedError: true,
@@ -443,14 +445,14 @@ func TestCoordinator_Institutions(t *testing.T) {
 			name          string
 			ctx           context.Context
 			instName      string
-			mockFn        func(ctx context.Context, spaceID finance.SpaceID, name string) (*finance.ResolveInstitutionResult, error)
+			mockFn        func(ctx context.Context, rCtx finance.Context, name string) (*finance.ResolveInstitutionResult, error)
 			expectedError bool
 		}{
 			{
 				name:     "Success",
 				ctx:      newTestContext("spc_1", "usr_1"),
 				instName: "Chase",
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, name string) (*finance.ResolveInstitutionResult, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, name string) (*finance.ResolveInstitutionResult, error) {
 					return &finance.ResolveInstitutionResult{Domain: "chase.com", Color: "#117aca"}, nil
 				},
 				expectedError: false,
@@ -465,7 +467,7 @@ func TestCoordinator_Institutions(t *testing.T) {
 				name:     "Domain error",
 				ctx:      newTestContext("spc_1", "usr_1"),
 				instName: "Chase",
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, name string) (*finance.ResolveInstitutionResult, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, name string) (*finance.ResolveInstitutionResult, error) {
 					return nil, errors.New("resolve failed")
 				},
 				expectedError: true,
@@ -543,16 +545,16 @@ func TestCoordinator_Integrations(t *testing.T) {
 			name          string
 			ctx           context.Context
 			id            string
-			mockFn        func(ctx context.Context, spaceID finance.SpaceID, id string) error
+			mockFn        func(ctx context.Context, rCtx finance.Context, id string) error
 			expectedError bool
 		}{
 			{
 				name: "Success",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				id:   "inbox_1",
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, id string) error {
-					if spaceID != "spc_1" || id != "inbox_1" {
-						t.Errorf("unexpected discard args: space=%v id=%v", spaceID, id)
+				mockFn: func(ctx context.Context, rCtx finance.Context, id string) error {
+					if rCtx.SpaceID() != "spc_1" || id != "inbox_1" {
+						t.Errorf("unexpected discard args: space=%v id=%v", rCtx.SpaceID(), id)
 					}
 					return nil
 				},
@@ -568,7 +570,7 @@ func TestCoordinator_Integrations(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				id:   "inbox_1",
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, id string) error {
+				mockFn: func(ctx context.Context, rCtx finance.Context, id string) error {
 					return errors.New("discard failed")
 				},
 				expectedError: true,
@@ -598,7 +600,7 @@ func TestCoordinator_Integrations(t *testing.T) {
 			name          string
 			ctx           context.Context
 			item          *finance.InboxItem
-			mockFn        func(ctx context.Context, spaceID finance.SpaceID, item *finance.InboxItem) (*finance.InboxItem, error)
+			mockFn        func(ctx context.Context, rCtx finance.Context, item *finance.InboxItem) (*finance.InboxItem, error)
 			expectedID    string
 			expectedError bool
 		}{
@@ -606,7 +608,7 @@ func TestCoordinator_Integrations(t *testing.T) {
 				name: "Success",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				item: &finance.InboxItem{ID: "inbox_1", VendorName: "Uber"},
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, item *finance.InboxItem) (*finance.InboxItem, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, item *finance.InboxItem) (*finance.InboxItem, error) {
 					return item, nil
 				},
 				expectedID:    "inbox_1",
@@ -622,7 +624,7 @@ func TestCoordinator_Integrations(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				item: &finance.InboxItem{ID: "inbox_1"},
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, item *finance.InboxItem) (*finance.InboxItem, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, item *finance.InboxItem) (*finance.InboxItem, error) {
 					return nil, errors.New("update failed")
 				},
 				expectedError: true,
@@ -655,7 +657,7 @@ func TestCoordinator_Integrations(t *testing.T) {
 			name          string
 			ctx           context.Context
 			id            string
-			mockFn        func(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.InboxItem, error)
+			mockFn        func(ctx context.Context, rCtx finance.Context, id string) (*finance.InboxItem, error)
 			expectedID    string
 			expectedError bool
 		}{
@@ -663,7 +665,7 @@ func TestCoordinator_Integrations(t *testing.T) {
 				name: "Success",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				id:   "inbox_1",
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.InboxItem, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, id string) (*finance.InboxItem, error) {
 					return &finance.InboxItem{ID: id, Status: finance.InboxItemResolved}, nil
 				},
 				expectedID:    "inbox_1",
@@ -679,7 +681,7 @@ func TestCoordinator_Integrations(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				id:   "inbox_1",
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.InboxItem, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, id string) (*finance.InboxItem, error) {
 					return nil, errors.New("approve failed")
 				},
 				expectedError: true,
@@ -716,8 +718,8 @@ func TestCoordinator_ProcessSuggestions(t *testing.T) {
 	tests := []struct {
 		name          string
 		req           *agentapp.SuggestionRequest
-		classifierFn  func(ctx context.Context, spaceID string, doc string) (string, error)
-		parserFn      func(ctx context.Context, spaceID string, doc string, ingCtx IngestionContext) (*ParsedTransaction, error)
+		classifierFn  func(ctx context.Context, fCtx finance.Context, doc string) (string, error)
+		parserFn      func(ctx context.Context, fCtx finance.Context, doc string, ingCtx IngestionContext) (*ParsedTransaction, error)
 		expectCard    bool
 		expectBudget  bool
 		expectAccount bool
@@ -732,10 +734,10 @@ func TestCoordinator_ProcessSuggestions(t *testing.T) {
 					{Filename: "starbucks.png", ContentType: "image/png", Content: []byte("img")},
 				},
 			},
-			classifierFn: func(ctx context.Context, spaceID string, doc string) (string, error) {
+			classifierFn: func(ctx context.Context, fCtx finance.Context, doc string) (string, error) {
 				return "RECEIPT", nil
 			},
-			parserFn: func(ctx context.Context, spaceID string, doc string, ingCtx IngestionContext) (*ParsedTransaction, error) {
+			parserFn: func(ctx context.Context, fCtx finance.Context, doc string, ingCtx IngestionContext) (*ParsedTransaction, error) {
 				return &ParsedTransaction{
 					Counterparty:         "Starbucks",
 					Amount:               550,
@@ -756,7 +758,7 @@ func TestCoordinator_ProcessSuggestions(t *testing.T) {
 		{
 			name: "Classifier error returns error",
 			req:  &agentapp.SuggestionRequest{TextContent: "Garbage data"},
-			classifierFn: func(ctx context.Context, spaceID string, doc string) (string, error) {
+			classifierFn: func(ctx context.Context, fCtx finance.Context, doc string) (string, error) {
 				return "", errors.New("classify failed")
 			},
 			expectedError: true,
@@ -767,38 +769,38 @@ func TestCoordinator_ProcessSuggestions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			deps := Dependencies{
 				FinanceService: &FinanceServiceMock{
-					ListBudgetsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
+					ListBudgetsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
 						return &paging.Page[*finance.Budget]{}, nil
 					},
-					ListAccountsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
+					ListAccountsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
 						return &paging.Page[*finance.Account]{}, nil
 					},
-					ListInstitutionsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListInstitutionsFilter) (*paging.Page[*finance.Institution], error) {
+					ListInstitutionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListInstitutionsFilter) (*paging.Page[*finance.Institution], error) {
 						return &paging.Page[*finance.Institution]{}, nil
 					},
-					ListScheduledTransactionsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error) {
+					ListScheduledTransactionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error) {
 						return &paging.Page[*finance.ScheduledTransaction]{}, nil
 					},
-					ListRecurringTransactionsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error) {
+					ListRecurringTransactionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error) {
 						return &paging.Page[*finance.RecurringTransaction]{}, nil
 					},
-					ListBorrowingsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error) {
+					ListBorrowingsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error) {
 						return nil, "", nil
 					},
-					ListTransactionsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
+					ListTransactionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
 						return &paging.Page[*finance.Transaction]{}, nil
 					},
-					ResolveAccountFunc: func(ctx context.Context, spaceID finance.SpaceID, opts finance.ResolveAccountOpts) (*finance.Account, error) {
+					ResolveAccountFunc: func(ctx context.Context, rCtx finance.Context, opts finance.ResolveAccountOpts) (*finance.Account, error) {
 						return &finance.Account{ID: "acc_1"}, nil
 					},
-					GetBudgetFunc: func(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID) (*finance.Budget, error) {
-						return &finance.Budget{ID: id, SpaceID: spaceID}, nil
+					GetBudgetFunc: func(ctx context.Context, rCtx finance.Context, id finance.BudgetID) (*finance.Budget, error) {
+						return &finance.Budget{ID: id}, nil
 					},
 				},
 				Classifier: &DocumentClassifierMock{ClassifyFunc: tc.classifierFn},
 				Parser:     &IngestionParserMock{ParseFunc: tc.parserFn},
 				Deduplicator: &IngestionDeduplicatorMock{
-					DeduplicateFunc: func(ctx context.Context, spaceID string, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error) {
+					DeduplicateFunc: func(ctx context.Context, fCtx finance.Context, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error) {
 						return &DeduplicationResult{IsDuplicate: false}, nil
 					},
 				},
@@ -885,9 +887,9 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 			deleteAccountCalled = true
 			return nil
 		},
-		AdjustAccountBalanceFunc: func(ctx context.Context, id finance.AccountID, targetBalance int64, adjustmentDate string, note string) (*finance.Account, error) {
+		AdjustAccountBalanceFunc: func(ctx context.Context, req *AdjustAccountBalanceRequest) (*finance.Account, error) {
 			adjustAccountCalled = true
-			return &finance.Account{ID: id}, nil
+			return &finance.Account{ID: req.AccountID}, nil
 		},
 		CreateBorrowingFunc: func(ctx context.Context, req *CreateBorrowingRequest) (*finance.Borrowing, error) {
 			createBorrowingCalled = true
@@ -1101,11 +1103,11 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 			processSugCalled = true
 			return map[string]any{}, nil
 		},
-		ProcessSignalPipelineFunc: func(ctx context.Context, spaceID string, req *IngestionRequest) (*IngestionState, error) {
+		ProcessSignalPipelineFunc: func(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*IngestionState, error) {
 			processSignalCalled = true
 			return &IngestionState{}, nil
 		},
-		GetSignalSuggestionsFunc: func(ctx context.Context, spaceID string, req *IngestionRequest) (*SignalSuggestion, error) {
+		GetSignalSuggestionsFunc: func(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*SignalSuggestion, error) {
 			getSignalSugCalled = true
 			return &SignalSuggestion{}, nil
 		},
@@ -1120,7 +1122,7 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 	_, _ = logged.CreateAccount(ctx, &CreateAccountRequest{})
 	_, _ = logged.UpdateAccount(ctx, &UpdateAccountRequest{})
 	_ = logged.DeleteAccount(ctx, "acc_1", finance.DeleteOptions{})
-	_, _ = logged.AdjustAccountBalance(ctx, "acc_1", 100, "2026-09-17", "note")
+	_, _ = logged.AdjustAccountBalance(ctx, &AdjustAccountBalanceRequest{AccountID: "acc_1", TargetBalance: 100, AdjustmentDate: "2026-09-17", Note: "note"})
 	_, _ = logged.CreateBorrowing(ctx, &CreateBorrowingRequest{})
 	_, _ = logged.UpdateBorrowing(ctx, &UpdateBorrowingRequest{})
 	_ = logged.DeleteBorrowing(ctx, "bor_1")
@@ -1174,8 +1176,9 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 	_, _ = logged.ApproveInboxItem(ctx, "inbox_1")
 	_, _ = logged.GetTransactionSuggestions(ctx, &IngestionRequest{})
 	_, _ = logged.ProcessSuggestions(ctx, "spc_1", &agentapp.SuggestionRequest{})
-	_, _ = logged.ProcessSignalPipeline(ctx, "spc_1", &IngestionRequest{})
-	_, _ = logged.GetSignalSuggestions(ctx, "spc_1", &IngestionRequest{})
+	fCtx := finance.NewContext("spc_1", "usr_1", time.UTC, "USD")
+	_, _ = logged.ProcessSignalPipeline(ctx, fCtx, &IngestionRequest{})
+	_, _ = logged.GetSignalSuggestions(ctx, fCtx, &IngestionRequest{})
 
 	if !configureCalled || !getSettingsCalled || !listCurrenciesCalled ||
 		!createAccountCalled || !updateAccountCalled || !deleteAccountCalled || !adjustAccountCalled ||
@@ -1220,7 +1223,7 @@ func TestLoggingCoordinator_Errors(t *testing.T) {
 		DeleteAccountFunc: func(ctx context.Context, id finance.AccountID, opts finance.DeleteOptions) error {
 			return expectedErr
 		},
-		AdjustAccountBalanceFunc: func(ctx context.Context, id finance.AccountID, targetBalance int64, adjustmentDate string, note string) (*finance.Account, error) {
+		AdjustAccountBalanceFunc: func(ctx context.Context, req *AdjustAccountBalanceRequest) (*finance.Account, error) {
 			return nil, expectedErr
 		},
 		CreateBorrowingFunc: func(ctx context.Context, req *CreateBorrowingRequest) (*finance.Borrowing, error) {
@@ -1382,10 +1385,10 @@ func TestLoggingCoordinator_Errors(t *testing.T) {
 		ProcessSuggestionsFunc: func(ctx context.Context, spaceID string, req *agentapp.SuggestionRequest) (map[string]any, error) {
 			return nil, expectedErr
 		},
-		ProcessSignalPipelineFunc: func(ctx context.Context, spaceID string, req *IngestionRequest) (*IngestionState, error) {
+		ProcessSignalPipelineFunc: func(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*IngestionState, error) {
 			return nil, expectedErr
 		},
-		GetSignalSuggestionsFunc: func(ctx context.Context, spaceID string, req *IngestionRequest) (*SignalSuggestion, error) {
+		GetSignalSuggestionsFunc: func(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*SignalSuggestion, error) {
 			return nil, expectedErr
 		},
 	}
@@ -1410,7 +1413,7 @@ func TestLoggingCoordinator_Errors(t *testing.T) {
 	if err := logged.DeleteAccount(ctx, "acc_1", finance.DeleteOptions{}); err != expectedErr {
 		t.Errorf("expected %v, got %v", expectedErr, err)
 	}
-	if _, err := logged.AdjustAccountBalance(ctx, "acc_1", 100, "2026-09-17", "note"); err != expectedErr {
+	if _, err := logged.AdjustAccountBalance(ctx, &AdjustAccountBalanceRequest{AccountID: "acc_1", TargetBalance: 100, AdjustmentDate: "2026-09-17", Note: "note"}); err != expectedErr {
 		t.Errorf("expected %v, got %v", expectedErr, err)
 	}
 	if _, err := logged.CreateBorrowing(ctx, &CreateBorrowingRequest{}); err != expectedErr {
@@ -1572,10 +1575,144 @@ func TestLoggingCoordinator_Errors(t *testing.T) {
 	if _, err := logged.ProcessSuggestions(ctx, "spc_1", &agentapp.SuggestionRequest{}); err != expectedErr {
 		t.Errorf("expected %v, got %v", expectedErr, err)
 	}
-	if _, err := logged.ProcessSignalPipeline(ctx, "spc_1", &IngestionRequest{}); err != expectedErr {
+	fCtx := finance.NewContext("spc_1", "usr_1", time.UTC, "USD")
+	if _, err := logged.ProcessSignalPipeline(ctx, fCtx, &IngestionRequest{}); err != expectedErr {
 		t.Errorf("expected %v, got %v", expectedErr, err)
 	}
-	if _, err := logged.GetSignalSuggestions(ctx, "spc_1", &IngestionRequest{}); err != expectedErr {
+	if _, err := logged.GetSignalSuggestions(ctx, fCtx, &IngestionRequest{}); err != expectedErr {
 		t.Errorf("expected %v, got %v", expectedErr, err)
 	}
+}
+
+func TestCoordinator_TimezoneIntegration(t *testing.T) {
+	ctx := newTestContext("spc_tz", "usr_tz")
+
+	t.Run("CreateExpense with workspace timezone", func(t *testing.T) {
+		spaceMock := &SpaceServiceMock{
+			GetSettingsFunc: func(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error) {
+				return &settings.Entry[space.Settings]{
+					Value: space.Settings{
+						Timezone: "America/Santo_Domingo",
+					},
+				}, nil
+			},
+		}
+
+		var capturedTxn *finance.Transaction
+		fsMock := &FinanceServiceMock{
+			CreateExpenseFunc: func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error) {
+				capturedTxn = txn
+				return txn, nil
+			},
+		}
+
+		coord := NewCoordinator(Dependencies{
+			FinanceService: fsMock,
+			SpaceService:   spaceMock,
+		})
+
+		_, err := coord.CreateExpense(ctx, &CreateExpenseRequest{
+			Amount:      5000,
+			Currency:    "DOP",
+			Description: "Lunch",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if capturedTxn == nil {
+			t.Fatal("expected captured txn, got nil")
+		}
+
+		if capturedTxn.TransactionDate.Location().String() != "America/Santo_Domingo" {
+			t.Errorf("expected location America/Santo_Domingo, got %v", capturedTxn.TransactionDate.Location())
+		}
+		if capturedTxn.EffectiveDate.Location().String() != "America/Santo_Domingo" {
+			t.Errorf("expected effective date location America/Santo_Domingo, got %v", capturedTxn.EffectiveDate.Location())
+		}
+	})
+
+	t.Run("CreateExpense fallback when settings fail", func(t *testing.T) {
+		spaceMock := &SpaceServiceMock{
+			GetSettingsFunc: func(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error) {
+				return nil, errors.New("settings unavailable")
+			},
+		}
+
+		var capturedTxn *finance.Transaction
+		fsMock := &FinanceServiceMock{
+			CreateExpenseFunc: func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error) {
+				capturedTxn = txn
+				return txn, nil
+			},
+		}
+
+		coord := NewCoordinator(Dependencies{
+			FinanceService: fsMock,
+			SpaceService:   spaceMock,
+		})
+
+		_, err := coord.CreateExpense(ctx, &CreateExpenseRequest{
+			Amount: 1000,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if capturedTxn.TransactionDate.Location() != time.UTC {
+			t.Errorf("expected fallback to UTC, got %v", capturedTxn.TransactionDate.Location())
+		}
+	})
+
+	t.Run("RequestContext Date edge cases", func(t *testing.T) {
+		loc, _ := time.LoadLocation("America/New_York")
+
+		rCtx := &RequestContext{
+			spaceSettings: &space.Settings{Timezone: "America/New_York"},
+			loc:           loc,
+		}
+		rCtx.spaceSettingsOnce.Do(func() {})
+
+		// 1. Zero time returns Now() in workspace timezone
+		d1 := rCtx.Date(time.Time{})
+		if d1.Location().String() != "America/New_York" {
+			t.Errorf("expected NY loc, got %v", d1.Location())
+		}
+		if time.Since(d1) > 2*time.Second {
+			t.Errorf("expected recent time, got %v", d1)
+		}
+
+		// 2. Non-zero time converted to workspace timezone
+		fallback := time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)
+		d2 := rCtx.Date(fallback)
+		if d2.Location().String() != "America/New_York" {
+			t.Errorf("expected NY loc, got %v", d2.Location())
+		}
+		if d2.Hour() != 6 { // 10 UTC is 6 EDT in NY
+			t.Errorf("expected hour 6, got %d", d2.Hour())
+		}
+
+		// 3. Fallback when spaceSettings is nil defaults to UTC
+		rCtxUTC := &RequestContext{}
+		rCtxUTC.spaceSettingsOnce.Do(func() {})
+		d3 := rCtxUTC.Date(fallback)
+		if d3.Location() != time.UTC {
+			t.Errorf("expected UTC, got %v", d3.Location())
+		}
+	})
+
+	t.Run("toLocation helper edge cases", func(t *testing.T) {
+		loc, _ := time.LoadLocation("America/New_York")
+
+		// Zero time stays zero
+		if !toLocation(time.Time{}, loc).IsZero() {
+			t.Error("expected zero time to remain zero")
+		}
+
+		// Nil loc falls back to UTC
+		nonZero := time.Date(2026, 1, 1, 12, 0, 0, 0, loc)
+		if toLocation(nonZero, nil).Location() != time.UTC {
+			t.Error("expected UTC fallback for nil location")
+		}
+	})
 }

@@ -16,15 +16,15 @@ import (
 func TestUpdateBudget(t *testing.T) {
 	ctx := context.Background()
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 	bID, _ := NewBudgetID()
 
 	budgetStore := newBudgetStoreMock(nil)
 	settingsStore := newSettingsStoreMock(nil)
-	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
+	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
 
-	_ = budgetStore.Create(ctx, &Budget{
+	_ = budgetStore.Create(ctx, rCtx, &Budget{
 		ID:          bID,
-		SpaceID:     spaceID,
 		Name:        "Dining Out",
 		LimitAmount: 30000,
 		Currency:    "USD",
@@ -49,7 +49,6 @@ func TestUpdateBudget(t *testing.T) {
 			name: "stale version returns VersionMismatch",
 			update: &Budget{
 				ID:          bID,
-				SpaceID:     spaceID,
 				Name:        "Stale Update",
 				LimitAmount: 40000,
 				Version:     1,
@@ -60,7 +59,6 @@ func TestUpdateBudget(t *testing.T) {
 			name: "valid matching version succeeds and updates fields",
 			update: &Budget{
 				ID:          bID,
-				SpaceID:     spaceID,
 				Name:        "Dining Out New",
 				LimitAmount: 35000,
 				Version:     2,
@@ -74,7 +72,7 @@ func TestUpdateBudget(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := svc.UpdateBudget(ctx, tt.update, tt.mask)
+			res, err := svc.UpdateBudget(ctx, rCtx, tt.update, tt.mask)
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
 					t.Errorf("UpdateBudget error = %v, want %v", err, tt.wantErr)
@@ -97,6 +95,7 @@ func TestUpdateBudget(t *testing.T) {
 func TestDeleteBudget(t *testing.T) {
 	ctx := context.Background()
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 
 	bIDClean, _ := NewBudgetID()
 	bIDTxns, _ := NewBudgetID()
@@ -106,21 +105,19 @@ func TestDeleteBudget(t *testing.T) {
 	txnStore := newTransactionStoreMock(nil)
 	schedStore := newScheduledTransactionStoreMock(nil)
 
-	_ = budgetStore.Create(ctx, &Budget{ID: bIDClean, SpaceID: spaceID, Name: "Clean Budget", Status: BudgetStatusActive})
-	_ = budgetStore.Create(ctx, &Budget{ID: bIDTxns, SpaceID: spaceID, Name: "Txn Budget", Status: BudgetStatusActive})
-	_ = budgetStore.Create(ctx, &Budget{ID: bIDSched, SpaceID: spaceID, Name: "Sched Budget", Status: BudgetStatusActive})
+	_ = budgetStore.Create(ctx, rCtx, &Budget{ID: bIDClean, Name: "Clean Budget", Status: BudgetStatusActive})
+	_ = budgetStore.Create(ctx, rCtx, &Budget{ID: bIDTxns, Name: "Txn Budget", Status: BudgetStatusActive})
+	_ = budgetStore.Create(ctx, rCtx, &Budget{ID: bIDSched, Name: "Sched Budget", Status: BudgetStatusActive})
 
-	_ = txnStore.Create(ctx, &Transaction{
+	_ = txnStore.Create(ctx, rCtx, &Transaction{
 		ID:       TransactionID("txn_1"),
-		SpaceID:  spaceID,
 		BudgetID: &bIDTxns,
 		Type:     TransactionTypeExpense,
 		Amount:   500,
 	})
 
-	_ = schedStore.Create(ctx, &ScheduledTransaction{
+	_ = schedStore.Create(ctx, rCtx, &ScheduledTransaction{
 		ID:       ScheduledTransactionID("sch_1"),
-		SpaceID:  spaceID,
 		BudgetID: &bIDSched,
 		Status:   ScheduledTransactionPending,
 		Type:     TransactionTypeExpense,
@@ -156,7 +153,7 @@ func TestDeleteBudget(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := svc.DeleteBudget(ctx, spaceID, tt.bID, DeleteOptions{})
+			err := svc.DeleteBudget(ctx, rCtx, tt.bID, DeleteOptions{})
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
 					t.Errorf("DeleteBudget error = %v, want %v", err, tt.wantErr)
@@ -176,7 +173,6 @@ func TestGetScheduledTransaction(t *testing.T) {
 	mockStore := newScheduledTransactionStoreMock(map[ScheduledTransactionID]*ScheduledTransaction{
 		spID: {
 			ID:       spID,
-			SpaceID:  spaceID,
 			Amount:   1500,
 			Currency: Currency("USD"),
 			Status:   ScheduledTransactionPending,
@@ -222,7 +218,8 @@ func TestGetScheduledTransaction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := svc.GetScheduledTransaction(ctx, tt.spaceID, tt.id)
+			rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+			got, err := svc.GetScheduledTransaction(ctx, rCtx, tt.id)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("GetScheduledTransaction expected error, got nil")
@@ -242,6 +239,7 @@ func TestGetScheduledTransaction(t *testing.T) {
 func TestGetOrCreatePeriod_MultiCurrencyRateResolution(t *testing.T) {
 	ctx := context.Background()
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 	bID, _ := NewBudgetID()
 	now := time.Now().UTC()
 
@@ -250,10 +248,9 @@ func TestGetOrCreatePeriod_MultiCurrencyRateResolution(t *testing.T) {
 	periodStore := newPeriodStoreMock(nil)
 	rateStore := newExchangeRateStoreMock(nil)
 
-	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
-	_ = budgetStore.Create(ctx, &Budget{
+	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+	_ = budgetStore.Create(ctx, rCtx, &Budget{
 		ID:          bID,
-		SpaceID:     spaceID,
 		Name:        "Travel EUR",
 		LimitAmount: 100000,
 		Currency:    "EUR",
@@ -269,15 +266,14 @@ func TestGetOrCreatePeriod_MultiCurrencyRateResolution(t *testing.T) {
 	})
 
 	t.Run("missing exchange rate returns validation error", func(t *testing.T) {
-		_, err := svc.GetOrCreatePeriod(ctx, spaceID, bID, now)
+		_, err := svc.GetOrCreatePeriod(ctx, rCtx, bID, now)
 		if err == nil || !strings.Contains(err.Error(), "exchange rate must be greater than zero") {
 			t.Fatalf("expected exchange rate error, got %v", err)
 		}
 	})
 
 	t.Run("registered exchange rate sets rate on period", func(t *testing.T) {
-		_ = rateStore.Create(ctx, &ExchangeRate{
-			SpaceID:      spaceID,
+		_ = rateStore.Create(ctx, rCtx, &ExchangeRate{
 			FromCurrency: "EUR",
 			ToCurrency:   "USD",
 			Rate:         1.10,
@@ -286,7 +282,7 @@ func TestGetOrCreatePeriod_MultiCurrencyRateResolution(t *testing.T) {
 
 		// Create period for next month with registered rate
 		nextMonth := now.AddDate(0, 1, 0)
-		p, err := svc.GetOrCreatePeriod(ctx, spaceID, bID, nextMonth)
+		p, err := svc.GetOrCreatePeriod(ctx, rCtx, bID, nextMonth)
 		if err != nil {
 			t.Fatalf("GetOrCreatePeriod failed: %v", err)
 		}
@@ -354,13 +350,13 @@ func TestConfigureFinance(t *testing.T) {
 
 	spIDStr, _ := id.Generate("spc_")
 	spID := SpaceID(spIDStr)
+	rCtx := NewRequestContext(spID, "usr_1", time.UTC, "USD")
 
 	settings := &FinanceSettings{
-		SpaceID:      spID,
 		BaseCurrency: Currency("USD"),
 	}
 
-	res, err := svc.ConfigureFinance(context.Background(), settings)
+	res, err := svc.ConfigureFinance(context.Background(), rCtx, settings)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -370,7 +366,7 @@ func TestConfigureFinance(t *testing.T) {
 	}
 
 	// Verify settings exist
-	retrieved, err := settingsStore.GetByID(context.Background(), spID)
+	retrieved, err := settingsStore.GetByID(context.Background(), rCtx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -380,10 +376,9 @@ func TestConfigureFinance(t *testing.T) {
 
 	// Verify base currency cannot be modified (immutable test)
 	newSettings := &FinanceSettings{
-		SpaceID:      spID,
 		BaseCurrency: Currency("EUR"),
 	}
-	res2, err := svc.ConfigureFinance(context.Background(), newSettings)
+	res2, err := svc.ConfigureFinance(context.Background(), rCtx, newSettings)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -415,9 +410,10 @@ func TestGetOrCreatePeriod(t *testing.T) {
 	ctx := context.Background()
 	spIDStr, _ := id.Generate("spc_")
 	spID := SpaceID(spIDStr)
+	rCtx := NewRequestContext(spID, "usr_1", time.UTC, "USD")
 
 	// 1. Setup workspace base currency
-	_, err := svc.ConfigureFinance(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: Currency("USD")})
+	_, err := svc.ConfigureFinance(ctx, rCtx, &FinanceSettings{BaseCurrency: Currency("USD")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -426,9 +422,8 @@ func TestGetOrCreatePeriod(t *testing.T) {
 	bgtID := BudgetID(bgtIDStr)
 
 	// 2. Setup budget template (EUR budget)
-	budget, err := svc.CreateBudget(ctx, &Budget{
+	budget, err := svc.CreateBudget(ctx, rCtx, &Budget{
 		ID:          bgtID,
-		SpaceID:     spID,
 		Name:        "Dining",
 		LimitAmount: 50000, // 500.00 EUR
 		Currency:    Currency("EUR"),
@@ -439,8 +434,7 @@ func TestGetOrCreatePeriod(t *testing.T) {
 	}
 
 	// 3. Set up exchange rate (EUR to USD) for Feb 15
-	err = rateStore.Create(ctx, &ExchangeRate{
-		SpaceID:      spID,
+	err = rateStore.Create(ctx, rCtx, &ExchangeRate{
 		FromCurrency: Currency("EUR"),
 		ToCurrency:   Currency("USD"),
 		Rate:         1.085,
@@ -452,7 +446,7 @@ func TestGetOrCreatePeriod(t *testing.T) {
 
 	// 4. Trigger JIT period creation
 	targetDate := time.Date(2026, 2, 15, 12, 0, 0, 0, time.UTC)
-	period, err := svc.GetOrCreatePeriod(ctx, spID, budget.ID, targetDate)
+	period, err := svc.GetOrCreatePeriod(ctx, rCtx, budget.ID, targetDate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -468,7 +462,7 @@ func TestGetOrCreatePeriod(t *testing.T) {
 	}
 
 	// 5. Query again (should return the same period without recreating)
-	period2, err := svc.GetOrCreatePeriod(ctx, spID, budget.ID, targetDate)
+	period2, err := svc.GetOrCreatePeriod(ctx, rCtx, budget.ID, targetDate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -499,18 +493,18 @@ func TestTransactions(t *testing.T) {
 	ctx := context.Background()
 	spIDStr, _ := id.Generate("spc_")
 	spID := SpaceID(spIDStr)
+	rCtx := NewRequestContext(spID, "usr_1", time.UTC, "USD")
 
 	// 1. Setup settings
-	_, err := svc.ConfigureFinance(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: Currency("USD")})
+	_, err := svc.ConfigureFinance(ctx, rCtx, &FinanceSettings{BaseCurrency: Currency("USD")})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// 2. Setup budget
 	bgtIDStr, _ := id.Generate("bgt_")
-	budget, err := svc.CreateBudget(ctx, &Budget{
+	budget, err := svc.CreateBudget(ctx, rCtx, &Budget{
 		ID:          BudgetID(bgtIDStr),
-		SpaceID:     spID,
 		Name:        "Food",
 		LimitAmount: 20000,
 		Currency:    Currency("EUR"),
@@ -522,8 +516,7 @@ func TestTransactions(t *testing.T) {
 
 	// 3. Setup exchange rate (EUR to USD = 1.10)
 	rateDate := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	err = rateStore.Create(ctx, &ExchangeRate{
-		SpaceID:      spID,
+	err = rateStore.Create(ctx, rCtx, &ExchangeRate{
 		FromCurrency: Currency("EUR"),
 		ToCurrency:   Currency("USD"),
 		Rate:         1.10,
@@ -537,7 +530,6 @@ func TestTransactions(t *testing.T) {
 	targetDate := time.Date(2026, 2, 15, 12, 0, 0, 0, time.UTC)
 	schedID := ScheduledTransactionID("sctx_123")
 	txn := &Transaction{
-		SpaceID:         spID,
 		BudgetID:        &budget.ID,
 		Amount:          1000,
 		Currency:        Currency("EUR"),
@@ -548,7 +540,7 @@ func TestTransactions(t *testing.T) {
 		},
 	}
 
-	createdTxn, err := svc.CreateExpense(ctx, txn)
+	createdTxn, err := svc.CreateExpense(ctx, rCtx, txn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -557,13 +549,13 @@ func TestTransactions(t *testing.T) {
 		t.Errorf("AmountInBase = %d, want 1100", createdTxn.AmountInBase)
 	}
 
-	period, err := svc.GetOrCreatePeriod(ctx, spID, budget.ID, targetDate)
+	period, err := svc.GetOrCreatePeriod(ctx, rCtx, budget.ID, targetDate)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Verify the period spent progress calculates correctly in batch query
-	stats, err := svc.AggregateSpentBatch(ctx, []PeriodID{period.ID})
+	stats, err := svc.AggregateSpentBatch(ctx, rCtx, []PeriodID{period.ID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -580,7 +572,6 @@ func TestTransactions(t *testing.T) {
 	// Update the expense: simulate the coordinator by instantiating a clean Transaction struct without metadata
 	updateTxnInput := &Transaction{
 		ID:              createdTxn.ID,
-		SpaceID:         createdTxn.SpaceID,
 		BudgetID:        createdTxn.BudgetID,
 		Amount:          1500,
 		Currency:        createdTxn.Currency,
@@ -589,7 +580,7 @@ func TestTransactions(t *testing.T) {
 		EffectiveDate:   createdTxn.EffectiveDate,
 		AccountID:       createdTxn.AccountID,
 	}
-	updatedTxn, err := svc.UpdateExpense(ctx, updateTxnInput)
+	updatedTxn, err := svc.UpdateExpense(ctx, rCtx, updateTxnInput)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -603,7 +594,7 @@ func TestTransactions(t *testing.T) {
 	}
 
 	// Verify the period updated its spent aggregates to reflect new amount
-	stats2, err := svc.AggregateSpentBatch(ctx, []PeriodID{period.ID})
+	stats2, err := svc.AggregateSpentBatch(ctx, rCtx, []PeriodID{period.ID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -615,13 +606,13 @@ func TestTransactions(t *testing.T) {
 	}
 
 	// 5. Delete transaction
-	err = svc.DeleteTransaction(ctx, spID, createdTxn.ID)
+	err = svc.DeleteTransaction(ctx, rCtx, createdTxn.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Verify period spent is back to 0
-	stats3, err := svc.AggregateSpentBatch(ctx, []PeriodID{period.ID})
+	stats3, err := svc.AggregateSpentBatch(ctx, rCtx, []PeriodID{period.ID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -636,6 +627,7 @@ func TestTransactions(t *testing.T) {
 func TestExchangeRateFallback(t *testing.T) {
 	ctx := context.Background()
 	spaceID := SpaceID("test-space")
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 
 	rateStore := newExchangeRateStoreMock(nil)
 	settingsStore := newSettingsStoreMock(nil)
@@ -647,33 +639,29 @@ func TestExchangeRateFallback(t *testing.T) {
 	})
 
 	// Configure finance settings
-	_ = settingsStore.Create(ctx, &FinanceSettings{
-		SpaceID:      spaceID,
+	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{
 		BaseCurrency: "USD",
 	})
 
 	// Set an exchange rate for 2026-07-24 (today) and 2026-07-28 (future)
 	rate1 := &ExchangeRate{
-		SpaceID:      spaceID,
 		FromCurrency: "EUR",
 		ToCurrency:   "USD",
 		Rate:         1.10,
 		RateDate:     time.Date(2026, 7, 24, 0, 0, 0, 0, time.UTC),
 	}
-	_ = rateStore.Create(ctx, rate1)
+	_ = rateStore.Create(ctx, rCtx, rate1)
 
 	rate2 := &ExchangeRate{
-		SpaceID:      spaceID,
 		FromCurrency: "EUR",
 		ToCurrency:   "USD",
 		Rate:         1.20,
 		RateDate:     time.Date(2026, 7, 28, 0, 0, 0, 0, time.UTC),
 	}
-	_ = rateStore.Create(ctx, rate2)
+	_ = rateStore.Create(ctx, rCtx, rate2)
 
 	// Test Case 1: Exact date lookup (2026-07-24)
-	r, err := svc.getExchangeRate(ctx, ExchangeRateKey{
-		SpaceID:      spaceID,
+	r, err := svc.getExchangeRate(ctx, rCtx, ExchangeRateKey{
 		FromCurrency: "EUR",
 		ToCurrency:   "USD",
 		RateDate:     time.Date(2026, 7, 24, 0, 0, 0, 0, time.UTC),
@@ -687,8 +675,7 @@ func TestExchangeRateFallback(t *testing.T) {
 
 	// Test Case 2: Past date before any rates exist (e.g., 2026-07-20)
 	// It should fall back to the oldest future rate (which is Rate 1 on 2026-07-24)
-	r, err = svc.getExchangeRate(ctx, ExchangeRateKey{
-		SpaceID:      spaceID,
+	r, err = svc.getExchangeRate(ctx, rCtx, ExchangeRateKey{
 		FromCurrency: "EUR",
 		ToCurrency:   "USD",
 		RateDate:     time.Date(2026, 7, 20, 0, 0, 0, 0, time.UTC),
@@ -702,8 +689,7 @@ func TestExchangeRateFallback(t *testing.T) {
 
 	// Test Case 3: Future date (e.g., 2026-07-26)
 	// It should find the closest rate in the past (which is Rate 1 on 2026-07-24)
-	r, err = svc.getExchangeRate(ctx, ExchangeRateKey{
-		SpaceID:      spaceID,
+	r, err = svc.getExchangeRate(ctx, rCtx, ExchangeRateKey{
 		FromCurrency: "EUR",
 		ToCurrency:   "USD",
 		RateDate:     time.Date(2026, 7, 26, 0, 0, 0, 0, time.UTC),
@@ -720,6 +706,7 @@ func TestAdjustAccountBalance(t *testing.T) {
 	ctx := context.Background()
 	spIDStr, _ := id.Generate("spc_")
 	spaceID := SpaceID(spIDStr)
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 
 	accIDStr, _ := id.Generate("acc_")
 	accID := AccountID(accIDStr)
@@ -730,21 +717,19 @@ func TestAdjustAccountBalance(t *testing.T) {
 	settingsStore := newSettingsStoreMock(nil)
 	eventStore := newTransactionEventStoreMock(nil)
 
-	_ = settingsStore.Create(ctx, &FinanceSettings{
-		SpaceID:      spaceID,
+	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{
 		BaseCurrency: "USD",
 	})
 
 	initialAcc := &Account{
 		ID:             accID,
-		SpaceID:        spaceID,
 		Name:           "Checking",
 		Type:           AccountTypeBank,
 		Currency:       "USD",
 		CurrentBalance: 5000, // $50.00
 		IsActive:       true,
 	}
-	_ = accountStore.Create(ctx, initialAcc)
+	_ = accountStore.Create(ctx, rCtx, initialAcc)
 
 	svc := NewService(Dependencies{
 		SettingsStore:         settingsStore,
@@ -754,7 +739,11 @@ func TestAdjustAccountBalance(t *testing.T) {
 	})
 
 	// Test Case 1: Positive Adjustment ($50.00 -> $120.00, Delta = +$70.00)
-	updatedAcc, err := svc.AdjustAccountBalance(ctx, spaceID, accID, 12000, "", "Statement reconciliation")
+	updatedAcc, err := svc.AdjustAccountBalance(ctx, rCtx, AdjustAccountBalanceRequest{
+		AccountID:     accID,
+		TargetBalance: 12000,
+		Note:          "Statement reconciliation",
+	})
 	if err != nil {
 		t.Fatalf("AdjustAccountBalance failed: %v", err)
 	}
@@ -781,7 +770,11 @@ func TestAdjustAccountBalance(t *testing.T) {
 	}
 
 	// Test Case 2: Negative Adjustment ($120.00 -> $80.00, Delta = -$40.00)
-	updatedAcc2, err := svc.AdjustAccountBalance(ctx, spaceID, accID, 8000, "", "Fee adjustment")
+	updatedAcc2, err := svc.AdjustAccountBalance(ctx, rCtx, AdjustAccountBalanceRequest{
+		AccountID:     accID,
+		TargetBalance: 8000,
+		Note:          "Fee adjustment",
+	})
 	if err != nil {
 		t.Fatalf("AdjustAccountBalance negative failed: %v", err)
 	}
@@ -791,7 +784,7 @@ func TestAdjustAccountBalance(t *testing.T) {
 	}
 
 	// Test Case 3: Prevent Manual Editing of Balance Adjustment
-	err = svc.updateTransaction(ctx, loggedTxn, loggedTxn)
+	err = svc.updateTransaction(ctx, rCtx, loggedTxn, loggedTxn)
 	if err == nil {
 		t.Error("expected error when attempting to update balance adjustment transaction, got nil")
 	} else if !strings.Contains(err.Error(), "balance adjustment transactions cannot be edited directly") {
@@ -803,6 +796,7 @@ func TestCreateBorrowingRepayment_SameCurrencyLent(t *testing.T) {
 	ctx := context.Background()
 	spIDStr, _ := id.Generate("spc_")
 	spaceID := SpaceID(spIDStr)
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 	accID, _ := NewAccountID()
 	borID, _ := NewBorrowingID()
 
@@ -811,19 +805,17 @@ func TestCreateBorrowingRepayment_SameCurrencyLent(t *testing.T) {
 	borrowingStore := newBorrowingStoreMock(nil)
 	settingsStore := newSettingsStoreMock(nil)
 
-	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
-	_ = accountStore.Create(ctx, &Account{
+	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+	_ = accountStore.Create(ctx, rCtx, &Account{
 		ID:             accID,
-		SpaceID:        spaceID,
 		Name:           "Checking Account",
 		Type:           AccountTypeBank,
 		Currency:       "USD",
 		CurrentBalance: 50000, // $500.00
 		IsActive:       true,
 	})
-	_ = borrowingStore.Create(ctx, &Borrowing{
+	_ = borrowingStore.Create(ctx, rCtx, &Borrowing{
 		ID:              borID,
-		SpaceID:         spaceID,
 		Direction:       BorrowingDirectionLent,
 		Counterparty:    "John",
 		TotalAmount:     10000, // $100.00
@@ -840,9 +832,8 @@ func TestCreateBorrowingRepayment_SameCurrencyLent(t *testing.T) {
 		TransactionStore: txnStore,
 	})
 
-	txnResult, err := svc.LogBorrowingTransaction(ctx, LogBorrowingTransactionRequest{
+	txnResult, err := svc.LogBorrowingTransaction(ctx, rCtx, LogBorrowingTransactionRequest{
 		BorrowingID:     borID,
-		SpaceID:         spaceID,
 		Type:            BorrowingTransactionTypePayment,
 		Amount:          3000, // $30.00 repayment
 		TransactionDate: time.Now().UTC(),
@@ -854,19 +845,19 @@ func TestCreateBorrowingRepayment_SameCurrencyLent(t *testing.T) {
 	}
 
 	// Verify Borrowing remaining balance (10000 - 3000 = 7000)
-	b, _ := borrowingStore.GetByID(ctx, spaceID, borID)
+	b, _ := borrowingStore.GetByID(ctx, rCtx, borID)
 	if b.RemainingAmount != 7000 {
 		t.Errorf("Borrowing remaining balance = %d, want 7000", b.RemainingAmount)
 	}
 
 	// Verify Account balance (50000 + 3000 = 53000 because LENT repayment is INFLOW)
-	acc, _ := accountStore.GetByID(ctx, spaceID, accID)
+	acc, _ := accountStore.GetByID(ctx, rCtx, accID)
 	if acc.CurrentBalance != 53000 {
 		t.Errorf("Account balance = %d, want 53000", acc.CurrentBalance)
 	}
 
 	// Verify Repayment Transaction logged
-	txn, err := txnStore.GetByID(ctx, spaceID, txnResult.ID)
+	txn, err := txnStore.GetByID(ctx, rCtx, txnResult.ID)
 	if err != nil {
 		t.Fatalf("Repayment transaction not found: %v", err)
 	}
@@ -882,6 +873,7 @@ func TestCreateBorrowingRepayment_MultiCurrency(t *testing.T) {
 	ctx := context.Background()
 	spIDStr, _ := id.Generate("spc_")
 	spaceID := SpaceID(spIDStr)
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 	accID, _ := NewAccountID()
 	borID, _ := NewBorrowingID()
 
@@ -891,27 +883,24 @@ func TestCreateBorrowingRepayment_MultiCurrency(t *testing.T) {
 	settingsStore := newSettingsStoreMock(nil)
 	rateStore := newExchangeRateStoreMock(nil)
 
-	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
-	_ = rateStore.Create(ctx, &ExchangeRate{
-		SpaceID:      spaceID,
+	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+	_ = rateStore.Create(ctx, rCtx, &ExchangeRate{
 		FromCurrency: "USD",
 		ToCurrency:   "DOP",
 		Rate:         60.0,
 		RateDate:     time.Now().UTC(),
 	})
 
-	_ = accountStore.Create(ctx, &Account{
+	_ = accountStore.Create(ctx, rCtx, &Account{
 		ID:             accID,
-		SpaceID:        spaceID,
 		Name:           "Dominican Bank Account",
 		Type:           AccountTypeBank,
 		Currency:       "DOP",
 		CurrentBalance: 5000000, // 50,000.00 DOP
 		IsActive:       true,
 	})
-	_ = borrowingStore.Create(ctx, &Borrowing{
+	_ = borrowingStore.Create(ctx, rCtx, &Borrowing{
 		ID:              borID,
-		SpaceID:         spaceID,
 		Direction:       BorrowingDirectionLent,
 		Counterparty:    "Maria",
 		TotalAmount:     10000, // $100.00 USD
@@ -929,9 +918,8 @@ func TestCreateBorrowingRepayment_MultiCurrency(t *testing.T) {
 		TransactionStore:  txnStore,
 	})
 
-	txnResult, err := svc.LogBorrowingTransaction(ctx, LogBorrowingTransactionRequest{
+	txnResult, err := svc.LogBorrowingTransaction(ctx, rCtx, LogBorrowingTransactionRequest{
 		BorrowingID:     borID,
-		SpaceID:         spaceID,
 		Type:            BorrowingTransactionTypePayment,
 		Amount:          1000, // $10.00 USD repayment
 		TransactionDate: time.Now().UTC(),
@@ -943,21 +931,20 @@ func TestCreateBorrowingRepayment_MultiCurrency(t *testing.T) {
 	}
 
 	// Verify Borrowing remaining balance ($100 - $10 = $90 USD)
-	b, _ := borrowingStore.GetByID(ctx, spaceID, borID)
+	b, _ := borrowingStore.GetByID(ctx, rCtx, borID)
 	if b.RemainingAmount != 9000 {
 		t.Errorf("Borrowing remaining balance = %d, want 9000 USD", b.RemainingAmount)
 	}
 
 	// Verify DOP Account balance: 50,000 DOP + ($10 * 60 = 600 DOP = 60000 DOP cents)
-	acc, _ := accountStore.GetByID(ctx, spaceID, accID)
+	acc, _ := accountStore.GetByID(ctx, rCtx, accID)
 	expectedDOPBalance := int64(5000000 + 60000)
 	if acc.CurrentBalance != expectedDOPBalance {
 		t.Errorf("Account DOP balance = %d, want %d", acc.CurrentBalance, expectedDOPBalance)
 	}
 
 	// Verify Deleting Repayment rolls back both DOP Account and USD Borrowing
-	err = svc.DeleteBorrowingTransaction(ctx, DeleteBorrowingTransactionRequest{
-		SpaceID:       spaceID,
+	err = svc.DeleteBorrowingTransaction(ctx, rCtx, DeleteBorrowingTransactionRequest{
 		BorrowingID:   borID,
 		TransactionID: txnResult.ID,
 	})
@@ -965,12 +952,12 @@ func TestCreateBorrowingRepayment_MultiCurrency(t *testing.T) {
 		t.Fatalf("DeleteBorrowingRepayment failed: %v", err)
 	}
 
-	bAfterDelete, _ := borrowingStore.GetByID(ctx, spaceID, borID)
+	bAfterDelete, _ := borrowingStore.GetByID(ctx, rCtx, borID)
 	if bAfterDelete.RemainingAmount != 10000 {
 		t.Errorf("Borrowing balance after deletion = %d, want 10000 USD", bAfterDelete.RemainingAmount)
 	}
 
-	accAfterDelete, _ := accountStore.GetByID(ctx, spaceID, accID)
+	accAfterDelete, _ := accountStore.GetByID(ctx, rCtx, accID)
 	if accAfterDelete.CurrentBalance != 5000000 {
 		t.Errorf("Account DOP balance after deletion = %d, want 5000000 DOP", accAfterDelete.CurrentBalance)
 	}
@@ -1062,6 +1049,7 @@ func TestAdjustBorrowingBalance(t *testing.T) {
 			ctx := context.Background()
 			spIDStr, _ := id.Generate("spc_")
 			spaceID := SpaceID(spIDStr)
+			rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 			accID, _ := NewAccountID()
 			borID, _ := NewBorrowingID()
 
@@ -1072,19 +1060,17 @@ func TestAdjustBorrowingBalance(t *testing.T) {
 			borrowingStore := newBorrowingStoreMock(nil)
 			settingsStore := newSettingsStoreMock(nil)
 
-			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
-			_ = accountStore.Create(ctx, &Account{
+			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+			_ = accountStore.Create(ctx, rCtx, &Account{
 				ID:             accID,
-				SpaceID:        spaceID,
 				Name:           "Checking",
 				Type:           AccountTypeBank,
 				Currency:       "USD",
 				CurrentBalance: tt.initialAccountBal,
 				IsActive:       true,
 			})
-			_ = borrowingStore.Create(ctx, &Borrowing{
+			_ = borrowingStore.Create(ctx, rCtx, &Borrowing{
 				ID:              borID,
-				SpaceID:         spaceID,
 				Direction:       tt.direction,
 				Counterparty:    "Test Party",
 				TotalAmount:     tt.initialTotal,
@@ -1106,8 +1092,7 @@ func TestAdjustBorrowingBalance(t *testing.T) {
 				accIDPtr = &accID
 			}
 
-			adjusted, err := svc.AdjustBorrowingBalance(ctx, AdjustBorrowingBalanceRequest{
-				SpaceID:       spaceID,
+			adjusted, err := svc.AdjustBorrowingBalance(ctx, rCtx, AdjustBorrowingBalanceRequest{
 				BorrowingID:   borID,
 				TargetBalance: tt.targetBalance,
 				Note:          "Table test adjustment",
@@ -1124,12 +1109,12 @@ func TestAdjustBorrowingBalance(t *testing.T) {
 				t.Errorf("Status = %s, want %s", adjusted.Status, tt.wantStatus)
 			}
 
-			acc, _ := accountStore.GetByID(ctx, spaceID, accID)
+			acc, _ := accountStore.GetByID(ctx, rCtx, accID)
 			if acc.CurrentBalance != tt.wantAccountBal {
 				t.Errorf("Account balance = %d, want %d", acc.CurrentBalance, tt.wantAccountBal)
 			}
 
-			page, err := txnStore.ListBySpace(ctx, spaceID, &TransactionFilter{
+			page, err := txnStore.ListBySpace(ctx, rCtx, &TransactionFilter{
 				BorrowingID:    &borID,
 				BorrowingRoles: []string{"REPAYMENT", "DISBURSEMENT", "ADJUSTMENT"},
 			})
@@ -1215,6 +1200,7 @@ func TestLogAndUpdateBorrowingTransaction(t *testing.T) {
 			ctx := context.Background()
 			spIDStr, _ := id.Generate("spc_")
 			spaceID := SpaceID(spIDStr)
+			rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 			accID, _ := NewAccountID()
 			borID, _ := NewBorrowingID()
 
@@ -1223,19 +1209,17 @@ func TestLogAndUpdateBorrowingTransaction(t *testing.T) {
 			borrowingStore := newBorrowingStoreMock(nil)
 			settingsStore := newSettingsStoreMock(nil)
 
-			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
-			_ = accountStore.Create(ctx, &Account{
+			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+			_ = accountStore.Create(ctx, rCtx, &Account{
 				ID:             accID,
-				SpaceID:        spaceID,
 				Name:           "Checking",
 				Type:           AccountTypeBank,
 				Currency:       "USD",
 				CurrentBalance: 100000, // $1,000.00
 				IsActive:       true,
 			})
-			_ = borrowingStore.Create(ctx, &Borrowing{
+			_ = borrowingStore.Create(ctx, rCtx, &Borrowing{
 				ID:              borID,
-				SpaceID:         spaceID,
 				Direction:       tt.direction,
 				Counterparty:    "Test Counterparty",
 				TotalAmount:     tt.initialTotal,
@@ -1253,8 +1237,7 @@ func TestLogAndUpdateBorrowingTransaction(t *testing.T) {
 			})
 
 			// 1. Log borrowing transaction
-			rep, err := svc.LogBorrowingTransaction(ctx, LogBorrowingTransactionRequest{
-				SpaceID:     spaceID,
+			rep, err := svc.LogBorrowingTransaction(ctx, rCtx, LogBorrowingTransactionRequest{
 				BorrowingID: borID,
 				Type:        tt.txType,
 				Amount:      tt.amount,
@@ -1266,7 +1249,7 @@ func TestLogAndUpdateBorrowingTransaction(t *testing.T) {
 			}
 
 			// Verify updated borrowing balances
-			b, _ := borrowingStore.GetByID(ctx, spaceID, borID)
+			b, _ := borrowingStore.GetByID(ctx, rCtx, borID)
 			if b.RemainingAmount != tt.wantRemaining {
 				t.Errorf("RemainingAmount = %d, want %d", b.RemainingAmount, tt.wantRemaining)
 			}
@@ -1275,15 +1258,14 @@ func TestLogAndUpdateBorrowingTransaction(t *testing.T) {
 			}
 
 			// Verify account balance impact
-			acc, _ := accountStore.GetByID(ctx, spaceID, accID)
+			acc, _ := accountStore.GetByID(ctx, rCtx, accID)
 			wantAccBal := 100000 + tt.wantAccountBalImpact
 			if acc.CurrentBalance != wantAccBal {
 				t.Errorf("Account balance = %d, want %d", acc.CurrentBalance, wantAccBal)
 			}
 
 			// 2. Test DeleteBorrowingTransaction (reverts everything back)
-			err = svc.DeleteBorrowingTransaction(ctx, DeleteBorrowingTransactionRequest{
-				SpaceID:       spaceID,
+			err = svc.DeleteBorrowingTransaction(ctx, rCtx, DeleteBorrowingTransactionRequest{
 				BorrowingID:   borID,
 				TransactionID: TransactionID(rep.ID),
 			})
@@ -1291,7 +1273,7 @@ func TestLogAndUpdateBorrowingTransaction(t *testing.T) {
 				t.Fatalf("DeleteBorrowingTransaction failed: %v", err)
 			}
 
-			bRestored, _ := borrowingStore.GetByID(ctx, spaceID, borID)
+			bRestored, _ := borrowingStore.GetByID(ctx, rCtx, borID)
 			if bRestored.RemainingAmount != tt.initialRemaining {
 				t.Errorf("Restored RemainingAmount = %d, want %d", bRestored.RemainingAmount, tt.initialRemaining)
 			}
@@ -1299,7 +1281,7 @@ func TestLogAndUpdateBorrowingTransaction(t *testing.T) {
 				t.Errorf("Restored TotalAmount = %d, want %d", bRestored.TotalAmount, tt.initialTotal)
 			}
 
-			accRestored, _ := accountStore.GetByID(ctx, spaceID, accID)
+			accRestored, _ := accountStore.GetByID(ctx, rCtx, accID)
 			if accRestored.CurrentBalance != 100000 {
 				t.Errorf("Restored account balance = %d, want 100000", accRestored.CurrentBalance)
 			}
@@ -1311,16 +1293,16 @@ func TestDeleteBorrowingAdjustment(t *testing.T) {
 	ctx := context.Background()
 	spIDStr, _ := id.Generate("spc_")
 	spaceID := SpaceID(spIDStr)
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 	borID, _ := NewBorrowingID()
 
 	txnStore := newTransactionStoreMock(nil)
 	borrowingStore := newBorrowingStoreMock(nil)
 	settingsStore := newSettingsStoreMock(nil)
 
-	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
-	_ = borrowingStore.Create(ctx, &Borrowing{
+	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+	_ = borrowingStore.Create(ctx, rCtx, &Borrowing{
 		ID:              borID,
-		SpaceID:         spaceID,
 		Direction:       BorrowingDirectionLent,
 		Counterparty:    "Charlie",
 		TotalAmount:     50000, // $500.00
@@ -1337,8 +1319,7 @@ func TestDeleteBorrowingAdjustment(t *testing.T) {
 	})
 
 	// Perform adjustment from 50000 down to 20000
-	_, err := svc.AdjustBorrowingBalance(ctx, AdjustBorrowingBalanceRequest{
-		SpaceID:       spaceID,
+	_, err := svc.AdjustBorrowingBalance(ctx, rCtx, AdjustBorrowingBalanceRequest{
 		BorrowingID:   borID,
 		TargetBalance: 20000,
 		Note:          "Test Adjustment",
@@ -1347,7 +1328,7 @@ func TestDeleteBorrowingAdjustment(t *testing.T) {
 		t.Fatalf("AdjustBorrowingBalance failed: %v", err)
 	}
 
-	page, _ := txnStore.ListBySpace(ctx, spaceID, &TransactionFilter{
+	page, _ := txnStore.ListBySpace(ctx, rCtx, &TransactionFilter{
 		BorrowingID:    &borID,
 		BorrowingRoles: []string{"ADJUSTMENT"},
 	})
@@ -1356,8 +1337,7 @@ func TestDeleteBorrowingAdjustment(t *testing.T) {
 	}
 
 	// Delete the adjustment record
-	err = svc.DeleteBorrowingTransaction(ctx, DeleteBorrowingTransactionRequest{
-		SpaceID:       spaceID,
+	err = svc.DeleteBorrowingTransaction(ctx, rCtx, DeleteBorrowingTransactionRequest{
 		BorrowingID:   borID,
 		TransactionID: page.Items[0].ID,
 	})
@@ -1366,7 +1346,7 @@ func TestDeleteBorrowingAdjustment(t *testing.T) {
 	}
 
 	// Verify RemainingAmount is restored back to 50000
-	b, _ := borrowingStore.GetByID(ctx, spaceID, borID)
+	b, _ := borrowingStore.GetByID(ctx, rCtx, borID)
 	if b.RemainingAmount != 50000 {
 		t.Errorf("RemainingAmount after adjustment deletion = %d, want 50000", b.RemainingAmount)
 	}
@@ -1376,9 +1356,10 @@ func TestDeleteBorrowing_BlockedWhenTransactionsExist(t *testing.T) {
 	ctx := context.Background()
 	rawSpace, _ := id.Generate("spc_")
 	spaceID := SpaceID(rawSpace)
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 
 	settingsStore := newSettingsStoreMock(nil)
-	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
+	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
 
 	borrowingStore := newBorrowingStoreMock(nil)
 	txnStore := newTransactionStoreMock(nil)
@@ -1390,8 +1371,7 @@ func TestDeleteBorrowing_BlockedWhenTransactionsExist(t *testing.T) {
 	})
 
 	// Create borrowing without transaction
-	b, err := svc.CreateBorrowing(ctx, &Borrowing{
-		SpaceID:         spaceID,
+	b, err := svc.CreateBorrowing(ctx, rCtx, &Borrowing{
 		Direction:       BorrowingDirectionLent,
 		Counterparty:    "Frank",
 		TotalAmount:     50000,
@@ -1404,13 +1384,12 @@ func TestDeleteBorrowing_BlockedWhenTransactionsExist(t *testing.T) {
 	}
 
 	// 1. Can delete when no transactions exist
-	if err := svc.DeleteBorrowing(ctx, spaceID, b.ID); err != nil {
+	if err := svc.DeleteBorrowing(ctx, rCtx, b.ID); err != nil {
 		t.Fatalf("DeleteBorrowing failed when no transactions exist: %v", err)
 	}
 
 	// 2. Re-create borrowing with initial transaction
-	b2, err := svc.CreateBorrowing(ctx, &Borrowing{
-		SpaceID:         spaceID,
+	b2, err := svc.CreateBorrowing(ctx, rCtx, &Borrowing{
 		Direction:       BorrowingDirectionLent,
 		Counterparty:    "Grace",
 		TotalAmount:     50000,
@@ -1423,7 +1402,7 @@ func TestDeleteBorrowing_BlockedWhenTransactionsExist(t *testing.T) {
 	}
 
 	// 3. Attempt delete -> must be blocked with BorrowingHasTransactions
-	err = svc.DeleteBorrowing(ctx, spaceID, b2.ID)
+	err = svc.DeleteBorrowing(ctx, rCtx, b2.ID)
 	if !errors.Is(err, BorrowingHasTransactions) {
 		t.Fatalf("DeleteBorrowing error = %v, want code %v", err, BorrowingHasTransactions)
 	}
@@ -1461,16 +1440,16 @@ func TestUpdateBorrowing(t *testing.T) {
 			ctx := context.Background()
 			spIDStr, _ := id.Generate("spc_")
 			spaceID := SpaceID(spIDStr)
+			rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 			borID, _ := NewBorrowingID()
 
 			txnStore := newTransactionStoreMock(nil)
 			borrowingStore := newBorrowingStoreMock(nil)
 			settingsStore := newSettingsStoreMock(nil)
 
-			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
-			_ = borrowingStore.Create(ctx, &Borrowing{
+			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+			_ = borrowingStore.Create(ctx, rCtx, &Borrowing{
 				ID:              borID,
-				SpaceID:         spaceID,
 				Direction:       tt.direction,
 				Counterparty:    "Test Counterparty",
 				TotalAmount:     tt.initialTotal,
@@ -1486,9 +1465,8 @@ func TestUpdateBorrowing(t *testing.T) {
 				TransactionStore: txnStore,
 			})
 
-			updated, err := svc.UpdateBorrowing(ctx, &Borrowing{
+			updated, err := svc.UpdateBorrowing(ctx, rCtx, &Borrowing{
 				ID:            borID,
-				SpaceID:       spaceID,
 				Direction:     tt.direction,
 				Counterparty:  "Test Counterparty",
 				TotalAmount:   tt.newTotal,
@@ -1517,6 +1495,8 @@ func TestService_CreateTransfer(t *testing.T) {
 	otherSpID := SpaceID(otherSpIDStr)
 
 	ctx := context.Background()
+	rCtx := NewRequestContext(spID, "usr_1", time.UTC, "USD")
+	otherRCtx := NewRequestContext(otherSpID, "usr_1", time.UTC, "USD")
 
 	srcUSD, _ := NewAccountID()
 	dstUSD, _ := NewAccountID()
@@ -1535,7 +1515,6 @@ func TestService_CreateTransfer(t *testing.T) {
 		{
 			name: "Success - Single Currency (USD to USD)",
 			transfer: &Transfer{
-				SpaceID:              spID,
 				SourceAccountID:      srcUSD,
 				DestinationAccountID: dstUSD,
 				SourceAmount:         40000,
@@ -1544,8 +1523,8 @@ func TestService_CreateTransfer(t *testing.T) {
 				Notes:                "Single currency savings transfer",
 			},
 			setupAccounts: func(as *AccountStoreMock) {
-				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
-				_ = as.Create(ctx, &Account{ID: dstUSD, SpaceID: spID, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: srcUSD, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: dstUSD, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
 			},
 			wantErr:            false,
 			expectedSrcBalance: 60000,
@@ -1554,7 +1533,6 @@ func TestService_CreateTransfer(t *testing.T) {
 		{
 			name: "Success - Multi Currency (EUR to USD)",
 			transfer: &Transfer{
-				SpaceID:              spID,
 				SourceAccountID:      srcUSD,
 				DestinationAccountID: dstEUR,
 				SourceAmount:         50000, // €500
@@ -1563,8 +1541,8 @@ func TestService_CreateTransfer(t *testing.T) {
 				Notes:                "Multi currency transfer",
 			},
 			setupAccounts: func(as *AccountStoreMock) {
-				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
-				_ = as.Create(ctx, &Account{ID: dstEUR, SpaceID: spID, Name: "Savings EUR", Currency: "EUR", CurrentBalance: 0, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: srcUSD, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: dstEUR, Name: "Savings EUR", Currency: "EUR", CurrentBalance: 0, IsActive: true})
 			},
 			wantErr:            false,
 			expectedSrcBalance: 50000,
@@ -1573,7 +1551,6 @@ func TestService_CreateTransfer(t *testing.T) {
 		{
 			name: "Err - Same Source and Destination Account",
 			transfer: &Transfer{
-				SpaceID:              spID,
 				SourceAccountID:      srcUSD,
 				DestinationAccountID: srcUSD,
 				SourceAmount:         10000,
@@ -1581,7 +1558,7 @@ func TestService_CreateTransfer(t *testing.T) {
 				TransferDate:         time.Now().UTC(),
 			},
 			setupAccounts: func(as *AccountStoreMock) {
-				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: srcUSD, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
 			},
 			wantErr:     true,
 			errContains: "source and destination accounts must be different",
@@ -1589,7 +1566,6 @@ func TestService_CreateTransfer(t *testing.T) {
 		{
 			name: "Err - Single Currency Mismatched Amounts",
 			transfer: &Transfer{
-				SpaceID:              spID,
 				SourceAccountID:      srcUSD,
 				DestinationAccountID: dstUSD,
 				SourceAmount:         50000,
@@ -1597,8 +1573,8 @@ func TestService_CreateTransfer(t *testing.T) {
 				TransferDate:         time.Now().UTC(),
 			},
 			setupAccounts: func(as *AccountStoreMock) {
-				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
-				_ = as.Create(ctx, &Account{ID: dstUSD, SpaceID: spID, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: srcUSD, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: dstUSD, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
 			},
 			wantErr:     true,
 			errContains: "source and destination amounts must match for single-currency transfers",
@@ -1606,7 +1582,6 @@ func TestService_CreateTransfer(t *testing.T) {
 		{
 			name: "Err - Zero or Negative Source Amount",
 			transfer: &Transfer{
-				SpaceID:              spID,
 				SourceAccountID:      srcUSD,
 				DestinationAccountID: dstUSD,
 				SourceAmount:         0,
@@ -1614,8 +1589,8 @@ func TestService_CreateTransfer(t *testing.T) {
 				TransferDate:         time.Now().UTC(),
 			},
 			setupAccounts: func(as *AccountStoreMock) {
-				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
-				_ = as.Create(ctx, &Account{ID: dstUSD, SpaceID: spID, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: srcUSD, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: dstUSD, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
 			},
 			wantErr:     true,
 			errContains: "source amount must be greater than zero",
@@ -1623,7 +1598,6 @@ func TestService_CreateTransfer(t *testing.T) {
 		{
 			name: "Err - Account From Different Space",
 			transfer: &Transfer{
-				SpaceID:              spID,
 				SourceAccountID:      srcUSD,
 				DestinationAccountID: otherSpaceAcc,
 				SourceAmount:         10000,
@@ -1631,8 +1605,8 @@ func TestService_CreateTransfer(t *testing.T) {
 				TransferDate:         time.Now().UTC(),
 			},
 			setupAccounts: func(as *AccountStoreMock) {
-				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
-				_ = as.Create(ctx, &Account{ID: otherSpaceAcc, SpaceID: otherSpID, Name: "Foreign Space Account", Currency: "USD", CurrentBalance: 0, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: srcUSD, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, otherRCtx, &Account{ID: otherSpaceAcc, Name: "Foreign Space Account", Currency: "USD", CurrentBalance: 0, IsActive: true})
 			},
 			wantErr:     true,
 			errContains: "destination account",
@@ -1642,12 +1616,11 @@ func TestService_CreateTransfer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			settingsStore := newSettingsStoreMock(nil)
-			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: "USD"})
-			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: otherSpID, BaseCurrency: "USD"})
+			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+			_ = settingsStore.Create(ctx, otherRCtx, &FinanceSettings{BaseCurrency: "USD"})
 
 			rateStore := newExchangeRateStoreMock(nil)
-			_ = rateStore.Create(ctx, &ExchangeRate{
-				SpaceID:      spID,
+			_ = rateStore.Create(ctx, rCtx, &ExchangeRate{
 				FromCurrency: "EUR",
 				ToCurrency:   "USD",
 				Rate:         1.08,
@@ -1670,7 +1643,7 @@ func TestService_CreateTransfer(t *testing.T) {
 				TransactionEventStore: newTransactionEventStoreMock(nil),
 			})
 
-			res, err := svc.CreateTransfer(ctx, tt.transfer)
+			res, err := svc.CreateTransfer(ctx, rCtx, tt.transfer)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatalf("expected error containing %q, got nil", tt.errContains)
@@ -1685,12 +1658,12 @@ func TestService_CreateTransfer(t *testing.T) {
 			}
 
 			// Verify balances
-			srcAcc, _ := accountStore.GetByID(ctx, spID, tt.transfer.SourceAccountID)
+			srcAcc, _ := accountStore.GetByID(ctx, rCtx, tt.transfer.SourceAccountID)
 			if srcAcc.CurrentBalance != tt.expectedSrcBalance {
 				t.Errorf("Source account balance = %d, want %d", srcAcc.CurrentBalance, tt.expectedSrcBalance)
 			}
 
-			dstAcc, _ := accountStore.GetByID(ctx, spID, tt.transfer.DestinationAccountID)
+			dstAcc, _ := accountStore.GetByID(ctx, rCtx, tt.transfer.DestinationAccountID)
 			if dstAcc.CurrentBalance != tt.expectedDstBalance {
 				t.Errorf("Destination account balance = %d, want %d", dstAcc.CurrentBalance, tt.expectedDstBalance)
 			}
@@ -1724,6 +1697,7 @@ func TestService_DeleteTransfer(t *testing.T) {
 	ctx := context.Background()
 	spIDStr, _ := id.Generate("spc_")
 	spID := SpaceID(spIDStr)
+	rCtx := NewRequestContext(spID, "usr_1", time.UTC, "USD")
 
 	srcAccID, _ := NewAccountID()
 	dstAccID, _ := NewAccountID()
@@ -1738,10 +1712,9 @@ func TestService_DeleteTransfer(t *testing.T) {
 		{
 			name: "Success - Delete Existing Transfer & Roll Back Balances",
 			setupData: func(svc *Service, as *AccountStoreMock) TransferID {
-				_ = as.Create(ctx, &Account{ID: srcAccID, SpaceID: spID, Name: "Checking", Currency: "USD", CurrentBalance: 100000, IsActive: true})
-				_ = as.Create(ctx, &Account{ID: dstAccID, SpaceID: spID, Name: "Savings", Currency: "USD", CurrentBalance: 0, IsActive: true})
-				tr, _ := svc.CreateTransfer(ctx, &Transfer{
-					SpaceID:              spID,
+				_ = as.Create(ctx, rCtx, &Account{ID: srcAccID, Name: "Checking", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: dstAccID, Name: "Savings", Currency: "USD", CurrentBalance: 0, IsActive: true})
+				tr, _ := svc.CreateTransfer(ctx, rCtx, &Transfer{
 					SourceAccountID:      srcAccID,
 					DestinationAccountID: dstAccID,
 					SourceAmount:         30000,
@@ -1766,7 +1739,7 @@ func TestService_DeleteTransfer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			settingsStore := newSettingsStoreMock(nil)
-			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: "USD"})
+			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
 
 			accountStore := newAccountStoreMock(nil)
 			transactionStore := newTransactionStoreMock(nil)
@@ -1782,7 +1755,7 @@ func TestService_DeleteTransfer(t *testing.T) {
 
 			targetID := tt.setupData(svc, accountStore)
 
-			err := svc.DeleteTransfer(ctx, spID, targetID)
+			err := svc.DeleteTransfer(ctx, rCtx, targetID)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatalf("expected error containing %q, got nil", tt.errContains)
@@ -1797,17 +1770,17 @@ func TestService_DeleteTransfer(t *testing.T) {
 			}
 
 			// Assert Transfer record deleted
-			_, err = transferStore.GetByID(ctx, spID, targetID)
+			_, err = transferStore.GetByID(ctx, rCtx, targetID)
 			if err == nil {
 				t.Errorf("expected transfer record to be deleted")
 			}
 
 			// Assert Account Balances restored ($1000 and $0)
-			sAcc, _ := accountStore.GetByID(ctx, spID, srcAccID)
+			sAcc, _ := accountStore.GetByID(ctx, rCtx, srcAccID)
 			if sAcc.CurrentBalance != 100000 {
 				t.Errorf("Source account balance after deletion = %d, want 100000", sAcc.CurrentBalance)
 			}
-			dAcc, _ := accountStore.GetByID(ctx, spID, dstAccID)
+			dAcc, _ := accountStore.GetByID(ctx, rCtx, dstAccID)
 			if dAcc.CurrentBalance != 0 {
 				t.Errorf("Destination account balance after deletion = %d, want 0", dAcc.CurrentBalance)
 			}
@@ -1819,9 +1792,10 @@ func TestService_GetAndListTransfers(t *testing.T) {
 	ctx := context.Background()
 	spIDStr, _ := id.Generate("spc_")
 	spID := SpaceID(spIDStr)
+	rCtx := NewRequestContext(spID, "usr_1", time.UTC, "USD")
 
 	settingsStore := newSettingsStoreMock(nil)
-	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: "USD"})
+	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
 
 	accountStore := newAccountStoreMock(nil)
 	transactionStore := newTransactionStoreMock(nil)
@@ -1840,7 +1814,6 @@ func TestService_GetAndListTransfers(t *testing.T) {
 
 	srcAcc := &Account{
 		ID:             srcAccID,
-		SpaceID:        spID,
 		Name:           "Checking",
 		Currency:       Currency("USD"),
 		CurrentBalance: 100000,
@@ -1848,17 +1821,15 @@ func TestService_GetAndListTransfers(t *testing.T) {
 	}
 	dstAcc := &Account{
 		ID:             dstAccID,
-		SpaceID:        spID,
 		Name:           "Savings",
 		Currency:       Currency("USD"),
 		CurrentBalance: 0,
 		IsActive:       true,
 	}
-	_ = accountStore.Create(ctx, srcAcc)
-	_ = accountStore.Create(ctx, dstAcc)
+	_ = accountStore.Create(ctx, rCtx, srcAcc)
+	_ = accountStore.Create(ctx, rCtx, dstAcc)
 
-	tr, err := svc.CreateTransfer(ctx, &Transfer{
-		SpaceID:              spID,
+	tr, err := svc.CreateTransfer(ctx, rCtx, &Transfer{
 		SourceAccountID:      srcAcc.ID,
 		DestinationAccountID: dstAcc.ID,
 		SourceAmount:         15000,
@@ -1870,7 +1841,7 @@ func TestService_GetAndListTransfers(t *testing.T) {
 	}
 
 	// Test GetTransfer
-	fetched, err := svc.GetTransfer(ctx, spID, tr.ID)
+	fetched, err := svc.GetTransfer(ctx, rCtx, tr.ID)
 	if err != nil {
 		t.Fatalf("GetTransfer failed: %v", err)
 	}
@@ -1879,7 +1850,7 @@ func TestService_GetAndListTransfers(t *testing.T) {
 	}
 
 	// Test ListTransfers
-	list, _, err := svc.ListTransfers(ctx, spID, 10, "")
+	list, _, err := svc.ListTransfers(ctx, rCtx, 10, "")
 	if err != nil {
 		t.Fatalf("ListTransfers failed: %v", err)
 	}
@@ -1892,6 +1863,7 @@ func TestService_ApproveInboxItem(t *testing.T) {
 	ctx := context.Background()
 	spIDStr, _ := id.Generate("spc_")
 	spID := SpaceID(spIDStr)
+	rCtx := NewRequestContext(spID, "usr_1", time.UTC, "USD")
 
 	tests := []struct {
 		name                 string
@@ -1998,41 +1970,38 @@ func TestService_ApproveInboxItem(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			settingsStore := newSettingsStoreMock(nil)
-			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: Currency("USD")})
+			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: Currency("USD")})
 
 			accountStore := newAccountStoreMock(nil)
 			srcAccID, _ := NewAccountID()
 			srcAcc := &Account{
 				ID:             srcAccID,
-				SpaceID:        spID,
 				Name:           "Checking",
 				Currency:       Currency("USD"),
 				CurrentBalance: 100000,
 				IsActive:       true,
 			}
-			_ = accountStore.Create(ctx, srcAcc)
+			_ = accountStore.Create(ctx, rCtx, srcAcc)
 
 			dstAccID, _ := NewAccountID()
 			dstAcc := &Account{
 				ID:             dstAccID,
-				SpaceID:        spID,
 				Name:           "Savings",
 				Currency:       Currency("USD"),
 				CurrentBalance: 0,
 				IsActive:       true,
 			}
-			_ = accountStore.Create(ctx, dstAcc)
+			_ = accountStore.Create(ctx, rCtx, dstAcc)
 
 			budgetStore := newBudgetStoreMock(nil)
 			bID, _ := NewBudgetID()
 			bg := &Budget{
 				ID:          bID,
-				SpaceID:     spID,
 				Name:        "General",
 				LimitAmount: 50000,
 				Currency:    Currency("USD"),
 			}
-			_ = budgetStore.Create(ctx, bg)
+			_ = budgetStore.Create(ctx, rCtx, bg)
 
 			periodStore := newPeriodStoreMock(nil)
 
@@ -2068,7 +2037,7 @@ func TestService_ApproveInboxItem(t *testing.T) {
 			// Stage item
 			srcAccStr := string(srcAccID)
 			bIDStr := string(bID)
-			staged, err := svc.StageInboxItem(ctx, spID, &StageInboxItem{
+			staged, err := svc.StageInboxItem(ctx, rCtx, &StageInboxItem{
 				DocType:    tt.docType,
 				Vendor:     "New Supermarket",
 				Amount:     4500,
@@ -2080,38 +2049,34 @@ func TestService_ApproveInboxItem(t *testing.T) {
 			if err != nil {
 				t.Fatalf("StageInboxItem failed: %v", err)
 			}
-			if err != nil {
-				t.Fatalf("StageInboxItem failed: %v", err)
-			}
 			staged.BudgetID = &bIDStr
-			_, _ = svc.UpdateInboxItem(ctx, spID, staged)
+			_, _ = svc.UpdateInboxItem(ctx, rCtx, staged)
 
 			var existingTxnID TransactionID
 			if tt.linkExistingTxn {
 				existingTxnID, _ = NewTransactionID()
 				txn := &Transaction{
 					ID:              existingTxnID,
-					SpaceID:         spID,
 					AccountID:       &srcAccID,
 					Amount:          tt.initialTxnAmount,
 					Currency:        Currency("USD"),
 					Description:     tt.initialTxnDesc,
 					TransactionDate: time.Now().UTC(),
 				}
-				_ = txnStore.Create(ctx, txn)
+				_ = txnStore.Create(ctx, rCtx, txn)
 
 				txnIDStr := string(existingTxnID)
 				staged.TransactionID = &txnIDStr
-				_, _ = svc.UpdateInboxItem(ctx, spID, staged)
+				_, _ = svc.UpdateInboxItem(ctx, rCtx, staged)
 			}
 
-			_, err = svc.ApproveInboxItem(ctx, spID, staged.ID)
+			_, err = svc.ApproveInboxItem(ctx, rCtx, staged.ID)
 			if (err != nil) != tt.expectErr {
 				t.Fatalf("ApproveInboxItem error = %v, expectErr = %v", err, tt.expectErr)
 			}
 
 			if tt.linkExistingTxn && !tt.expectErr {
-				updatedTxn, err := txnStore.GetByID(ctx, spID, existingTxnID)
+				updatedTxn, err := txnStore.GetByID(ctx, rCtx, existingTxnID)
 				if err != nil {
 					t.Fatalf("GetByID failed: %v", err)
 				}
@@ -2130,7 +2095,7 @@ func TestService_ApproveInboxItem(t *testing.T) {
 			}
 
 			// Verify status marked resolved
-			finalItem, err := inboxStore.Get(ctx, spID, staged.ID)
+			finalItem, err := inboxStore.Get(ctx, rCtx, staged.ID)
 			if err != nil {
 				t.Fatalf("Get inbox item failed: %v", err)
 			}
@@ -2145,6 +2110,7 @@ func TestService_SystemVerification(t *testing.T) {
 	ctx := context.Background()
 	spIDStr, _ := id.Generate("spc_")
 	spID := SpaceID(spIDStr)
+	rCtx := NewRequestContext(spID, "usr_1", time.UTC, "USD")
 
 	tests := []struct {
 		name     string
@@ -2174,7 +2140,7 @@ func TestService_SystemVerification(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			settingsStore := newSettingsStoreMock(nil)
-			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: Currency("USD")})
+			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: Currency("USD")})
 
 			txnData := make(map[TransactionID]*Transaction)
 			txnStore := newTransactionStoreMock(txnData)
@@ -2184,9 +2150,11 @@ func TestService_SystemVerification(t *testing.T) {
 			schedData := make(map[ScheduledTransactionID]*ScheduledTransaction)
 			scheduledStore := newScheduledTransactionStoreMock(schedData)
 			inboxStore := newInboxItemStoreMock(nil)
+			accStore := newAccountStoreMock(nil)
 
 			svc := NewService(Dependencies{
 				SettingsStore:             settingsStore,
+				AccountStore:              accStore,
 				TransactionStore:          txnStore,
 				TransactionEventStore:     eventStore,
 				TransferStore:             transferStore,
@@ -2195,7 +2163,7 @@ func TestService_SystemVerification(t *testing.T) {
 			})
 
 			// Stage system verification item
-			staged, err := svc.StageInboxItem(ctx, spID, &StageInboxItem{
+			staged, err := svc.StageInboxItem(ctx, rCtx, &StageInboxItem{
 				DocType:    tt.docType,
 				Vendor:     "Auth System",
 				RawPayload: "Your verification code is 987654",
@@ -2211,13 +2179,13 @@ func TestService_SystemVerification(t *testing.T) {
 
 			switch tt.action {
 			case "approve":
-				_, err := svc.ApproveInboxItem(ctx, spID, staged.ID)
+				_, err := svc.ApproveInboxItem(ctx, rCtx, staged.ID)
 				if err != nil {
 					t.Fatalf("ApproveInboxItem failed: %v", err)
 				}
 
 				// Verify item status resolved
-				item, err := inboxStore.Get(ctx, spID, staged.ID)
+				item, err := inboxStore.Get(ctx, rCtx, staged.ID)
 				if err != nil {
 					t.Fatalf("Get inbox item failed: %v", err)
 				}
@@ -2226,13 +2194,13 @@ func TestService_SystemVerification(t *testing.T) {
 				}
 
 			case "discard":
-				err := svc.DiscardInboxItem(ctx, spID, staged.ID)
+				err := svc.DiscardInboxItem(ctx, rCtx, staged.ID)
 				if err != nil {
 					t.Fatalf("DiscardInboxItem failed: %v", err)
 				}
 
 				// Verify item deleted from store
-				_, err = inboxStore.Get(ctx, spID, staged.ID)
+				_, err = inboxStore.Get(ctx, rCtx, staged.ID)
 				if err == nil {
 					t.Errorf("Expected error fetching discarded item, got nil")
 				}
@@ -2256,6 +2224,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 	ctx := context.Background()
 	spIDStr, _ := id.Generate("spc_")
 	spID := SpaceID(spIDStr)
+	rCtx := NewRequestContext(spID, "usr_1", time.UTC, "USD")
 
 	tests := []struct {
 		name                     string
@@ -2305,13 +2274,12 @@ func TestService_InvoiceBranch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			settingsStore := newSettingsStoreMock(nil)
-			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: Currency("USD")})
+			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: Currency("USD")})
 
 			accountStore := newAccountStoreMock(nil)
 			accID, _ := NewAccountID()
-			_ = accountStore.Create(ctx, &Account{
+			_ = accountStore.Create(ctx, rCtx, &Account{
 				ID:             accID,
-				SpaceID:        spID,
 				Name:           "checking",
 				Currency:       Currency("USD"),
 				CurrentBalance: 100000,
@@ -2322,11 +2290,10 @@ func TestService_InvoiceBranch(t *testing.T) {
 			bIDVal, _ := NewBudgetID()
 			bg := &Budget{
 				ID:       bIDVal,
-				SpaceID:  spID,
 				Name:     "util",
 				Currency: Currency("USD"),
 			}
-			_ = budgetStore.Create(ctx, bg)
+			_ = budgetStore.Create(ctx, rCtx, bg)
 
 			periodStore := newPeriodStoreMock(nil)
 
@@ -2357,7 +2324,6 @@ func TestService_InvoiceBranch(t *testing.T) {
 				preExistingPayID, _ = NewScheduledTransactionID()
 				pay := &ScheduledTransaction{
 					ID:         preExistingPayID,
-					SpaceID:    spID,
 					SourceType: "Electric Co",
 					SourceID:   "src_elec",
 					Amount:     10000,
@@ -2371,24 +2337,23 @@ func TestService_InvoiceBranch(t *testing.T) {
 					preExistingTxnID, _ = NewTransactionID()
 					txn := &Transaction{
 						ID:              preExistingTxnID,
-						SpaceID:         spID,
 						AccountID:       &accID,
 						Amount:          10000,
 						Currency:        Currency("USD"),
 						Description:     "Electric Co Bill Paid",
 						TransactionDate: time.Now().UTC(),
 					}
-					_ = txnStore.Create(ctx, txn)
+					_ = txnStore.Create(ctx, rCtx, txn)
 				}
 
-				_ = scheduledStore.Create(ctx, pay)
+				_ = scheduledStore.Create(ctx, rCtx, pay)
 			}
 
 			bIDStr := string(bIDVal)
 
 			// Stage Invoice item
 			accIDStr := string(accID)
-			staged, err := svc.StageInboxItem(ctx, spID, &StageInboxItem{
+			staged, err := svc.StageInboxItem(ctx, rCtx, &StageInboxItem{
 				DocType:    InboxItemDocInvoice,
 				Vendor:     "Electric Co",
 				Amount:     12500, // $125.00
@@ -2401,7 +2366,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 				t.Fatalf("StageInboxItem failed: %v", err)
 			}
 			staged.BudgetID = &bIDStr
-			_, _ = svc.UpdateInboxItem(ctx, spID, staged)
+			_, _ = svc.UpdateInboxItem(ctx, rCtx, staged)
 
 			if tt.linkScheduledPayment {
 				pIDStr := string(preExistingPayID)
@@ -2410,17 +2375,17 @@ func TestService_InvoiceBranch(t *testing.T) {
 					tIDStr := string(preExistingTxnID)
 					staged.TransactionID = &tIDStr
 				}
-				_, _ = svc.UpdateInboxItem(ctx, spID, staged)
+				_, _ = svc.UpdateInboxItem(ctx, rCtx, staged)
 			}
 
 			switch tt.action {
 			case "approve":
-				_, err := svc.ApproveInboxItem(ctx, spID, staged.ID)
+				_, err := svc.ApproveInboxItem(ctx, rCtx, staged.ID)
 				if err != nil {
 					t.Fatalf("ApproveInboxItem failed: %v", err)
 				}
 
-				item, err := inboxStore.Get(ctx, spID, staged.ID)
+				item, err := inboxStore.Get(ctx, rCtx, staged.ID)
 				if err != nil {
 					t.Fatalf("Get inbox item failed: %v", err)
 				}
@@ -2435,12 +2400,12 @@ func TestService_InvoiceBranch(t *testing.T) {
 				}
 
 			case "discard":
-				err := svc.DiscardInboxItem(ctx, spID, staged.ID)
+				err := svc.DiscardInboxItem(ctx, rCtx, staged.ID)
 				if err != nil {
 					t.Fatalf("DiscardInboxItem failed: %v", err)
 				}
 
-				_, err = inboxStore.Get(ctx, spID, staged.ID)
+				_, err = inboxStore.Get(ctx, rCtx, staged.ID)
 				if err == nil {
 					t.Errorf("Expected error fetching discarded invoice, got nil")
 				}
@@ -2459,12 +2424,12 @@ func TestService_InvoiceBranch(t *testing.T) {
 func TestUpdateAccount(t *testing.T) {
 	ctx := context.Background()
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 	aID, _ := NewAccountID()
 
 	accStore := newAccountStoreMock(nil)
-	_ = accStore.Create(ctx, &Account{
+	_ = accStore.Create(ctx, rCtx, &Account{
 		ID:             aID,
-		SpaceID:        spaceID,
 		Name:           "Checking",
 		Type:           AccountTypeBank,
 		Currency:       "USD",
@@ -2486,7 +2451,6 @@ func TestUpdateAccount(t *testing.T) {
 			name: "stale version returns VersionMismatch",
 			update: &Account{
 				ID:      aID,
-				SpaceID: spaceID,
 				Color:   "#FF0000",
 				Version: 99,
 			},
@@ -2497,7 +2461,6 @@ func TestUpdateAccount(t *testing.T) {
 			name: "valid version applies patch mask",
 			update: &Account{
 				ID:      aID,
-				SpaceID: spaceID,
 				Color:   "#00FF00",
 				Version: 1,
 			},
@@ -2509,7 +2472,7 @@ func TestUpdateAccount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := svc.UpdateAccount(ctx, tt.update, tt.mask)
+			res, err := svc.UpdateAccount(ctx, rCtx, tt.update, tt.mask)
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
 					t.Errorf("UpdateAccount error = %v, want %v", err, tt.wantErr)
@@ -2529,12 +2492,12 @@ func TestUpdateAccount(t *testing.T) {
 func TestUpdateInstitution(t *testing.T) {
 	ctx := context.Background()
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 	iID, _ := NewInstitutionID()
 
 	instStore := newInstitutionStoreMock(nil)
-	_ = instStore.Create(ctx, &Institution{
+	_ = instStore.Create(ctx, rCtx, &Institution{
 		ID:      iID,
-		SpaceID: spaceID,
 		Name:    "Chase",
 		Domain:  "chase.com",
 		Color:   "#0000FF",
@@ -2554,7 +2517,6 @@ func TestUpdateInstitution(t *testing.T) {
 			name: "stale version returns VersionMismatch",
 			update: &Institution{
 				ID:      iID,
-				SpaceID: spaceID,
 				Color:   "#FF0000",
 				Version: 99,
 			},
@@ -2565,7 +2527,6 @@ func TestUpdateInstitution(t *testing.T) {
 			name: "valid version applies patch mask",
 			update: &Institution{
 				ID:      iID,
-				SpaceID: spaceID,
 				Color:   "#0000AA",
 				Version: 1,
 			},
@@ -2577,7 +2538,7 @@ func TestUpdateInstitution(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := svc.UpdateInstitution(ctx, tt.update, tt.mask)
+			res, err := svc.UpdateInstitution(ctx, rCtx, tt.update, tt.mask)
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
 					t.Errorf("UpdateInstitution error = %v, want %v", err, tt.wantErr)
@@ -2597,6 +2558,7 @@ func TestUpdateInstitution(t *testing.T) {
 func TestCreateInstitution(t *testing.T) {
 	ctx := context.Background()
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 	instStore := newInstitutionStoreMock(nil)
 	svc := NewService(Dependencies{InstitutionStore: instStore})
 
@@ -2609,9 +2571,8 @@ func TestCreateInstitution(t *testing.T) {
 		{
 			name: "valid institution creates successfully",
 			input: &Institution{
-				SpaceID: spaceID,
-				Name:    "Chase Bank",
-				Domain:  "chase.com",
+				Name:   "Chase Bank",
+				Domain: "chase.com",
 			},
 			wantErr:    false,
 			wantDomain: "chase.com",
@@ -2619,8 +2580,7 @@ func TestCreateInstitution(t *testing.T) {
 		{
 			name: "full website URL extracts domain",
 			input: &Institution{
-				SpaceID: spaceID,
-				Name:    "https://www.chase.com/personal/banking",
+				Name: "https://www.chase.com/personal/banking",
 			},
 			wantErr:    false,
 			wantDomain: "chase.com",
@@ -2628,8 +2588,7 @@ func TestCreateInstitution(t *testing.T) {
 		{
 			name: "empty name returns validation error",
 			input: &Institution{
-				SpaceID: spaceID,
-				Name:    "",
+				Name: "",
 			},
 			wantErr: true,
 		},
@@ -2637,7 +2596,7 @@ func TestCreateInstitution(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := svc.CreateInstitution(ctx, tt.input)
+			res, err := svc.CreateInstitution(ctx, rCtx, tt.input)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error, got nil")
@@ -2657,12 +2616,12 @@ func TestCreateInstitution(t *testing.T) {
 func TestDeleteInstitution(t *testing.T) {
 	ctx := context.Background()
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 	iID, _ := NewInstitutionID()
 
 	instStore := newInstitutionStoreMock(nil)
-	_ = instStore.Create(ctx, &Institution{
+	_ = instStore.Create(ctx, rCtx, &Institution{
 		ID:      iID,
-		SpaceID: spaceID,
 		Name:    "Chase",
 		Version: 2,
 	})
@@ -2688,7 +2647,7 @@ func TestDeleteInstitution(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := svc.DeleteInstitution(ctx, spaceID, iID, tt.opts)
+			err := svc.DeleteInstitution(ctx, rCtx, iID, tt.opts)
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
 					t.Errorf("DeleteInstitution error = %v, want %v", err, tt.wantErr)
@@ -2705,12 +2664,12 @@ func TestDeleteInstitution(t *testing.T) {
 func TestDeleteAccount(t *testing.T) {
 	ctx := context.Background()
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 	aID, _ := NewAccountID()
 
 	accStore := newAccountStoreMock(nil)
-	_ = accStore.Create(ctx, &Account{
+	_ = accStore.Create(ctx, rCtx, &Account{
 		ID:        aID,
-		SpaceID:   spaceID,
 		Name:      "Savings",
 		IsDefault: false,
 		Version:   2,
@@ -2737,7 +2696,7 @@ func TestDeleteAccount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := svc.DeleteAccount(ctx, spaceID, aID, tt.opts)
+			err := svc.DeleteAccount(ctx, rCtx, aID, tt.opts)
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
 					t.Errorf("DeleteAccount error = %v, want %v", err, tt.wantErr)
@@ -2838,18 +2797,18 @@ func TestService_ImportStatement(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			spaceID := SpaceID("spc_" + ksuid.New().String())
+			rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 			accountID := AccountID("acc_" + ksuid.New().String())
 			linesMap := make(map[StatementID][]*StatementLine)
 			statementStore := newStatementStoreMock(nil, linesMap)
 
 			deps := Dependencies{
 				SettingsStore: newSettingsStoreMock(map[SpaceID]*FinanceSettings{
-					spaceID: {SpaceID: spaceID, BaseCurrency: Currency("USD")},
+					spaceID: {BaseCurrency: Currency("USD")},
 				}),
 				AccountStore: newAccountStoreMock(map[AccountID]*Account{
 					accountID: {
 						ID:             accountID,
-						SpaceID:        spaceID,
 						Name:           "Main Checking",
 						Type:           AccountTypeBank,
 						Currency:       Currency("USD"),
@@ -2863,7 +2822,6 @@ func TestService_ImportStatement(t *testing.T) {
 
 			svc := NewService(deps)
 			stmt := &Statement{
-				SpaceID:                  spaceID,
 				StatementDate:            time.Date(2026, 8, 12, 0, 0, 0, 0, time.UTC),
 				StatementStartingBalance: 100000,
 				StatementEndingBalance:   120000,
@@ -2875,7 +2833,7 @@ func TestService_ImportStatement(t *testing.T) {
 				RawContent: tt.rawCSV,
 			}
 
-			imported, err := svc.ImportStatement(context.Background(), accountID, stmt)
+			imported, err := svc.ImportStatement(context.Background(), rCtx, accountID, stmt)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -2897,6 +2855,7 @@ func TestService_ImportStatement(t *testing.T) {
 func TestService_InvertStatementSigns(t *testing.T) {
 	ctx := context.Background()
 	spaceID := SpaceID("spc_" + ksuid.New().String())
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 	accountID := AccountID("acc_" + ksuid.New().String())
 	stmtID := StatementID("stmt_" + ksuid.New().String())
 
@@ -2904,7 +2863,6 @@ func TestService_InvertStatementSigns(t *testing.T) {
 	accountData := map[AccountID]*Account{
 		accountID: {
 			ID:             accountID,
-			SpaceID:        spaceID,
 			Type:           AccountTypeCreditCard,
 			CurrentBalance: 50000,
 			Currency:       Currency("USD"),
@@ -2914,7 +2872,6 @@ func TestService_InvertStatementSigns(t *testing.T) {
 
 	stmt := &Statement{
 		ID:                       stmtID,
-		SpaceID:                  spaceID,
 		AccountID:                accountID,
 		Status:                   StatementStatusInProgress,
 		StatementDate:            time.Date(2026, 8, 20, 0, 0, 0, 0, time.UTC),
@@ -2948,7 +2905,7 @@ func TestService_InvertStatementSigns(t *testing.T) {
 		},
 	}
 
-	_ = statementStore.Create(ctx, stmt, lines)
+	_ = statementStore.Create(ctx, rCtx, stmt, lines)
 
 	deps := Dependencies{
 		StatementStore:   statementStore,
@@ -2958,7 +2915,7 @@ func TestService_InvertStatementSigns(t *testing.T) {
 
 	svc := NewService(deps)
 
-	invertedStmt, invertedLines, err := svc.InvertStatementSigns(ctx, spaceID, stmtID)
+	invertedStmt, invertedLines, err := svc.InvertStatementSigns(ctx, rCtx, stmtID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -2995,11 +2952,11 @@ func TestService_CompleteStatement(t *testing.T) {
 		name            string
 		startingBalance int64
 		endingBalance   int64
-		setupStores     func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing)
+		setupStores     func(rCtx Context, spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing)
 		setupLines      func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine
 		wantErr         bool
 		errContains     string
-		verifyResults   func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction)
+		verifyResults   func(t *testing.T, rCtx Context, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction)
 	}
 
 	tests := []testFixture{
@@ -3007,11 +2964,10 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "Match_ExistingTransaction_Outflow",
 			startingBalance: 100000,
 			endingBalance:   95000,
-			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) {
+			setupStores: func(rCtx Context, spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) {
 				txID := TransactionID("txn_" + ksuid.New().String())
 				txn := &Transaction{
 					ID:              txID,
-					SpaceID:         spaceID,
 					Type:            TransactionTypeExpense,
 					AccountID:       &accountID,
 					Amount:          5000,
@@ -3019,7 +2975,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					Description:     "Grocery Store",
 					TransactionDate: time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC),
 				}
-				_ = deps.TransactionStore.Create(context.Background(), txn)
+				_ = deps.TransactionStore.Create(context.Background(), rCtx, txn)
 			},
 			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				var txID TransactionID
@@ -3042,7 +2998,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
+			verifyResults: func(t *testing.T, rCtx Context, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				if stmt.Status != StatementStatusCompleted {
 					t.Errorf("expected statement completed, got %s", stmt.Status)
 				}
@@ -3053,7 +3009,7 @@ func TestService_CompleteStatement(t *testing.T) {
 				if line.MatchedTransactionID == nil {
 					t.Fatal("expected matched transaction ID to be set")
 				}
-				txn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				txn, err := deps.TransactionStore.GetByID(context.Background(), rCtx, *line.MatchedTransactionID)
 				if err != nil {
 					t.Fatalf("get matched transaction: %v", err)
 				}
@@ -3069,11 +3025,10 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "Match_ExistingTransaction_WithOverwrite_IncreaseExpense",
 			startingBalance: 100000,
 			endingBalance:   85000,
-			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) {
+			setupStores: func(rCtx Context, spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) {
 				txID := TransactionID("txn_" + ksuid.New().String())
 				txn := &Transaction{
 					ID:              txID,
-					SpaceID:         spaceID,
 					Type:            TransactionTypeExpense,
 					AccountID:       &accountID,
 					Amount:          10000, // initially 100.00
@@ -3081,7 +3036,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					Description:     "Initial Grocery",
 					TransactionDate: time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC),
 				}
-				_ = deps.TransactionStore.Create(context.Background(), txn)
+				_ = deps.TransactionStore.Create(context.Background(), rCtx, txn)
 			},
 			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				var txID TransactionID
@@ -3106,7 +3061,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
+			verifyResults: func(t *testing.T, rCtx Context, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				if stmt.Status != StatementStatusCompleted {
 					t.Errorf("expected statement completed, got %s", stmt.Status)
 				}
@@ -3114,7 +3069,7 @@ func TestService_CompleteStatement(t *testing.T) {
 				if line.Status != StatementLineStatusMatched {
 					t.Errorf("expected line matched, got %s", line.Status)
 				}
-				txn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				txn, err := deps.TransactionStore.GetByID(context.Background(), rCtx, *line.MatchedTransactionID)
 				if err != nil {
 					t.Fatalf("expected matched transaction: %v", err)
 				}
@@ -3128,7 +3083,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					t.Errorf("expected transaction marked reconciled")
 				}
 				// Verify account balance was adjusted by delta (10000 -> 15000 means -5000 more deducted from 100000 initial balance)
-				acc, err := deps.AccountStore.GetByID(context.Background(), spaceID, stmt.AccountID)
+				acc, err := deps.AccountStore.GetByID(context.Background(), rCtx, stmt.AccountID)
 				if err != nil {
 					t.Fatalf("expected account: %v", err)
 				}
@@ -3158,12 +3113,12 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
+			verifyResults: func(t *testing.T, rCtx Context, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				line := lines[0]
 				if line.MatchedTransactionID == nil {
 					t.Fatal("expected matched transaction ID to be populated")
 				}
-				txn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				txn, err := deps.TransactionStore.GetByID(context.Background(), rCtx, *line.MatchedTransactionID)
 				if err != nil {
 					t.Fatalf("expected created transaction in store: %v", err)
 				}
@@ -3195,12 +3150,12 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
+			verifyResults: func(t *testing.T, rCtx Context, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				line := lines[0]
 				if line.MatchedTransactionID == nil {
 					t.Fatal("expected matched transaction ID to be populated")
 				}
-				txn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				txn, err := deps.TransactionStore.GetByID(context.Background(), rCtx, *line.MatchedTransactionID)
 				if err != nil {
 					t.Fatalf("expected created transaction in store: %v", err)
 				}
@@ -3233,12 +3188,12 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
+			verifyResults: func(t *testing.T, rCtx Context, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				line := lines[0]
 				if line.MatchedTransactionID == nil {
 					t.Fatal("expected matched transaction ID to be populated")
 				}
-				outflowTxn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				outflowTxn, err := deps.TransactionStore.GetByID(context.Background(), rCtx, *line.MatchedTransactionID)
 				if err != nil {
 					t.Fatalf("expected outflow transaction: %v", err)
 				}
@@ -3280,12 +3235,12 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
+			verifyResults: func(t *testing.T, rCtx Context, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				line := lines[0]
 				if line.MatchedTransactionID == nil {
 					t.Fatal("expected matched transaction ID to be populated")
 				}
-				inflowTxn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				inflowTxn, err := deps.TransactionStore.GetByID(context.Background(), rCtx, *line.MatchedTransactionID)
 				if err != nil {
 					t.Fatalf("expected inflow transaction: %v", err)
 				}
@@ -3310,11 +3265,10 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "ConfirmScheduled_Payment",
 			startingBalance: 100000,
 			endingBalance:   85000,
-			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) {
+			setupStores: func(rCtx Context, spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) {
 				schedID := ScheduledTransactionID("sch_" + ksuid.New().String())
 				payment := &ScheduledTransaction{
 					ID:         schedID,
-					SpaceID:    spaceID,
 					Amount:     15000,
 					Currency:   Currency("USD"),
 					Status:     ScheduledTransactionPending,
@@ -3322,7 +3276,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					Type:       TransactionTypeExpense,
 					SourceType: "Electric Company",
 				}
-				_ = deps.ScheduledTransactionStore.Create(context.Background(), payment)
+				_ = deps.ScheduledTransactionStore.Create(context.Background(), rCtx, payment)
 			},
 			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				var schedID ScheduledTransactionID
@@ -3345,12 +3299,12 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
+			verifyResults: func(t *testing.T, rCtx Context, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				line := lines[0]
 				if line.MatchedTransactionID == nil {
 					t.Fatal("expected matched transaction ID to be populated")
 				}
-				txn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				txn, err := deps.TransactionStore.GetByID(context.Background(), rCtx, *line.MatchedTransactionID)
 				if err != nil {
 					t.Fatalf("expected logged payment transaction: %v", err)
 				}
@@ -3363,11 +3317,10 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "CreateRepayment_Borrowing",
 			startingBalance: 100000,
 			endingBalance:   80000,
-			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) {
+			setupStores: func(rCtx Context, spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) {
 				bID := BorrowingID("bor_" + ksuid.New().String())
 				b := &Borrowing{
 					ID:              bID,
-					SpaceID:         spaceID,
 					Direction:       BorrowingDirectionBorrowed,
 					Counterparty:    "Bank of America",
 					TotalAmount:     100000,
@@ -3375,7 +3328,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					Currency:        Currency("USD"),
 					Status:          BorrowingStatusActive,
 				}
-				_ = deps.BorrowingStore.Create(context.Background(), b)
+				_ = deps.BorrowingStore.Create(context.Background(), rCtx, b)
 			},
 			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				var bID BorrowingID
@@ -3398,12 +3351,12 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
+			verifyResults: func(t *testing.T, rCtx Context, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				line := lines[0]
 				if line.MatchedTransactionID == nil {
 					t.Fatal("expected matched transaction ID to be populated")
 				}
-				txn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				txn, err := deps.TransactionStore.GetByID(context.Background(), rCtx, *line.MatchedTransactionID)
 				if err != nil {
 					t.Fatalf("expected repayment transaction: %v", err)
 				}
@@ -3435,7 +3388,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
+			verifyResults: func(t *testing.T, rCtx Context, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				line := lines[0]
 				if line.MatchedTransactionID != nil {
 					t.Errorf("expected nil matched transaction ID for skipped line, got %v", line.MatchedTransactionID)
@@ -3510,14 +3463,12 @@ func TestService_CompleteStatement(t *testing.T) {
 
 			settingsData := map[SpaceID]*FinanceSettings{
 				spaceID: {
-					SpaceID:      spaceID,
 					BaseCurrency: Currency("USD"),
 				},
 			}
 			budgetData := map[BudgetID]*Budget{
 				bgtID: {
 					ID:          bgtID,
-					SpaceID:     spaceID,
 					Name:        "Operations",
 					LimitAmount: 1000000,
 					Currency:    Currency("USD"),
@@ -3527,7 +3478,6 @@ func TestService_CompleteStatement(t *testing.T) {
 			periodData := map[string]*BudgetPeriod{
 				string(bgtID) + "_" + time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339) + "_" + time.Date(2026, 8, 31, 23, 59, 59, 0, time.UTC).Format(time.RFC3339): {
 					ID:          periodID,
-					SpaceID:     spaceID,
 					BudgetID:    bgtID,
 					StartDate:   time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
 					EndDate:     time.Date(2026, 8, 31, 23, 59, 59, 0, time.UTC),
@@ -3537,7 +3487,6 @@ func TestService_CompleteStatement(t *testing.T) {
 			accountData := map[AccountID]*Account{
 				accountID: {
 					ID:             accountID,
-					SpaceID:        spaceID,
 					Name:           "Main Checking",
 					Type:           AccountTypeBank,
 					Currency:       Currency("USD"),
@@ -3546,7 +3495,6 @@ func TestService_CompleteStatement(t *testing.T) {
 				},
 				counterpartID: {
 					ID:             counterpartID,
-					SpaceID:        spaceID,
 					Name:           "High Yield Savings",
 					Type:           AccountTypeBank,
 					Currency:       Currency("USD"),
@@ -3567,13 +3515,13 @@ func TestService_CompleteStatement(t *testing.T) {
 				BorrowingStore:            newBorrowingStoreMock(borData),
 			}
 
+			rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 			if tt.setupStores != nil {
-				tt.setupStores(spaceID, accountID, counterpartID, &deps, txnData, schedData, borData)
+				tt.setupStores(rCtx, spaceID, accountID, counterpartID, &deps, txnData, schedData, borData)
 			}
 
 			stmt := &Statement{
 				ID:                       stmtID,
-				SpaceID:                  spaceID,
 				AccountID:                accountID,
 				StatementDate:            time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC),
 				StatementStartingBalance: tt.startingBalance,
@@ -3591,10 +3539,10 @@ func TestService_CompleteStatement(t *testing.T) {
 				}
 			}
 
-			_ = deps.StatementStore.Create(context.Background(), stmt, lines)
+			_ = deps.StatementStore.Create(context.Background(), rCtx, stmt, lines)
 
 			svc := NewService(deps)
-			completedStmt, err := svc.CompleteStatement(context.Background(), spaceID, stmtID)
+			completedStmt, err := svc.CompleteStatement(context.Background(), rCtx, stmtID)
 
 			if tt.wantErr {
 				if err == nil {
@@ -3610,13 +3558,13 @@ func TestService_CompleteStatement(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			updatedLines, err := svc.ListStatementLines(context.Background(), spaceID, stmtID)
+			updatedLines, err := svc.ListStatementLines(context.Background(), rCtx, stmtID)
 			if err != nil {
 				t.Fatalf("failed to list lines: %v", err)
 			}
 
 			if tt.verifyResults != nil {
-				tt.verifyResults(t, spaceID, completedStmt, updatedLines, &deps, txnData)
+				tt.verifyResults(t, rCtx, spaceID, completedStmt, updatedLines, &deps, txnData)
 			}
 		})
 	}
@@ -3624,6 +3572,7 @@ func TestService_CompleteStatement(t *testing.T) {
 
 func TestService_UpdateStatement(t *testing.T) {
 	spaceID := SpaceID("spc_" + ksuid.New().String())
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 	stmtID := StatementID("stmt_" + ksuid.New().String())
 	accID := AccountID("acc_" + ksuid.New().String())
 
@@ -3639,9 +3588,8 @@ func TestService_UpdateStatement(t *testing.T) {
 			name: "successful update increments version",
 			setupStore: func() *StatementStoreMock {
 				store := newStatementStoreMock(nil, nil)
-				_ = store.Create(context.Background(), &Statement{
+				_ = store.Create(context.Background(), rCtx, &Statement{
 					ID:                       stmtID,
-					SpaceID:                  spaceID,
 					AccountID:                accID,
 					Status:                   StatementStatusInProgress,
 					StatementDate:            time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
@@ -3667,9 +3615,8 @@ func TestService_UpdateStatement(t *testing.T) {
 			name: "stale version returns VersionMismatch",
 			setupStore: func() *StatementStoreMock {
 				store := newStatementStoreMock(nil, nil)
-				_ = store.Create(context.Background(), &Statement{
+				_ = store.Create(context.Background(), rCtx, &Statement{
 					ID:                       stmtID,
-					SpaceID:                  spaceID,
 					AccountID:                accID,
 					Status:                   StatementStatusInProgress,
 					StatementDate:            time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
@@ -3697,7 +3644,7 @@ func TestService_UpdateStatement(t *testing.T) {
 			store := tt.setupStore()
 			svc := NewService(Dependencies{StatementStore: store})
 
-			res, err := svc.UpdateStatement(context.Background(), spaceID, tt.updateStmt, tt.mask)
+			res, err := svc.UpdateStatement(context.Background(), rCtx, tt.updateStmt, tt.mask)
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
 					t.Fatalf("expected error %v, got %v", tt.wantErr, err)
@@ -3717,6 +3664,7 @@ func TestService_UpdateStatement(t *testing.T) {
 
 func TestService_DeleteStatement(t *testing.T) {
 	spaceID := SpaceID("spc_" + ksuid.New().String())
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 	stmtID := StatementID("stmt_" + ksuid.New().String())
 	accID := AccountID("acc_" + ksuid.New().String())
 
@@ -3730,9 +3678,8 @@ func TestService_DeleteStatement(t *testing.T) {
 			name: "successful delete matching version",
 			setupStore: func() *StatementStoreMock {
 				store := newStatementStoreMock(nil, nil)
-				_ = store.Create(context.Background(), &Statement{
+				_ = store.Create(context.Background(), rCtx, &Statement{
 					ID:        stmtID,
-					SpaceID:   spaceID,
 					AccountID: accID,
 					Status:    StatementStatusInProgress,
 					Version:   2,
@@ -3746,9 +3693,8 @@ func TestService_DeleteStatement(t *testing.T) {
 			name: "version mismatch returns VersionMismatch",
 			setupStore: func() *StatementStoreMock {
 				store := newStatementStoreMock(nil, nil)
-				_ = store.Create(context.Background(), &Statement{
+				_ = store.Create(context.Background(), rCtx, &Statement{
 					ID:        stmtID,
-					SpaceID:   spaceID,
 					AccountID: accID,
 					Status:    StatementStatusInProgress,
 					Version:   2,
@@ -3765,7 +3711,7 @@ func TestService_DeleteStatement(t *testing.T) {
 			store := tt.setupStore()
 			svc := NewService(Dependencies{StatementStore: store})
 
-			err := svc.DeleteStatement(context.Background(), spaceID, stmtID, tt.opts)
+			err := svc.DeleteStatement(context.Background(), rCtx, stmtID, tt.opts)
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
 					t.Fatalf("expected error %v, got %v", tt.wantErr, err)
@@ -3781,6 +3727,7 @@ func TestService_DeleteStatement(t *testing.T) {
 
 func TestService_UpdateStatementLine(t *testing.T) {
 	spaceID := SpaceID("spc_" + ksuid.New().String())
+	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 	stmtID := StatementID("stmt_" + ksuid.New().String())
 	lineID := StatementLineID("stln_" + ksuid.New().String())
 	accID := AccountID("acc_" + ksuid.New().String())
@@ -3797,9 +3744,8 @@ func TestService_UpdateStatementLine(t *testing.T) {
 			name: "successful update increments line version",
 			setupStore: func() *StatementStoreMock {
 				store := newStatementStoreMock(nil, nil)
-				_ = store.Create(context.Background(), &Statement{
+				_ = store.Create(context.Background(), rCtx, &Statement{
 					ID:        stmtID,
-					SpaceID:   spaceID,
 					AccountID: accID,
 					Status:    StatementStatusInProgress,
 					Version:   1,
@@ -3829,9 +3775,8 @@ func TestService_UpdateStatementLine(t *testing.T) {
 			name: "stale line version returns VersionMismatch",
 			setupStore: func() *StatementStoreMock {
 				store := newStatementStoreMock(nil, nil)
-				_ = store.Create(context.Background(), &Statement{
+				_ = store.Create(context.Background(), rCtx, &Statement{
 					ID:        stmtID,
-					SpaceID:   spaceID,
 					AccountID: accID,
 					Status:    StatementStatusInProgress,
 					Version:   1,
@@ -3863,7 +3808,7 @@ func TestService_UpdateStatementLine(t *testing.T) {
 			store := tt.setupStore()
 			svc := NewService(Dependencies{StatementStore: store})
 
-			res, err := svc.UpdateStatementLine(context.Background(), spaceID, tt.updateLine, tt.mask)
+			res, err := svc.UpdateStatementLine(context.Background(), rCtx, tt.updateLine, tt.mask)
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
 					t.Fatalf("expected error %v, got %v", tt.wantErr, err)
@@ -3940,11 +3885,12 @@ func TestService_AccountsAndCurrencies(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				data := make(map[AccountID]*Account)
 				if tt.exists {
-					data[validAccID] = &Account{ID: validAccID, SpaceID: validSpace, Name: "Checking"}
+					data[validAccID] = &Account{ID: validAccID, Name: "Checking"}
 				}
 				store := newAccountStoreMock(data)
 				svc := NewService(Dependencies{AccountStore: store})
-				res, err := svc.GetAccount(ctx, tt.spaceID, tt.id)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				res, err := svc.GetAccount(ctx, rCtx, tt.id)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("GetAccount() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -3979,10 +3925,11 @@ func TestService_AccountsAndCurrencies(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				store := newAccountStoreMock(map[AccountID]*Account{
-					validAccID: {ID: validAccID, SpaceID: validSpace, Name: "Savings"},
+					validAccID: {ID: validAccID, Name: "Savings"},
 				})
 				svc := NewService(Dependencies{AccountStore: store})
-				res, err := svc.GetAccounts(ctx, tt.spaceID, tt.ids)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				res, err := svc.GetAccounts(ctx, rCtx, tt.ids)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("GetAccounts() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -4015,7 +3962,8 @@ func TestService_AccountsAndCurrencies(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				store := newAccountStoreMock(nil)
 				svc := NewService(Dependencies{AccountStore: store})
-				_, err := svc.ListAccounts(ctx, tt.spaceID, nil)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				_, err := svc.ListAccounts(ctx, rCtx, nil)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ListAccounts() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -4024,7 +3972,7 @@ func TestService_AccountsAndCurrencies(t *testing.T) {
 	})
 }
 
-func TestService_ResolveAccount_Table(t *testing.T) {
+func TestService_ResolveAccount(t *testing.T) {
 	ctx := context.Background()
 	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	acc1ID, _ := NewAccountID()
@@ -4032,7 +3980,6 @@ func TestService_ResolveAccount_Table(t *testing.T) {
 
 	acc1 := &Account{
 		ID:             acc1ID,
-		SpaceID:        validSpace,
 		Name:           "Checking",
 		Currency:       "USD",
 		LastFour:       "1111",
@@ -4041,7 +3988,6 @@ func TestService_ResolveAccount_Table(t *testing.T) {
 	}
 	acc2 := &Account{
 		ID:             acc2ID,
-		SpaceID:        validSpace,
 		Name:           "Savings",
 		Currency:       "EUR",
 		LastFour:       "2222",
@@ -4152,7 +4098,8 @@ func TestService_ResolveAccount_Table(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			store := tt.setupStore()
 			svc := NewService(Dependencies{AccountStore: store})
-			acc, err := svc.ResolveAccount(ctx, tt.spaceID, tt.opts)
+			rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+			acc, err := svc.ResolveAccount(ctx, rCtx, tt.opts)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ResolveAccount() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -4168,7 +4115,7 @@ func TestService_ResolveAccount_Table(t *testing.T) {
 	}
 }
 
-func TestService_CreateAccount_Table(t *testing.T) {
+func TestService_CreateAccount(t *testing.T) {
 	ctx := context.Background()
 	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	existingID, _ := NewAccountID()
@@ -4183,7 +4130,6 @@ func TestService_CreateAccount_Table(t *testing.T) {
 		{
 			name: "first account automatically becomes default",
 			account: &Account{
-				SpaceID:   validSpace,
 				Name:      "First Bank",
 				Type:      AccountTypeBank,
 				Currency:  "USD",
@@ -4196,7 +4142,6 @@ func TestService_CreateAccount_Table(t *testing.T) {
 		{
 			name: "subsequent account with IsDefault true",
 			account: &Account{
-				SpaceID:   validSpace,
 				Name:      "Second Card",
 				Type:      AccountTypeCreditCard,
 				Currency:  "USD",
@@ -4209,7 +4154,6 @@ func TestService_CreateAccount_Table(t *testing.T) {
 		{
 			name: "subsequent account with IsDefault false",
 			account: &Account{
-				SpaceID:   validSpace,
 				Name:      "Third Account",
 				Type:      AccountTypeBank,
 				Currency:  "USD",
@@ -4222,7 +4166,6 @@ func TestService_CreateAccount_Table(t *testing.T) {
 		{
 			name: "invalid account fails validation",
 			account: &Account{
-				SpaceID:  validSpace,
 				Name:     "",
 				Currency: "USD",
 			},
@@ -4238,14 +4181,14 @@ func TestService_CreateAccount_Table(t *testing.T) {
 			if tt.hasAny {
 				data[existingID] = &Account{
 					ID:        existingID,
-					SpaceID:   validSpace,
 					IsDefault: true,
 					IsActive:  true,
 				}
 			}
 			store := newAccountStoreMock(data)
 			svc := NewService(Dependencies{AccountStore: store})
-			created, err := svc.CreateAccount(ctx, tt.account)
+			rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+			created, err := svc.CreateAccount(ctx, rCtx, tt.account)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CreateAccount() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -4256,7 +4199,7 @@ func TestService_CreateAccount_Table(t *testing.T) {
 	}
 }
 
-func TestService_UpdateAccount_Table(t *testing.T) {
+func TestService_UpdateAccount(t *testing.T) {
 	ctx := context.Background()
 	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	accID, _ := NewAccountID()
@@ -4272,8 +4215,7 @@ func TestService_UpdateAccount_Table(t *testing.T) {
 		{
 			name: "not found",
 			patchAcc: &Account{
-				ID:      accID,
-				SpaceID: validSpace,
+				ID: accID,
 			},
 			mask: []string{"name"},
 			setupStore: func() *AccountStoreMock {
@@ -4285,13 +4227,12 @@ func TestService_UpdateAccount_Table(t *testing.T) {
 			name: "version mismatch conflict",
 			patchAcc: &Account{
 				ID:      accID,
-				SpaceID: validSpace,
 				Version: 2,
 			},
 			mask: []string{"name"},
 			setupStore: func() *AccountStoreMock {
 				return newAccountStoreMock(map[AccountID]*Account{
-					accID: {ID: accID, SpaceID: validSpace, Version: 1},
+					accID: {ID: accID, Version: 1},
 				})
 			},
 			wantErr: true,
@@ -4300,7 +4241,6 @@ func TestService_UpdateAccount_Table(t *testing.T) {
 			name: "successful name update",
 			patchAcc: &Account{
 				ID:      accID,
-				SpaceID: validSpace,
 				Name:    "Updated Checking",
 				Version: 1,
 			},
@@ -4309,7 +4249,6 @@ func TestService_UpdateAccount_Table(t *testing.T) {
 				return newAccountStoreMock(map[AccountID]*Account{
 					accID: {
 						ID:       accID,
-						SpaceID:  validSpace,
 						Name:     "Old Checking",
 						Type:     AccountTypeBank,
 						Currency: "USD",
@@ -4324,7 +4263,6 @@ func TestService_UpdateAccount_Table(t *testing.T) {
 			name: "make default unsets other defaults",
 			patchAcc: &Account{
 				ID:        accID,
-				SpaceID:   validSpace,
 				IsDefault: true,
 				Version:   1,
 			},
@@ -4333,7 +4271,6 @@ func TestService_UpdateAccount_Table(t *testing.T) {
 				return newAccountStoreMock(map[AccountID]*Account{
 					accID: {
 						ID:        accID,
-						SpaceID:   validSpace,
 						Name:      "Savings",
 						Type:      AccountTypeBank,
 						Currency:  "USD",
@@ -4343,7 +4280,6 @@ func TestService_UpdateAccount_Table(t *testing.T) {
 					},
 					otherAccID: {
 						ID:        otherAccID,
-						SpaceID:   validSpace,
 						Name:      "Checking",
 						Type:      AccountTypeBank,
 						Currency:  "USD",
@@ -4361,7 +4297,8 @@ func TestService_UpdateAccount_Table(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			store := tt.setupStore()
 			svc := NewService(Dependencies{AccountStore: store})
-			updated, err := svc.UpdateAccount(ctx, tt.patchAcc, tt.mask)
+			rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+			updated, err := svc.UpdateAccount(ctx, rCtx, tt.patchAcc, tt.mask)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UpdateAccount() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -4372,7 +4309,7 @@ func TestService_UpdateAccount_Table(t *testing.T) {
 	}
 }
 
-func TestService_AdjustAccountBalance_Table(t *testing.T) {
+func TestService_AdjustAccountBalance(t *testing.T) {
 	ctx := context.Background()
 	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	accID, _ := NewAccountID()
@@ -4412,7 +4349,6 @@ func TestService_AdjustAccountBalance_Table(t *testing.T) {
 			accStore := newAccountStoreMock(map[AccountID]*Account{
 				accID: {
 					ID:             accID,
-					SpaceID:        validSpace,
 					Name:           "Audit Account",
 					Type:           AccountTypeBank,
 					Currency:       "USD",
@@ -4429,7 +4365,13 @@ func TestService_AdjustAccountBalance_Table(t *testing.T) {
 				TransactionStore: txnStore,
 				SettingsStore:    settingsStore,
 			})
-			res, err := svc.AdjustAccountBalance(ctx, validSpace, accID, tt.targetBalance, tt.dateStr, "Reconciliation")
+			rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+			res, err := svc.AdjustAccountBalance(ctx, rCtx, AdjustAccountBalanceRequest{
+				AccountID:      accID,
+				TargetBalance:  tt.targetBalance,
+				AdjustmentDate: tt.dateStr,
+				Note:           "Reconciliation",
+			})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("AdjustAccountBalance() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -4440,7 +4382,7 @@ func TestService_AdjustAccountBalance_Table(t *testing.T) {
 	}
 }
 
-func TestService_DeleteAccount_Table(t *testing.T) {
+func TestService_DeleteAccount(t *testing.T) {
 	ctx := context.Background()
 	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	defaultAccID, _ := NewAccountID()
@@ -4468,17 +4410,16 @@ func TestService_DeleteAccount_Table(t *testing.T) {
 			store := newAccountStoreMock(map[AccountID]*Account{
 				defaultAccID: {
 					ID:        defaultAccID,
-					SpaceID:   validSpace,
 					IsDefault: true,
 				},
 				nonDefaultAccID: {
 					ID:        nonDefaultAccID,
-					SpaceID:   validSpace,
 					IsDefault: false,
 				},
 			})
 			svc := NewService(Dependencies{AccountStore: store})
-			err := svc.DeleteAccount(ctx, validSpace, tt.accID, DeleteOptions{})
+			rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+			err := svc.DeleteAccount(ctx, rCtx, tt.accID, DeleteOptions{})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DeleteAccount() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -4538,11 +4479,12 @@ func TestService_Borrowings(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				data := make(map[BorrowingID]*Borrowing)
 				if tt.exists {
-					data[validBID] = &Borrowing{ID: validBID, SpaceID: validSpace, Counterparty: "Alice"}
+					data[validBID] = &Borrowing{ID: validBID, Counterparty: "Alice"}
 				}
 				store := newBorrowingStoreMock(data)
 				svc := NewService(Dependencies{BorrowingStore: store})
-				res, err := svc.GetBorrowing(ctx, tt.spaceID, tt.id)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				res, err := svc.GetBorrowing(ctx, rCtx, tt.id)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("GetBorrowing() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -4575,7 +4517,8 @@ func TestService_Borrowings(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				store := newBorrowingStoreMock(nil)
 				svc := NewService(Dependencies{BorrowingStore: store})
-				_, _, err := svc.ListBorrowings(ctx, tt.spaceID, nil)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				_, _, err := svc.ListBorrowings(ctx, rCtx, nil)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ListBorrowings() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -4586,15 +4529,16 @@ func TestService_Borrowings(t *testing.T) {
 	t.Run("UpdateBorrowingTransaction", func(t *testing.T) {
 		tests := []struct {
 			name      string
+			spaceID   SpaceID
 			req       UpdateBorrowingTransactionRequest
 			setupTxn  bool
 			wrongLink bool
 			wantErr   bool
 		}{
 			{
-				name: "valid update of repayment",
+				name:    "valid update of repayment",
+				spaceID: validSpace,
 				req: UpdateBorrowingTransactionRequest{
-					SpaceID:         validSpace,
 					BorrowingID:     validBID,
 					TransactionID:   validTID,
 					Type:            BorrowingTransactionTypePayment,
@@ -4607,9 +4551,9 @@ func TestService_Borrowings(t *testing.T) {
 				wantErr:   false,
 			},
 			{
-				name: "transaction linked to different borrowing",
+				name:    "transaction linked to different borrowing",
+				spaceID: validSpace,
 				req: UpdateBorrowingTransactionRequest{
-					SpaceID:         validSpace,
 					BorrowingID:     validBID,
 					TransactionID:   validTID,
 					Type:            BorrowingTransactionTypePayment,
@@ -4621,9 +4565,9 @@ func TestService_Borrowings(t *testing.T) {
 				wantErr:   true,
 			},
 			{
-				name: "invalid space ID",
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
 				req: UpdateBorrowingTransactionRequest{
-					SpaceID:       "invalid_space",
 					BorrowingID:   validBID,
 					TransactionID: validTID,
 				},
@@ -4637,7 +4581,6 @@ func TestService_Borrowings(t *testing.T) {
 				bStore := newBorrowingStoreMock(map[BorrowingID]*Borrowing{
 					validBID: {
 						ID:              validBID,
-						SpaceID:         validSpace,
 						Direction:       BorrowingDirectionBorrowed,
 						Counterparty:    "Bob",
 						TotalAmount:     10000,
@@ -4656,7 +4599,6 @@ func TestService_Borrowings(t *testing.T) {
 					}
 					txnMap[validTID] = &Transaction{
 						ID:              validTID,
-						SpaceID:         validSpace,
 						Amount:          1000,
 						AmountInBase:    1000,
 						Currency:        "USD",
@@ -4671,13 +4613,12 @@ func TestService_Borrowings(t *testing.T) {
 				txnStore := newTransactionStoreMock(txnMap)
 
 				setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
-					validSpace: {SpaceID: validSpace, BaseCurrency: "USD"},
+					validSpace: {BaseCurrency: "USD"},
 				})
 
 				accStore := newAccountStoreMock(map[AccountID]*Account{
 					validAccID: {
 						ID:             validAccID,
-						SpaceID:        validSpace,
 						Currency:       "USD",
 						IsActive:       true,
 						CurrentBalance: 20000,
@@ -4691,7 +4632,8 @@ func TestService_Borrowings(t *testing.T) {
 					AccountStore:     accStore,
 				})
 
-				res, err := svc.UpdateBorrowingTransaction(ctx, tt.req)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				res, err := svc.UpdateBorrowingTransaction(ctx, rCtx, tt.req)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("UpdateBorrowingTransaction() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -4713,7 +4655,6 @@ func TestService_Borrowings(t *testing.T) {
 			{
 				name: "invalid borrowing properties",
 				borrowing: &Borrowing{
-					SpaceID:      validSpace,
 					Counterparty: "",
 					TotalAmount:  0,
 				},
@@ -4730,7 +4671,6 @@ func TestService_Borrowings(t *testing.T) {
 				name: "missing workspace settings fails",
 				borrowing: &Borrowing{
 					ID:              validBID,
-					SpaceID:         validSpace,
 					Direction:       BorrowingDirectionBorrowed,
 					Counterparty:    "Charlie",
 					TotalAmount:     10000,
@@ -4752,7 +4692,6 @@ func TestService_Borrowings(t *testing.T) {
 				name: "createAsTransaction true with missing exchange rate fails",
 				borrowing: &Borrowing{
 					ID:              validBID,
-					SpaceID:         validSpace,
 					Direction:       BorrowingDirectionLent,
 					Counterparty:    "Charlie",
 					TotalAmount:     10000,
@@ -4775,7 +4714,6 @@ func TestService_Borrowings(t *testing.T) {
 				name: "createAsTransaction true with missing account fails",
 				borrowing: &Borrowing{
 					ID:              validBID,
-					SpaceID:         validSpace,
 					Direction:       BorrowingDirectionLent,
 					Counterparty:    "Charlie",
 					TotalAmount:     10000,
@@ -4798,7 +4736,6 @@ func TestService_Borrowings(t *testing.T) {
 				name: "valid borrowing without initial transaction",
 				borrowing: &Borrowing{
 					ID:              validBID,
-					SpaceID:         validSpace,
 					Direction:       BorrowingDirectionBorrowed,
 					Counterparty:    "Charlie",
 					TotalAmount:     10000,
@@ -4820,7 +4757,6 @@ func TestService_Borrowings(t *testing.T) {
 				name: "valid borrowing with initial transaction and account",
 				borrowing: &Borrowing{
 					ID:              validBID,
-					SpaceID:         validSpace,
 					Direction:       BorrowingDirectionBorrowed,
 					Counterparty:    "Charlie",
 					TotalAmount:     10000,
@@ -4835,7 +4771,7 @@ func TestService_Borrowings(t *testing.T) {
 					return newBorrowingStoreMock(nil),
 						newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
 						newAccountStoreMock(map[AccountID]*Account{
-							validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", IsActive: true},
+							validAccID: {ID: validAccID, Currency: "USD", IsActive: true},
 						}),
 						newTransactionStoreMock(nil)
 				},
@@ -4845,7 +4781,6 @@ func TestService_Borrowings(t *testing.T) {
 				name: "valid borrowing with initial transaction updates existing transaction if already present",
 				borrowing: &Borrowing{
 					ID:              validBID,
-					SpaceID:         validSpace,
 					Direction:       BorrowingDirectionBorrowed,
 					Counterparty:    "Charlie",
 					TotalAmount:     10000,
@@ -4860,12 +4795,11 @@ func TestService_Borrowings(t *testing.T) {
 					return newBorrowingStoreMock(nil),
 						newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
 						newAccountStoreMock(map[AccountID]*Account{
-							validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", IsActive: true, CurrentBalance: 20000},
+							validAccID: {ID: validAccID, Currency: "USD", IsActive: true, CurrentBalance: 20000},
 						}),
 						newTransactionStoreMock(map[TransactionID]*Transaction{
 							validTID: {
 								ID:        validTID,
-								SpaceID:   validSpace,
 								Type:      TransactionTypeIncome,
 								Amount:    10000,
 								AccountID: &validAccID,
@@ -4890,7 +4824,12 @@ func TestService_Borrowings(t *testing.T) {
 					TransactionStore:  txnStore,
 					ExchangeRateStore: newExchangeRateStoreMock(nil),
 				})
-				res, err := svc.CreateBorrowing(ctx, tt.borrowing, tt.createAsTransaction)
+				baseCurrency := Currency("")
+				if s, err := setStore.GetByID(ctx, NewRequestContext(validSpace, "", nil, "")); err == nil && s != nil {
+					baseCurrency = s.BaseCurrency
+				}
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, baseCurrency)
+				res, err := svc.CreateBorrowing(ctx, rCtx, tt.borrowing, tt.createAsTransaction)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("CreateBorrowing() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -4912,8 +4851,7 @@ func TestService_Borrowings(t *testing.T) {
 			{
 				name: "not found",
 				borrowing: &Borrowing{
-					ID:      validBID,
-					SpaceID: validSpace,
+					ID: validBID,
 				},
 				mask: []string{"notes"},
 				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *TransactionStoreMock) {
@@ -4927,7 +4865,6 @@ func TestService_Borrowings(t *testing.T) {
 				name: "successful patch update untouched borrowing",
 				borrowing: &Borrowing{
 					ID:          validBID,
-					SpaceID:     validSpace,
 					TotalAmount: 15000,
 					Notes:       "Updated note",
 					Version:     1,
@@ -4937,7 +4874,6 @@ func TestService_Borrowings(t *testing.T) {
 					bStore := newBorrowingStoreMock(map[BorrowingID]*Borrowing{
 						validBID: {
 							ID:              validBID,
-							SpaceID:         validSpace,
 							Direction:       BorrowingDirectionBorrowed,
 							Counterparty:    "Bob",
 							TotalAmount:     10000,
@@ -4964,7 +4900,8 @@ func TestService_Borrowings(t *testing.T) {
 					SettingsStore:    setStore,
 					TransactionStore: txnStore,
 				})
-				res, err := svc.UpdateBorrowing(ctx, tt.borrowing, tt.mask)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				res, err := svc.UpdateBorrowing(ctx, rCtx, tt.borrowing, tt.mask)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("UpdateBorrowing() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -4993,12 +4930,11 @@ func TestService_Borrowings(t *testing.T) {
 				name: "has linked transactions rejected",
 				setupStore: func() (*BorrowingStoreMock, *TransactionStoreMock) {
 					bStore := newBorrowingStoreMock(map[BorrowingID]*Borrowing{
-						validBID: {ID: validBID, SpaceID: validSpace},
+						validBID: {ID: validBID},
 					})
 					txnStore := newTransactionStoreMock(map[TransactionID]*Transaction{
 						validTID: {
 							ID:       validTID,
-							SpaceID:  validSpace,
 							Metadata: TransactionMetadata{BorrowingID: &validBID},
 						},
 					})
@@ -5010,7 +4946,7 @@ func TestService_Borrowings(t *testing.T) {
 				name: "successful deletion without transactions",
 				setupStore: func() (*BorrowingStoreMock, *TransactionStoreMock) {
 					bStore := newBorrowingStoreMock(map[BorrowingID]*Borrowing{
-						validBID: {ID: validBID, SpaceID: validSpace},
+						validBID: {ID: validBID},
 					})
 					return bStore, newTransactionStoreMock(nil)
 				},
@@ -5025,7 +4961,8 @@ func TestService_Borrowings(t *testing.T) {
 					BorrowingStore:   bStore,
 					TransactionStore: txnStore,
 				})
-				err := svc.DeleteBorrowing(ctx, validSpace, validBID)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				err := svc.DeleteBorrowing(ctx, rCtx, validBID)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("DeleteBorrowing() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -5036,14 +4973,15 @@ func TestService_Borrowings(t *testing.T) {
 	t.Run("DeleteBorrowingTransaction", func(t *testing.T) {
 		tests := []struct {
 			name       string
+			spaceID    SpaceID
 			req        DeleteBorrowingTransactionRequest
 			setupStore func() (*TransactionStoreMock, *BorrowingStoreMock, *AccountStoreMock)
 			wantErr    bool
 		}{
 			{
-				name: "invalid space ID",
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
 				req: DeleteBorrowingTransactionRequest{
-					SpaceID:       "invalid",
 					BorrowingID:   validBID,
 					TransactionID: validTID,
 				},
@@ -5055,9 +4993,9 @@ func TestService_Borrowings(t *testing.T) {
 				wantErr: true,
 			},
 			{
-				name: "transaction not found",
+				name:    "transaction not found",
+				spaceID: validSpace,
 				req: DeleteBorrowingTransactionRequest{
-					SpaceID:       validSpace,
 					BorrowingID:   validBID,
 					TransactionID: validTID,
 				},
@@ -5069,9 +5007,9 @@ func TestService_Borrowings(t *testing.T) {
 				wantErr: true,
 			},
 			{
-				name: "transaction not linked to this borrowing",
+				name:    "transaction not linked to this borrowing",
+				spaceID: validSpace,
 				req: DeleteBorrowingTransactionRequest{
-					SpaceID:       validSpace,
 					BorrowingID:   validBID,
 					TransactionID: validTID,
 				},
@@ -5080,7 +5018,6 @@ func TestService_Borrowings(t *testing.T) {
 					return newTransactionStoreMock(map[TransactionID]*Transaction{
 							validTID: {
 								ID:       validTID,
-								SpaceID:  validSpace,
 								Metadata: TransactionMetadata{BorrowingID: &otherBID},
 							},
 						}),
@@ -5090,9 +5027,9 @@ func TestService_Borrowings(t *testing.T) {
 				wantErr: true,
 			},
 			{
-				name: "successful deletion",
+				name:    "successful deletion",
+				spaceID: validSpace,
 				req: DeleteBorrowingTransactionRequest{
-					SpaceID:       validSpace,
 					BorrowingID:   validBID,
 					TransactionID: validTID,
 				},
@@ -5100,7 +5037,6 @@ func TestService_Borrowings(t *testing.T) {
 					return newTransactionStoreMock(map[TransactionID]*Transaction{
 							validTID: {
 								ID:        validTID,
-								SpaceID:   validSpace,
 								Type:      TransactionTypeExpense,
 								Amount:    1000,
 								AccountID: &validAccID,
@@ -5113,7 +5049,6 @@ func TestService_Borrowings(t *testing.T) {
 						newBorrowingStoreMock(map[BorrowingID]*Borrowing{
 							validBID: {
 								ID:              validBID,
-								SpaceID:         validSpace,
 								TotalAmount:     10000,
 								RemainingAmount: 4000,
 								Status:          BorrowingStatusActive,
@@ -5122,7 +5057,6 @@ func TestService_Borrowings(t *testing.T) {
 						newAccountStoreMock(map[AccountID]*Account{
 							validAccID: {
 								ID:             validAccID,
-								SpaceID:        validSpace,
 								CurrentBalance: 5000,
 								IsActive:       true,
 							},
@@ -5140,7 +5074,8 @@ func TestService_Borrowings(t *testing.T) {
 					BorrowingStore:   bStore,
 					AccountStore:     accStore,
 				})
-				err := svc.DeleteBorrowingTransaction(ctx, tt.req)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				err := svc.DeleteBorrowingTransaction(ctx, rCtx, tt.req)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("DeleteBorrowingTransaction() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -5176,10 +5111,11 @@ func TestService_ListBudgets(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bStore := newBudgetStoreMock(map[BudgetID]*Budget{
-				bID: {ID: bID, SpaceID: validSpace, Name: "Food"},
+				bID: {ID: bID, Name: "Food"},
 			})
 			svc := NewService(Dependencies{BudgetStore: bStore})
-			page, err := svc.ListBudgets(ctx, tt.spaceID, &ListBudgetsFilter{})
+			rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+			page, err := svc.ListBudgets(ctx, rCtx, &ListBudgetsFilter{})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ListBudgets() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -5231,10 +5167,11 @@ func TestService_GetBudget(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bStore := newBudgetStoreMock(map[BudgetID]*Budget{
-				validBID: {ID: validBID, SpaceID: validSpace, Name: "Rent"},
+				validBID: {ID: validBID, Name: "Rent"},
 			})
 			svc := NewService(Dependencies{BudgetStore: bStore})
-			res, err := svc.GetBudget(ctx, tt.spaceID, tt.budgetID)
+			rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+			res, err := svc.GetBudget(ctx, rCtx, tt.budgetID)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBudget() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -5273,10 +5210,11 @@ func TestService_GetBudgets(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bStore := newBudgetStoreMock(map[BudgetID]*Budget{
-				validBID: {ID: validBID, SpaceID: validSpace, Name: "Utilities"},
+				validBID: {ID: validBID, Name: "Utilities"},
 			})
 			svc := NewService(Dependencies{BudgetStore: bStore})
-			res, err := svc.GetBudgets(ctx, tt.spaceID, tt.ids)
+			rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+			res, err := svc.GetBudgets(ctx, rCtx, tt.ids)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBudgets() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -5295,7 +5233,6 @@ func TestService_GetOrCreatePeriods(t *testing.T) {
 
 	budget := &Budget{
 		ID:          bID,
-		SpaceID:     validSpace,
 		Name:        "Entertainment",
 		LimitAmount: 50000,
 		Currency:    "USD",
@@ -5341,17 +5278,21 @@ func TestService_GetOrCreatePeriods(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			sStoreData := make(map[SpaceID]*FinanceSettings)
 			if tt.setupSettings {
-				sStoreData[validSpace] = &FinanceSettings{SpaceID: validSpace, BaseCurrency: "USD"}
+				sStoreData[validSpace] = &FinanceSettings{BaseCurrency: "USD"}
 			}
 			sStore := newSettingsStoreMock(sStoreData)
 
 			pStore := newPeriodStoreMock(nil)
+			baseCurrency := Currency("")
+			if tt.setupSettings {
+				baseCurrency = "USD"
+			}
+			rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, baseCurrency)
 			if tt.setupPeriod {
 				start, end := budget.CalculateBounds(now)
 				p := &BudgetPeriod{
 					ID:                 "bgp_existing",
 					BudgetID:           bID,
-					SpaceID:            validSpace,
 					StartDate:          start,
 					EndDate:            end,
 					LimitAmount:        50000,
@@ -5359,7 +5300,7 @@ func TestService_GetOrCreatePeriods(t *testing.T) {
 					BaseCurrency:       "USD",
 					ExchangeRateToBase: 1.0,
 				}
-				_ = pStore.Create(ctx, p)
+				_ = pStore.Create(ctx, rCtx, p)
 			}
 
 			rateStore := newExchangeRateStoreMock(nil)
@@ -5369,7 +5310,7 @@ func TestService_GetOrCreatePeriods(t *testing.T) {
 				ExchangeRateStore: rateStore,
 			})
 
-			res, err := svc.GetOrCreatePeriods(ctx, tt.budgets, now)
+			res, err := svc.GetOrCreatePeriods(ctx, rCtx, tt.budgets, now)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetOrCreatePeriods() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -5422,7 +5363,8 @@ func TestService_UpdatePeriodLimit(t *testing.T) {
 			}
 			pStore := newPeriodStoreMock(pData)
 			svc := NewService(Dependencies{PeriodStore: pStore})
-			err := svc.UpdatePeriodLimit(ctx, tt.periodID, tt.newLimit)
+			rCtx := NewRequestContext("spc_default", "usr_1", time.UTC, "USD")
+			err := svc.UpdatePeriodLimit(ctx, rCtx, tt.periodID, tt.newLimit)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UpdatePeriodLimit() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -5430,7 +5372,7 @@ func TestService_UpdatePeriodLimit(t *testing.T) {
 	}
 }
 
-func TestService_BudgetCRUD_Table(t *testing.T) {
+func TestService_BudgetCRUD(t *testing.T) {
 	ctx := context.Background()
 	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	validBID, _ := NewBudgetID()
@@ -5445,8 +5387,7 @@ func TestService_BudgetCRUD_Table(t *testing.T) {
 			{
 				name: "invalid budget validation",
 				budget: &Budget{
-					SpaceID: validSpace,
-					Name:    "",
+					Name: "",
 				},
 				setupStore: func() (*BudgetStoreMock, *SettingsStoreMock) {
 					return newBudgetStoreMock(nil),
@@ -5458,7 +5399,6 @@ func TestService_BudgetCRUD_Table(t *testing.T) {
 				name: "missing space settings",
 				budget: &Budget{
 					ID:          validBID,
-					SpaceID:     validSpace,
 					Name:        "Groceries",
 					LimitAmount: 50000,
 					Currency:    "USD",
@@ -5474,7 +5414,6 @@ func TestService_BudgetCRUD_Table(t *testing.T) {
 				name: "successful budget creation",
 				budget: &Budget{
 					ID:          validBID,
-					SpaceID:     validSpace,
 					Name:        "Groceries",
 					LimitAmount: 50000,
 					Currency:    "USD",
@@ -5497,7 +5436,12 @@ func TestService_BudgetCRUD_Table(t *testing.T) {
 					BudgetStore:   bStore,
 					SettingsStore: setStore,
 				})
-				res, err := svc.CreateBudget(ctx, tt.budget)
+				baseCurrency := Currency("")
+				if s, err := setStore.GetByID(ctx, NewRequestContext(validSpace, "", nil, "")); err == nil && s != nil {
+					baseCurrency = s.BaseCurrency
+				}
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, baseCurrency)
+				res, err := svc.CreateBudget(ctx, rCtx, tt.budget)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("CreateBudget() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -5519,9 +5463,8 @@ func TestService_BudgetCRUD_Table(t *testing.T) {
 			{
 				name: "budget not found",
 				budget: &Budget{
-					ID:      validBID,
-					SpaceID: validSpace,
-					Name:    "Dining",
+					ID:   validBID,
+					Name: "Dining",
 				},
 				mask: []string{"name"},
 				setupStore: func() *BudgetStoreMock {
@@ -5533,7 +5476,6 @@ func TestService_BudgetCRUD_Table(t *testing.T) {
 				name: "successful update",
 				budget: &Budget{
 					ID:      validBID,
-					SpaceID: validSpace,
 					Name:    "Dining Out",
 					Version: 1,
 				},
@@ -5542,7 +5484,6 @@ func TestService_BudgetCRUD_Table(t *testing.T) {
 					return newBudgetStoreMock(map[BudgetID]*Budget{
 						validBID: {
 							ID:          validBID,
-							SpaceID:     validSpace,
 							Name:        "Dining",
 							LimitAmount: 40000,
 							Currency:    "USD",
@@ -5559,7 +5500,8 @@ func TestService_BudgetCRUD_Table(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				bStore := tt.setupStore()
 				svc := NewService(Dependencies{BudgetStore: bStore})
-				res, err := svc.UpdateBudget(ctx, tt.budget, tt.mask)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				res, err := svc.UpdateBudget(ctx, rCtx, tt.budget, tt.mask)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("UpdateBudget() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -5595,9 +5537,9 @@ func TestService_BudgetCRUD_Table(t *testing.T) {
 				budgetID: validBID,
 				setupStore: func() (*BudgetStoreMock, *TransactionStoreMock, *ScheduledTransactionStoreMock) {
 					tID, _ := NewTransactionID()
-					return newBudgetStoreMock(map[BudgetID]*Budget{validBID: {ID: validBID, SpaceID: validSpace}}),
+					return newBudgetStoreMock(map[BudgetID]*Budget{validBID: {ID: validBID}}),
 						newTransactionStoreMock(map[TransactionID]*Transaction{
-							tID: {ID: tID, SpaceID: validSpace, BudgetID: &validBID},
+							tID: {ID: tID, BudgetID: &validBID},
 						}),
 						newScheduledTransactionStoreMock(nil)
 				},
@@ -5608,7 +5550,7 @@ func TestService_BudgetCRUD_Table(t *testing.T) {
 				spaceID:  validSpace,
 				budgetID: validBID,
 				setupStore: func() (*BudgetStoreMock, *TransactionStoreMock, *ScheduledTransactionStoreMock) {
-					return newBudgetStoreMock(map[BudgetID]*Budget{validBID: {ID: validBID, SpaceID: validSpace}}),
+					return newBudgetStoreMock(map[BudgetID]*Budget{validBID: {ID: validBID}}),
 						newTransactionStoreMock(nil),
 						newScheduledTransactionStoreMock(nil)
 				},
@@ -5624,7 +5566,8 @@ func TestService_BudgetCRUD_Table(t *testing.T) {
 					TransactionStore:          txnStore,
 					ScheduledTransactionStore: schedStore,
 				})
-				err := svc.DeleteBudget(ctx, tt.spaceID, tt.budgetID, DeleteOptions{})
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				err := svc.DeleteBudget(ctx, rCtx, tt.budgetID, DeleteOptions{})
 				if (err != nil) != tt.wantErr {
 					t.Errorf("DeleteBudget() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -5640,36 +5583,36 @@ func TestService_AggregateSpentBatch(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupStore func() *TransactionStoreMock
+		periodIDs  []PeriodID
 		wantLen    int
 		wantErr    bool
 	}{
 		{
-			name: "nil store returns nil",
+			name: "empty period IDs returns empty",
 			setupStore: func() *TransactionStoreMock {
-				return nil
+				return newTransactionStoreMock(nil)
 			},
-			wantLen: 0,
-			wantErr: false,
+			periodIDs: []PeriodID{},
+			wantLen:   0,
+			wantErr:   false,
 		},
 		{
 			name: "with store returns period spent",
 			setupStore: func() *TransactionStoreMock {
 				return newTransactionStoreMock(nil)
 			},
-			wantLen: 1,
-			wantErr: false,
+			periodIDs: []PeriodID{pID},
+			wantLen:   1,
+			wantErr:   false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			store := tt.setupStore()
-			var txnStore TransactionStore
-			if store != nil {
-				txnStore = store
-			}
-			svc := NewService(Dependencies{TransactionStore: txnStore})
-			res, err := svc.AggregateSpentBatch(ctx, []PeriodID{pID})
+			svc := NewService(Dependencies{TransactionStore: store})
+			rCtx := NewRequestContext("spc_default", "usr_1", time.UTC, "USD")
+			res, err := svc.AggregateSpentBatch(ctx, rCtx, tt.periodIDs)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("AggregateSpentBatch() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -5706,10 +5649,11 @@ func TestService_ListInboxItems(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			store := newInboxItemStoreMock(map[string]*InboxItem{
-				"item_1": {ID: "item_1", SpaceID: string(validSpace)},
+				"item_1": {ID: "item_1"},
 			})
 			svc := NewService(Dependencies{InboxItemStore: store})
-			res, err := svc.ListInboxItems(ctx, tt.spaceID, nil)
+			rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+			res, err := svc.ListInboxItems(ctx, rCtx, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ListInboxItems() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -5774,7 +5718,6 @@ func TestService_UpdateInboxItem(t *testing.T) {
 				return newInboxItemStoreMock(map[string]*InboxItem{
 					"ibx_1": {
 						ID:                     "ibx_1",
-						SpaceID:                string(validSpace),
 						Status:                 InboxItemPending,
 						DocType:                InboxItemDocReceipt,
 						Amount:                 2500,
@@ -5818,7 +5761,6 @@ func TestService_UpdateInboxItem(t *testing.T) {
 				return newInboxItemStoreMock(map[string]*InboxItem{
 					"ibx_1": {
 						ID:         "ibx_1",
-						SpaceID:    string(validSpace),
 						Status:     InboxItemPending,
 						DocType:    InboxItemDocReceipt,
 						Amount:     1000,
@@ -5840,7 +5782,8 @@ func TestService_UpdateInboxItem(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			store := tt.setupStore()
 			svc := NewService(Dependencies{InboxItemStore: store})
-			res, err := svc.UpdateInboxItem(ctx, tt.spaceID, tt.item)
+			rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+			res, err := svc.UpdateInboxItem(ctx, rCtx, tt.item)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UpdateInboxItem() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -5878,10 +5821,11 @@ func TestService_DiscardInboxItem(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			store := newInboxItemStoreMock(map[string]*InboxItem{
-				"ibx_1": {ID: "ibx_1", SpaceID: string(validSpace)},
+				"ibx_1": {ID: "ibx_1"},
 			})
 			svc := NewService(Dependencies{InboxItemStore: store})
-			err := svc.DiscardInboxItem(ctx, tt.spaceID, tt.itemID)
+			rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+			err := svc.DiscardInboxItem(ctx, rCtx, tt.itemID)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DiscardInboxItem() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -5938,9 +5882,8 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				setupStore: func() *InboxItemStoreMock {
 					return newInboxItemStoreMock(map[string]*InboxItem{
 						"ibx_resolved": {
-							ID:      "ibx_resolved",
-							SpaceID: string(validSpace),
-							Status:  InboxItemResolved,
+							ID:     "ibx_resolved",
+							Status: InboxItemResolved,
 						},
 					})
 				},
@@ -5952,7 +5895,8 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				store := tt.setupStore()
 				svc := NewService(Dependencies{InboxItemStore: store})
-				_, err := svc.ApproveInboxItem(ctx, tt.spaceID, tt.itemID)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				_, err := svc.ApproveInboxItem(ctx, rCtx, tt.itemID)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ApproveInboxItem() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -5971,7 +5915,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				name: "invalid transaction ID format in item",
 				item: &InboxItem{
 					ID:            "ibx_1",
-					SpaceID:       string(validSpace),
 					Status:        InboxItemPending,
 					TransactionID: new(string),
 				},
@@ -5979,7 +5922,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					invalidStr := "not_a_valid_txn_id"
 					ibx := &InboxItem{
 						ID:            "ibx_1",
-						SpaceID:       string(validSpace),
 						Status:        InboxItemPending,
 						TransactionID: &invalidStr,
 					}
@@ -5993,13 +5935,12 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				name: "transaction not found in store",
 				item: &InboxItem{
 					ID:            "ibx_1",
-					SpaceID:       string(validSpace),
 					Status:        InboxItemPending,
 					TransactionID: &txnIDStr,
 				},
 				setupStores: func() (Dependencies, *Transaction) {
 					return Dependencies{
-						InboxItemStore:   newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": {ID: "ibx_1", SpaceID: string(validSpace), Status: InboxItemPending, TransactionID: &txnIDStr}}),
+						InboxItemStore:   newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": {ID: "ibx_1", Status: InboxItemPending, TransactionID: &txnIDStr}}),
 						TransactionStore: newTransactionStoreMock(nil),
 					}, nil
 				},
@@ -6009,20 +5950,18 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				name: "cannot link receipt to transfer transaction",
 				item: &InboxItem{
 					ID:            "ibx_1",
-					SpaceID:       string(validSpace),
 					Status:        InboxItemPending,
 					TransactionID: &txnIDStr,
 				},
 				setupStores: func() (Dependencies, *Transaction) {
 					txn := &Transaction{
 						ID:       validTxnID,
-						SpaceID:  validSpace,
 						Type:     TransactionTypeTransferOut,
 						Amount:   1000,
 						Currency: "USD",
 					}
 					return Dependencies{
-						InboxItemStore:   newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": {ID: "ibx_1", SpaceID: string(validSpace), Status: InboxItemPending, TransactionID: &txnIDStr}}),
+						InboxItemStore:   newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": {ID: "ibx_1", Status: InboxItemPending, TransactionID: &txnIDStr}}),
 						TransactionStore: newTransactionStoreMock(map[TransactionID]*Transaction{validTxnID: txn}),
 					}, txn
 				},
@@ -6032,7 +5971,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				name: "link borrowing repayment reducing remaining amount to zero",
 				item: &InboxItem{
 					ID:                "ibx_1",
-					SpaceID:           string(validSpace),
 					Status:            InboxItemPending,
 					Amount:            1000,
 					Currency:          "USD",
@@ -6044,7 +5982,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					repayType := BorrowingLinkTypeRepayment
 					ibx := &InboxItem{
 						ID:                "ibx_1",
-						SpaceID:           string(validSpace),
 						Status:            InboxItemPending,
 						Amount:            1000,
 						Currency:          "USD",
@@ -6054,7 +5991,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					}
 					txn := &Transaction{
 						ID:        validTxnID,
-						SpaceID:   validSpace,
 						Type:      TransactionTypeExpense,
 						AccountID: &validAccID,
 						Amount:    1000,
@@ -6062,7 +5998,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					}
 					brw := &Borrowing{
 						ID:              validBrwID,
-						SpaceID:         validSpace,
 						TotalAmount:     1000,
 						RemainingAmount: 1000,
 						Status:          BorrowingStatusActive,
@@ -6080,7 +6015,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				name: "link borrowing additional loan increasing total and remaining amount",
 				item: &InboxItem{
 					ID:                "ibx_1",
-					SpaceID:           string(validSpace),
 					Status:            InboxItemPending,
 					Amount:            500,
 					Currency:          "USD",
@@ -6092,7 +6026,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					loanType := BorrowingLinkTypeAdditionalLoan
 					ibx := &InboxItem{
 						ID:                "ibx_1",
-						SpaceID:           string(validSpace),
 						Status:            InboxItemPending,
 						Amount:            500,
 						Currency:          "USD",
@@ -6102,7 +6035,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					}
 					txn := &Transaction{
 						ID:        validTxnID,
-						SpaceID:   validSpace,
 						Type:      TransactionTypeIncome,
 						AccountID: &validAccID,
 						Amount:    500,
@@ -6110,7 +6042,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					}
 					brw := &Borrowing{
 						ID:              validBrwID,
-						SpaceID:         validSpace,
 						TotalAmount:     1000,
 						RemainingAmount: 1000,
 						Status:          BorrowingStatusActive,
@@ -6128,7 +6059,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				name: "relink borrowing to different borrowing fails",
 				item: &InboxItem{
 					ID:            "ibx_1",
-					SpaceID:       string(validSpace),
 					Status:        InboxItemPending,
 					Amount:        500,
 					Currency:      "USD",
@@ -6139,7 +6069,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					otherBrwID, _ := NewBorrowingID()
 					ibx := &InboxItem{
 						ID:            "ibx_1",
-						SpaceID:       string(validSpace),
 						Status:        InboxItemPending,
 						Amount:        500,
 						Currency:      "USD",
@@ -6148,7 +6077,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					}
 					txn := &Transaction{
 						ID:        validTxnID,
-						SpaceID:   validSpace,
 						Type:      TransactionTypeExpense,
 						AccountID: &validAccID,
 						Amount:    500,
@@ -6159,7 +6087,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					}
 					brw := &Borrowing{
 						ID:              validBrwID,
-						SpaceID:         validSpace,
 						TotalAmount:     1000,
 						RemainingAmount: 1000,
 					}
@@ -6175,7 +6102,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				name: "relink scheduled transaction to different scheduled transaction fails",
 				item: &InboxItem{
 					ID:                     "ibx_1",
-					SpaceID:                string(validSpace),
 					Status:                 InboxItemPending,
 					Amount:                 500,
 					Currency:               "USD",
@@ -6186,7 +6112,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					otherPayID, _ := NewScheduledTransactionID()
 					ibx := &InboxItem{
 						ID:                     "ibx_1",
-						SpaceID:                string(validSpace),
 						Status:                 InboxItemPending,
 						Amount:                 500,
 						Currency:               "USD",
@@ -6195,7 +6120,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					}
 					txn := &Transaction{
 						ID:        validTxnID,
-						SpaceID:   validSpace,
 						Type:      TransactionTypeExpense,
 						AccountID: &validAccID,
 						Amount:    500,
@@ -6205,9 +6129,8 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 						},
 					}
 					payment := &ScheduledTransaction{
-						ID:      validPID,
-						SpaceID: validSpace,
-						Amount:  500,
+						ID:     validPID,
+						Amount: 500,
 					}
 					return Dependencies{
 						InboxItemStore:            newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
@@ -6221,7 +6144,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				name: "link scheduled transaction to transaction successfully marks payment paid",
 				item: &InboxItem{
 					ID:                     "ibx_1",
-					SpaceID:                string(validSpace),
 					Status:                 InboxItemPending,
 					Amount:                 500,
 					Currency:               "USD",
@@ -6231,7 +6153,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				setupStores: func() (Dependencies, *Transaction) {
 					ibx := &InboxItem{
 						ID:                     "ibx_1",
-						SpaceID:                string(validSpace),
 						Status:                 InboxItemPending,
 						Amount:                 500,
 						Currency:               "USD",
@@ -6240,17 +6161,15 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					}
 					txn := &Transaction{
 						ID:        validTxnID,
-						SpaceID:   validSpace,
 						Type:      TransactionTypeExpense,
 						AccountID: &validAccID,
 						Amount:    500,
 						Currency:  "USD",
 					}
 					payment := &ScheduledTransaction{
-						ID:      validPID,
-						SpaceID: validSpace,
-						Amount:  500,
-						Status:  ScheduledTransactionPending,
+						ID:     validPID,
+						Amount: 500,
+						Status: ScheduledTransactionPending,
 					}
 					return Dependencies{
 						InboxItemStore:            newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
@@ -6265,7 +6184,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				name: "relink to same scheduled transaction with status pending updates status to paid",
 				item: &InboxItem{
 					ID:                     "ibx_1",
-					SpaceID:                string(validSpace),
 					Status:                 InboxItemPending,
 					Amount:                 500,
 					Currency:               "USD",
@@ -6275,7 +6193,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				setupStores: func() (Dependencies, *Transaction) {
 					ibx := &InboxItem{
 						ID:                     "ibx_1",
-						SpaceID:                string(validSpace),
 						Status:                 InboxItemPending,
 						Amount:                 500,
 						Currency:               "USD",
@@ -6284,7 +6201,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					}
 					txn := &Transaction{
 						ID:        validTxnID,
-						SpaceID:   validSpace,
 						Type:      TransactionTypeExpense,
 						AccountID: &validAccID,
 						Amount:    500,
@@ -6294,10 +6210,9 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 						},
 					}
 					payment := &ScheduledTransaction{
-						ID:      validPID,
-						SpaceID: validSpace,
-						Amount:  500,
-						Status:  ScheduledTransactionPending,
+						ID:     validPID,
+						Amount: 500,
+						Status: ScheduledTransactionPending,
 					}
 					return Dependencies{
 						InboxItemStore:            newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
@@ -6312,7 +6227,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				name: "relink to same scheduled transaction with status already paid returns nil",
 				item: &InboxItem{
 					ID:                     "ibx_1",
-					SpaceID:                string(validSpace),
 					Status:                 InboxItemPending,
 					Amount:                 500,
 					Currency:               "USD",
@@ -6322,7 +6236,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				setupStores: func() (Dependencies, *Transaction) {
 					ibx := &InboxItem{
 						ID:                     "ibx_1",
-						SpaceID:                string(validSpace),
 						Status:                 InboxItemPending,
 						Amount:                 500,
 						Currency:               "USD",
@@ -6331,7 +6244,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					}
 					txn := &Transaction{
 						ID:        validTxnID,
-						SpaceID:   validSpace,
 						Type:      TransactionTypeExpense,
 						AccountID: &validAccID,
 						Amount:    500,
@@ -6341,10 +6253,9 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 						},
 					}
 					payment := &ScheduledTransaction{
-						ID:      validPID,
-						SpaceID: validSpace,
-						Amount:  500,
-						Status:  ScheduledTransactionPaid,
+						ID:     validPID,
+						Amount: 500,
+						Status: ScheduledTransactionPaid,
 					}
 					return Dependencies{
 						InboxItemStore:            newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
@@ -6359,7 +6270,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				name: "link scheduled transaction not found returns error",
 				item: &InboxItem{
 					ID:                     "ibx_1",
-					SpaceID:                string(validSpace),
 					Status:                 InboxItemPending,
 					Amount:                 500,
 					Currency:               "USD",
@@ -6369,7 +6279,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				setupStores: func() (Dependencies, *Transaction) {
 					ibx := &InboxItem{
 						ID:                     "ibx_1",
-						SpaceID:                string(validSpace),
 						Status:                 InboxItemPending,
 						Amount:                 500,
 						Currency:               "USD",
@@ -6378,7 +6287,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					}
 					txn := &Transaction{
 						ID:        validTxnID,
-						SpaceID:   validSpace,
 						Type:      TransactionTypeExpense,
 						AccountID: &validAccID,
 						Amount:    500,
@@ -6398,7 +6306,7 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				deps, _ := tt.setupStores()
 				svc := NewService(deps)
-				res, err := svc.ApproveInboxItem(ctx, validSpace, "ibx_1")
+				res, err := svc.ApproveInboxItem(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), "ibx_1")
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ApproveInboxItem() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -6422,7 +6330,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				setupStores: func() Dependencies {
 					ibx := &InboxItem{
 						ID:                     "ibx_1",
-						SpaceID:                string(validSpace),
 						Status:                 InboxItemPending,
 						DocType:                InboxItemDocInvoice,
 						Amount:                 7500,
@@ -6431,7 +6338,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					}
 					pay := &ScheduledTransaction{
 						ID:         validPID,
-						SpaceID:    validSpace,
 						Amount:     5000,
 						SourceType: "Old Utility",
 					}
@@ -6448,7 +6354,7 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				deps := tt.setupStores()
 				svc := NewService(deps)
-				res, err := svc.ApproveInboxItem(ctx, validSpace, "ibx_1")
+				res, err := svc.ApproveInboxItem(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), "ibx_1")
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ApproveInboxItem() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -6470,7 +6376,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				setupStores: func() Dependencies {
 					ibx := &InboxItem{
 						ID:              "ibx_1",
-						SpaceID:         string(validSpace),
 						Status:          InboxItemPending,
 						DocType:         InboxItemDocInvoice,
 						Amount:          12000,
@@ -6493,7 +6398,7 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				deps := tt.setupStores()
 				svc := NewService(deps)
-				res, err := svc.ApproveInboxItem(ctx, validSpace, "ibx_1")
+				res, err := svc.ApproveInboxItem(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), "ibx_1")
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ApproveInboxItem() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -6515,7 +6420,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				setupStores: func() Dependencies {
 					ibx := &InboxItem{
 						ID:                     "ibx_1",
-						SpaceID:                string(validSpace),
 						Status:                 InboxItemPending,
 						DocType:                InboxItemDocReceipt,
 						Amount:                 4000,
@@ -6526,7 +6430,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					}
 					pay := &ScheduledTransaction{
 						ID:       validPID,
-						SpaceID:  validSpace,
 						Amount:   4000,
 						Currency: "USD",
 						Type:     TransactionTypeIncome,
@@ -6537,7 +6440,7 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 						ScheduledTransactionStore: newScheduledTransactionStoreMock(map[ScheduledTransactionID]*ScheduledTransaction{validPID: pay}),
 						SettingsStore:             newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
 						AccountStore: newAccountStoreMock(map[AccountID]*Account{
-							validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", IsActive: true, CurrentBalance: 10000},
+							validAccID: {ID: validAccID, Currency: "USD", IsActive: true, CurrentBalance: 10000},
 						}),
 						TransactionStore:      newTransactionStoreMock(nil),
 						TransactionEventStore: newTransactionEventStoreMock(nil),
@@ -6551,7 +6454,7 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				deps := tt.setupStores()
 				svc := NewService(deps)
-				res, err := svc.ApproveInboxItem(ctx, validSpace, "ibx_1")
+				res, err := svc.ApproveInboxItem(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), "ibx_1")
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ApproveInboxItem() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -6573,7 +6476,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				setupStores: func() Dependencies {
 					ibx := &InboxItem{
 						ID:       "ibx_1",
-						SpaceID:  string(validSpace),
 						Status:   InboxItemPending,
 						DocType:  InboxItemDocReceipt,
 						Amount:   1000,
@@ -6593,7 +6495,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				setupStores: func() Dependencies {
 					ibx := &InboxItem{
 						ID:       "ibx_1",
-						SpaceID:  string(validSpace),
 						Status:   InboxItemPending,
 						DocType:  InboxItemDocReceipt,
 						Amount:   1000,
@@ -6614,7 +6515,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 				setupStores: func() Dependencies {
 					ibx := &InboxItem{
 						ID:          "ibx_1",
-						SpaceID:     string(validSpace),
 						Status:      InboxItemPending,
 						DocType:     InboxItemDocReceipt,
 						Amount:      2000,
@@ -6628,7 +6528,6 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					}
 					brw := &Borrowing{
 						ID:              validBrwID,
-						SpaceID:         validSpace,
 						TotalAmount:     5000,
 						RemainingAmount: 5000,
 						Status:          BorrowingStatusActive,
@@ -6636,7 +6535,7 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					return Dependencies{
 						InboxItemStore: newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
 						AccountStore: newAccountStoreMock(map[AccountID]*Account{
-							validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", IsActive: true, CurrentBalance: 10000},
+							validAccID: {ID: validAccID, Currency: "USD", IsActive: true, CurrentBalance: 10000},
 						}),
 						SettingsStore:    newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
 						TransactionStore: newTransactionStoreMock(nil),
@@ -6651,7 +6550,7 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				deps := tt.setupStores()
 				svc := NewService(deps)
-				res, err := svc.ApproveInboxItem(ctx, validSpace, "ibx_1")
+				res, err := svc.ApproveInboxItem(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), "ibx_1")
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ApproveInboxItem() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -6681,7 +6580,6 @@ func TestService_Insights(t *testing.T) {
 			{
 				name: "valid spent insights",
 				req: &GetSpentInsightsRequest{
-					SpaceID:     validSpace,
 					Granularity: "monthly",
 					StartDate:   now.AddDate(0, -1, 0),
 					EndDate:     now,
@@ -6693,8 +6591,7 @@ func TestService_Insights(t *testing.T) {
 			{
 				name: "invalid range",
 				req: &GetSpentInsightsRequest{
-					SpaceID:     "invalid_space",
-					Granularity: "monthly",
+					Granularity: "invalid",
 				},
 				setupSet: true,
 				wantErr:  true,
@@ -6702,7 +6599,6 @@ func TestService_Insights(t *testing.T) {
 			{
 				name: "missing settings",
 				req: &GetSpentInsightsRequest{
-					SpaceID:     validSpace,
 					Granularity: "monthly",
 				},
 				setupSet: false,
@@ -6711,7 +6607,6 @@ func TestService_Insights(t *testing.T) {
 			{
 				name: "store error on spent trend",
 				req: &GetSpentInsightsRequest{
-					SpaceID:     validSpace,
 					Granularity: "monthly",
 				},
 				setupSet: true,
@@ -6723,8 +6618,13 @@ func TestService_Insights(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				setStore := newSettingsStoreMock(nil)
+				baseCurrency := Currency("")
 				if tt.setupSet {
-					_ = setStore.Create(ctx, &FinanceSettings{SpaceID: validSpace, BaseCurrency: "USD"})
+					baseCurrency = "USD"
+				}
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, baseCurrency)
+				if tt.setupSet {
+					_ = setStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
 				}
 				insStore := newInsightsStoreMock(
 					[]*SpentTrend{},
@@ -6740,7 +6640,7 @@ func TestService_Insights(t *testing.T) {
 					InsightsStore: insStore,
 				})
 
-				res, err := svc.GetSpentInsights(ctx, tt.req)
+				res, err := svc.GetSpentInsights(ctx, rCtx, tt.req)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("GetSpentInsights() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -6762,7 +6662,6 @@ func TestService_Insights(t *testing.T) {
 			{
 				name: "valid income insights",
 				req: &GetSpentInsightsRequest{
-					SpaceID:     validSpace,
 					Granularity: "monthly",
 					StartDate:   now.AddDate(0, -1, 0),
 					EndDate:     now,
@@ -6774,8 +6673,7 @@ func TestService_Insights(t *testing.T) {
 			{
 				name: "invalid range",
 				req: &GetSpentInsightsRequest{
-					SpaceID:     "invalid_space",
-					Granularity: "monthly",
+					Granularity: "invalid",
 				},
 				setupSet: true,
 				wantErr:  true,
@@ -6783,7 +6681,6 @@ func TestService_Insights(t *testing.T) {
 			{
 				name: "missing settings",
 				req: &GetSpentInsightsRequest{
-					SpaceID:     validSpace,
 					Granularity: "monthly",
 				},
 				setupSet: false,
@@ -6792,7 +6689,6 @@ func TestService_Insights(t *testing.T) {
 			{
 				name: "store error on income trend",
 				req: &GetSpentInsightsRequest{
-					SpaceID:     validSpace,
 					Granularity: "monthly",
 				},
 				setupSet: true,
@@ -6804,8 +6700,13 @@ func TestService_Insights(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				setStore := newSettingsStoreMock(nil)
+				baseCurrency := Currency("")
 				if tt.setupSet {
-					_ = setStore.Create(ctx, &FinanceSettings{SpaceID: validSpace, BaseCurrency: "USD"})
+					baseCurrency = "USD"
+				}
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, baseCurrency)
+				if tt.setupSet {
+					_ = setStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
 				}
 				insStore := newInsightsStoreMock(
 					nil,
@@ -6821,7 +6722,7 @@ func TestService_Insights(t *testing.T) {
 					InsightsStore: insStore,
 				})
 
-				res, err := svc.GetIncomeInsights(ctx, tt.req)
+				res, err := svc.GetIncomeInsights(ctx, rCtx, tt.req)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("GetIncomeInsights() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -6868,10 +6769,11 @@ func TestService_Institutions(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				data := make(map[InstitutionID]*Institution)
 				if tt.exists {
-					data[validInstID] = &Institution{ID: validInstID, SpaceID: validSpace, Name: "Chase"}
+					data[validInstID] = &Institution{ID: validInstID, Name: "Chase"}
 				}
 				svc := NewService(Dependencies{InstitutionStore: newInstitutionStoreMock(data)})
-				res, err := svc.GetInstitution(ctx, tt.spaceID, tt.id)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				res, err := svc.GetInstitution(ctx, rCtx, tt.id)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("GetInstitution() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -6884,28 +6786,42 @@ func TestService_Institutions(t *testing.T) {
 
 	t.Run("ListInstitutions", func(t *testing.T) {
 		tests := []struct {
-			name     string
-			hasStore bool
+			name       string
+			setupStore func() InstitutionStore
+			wantLen    int
 		}{
-			{"with store", true},
-			{"nil store returns empty page", false},
+			{
+				name: "with items in store",
+				setupStore: func() InstitutionStore {
+					return newInstitutionStoreMock(map[InstitutionID]*Institution{
+						validInstID: {ID: validInstID, Name: "Bank of America"},
+					})
+				},
+				wantLen: 1,
+			},
+			{
+				name: "empty store returns empty page",
+				setupStore: func() InstitutionStore {
+					return newInstitutionStoreMock(nil)
+				},
+				wantLen: 0,
+			},
 		}
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				var store InstitutionStore
-				if tt.hasStore {
-					store = newInstitutionStoreMock(map[InstitutionID]*Institution{
-						validInstID: {ID: validInstID, SpaceID: validSpace, Name: "Bank of America"},
-					})
-				}
+				store := tt.setupStore()
 				svc := NewService(Dependencies{InstitutionStore: store})
-				res, err := svc.ListInstitutions(ctx, validSpace, nil)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				res, err := svc.ListInstitutions(ctx, rCtx, nil)
 				if err != nil {
 					t.Fatalf("ListInstitutions() unexpected error: %v", err)
 				}
 				if res == nil {
-					t.Error("expected non-nil page")
+					t.Fatal("expected non-nil page")
+				}
+				if len(res.Items) != tt.wantLen {
+					t.Errorf("len(res.Items) = %d, want %d", len(res.Items), tt.wantLen)
 				}
 			})
 		}
@@ -6913,41 +6829,35 @@ func TestService_Institutions(t *testing.T) {
 
 	t.Run("GetInstitutionsByIDs", func(t *testing.T) {
 		tests := []struct {
-			name     string
-			hasStore bool
-			ids      []InstitutionID
-			wantLen  int
+			name    string
+			ids     []InstitutionID
+			wantLen int
 		}{
 			{
-				name:     "valid retrieval",
-				hasStore: true,
-				ids:      []InstitutionID{validInstID},
-				wantLen:  1,
+				name:    "valid retrieval",
+				ids:     []InstitutionID{validInstID},
+				wantLen: 1,
 			},
 			{
-				name:     "empty ids",
-				hasStore: true,
-				ids:      []InstitutionID{},
-				wantLen:  0,
+				name:    "empty ids",
+				ids:     []InstitutionID{},
+				wantLen: 0,
 			},
 			{
-				name:     "nil store",
-				hasStore: false,
-				ids:      []InstitutionID{validInstID},
-				wantLen:  0,
+				name:    "nonexistent id returns empty",
+				ids:     []InstitutionID{"inst_nonexistent"},
+				wantLen: 0,
 			},
 		}
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				var store InstitutionStore
-				if tt.hasStore {
-					store = newInstitutionStoreMock(map[InstitutionID]*Institution{
-						validInstID: {ID: validInstID, SpaceID: validSpace, Name: "Chase"},
-					})
-				}
+				store := newInstitutionStoreMock(map[InstitutionID]*Institution{
+					validInstID: {ID: validInstID, Name: "Chase"},
+				})
 				svc := NewService(Dependencies{InstitutionStore: store})
-				res, err := svc.GetInstitutionsByIDs(ctx, validSpace, tt.ids)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				res, err := svc.GetInstitutionsByIDs(ctx, rCtx, tt.ids)
 				if err != nil {
 					t.Fatalf("GetInstitutionsByIDs() unexpected error: %v", err)
 				}
@@ -6988,7 +6898,6 @@ func TestService_Institutions(t *testing.T) {
 				if tt.setupExist {
 					data[validInstID] = &Institution{
 						ID:      validInstID,
-						SpaceID: validSpace,
 						Name:    "Chase",
 						Domain:  "chase.com",
 						LogoURL: "https://chase.com/icon.png",
@@ -6996,7 +6905,8 @@ func TestService_Institutions(t *testing.T) {
 					}
 				}
 				svc := NewService(Dependencies{InstitutionStore: newInstitutionStoreMock(data)})
-				res, err := svc.ResolveInstitution(ctx, validSpace, tt.inputName)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				res, err := svc.ResolveInstitution(ctx, rCtx, tt.inputName)
 				if err != nil {
 					t.Fatalf("ResolveInstitution() unexpected error: %v", err)
 				}
@@ -7019,17 +6929,15 @@ func TestService_Institutions(t *testing.T) {
 			{
 				name: "invalid institution fails validation",
 				inst: &Institution{
-					SpaceID: validSpace,
-					Name:    "", // empty name fails validation
+					Name: "", // empty name fails validation
 				},
 				wantErr: true,
 			},
 			{
 				name: "valid institution creates successfully",
 				inst: &Institution{
-					SpaceID: validSpace,
-					Name:    "Wells Fargo",
-					Domain:  "wellsfargo.com",
+					Name:   "Wells Fargo",
+					Domain: "wellsfargo.com",
 				},
 				wantErr: false,
 			},
@@ -7038,7 +6946,8 @@ func TestService_Institutions(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				svc := NewService(Dependencies{InstitutionStore: newInstitutionStoreMock(nil)})
-				res, err := svc.CreateInstitution(ctx, tt.inst)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				res, err := svc.CreateInstitution(ctx, rCtx, tt.inst)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("CreateInstitution() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7060,9 +6969,8 @@ func TestService_Institutions(t *testing.T) {
 			{
 				name: "institution not found",
 				inst: &Institution{
-					ID:      validInstID,
-					SpaceID: validSpace,
-					Name:    "Nonexistent",
+					ID:   validInstID,
+					Name: "Nonexistent",
 				},
 				mask: []string{"name"},
 				setupStore: func() *InstitutionStoreMock {
@@ -7074,7 +6982,6 @@ func TestService_Institutions(t *testing.T) {
 				name: "successful update",
 				inst: &Institution{
 					ID:      validInstID,
-					SpaceID: validSpace,
 					Name:    "Updated Bank",
 					Version: 1,
 				},
@@ -7083,7 +6990,6 @@ func TestService_Institutions(t *testing.T) {
 					return newInstitutionStoreMock(map[InstitutionID]*Institution{
 						validInstID: {
 							ID:      validInstID,
-							SpaceID: validSpace,
 							Name:    "Old Bank",
 							Version: 1,
 						},
@@ -7097,7 +7003,8 @@ func TestService_Institutions(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				store := tt.setupStore()
 				svc := NewService(Dependencies{InstitutionStore: store})
-				res, err := svc.UpdateInstitution(ctx, tt.inst, tt.mask)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				res, err := svc.UpdateInstitution(ctx, rCtx, tt.inst, tt.mask)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("UpdateInstitution() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7131,7 +7038,7 @@ func TestService_Institutions(t *testing.T) {
 				id:      validInstID,
 				setupStore: func() *InstitutionStoreMock {
 					return newInstitutionStoreMock(map[InstitutionID]*Institution{
-						validInstID: {ID: validInstID, SpaceID: validSpace, Name: "Bank"},
+						validInstID: {ID: validInstID, Name: "Bank"},
 					})
 				},
 				wantErr: false,
@@ -7142,7 +7049,8 @@ func TestService_Institutions(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				store := tt.setupStore()
 				svc := NewService(Dependencies{InstitutionStore: store})
-				err := svc.DeleteInstitution(ctx, tt.spaceID, tt.id, DeleteOptions{})
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				err := svc.DeleteInstitution(ctx, rCtx, tt.id, DeleteOptions{})
 				if (err != nil) != tt.wantErr {
 					t.Errorf("DeleteInstitution() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7186,7 +7094,6 @@ func TestService_ExchangeRates(t *testing.T) {
 			{
 				name: "valid rate",
 				rate: &ExchangeRate{
-					SpaceID:      validSpace,
 					FromCurrency: "EUR",
 					ToCurrency:   "USD",
 					Rate:         1.08,
@@ -7197,7 +7104,6 @@ func TestService_ExchangeRates(t *testing.T) {
 			{
 				name: "invalid rate <= 0",
 				rate: &ExchangeRate{
-					SpaceID:      validSpace,
 					FromCurrency: "EUR",
 					ToCurrency:   "USD",
 					Rate:         0,
@@ -7211,7 +7117,8 @@ func TestService_ExchangeRates(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				store := newExchangeRateStoreMock(nil)
 				svc := NewService(Dependencies{ExchangeRateStore: store})
-				res, err := svc.CreateExchangeRate(ctx, tt.rate)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				res, err := svc.CreateExchangeRate(ctx, rCtx, tt.rate)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("CreateExchangeRate() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7224,7 +7131,6 @@ func TestService_ExchangeRates(t *testing.T) {
 
 	t.Run("GetExchangeRateByID", func(t *testing.T) {
 		rate := &ExchangeRate{
-			SpaceID:      validSpace,
 			FromCurrency: "EUR",
 			ToCurrency:   "USD",
 			Rate:         1.08,
@@ -7273,11 +7179,12 @@ func TestService_ExchangeRates(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				store := newExchangeRateStoreMock(nil)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
 				if tt.exists {
-					_ = store.Create(ctx, rate)
+					_ = store.Create(ctx, rCtx, rate)
 				}
 				svc := NewService(Dependencies{ExchangeRateStore: store})
-				res, err := svc.GetExchangeRateByID(ctx, tt.spaceID, tt.id)
+				res, err := svc.GetExchangeRateByID(ctx, rCtx, tt.id)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("GetExchangeRateByID() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7290,7 +7197,6 @@ func TestService_ExchangeRates(t *testing.T) {
 
 	t.Run("UpdateExchangeRate", func(t *testing.T) {
 		rate := &ExchangeRate{
-			SpaceID:      validSpace,
 			FromCurrency: "EUR",
 			ToCurrency:   "USD",
 			Rate:         1.08,
@@ -7335,9 +7241,9 @@ func TestService_ExchangeRates(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				store := newExchangeRateStoreMock(nil)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
 				if tt.exists {
-					_ = store.Create(ctx, &ExchangeRate{
-						SpaceID:      rate.SpaceID,
+					_ = store.Create(ctx, rCtx, &ExchangeRate{
 						FromCurrency: rate.FromCurrency,
 						ToCurrency:   rate.ToCurrency,
 						Rate:         rate.Rate,
@@ -7345,7 +7251,7 @@ func TestService_ExchangeRates(t *testing.T) {
 					})
 				}
 				svc := NewService(Dependencies{ExchangeRateStore: store})
-				res, err := svc.UpdateExchangeRate(ctx, tt.spaceID, tt.id, &ExchangeRate{Rate: tt.newRate})
+				res, err := svc.UpdateExchangeRate(ctx, rCtx, tt.id, &ExchangeRate{Rate: tt.newRate})
 				if (err != nil) != tt.wantErr {
 					t.Errorf("UpdateExchangeRate() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7377,10 +7283,11 @@ func TestService_ExchangeRates(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				store := newExchangeRateStoreMock(map[string]*ExchangeRate{
-					"key": {SpaceID: validSpace},
+					"key": {},
 				})
 				svc := NewService(Dependencies{ExchangeRateStore: store})
-				list, _, err := svc.ListExchangeRates(ctx, tt.spaceID, nil)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				list, _, err := svc.ListExchangeRates(ctx, rCtx, nil)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ListExchangeRates() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7393,7 +7300,6 @@ func TestService_ExchangeRates(t *testing.T) {
 
 	t.Run("DeleteExchangeRateByID", func(t *testing.T) {
 		rate := &ExchangeRate{
-			SpaceID:      validSpace,
 			FromCurrency: "EUR",
 			ToCurrency:   "USD",
 			Rate:         1.08,
@@ -7431,9 +7337,10 @@ func TestService_ExchangeRates(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				store := newExchangeRateStoreMock(nil)
-				_ = store.Create(ctx, rate)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				_ = store.Create(ctx, rCtx, rate)
 				svc := NewService(Dependencies{ExchangeRateStore: store})
-				err := svc.DeleteExchangeRateByID(ctx, tt.spaceID, tt.id)
+				err := svc.DeleteExchangeRateByID(ctx, rCtx, tt.id)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("DeleteExchangeRateByID() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7463,7 +7370,8 @@ func TestService_ExchangeRates(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				store := newExchangeRateStoreMock(nil)
 				svc := NewService(Dependencies{ExchangeRateStore: store})
-				_, err := svc.GetLatestRates(ctx, tt.spaceID, []Currency{"EUR"}, "USD")
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				_, err := svc.GetLatestRates(ctx, rCtx, []Currency{"EUR"}, "USD")
 				if (err != nil) != tt.wantErr {
 					t.Errorf("GetLatestRates() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7490,7 +7398,6 @@ func TestService_RecurringTransactions(t *testing.T) {
 			{
 				name: "valid recurring expense",
 				rec: &RecurringTransaction{
-					SpaceID:     validSpace,
 					BudgetID:    &validBID,
 					Name:        "Netflix",
 					Amount:      1500,
@@ -7505,7 +7412,6 @@ func TestService_RecurringTransactions(t *testing.T) {
 			{
 				name: "invalid recurring transaction amount <= 0",
 				rec: &RecurringTransaction{
-					SpaceID:  validSpace,
 					BudgetID: &validBID,
 					Name:     "Netflix",
 					Amount:   0,
@@ -7518,7 +7424,6 @@ func TestService_RecurringTransactions(t *testing.T) {
 			{
 				name: "invalid budget ID",
 				rec: &RecurringTransaction{
-					SpaceID:  validSpace,
 					BudgetID: (*BudgetID)(new(string)), // invalid pointer to empty string
 					Name:     "Netflix",
 					Amount:   1500,
@@ -7534,7 +7439,8 @@ func TestService_RecurringTransactions(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				rStore := newRecurringTransactionStoreMock(nil)
 				svc := NewService(Dependencies{RecurringTransactionStore: rStore})
-				res, err := svc.CreateRecurringTransaction(ctx, tt.rec)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				res, err := svc.CreateRecurringTransaction(ctx, rCtx, tt.rec)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("CreateRecurringTransaction() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7587,11 +7493,12 @@ func TestService_RecurringTransactions(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				data := make(map[RecurringTransactionID]*RecurringTransaction)
 				if tt.exists {
-					data[validRID] = &RecurringTransaction{ID: validRID, SpaceID: validSpace, Name: "Gym"}
+					data[validRID] = &RecurringTransaction{ID: validRID, Name: "Gym"}
 				}
 				rStore := newRecurringTransactionStoreMock(data)
 				svc := NewService(Dependencies{RecurringTransactionStore: rStore})
-				res, err := svc.GetRecurringTransaction(ctx, tt.spaceID, tt.id)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				res, err := svc.GetRecurringTransaction(ctx, rCtx, tt.id)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("GetRecurringTransaction() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7626,10 +7533,11 @@ func TestService_RecurringTransactions(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				rStore := newRecurringTransactionStoreMock(map[RecurringTransactionID]*RecurringTransaction{
-					validRID: {ID: validRID, SpaceID: validSpace},
+					validRID: {ID: validRID},
 				})
 				svc := NewService(Dependencies{RecurringTransactionStore: rStore})
-				res, err := svc.GetRecurringTransactions(ctx, tt.spaceID, tt.ids)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				res, err := svc.GetRecurringTransactions(ctx, rCtx, tt.ids)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("GetRecurringTransactions() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7653,7 +7561,6 @@ func TestService_RecurringTransactions(t *testing.T) {
 				name: "valid patch update",
 				re: &RecurringTransaction{
 					ID:      validRID,
-					SpaceID: validSpace,
 					Name:    "Gym Patched",
 					Amount:  5000,
 					Version: 1,
@@ -7667,7 +7574,6 @@ func TestService_RecurringTransactions(t *testing.T) {
 				name: "version mismatch",
 				re: &RecurringTransaction{
 					ID:      validRID,
-					SpaceID: validSpace,
 					Name:    "Gym Patched",
 					Version: 1,
 				},
@@ -7679,9 +7585,8 @@ func TestService_RecurringTransactions(t *testing.T) {
 			{
 				name: "not found",
 				re: &RecurringTransaction{
-					ID:      validRID,
-					SpaceID: validSpace,
-					Name:    "Gym Patched",
+					ID:   validRID,
+					Name: "Gym Patched",
 				},
 				mask:       []string{"name"},
 				setupExist: false,
@@ -7695,7 +7600,6 @@ func TestService_RecurringTransactions(t *testing.T) {
 				if tt.setupExist {
 					data[validRID] = &RecurringTransaction{
 						ID:          validRID,
-						SpaceID:     validSpace,
 						BudgetID:    &validBID,
 						Name:        "Gym",
 						Amount:      4000,
@@ -7709,7 +7613,8 @@ func TestService_RecurringTransactions(t *testing.T) {
 				}
 				rStore := newRecurringTransactionStoreMock(data)
 				svc := NewService(Dependencies{RecurringTransactionStore: rStore})
-				res, err := svc.UpdateRecurringTransaction(ctx, tt.re, tt.mask)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				res, err := svc.UpdateRecurringTransaction(ctx, rCtx, tt.re, tt.mask)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("UpdateRecurringTransaction() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7751,11 +7656,12 @@ func TestService_RecurringTransactions(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				data := make(map[RecurringTransactionID]*RecurringTransaction)
 				if tt.exists {
-					data[validRID] = &RecurringTransaction{ID: validRID, SpaceID: validSpace}
+					data[validRID] = &RecurringTransaction{ID: validRID}
 				}
 				rStore := newRecurringTransactionStoreMock(data)
 				svc := NewService(Dependencies{RecurringTransactionStore: rStore})
-				err := svc.DeleteRecurringTransaction(ctx, tt.id, DeleteOptions{})
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				err := svc.DeleteRecurringTransaction(ctx, rCtx, tt.id, DeleteOptions{})
 				if (err != nil) != tt.wantErr {
 					t.Errorf("DeleteRecurringTransaction() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7785,7 +7691,8 @@ func TestService_RecurringTransactions(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				rStore := newRecurringTransactionStoreMock(nil)
 				svc := NewService(Dependencies{RecurringTransactionStore: rStore})
-				_, err := svc.ListRecurringTransactions(ctx, tt.spaceID, nil)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				_, err := svc.ListRecurringTransactions(ctx, rCtx, nil)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ListRecurringTransactions() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7805,11 +7712,10 @@ func TestService_RecurringTransactions(t *testing.T) {
 					rStore := newRecurringTransactionStoreMock(map[RecurringTransactionID]*RecurringTransaction{
 						validRID: {
 							ID:          validRID,
-							SpaceID:     "invalid_space",
 							BudgetID:    &validBID,
 							Name:        "Internet",
 							Amount:      6000,
-							Currency:    "USD",
+							Currency:    "INVALID",
 							Interval:    IntervalMonthly,
 							NextDueDate: now,
 							Status:      RecurringTransactionActive,
@@ -7828,7 +7734,6 @@ func TestService_RecurringTransactions(t *testing.T) {
 					rStore := newRecurringTransactionStoreMock(map[RecurringTransactionID]*RecurringTransaction{
 						validRID: {
 							ID:          validRID,
-							SpaceID:     validSpace,
 							BudgetID:    &validBID,
 							Name:        "Internet",
 							Amount:      6000,
@@ -7893,7 +7798,8 @@ func TestService_ScheduledTransactions(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				sStore := newScheduledTransactionStoreMock(nil)
 				svc := NewService(Dependencies{ScheduledTransactionStore: sStore})
-				_, err := svc.ListScheduledTransactions(ctx, tt.spaceID, nil)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				_, err := svc.ListScheduledTransactions(ctx, rCtx, nil)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ListScheduledTransactions() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -7952,7 +7858,6 @@ func TestService_ScheduledTransactions(t *testing.T) {
 					}
 					stPayments[validSTID] = &ScheduledTransaction{
 						ID:         validSTID,
-						SpaceID:    validSpace,
 						BudgetID:   &validBID,
 						AccountID:  &validAccID,
 						Amount:     5000,
@@ -7969,7 +7874,6 @@ func TestService_ScheduledTransactions(t *testing.T) {
 				bStore := newBudgetStoreMock(map[BudgetID]*Budget{
 					validBID: {
 						ID:          validBID,
-						SpaceID:     validSpace,
 						LimitAmount: 50000,
 						Currency:    "USD",
 						Interval:    IntervalMonthly,
@@ -7981,7 +7885,6 @@ func TestService_ScheduledTransactions(t *testing.T) {
 					"key": {
 						ID:                 validPID,
 						BudgetID:           validBID,
-						SpaceID:            validSpace,
 						Currency:           "USD",
 						BaseCurrency:       "USD",
 						ExchangeRateToBase: 1.0,
@@ -7989,17 +7892,17 @@ func TestService_ScheduledTransactions(t *testing.T) {
 				})
 
 				setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
-					validSpace: {SpaceID: validSpace, BaseCurrency: "USD"},
+					validSpace: {BaseCurrency: "USD"},
 				})
 
 				accStore := newAccountStoreMock(map[AccountID]*Account{
-					validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", IsActive: true, CurrentBalance: 20000},
+					validAccID: {ID: validAccID, Currency: "USD", IsActive: true, CurrentBalance: 20000},
 				})
 
 				txnStore := newTransactionStoreMock(nil)
 				eventStore := newTransactionEventStoreMock(nil)
 				rStore := newRecurringTransactionStoreMock(map[RecurringTransactionID]*RecurringTransaction{
-					"rec_123": {ID: "rec_123", SpaceID: validSpace, Name: "Rec Name"},
+					"rec_123": {ID: "rec_123", Name: "Rec Name"},
 				})
 
 				svc := NewService(Dependencies{
@@ -8013,7 +7916,8 @@ func TestService_ScheduledTransactions(t *testing.T) {
 					RecurringTransactionStore: rStore,
 				})
 
-				res, err := svc.ConfirmScheduledTransaction(ctx, tt.req)
+				rCtx := NewRequestContext(tt.req.SpaceID, "usr_1", time.UTC, "USD")
+				res, err := svc.ConfirmScheduledTransaction(ctx, rCtx, tt.req)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ConfirmScheduledTransaction() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -8075,7 +7979,6 @@ func TestService_ScheduledTransactions(t *testing.T) {
 				if tt.setupST {
 					stPayments[validSTID] = &ScheduledTransaction{
 						ID:         validSTID,
-						SpaceID:    validSpace,
 						Amount:     5000,
 						Status:     ScheduledTransactionPending,
 						SourceType: string(SourceTypeRecurrentTransaction),
@@ -8084,19 +7987,18 @@ func TestService_ScheduledTransactions(t *testing.T) {
 				}
 				stStore := newScheduledTransactionStoreMock(stPayments)
 
-				txnMap := make(map[TransactionID]*Transaction)
+				txnStore := newTransactionStoreMock(nil)
 				if tt.setupTxn {
 					space := validSpace
 					if tt.diffSpaces {
 						space = otherSpace
 					}
-					txnMap[validTID] = &Transaction{
-						ID:      validTID,
-						SpaceID: space,
-						Amount:  5000,
-					}
+					tRCtx := NewRequestContext(space, "usr_1", time.UTC, "USD")
+					_ = txnStore.Create(ctx, tRCtx, &Transaction{
+						ID:     validTID,
+						Amount: 5000,
+					})
 				}
-				txnStore := newTransactionStoreMock(txnMap)
 
 				eventStore := newTransactionEventStoreMock(nil)
 
@@ -8106,7 +8008,8 @@ func TestService_ScheduledTransactions(t *testing.T) {
 					TransactionEventStore:     eventStore,
 				})
 
-				res, err := svc.MatchScheduledTransaction(ctx, tt.req)
+				rCtx := NewRequestContext(tt.req.SpaceID, "usr_1", time.UTC, "USD")
+				res, err := svc.MatchScheduledTransaction(ctx, rCtx, tt.req)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("MatchScheduledTransaction() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -8174,15 +8077,15 @@ func TestService_ScheduledTransactions(t *testing.T) {
 						status = ScheduledTransactionPaid
 					}
 					stPayments[validSTID] = &ScheduledTransaction{
-						ID:      validSTID,
-						SpaceID: validSpace,
-						Status:  status,
+						ID:     validSTID,
+						Status: status,
 					}
 				}
 				stStore := newScheduledTransactionStoreMock(stPayments)
 
 				svc := NewService(Dependencies{ScheduledTransactionStore: stStore})
-				res, err := svc.SkipScheduledTransaction(ctx, tt.spaceID, tt.id)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				res, err := svc.SkipScheduledTransaction(ctx, rCtx, tt.id)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("SkipScheduledTransaction() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -8211,7 +8114,7 @@ func TestService_GetFinanceSettings(t *testing.T) {
 			name:    "successful retrieval",
 			spaceID: validSpace,
 			setupData: map[SpaceID]*FinanceSettings{
-				validSpace: {SpaceID: validSpace, BaseCurrency: "USD"},
+				validSpace: {BaseCurrency: "USD"},
 			},
 			wantErr: false,
 		},
@@ -8232,9 +8135,9 @@ func TestService_GetFinanceSettings(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			store := &SettingsStoreMock{
-				GetByIDFunc: func(ctx context.Context, spaceID SpaceID) (*FinanceSettings, error) {
+				GetByIDFunc: func(ctx context.Context, rCtx Context) (*FinanceSettings, error) {
 					if tt.setupData != nil {
-						if s, ok := tt.setupData[spaceID]; ok {
+						if s, ok := tt.setupData[rCtx.SpaceID()]; ok {
 							return s, nil
 						}
 					}
@@ -8242,12 +8145,13 @@ func TestService_GetFinanceSettings(t *testing.T) {
 				},
 			}
 			svc := NewService(Dependencies{SettingsStore: store})
-			res, err := svc.GetFinanceSettings(ctx, tt.spaceID)
+			rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+			res, err := svc.GetFinanceSettings(ctx, rCtx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetFinanceSettings() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if !tt.wantErr && res.SpaceID != tt.spaceID {
-				t.Errorf("res.SpaceID = %v, want %v", res.SpaceID, tt.spaceID)
+			if !tt.wantErr && res.BaseCurrency != "USD" {
+				t.Errorf("res.BaseCurrency = %v, want USD", res.BaseCurrency)
 			}
 		})
 	}
@@ -8304,11 +8208,12 @@ func TestService_Statements(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				store := newStatementStoreMock(nil, nil)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
 				if tt.exists {
-					_ = store.Create(ctx, &Statement{ID: validSID, SpaceID: validSpace}, nil)
+					_ = store.Create(ctx, rCtx, &Statement{ID: validSID}, nil)
 				}
 				svc := NewService(Dependencies{StatementStore: store})
-				res, err := svc.GetStatement(ctx, tt.spaceID, tt.id)
+				res, err := svc.GetStatement(ctx, rCtx, tt.id)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("GetStatement() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -8341,7 +8246,8 @@ func TestService_Statements(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				store := newStatementStoreMock(nil, nil)
 				svc := NewService(Dependencies{StatementStore: store})
-				_, err := svc.ListStatements(ctx, tt.spaceID, &ListStatementsFilter{})
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				_, err := svc.ListStatements(ctx, rCtx, &ListStatementsFilter{})
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ListStatements() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -8362,38 +8268,32 @@ func TestService_Statements(t *testing.T) {
 				accountID: validAccID,
 				statement: nil,
 				setupStore: func() *AccountStoreMock {
-					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID, SpaceID: validSpace}})
+					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID}})
 				},
 				wantErr: true,
 			},
 			{
 				name:      "invalid space ID",
 				accountID: validAccID,
-				statement: &Statement{
-					SpaceID: "invalid_space",
-				},
+				statement: &Statement{},
 				setupStore: func() *AccountStoreMock {
-					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID, SpaceID: validSpace}})
+					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID}})
 				},
 				wantErr: true,
 			},
 			{
 				name:      "invalid account ID",
 				accountID: "invalid_acc",
-				statement: &Statement{
-					SpaceID: validSpace,
-				},
+				statement: &Statement{},
 				setupStore: func() *AccountStoreMock {
-					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID, SpaceID: validSpace}})
+					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID}})
 				},
 				wantErr: true,
 			},
 			{
 				name:      "account not found in store",
 				accountID: validAccID,
-				statement: &Statement{
-					SpaceID: validSpace,
-				},
+				statement: &Statement{},
 				setupStore: func() *AccountStoreMock {
 					return newAccountStoreMock(nil)
 				},
@@ -8404,7 +8304,6 @@ func TestService_Statements(t *testing.T) {
 				accountID: validAccID,
 				statement: &Statement{
 					ID:            validSID,
-					SpaceID:       validSpace,
 					AccountID:     validAccID,
 					Status:        StatementStatusInProgress,
 					StatementDate: now,
@@ -8415,7 +8314,7 @@ func TestService_Statements(t *testing.T) {
 					RawContent: "some random data",
 				},
 				setupStore: func() *AccountStoreMock {
-					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID, SpaceID: validSpace}})
+					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID}})
 				},
 				wantErr: true,
 			},
@@ -8424,7 +8323,6 @@ func TestService_Statements(t *testing.T) {
 				accountID: validAccID,
 				statement: &Statement{
 					ID:            validSID,
-					SpaceID:       validSpace,
 					AccountID:     validAccID,
 					Status:        StatementStatusInProgress,
 					StatementDate: now,
@@ -8443,7 +8341,7 @@ func TestService_Statements(t *testing.T) {
 					RawContent: "Date,Description,Amount\n2026-08-01,Store,-15.50",
 				},
 				setupStore: func() *AccountStoreMock {
-					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID, SpaceID: validSpace}})
+					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID}})
 				},
 				wantErr: false,
 			},
@@ -8452,7 +8350,6 @@ func TestService_Statements(t *testing.T) {
 				accountID: validAccID,
 				statement: &Statement{
 					ID:            validSID,
-					SpaceID:       validSpace,
 					AccountID:     validAccID,
 					Status:        "UNKNOWN_STATUS",
 					StatementDate: now,
@@ -8461,7 +8358,7 @@ func TestService_Statements(t *testing.T) {
 					RawContent:    "data",
 				},
 				setupStore: func() *AccountStoreMock {
-					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID, SpaceID: validSpace}})
+					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID}})
 				},
 				wantErr: true,
 			},
@@ -8472,7 +8369,8 @@ func TestService_Statements(t *testing.T) {
 				store := newStatementStoreMock(nil, nil)
 				accStore := tt.setupStore()
 				svc := NewService(Dependencies{StatementStore: store, AccountStore: accStore})
-				stmt, err := svc.ImportStatement(ctx, tt.accountID, tt.statement)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				stmt, err := svc.ImportStatement(ctx, rCtx, tt.accountID, tt.statement)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ImportStatement() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -8515,10 +8413,10 @@ func TestService_Statements(t *testing.T) {
 				id:      validSID,
 				setupStore: func() *StatementStoreMock {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{
-						ID:      validSID,
-						SpaceID: validSpace,
-						Status:  StatementStatusCompleted,
+					rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+					_ = store.Create(ctx, rCtx, &Statement{
+						ID:     validSID,
+						Status: StatementStatusCompleted,
 					}, nil)
 					return store
 				},
@@ -8530,10 +8428,10 @@ func TestService_Statements(t *testing.T) {
 				id:      validSID,
 				setupStore: func() *StatementStoreMock {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{
-						ID:      validSID,
-						SpaceID: validSpace,
-						Status:  StatementStatusInProgress,
+					rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+					_ = store.Create(ctx, rCtx, &Statement{
+						ID:     validSID,
+						Status: StatementStatusInProgress,
 					}, nil)
 					return store
 				},
@@ -8545,7 +8443,8 @@ func TestService_Statements(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				store := tt.setupStore()
 				svc := NewService(Dependencies{StatementStore: store})
-				err := svc.DeleteStatement(ctx, tt.spaceID, tt.id, DeleteOptions{})
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				err := svc.DeleteStatement(ctx, rCtx, tt.id, DeleteOptions{})
 				if (err != nil) != tt.wantErr {
 					t.Errorf("DeleteStatement() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -8567,7 +8466,8 @@ func TestService_Statements(t *testing.T) {
 				id:      validSID,
 				setupStore: func() *StatementStoreMock {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{ID: validSID, SpaceID: validSpace}, nil)
+					rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+					_ = store.Create(ctx, rCtx, &Statement{ID: validSID}, nil)
 					return store
 				},
 				wantErr: false,
@@ -8609,7 +8509,8 @@ func TestService_Statements(t *testing.T) {
 					StatementStore:   store,
 					TransactionStore: txnStore,
 				})
-				_, err := svc.ListStatementLines(ctx, tt.spaceID, tt.id)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				_, err := svc.ListStatementLines(ctx, rCtx, tt.id)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ListStatementLines() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -8660,7 +8561,7 @@ func TestService_Statements(t *testing.T) {
 				mask: []string{"status"},
 				setupStore: func() *StatementStoreMock {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{ID: validSID, SpaceID: validSpace}, []*StatementLine{
+					_ = store.Create(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), &Statement{ID: validSID}, []*StatementLine{
 						{
 							ID:          validLineID,
 							StatementID: validSID,
@@ -8682,7 +8583,8 @@ func TestService_Statements(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				store := tt.setupStore()
 				svc := NewService(Dependencies{StatementStore: store})
-				res, err := svc.UpdateStatementLine(ctx, validSpace, tt.line, tt.mask)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				res, err := svc.UpdateStatementLine(ctx, rCtx, tt.line, tt.mask)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("UpdateStatementLine() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -8705,15 +8607,13 @@ func TestService_Statements(t *testing.T) {
 				name: "cannot update completed statement",
 				statement: &Statement{
 					ID:      validSID,
-					SpaceID: validSpace,
 					Version: 1,
 				},
 				mask: []string{"statement_ending_balance"},
 				setupStore: func() *StatementStoreMock {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{
+					_ = store.Create(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), &Statement{
 						ID:      validSID,
-						SpaceID: validSpace,
 						Status:  StatementStatusCompleted,
 						Version: 1,
 					}, nil)
@@ -8725,16 +8625,14 @@ func TestService_Statements(t *testing.T) {
 				name: "successful patch update",
 				statement: &Statement{
 					ID:                     validSID,
-					SpaceID:                validSpace,
 					StatementEndingBalance: 9000,
 					Version:                1,
 				},
 				mask: []string{"statement_ending_balance"},
 				setupStore: func() *StatementStoreMock {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{
+					_ = store.Create(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), &Statement{
 						ID:            validSID,
-						SpaceID:       validSpace,
 						AccountID:     validAccID,
 						Status:        StatementStatusInProgress,
 						StatementDate: now,
@@ -8753,7 +8651,8 @@ func TestService_Statements(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				store := tt.setupStore()
 				svc := NewService(Dependencies{StatementStore: store})
-				res, err := svc.UpdateStatement(ctx, validSpace, tt.statement, tt.mask)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				res, err := svc.UpdateStatement(ctx, rCtx, tt.statement, tt.mask)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("UpdateStatement() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -8805,9 +8704,8 @@ func TestService_Statements(t *testing.T) {
 				id:      validSID,
 				setupStore: func() *StatementStoreMock {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{
+					_ = store.Create(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), &Statement{
 						ID:                       validSID,
-						SpaceID:                  validSpace,
 						Status:                   StatementStatusCompleted,
 						StatementStartingBalance: 1000,
 						StatementEndingBalance:   2000,
@@ -8822,9 +8720,8 @@ func TestService_Statements(t *testing.T) {
 				id:      validSID,
 				setupStore: func() *StatementStoreMock {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{
+					_ = store.Create(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), &Statement{
 						ID:                       validSID,
-						SpaceID:                  validSpace,
 						AccountID:                validAccID,
 						Status:                   StatementStatusInProgress,
 						StatementStartingBalance: 1000,
@@ -8851,7 +8748,8 @@ func TestService_Statements(t *testing.T) {
 					StatementStore:   store,
 					TransactionStore: txnStore,
 				})
-				stmt, lines, err := svc.InvertStatementSigns(ctx, tt.spaceID, tt.id)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				stmt, lines, err := svc.InvertStatementSigns(ctx, rCtx, tt.id)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("InvertStatementSigns() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -8914,10 +8812,10 @@ func TestService_Statements(t *testing.T) {
 				id:      validSID,
 				setupStores: func() Dependencies {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{
-						ID:      validSID,
-						SpaceID: validSpace,
-						Status:  StatementStatusCompleted,
+					rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+					_ = store.Create(ctx, rCtx, &Statement{
+						ID:     validSID,
+						Status: StatementStatusCompleted,
 					}, nil)
 					return Dependencies{StatementStore: store}
 				},
@@ -8929,9 +8827,8 @@ func TestService_Statements(t *testing.T) {
 				id:      validSID,
 				setupStores: func() Dependencies {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{
+					_ = store.Create(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), &Statement{
 						ID:                       validSID,
-						SpaceID:                  validSpace,
 						AccountID:                validAccID,
 						Status:                   StatementStatusInProgress,
 						StatementStartingBalance: 1000,
@@ -8954,9 +8851,8 @@ func TestService_Statements(t *testing.T) {
 				id:      validSID,
 				setupStores: func() Dependencies {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{
+					_ = store.Create(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), &Statement{
 						ID:                       validSID,
-						SpaceID:                  validSpace,
 						AccountID:                validAccID,
 						Status:                   StatementStatusInProgress,
 						StatementStartingBalance: 1000,
@@ -8982,9 +8878,8 @@ func TestService_Statements(t *testing.T) {
 				id:      validSID,
 				setupStores: func() Dependencies {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{
+					_ = store.Create(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), &Statement{
 						ID:                       validSID,
-						SpaceID:                  validSpace,
 						AccountID:                validAccID,
 						Status:                   StatementStatusInProgress,
 						StatementStartingBalance: 1000,
@@ -8999,7 +8894,7 @@ func TestService_Statements(t *testing.T) {
 						},
 					})
 					accStore := newAccountStoreMock(map[AccountID]*Account{
-						validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD"},
+						validAccID: {ID: validAccID, Currency: "USD"},
 					})
 					return Dependencies{
 						StatementStore: store,
@@ -9015,9 +8910,8 @@ func TestService_Statements(t *testing.T) {
 				setupStores: func() Dependencies {
 					store := newStatementStoreMock(nil, nil)
 					overwrite := true
-					_ = store.Create(ctx, &Statement{
+					_ = store.Create(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), &Statement{
 						ID:                       validSID,
-						SpaceID:                  validSpace,
 						AccountID:                validAccID,
 						Status:                   StatementStatusInProgress,
 						StatementStartingBalance: 1000,
@@ -9034,12 +8928,11 @@ func TestService_Statements(t *testing.T) {
 						},
 					})
 					accStore := newAccountStoreMock(map[AccountID]*Account{
-						validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", CurrentBalance: 10000, IsActive: true},
+						validAccID: {ID: validAccID, Currency: "USD", CurrentBalance: 10000, IsActive: true},
 					})
 					txnStore := newTransactionStoreMock(map[TransactionID]*Transaction{
 						existingTxnID: {
 							ID:        existingTxnID,
-							SpaceID:   validSpace,
 							Type:      TransactionTypeIncome,
 							AccountID: &validAccID,
 							Amount:    1500,
@@ -9063,9 +8956,8 @@ func TestService_Statements(t *testing.T) {
 					lineIncomeID, _ := NewStatementLineID()
 					lineSkipID, _ := NewStatementLineID()
 
-					_ = store.Create(ctx, &Statement{
+					_ = store.Create(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), &Statement{
 						ID:                       validSID,
-						SpaceID:                  validSpace,
 						AccountID:                validAccID,
 						Status:                   StatementStatusInProgress,
 						StatementStartingBalance: 10000,
@@ -9109,12 +9001,11 @@ func TestService_Statements(t *testing.T) {
 					})
 
 					accStore := newAccountStoreMock(map[AccountID]*Account{
-						validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", CurrentBalance: 10000, IsActive: true},
+						validAccID: {ID: validAccID, Currency: "USD", CurrentBalance: 10000, IsActive: true},
 					})
 					bgtStore := newBudgetStoreMock(map[BudgetID]*Budget{
 						validBID: {
 							ID:          validBID,
-							SpaceID:     validSpace,
 							Name:        "General",
 							Status:      BudgetStatusActive,
 							LimitAmount: 50000,
@@ -9145,9 +9036,8 @@ func TestService_Statements(t *testing.T) {
 				id:      validSID,
 				setupStores: func() Dependencies {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{
+					_ = store.Create(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), &Statement{
 						ID:                       validSID,
-						SpaceID:                  validSpace,
 						AccountID:                validAccID,
 						Status:                   StatementStatusInProgress,
 						StatementStartingBalance: 1000,
@@ -9164,7 +9054,7 @@ func TestService_Statements(t *testing.T) {
 						},
 					})
 					accStore := newAccountStoreMock(map[AccountID]*Account{
-						validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", CurrentBalance: 10000, IsActive: true},
+						validAccID: {ID: validAccID, Currency: "USD", CurrentBalance: 10000, IsActive: true},
 					})
 					return Dependencies{
 						StatementStore: store,
@@ -9179,9 +9069,8 @@ func TestService_Statements(t *testing.T) {
 				id:      validSID,
 				setupStores: func() Dependencies {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{
+					_ = store.Create(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), &Statement{
 						ID:                       validSID,
-						SpaceID:                  validSpace,
 						AccountID:                validAccID,
 						Status:                   StatementStatusInProgress,
 						StatementStartingBalance: 5000,
@@ -9200,8 +9089,8 @@ func TestService_Statements(t *testing.T) {
 						},
 					})
 					accStore := newAccountStoreMock(map[AccountID]*Account{
-						validAccID:   {ID: validAccID, SpaceID: validSpace, Currency: "USD", CurrentBalance: 10000, IsActive: true},
-						counterAccID: {ID: counterAccID, SpaceID: validSpace, Currency: "USD", CurrentBalance: 5000, IsActive: true},
+						validAccID:   {ID: validAccID, Currency: "USD", CurrentBalance: 10000, IsActive: true},
+						counterAccID: {ID: counterAccID, Currency: "USD", CurrentBalance: 5000, IsActive: true},
 					})
 					setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
 						validSpace: {BaseCurrency: "USD"},
@@ -9224,9 +9113,8 @@ func TestService_Statements(t *testing.T) {
 				id:      validSID,
 				setupStores: func() Dependencies {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{
+					_ = store.Create(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), &Statement{
 						ID:                       validSID,
-						SpaceID:                  validSpace,
 						AccountID:                validAccID,
 						Status:                   StatementStatusInProgress,
 						StatementStartingBalance: 5000,
@@ -9245,12 +9133,11 @@ func TestService_Statements(t *testing.T) {
 						},
 					})
 					accStore := newAccountStoreMock(map[AccountID]*Account{
-						validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", CurrentBalance: 10000, IsActive: true},
+						validAccID: {ID: validAccID, Currency: "USD", CurrentBalance: 10000, IsActive: true},
 					})
 					schedStore := newScheduledTransactionStoreMock(map[ScheduledTransactionID]*ScheduledTransaction{
 						validPID: {
 							ID:       validPID,
-							SpaceID:  validSpace,
 							Amount:   2000,
 							BudgetID: &validBID,
 							Status:   ScheduledTransactionPending,
@@ -9259,7 +9146,6 @@ func TestService_Statements(t *testing.T) {
 					bgtStore := newBudgetStoreMock(map[BudgetID]*Budget{
 						validBID: {
 							ID:          validBID,
-							SpaceID:     validSpace,
 							Name:        "Utilities",
 							Status:      BudgetStatusActive,
 							LimitAmount: 50000,
@@ -9291,9 +9177,8 @@ func TestService_Statements(t *testing.T) {
 				id:      validSID,
 				setupStores: func() Dependencies {
 					store := newStatementStoreMock(nil, nil)
-					_ = store.Create(ctx, &Statement{
+					_ = store.Create(ctx, NewRequestContext(validSpace, "usr_1", time.UTC, "USD"), &Statement{
 						ID:                       validSID,
-						SpaceID:                  validSpace,
 						AccountID:                validAccID,
 						Status:                   StatementStatusInProgress,
 						StatementStartingBalance: 5000,
@@ -9313,12 +9198,11 @@ func TestService_Statements(t *testing.T) {
 						},
 					})
 					accStore := newAccountStoreMock(map[AccountID]*Account{
-						validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", CurrentBalance: 10000, IsActive: true},
+						validAccID: {ID: validAccID, Currency: "USD", CurrentBalance: 10000, IsActive: true},
 					})
 					brwStore := newBorrowingStoreMock(map[BorrowingID]*Borrowing{
 						validBrwID: {
 							ID:              validBrwID,
-							SpaceID:         validSpace,
 							TotalAmount:     10000,
 							RemainingAmount: 5000,
 							Status:          BorrowingStatusActive,
@@ -9327,7 +9211,6 @@ func TestService_Statements(t *testing.T) {
 					bgtStore := newBudgetStoreMock(map[BudgetID]*Budget{
 						validBID: {
 							ID:          validBID,
-							SpaceID:     validSpace,
 							Name:        "Loan Repayment",
 							Status:      BudgetStatusActive,
 							LimitAmount: 50000,
@@ -9359,7 +9242,8 @@ func TestService_Statements(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				deps := tt.setupStores()
 				svc := NewService(deps)
-				stmt, err := svc.CompleteStatement(ctx, tt.spaceID, tt.id)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				stmt, err := svc.CompleteStatement(ctx, rCtx, tt.id)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("CompleteStatement() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -9373,7 +9257,7 @@ func TestService_Statements(t *testing.T) {
 
 // --- Tests from service_transfer_test.go ---
 
-func TestService_TransferOperations_Table(t *testing.T) {
+func TestService_TransferOperations(t *testing.T) {
 	ctx := context.Background()
 	rawSpace, _ := id.Generate("spc_")
 	spaceID := SpaceID(rawSpace)
@@ -9426,7 +9310,6 @@ func TestService_TransferOperations_Table(t *testing.T) {
 				if tt.exists {
 					data[trsfID] = &Transfer{
 						ID:                   trsfID,
-						SpaceID:              spaceID,
 						SourceAccountID:      srcAccID,
 						DestinationAccountID: dstAccID,
 						SourceAmount:         1000,
@@ -9436,7 +9319,8 @@ func TestService_TransferOperations_Table(t *testing.T) {
 				}
 				store := newTransferStoreMock(data)
 				svc := NewService(Dependencies{TransferStore: store})
-				res, err := svc.GetTransfer(ctx, tt.spaceID, tt.id)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				res, err := svc.GetTransfer(ctx, rCtx, tt.id)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("GetTransfer() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -9469,7 +9353,8 @@ func TestService_TransferOperations_Table(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				store := newTransferStoreMock(nil)
 				svc := NewService(Dependencies{TransferStore: store})
-				_, _, err := svc.ListTransfers(ctx, tt.spaceID, 10, "")
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				_, _, err := svc.ListTransfers(ctx, rCtx, 10, "")
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ListTransfers() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -9489,7 +9374,6 @@ func TestService_TransferOperations_Table(t *testing.T) {
 				name: "invalid transfer properties (zero amount)",
 				transfer: &Transfer{
 					ID:                   trsfID,
-					SpaceID:              spaceID,
 					SourceAccountID:      srcAccID,
 					DestinationAccountID: dstAccID,
 					SourceAmount:         0,
@@ -9508,7 +9392,6 @@ func TestService_TransferOperations_Table(t *testing.T) {
 				name: "source and destination amounts differ for single currency",
 				transfer: &Transfer{
 					ID:                   trsfID,
-					SpaceID:              spaceID,
 					SourceAccountID:      srcAccID,
 					DestinationAccountID: dstAccID,
 					SourceAmount:         1000,
@@ -9517,8 +9400,8 @@ func TestService_TransferOperations_Table(t *testing.T) {
 				},
 				setupStore: func() (*AccountStoreMock, *TransferStoreMock, *TransactionStoreMock, *SettingsStoreMock) {
 					accStore := newAccountStoreMock(map[AccountID]*Account{
-						srcAccID: {ID: srcAccID, SpaceID: spaceID, Name: "Src", Currency: "USD", IsActive: true},
-						dstAccID: {ID: dstAccID, SpaceID: spaceID, Name: "Dst", Currency: "USD", IsActive: true},
+						srcAccID: {ID: srcAccID, Name: "Src", Currency: "USD", IsActive: true},
+						dstAccID: {ID: dstAccID, Name: "Dst", Currency: "USD", IsActive: true},
 					})
 					return accStore,
 						newTransferStoreMock(nil),
@@ -9531,7 +9414,6 @@ func TestService_TransferOperations_Table(t *testing.T) {
 				name: "valid transfer creates parent and both leg transactions",
 				transfer: &Transfer{
 					ID:                   trsfID,
-					SpaceID:              spaceID,
 					SourceAccountID:      srcAccID,
 					DestinationAccountID: dstAccID,
 					SourceAmount:         5000,
@@ -9540,8 +9422,8 @@ func TestService_TransferOperations_Table(t *testing.T) {
 				},
 				setupStore: func() (*AccountStoreMock, *TransferStoreMock, *TransactionStoreMock, *SettingsStoreMock) {
 					accStore := newAccountStoreMock(map[AccountID]*Account{
-						srcAccID: {ID: srcAccID, SpaceID: spaceID, Name: "Src", Currency: "USD", CurrentBalance: 10000, IsActive: true},
-						dstAccID: {ID: dstAccID, SpaceID: spaceID, Name: "Dst", Currency: "USD", CurrentBalance: 2000, IsActive: true},
+						srcAccID: {ID: srcAccID, Name: "Src", Currency: "USD", CurrentBalance: 10000, IsActive: true},
+						dstAccID: {ID: dstAccID, Name: "Dst", Currency: "USD", CurrentBalance: 2000, IsActive: true},
 					})
 					return accStore,
 						newTransferStoreMock(nil),
@@ -9561,7 +9443,8 @@ func TestService_TransferOperations_Table(t *testing.T) {
 					TransactionStore: txnStore,
 					SettingsStore:    settingsStore,
 				})
-				created, outLeg, inLeg, err := svc.createTransfer(ctx, tt.transfer, CreateTransferOpts{})
+				rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
+				created, outLeg, inLeg, err := svc.createTransfer(ctx, rCtx, tt.transfer, CreateTransferOpts{})
 				if (err != nil) != tt.wantErr {
 					t.Errorf("createTransfer() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -9605,7 +9488,6 @@ func TestService_TransferOperations_Table(t *testing.T) {
 					trsfMap := map[TransferID]*Transfer{
 						trsfID: {
 							ID:                   trsfID,
-							SpaceID:              spaceID,
 							SourceAccountID:      srcAccID,
 							DestinationAccountID: dstAccID,
 							SourceAmount:         5000,
@@ -9619,7 +9501,6 @@ func TestService_TransferOperations_Table(t *testing.T) {
 					txnMap := map[TransactionID]*Transaction{
 						tID1: {
 							ID:        tID1,
-							SpaceID:   spaceID,
 							Type:      TransactionTypeTransferOut,
 							AccountID: &srcAccID,
 							Amount:    5000,
@@ -9627,7 +9508,6 @@ func TestService_TransferOperations_Table(t *testing.T) {
 						},
 						tID2: {
 							ID:        tID2,
-							SpaceID:   spaceID,
 							Type:      TransactionTypeTransferIn,
 							AccountID: &dstAccID,
 							Amount:    5000,
@@ -9636,8 +9516,8 @@ func TestService_TransferOperations_Table(t *testing.T) {
 					}
 					txnStore := newTransactionStoreMock(txnMap)
 					accStore := newAccountStoreMock(map[AccountID]*Account{
-						srcAccID: {ID: srcAccID, SpaceID: spaceID, CurrentBalance: 5000, IsActive: true},
-						dstAccID: {ID: dstAccID, SpaceID: spaceID, CurrentBalance: 7000, IsActive: true},
+						srcAccID: {ID: srcAccID, CurrentBalance: 5000, IsActive: true},
+						dstAccID: {ID: dstAccID, CurrentBalance: 7000, IsActive: true},
 					})
 					return trsfStore, txnStore, accStore, trsfMap, txnMap
 				},
@@ -9653,7 +9533,8 @@ func TestService_TransferOperations_Table(t *testing.T) {
 					TransactionStore: txnStore,
 					AccountStore:     accStore,
 				})
-				err := svc.DeleteTransfer(ctx, spaceID, tt.transferID)
+				rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
+				err := svc.DeleteTransfer(ctx, rCtx, tt.transferID)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("DeleteTransfer() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -9689,7 +9570,6 @@ func TestService_Transactions(t *testing.T) {
 			{
 				name: "valid income transaction",
 				txn: &Transaction{
-					SpaceID:         validSpace,
 					AccountID:       &validAccID,
 					Amount:          10000,
 					Currency:        "USD",
@@ -9703,7 +9583,6 @@ func TestService_Transactions(t *testing.T) {
 			{
 				name: "missing settings fails creation",
 				txn: &Transaction{
-					SpaceID:         validSpace,
 					AccountID:       &validAccID,
 					Amount:          10000,
 					Currency:        "USD",
@@ -9720,13 +9599,12 @@ func TestService_Transactions(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				setData := make(map[SpaceID]*FinanceSettings)
 				if tt.setupSet {
-					setData[validSpace] = &FinanceSettings{SpaceID: validSpace, BaseCurrency: "USD"}
+					setData[validSpace] = &FinanceSettings{BaseCurrency: "USD"}
 				}
 				accData := make(map[AccountID]*Account)
 				if tt.setupAcc {
 					accData[validAccID] = &Account{
 						ID:             validAccID,
-						SpaceID:        validSpace,
 						Currency:       "USD",
 						IsActive:       true,
 						CurrentBalance: 50000,
@@ -9744,7 +9622,12 @@ func TestService_Transactions(t *testing.T) {
 					TransactionEventStore: eventStore,
 				})
 
-				res, err := svc.CreateIncome(ctx, tt.txn)
+				baseCurrency := Currency("")
+				if tt.setupSet {
+					baseCurrency = "USD"
+				}
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, baseCurrency)
+				res, err := svc.CreateIncome(ctx, rCtx, tt.txn)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("CreateIncome() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -9800,11 +9683,12 @@ func TestService_Transactions(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				txnData := make(map[TransactionID]*Transaction)
 				if tt.exists {
-					txnData[validTID] = &Transaction{ID: validTID, SpaceID: validSpace, Amount: 1000}
+					txnData[validTID] = &Transaction{ID: validTID, Amount: 1000}
 				}
 				txnStore := newTransactionStoreMock(txnData)
 				svc := NewService(Dependencies{TransactionStore: txnStore})
-				res, err := svc.GetTransaction(ctx, tt.spaceID, tt.id)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				res, err := svc.GetTransaction(ctx, rCtx, tt.id)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("GetTransaction() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -9819,7 +9703,6 @@ func TestService_Transactions(t *testing.T) {
 		validTID, _ := NewTransactionID()
 		existingTxn := &Transaction{
 			ID:              validTID,
-			SpaceID:         validSpace,
 			AccountID:       &validAccID,
 			Amount:          10000,
 			AmountInBase:    10000,
@@ -9839,7 +9722,6 @@ func TestService_Transactions(t *testing.T) {
 				name: "valid update with diff event",
 				updateTxn: &Transaction{
 					ID:              validTID,
-					SpaceID:         validSpace,
 					AccountID:       &validAccID,
 					Amount:          15000,
 					AmountInBase:    15000,
@@ -9854,7 +9736,6 @@ func TestService_Transactions(t *testing.T) {
 				name: "transaction not found",
 				updateTxn: &Transaction{
 					ID:              validTID,
-					SpaceID:         validSpace,
 					AccountID:       &validAccID,
 					Amount:          15000,
 					Currency:        "USD",
@@ -9868,10 +9749,10 @@ func TestService_Transactions(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
-					validSpace: {SpaceID: validSpace, BaseCurrency: "USD"},
+					validSpace: {BaseCurrency: "USD"},
 				})
 				accStore := newAccountStoreMock(map[AccountID]*Account{
-					validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", IsActive: true, CurrentBalance: 50000},
+					validAccID: {ID: validAccID, Currency: "USD", IsActive: true, CurrentBalance: 50000},
 				})
 				txnData := make(map[TransactionID]*Transaction)
 				if tt.setupExist {
@@ -9888,7 +9769,8 @@ func TestService_Transactions(t *testing.T) {
 					TransactionEventStore: eventStore,
 				})
 
-				res, err := svc.UpdateIncome(ctx, tt.updateTxn)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				res, err := svc.UpdateIncome(ctx, rCtx, tt.updateTxn)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("UpdateIncome() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -9921,7 +9803,8 @@ func TestService_Transactions(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				txnStore := newTransactionStoreMock(nil)
 				svc := NewService(Dependencies{TransactionStore: txnStore})
-				_, err := svc.ListTransactions(ctx, tt.spaceID, &TransactionFilter{})
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				_, err := svc.ListTransactions(ctx, rCtx, &TransactionFilter{})
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ListTransactions() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -9962,7 +9845,8 @@ func TestService_Transactions(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				eventStore := newTransactionEventStoreMock(nil)
 				svc := NewService(Dependencies{TransactionEventStore: eventStore})
-				_, err := svc.ListTransactionEvents(ctx, tt.spaceID, tt.txnID)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				_, err := svc.ListTransactionEvents(ctx, rCtx, tt.txnID)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("ListTransactionEvents() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -10008,7 +9892,6 @@ func TestService_Transactions(t *testing.T) {
 					txnStore := newTransactionStoreMock(map[TransactionID]*Transaction{
 						validTID: {
 							ID:        validTID,
-							SpaceID:   validSpace,
 							Type:      TransactionTypeExpense,
 							Amount:    2000,
 							AccountID: &validAccID,
@@ -10017,7 +9900,6 @@ func TestService_Transactions(t *testing.T) {
 					accStore := newAccountStoreMock(map[AccountID]*Account{
 						validAccID: {
 							ID:             validAccID,
-							SpaceID:        validSpace,
 							Type:           AccountTypeBank,
 							CurrentBalance: 8000,
 							IsActive:       true,
@@ -10036,7 +9918,8 @@ func TestService_Transactions(t *testing.T) {
 					TransactionStore: txnStore,
 					AccountStore:     accStore,
 				})
-				err := svc.DeleteTransaction(ctx, tt.spaceID, tt.txnID)
+				rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
+				err := svc.DeleteTransaction(ctx, rCtx, tt.txnID)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("DeleteTransaction() error = %v, wantErr %v", err, tt.wantErr)
 				}
@@ -10056,7 +9939,6 @@ func TestService_Transactions(t *testing.T) {
 			{
 				name: "missing budget ID fails",
 				txn: &Transaction{
-					SpaceID:         validSpace,
 					Amount:          5000,
 					Currency:        "USD",
 					TransactionDate: now,
@@ -10073,7 +9955,6 @@ func TestService_Transactions(t *testing.T) {
 			{
 				name: "valid expense creates transaction",
 				txn: &Transaction{
-					SpaceID:         validSpace,
 					BudgetID:        &validBID,
 					Amount:          5000,
 					Currency:        "USD",
@@ -10085,7 +9966,6 @@ func TestService_Transactions(t *testing.T) {
 					bStore := newBudgetStoreMock(map[BudgetID]*Budget{
 						validBID: {
 							ID:          validBID,
-							SpaceID:     validSpace,
 							Name:        "Food",
 							Status:      BudgetStatusActive,
 							LimitAmount: 50000,
@@ -10101,7 +9981,6 @@ func TestService_Transactions(t *testing.T) {
 					accStore := newAccountStoreMock(map[AccountID]*Account{
 						validAccID: {
 							ID:             validAccID,
-							SpaceID:        validSpace,
 							Type:           AccountTypeBank,
 							CurrentBalance: 10000,
 							IsActive:       true,
@@ -10123,7 +10002,8 @@ func TestService_Transactions(t *testing.T) {
 					TransactionStore: txnStore,
 					AccountStore:     accStore,
 				})
-				res, err := svc.CreateExpense(ctx, tt.txn)
+				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
+				res, err := svc.CreateExpense(ctx, rCtx, tt.txn)
 				if (err != nil) != tt.wantErr {
 					t.Errorf("CreateExpense() error = %v, wantErr %v", err, tt.wantErr)
 				}

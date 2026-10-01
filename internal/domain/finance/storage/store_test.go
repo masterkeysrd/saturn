@@ -55,6 +55,7 @@ func (m *mockDB) Rebind(query string) string {
 
 func TestAccountStore(t *testing.T) {
 	ctx := context.Background()
+	rCtx := finance.NewContext("sp_1", "user_1", time.UTC, "USD")
 
 	t.Run("GetByID returns translated NotExist error and canonical Op", func(t *testing.T) {
 		mock := &mockDB{
@@ -64,7 +65,7 @@ func TestAccountStore(t *testing.T) {
 		}
 
 		store := NewAccountStore(mock)
-		acc, err := store.GetByID(ctx, "sp_1", "acc_nonexistent")
+		acc, err := store.GetByID(ctx, rCtx, "acc_nonexistent")
 		if acc != nil {
 			t.Errorf("expected nil account, got %v", acc)
 		}
@@ -86,11 +87,10 @@ func TestAccountStore(t *testing.T) {
 		store := NewAccountStore(mock)
 		acc := &finance.Account{
 			ID:      "acc_1",
-			SpaceID: "sp_1",
 			Version: 2,
 		}
 
-		err := store.Update(ctx, acc)
+		err := store.Update(ctx, rCtx, acc)
 		if !errors.Is(err, errors.Conflict) {
 			t.Errorf("expected Conflict error, got %v", err)
 		}
@@ -112,11 +112,10 @@ func TestAccountStore(t *testing.T) {
 		store := NewAccountStore(mock)
 		acc := &finance.Account{
 			ID:      "acc_1",
-			SpaceID: "sp_1",
 			Version: 2,
 		}
 
-		err := store.Update(ctx, acc)
+		err := store.Update(ctx, rCtx, acc)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -133,7 +132,7 @@ func TestAccountStore(t *testing.T) {
 		}
 
 		store := NewAccountStore(mock)
-		err := store.Delete(ctx, "sp_1", "acc_1", finance.DeleteOptions{})
+		err := store.Delete(ctx, rCtx, "acc_1", finance.DeleteOptions{})
 		if !errors.Is(err, errors.NotExist) {
 			t.Errorf("expected NotExist error, got %v", err)
 		}
@@ -145,6 +144,7 @@ func TestAccountStore(t *testing.T) {
 
 func TestBudgetStore(t *testing.T) {
 	ctx := context.Background()
+	rCtx := finance.NewContext("sp_1", "user_1", time.UTC, "USD")
 
 	t.Run("GetByID returns translated NotExist error", func(t *testing.T) {
 		mock := &mockDB{
@@ -154,7 +154,7 @@ func TestBudgetStore(t *testing.T) {
 		}
 
 		store := NewBudgetStore(mock)
-		b, err := store.GetByID(ctx, "sp_1", "bgt_nonexistent")
+		b, err := store.GetByID(ctx, rCtx, "bgt_nonexistent")
 		if b != nil {
 			t.Errorf("expected nil budget, got %v", b)
 		}
@@ -176,11 +176,10 @@ func TestBudgetStore(t *testing.T) {
 		store := NewBudgetStore(mock)
 		b := &finance.Budget{
 			ID:      "bgt_1",
-			SpaceID: "sp_1",
 			Version: 5,
 		}
 
-		err := store.Update(ctx, b)
+		err := store.Update(ctx, rCtx, b)
 		if !errors.Is(err, errors.Conflict) {
 			t.Errorf("expected Conflict error, got %v", err)
 		}
@@ -195,6 +194,7 @@ func TestBudgetStore(t *testing.T) {
 
 func TestTransactionStore(t *testing.T) {
 	ctx := context.Background()
+	rCtx := finance.NewContext("sp_1", "user_1", time.UTC, "USD")
 
 	t.Run("GetByID returns NotExist error", func(t *testing.T) {
 		mock := &mockDB{
@@ -204,7 +204,7 @@ func TestTransactionStore(t *testing.T) {
 		}
 
 		store := NewTransactionStore(mock)
-		tx, err := store.GetByID(ctx, "sp_1", "tx_nonexistent")
+		tx, err := store.GetByID(ctx, rCtx, "tx_nonexistent")
 		if tx != nil {
 			t.Errorf("expected nil transaction, got %v", tx)
 		}
@@ -224,7 +224,7 @@ func TestTransactionStore(t *testing.T) {
 		}
 
 		store := NewTransactionStore(mock)
-		err := store.Delete(ctx, "tx_1")
+		err := store.Delete(ctx, rCtx, "tx_1")
 		if !errors.Is(err, errors.NotExist) {
 			t.Errorf("expected NotExist error, got %v", err)
 		}
@@ -236,6 +236,7 @@ func TestTransactionStore(t *testing.T) {
 
 func TestStatementStore(t *testing.T) {
 	ctx := context.Background()
+	rCtx := finance.NewContext("sp_1", "user_1", time.UTC, "USD")
 
 	t.Run("GetByID returns NotExist error", func(t *testing.T) {
 		mock := &mockDB{
@@ -245,7 +246,7 @@ func TestStatementStore(t *testing.T) {
 		}
 
 		store := NewStatementStore(mock)
-		stmt, err := store.GetByID(ctx, "sp_1", "stmt_nonexistent")
+		stmt, err := store.GetByID(ctx, rCtx, "stmt_nonexistent")
 		if stmt != nil {
 			t.Errorf("expected nil statement, got %v", stmt)
 		}
@@ -267,11 +268,10 @@ func TestStatementStore(t *testing.T) {
 		store := NewStatementStore(mock)
 		stmt := &finance.Statement{
 			ID:      "stmt_1",
-			SpaceID: "sp_1",
 			Version: 3,
 		}
 
-		err := store.Update(ctx, stmt)
+		err := store.Update(ctx, rCtx, stmt)
 		if !errors.Is(err, errors.Conflict) {
 			t.Errorf("expected Conflict error, got %v", err)
 		}
@@ -296,7 +296,7 @@ func TestStatementStore(t *testing.T) {
 			Version: 2,
 		}
 
-		err := store.UpdateLineDraft(ctx, line)
+		err := store.UpdateLineDraft(ctx, rCtx, line)
 		if !errors.Is(err, errors.Conflict) {
 			t.Errorf("expected Conflict error, got %v", err)
 		}
@@ -311,6 +311,7 @@ func TestStatementStore(t *testing.T) {
 
 func TestBorrowingStore(t *testing.T) {
 	ctx := context.Background()
+	rCtx := finance.NewContext("sp_1", "user_1", time.UTC, "USD")
 
 	t.Run("GetByID returns NotExist error", func(t *testing.T) {
 		mock := &mockDB{
@@ -320,7 +321,7 @@ func TestBorrowingStore(t *testing.T) {
 		}
 
 		store := NewBorrowingStore(mock)
-		b, err := store.GetByID(ctx, "sp_1", "bor_nonexistent")
+		b, err := store.GetByID(ctx, rCtx, "bor_nonexistent")
 		if b != nil {
 			t.Errorf("expected nil borrowing, got %v", b)
 		}
@@ -342,11 +343,10 @@ func TestBorrowingStore(t *testing.T) {
 		store := NewBorrowingStore(mock)
 		b := &finance.Borrowing{
 			ID:      "bor_1",
-			SpaceID: "sp_1",
 			Version: 2,
 		}
 
-		err := store.Update(ctx, b)
+		err := store.Update(ctx, rCtx, b)
 		if !errors.Is(err, errors.Conflict) {
 			t.Errorf("expected Conflict error, got %v", err)
 		}
@@ -361,6 +361,7 @@ func TestBorrowingStore(t *testing.T) {
 
 func TestInstitutionStore(t *testing.T) {
 	ctx := context.Background()
+	rCtx := finance.NewContext("sp_1", "user_1", time.UTC, "USD")
 
 	t.Run("GetByID returns NotExist error", func(t *testing.T) {
 		mock := &mockDB{
@@ -370,7 +371,7 @@ func TestInstitutionStore(t *testing.T) {
 		}
 
 		store := NewInstitutionStore(mock)
-		inst, err := store.GetByID(ctx, "sp_1", "inst_nonexistent")
+		inst, err := store.GetByID(ctx, rCtx, "inst_nonexistent")
 		if inst != nil {
 			t.Errorf("expected nil institution, got %v", inst)
 		}
@@ -392,11 +393,10 @@ func TestInstitutionStore(t *testing.T) {
 		store := NewInstitutionStore(mock)
 		inst := &finance.Institution{
 			ID:      "inst_1",
-			SpaceID: "sp_1",
 			Version: 1,
 		}
 
-		err := store.Update(ctx, inst)
+		err := store.Update(ctx, rCtx, inst)
 		if !errors.Is(err, errors.Conflict) {
 			t.Errorf("expected Conflict error, got %v", err)
 		}
@@ -420,8 +420,8 @@ func TestExchangeRateStore(t *testing.T) {
 		}
 
 		store := NewExchangeRateStore(mock)
-		rate, err := store.GetRate(ctx, finance.ExchangeRateKey{
-			SpaceID:      "sp_1",
+		rCtx := finance.NewContext("sp_1", "usr_1", time.UTC, "USD")
+		rate, err := store.GetRate(ctx, rCtx, finance.ExchangeRateKey{
 			FromCurrency: "USD",
 			ToCurrency:   "EUR",
 			RateDate:     time.Now(),

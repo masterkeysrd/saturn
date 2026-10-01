@@ -3,8 +3,6 @@ package finance
 import (
 	"testing"
 	"time"
-
-	"github.com/masterkeysrd/saturn/internal/platform/id"
 )
 
 func TestRecurringTransactionID(t *testing.T) {
@@ -24,8 +22,6 @@ func TestRecurringTransactionID(t *testing.T) {
 
 func TestRecurringTransaction_Validate(t *testing.T) {
 	recID, _ := NewRecurringTransactionID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	budID, _ := NewBudgetID()
 	now := time.Now()
 
@@ -38,7 +34,6 @@ func TestRecurringTransaction_Validate(t *testing.T) {
 			name: "valid monthly recurring expense",
 			recurring: RecurringTransaction{
 				ID:          recID,
-				SpaceID:     spaceID,
 				BudgetID:    &budID,
 				Name:        "Netflix",
 				Amount:      1500,
@@ -54,7 +49,6 @@ func TestRecurringTransaction_Validate(t *testing.T) {
 			name: "valid monthly recurring income without budget ID",
 			recurring: RecurringTransaction{
 				ID:          recID,
-				SpaceID:     spaceID,
 				BudgetID:    nil,
 				Name:        "Salary",
 				Amount:      500000,
@@ -70,7 +64,6 @@ func TestRecurringTransaction_Validate(t *testing.T) {
 			name: "invalid interval",
 			recurring: RecurringTransaction{
 				ID:          recID,
-				SpaceID:     spaceID,
 				BudgetID:    &budID,
 				Name:        "Software",
 				Amount:      5000,
@@ -86,7 +79,6 @@ func TestRecurringTransaction_Validate(t *testing.T) {
 			name: "zero amount",
 			recurring: RecurringTransaction{
 				ID:          recID,
-				SpaceID:     spaceID,
 				BudgetID:    &budID,
 				Name:        "Software",
 				Amount:      0,
@@ -112,14 +104,11 @@ func TestRecurringTransaction_Validate(t *testing.T) {
 
 func TestRecurringTransaction_AdvanceNextDueDateAndNewScheduledTransaction(t *testing.T) {
 	recID, _ := NewRecurringTransactionID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	budID, _ := NewBudgetID()
 	now := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
 
 	re := &RecurringTransaction{
 		ID:          recID,
-		SpaceID:     spaceID,
 		BudgetID:    &budID,
 		Name:        "SaaS Subscription",
 		Amount:      4900,
@@ -188,13 +177,11 @@ func TestRecurringTransaction_SortFields(t *testing.T) {
 
 func TestRecurringTransaction_ApplyPatch(t *testing.T) {
 	recID, _ := NewRecurringTransactionID()
-	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	budID, _ := NewBudgetID()
 	now := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
 
 	original := &RecurringTransaction{
 		ID:          recID,
-		SpaceID:     spaceID,
 		BudgetID:    &budID,
 		Name:        "Old Name",
 		Amount:      1000,
@@ -342,8 +329,6 @@ func TestRecurringTransaction_AdvanceNextDueDate_Table(t *testing.T) {
 
 func TestRecurringTransaction_Validate_Table_Extended(t *testing.T) {
 	recID, _ := NewRecurringTransactionID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	budID, _ := NewBudgetID()
 	accID, _ := NewAccountID()
 	now := time.Now().UTC()
@@ -357,7 +342,6 @@ func TestRecurringTransaction_Validate_Table_Extended(t *testing.T) {
 			name: "valid income without budget",
 			recurring: RecurringTransaction{
 				ID:          recID,
-				SpaceID:     spaceID,
 				Type:        TransactionTypeIncome,
 				Name:        "Salary",
 				Amount:      500000,
@@ -371,7 +355,6 @@ func TestRecurringTransaction_Validate_Table_Extended(t *testing.T) {
 			name: "expense missing budget ID",
 			recurring: RecurringTransaction{
 				ID:          recID,
-				SpaceID:     spaceID,
 				Type:        TransactionTypeExpense,
 				BudgetID:    nil,
 				Name:        "Internet",
@@ -386,7 +369,6 @@ func TestRecurringTransaction_Validate_Table_Extended(t *testing.T) {
 			name: "invalid recurring transaction type",
 			recurring: RecurringTransaction{
 				ID:          recID,
-				SpaceID:     spaceID,
 				Type:        TransactionTypeTransferOut,
 				Name:        "Transfer",
 				Amount:      8000,
@@ -400,7 +382,6 @@ func TestRecurringTransaction_Validate_Table_Extended(t *testing.T) {
 			name: "recurring transaction cannot have one_time interval",
 			recurring: RecurringTransaction{
 				ID:          recID,
-				SpaceID:     spaceID,
 				Type:        TransactionTypeExpense,
 				BudgetID:    &budID,
 				Name:        "One Timer",
@@ -415,7 +396,6 @@ func TestRecurringTransaction_Validate_Table_Extended(t *testing.T) {
 			name: "zero next due date",
 			recurring: RecurringTransaction{
 				ID:          recID,
-				SpaceID:     spaceID,
 				Type:        TransactionTypeExpense,
 				BudgetID:    &budID,
 				Name:        "Subscription",
@@ -430,7 +410,6 @@ func TestRecurringTransaction_Validate_Table_Extended(t *testing.T) {
 			name: "valid with account ID",
 			recurring: RecurringTransaction{
 				ID:          recID,
-				SpaceID:     spaceID,
 				AccountID:   &accID,
 				Type:        TransactionTypeIncome,
 				Name:        "Consulting",

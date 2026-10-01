@@ -138,13 +138,13 @@ func NewStatementPipeline(deps StatementPipelineDependencies) *StatementPipeline
 }
 
 // buildGraph compiles the pure, side-effect-free Loom inference graph.
-func (p *StatementPipeline) buildGraph() (*graph.Graph[*StatementIngestionState], error) {
+func (p *StatementPipeline) buildGraph(fCtx finance.Context) (*graph.Graph[*StatementIngestionState], error) {
 	return graph.New[*StatementIngestionState]().
 		WithName("finance-statement-ingestion").
 		AddNode("preprocess", graph.NodeFunc(p.nodePreprocess)).
-		AddNode("extract", graph.NodeFunc(p.nodeExtract)).
+		AddNode("extract", p.nodeExtract(fCtx)).
 		AddNode("validate_math", graph.NodeFunc(p.nodeValidateMath)).
-		AddNode("resolve_accounts", graph.NodeFunc(p.nodeResolveAccounts)).
+		AddNode("resolve_accounts", p.nodeResolveAccounts(fCtx)).
 		AddEdge(graph.START, "preprocess").
 		AddConditionalEdge("preprocess", graph.END, func(s *StatementIngestionState) bool {
 			return s.NeedsPassword || len(s.Errors) > 0
@@ -159,11 +159,13 @@ func (p *StatementPipeline) buildGraph() (*graph.Graph[*StatementIngestionState]
 }
 
 // AnalyzeDocument executes the pure Loom graph without modifying the database.
-func (p *StatementPipeline) AnalyzeDocument(ctx context.Context, spaceID string, req *StatementDocumentRequest) (*StatementIngestionState, error) {
-	g, err := p.buildGraph()
+func (p *StatementPipeline) AnalyzeDocument(ctx context.Context, fCtx finance.Context, req *StatementDocumentRequest) (*StatementIngestionState, error) {
+	g, err := p.buildGraph(fCtx)
 	if err != nil {
 		return nil, fmt.Errorf("build statement pipeline graph: %w", err)
 	}
+
+	spaceID := string(fCtx.SpaceID())
 
 	snapshot, err := g.Execute(ctx, graph.Update[*StatementIngestionState](func(s *StatementIngestionState) *StatementIngestionState {
 		return &StatementIngestionState{
@@ -181,8 +183,8 @@ func (p *StatementPipeline) AnalyzeDocument(ctx context.Context, spaceID string,
 }
 
 // IngestDocument executes the graph and persists statement drafts into the database.
-func (p *StatementPipeline) IngestDocument(ctx context.Context, spaceID string, req *StatementDocumentRequest) (*IngestStatementResult, error) {
-	state, err := p.AnalyzeDocument(ctx, spaceID, req)
+func (p *StatementPipeline) IngestDocument(ctx context.Context, fCtx finance.Context, req *StatementDocumentRequest) (*IngestStatementResult, error) {
+	state, err := p.AnalyzeDocument(ctx, fCtx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +236,7 @@ func (p *StatementPipeline) IngestDocument(ctx context.Context, spaceID string, 
 
 		stmtDate, err := time.Parse("2006-01-02", state.ParsedDocument.StatementDate)
 		if err != nil {
-			stmtDate = time.Now().UTC()
+			stmtDate = fCtx.Now()
 		}
 
 		filename := req.Filename
@@ -243,7 +245,6 @@ func (p *StatementPipeline) IngestDocument(ctx context.Context, spaceID string, 
 		}
 
 		stmt := &finance.Statement{
-			SpaceID:                  finance.SpaceID(spaceID),
 			AccountID:                acc.ID,
 			Status:                   finance.StatementStatusInProgress,
 			StatementDate:            stmtDate,
@@ -268,7 +269,7 @@ func (p *StatementPipeline) IngestDocument(ctx context.Context, spaceID string, 
 		}
 
 		// Save statement draft and lines via existing domain service
-		created, err := p.financeService.ImportStatement(ctx, acc.ID, stmt)
+		created, err := p.financeService.ImportStatement(ctx, fCtx, acc.ID, stmt)
 		if err != nil {
 			return nil, fmt.Errorf("import statement for currency %s: %w", section.Currency, err)
 		}
@@ -353,42 +354,44 @@ func (p *StatementPipeline) nodePreprocess(ctx context.Context, state *Statement
 }
 
 // 2. Extract Node: Runs Janus to split multi-currency sections and extract balances.
-func (p *StatementPipeline) nodeExtract(ctx context.Context, state *StatementIngestionState) (graph.Command[*StatementIngestionState], error) {
-	accPage, err := p.financeService.ListAccounts(ctx, finance.SpaceID(state.SpaceID), &finance.ListAccountsFilter{PageSize: 1000})
-	var accounts []*finance.Account
-	if err == nil && accPage != nil {
-		accounts = accPage.Items
-	}
-
-	parsedDoc, err := p.extractor.Extract(ctx, state.SpaceID, state.ExtractedText, accounts)
-	if err != nil {
-		return graph.Update[*StatementIngestionState](func(s *StatementIngestionState) *StatementIngestionState {
-			s.Errors = append(s.Errors, fmt.Sprintf("extract statement document: %v", err))
-			return s
-		}), nil
-	}
-
-	// Filter out empty installment / boilerplate sections with 0 balance and 0 lines (e.g. "Installment Credit Line DOP 0.00")
-	var activeSections []ParsedStatementSection
-	for _, sec := range parsedDoc.Sections {
-		if len(sec.Lines) == 0 && sec.StartingBalance == 0 && sec.EndingBalance == 0 {
-			continue
+func (p *StatementPipeline) nodeExtract(fCtx finance.Context) graph.Node[*StatementIngestionState] {
+	return graph.NodeFunc(func(ctx context.Context, state *StatementIngestionState) (graph.Command[*StatementIngestionState], error) {
+		accPage, err := p.financeService.ListAccounts(ctx, fCtx, &finance.ListAccountsFilter{PageSize: 1000})
+		var accounts []*finance.Account
+		if err == nil && accPage != nil {
+			accounts = accPage.Items
 		}
-		activeSections = append(activeSections, sec)
-	}
-	parsedDoc.Sections = activeSections
 
-	if len(parsedDoc.Sections) == 0 {
+		parsedDoc, err := p.extractor.Extract(ctx, fCtx, state.ExtractedText, accounts)
+		if err != nil {
+			return graph.Update[*StatementIngestionState](func(s *StatementIngestionState) *StatementIngestionState {
+				s.Errors = append(s.Errors, fmt.Sprintf("extract statement document: %v", err))
+				return s
+			}), nil
+		}
+
+		// Filter out empty installment / boilerplate sections with 0 balance and 0 lines (e.g. "Installment Credit Line DOP 0.00")
+		var activeSections []ParsedStatementSection
+		for _, sec := range parsedDoc.Sections {
+			if len(sec.Lines) == 0 && sec.StartingBalance == 0 && sec.EndingBalance == 0 {
+				continue
+			}
+			activeSections = append(activeSections, sec)
+		}
+		parsedDoc.Sections = activeSections
+
+		if len(parsedDoc.Sections) == 0 {
+			return graph.Update[*StatementIngestionState](func(s *StatementIngestionState) *StatementIngestionState {
+				s.Errors = append(s.Errors, "no ledger sections could be extracted from statement")
+				return s
+			}), nil
+		}
+
 		return graph.Update[*StatementIngestionState](func(s *StatementIngestionState) *StatementIngestionState {
-			s.Errors = append(s.Errors, "no ledger sections could be extracted from statement")
+			s.ParsedDocument = parsedDoc
 			return s
 		}), nil
-	}
-
-	return graph.Update[*StatementIngestionState](func(s *StatementIngestionState) *StatementIngestionState {
-		s.ParsedDocument = parsedDoc
-		return s
-	}), nil
+	})
 }
 
 // 3. Validate Math Node: Checks starting_balance + sum(lines) == ending_balance per section.
@@ -464,65 +467,67 @@ func (p *StatementPipeline) nodeValidateMath(ctx context.Context, state *Stateme
 }
 
 // 4. Resolve Accounts Node: Matches institution, last_four, and section currency to Saturn accounts.
-func (p *StatementPipeline) nodeResolveAccounts(ctx context.Context, state *StatementIngestionState) (graph.Command[*StatementIngestionState], error) {
-	if state.ParsedDocument == nil {
-		return graph.Update[*StatementIngestionState](func(s *StatementIngestionState) *StatementIngestionState { return s }), nil
-	}
-
-	mappings := make(map[string]*finance.Account)
-	var unmapped []string
-
-	for _, sec := range state.ParsedDocument.Sections {
-		cardLastFour := sec.CardLastFour
-		if cardLastFour == "" {
-			cardLastFour = state.ParsedDocument.CardLastFour
+func (p *StatementPipeline) nodeResolveAccounts(fCtx finance.Context) graph.Node[*StatementIngestionState] {
+	return graph.NodeFunc(func(ctx context.Context, state *StatementIngestionState) (graph.Command[*StatementIngestionState], error) {
+		if state.ParsedDocument == nil {
+			return graph.Update[*StatementIngestionState](func(s *StatementIngestionState) *StatementIngestionState { return s }), nil
 		}
 
-		// 1. Suggested Account ID from Janus AI matching workspace accounts
-		if sec.SuggestedAccountID != "" {
-			suggestedID, parseErr := finance.ParseAccountID(sec.SuggestedAccountID)
-			if parseErr == nil {
-				acc, accErr := p.financeService.GetAccount(ctx, finance.SpaceID(state.SpaceID), suggestedID)
-				if accErr == nil && acc != nil && string(acc.Currency) == sec.Currency {
-					mappings[sec.Currency] = acc
-					continue
-				}
+		mappings := make(map[string]*finance.Account)
+		var unmapped []string
+
+		for _, sec := range state.ParsedDocument.Sections {
+			cardLastFour := sec.CardLastFour
+			if cardLastFour == "" {
+				cardLastFour = state.ParsedDocument.CardLastFour
 			}
-		}
 
-		// 2. If user explicitly passed a TargetAccountID, verify currency match and no card conflict
-		if state.Request != nil && state.Request.TargetAccountID != nil && *state.Request.TargetAccountID != "" {
-			targetID, parseErr := finance.ParseAccountID(*state.Request.TargetAccountID)
-			if parseErr == nil {
-				acc, accErr := p.financeService.GetAccount(ctx, finance.SpaceID(state.SpaceID), targetID)
-				if accErr == nil && acc != nil && string(acc.Currency) == sec.Currency {
-					if cardLastFour == "" || acc.LastFour == "" || acc.LastFour == cardLastFour {
+			// 1. Suggested Account ID from Janus AI matching workspace accounts
+			if sec.SuggestedAccountID != "" {
+				suggestedID, parseErr := finance.ParseAccountID(sec.SuggestedAccountID)
+				if parseErr == nil {
+					acc, accErr := p.financeService.GetAccount(ctx, fCtx, suggestedID)
+					if accErr == nil && acc != nil && string(acc.Currency) == sec.Currency {
 						mappings[sec.Currency] = acc
 						continue
 					}
 				}
 			}
+
+			// 2. If user explicitly passed a TargetAccountID, verify currency match and no card conflict
+			if state.Request != nil && state.Request.TargetAccountID != nil && *state.Request.TargetAccountID != "" {
+				targetID, parseErr := finance.ParseAccountID(*state.Request.TargetAccountID)
+				if parseErr == nil {
+					acc, accErr := p.financeService.GetAccount(ctx, fCtx, targetID)
+					if accErr == nil && acc != nil && string(acc.Currency) == sec.Currency {
+						if cardLastFour == "" || acc.LastFour == "" || acc.LastFour == cardLastFour {
+							mappings[sec.Currency] = acc
+							continue
+						}
+					}
+				}
+			}
+
+			// 3. Resolve Account by institution name, card last four, and currency
+			acc, err := p.financeService.ResolveAccount(ctx, fCtx, finance.ResolveAccountOpts{
+				AccountName: state.ParsedDocument.InstitutionName,
+				LastFour:    cardLastFour,
+				Currency:    sec.Currency,
+			})
+
+			if err == nil && acc != nil {
+				mappings[sec.Currency] = acc
+			} else {
+				unmapped = append(unmapped, sec.Currency)
+			}
 		}
 
-		// 3. Resolve Account by institution name, card last four, and currency
-		acc, err := p.financeService.ResolveAccount(ctx, finance.SpaceID(state.SpaceID), finance.ResolveAccountOpts{
-			AccountName: state.ParsedDocument.InstitutionName,
-			LastFour:    cardLastFour,
-			Currency:    sec.Currency,
-		})
-
-		if err == nil && acc != nil {
-			mappings[sec.Currency] = acc
-		} else {
-			unmapped = append(unmapped, sec.Currency)
-		}
-	}
-
-	return graph.Update[*StatementIngestionState](func(s *StatementIngestionState) *StatementIngestionState {
-		s.AccountMappings = mappings
-		s.UnmappedSections = unmapped
-		return s
-	}), nil
+		return graph.Update[*StatementIngestionState](func(s *StatementIngestionState) *StatementIngestionState {
+			s.AccountMappings = mappings
+			s.UnmappedSections = unmapped
+			return s
+		}), nil
+	})
 }
 
 // generateStandardizedCSV converts a slice of parsed statement lines into clean CSV content.

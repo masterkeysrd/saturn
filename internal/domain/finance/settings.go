@@ -32,7 +32,6 @@ const spacePrefix = "spc_"
 
 // FinanceSettings stores workspace-scoped configurations.
 type FinanceSettings struct {
-	SpaceID      SpaceID
 	BaseCurrency Currency
 	CreateTime   time.Time
 	UpdateTime   time.Time
@@ -43,14 +42,15 @@ func (fs *FinanceSettings) Validate() error {
 	if err := fs.BaseCurrency.Validate(); err != nil {
 		return fmt.Errorf("validate base currency: %w", err)
 	}
-	if err := fs.SpaceID.Validate(); err != nil {
-		return fmt.Errorf("validate space ID: %w", err)
-	}
 	return nil
 }
 
 // NewDefaultCashAccount instantiates the standard default Cash account for a workspace.
 func (fs *FinanceSettings) NewDefaultCashAccount() (*Account, error) {
+	if err := fs.Validate(); err != nil {
+		return nil, fmt.Errorf("validate finance settings: %w", err)
+	}
+
 	accID, err := NewAccountID()
 	if err != nil {
 		return nil, fmt.Errorf("generate cash account ID: %w", err)
@@ -58,7 +58,6 @@ func (fs *FinanceSettings) NewDefaultCashAccount() (*Account, error) {
 
 	acc := &Account{
 		ID:             accID,
-		SpaceID:        fs.SpaceID,
 		Name:           "Cash",
 		Type:           AccountTypeCash,
 		Currency:       fs.BaseCurrency,

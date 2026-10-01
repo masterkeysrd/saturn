@@ -36,7 +36,6 @@ func (iid InstitutionID) String() string {
 // Institution represents a financial bank, brokerage, or payment platform.
 type Institution struct {
 	ID         InstitutionID
-	SpaceID    SpaceID
 	Name       string
 	Domain     string
 	LogoURL    string
@@ -84,9 +83,6 @@ func (i *Institution) Validate() error {
 	}
 	if err := i.ID.Validate(); err != nil {
 		return fmt.Errorf("validate institution ID: %w", err)
-	}
-	if err := i.SpaceID.Validate(); err != nil {
-		return fmt.Errorf("validate space ID: %w", err)
 	}
 	return nil
 }

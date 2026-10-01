@@ -42,7 +42,6 @@ const (
 
 type RecurringTransaction struct {
 	ID              RecurringTransactionID
-	SpaceID         SpaceID
 	BudgetID        *BudgetID // Nullable, required for EXPENSE type
 	Name            string
 	Amount          int64
@@ -106,9 +105,6 @@ func (re *RecurringTransaction) Init() error {
 func (re *RecurringTransaction) Validate() error {
 	if err := re.ID.Validate(); err != nil {
 		return fmt.Errorf("validate recurring transaction ID: %w", err)
-	}
-	if err := re.SpaceID.Validate(); err != nil {
-		return fmt.Errorf("validate space ID: %w", err)
 	}
 	if re.Type == TransactionTypeExpense {
 		if re.BudgetID == nil {
@@ -178,7 +174,6 @@ func (re *RecurringTransaction) NewScheduledTransaction(spID ScheduledTransactio
 
 	sp := &ScheduledTransaction{
 		ID:         spID,
-		SpaceID:    re.SpaceID,
 		BudgetID:   re.BudgetID,
 		SourceType: string(SourceTypeRecurrentTransaction),
 		SourceID:   string(re.ID),

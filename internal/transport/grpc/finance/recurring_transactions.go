@@ -11,7 +11,6 @@ import (
 	financeaggregator "github.com/masterkeysrd/saturn/internal/aggregator/finance"
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
-	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
@@ -169,11 +168,10 @@ func (h *Handler) DeleteRecurringTransaction(ctx context.Context, req *financev1
 func (h *Handler) ListRecurringTransactions(ctx context.Context, req *financev1.ListRecurringTransactionsRequest) (*financev1.ListRecurringTransactionsResponse, error) {
 	const op errors.Op = "grpc/finance.ListRecurringTransactions"
 
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	var statusFilter *finance.RecurringTransactionStatus
 	if req.GetStatus() != financev1.RecurringTransaction_STATUS_UNSPECIFIED {
@@ -197,7 +195,7 @@ func (h *Handler) ListRecurringTransactions(ctx context.Context, req *financev1.
 		viewType = financeaggregator.ViewFull
 	}
 
-	page, err := h.Aggregator.ListRecurringTransactions(ctx, spaceID, viewType, filter)
+	page, err := h.Aggregator.ListRecurringTransactions(ctx, rCtx, viewType, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -216,11 +214,10 @@ func (h *Handler) ListRecurringTransactions(ctx context.Context, req *financev1.
 func (h *Handler) ListScheduledTransactions(ctx context.Context, req *financev1.ListScheduledTransactionsRequest) (*financev1.ListScheduledTransactionsResponse, error) {
 	const op errors.Op = "grpc/finance.ListScheduledTransactions"
 
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	var statusFilter *finance.ScheduledTransactionStatus
 	if req.GetStatus() != financev1.ScheduledTransaction_STATUS_UNSPECIFIED {
@@ -235,10 +232,12 @@ func (h *Handler) ListScheduledTransactions(ctx context.Context, req *financev1.
 
 	var startDate, endDate *time.Time
 	if req.GetStartDate() != nil {
-		startDate = new(req.GetStartDate().AsTime())
+		t := rCtx.Date(req.GetStartDate().AsTime())
+		startDate = &t
 	}
 	if req.GetEndDate() != nil {
-		endDate = new(req.GetEndDate().AsTime())
+		t := rCtx.Date(req.GetEndDate().AsTime())
+		endDate = &t
 	}
 
 	filter := finance.ListScheduledTransactionsFilter{
@@ -256,7 +255,7 @@ func (h *Handler) ListScheduledTransactions(ctx context.Context, req *financev1.
 		viewType = financeaggregator.ViewFull
 	}
 
-	page, err := h.Aggregator.ListScheduledTransactions(ctx, spaceID, viewType, filter)
+	page, err := h.Aggregator.ListScheduledTransactions(ctx, rCtx, viewType, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -509,7 +508,6 @@ func toProtoRecurringTransaction(e *finance.RecurringTransaction) *financev1.Rec
 
 	return &financev1.RecurringTransaction{
 		Id:       string(e.ID),
-		SpaceId:  string(e.SpaceID),
 		BudgetId: budgetID,
 		Name:     e.Name,
 		Amount:   e.Amount,
@@ -547,7 +545,6 @@ func toProtoScheduledTransaction(p *finance.ScheduledTransaction) *financev1.Sch
 
 	return &financev1.ScheduledTransaction{
 		Id:         string(p.ID),
-		SpaceId:    string(p.SpaceID),
 		BudgetId:   budgetID,
 		SourceType: mapDomainSourceTypeToProto(p.SourceType),
 		SourceId:   p.SourceID,

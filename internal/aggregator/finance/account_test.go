@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
@@ -13,11 +14,11 @@ import (
 func TestListAccounts(t *testing.T) {
 	ctx := context.Background()
 	spaceID := finance.SpaceID("spc_1")
+	rCtx := finance.NewContext(spaceID, "usr_1", time.UTC, "USD")
 	instID := finance.InstitutionID("inst_1")
 
 	acc1 := &finance.Account{
 		ID:             "acc_1",
-		SpaceID:        spaceID,
 		Name:           "Checking",
 		Currency:       "USD",
 		CurrentBalance: 10000,
@@ -25,7 +26,6 @@ func TestListAccounts(t *testing.T) {
 	}
 	acc2 := &finance.Account{
 		ID:             "acc_2",
-		SpaceID:        spaceID,
 		Name:           "EUR Savings",
 		Currency:       "EUR",
 		CurrentBalance: 5000,
@@ -33,7 +33,7 @@ func TestListAccounts(t *testing.T) {
 
 	t.Run("Basic View", func(t *testing.T) {
 		mockFS := &FinanceServiceMock{
-			ListAccountsFunc: func(ctx context.Context, sid finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
+			ListAccountsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
 				return &paging.Page[*finance.Account]{
 					Items:         []*finance.Account{acc1, acc2},
 					NextPageToken: "next_token",
@@ -42,7 +42,7 @@ func TestListAccounts(t *testing.T) {
 		}
 
 		svc := NewService(mockFS)
-		page, err := svc.ListAccounts(ctx, spaceID, ViewBasic, ListAccountsFilter{
+		page, err := svc.ListAccounts(ctx, rCtx, ViewBasic, ListAccountsFilter{
 			ListAccountsFilter: finance.ListAccountsFilter{
 				PageSize: 10,
 				Sort:     sorting.New("id", true),
@@ -64,23 +64,22 @@ func TestListAccounts(t *testing.T) {
 
 	t.Run("Full View with currency conversion and institution", func(t *testing.T) {
 		mockFS := &FinanceServiceMock{
-			ListAccountsFunc: func(ctx context.Context, sid finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
+			ListAccountsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
 				return &paging.Page[*finance.Account]{
 					Items: []*finance.Account{acc1, acc2},
 				}, nil
 			},
-			GetFinanceSettingsFunc: func(ctx context.Context, sid finance.SpaceID) (*finance.FinanceSettings, error) {
+			GetFinanceSettingsFunc: func(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error) {
 				return &finance.FinanceSettings{
-					SpaceID:      spaceID,
 					BaseCurrency: "USD",
 				}, nil
 			},
-			GetLatestRatesFunc: func(ctx context.Context, sid finance.SpaceID, from []finance.Currency, to finance.Currency) ([]*finance.ExchangeRate, error) {
+			GetLatestRatesFunc: func(ctx context.Context, rCtx finance.Context, from []finance.Currency, to finance.Currency) ([]*finance.ExchangeRate, error) {
 				return []*finance.ExchangeRate{
 					{FromCurrency: "EUR", ToCurrency: "USD", Rate: 1.1},
 				}, nil
 			},
-			GetInstitutionsByIDsFunc: func(ctx context.Context, sid finance.SpaceID, ids []finance.InstitutionID) ([]*finance.Institution, error) {
+			GetInstitutionsByIDsFunc: func(ctx context.Context, rCtx finance.Context, ids []finance.InstitutionID) ([]*finance.Institution, error) {
 				return []*finance.Institution{
 					{ID: instID, Name: "Bank of Test"},
 				}, nil
@@ -88,7 +87,7 @@ func TestListAccounts(t *testing.T) {
 		}
 
 		svc := NewService(mockFS)
-		page, err := svc.ListAccounts(ctx, spaceID, ViewFull, ListAccountsFilter{
+		page, err := svc.ListAccounts(ctx, rCtx, ViewFull, ListAccountsFilter{
 			ListAccountsFilter: finance.ListAccountsFilter{PageSize: 10},
 		})
 		if err != nil {
@@ -112,13 +111,13 @@ func TestListAccounts(t *testing.T) {
 
 	t.Run("Error from domain ListAccounts", func(t *testing.T) {
 		mockFS := &FinanceServiceMock{
-			ListAccountsFunc: func(ctx context.Context, sid finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
+			ListAccountsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
 				return nil, errors.New("db error")
 			},
 		}
 
 		svc := NewService(mockFS)
-		_, err := svc.ListAccounts(ctx, spaceID, ViewBasic, ListAccountsFilter{
+		_, err := svc.ListAccounts(ctx, rCtx, ViewBasic, ListAccountsFilter{
 			ListAccountsFilter: finance.ListAccountsFilter{PageSize: 10},
 		})
 		if err == nil {
@@ -128,16 +127,16 @@ func TestListAccounts(t *testing.T) {
 
 	t.Run("Error from GetFinanceSettings in Full View", func(t *testing.T) {
 		mockFS := &FinanceServiceMock{
-			ListAccountsFunc: func(ctx context.Context, sid finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
+			ListAccountsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
 				return &paging.Page[*finance.Account]{Items: []*finance.Account{acc1}}, nil
 			},
-			GetFinanceSettingsFunc: func(ctx context.Context, sid finance.SpaceID) (*finance.FinanceSettings, error) {
+			GetFinanceSettingsFunc: func(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error) {
 				return nil, errors.New("settings error")
 			},
 		}
 
 		svc := NewService(mockFS)
-		_, err := svc.ListAccounts(ctx, spaceID, ViewFull, ListAccountsFilter{
+		_, err := svc.ListAccounts(ctx, rCtx, ViewFull, ListAccountsFilter{
 			ListAccountsFilter: finance.ListAccountsFilter{PageSize: 10},
 		})
 		if err == nil {
@@ -149,9 +148,9 @@ func TestListAccounts(t *testing.T) {
 func TestGetAccount(t *testing.T) {
 	ctx := context.Background()
 	spaceID := finance.SpaceID("spc_1")
+	rCtx := finance.NewContext(spaceID, "usr_1", time.UTC, "USD")
 	acc := &finance.Account{
 		ID:             "acc_1",
-		SpaceID:        spaceID,
 		Name:           "Checking",
 		Currency:       "USD",
 		CurrentBalance: 1000,
@@ -159,13 +158,13 @@ func TestGetAccount(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		mockFS := &FinanceServiceMock{
-			GetAccountFunc: func(ctx context.Context, sid finance.SpaceID, id finance.AccountID) (*finance.Account, error) {
+			GetAccountFunc: func(ctx context.Context, rCtx finance.Context, id finance.AccountID) (*finance.Account, error) {
 				return acc, nil
 			},
 		}
 
 		svc := NewService(mockFS)
-		result, err := svc.GetAccount(ctx, spaceID, "acc_1", ViewBasic)
+		result, err := svc.GetAccount(ctx, rCtx, "acc_1", ViewBasic)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -176,13 +175,13 @@ func TestGetAccount(t *testing.T) {
 
 	t.Run("Error", func(t *testing.T) {
 		mockFS := &FinanceServiceMock{
-			GetAccountFunc: func(ctx context.Context, sid finance.SpaceID, id finance.AccountID) (*finance.Account, error) {
+			GetAccountFunc: func(ctx context.Context, rCtx finance.Context, id finance.AccountID) (*finance.Account, error) {
 				return nil, errors.New("not found")
 			},
 		}
 
 		svc := NewService(mockFS)
-		_, err := svc.GetAccount(ctx, spaceID, "acc_1", ViewBasic)
+		_, err := svc.GetAccount(ctx, rCtx, "acc_1", ViewBasic)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -192,14 +191,14 @@ func TestGetAccount(t *testing.T) {
 func TestGetAccounts(t *testing.T) {
 	ctx := context.Background()
 	spaceID := finance.SpaceID("spc_1")
-	otherSpaceID := finance.SpaceID("spc_2")
+	rCtx := finance.NewContext(spaceID, "usr_1", time.UTC, "USD")
 
-	acc1 := &finance.Account{ID: "acc_1", SpaceID: spaceID, Currency: "USD", CurrentBalance: 100}
-	acc2 := &finance.Account{ID: "acc_2", SpaceID: otherSpaceID, Currency: "USD", CurrentBalance: 200}
+	acc1 := &finance.Account{ID: "acc_1", Currency: "USD", CurrentBalance: 100}
+	acc2 := &finance.Account{ID: "acc_2", Currency: "USD", CurrentBalance: 200}
 
 	t.Run("Empty IDs returns nil", func(t *testing.T) {
 		svc := NewService(&FinanceServiceMock{})
-		res, err := svc.GetAccounts(ctx, spaceID, nil, ViewBasic)
+		res, err := svc.GetAccounts(ctx, rCtx, nil, ViewBasic)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -208,32 +207,32 @@ func TestGetAccounts(t *testing.T) {
 		}
 	})
 
-	t.Run("Filters accounts by spaceID", func(t *testing.T) {
+	t.Run("Returns accounts", func(t *testing.T) {
 		mockFS := &FinanceServiceMock{
-			GetAccountsFunc: func(ctx context.Context, sid finance.SpaceID, ids []finance.AccountID) ([]*finance.Account, error) {
+			GetAccountsFunc: func(ctx context.Context, rCtx finance.Context, ids []finance.AccountID) ([]*finance.Account, error) {
 				return []*finance.Account{acc1, acc2}, nil
 			},
 		}
 
 		svc := NewService(mockFS)
-		res, err := svc.GetAccounts(ctx, spaceID, []finance.AccountID{"acc_1", "acc_2"}, ViewBasic)
+		res, err := svc.GetAccounts(ctx, rCtx, []finance.AccountID{"acc_1", "acc_2"}, ViewBasic)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if len(res) != 1 || res[0].ID != "acc_1" {
-			t.Errorf("expected only acc_1, got %v", res)
+		if len(res) != 2 || res[0].ID != "acc_1" || res[1].ID != "acc_2" {
+			t.Errorf("expected acc_1 and acc_2, got %v", res)
 		}
 	})
 
 	t.Run("Domain error returns error", func(t *testing.T) {
 		mockFS := &FinanceServiceMock{
-			GetAccountsFunc: func(ctx context.Context, sid finance.SpaceID, ids []finance.AccountID) ([]*finance.Account, error) {
+			GetAccountsFunc: func(ctx context.Context, rCtx finance.Context, ids []finance.AccountID) ([]*finance.Account, error) {
 				return nil, errors.New("query failed")
 			},
 		}
 
 		svc := NewService(mockFS)
-		_, err := svc.GetAccounts(ctx, spaceID, []finance.AccountID{"acc_1"}, ViewBasic)
+		_, err := svc.GetAccounts(ctx, rCtx, []finance.AccountID{"acc_1"}, ViewBasic)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}

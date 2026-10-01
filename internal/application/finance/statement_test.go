@@ -15,7 +15,7 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 			ctx           context.Context
 			accountID     finance.AccountID
 			stmt          *finance.Statement
-			mockFn        func(ctx context.Context, accountID finance.AccountID, stmt *finance.Statement) (*finance.Statement, error)
+			mockFn        func(ctx context.Context, rCtx finance.Context, accountID finance.AccountID, stmt *finance.Statement) (*finance.Statement, error)
 			expectedID    finance.StatementID
 			expectedError bool
 		}{
@@ -24,11 +24,11 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 				ctx:       newTestContext("spc_1", "usr_1"),
 				accountID: "acc_1",
 				stmt:      &finance.Statement{Filename: "statement.pdf"},
-				mockFn: func(ctx context.Context, accountID finance.AccountID, stmt *finance.Statement) (*finance.Statement, error) {
-					if stmt.SpaceID != "spc_1" || accountID != "acc_1" {
-						t.Errorf("unexpected import args: space=%v acc=%v", stmt.SpaceID, accountID)
+				mockFn: func(ctx context.Context, rCtx finance.Context, accountID finance.AccountID, stmt *finance.Statement) (*finance.Statement, error) {
+					if rCtx.SpaceID() != "spc_1" || accountID != "acc_1" {
+						t.Errorf("unexpected import args: space=%v acc=%v", rCtx.SpaceID(), accountID)
 					}
-					return &finance.Statement{ID: "stmt_1", SpaceID: stmt.SpaceID}, nil
+					return &finance.Statement{ID: "stmt_1"}, nil
 				},
 				expectedID:    "stmt_1",
 				expectedError: false,
@@ -45,7 +45,7 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 				ctx:       newTestContext("spc_1", "usr_1"),
 				accountID: "acc_1",
 				stmt:      &finance.Statement{},
-				mockFn: func(ctx context.Context, accountID finance.AccountID, stmt *finance.Statement) (*finance.Statement, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, accountID finance.AccountID, stmt *finance.Statement) (*finance.Statement, error) {
 					return nil, errors.New("import error")
 				},
 				expectedError: true,
@@ -79,7 +79,7 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 			ctx           context.Context
 			id            finance.StatementID
 			opts          finance.DeleteOptions
-			mockFn        func(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID, opts finance.DeleteOptions) error
+			mockFn        func(ctx context.Context, rCtx finance.Context, id finance.StatementID, opts finance.DeleteOptions) error
 			expectedError bool
 		}{
 			{
@@ -87,9 +87,9 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 				ctx:  newTestContext("spc_1", "usr_1"),
 				id:   "stmt_1",
 				opts: finance.DeleteOptions{Version: 1},
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID, opts finance.DeleteOptions) error {
-					if spaceID != "spc_1" || id != "stmt_1" || opts.Version != 1 {
-						t.Errorf("unexpected delete args: space=%v id=%v opts=%+v", spaceID, id, opts)
+				mockFn: func(ctx context.Context, rCtx finance.Context, id finance.StatementID, opts finance.DeleteOptions) error {
+					if rCtx.SpaceID() != "spc_1" || id != "stmt_1" || opts.Version != 1 {
+						t.Errorf("unexpected delete args: space=%v id=%v opts=%+v", rCtx.SpaceID(), id, opts)
 					}
 					return nil
 				},
@@ -105,7 +105,7 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				id:   "stmt_1",
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID, opts finance.DeleteOptions) error {
+				mockFn: func(ctx context.Context, rCtx finance.Context, id finance.StatementID, opts finance.DeleteOptions) error {
 					return errors.New("delete statement failed")
 				},
 				expectedError: true,
@@ -136,7 +136,7 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 			ctx           context.Context
 			stmt          *finance.Statement
 			mask          []string
-			mockFn        func(ctx context.Context, spaceID finance.SpaceID, stmt *finance.Statement, mask []string) (*finance.Statement, error)
+			mockFn        func(ctx context.Context, rCtx finance.Context, stmt *finance.Statement, mask []string) (*finance.Statement, error)
 			expectedID    finance.StatementID
 			expectedError bool
 		}{
@@ -145,9 +145,9 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 				ctx:  newTestContext("spc_1", "usr_1"),
 				stmt: &finance.Statement{ID: "stmt_1"},
 				mask: []string{"ending_balance"},
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, stmt *finance.Statement, mask []string) (*finance.Statement, error) {
-					if spaceID != "spc_1" || stmt.ID != "stmt_1" || len(mask) != 1 {
-						t.Errorf("unexpected update args: space=%v stmt=%+v mask=%v", spaceID, stmt, mask)
+				mockFn: func(ctx context.Context, rCtx finance.Context, stmt *finance.Statement, mask []string) (*finance.Statement, error) {
+					if rCtx.SpaceID() != "spc_1" || stmt.ID != "stmt_1" || len(mask) != 1 {
+						t.Errorf("unexpected update args: space=%v stmt=%+v mask=%v", rCtx.SpaceID(), stmt, mask)
 					}
 					return &finance.Statement{ID: stmt.ID}, nil
 				},
@@ -164,7 +164,7 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				stmt: &finance.Statement{ID: "stmt_1"},
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, stmt *finance.Statement, mask []string) (*finance.Statement, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, stmt *finance.Statement, mask []string) (*finance.Statement, error) {
 					return nil, errors.New("update statement error")
 				},
 				expectedError: true,
@@ -198,7 +198,7 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 			ctx           context.Context
 			line          *finance.StatementLine
 			mask          []string
-			mockFn        func(ctx context.Context, spaceID finance.SpaceID, line *finance.StatementLine, mask []string) (*finance.StatementLine, error)
+			mockFn        func(ctx context.Context, rCtx finance.Context, line *finance.StatementLine, mask []string) (*finance.StatementLine, error)
 			expectedID    finance.StatementLineID
 			expectedError bool
 		}{
@@ -207,9 +207,9 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 				ctx:  newTestContext("spc_1", "usr_1"),
 				line: &finance.StatementLine{ID: "line_1"},
 				mask: []string{"draft_amount"},
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, line *finance.StatementLine, mask []string) (*finance.StatementLine, error) {
-					if spaceID != "spc_1" || line.ID != "line_1" {
-						t.Errorf("unexpected update line args: space=%v line=%+v", spaceID, line)
+				mockFn: func(ctx context.Context, rCtx finance.Context, line *finance.StatementLine, mask []string) (*finance.StatementLine, error) {
+					if rCtx.SpaceID() != "spc_1" || line.ID != "line_1" {
+						t.Errorf("unexpected update line args: space=%v line=%+v", rCtx.SpaceID(), line)
 					}
 					return &finance.StatementLine{ID: line.ID}, nil
 				},
@@ -226,7 +226,7 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				line: &finance.StatementLine{ID: "line_1"},
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, line *finance.StatementLine, mask []string) (*finance.StatementLine, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, line *finance.StatementLine, mask []string) (*finance.StatementLine, error) {
 					return nil, errors.New("update line error")
 				},
 				expectedError: true,
@@ -259,7 +259,7 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 			name          string
 			ctx           context.Context
 			id            finance.StatementID
-			mockFn        func(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, error)
+			mockFn        func(ctx context.Context, rCtx finance.Context, id finance.StatementID) (*finance.Statement, error)
 			expectedID    finance.StatementID
 			expectedError bool
 		}{
@@ -267,9 +267,9 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 				name: "Success",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				id:   "stmt_1",
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, error) {
-					if spaceID != "spc_1" || id != "stmt_1" {
-						t.Errorf("unexpected complete args: space=%v id=%v", spaceID, id)
+				mockFn: func(ctx context.Context, rCtx finance.Context, id finance.StatementID) (*finance.Statement, error) {
+					if rCtx.SpaceID() != "spc_1" || id != "stmt_1" {
+						t.Errorf("unexpected complete args: space=%v id=%v", rCtx.SpaceID(), id)
 					}
 					return &finance.Statement{ID: id, Status: finance.StatementStatusCompleted}, nil
 				},
@@ -286,7 +286,7 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				id:   "stmt_1",
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, id finance.StatementID) (*finance.Statement, error) {
 					return nil, errors.New("balance mismatch")
 				},
 				expectedError: true,
@@ -319,7 +319,7 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 			name          string
 			ctx           context.Context
 			id            finance.StatementID
-			mockFn        func(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error)
+			mockFn        func(ctx context.Context, rCtx finance.Context, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error)
 			expectedID    finance.StatementID
 			expectedLines int
 			expectedError bool
@@ -328,9 +328,9 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 				name: "Success",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				id:   "stmt_1",
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error) {
-					if spaceID != "spc_1" || id != "stmt_1" {
-						t.Errorf("unexpected invert args: space=%v id=%v", spaceID, id)
+				mockFn: func(ctx context.Context, rCtx finance.Context, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error) {
+					if rCtx.SpaceID() != "spc_1" || id != "stmt_1" {
+						t.Errorf("unexpected invert args: space=%v id=%v", rCtx.SpaceID(), id)
 					}
 					return &finance.Statement{ID: id}, []*finance.StatementLine{{ID: "line_1"}}, nil
 				},
@@ -348,7 +348,7 @@ func TestCoordinator_StatementOperations(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				id:   "stmt_1",
-				mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error) {
 					return nil, nil, errors.New("cannot invert finalized statement")
 				},
 				expectedError: true,

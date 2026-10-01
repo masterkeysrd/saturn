@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
@@ -12,12 +13,12 @@ import (
 func TestGetTransaction(t *testing.T) {
 	ctx := context.Background()
 	spaceID := finance.SpaceID("spc_1")
+	rCtx := finance.NewContext(spaceID, "usr_1", time.UTC, "USD")
 	accountID := finance.AccountID("acc_1")
 	budgetID := finance.BudgetID("bgt_1")
 
 	txn := &finance.Transaction{
 		ID:        "txn_1",
-		SpaceID:   spaceID,
 		AccountID: &accountID,
 		BudgetID:  &budgetID,
 		Amount:    2500,
@@ -25,13 +26,13 @@ func TestGetTransaction(t *testing.T) {
 
 	t.Run("Basic View", func(t *testing.T) {
 		mockFS := &FinanceServiceMock{
-			GetTransactionFunc: func(ctx context.Context, sid finance.SpaceID, id finance.TransactionID) (*finance.Transaction, error) {
+			GetTransactionFunc: func(ctx context.Context, rCtx finance.Context, id finance.TransactionID) (*finance.Transaction, error) {
 				return txn, nil
 			},
 		}
 
 		svc := NewService(mockFS)
-		res, err := svc.GetTransaction(ctx, spaceID, ViewBasic, "txn_1")
+		res, err := svc.GetTransaction(ctx, rCtx, ViewBasic, "txn_1")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -44,29 +45,29 @@ func TestGetTransaction(t *testing.T) {
 	})
 
 	t.Run("Full View hydrates account and budget", func(t *testing.T) {
-		acc := &finance.Account{ID: accountID, SpaceID: spaceID, Name: "Checking", Currency: "USD"}
-		bgt := &finance.Budget{ID: budgetID, SpaceID: spaceID, Name: "Groceries"}
+		acc := &finance.Account{ID: accountID, Name: "Checking", Currency: "USD"}
+		bgt := &finance.Budget{ID: budgetID, Name: "Groceries"}
 
 		mockFS := &FinanceServiceMock{
-			GetTransactionFunc: func(ctx context.Context, sid finance.SpaceID, id finance.TransactionID) (*finance.Transaction, error) {
+			GetTransactionFunc: func(ctx context.Context, rCtx finance.Context, id finance.TransactionID) (*finance.Transaction, error) {
 				return txn, nil
 			},
-			GetAccountsFunc: func(ctx context.Context, sid finance.SpaceID, ids []finance.AccountID) ([]*finance.Account, error) {
+			GetAccountsFunc: func(ctx context.Context, rCtx finance.Context, ids []finance.AccountID) ([]*finance.Account, error) {
 				return []*finance.Account{acc}, nil
 			},
-			GetFinanceSettingsFunc: func(ctx context.Context, sid finance.SpaceID) (*finance.FinanceSettings, error) {
-				return &finance.FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"}, nil
+			GetFinanceSettingsFunc: func(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error) {
+				return &finance.FinanceSettings{BaseCurrency: "USD"}, nil
 			},
-			GetLatestRatesFunc: func(ctx context.Context, sid finance.SpaceID, from []finance.Currency, to finance.Currency) ([]*finance.ExchangeRate, error) {
+			GetLatestRatesFunc: func(ctx context.Context, rCtx finance.Context, from []finance.Currency, to finance.Currency) ([]*finance.ExchangeRate, error) {
 				return nil, nil
 			},
-			GetBudgetsFunc: func(ctx context.Context, sid finance.SpaceID, ids []finance.BudgetID) ([]*finance.Budget, error) {
+			GetBudgetsFunc: func(ctx context.Context, rCtx finance.Context, ids []finance.BudgetID) ([]*finance.Budget, error) {
 				return []*finance.Budget{bgt}, nil
 			},
 		}
 
 		svc := NewService(mockFS)
-		res, err := svc.GetTransaction(ctx, spaceID, ViewFull, "txn_1")
+		res, err := svc.GetTransaction(ctx, rCtx, ViewFull, "txn_1")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -80,13 +81,13 @@ func TestGetTransaction(t *testing.T) {
 
 	t.Run("Error fetching transaction", func(t *testing.T) {
 		mockFS := &FinanceServiceMock{
-			GetTransactionFunc: func(ctx context.Context, sid finance.SpaceID, id finance.TransactionID) (*finance.Transaction, error) {
+			GetTransactionFunc: func(ctx context.Context, rCtx finance.Context, id finance.TransactionID) (*finance.Transaction, error) {
 				return nil, errors.New("not found")
 			},
 		}
 
 		svc := NewService(mockFS)
-		_, err := svc.GetTransaction(ctx, spaceID, ViewBasic, "txn_1")
+		_, err := svc.GetTransaction(ctx, rCtx, ViewBasic, "txn_1")
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -96,10 +97,11 @@ func TestGetTransaction(t *testing.T) {
 func TestListTransactions(t *testing.T) {
 	ctx := context.Background()
 	spaceID := finance.SpaceID("spc_1")
+	rCtx := finance.NewContext(spaceID, "usr_1", time.UTC, "USD")
 
 	t.Run("Empty transaction list", func(t *testing.T) {
 		mockFS := &FinanceServiceMock{
-			ListTransactionsFunc: func(ctx context.Context, sid finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
+			ListTransactionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
 				return &paging.Page[*finance.Transaction]{
 					Items:         []*finance.Transaction{},
 					NextPageToken: "",
@@ -108,7 +110,7 @@ func TestListTransactions(t *testing.T) {
 		}
 
 		svc := NewService(mockFS)
-		page, err := svc.ListTransactions(ctx, spaceID, ViewFull, finance.TransactionFilter{})
+		page, err := svc.ListTransactions(ctx, rCtx, ViewFull, finance.TransactionFilter{})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -119,13 +121,13 @@ func TestListTransactions(t *testing.T) {
 
 	t.Run("Error from domain", func(t *testing.T) {
 		mockFS := &FinanceServiceMock{
-			ListTransactionsFunc: func(ctx context.Context, sid finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
+			ListTransactionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
 				return nil, errors.New("db error")
 			},
 		}
 
 		svc := NewService(mockFS)
-		_, err := svc.ListTransactions(ctx, spaceID, ViewBasic, finance.TransactionFilter{})
+		_, err := svc.ListTransactions(ctx, rCtx, ViewBasic, finance.TransactionFilter{})
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}

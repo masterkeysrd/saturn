@@ -170,7 +170,6 @@ func TestInboxItem_NewTransaction(t *testing.T) {
 
 	item := &InboxItem{
 		ID:         "ibx_" + ksuid.New().String(),
-		SpaceID:    string(spaceID),
 		Amount:     5000,
 		Currency:   "USD",
 		VendorName: "Coffee Shop",
@@ -202,7 +201,6 @@ func TestInboxItem_NewTransfer(t *testing.T) {
 
 	item := &InboxItem{
 		ID:         "ibx_" + ksuid.New().String(),
-		SpaceID:    string(spaceID),
 		Amount:     12000,
 		Currency:   "USD",
 		VendorName: "Transfer to Savings",
@@ -289,7 +287,6 @@ func TestInboxItem_Events(t *testing.T) {
 	txnID := TransactionID("txn_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	item := &InboxItem{
 		ID:         "ibx_123",
-		SpaceID:    "spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO",
 		Amount:     4500,
 		Currency:   "USD",
 		VendorName: "Supermarket",

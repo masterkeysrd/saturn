@@ -18,7 +18,7 @@ func NewInsightsStore(database db.DB) *InsightsStore {
 	return &InsightsStore{db: database}
 }
 
-type spentTrendRow struct {
+type SpentTrendRow struct {
 	IntervalStart  time.Time `db:"interval_start"`
 	BudgetID       string    `db:"budget_id"`
 	BudgetName     string    `db:"budget_name"`
@@ -29,7 +29,7 @@ type spentTrendRow struct {
 	SpentInLocal   int64     `db:"spent_in_local"`
 }
 
-func (s *InsightsStore) GetSpentTrend(ctx context.Context, filter *finance.SpentTrendFilter) ([]*finance.SpentTrend, error) {
+func (s *InsightsStore) GetSpentTrend(ctx context.Context, rCtx finance.Context, filter *finance.SpentTrendFilter) ([]*finance.SpentTrend, error) {
 	const op errors.Op = "domain/finance/storage.GetSpentTrend"
 	var trunc string
 	switch filter.Granularity {
@@ -60,11 +60,11 @@ func (s *InsightsStore) GetSpentTrend(ctx context.Context, filter *finance.Spent
 	GROUP BY interval_start, t.budget_id, b.name, b.color, b.currency
 	ORDER BY interval_start ASC`, trunc)
 
-	startDateStr := filter.StartDate.UTC().Format("2006-01-02")
-	endDateStr := filter.EndDate.UTC().Format("2006-01-02")
+	startDateStr := formatDateForQuery(filter.StartDate, rCtx)
+	endDateStr := formatDateForQuery(filter.EndDate, rCtx)
 
-	var rows []*spentTrendRow
-	if err := s.db.Select(ctx, &rows, query, string(filter.SpaceID), startDateStr, endDateStr); err != nil {
+	var rows []*SpentTrendRow
+	if err := s.db.Select(ctx, &rows, query, string(rCtx.SpaceID()), startDateStr, endDateStr); err != nil {
 		return nil, errors.E(op, err)
 	}
 
@@ -84,7 +84,7 @@ func (s *InsightsStore) GetSpentTrend(ctx context.Context, filter *finance.Spent
 	return results, nil
 }
 
-type budgetDistributionRow struct {
+type BudgetDistributionRow struct {
 	BudgetID             string  `db:"budget_id"`
 	BudgetName           string  `db:"budget_name"`
 	BudgetColor          string  `db:"budget_color"`
@@ -96,7 +96,7 @@ type budgetDistributionRow struct {
 	ExchangeRateToBase   float64 `db:"exchange_rate_to_base"`
 }
 
-func (s *InsightsStore) GetBudgetDistribution(ctx context.Context, filter *finance.BudgetDistributionFilter) ([]*finance.BudgetDistribution, error) {
+func (s *InsightsStore) GetBudgetDistribution(ctx context.Context, rCtx finance.Context, filter *finance.BudgetDistributionFilter) ([]*finance.BudgetDistribution, error) {
 	const op errors.Op = "domain/finance/storage.GetBudgetDistribution"
 	query := `SELECT 
 		b.id as budget_id,
@@ -124,11 +124,11 @@ func (s *InsightsStore) GetBudgetDistribution(ctx context.Context, filter *finan
 	) bp ON TRUE
 	WHERE b.space_id = $1 AND (LOWER(b.status) = 'active' OR t.spent_in_base > 0)`
 
-	startDateStr := filter.StartDate.UTC().Format("2006-01-02")
-	endDateStr := filter.EndDate.UTC().Format("2006-01-02")
+	startDateStr := formatDateForQuery(filter.StartDate, rCtx)
+	endDateStr := formatDateForQuery(filter.EndDate, rCtx)
 
-	var rows []*budgetDistributionRow
-	if err := s.db.Select(ctx, &rows, query, string(filter.SpaceID), startDateStr, endDateStr); err != nil {
+	var rows []*BudgetDistributionRow
+	if err := s.db.Select(ctx, &rows, query, string(rCtx.SpaceID()), startDateStr, endDateStr); err != nil {
 		return nil, errors.E(op, err)
 	}
 
@@ -160,7 +160,7 @@ type topExpenseRow struct {
 	EffectiveDate   time.Time `db:"effective_date"`
 }
 
-func (s *InsightsStore) GetTopExpenses(ctx context.Context, filter *finance.TopExpensesFilter) ([]*finance.TopExpense, error) {
+func (s *InsightsStore) GetTopExpenses(ctx context.Context, rCtx finance.Context, filter *finance.TopExpensesFilter) ([]*finance.TopExpense, error) {
 	const op errors.Op = "domain/finance/storage.GetTopExpenses"
 	query := `SELECT 
 		t.id as transaction_id,
@@ -177,11 +177,11 @@ func (s *InsightsStore) GetTopExpenses(ctx context.Context, filter *finance.TopE
 	ORDER BY t.amount_in_base DESC
 	LIMIT $4`
 
-	startDateStr := filter.StartDate.UTC().Format("2006-01-02")
-	endDateStr := filter.EndDate.UTC().Format("2006-01-02")
+	startDateStr := formatDateForQuery(filter.StartDate, rCtx)
+	endDateStr := formatDateForQuery(filter.EndDate, rCtx)
 
 	var rows []*topExpenseRow
-	if err := s.db.Select(ctx, &rows, query, string(filter.SpaceID), startDateStr, endDateStr, filter.Limit); err != nil {
+	if err := s.db.Select(ctx, &rows, query, string(rCtx.SpaceID()), startDateStr, endDateStr, filter.Limit); err != nil {
 		return nil, errors.E(op, err)
 	}
 
@@ -201,7 +201,7 @@ func (s *InsightsStore) GetTopExpenses(ctx context.Context, filter *finance.TopE
 	return results, nil
 }
 
-type incomeTrendRow struct {
+type IncomeTrendRow struct {
 	IntervalStart   time.Time `db:"interval_start"`
 	AccountID       string    `db:"account_id"`
 	AccountName     string    `db:"account_name"`
@@ -211,7 +211,7 @@ type incomeTrendRow struct {
 	IncomeInLocal   int64     `db:"income_in_local"`
 }
 
-func (s *InsightsStore) GetIncomeTrend(ctx context.Context, filter *finance.IncomeTrendFilter) ([]*finance.IncomeTrend, error) {
+func (s *InsightsStore) GetIncomeTrend(ctx context.Context, rCtx finance.Context, filter *finance.IncomeTrendFilter) ([]*finance.IncomeTrend, error) {
 	const op errors.Op = "domain/finance/storage.GetIncomeTrend"
 	var trunc string
 	switch filter.Granularity {
@@ -241,11 +241,11 @@ func (s *InsightsStore) GetIncomeTrend(ctx context.Context, filter *finance.Inco
 	GROUP BY interval_start, t.account_id, a.name, a.currency
 	ORDER BY interval_start ASC`, trunc)
 
-	startDateStr := filter.StartDate.UTC().Format("2006-01-02")
-	endDateStr := filter.EndDate.UTC().Format("2006-01-02")
+	startDateStr := formatDateForQuery(filter.StartDate, rCtx)
+	endDateStr := formatDateForQuery(filter.EndDate, rCtx)
 
-	var rows []*incomeTrendRow
-	if err := s.db.Select(ctx, &rows, query, string(filter.SpaceID), startDateStr, endDateStr); err != nil {
+	var rows []*IncomeTrendRow
+	if err := s.db.Select(ctx, &rows, query, string(rCtx.SpaceID()), startDateStr, endDateStr); err != nil {
 		return nil, errors.E(op, err)
 	}
 
@@ -264,12 +264,12 @@ func (s *InsightsStore) GetIncomeTrend(ctx context.Context, filter *finance.Inco
 	return results, nil
 }
 
-type incomeSourceRow struct {
+type IncomeSourceRow struct {
 	SourceName   string `db:"source_name"`
 	AmountInBase int64  `db:"amount_in_base"`
 }
 
-func (s *InsightsStore) GetIncomeSources(ctx context.Context, filter *finance.IncomeSourcesFilter) ([]*finance.IncomeSourceRow, error) {
+func (s *InsightsStore) GetIncomeSources(ctx context.Context, rCtx finance.Context, filter *finance.IncomeSourcesFilter) ([]*finance.IncomeSourceRow, error) {
 	const op errors.Op = "domain/finance/storage.GetIncomeSources"
 	query := `SELECT 
 		COALESCE(t.description, 'Other Inflow') as source_name,
@@ -279,11 +279,11 @@ func (s *InsightsStore) GetIncomeSources(ctx context.Context, filter *finance.In
 	GROUP BY source_name
 	ORDER BY amount_in_base DESC`
 
-	startDateStr := filter.StartDate.UTC().Format("2006-01-02")
-	endDateStr := filter.EndDate.UTC().Format("2006-01-02")
+	startDateStr := formatDateForQuery(filter.StartDate, rCtx)
+	endDateStr := formatDateForQuery(filter.EndDate, rCtx)
 
-	var rows []*incomeSourceRow
-	if err := s.db.Select(ctx, &rows, query, string(filter.SpaceID), startDateStr, endDateStr); err != nil {
+	var rows []*IncomeSourceRow
+	if err := s.db.Select(ctx, &rows, query, string(rCtx.SpaceID()), startDateStr, endDateStr); err != nil {
 		return nil, errors.E(op, err)
 	}
 
@@ -307,7 +307,7 @@ type topIncomeRow struct {
 	EffectiveDate   time.Time `db:"effective_date"`
 }
 
-func (s *InsightsStore) GetTopIncomes(ctx context.Context, filter *finance.TopIncomesFilter) ([]*finance.TopIncome, error) {
+func (s *InsightsStore) GetTopIncomes(ctx context.Context, rCtx finance.Context, filter *finance.TopIncomesFilter) ([]*finance.TopIncome, error) {
 	const op errors.Op = "domain/finance/storage.GetTopIncomes"
 	query := `SELECT 
 		t.id as transaction_id,
@@ -322,11 +322,11 @@ func (s *InsightsStore) GetTopIncomes(ctx context.Context, filter *finance.TopIn
 	ORDER BY t.amount_in_base DESC
 	LIMIT $4`
 
-	startDateStr := filter.StartDate.UTC().Format("2006-01-02")
-	endDateStr := filter.EndDate.UTC().Format("2006-01-02")
+	startDateStr := formatDateForQuery(filter.StartDate, rCtx)
+	endDateStr := formatDateForQuery(filter.EndDate, rCtx)
 
 	var rows []*topIncomeRow
-	if err := s.db.Select(ctx, &rows, query, string(filter.SpaceID), startDateStr, endDateStr, filter.Limit); err != nil {
+	if err := s.db.Select(ctx, &rows, query, string(rCtx.SpaceID()), startDateStr, endDateStr, filter.Limit); err != nil {
 		return nil, errors.E(op, err)
 	}
 
@@ -343,4 +343,12 @@ func (s *InsightsStore) GetTopIncomes(ctx context.Context, filter *finance.TopIn
 		}
 	}
 	return results, nil
+}
+
+func formatDateForQuery(t time.Time, rCtx finance.Context) string {
+	loc := rCtx.Location()
+	if loc == nil {
+		loc = time.UTC
+	}
+	return t.In(loc).Format("2006-01-02")
 }

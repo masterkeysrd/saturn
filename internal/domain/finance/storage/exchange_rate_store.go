@@ -13,7 +13,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
-type exchangeRateDB struct {
+type ExchangeRateRecord struct {
 	SpaceID      string    `db:"space_id"`
 	FromCurrency string    `db:"from_currency"`
 	ToCurrency   string    `db:"to_currency"`
@@ -22,9 +22,8 @@ type exchangeRateDB struct {
 	CreateTime   time.Time `db:"create_time"`
 }
 
-func (row *exchangeRateDB) toDomain() *finance.ExchangeRate {
+func (row *ExchangeRateRecord) toModel() *finance.ExchangeRate {
 	r := &finance.ExchangeRate{
-		SpaceID:      finance.SpaceID(row.SpaceID),
 		FromCurrency: finance.Currency(row.FromCurrency),
 		ToCurrency:   finance.Currency(row.ToCurrency),
 		Rate:         row.Rate,
@@ -43,11 +42,11 @@ func NewExchangeRateStore(database db.DB) *ExchangeRateStore {
 	return &ExchangeRateStore{db: database}
 }
 
-func (s *ExchangeRateStore) Create(ctx context.Context, r *finance.ExchangeRate) error {
+func (s *ExchangeRateStore) Create(ctx context.Context, rCtx finance.Context, r *finance.ExchangeRate) error {
 	const op errors.Op = "domain/finance/storage.Create"
 	ds := pgDialect.Insert(goqu.S("finance").Table("exchange_rate")).
 		Rows(goqu.Record{
-			"space_id":      string(r.SpaceID),
+			"space_id":      string(rCtx.SpaceID()),
 			"from_currency": string(r.FromCurrency),
 			"to_currency":   string(r.ToCurrency),
 			"rate":          r.Rate,
@@ -69,12 +68,12 @@ func (s *ExchangeRateStore) Create(ctx context.Context, r *finance.ExchangeRate)
 	return nil
 }
 
-func (s *ExchangeRateStore) Update(ctx context.Context, r *finance.ExchangeRate) error {
+func (s *ExchangeRateStore) Update(ctx context.Context, rCtx finance.Context, r *finance.ExchangeRate) error {
 	const op errors.Op = "domain/finance/storage.Update"
 	ds := pgDialect.Update(goqu.S("finance").Table("exchange_rate")).
 		Set(goqu.Record{"rate": r.Rate}).
 		Where(goqu.Ex{
-			"space_id":      string(r.SpaceID),
+			"space_id":      string(rCtx.SpaceID()),
 			"from_currency": string(r.FromCurrency),
 			"to_currency":   string(r.ToCurrency),
 			"rate_date":     r.RateDate.Format("2006-01-02"),
@@ -91,12 +90,12 @@ func (s *ExchangeRateStore) Update(ctx context.Context, r *finance.ExchangeRate)
 	return nil
 }
 
-func (s *ExchangeRateStore) GetRate(ctx context.Context, key finance.ExchangeRateKey) (*finance.ExchangeRate, error) {
+func (s *ExchangeRateStore) GetRate(ctx context.Context, rCtx finance.Context, key finance.ExchangeRateKey) (*finance.ExchangeRate, error) {
 	const op errors.Op = "domain/finance/storage.GetRate"
 	ds := pgDialect.From(goqu.S("finance").Table("exchange_rate")).
 		Select("*").
 		Where(goqu.Ex{
-			"space_id":      string(key.SpaceID),
+			"space_id":      string(rCtx.SpaceID()),
 			"from_currency": string(key.FromCurrency),
 			"to_currency":   string(key.ToCurrency),
 		}, goqu.I("rate_date").Lte(key.RateDate.Format("2006-01-02"))).
@@ -108,19 +107,19 @@ func (s *ExchangeRateStore) GetRate(ctx context.Context, key finance.ExchangeRat
 		return nil, errors.E(op, err)
 	}
 
-	var row exchangeRateDB
+	var row ExchangeRateRecord
 	if err := s.db.Get(ctx, &row, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
-	return row.toDomain(), nil
+	return row.toModel(), nil
 }
 
-func (s *ExchangeRateStore) GetExactRate(ctx context.Context, key finance.ExchangeRateKey) (*finance.ExchangeRate, error) {
+func (s *ExchangeRateStore) GetExactRate(ctx context.Context, rCtx finance.Context, key finance.ExchangeRateKey) (*finance.ExchangeRate, error) {
 	const op errors.Op = "domain/finance/storage.GetExactRate"
 	ds := pgDialect.From(goqu.S("finance").Table("exchange_rate")).
 		Select("*").
 		Where(goqu.Ex{
-			"space_id":      string(key.SpaceID),
+			"space_id":      string(rCtx.SpaceID()),
 			"from_currency": string(key.FromCurrency),
 			"to_currency":   string(key.ToCurrency),
 			"rate_date":     key.RateDate.Format("2006-01-02"),
@@ -132,19 +131,19 @@ func (s *ExchangeRateStore) GetExactRate(ctx context.Context, key finance.Exchan
 		return nil, errors.E(op, err)
 	}
 
-	var row exchangeRateDB
+	var row ExchangeRateRecord
 	if err := s.db.Get(ctx, &row, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
-	return row.toDomain(), nil
+	return row.toModel(), nil
 }
 
-func (s *ExchangeRateStore) GetNextRate(ctx context.Context, key finance.ExchangeRateKey) (*finance.ExchangeRate, error) {
+func (s *ExchangeRateStore) GetNextRate(ctx context.Context, rCtx finance.Context, key finance.ExchangeRateKey) (*finance.ExchangeRate, error) {
 	const op errors.Op = "domain/finance/storage.GetNextRate"
 	ds := pgDialect.From(goqu.S("finance").Table("exchange_rate")).
 		Select("*").
 		Where(goqu.Ex{
-			"space_id":      string(key.SpaceID),
+			"space_id":      string(rCtx.SpaceID()),
 			"from_currency": string(key.FromCurrency),
 			"to_currency":   string(key.ToCurrency),
 		}, goqu.I("rate_date").Gt(key.RateDate.Format("2006-01-02"))).
@@ -156,14 +155,14 @@ func (s *ExchangeRateStore) GetNextRate(ctx context.Context, key finance.Exchang
 		return nil, errors.E(op, err)
 	}
 
-	var row exchangeRateDB
+	var row ExchangeRateRecord
 	if err := s.db.Get(ctx, &row, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
-	return row.toDomain(), nil
+	return row.toModel(), nil
 }
 
-func (s *ExchangeRateStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error) {
+func (s *ExchangeRateStore) ListBySpace(ctx context.Context, rCtx finance.Context, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error) {
 	const op errors.Op = "domain/finance/storage.ListBySpace"
 	if filter.PageSize <= 0 {
 		filter.PageSize = 100
@@ -171,7 +170,7 @@ func (s *ExchangeRateStore) ListBySpace(ctx context.Context, spaceID finance.Spa
 
 	ds := pgDialect.From(goqu.S("finance").Table("exchange_rate")).
 		Select("*").
-		Where(goqu.Ex{"space_id": string(spaceID)})
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID())})
 
 	if filter.FromCurrency != nil {
 		ds = ds.Where(goqu.Ex{"from_currency": string(*filter.FromCurrency)})
@@ -205,14 +204,14 @@ func (s *ExchangeRateStore) ListBySpace(ctx context.Context, spaceID finance.Spa
 		return nil, "", errors.E(op, err)
 	}
 
-	var rows []exchangeRateDB
+	var rows []ExchangeRateRecord
 	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
 		return nil, "", errors.E(op, err)
 	}
 
 	rates := make([]*finance.ExchangeRate, len(rows))
 	for i := range rows {
-		rates[i] = rows[i].toDomain()
+		rates[i] = rows[i].toModel()
 	}
 
 	page := paging.NewPage(rates, int(filter.PageSize), func(r *finance.ExchangeRate) paging.Cursor {
@@ -225,11 +224,11 @@ func (s *ExchangeRateStore) ListBySpace(ctx context.Context, spaceID finance.Spa
 	return page.Items, page.NextPageToken, nil
 }
 
-func (s *ExchangeRateStore) Delete(ctx context.Context, key finance.ExchangeRateKey) error {
+func (s *ExchangeRateStore) Delete(ctx context.Context, rCtx finance.Context, key finance.ExchangeRateKey) error {
 	const op errors.Op = "domain/finance/storage.Delete"
 	ds := pgDialect.Delete(goqu.S("finance").Table("exchange_rate")).
 		Where(goqu.Ex{
-			"space_id":      string(key.SpaceID),
+			"space_id":      string(rCtx.SpaceID()),
 			"from_currency": string(key.FromCurrency),
 			"to_currency":   string(key.ToCurrency),
 			"rate_date":     key.RateDate.Format("2006-01-02"),
@@ -246,7 +245,7 @@ func (s *ExchangeRateStore) Delete(ctx context.Context, key finance.ExchangeRate
 	return nil
 }
 
-func (s *ExchangeRateStore) GetLatestRates(ctx context.Context, spaceID finance.SpaceID, fromCurrencies []finance.Currency, toCurrency finance.Currency) ([]*finance.ExchangeRate, error) {
+func (s *ExchangeRateStore) GetLatestRates(ctx context.Context, rCtx finance.Context, fromCurrencies []finance.Currency, toCurrency finance.Currency) ([]*finance.ExchangeRate, error) {
 	const op errors.Op = "domain/finance/storage.GetLatestRates"
 	if len(fromCurrencies) == 0 {
 		return nil, nil
@@ -281,21 +280,21 @@ func (s *ExchangeRateStore) GetLatestRates(ctx context.Context, spaceID finance.
 		   AND r.rate_date = m.max_date
 	`
 
-	query, args, err := sqlx.In(query, string(spaceID), string(toCurrency), currencies)
+	query, args, err := sqlx.In(query, string(rCtx.SpaceID()), string(toCurrency), currencies)
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
 
 	query = s.db.Rebind(query)
 
-	var rows []exchangeRateDB
+	var rows []ExchangeRateRecord
 	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
 
 	rates := make([]*finance.ExchangeRate, len(rows))
 	for i := range rows {
-		rates[i] = rows[i].toDomain()
+		rates[i] = rows[i].toModel()
 	}
 
 	return rates, nil

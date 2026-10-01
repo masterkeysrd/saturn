@@ -11,7 +11,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
-type accountDB struct {
+type AccountRecord struct {
 	ID             string         `db:"id"`
 	SpaceID        string         `db:"space_id"`
 	Name           string         `db:"name"`
@@ -31,14 +31,13 @@ type accountDB struct {
 	UpdateTime     sql.NullTime   `db:"update_time"`
 }
 
-func (row *accountDB) toDomain() *finance.Account {
+func (row *AccountRecord) toModel() *finance.Account {
 	var instID *finance.InstitutionID
 	if row.InstitutionID.Valid {
 		instID = new(finance.InstitutionID(row.InstitutionID.String))
 	}
 	return &finance.Account{
 		ID:             finance.AccountID(row.ID),
-		SpaceID:        finance.SpaceID(row.SpaceID),
 		Name:           row.Name,
 		Type:           finance.AccountType(row.Type),
 		Currency:       finance.Currency(row.Currency),
@@ -65,7 +64,7 @@ func NewAccountStore(database db.DB) *AccountStore {
 	return &AccountStore{db: database}
 }
 
-func (s *AccountStore) Create(ctx context.Context, a *finance.Account) error {
+func (s *AccountStore) Create(ctx context.Context, rCtx finance.Context, a *finance.Account) error {
 	const op errors.Op = "domain/finance/storage.Create"
 	version := a.Version
 	if version <= 0 {
@@ -73,7 +72,7 @@ func (s *AccountStore) Create(ctx context.Context, a *finance.Account) error {
 	}
 	ds := pgDialect.Insert(goqu.S("finance").Table("account")).Rows(goqu.Record{
 		"id":              string(a.ID),
-		"space_id":        string(a.SpaceID),
+		"space_id":        string(rCtx.SpaceID()),
 		"name":            a.Name,
 		"type":            string(a.Type),
 		"currency":        string(a.Currency),
@@ -101,27 +100,27 @@ func (s *AccountStore) Create(ctx context.Context, a *finance.Account) error {
 	return nil
 }
 
-func (s *AccountStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID) (*finance.Account, error) {
+func (s *AccountStore) GetByID(ctx context.Context, rCtx finance.Context, id finance.AccountID) (*finance.Account, error) {
 	const op errors.Op = "domain/finance/storage.GetByID"
 	ds := pgDialect.
 		From(goqu.S("finance").Table("account")).
 		Select("*").
 		Where(goqu.Ex{
-			"space_id": string(spaceID),
+			"space_id": string(rCtx.SpaceID()),
 			"id":       string(id),
 		})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
-	var row accountDB
-	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+	var rec AccountRecord
+	if err := s.db.Get(ctx, &rec, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
-	return row.toDomain(), nil
+	return rec.toModel(), nil
 }
 
-func (s *AccountStore) Update(ctx context.Context, a *finance.Account) error {
+func (s *AccountStore) Update(ctx context.Context, rCtx finance.Context, a *finance.Account) error {
 	const op errors.Op = "domain/finance/storage.Update"
 	currentVersion := a.Version
 	newVersion := currentVersion + 1
@@ -143,7 +142,7 @@ func (s *AccountStore) Update(ctx context.Context, a *finance.Account) error {
 			"version":         newVersion,
 			"update_time":     a.UpdateTime,
 		}).
-		Where(goqu.Ex{"id": string(a.ID), "space_id": string(a.SpaceID)})
+		Where(goqu.Ex{"id": string(a.ID), "space_id": string(rCtx.SpaceID())})
 
 	if currentVersion > 0 {
 		ds = ds.Where(goqu.Ex{"version": currentVersion})
@@ -163,10 +162,10 @@ func (s *AccountStore) Update(ctx context.Context, a *finance.Account) error {
 	return nil
 }
 
-func (s *AccountStore) Delete(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID, opts finance.DeleteOptions) error {
+func (s *AccountStore) Delete(ctx context.Context, rCtx finance.Context, id finance.AccountID, opts finance.DeleteOptions) error {
 	const op errors.Op = "domain/finance/storage.Delete"
 	ds := pgDialect.Delete(goqu.S("finance").Table("account")).
-		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID()), "id": string(id)})
 
 	if opts.Version > 0 {
 		ds = ds.Where(goqu.Ex{"version": opts.Version})
@@ -185,14 +184,14 @@ func (s *AccountStore) Delete(ctx context.Context, spaceID finance.SpaceID, id f
 	return nil
 }
 
-func (s *AccountStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
+func (s *AccountStore) ListBySpace(ctx context.Context, rCtx finance.Context, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
 	const op errors.Op = "domain/finance/storage.ListBySpace"
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
 
 	ds := pgDialect.From(goqu.S("finance").Table("account")).Select("*")
-	ds = ds.Where(goqu.Ex{"space_id": string(spaceID)})
+	ds = ds.Where(goqu.Ex{"space_id": string(rCtx.SpaceID())})
 
 	if filter.ActiveOnly != nil && *filter.ActiveOnly {
 		ds = ds.Where(goqu.Ex{"is_active": true})
@@ -224,14 +223,14 @@ func (s *AccountStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID,
 		return nil, errors.E(op, err)
 	}
 
-	var rows []accountDB
+	var rows []AccountRecord
 	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
 
 	accounts := make([]*finance.Account, len(rows))
 	for i := range rows {
-		accounts[i] = rows[i].toDomain()
+		accounts[i] = rows[i].toModel()
 	}
 
 	page := paging.NewPage(accounts, int(filter.PageSize), func(a *finance.Account) paging.Cursor {
@@ -244,11 +243,11 @@ func (s *AccountStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID,
 	return page, nil
 }
 
-func (s *AccountStore) HasDefault(ctx context.Context, spaceID finance.SpaceID) (bool, error) {
+func (s *AccountStore) HasDefault(ctx context.Context, rCtx finance.Context) (bool, error) {
 	const op errors.Op = "domain/finance/storage.HasDefault"
 	ds := pgDialect.From(goqu.S("finance").Table("account")).
 		Select(goqu.L("1")).
-		Where(goqu.Ex{"space_id": string(spaceID), "is_default": true}).
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID()), "is_default": true}).
 		Limit(1)
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
@@ -265,11 +264,11 @@ func (s *AccountStore) HasDefault(ctx context.Context, spaceID finance.SpaceID) 
 	return true, nil
 }
 
-func (s *AccountStore) UnsetDefaultsExcept(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID) error {
+func (s *AccountStore) UnsetDefaultsExcept(ctx context.Context, rCtx finance.Context, id finance.AccountID) error {
 	const op errors.Op = "domain/finance/storage.UnsetDefaultsExcept"
 	ds := pgDialect.Update(goqu.S("finance").Table("account")).
 		Set(goqu.Record{"is_default": false}).
-		Where(goqu.Ex{"space_id": string(spaceID)}, goqu.I("id").Neq(string(id)))
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID())}, goqu.I("id").Neq(string(id)))
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return errors.E(op, err)
@@ -280,11 +279,11 @@ func (s *AccountStore) UnsetDefaultsExcept(ctx context.Context, spaceID finance.
 	return nil
 }
 
-func (s *AccountStore) HasAny(ctx context.Context, spaceID finance.SpaceID) (bool, error) {
+func (s *AccountStore) HasAny(ctx context.Context, rCtx finance.Context) (bool, error) {
 	const op errors.Op = "domain/finance/storage.HasAny"
 	ds := pgDialect.From(goqu.S("finance").Table("account")).
 		Select(goqu.L("1")).
-		Where(goqu.Ex{"space_id": string(spaceID)}).
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID())}).
 		Limit(1)
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
@@ -301,7 +300,7 @@ func (s *AccountStore) HasAny(ctx context.Context, spaceID finance.SpaceID) (boo
 	return true, nil
 }
 
-func (s *AccountStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, ids []finance.AccountID) ([]*finance.Account, error) {
+func (s *AccountStore) GetByIDs(ctx context.Context, rCtx finance.Context, ids []finance.AccountID) ([]*finance.Account, error) {
 	const op errors.Op = "domain/finance/storage.GetByIDs"
 	if len(ids) == 0 {
 		return nil, nil
@@ -313,20 +312,20 @@ func (s *AccountStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, id
 
 	ds := pgDialect.From(goqu.S("finance").Table("account")).
 		Select("*").
-		Where(goqu.Ex{"space_id": string(spaceID), "id": idStrings})
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID()), "id": idStrings})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
 
-	var rows []accountDB
+	var rows []AccountRecord
 	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
 
 	accounts := make([]*finance.Account, len(rows))
 	for i := range rows {
-		accounts[i] = rows[i].toDomain()
+		accounts[i] = rows[i].toModel()
 	}
 	return accounts, nil
 }

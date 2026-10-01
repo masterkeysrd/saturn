@@ -16,20 +16,21 @@ var _ SettingsStore = (*SettingsStoreMock)(nil)
 // SettingsStoreMock is a mock implementation of SettingsStore.
 type SettingsStoreMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, settings *FinanceSettings) error
+	CreateFunc func(ctx context.Context, rCtx Context, settings *FinanceSettings) error
 
 	// GetByIDFunc mocks the GetByID method.
-	GetByIDFunc func(ctx context.Context, spaceID SpaceID) (*FinanceSettings, error)
+	GetByIDFunc func(ctx context.Context, rCtx Context) (*FinanceSettings, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Create []struct {
 			Ctx      context.Context
+			RCtx     Context
 			Settings *FinanceSettings
 		}
 		GetByID []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
+			Ctx  context.Context
+			RCtx Context
 		}
 	}
 	lockCreate  sync.RWMutex
@@ -37,25 +38,28 @@ type SettingsStoreMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *SettingsStoreMock) Create(ctx context.Context, settings *FinanceSettings) error {
+func (mock *SettingsStoreMock) Create(ctx context.Context, rCtx Context, settings *FinanceSettings) error {
 	if mock.CreateFunc == nil {
 		panic("SettingsStoreMock.CreateFunc: method is nil but SettingsStore.Create was just called")
 	}
 	mock.lockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, struct {
 		Ctx      context.Context
+		RCtx     Context
 		Settings *FinanceSettings
 	}{
 		Ctx:      ctx,
+		RCtx:     rCtx,
 		Settings: settings,
 	})
 	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, settings)
+	return mock.CreateFunc(ctx, rCtx, settings)
 }
 
 // CreateCalls returns all calls made to Create.
 func (mock *SettingsStoreMock) CreateCalls() []struct {
 	Ctx      context.Context
+	RCtx     Context
 	Settings *FinanceSettings
 } {
 	mock.lockCreate.RLock()
@@ -64,26 +68,26 @@ func (mock *SettingsStoreMock) CreateCalls() []struct {
 }
 
 // GetByID calls GetByIDFunc.
-func (mock *SettingsStoreMock) GetByID(ctx context.Context, spaceID SpaceID) (*FinanceSettings, error) {
+func (mock *SettingsStoreMock) GetByID(ctx context.Context, rCtx Context) (*FinanceSettings, error) {
 	if mock.GetByIDFunc == nil {
 		panic("SettingsStoreMock.GetByIDFunc: method is nil but SettingsStore.GetByID was just called")
 	}
 	mock.lockGetByID.Lock()
 	mock.calls.GetByID = append(mock.calls.GetByID, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
+		Ctx  context.Context
+		RCtx Context
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
+		Ctx:  ctx,
+		RCtx: rCtx,
 	})
 	mock.lockGetByID.Unlock()
-	return mock.GetByIDFunc(ctx, spaceID)
+	return mock.GetByIDFunc(ctx, rCtx)
 }
 
 // GetByIDCalls returns all calls made to GetByID.
 func (mock *SettingsStoreMock) GetByIDCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
+	Ctx  context.Context
+	RCtx Context
 } {
 	mock.lockGetByID.RLock()
 	defer mock.lockGetByID.RUnlock()
@@ -96,53 +100,55 @@ var _ BudgetStore = (*BudgetStoreMock)(nil)
 // BudgetStoreMock is a mock implementation of BudgetStore.
 type BudgetStoreMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, budget *Budget) error
+	CreateFunc func(ctx context.Context, rCtx Context, budget *Budget) error
 
 	// GetByIDFunc mocks the GetByID method.
-	GetByIDFunc func(ctx context.Context, spaceID SpaceID, id BudgetID) (*Budget, error)
+	GetByIDFunc func(ctx context.Context, rCtx Context, id BudgetID) (*Budget, error)
 
 	// GetByIDsFunc mocks the GetByIDs method.
-	GetByIDsFunc func(ctx context.Context, spaceID SpaceID, ids []BudgetID) ([]*Budget, error)
+	GetByIDsFunc func(ctx context.Context, rCtx Context, ids []BudgetID) ([]*Budget, error)
 
 	// UpdateFunc mocks the Update method.
-	UpdateFunc func(ctx context.Context, budget *Budget) error
+	UpdateFunc func(ctx context.Context, rCtx Context, budget *Budget) error
 
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(ctx context.Context, spaceID SpaceID, id BudgetID, opts DeleteOptions) error
+	DeleteFunc func(ctx context.Context, rCtx Context, id BudgetID, opts DeleteOptions) error
 
 	// ListBySpaceFunc mocks the ListBySpace method.
-	ListBySpaceFunc func(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) (*paging.Page[*Budget], error)
+	ListBySpaceFunc func(ctx context.Context, rCtx Context, filter *ListBudgetsFilter) (*paging.Page[*Budget], error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Create []struct {
 			Ctx    context.Context
+			RCtx   Context
 			Budget *Budget
 		}
 		GetByID []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      BudgetID
+			Ctx  context.Context
+			RCtx Context
+			Id   BudgetID
 		}
 		GetByIDs []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Ids     []BudgetID
+			Ctx  context.Context
+			RCtx Context
+			Ids  []BudgetID
 		}
 		Update []struct {
 			Ctx    context.Context
+			RCtx   Context
 			Budget *Budget
 		}
 		Delete []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      BudgetID
-			Opts    DeleteOptions
+			Ctx  context.Context
+			RCtx Context
+			Id   BudgetID
+			Opts DeleteOptions
 		}
 		ListBySpace []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Filter  *ListBudgetsFilter
+			Ctx    context.Context
+			RCtx   Context
+			Filter *ListBudgetsFilter
 		}
 	}
 	lockCreate      sync.RWMutex
@@ -154,25 +160,28 @@ type BudgetStoreMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *BudgetStoreMock) Create(ctx context.Context, budget *Budget) error {
+func (mock *BudgetStoreMock) Create(ctx context.Context, rCtx Context, budget *Budget) error {
 	if mock.CreateFunc == nil {
 		panic("BudgetStoreMock.CreateFunc: method is nil but BudgetStore.Create was just called")
 	}
 	mock.lockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, struct {
 		Ctx    context.Context
+		RCtx   Context
 		Budget *Budget
 	}{
 		Ctx:    ctx,
+		RCtx:   rCtx,
 		Budget: budget,
 	})
 	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, budget)
+	return mock.CreateFunc(ctx, rCtx, budget)
 }
 
 // CreateCalls returns all calls made to Create.
 func (mock *BudgetStoreMock) CreateCalls() []struct {
 	Ctx    context.Context
+	RCtx   Context
 	Budget *Budget
 } {
 	mock.lockCreate.RLock()
@@ -181,29 +190,29 @@ func (mock *BudgetStoreMock) CreateCalls() []struct {
 }
 
 // GetByID calls GetByIDFunc.
-func (mock *BudgetStoreMock) GetByID(ctx context.Context, spaceID SpaceID, id BudgetID) (*Budget, error) {
+func (mock *BudgetStoreMock) GetByID(ctx context.Context, rCtx Context, id BudgetID) (*Budget, error) {
 	if mock.GetByIDFunc == nil {
 		panic("BudgetStoreMock.GetByIDFunc: method is nil but BudgetStore.GetByID was just called")
 	}
 	mock.lockGetByID.Lock()
 	mock.calls.GetByID = append(mock.calls.GetByID, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      BudgetID
+		Ctx  context.Context
+		RCtx Context
+		Id   BudgetID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockGetByID.Unlock()
-	return mock.GetByIDFunc(ctx, spaceID, id)
+	return mock.GetByIDFunc(ctx, rCtx, id)
 }
 
 // GetByIDCalls returns all calls made to GetByID.
 func (mock *BudgetStoreMock) GetByIDCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      BudgetID
+	Ctx  context.Context
+	RCtx Context
+	Id   BudgetID
 } {
 	mock.lockGetByID.RLock()
 	defer mock.lockGetByID.RUnlock()
@@ -211,29 +220,29 @@ func (mock *BudgetStoreMock) GetByIDCalls() []struct {
 }
 
 // GetByIDs calls GetByIDsFunc.
-func (mock *BudgetStoreMock) GetByIDs(ctx context.Context, spaceID SpaceID, ids []BudgetID) ([]*Budget, error) {
+func (mock *BudgetStoreMock) GetByIDs(ctx context.Context, rCtx Context, ids []BudgetID) ([]*Budget, error) {
 	if mock.GetByIDsFunc == nil {
 		panic("BudgetStoreMock.GetByIDsFunc: method is nil but BudgetStore.GetByIDs was just called")
 	}
 	mock.lockGetByIDs.Lock()
 	mock.calls.GetByIDs = append(mock.calls.GetByIDs, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Ids     []BudgetID
+		Ctx  context.Context
+		RCtx Context
+		Ids  []BudgetID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Ids:     ids,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Ids:  ids,
 	})
 	mock.lockGetByIDs.Unlock()
-	return mock.GetByIDsFunc(ctx, spaceID, ids)
+	return mock.GetByIDsFunc(ctx, rCtx, ids)
 }
 
 // GetByIDsCalls returns all calls made to GetByIDs.
 func (mock *BudgetStoreMock) GetByIDsCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Ids     []BudgetID
+	Ctx  context.Context
+	RCtx Context
+	Ids  []BudgetID
 } {
 	mock.lockGetByIDs.RLock()
 	defer mock.lockGetByIDs.RUnlock()
@@ -241,25 +250,28 @@ func (mock *BudgetStoreMock) GetByIDsCalls() []struct {
 }
 
 // Update calls UpdateFunc.
-func (mock *BudgetStoreMock) Update(ctx context.Context, budget *Budget) error {
+func (mock *BudgetStoreMock) Update(ctx context.Context, rCtx Context, budget *Budget) error {
 	if mock.UpdateFunc == nil {
 		panic("BudgetStoreMock.UpdateFunc: method is nil but BudgetStore.Update was just called")
 	}
 	mock.lockUpdate.Lock()
 	mock.calls.Update = append(mock.calls.Update, struct {
 		Ctx    context.Context
+		RCtx   Context
 		Budget *Budget
 	}{
 		Ctx:    ctx,
+		RCtx:   rCtx,
 		Budget: budget,
 	})
 	mock.lockUpdate.Unlock()
-	return mock.UpdateFunc(ctx, budget)
+	return mock.UpdateFunc(ctx, rCtx, budget)
 }
 
 // UpdateCalls returns all calls made to Update.
 func (mock *BudgetStoreMock) UpdateCalls() []struct {
 	Ctx    context.Context
+	RCtx   Context
 	Budget *Budget
 } {
 	mock.lockUpdate.RLock()
@@ -268,32 +280,32 @@ func (mock *BudgetStoreMock) UpdateCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *BudgetStoreMock) Delete(ctx context.Context, spaceID SpaceID, id BudgetID, opts DeleteOptions) error {
+func (mock *BudgetStoreMock) Delete(ctx context.Context, rCtx Context, id BudgetID, opts DeleteOptions) error {
 	if mock.DeleteFunc == nil {
 		panic("BudgetStoreMock.DeleteFunc: method is nil but BudgetStore.Delete was just called")
 	}
 	mock.lockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      BudgetID
-		Opts    DeleteOptions
+		Ctx  context.Context
+		RCtx Context
+		Id   BudgetID
+		Opts DeleteOptions
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
-		Opts:    opts,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
+		Opts: opts,
 	})
 	mock.lockDelete.Unlock()
-	return mock.DeleteFunc(ctx, spaceID, id, opts)
+	return mock.DeleteFunc(ctx, rCtx, id, opts)
 }
 
 // DeleteCalls returns all calls made to Delete.
 func (mock *BudgetStoreMock) DeleteCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      BudgetID
-	Opts    DeleteOptions
+	Ctx  context.Context
+	RCtx Context
+	Id   BudgetID
+	Opts DeleteOptions
 } {
 	mock.lockDelete.RLock()
 	defer mock.lockDelete.RUnlock()
@@ -301,29 +313,29 @@ func (mock *BudgetStoreMock) DeleteCalls() []struct {
 }
 
 // ListBySpace calls ListBySpaceFunc.
-func (mock *BudgetStoreMock) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) (*paging.Page[*Budget], error) {
+func (mock *BudgetStoreMock) ListBySpace(ctx context.Context, rCtx Context, filter *ListBudgetsFilter) (*paging.Page[*Budget], error) {
 	if mock.ListBySpaceFunc == nil {
 		panic("BudgetStoreMock.ListBySpaceFunc: method is nil but BudgetStore.ListBySpace was just called")
 	}
 	mock.lockListBySpace.Lock()
 	mock.calls.ListBySpace = append(mock.calls.ListBySpace, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Filter  *ListBudgetsFilter
+		Ctx    context.Context
+		RCtx   Context
+		Filter *ListBudgetsFilter
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Filter:  filter,
+		Ctx:    ctx,
+		RCtx:   rCtx,
+		Filter: filter,
 	})
 	mock.lockListBySpace.Unlock()
-	return mock.ListBySpaceFunc(ctx, spaceID, filter)
+	return mock.ListBySpaceFunc(ctx, rCtx, filter)
 }
 
 // ListBySpaceCalls returns all calls made to ListBySpace.
 func (mock *BudgetStoreMock) ListBySpaceCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Filter  *ListBudgetsFilter
+	Ctx    context.Context
+	RCtx   Context
+	Filter *ListBudgetsFilter
 } {
 	mock.lockListBySpace.RLock()
 	defer mock.lockListBySpace.RUnlock()
@@ -336,61 +348,63 @@ var _ InstitutionStore = (*InstitutionStoreMock)(nil)
 // InstitutionStoreMock is a mock implementation of InstitutionStore.
 type InstitutionStoreMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, inst *Institution) error
+	CreateFunc func(ctx context.Context, rCtx Context, inst *Institution) error
 
 	// GetByIDFunc mocks the GetByID method.
-	GetByIDFunc func(ctx context.Context, spaceID SpaceID, id InstitutionID) (*Institution, error)
+	GetByIDFunc func(ctx context.Context, rCtx Context, id InstitutionID) (*Institution, error)
 
 	// GetByNameFunc mocks the GetByName method.
-	GetByNameFunc func(ctx context.Context, spaceID SpaceID, name string) (*Institution, error)
+	GetByNameFunc func(ctx context.Context, rCtx Context, name string) (*Institution, error)
 
 	// GetByIDsFunc mocks the GetByIDs method.
-	GetByIDsFunc func(ctx context.Context, spaceID SpaceID, ids []InstitutionID) ([]*Institution, error)
+	GetByIDsFunc func(ctx context.Context, rCtx Context, ids []InstitutionID) ([]*Institution, error)
 
 	// UpdateFunc mocks the Update method.
-	UpdateFunc func(ctx context.Context, inst *Institution) error
+	UpdateFunc func(ctx context.Context, rCtx Context, inst *Institution) error
 
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(ctx context.Context, spaceID SpaceID, id InstitutionID, opts DeleteOptions) error
+	DeleteFunc func(ctx context.Context, rCtx Context, id InstitutionID, opts DeleteOptions) error
 
 	// ListBySpaceFunc mocks the ListBySpace method.
-	ListBySpaceFunc func(ctx context.Context, spaceID SpaceID, filter *ListInstitutionsFilter) (*paging.Page[*Institution], error)
+	ListBySpaceFunc func(ctx context.Context, rCtx Context, filter *ListInstitutionsFilter) (*paging.Page[*Institution], error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Create []struct {
 			Ctx  context.Context
+			RCtx Context
 			Inst *Institution
 		}
 		GetByID []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      InstitutionID
+			Ctx  context.Context
+			RCtx Context
+			Id   InstitutionID
 		}
 		GetByName []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Name    string
+			Ctx  context.Context
+			RCtx Context
+			Name string
 		}
 		GetByIDs []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Ids     []InstitutionID
+			Ctx  context.Context
+			RCtx Context
+			Ids  []InstitutionID
 		}
 		Update []struct {
 			Ctx  context.Context
+			RCtx Context
 			Inst *Institution
 		}
 		Delete []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      InstitutionID
-			Opts    DeleteOptions
+			Ctx  context.Context
+			RCtx Context
+			Id   InstitutionID
+			Opts DeleteOptions
 		}
 		ListBySpace []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Filter  *ListInstitutionsFilter
+			Ctx    context.Context
+			RCtx   Context
+			Filter *ListInstitutionsFilter
 		}
 	}
 	lockCreate      sync.RWMutex
@@ -403,25 +417,28 @@ type InstitutionStoreMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *InstitutionStoreMock) Create(ctx context.Context, inst *Institution) error {
+func (mock *InstitutionStoreMock) Create(ctx context.Context, rCtx Context, inst *Institution) error {
 	if mock.CreateFunc == nil {
 		panic("InstitutionStoreMock.CreateFunc: method is nil but InstitutionStore.Create was just called")
 	}
 	mock.lockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, struct {
 		Ctx  context.Context
+		RCtx Context
 		Inst *Institution
 	}{
 		Ctx:  ctx,
+		RCtx: rCtx,
 		Inst: inst,
 	})
 	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, inst)
+	return mock.CreateFunc(ctx, rCtx, inst)
 }
 
 // CreateCalls returns all calls made to Create.
 func (mock *InstitutionStoreMock) CreateCalls() []struct {
 	Ctx  context.Context
+	RCtx Context
 	Inst *Institution
 } {
 	mock.lockCreate.RLock()
@@ -430,29 +447,29 @@ func (mock *InstitutionStoreMock) CreateCalls() []struct {
 }
 
 // GetByID calls GetByIDFunc.
-func (mock *InstitutionStoreMock) GetByID(ctx context.Context, spaceID SpaceID, id InstitutionID) (*Institution, error) {
+func (mock *InstitutionStoreMock) GetByID(ctx context.Context, rCtx Context, id InstitutionID) (*Institution, error) {
 	if mock.GetByIDFunc == nil {
 		panic("InstitutionStoreMock.GetByIDFunc: method is nil but InstitutionStore.GetByID was just called")
 	}
 	mock.lockGetByID.Lock()
 	mock.calls.GetByID = append(mock.calls.GetByID, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      InstitutionID
+		Ctx  context.Context
+		RCtx Context
+		Id   InstitutionID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockGetByID.Unlock()
-	return mock.GetByIDFunc(ctx, spaceID, id)
+	return mock.GetByIDFunc(ctx, rCtx, id)
 }
 
 // GetByIDCalls returns all calls made to GetByID.
 func (mock *InstitutionStoreMock) GetByIDCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      InstitutionID
+	Ctx  context.Context
+	RCtx Context
+	Id   InstitutionID
 } {
 	mock.lockGetByID.RLock()
 	defer mock.lockGetByID.RUnlock()
@@ -460,29 +477,29 @@ func (mock *InstitutionStoreMock) GetByIDCalls() []struct {
 }
 
 // GetByName calls GetByNameFunc.
-func (mock *InstitutionStoreMock) GetByName(ctx context.Context, spaceID SpaceID, name string) (*Institution, error) {
+func (mock *InstitutionStoreMock) GetByName(ctx context.Context, rCtx Context, name string) (*Institution, error) {
 	if mock.GetByNameFunc == nil {
 		panic("InstitutionStoreMock.GetByNameFunc: method is nil but InstitutionStore.GetByName was just called")
 	}
 	mock.lockGetByName.Lock()
 	mock.calls.GetByName = append(mock.calls.GetByName, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Name    string
+		Ctx  context.Context
+		RCtx Context
+		Name string
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Name:    name,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Name: name,
 	})
 	mock.lockGetByName.Unlock()
-	return mock.GetByNameFunc(ctx, spaceID, name)
+	return mock.GetByNameFunc(ctx, rCtx, name)
 }
 
 // GetByNameCalls returns all calls made to GetByName.
 func (mock *InstitutionStoreMock) GetByNameCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Name    string
+	Ctx  context.Context
+	RCtx Context
+	Name string
 } {
 	mock.lockGetByName.RLock()
 	defer mock.lockGetByName.RUnlock()
@@ -490,29 +507,29 @@ func (mock *InstitutionStoreMock) GetByNameCalls() []struct {
 }
 
 // GetByIDs calls GetByIDsFunc.
-func (mock *InstitutionStoreMock) GetByIDs(ctx context.Context, spaceID SpaceID, ids []InstitutionID) ([]*Institution, error) {
+func (mock *InstitutionStoreMock) GetByIDs(ctx context.Context, rCtx Context, ids []InstitutionID) ([]*Institution, error) {
 	if mock.GetByIDsFunc == nil {
 		panic("InstitutionStoreMock.GetByIDsFunc: method is nil but InstitutionStore.GetByIDs was just called")
 	}
 	mock.lockGetByIDs.Lock()
 	mock.calls.GetByIDs = append(mock.calls.GetByIDs, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Ids     []InstitutionID
+		Ctx  context.Context
+		RCtx Context
+		Ids  []InstitutionID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Ids:     ids,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Ids:  ids,
 	})
 	mock.lockGetByIDs.Unlock()
-	return mock.GetByIDsFunc(ctx, spaceID, ids)
+	return mock.GetByIDsFunc(ctx, rCtx, ids)
 }
 
 // GetByIDsCalls returns all calls made to GetByIDs.
 func (mock *InstitutionStoreMock) GetByIDsCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Ids     []InstitutionID
+	Ctx  context.Context
+	RCtx Context
+	Ids  []InstitutionID
 } {
 	mock.lockGetByIDs.RLock()
 	defer mock.lockGetByIDs.RUnlock()
@@ -520,25 +537,28 @@ func (mock *InstitutionStoreMock) GetByIDsCalls() []struct {
 }
 
 // Update calls UpdateFunc.
-func (mock *InstitutionStoreMock) Update(ctx context.Context, inst *Institution) error {
+func (mock *InstitutionStoreMock) Update(ctx context.Context, rCtx Context, inst *Institution) error {
 	if mock.UpdateFunc == nil {
 		panic("InstitutionStoreMock.UpdateFunc: method is nil but InstitutionStore.Update was just called")
 	}
 	mock.lockUpdate.Lock()
 	mock.calls.Update = append(mock.calls.Update, struct {
 		Ctx  context.Context
+		RCtx Context
 		Inst *Institution
 	}{
 		Ctx:  ctx,
+		RCtx: rCtx,
 		Inst: inst,
 	})
 	mock.lockUpdate.Unlock()
-	return mock.UpdateFunc(ctx, inst)
+	return mock.UpdateFunc(ctx, rCtx, inst)
 }
 
 // UpdateCalls returns all calls made to Update.
 func (mock *InstitutionStoreMock) UpdateCalls() []struct {
 	Ctx  context.Context
+	RCtx Context
 	Inst *Institution
 } {
 	mock.lockUpdate.RLock()
@@ -547,32 +567,32 @@ func (mock *InstitutionStoreMock) UpdateCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *InstitutionStoreMock) Delete(ctx context.Context, spaceID SpaceID, id InstitutionID, opts DeleteOptions) error {
+func (mock *InstitutionStoreMock) Delete(ctx context.Context, rCtx Context, id InstitutionID, opts DeleteOptions) error {
 	if mock.DeleteFunc == nil {
 		panic("InstitutionStoreMock.DeleteFunc: method is nil but InstitutionStore.Delete was just called")
 	}
 	mock.lockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      InstitutionID
-		Opts    DeleteOptions
+		Ctx  context.Context
+		RCtx Context
+		Id   InstitutionID
+		Opts DeleteOptions
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
-		Opts:    opts,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
+		Opts: opts,
 	})
 	mock.lockDelete.Unlock()
-	return mock.DeleteFunc(ctx, spaceID, id, opts)
+	return mock.DeleteFunc(ctx, rCtx, id, opts)
 }
 
 // DeleteCalls returns all calls made to Delete.
 func (mock *InstitutionStoreMock) DeleteCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      InstitutionID
-	Opts    DeleteOptions
+	Ctx  context.Context
+	RCtx Context
+	Id   InstitutionID
+	Opts DeleteOptions
 } {
 	mock.lockDelete.RLock()
 	defer mock.lockDelete.RUnlock()
@@ -580,29 +600,29 @@ func (mock *InstitutionStoreMock) DeleteCalls() []struct {
 }
 
 // ListBySpace calls ListBySpaceFunc.
-func (mock *InstitutionStoreMock) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListInstitutionsFilter) (*paging.Page[*Institution], error) {
+func (mock *InstitutionStoreMock) ListBySpace(ctx context.Context, rCtx Context, filter *ListInstitutionsFilter) (*paging.Page[*Institution], error) {
 	if mock.ListBySpaceFunc == nil {
 		panic("InstitutionStoreMock.ListBySpaceFunc: method is nil but InstitutionStore.ListBySpace was just called")
 	}
 	mock.lockListBySpace.Lock()
 	mock.calls.ListBySpace = append(mock.calls.ListBySpace, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Filter  *ListInstitutionsFilter
+		Ctx    context.Context
+		RCtx   Context
+		Filter *ListInstitutionsFilter
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Filter:  filter,
+		Ctx:    ctx,
+		RCtx:   rCtx,
+		Filter: filter,
 	})
 	mock.lockListBySpace.Unlock()
-	return mock.ListBySpaceFunc(ctx, spaceID, filter)
+	return mock.ListBySpaceFunc(ctx, rCtx, filter)
 }
 
 // ListBySpaceCalls returns all calls made to ListBySpace.
 func (mock *InstitutionStoreMock) ListBySpaceCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Filter  *ListInstitutionsFilter
+	Ctx    context.Context
+	RCtx   Context
+	Filter *ListInstitutionsFilter
 } {
 	mock.lockListBySpace.RLock()
 	defer mock.lockListBySpace.RUnlock()
@@ -615,43 +635,46 @@ var _ PeriodStore = (*PeriodStoreMock)(nil)
 // PeriodStoreMock is a mock implementation of PeriodStore.
 type PeriodStoreMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, period *BudgetPeriod) error
+	CreateFunc func(ctx context.Context, rCtx Context, period *BudgetPeriod) error
 
 	// GetByRangeFunc mocks the GetByRange method.
-	GetByRangeFunc func(ctx context.Context, budgetID BudgetID, startDate time.Time, endDate time.Time) (*BudgetPeriod, error)
+	GetByRangeFunc func(ctx context.Context, fCtx Context, key PeriodRangeKey) (*BudgetPeriod, error)
 
 	// GetByRangesFunc mocks the GetByRanges method.
-	GetByRangesFunc func(ctx context.Context, keys []PeriodRangeKey) ([]*BudgetPeriod, error)
+	GetByRangesFunc func(ctx context.Context, fCtx Context, keys []PeriodRangeKey) ([]*BudgetPeriod, error)
 
 	// UpdateLimitFunc mocks the UpdateLimit method.
-	UpdateLimitFunc func(ctx context.Context, periodID PeriodID, limitAmount int64) error
+	UpdateLimitFunc func(ctx context.Context, fCtx Context, periodID PeriodID, limitAmount int64) error
 
 	// ListByBudgetFunc mocks the ListByBudget method.
-	ListByBudgetFunc func(ctx context.Context, budgetID BudgetID) ([]*BudgetPeriod, error)
+	ListByBudgetFunc func(ctx context.Context, fCtx Context, budgetID BudgetID) ([]*BudgetPeriod, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Create []struct {
 			Ctx    context.Context
+			RCtx   Context
 			Period *BudgetPeriod
 		}
 		GetByRange []struct {
-			Ctx       context.Context
-			BudgetID  BudgetID
-			StartDate time.Time
-			EndDate   time.Time
+			Ctx  context.Context
+			FCtx Context
+			Key  PeriodRangeKey
 		}
 		GetByRanges []struct {
 			Ctx  context.Context
+			FCtx Context
 			Keys []PeriodRangeKey
 		}
 		UpdateLimit []struct {
 			Ctx         context.Context
+			FCtx        Context
 			PeriodID    PeriodID
 			LimitAmount int64
 		}
 		ListByBudget []struct {
 			Ctx      context.Context
+			FCtx     Context
 			BudgetID BudgetID
 		}
 	}
@@ -663,25 +686,28 @@ type PeriodStoreMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *PeriodStoreMock) Create(ctx context.Context, period *BudgetPeriod) error {
+func (mock *PeriodStoreMock) Create(ctx context.Context, rCtx Context, period *BudgetPeriod) error {
 	if mock.CreateFunc == nil {
 		panic("PeriodStoreMock.CreateFunc: method is nil but PeriodStore.Create was just called")
 	}
 	mock.lockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, struct {
 		Ctx    context.Context
+		RCtx   Context
 		Period *BudgetPeriod
 	}{
 		Ctx:    ctx,
+		RCtx:   rCtx,
 		Period: period,
 	})
 	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, period)
+	return mock.CreateFunc(ctx, rCtx, period)
 }
 
 // CreateCalls returns all calls made to Create.
 func (mock *PeriodStoreMock) CreateCalls() []struct {
 	Ctx    context.Context
+	RCtx   Context
 	Period *BudgetPeriod
 } {
 	mock.lockCreate.RLock()
@@ -690,32 +716,29 @@ func (mock *PeriodStoreMock) CreateCalls() []struct {
 }
 
 // GetByRange calls GetByRangeFunc.
-func (mock *PeriodStoreMock) GetByRange(ctx context.Context, budgetID BudgetID, startDate time.Time, endDate time.Time) (*BudgetPeriod, error) {
+func (mock *PeriodStoreMock) GetByRange(ctx context.Context, fCtx Context, key PeriodRangeKey) (*BudgetPeriod, error) {
 	if mock.GetByRangeFunc == nil {
 		panic("PeriodStoreMock.GetByRangeFunc: method is nil but PeriodStore.GetByRange was just called")
 	}
 	mock.lockGetByRange.Lock()
 	mock.calls.GetByRange = append(mock.calls.GetByRange, struct {
-		Ctx       context.Context
-		BudgetID  BudgetID
-		StartDate time.Time
-		EndDate   time.Time
+		Ctx  context.Context
+		FCtx Context
+		Key  PeriodRangeKey
 	}{
-		Ctx:       ctx,
-		BudgetID:  budgetID,
-		StartDate: startDate,
-		EndDate:   endDate,
+		Ctx:  ctx,
+		FCtx: fCtx,
+		Key:  key,
 	})
 	mock.lockGetByRange.Unlock()
-	return mock.GetByRangeFunc(ctx, budgetID, startDate, endDate)
+	return mock.GetByRangeFunc(ctx, fCtx, key)
 }
 
 // GetByRangeCalls returns all calls made to GetByRange.
 func (mock *PeriodStoreMock) GetByRangeCalls() []struct {
-	Ctx       context.Context
-	BudgetID  BudgetID
-	StartDate time.Time
-	EndDate   time.Time
+	Ctx  context.Context
+	FCtx Context
+	Key  PeriodRangeKey
 } {
 	mock.lockGetByRange.RLock()
 	defer mock.lockGetByRange.RUnlock()
@@ -723,25 +746,28 @@ func (mock *PeriodStoreMock) GetByRangeCalls() []struct {
 }
 
 // GetByRanges calls GetByRangesFunc.
-func (mock *PeriodStoreMock) GetByRanges(ctx context.Context, keys []PeriodRangeKey) ([]*BudgetPeriod, error) {
+func (mock *PeriodStoreMock) GetByRanges(ctx context.Context, fCtx Context, keys []PeriodRangeKey) ([]*BudgetPeriod, error) {
 	if mock.GetByRangesFunc == nil {
 		panic("PeriodStoreMock.GetByRangesFunc: method is nil but PeriodStore.GetByRanges was just called")
 	}
 	mock.lockGetByRanges.Lock()
 	mock.calls.GetByRanges = append(mock.calls.GetByRanges, struct {
 		Ctx  context.Context
+		FCtx Context
 		Keys []PeriodRangeKey
 	}{
 		Ctx:  ctx,
+		FCtx: fCtx,
 		Keys: keys,
 	})
 	mock.lockGetByRanges.Unlock()
-	return mock.GetByRangesFunc(ctx, keys)
+	return mock.GetByRangesFunc(ctx, fCtx, keys)
 }
 
 // GetByRangesCalls returns all calls made to GetByRanges.
 func (mock *PeriodStoreMock) GetByRangesCalls() []struct {
 	Ctx  context.Context
+	FCtx Context
 	Keys []PeriodRangeKey
 } {
 	mock.lockGetByRanges.RLock()
@@ -750,27 +776,30 @@ func (mock *PeriodStoreMock) GetByRangesCalls() []struct {
 }
 
 // UpdateLimit calls UpdateLimitFunc.
-func (mock *PeriodStoreMock) UpdateLimit(ctx context.Context, periodID PeriodID, limitAmount int64) error {
+func (mock *PeriodStoreMock) UpdateLimit(ctx context.Context, fCtx Context, periodID PeriodID, limitAmount int64) error {
 	if mock.UpdateLimitFunc == nil {
 		panic("PeriodStoreMock.UpdateLimitFunc: method is nil but PeriodStore.UpdateLimit was just called")
 	}
 	mock.lockUpdateLimit.Lock()
 	mock.calls.UpdateLimit = append(mock.calls.UpdateLimit, struct {
 		Ctx         context.Context
+		FCtx        Context
 		PeriodID    PeriodID
 		LimitAmount int64
 	}{
 		Ctx:         ctx,
+		FCtx:        fCtx,
 		PeriodID:    periodID,
 		LimitAmount: limitAmount,
 	})
 	mock.lockUpdateLimit.Unlock()
-	return mock.UpdateLimitFunc(ctx, periodID, limitAmount)
+	return mock.UpdateLimitFunc(ctx, fCtx, periodID, limitAmount)
 }
 
 // UpdateLimitCalls returns all calls made to UpdateLimit.
 func (mock *PeriodStoreMock) UpdateLimitCalls() []struct {
 	Ctx         context.Context
+	FCtx        Context
 	PeriodID    PeriodID
 	LimitAmount int64
 } {
@@ -780,25 +809,28 @@ func (mock *PeriodStoreMock) UpdateLimitCalls() []struct {
 }
 
 // ListByBudget calls ListByBudgetFunc.
-func (mock *PeriodStoreMock) ListByBudget(ctx context.Context, budgetID BudgetID) ([]*BudgetPeriod, error) {
+func (mock *PeriodStoreMock) ListByBudget(ctx context.Context, fCtx Context, budgetID BudgetID) ([]*BudgetPeriod, error) {
 	if mock.ListByBudgetFunc == nil {
 		panic("PeriodStoreMock.ListByBudgetFunc: method is nil but PeriodStore.ListByBudget was just called")
 	}
 	mock.lockListByBudget.Lock()
 	mock.calls.ListByBudget = append(mock.calls.ListByBudget, struct {
 		Ctx      context.Context
+		FCtx     Context
 		BudgetID BudgetID
 	}{
 		Ctx:      ctx,
+		FCtx:     fCtx,
 		BudgetID: budgetID,
 	})
 	mock.lockListByBudget.Unlock()
-	return mock.ListByBudgetFunc(ctx, budgetID)
+	return mock.ListByBudgetFunc(ctx, fCtx, budgetID)
 }
 
 // ListByBudgetCalls returns all calls made to ListByBudget.
 func (mock *PeriodStoreMock) ListByBudgetCalls() []struct {
 	Ctx      context.Context
+	FCtx     Context
 	BudgetID BudgetID
 } {
 	mock.lockListByBudget.RLock()
@@ -812,65 +844,71 @@ var _ ExchangeRateStore = (*ExchangeRateStoreMock)(nil)
 // ExchangeRateStoreMock is a mock implementation of ExchangeRateStore.
 type ExchangeRateStoreMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, rate *ExchangeRate) error
+	CreateFunc func(ctx context.Context, rCtx Context, rate *ExchangeRate) error
 
 	// UpdateFunc mocks the Update method.
-	UpdateFunc func(ctx context.Context, rate *ExchangeRate) error
+	UpdateFunc func(ctx context.Context, rCtx Context, rate *ExchangeRate) error
 
 	// GetRateFunc mocks the GetRate method.
-	GetRateFunc func(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error)
+	GetRateFunc func(ctx context.Context, rCtx Context, key ExchangeRateKey) (*ExchangeRate, error)
 
 	// GetExactRateFunc mocks the GetExactRate method.
-	GetExactRateFunc func(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error)
+	GetExactRateFunc func(ctx context.Context, rCtx Context, key ExchangeRateKey) (*ExchangeRate, error)
 
 	// GetNextRateFunc mocks the GetNextRate method.
-	GetNextRateFunc func(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error)
+	GetNextRateFunc func(ctx context.Context, rCtx Context, key ExchangeRateKey) (*ExchangeRate, error)
 
 	// ListBySpaceFunc mocks the ListBySpace method.
-	ListBySpaceFunc func(ctx context.Context, spaceID SpaceID, filter *ListExchangeRatesFilter) ([]*ExchangeRate, string, error)
+	ListBySpaceFunc func(ctx context.Context, rCtx Context, filter *ListExchangeRatesFilter) ([]*ExchangeRate, string, error)
 
 	// GetLatestRatesFunc mocks the GetLatestRates method.
-	GetLatestRatesFunc func(ctx context.Context, spaceID SpaceID, fromCurrencies []Currency, toCurrency Currency) ([]*ExchangeRate, error)
+	GetLatestRatesFunc func(ctx context.Context, rCtx Context, fromCurrencies []Currency, toCurrency Currency) ([]*ExchangeRate, error)
 
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(ctx context.Context, key ExchangeRateKey) error
+	DeleteFunc func(ctx context.Context, rCtx Context, key ExchangeRateKey) error
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Create []struct {
 			Ctx  context.Context
+			RCtx Context
 			Rate *ExchangeRate
 		}
 		Update []struct {
 			Ctx  context.Context
+			RCtx Context
 			Rate *ExchangeRate
 		}
 		GetRate []struct {
-			Ctx context.Context
-			Key ExchangeRateKey
+			Ctx  context.Context
+			RCtx Context
+			Key  ExchangeRateKey
 		}
 		GetExactRate []struct {
-			Ctx context.Context
-			Key ExchangeRateKey
+			Ctx  context.Context
+			RCtx Context
+			Key  ExchangeRateKey
 		}
 		GetNextRate []struct {
-			Ctx context.Context
-			Key ExchangeRateKey
+			Ctx  context.Context
+			RCtx Context
+			Key  ExchangeRateKey
 		}
 		ListBySpace []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Filter  *ListExchangeRatesFilter
+			Ctx    context.Context
+			RCtx   Context
+			Filter *ListExchangeRatesFilter
 		}
 		GetLatestRates []struct {
 			Ctx            context.Context
-			SpaceID        SpaceID
+			RCtx           Context
 			FromCurrencies []Currency
 			ToCurrency     Currency
 		}
 		Delete []struct {
-			Ctx context.Context
-			Key ExchangeRateKey
+			Ctx  context.Context
+			RCtx Context
+			Key  ExchangeRateKey
 		}
 	}
 	lockCreate         sync.RWMutex
@@ -884,25 +922,28 @@ type ExchangeRateStoreMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *ExchangeRateStoreMock) Create(ctx context.Context, rate *ExchangeRate) error {
+func (mock *ExchangeRateStoreMock) Create(ctx context.Context, rCtx Context, rate *ExchangeRate) error {
 	if mock.CreateFunc == nil {
 		panic("ExchangeRateStoreMock.CreateFunc: method is nil but ExchangeRateStore.Create was just called")
 	}
 	mock.lockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, struct {
 		Ctx  context.Context
+		RCtx Context
 		Rate *ExchangeRate
 	}{
 		Ctx:  ctx,
+		RCtx: rCtx,
 		Rate: rate,
 	})
 	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, rate)
+	return mock.CreateFunc(ctx, rCtx, rate)
 }
 
 // CreateCalls returns all calls made to Create.
 func (mock *ExchangeRateStoreMock) CreateCalls() []struct {
 	Ctx  context.Context
+	RCtx Context
 	Rate *ExchangeRate
 } {
 	mock.lockCreate.RLock()
@@ -911,25 +952,28 @@ func (mock *ExchangeRateStoreMock) CreateCalls() []struct {
 }
 
 // Update calls UpdateFunc.
-func (mock *ExchangeRateStoreMock) Update(ctx context.Context, rate *ExchangeRate) error {
+func (mock *ExchangeRateStoreMock) Update(ctx context.Context, rCtx Context, rate *ExchangeRate) error {
 	if mock.UpdateFunc == nil {
 		panic("ExchangeRateStoreMock.UpdateFunc: method is nil but ExchangeRateStore.Update was just called")
 	}
 	mock.lockUpdate.Lock()
 	mock.calls.Update = append(mock.calls.Update, struct {
 		Ctx  context.Context
+		RCtx Context
 		Rate *ExchangeRate
 	}{
 		Ctx:  ctx,
+		RCtx: rCtx,
 		Rate: rate,
 	})
 	mock.lockUpdate.Unlock()
-	return mock.UpdateFunc(ctx, rate)
+	return mock.UpdateFunc(ctx, rCtx, rate)
 }
 
 // UpdateCalls returns all calls made to Update.
 func (mock *ExchangeRateStoreMock) UpdateCalls() []struct {
 	Ctx  context.Context
+	RCtx Context
 	Rate *ExchangeRate
 } {
 	mock.lockUpdate.RLock()
@@ -938,26 +982,29 @@ func (mock *ExchangeRateStoreMock) UpdateCalls() []struct {
 }
 
 // GetRate calls GetRateFunc.
-func (mock *ExchangeRateStoreMock) GetRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error) {
+func (mock *ExchangeRateStoreMock) GetRate(ctx context.Context, rCtx Context, key ExchangeRateKey) (*ExchangeRate, error) {
 	if mock.GetRateFunc == nil {
 		panic("ExchangeRateStoreMock.GetRateFunc: method is nil but ExchangeRateStore.GetRate was just called")
 	}
 	mock.lockGetRate.Lock()
 	mock.calls.GetRate = append(mock.calls.GetRate, struct {
-		Ctx context.Context
-		Key ExchangeRateKey
+		Ctx  context.Context
+		RCtx Context
+		Key  ExchangeRateKey
 	}{
-		Ctx: ctx,
-		Key: key,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Key:  key,
 	})
 	mock.lockGetRate.Unlock()
-	return mock.GetRateFunc(ctx, key)
+	return mock.GetRateFunc(ctx, rCtx, key)
 }
 
 // GetRateCalls returns all calls made to GetRate.
 func (mock *ExchangeRateStoreMock) GetRateCalls() []struct {
-	Ctx context.Context
-	Key ExchangeRateKey
+	Ctx  context.Context
+	RCtx Context
+	Key  ExchangeRateKey
 } {
 	mock.lockGetRate.RLock()
 	defer mock.lockGetRate.RUnlock()
@@ -965,26 +1012,29 @@ func (mock *ExchangeRateStoreMock) GetRateCalls() []struct {
 }
 
 // GetExactRate calls GetExactRateFunc.
-func (mock *ExchangeRateStoreMock) GetExactRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error) {
+func (mock *ExchangeRateStoreMock) GetExactRate(ctx context.Context, rCtx Context, key ExchangeRateKey) (*ExchangeRate, error) {
 	if mock.GetExactRateFunc == nil {
 		panic("ExchangeRateStoreMock.GetExactRateFunc: method is nil but ExchangeRateStore.GetExactRate was just called")
 	}
 	mock.lockGetExactRate.Lock()
 	mock.calls.GetExactRate = append(mock.calls.GetExactRate, struct {
-		Ctx context.Context
-		Key ExchangeRateKey
+		Ctx  context.Context
+		RCtx Context
+		Key  ExchangeRateKey
 	}{
-		Ctx: ctx,
-		Key: key,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Key:  key,
 	})
 	mock.lockGetExactRate.Unlock()
-	return mock.GetExactRateFunc(ctx, key)
+	return mock.GetExactRateFunc(ctx, rCtx, key)
 }
 
 // GetExactRateCalls returns all calls made to GetExactRate.
 func (mock *ExchangeRateStoreMock) GetExactRateCalls() []struct {
-	Ctx context.Context
-	Key ExchangeRateKey
+	Ctx  context.Context
+	RCtx Context
+	Key  ExchangeRateKey
 } {
 	mock.lockGetExactRate.RLock()
 	defer mock.lockGetExactRate.RUnlock()
@@ -992,26 +1042,29 @@ func (mock *ExchangeRateStoreMock) GetExactRateCalls() []struct {
 }
 
 // GetNextRate calls GetNextRateFunc.
-func (mock *ExchangeRateStoreMock) GetNextRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error) {
+func (mock *ExchangeRateStoreMock) GetNextRate(ctx context.Context, rCtx Context, key ExchangeRateKey) (*ExchangeRate, error) {
 	if mock.GetNextRateFunc == nil {
 		panic("ExchangeRateStoreMock.GetNextRateFunc: method is nil but ExchangeRateStore.GetNextRate was just called")
 	}
 	mock.lockGetNextRate.Lock()
 	mock.calls.GetNextRate = append(mock.calls.GetNextRate, struct {
-		Ctx context.Context
-		Key ExchangeRateKey
+		Ctx  context.Context
+		RCtx Context
+		Key  ExchangeRateKey
 	}{
-		Ctx: ctx,
-		Key: key,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Key:  key,
 	})
 	mock.lockGetNextRate.Unlock()
-	return mock.GetNextRateFunc(ctx, key)
+	return mock.GetNextRateFunc(ctx, rCtx, key)
 }
 
 // GetNextRateCalls returns all calls made to GetNextRate.
 func (mock *ExchangeRateStoreMock) GetNextRateCalls() []struct {
-	Ctx context.Context
-	Key ExchangeRateKey
+	Ctx  context.Context
+	RCtx Context
+	Key  ExchangeRateKey
 } {
 	mock.lockGetNextRate.RLock()
 	defer mock.lockGetNextRate.RUnlock()
@@ -1019,29 +1072,29 @@ func (mock *ExchangeRateStoreMock) GetNextRateCalls() []struct {
 }
 
 // ListBySpace calls ListBySpaceFunc.
-func (mock *ExchangeRateStoreMock) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListExchangeRatesFilter) ([]*ExchangeRate, string, error) {
+func (mock *ExchangeRateStoreMock) ListBySpace(ctx context.Context, rCtx Context, filter *ListExchangeRatesFilter) ([]*ExchangeRate, string, error) {
 	if mock.ListBySpaceFunc == nil {
 		panic("ExchangeRateStoreMock.ListBySpaceFunc: method is nil but ExchangeRateStore.ListBySpace was just called")
 	}
 	mock.lockListBySpace.Lock()
 	mock.calls.ListBySpace = append(mock.calls.ListBySpace, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Filter  *ListExchangeRatesFilter
+		Ctx    context.Context
+		RCtx   Context
+		Filter *ListExchangeRatesFilter
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Filter:  filter,
+		Ctx:    ctx,
+		RCtx:   rCtx,
+		Filter: filter,
 	})
 	mock.lockListBySpace.Unlock()
-	return mock.ListBySpaceFunc(ctx, spaceID, filter)
+	return mock.ListBySpaceFunc(ctx, rCtx, filter)
 }
 
 // ListBySpaceCalls returns all calls made to ListBySpace.
 func (mock *ExchangeRateStoreMock) ListBySpaceCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Filter  *ListExchangeRatesFilter
+	Ctx    context.Context
+	RCtx   Context
+	Filter *ListExchangeRatesFilter
 } {
 	mock.lockListBySpace.RLock()
 	defer mock.lockListBySpace.RUnlock()
@@ -1049,30 +1102,30 @@ func (mock *ExchangeRateStoreMock) ListBySpaceCalls() []struct {
 }
 
 // GetLatestRates calls GetLatestRatesFunc.
-func (mock *ExchangeRateStoreMock) GetLatestRates(ctx context.Context, spaceID SpaceID, fromCurrencies []Currency, toCurrency Currency) ([]*ExchangeRate, error) {
+func (mock *ExchangeRateStoreMock) GetLatestRates(ctx context.Context, rCtx Context, fromCurrencies []Currency, toCurrency Currency) ([]*ExchangeRate, error) {
 	if mock.GetLatestRatesFunc == nil {
 		panic("ExchangeRateStoreMock.GetLatestRatesFunc: method is nil but ExchangeRateStore.GetLatestRates was just called")
 	}
 	mock.lockGetLatestRates.Lock()
 	mock.calls.GetLatestRates = append(mock.calls.GetLatestRates, struct {
 		Ctx            context.Context
-		SpaceID        SpaceID
+		RCtx           Context
 		FromCurrencies []Currency
 		ToCurrency     Currency
 	}{
 		Ctx:            ctx,
-		SpaceID:        spaceID,
+		RCtx:           rCtx,
 		FromCurrencies: fromCurrencies,
 		ToCurrency:     toCurrency,
 	})
 	mock.lockGetLatestRates.Unlock()
-	return mock.GetLatestRatesFunc(ctx, spaceID, fromCurrencies, toCurrency)
+	return mock.GetLatestRatesFunc(ctx, rCtx, fromCurrencies, toCurrency)
 }
 
 // GetLatestRatesCalls returns all calls made to GetLatestRates.
 func (mock *ExchangeRateStoreMock) GetLatestRatesCalls() []struct {
 	Ctx            context.Context
-	SpaceID        SpaceID
+	RCtx           Context
 	FromCurrencies []Currency
 	ToCurrency     Currency
 } {
@@ -1082,26 +1135,29 @@ func (mock *ExchangeRateStoreMock) GetLatestRatesCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *ExchangeRateStoreMock) Delete(ctx context.Context, key ExchangeRateKey) error {
+func (mock *ExchangeRateStoreMock) Delete(ctx context.Context, rCtx Context, key ExchangeRateKey) error {
 	if mock.DeleteFunc == nil {
 		panic("ExchangeRateStoreMock.DeleteFunc: method is nil but ExchangeRateStore.Delete was just called")
 	}
 	mock.lockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, struct {
-		Ctx context.Context
-		Key ExchangeRateKey
+		Ctx  context.Context
+		RCtx Context
+		Key  ExchangeRateKey
 	}{
-		Ctx: ctx,
-		Key: key,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Key:  key,
 	})
 	mock.lockDelete.Unlock()
-	return mock.DeleteFunc(ctx, key)
+	return mock.DeleteFunc(ctx, rCtx, key)
 }
 
 // DeleteCalls returns all calls made to Delete.
 func (mock *ExchangeRateStoreMock) DeleteCalls() []struct {
-	Ctx context.Context
-	Key ExchangeRateKey
+	Ctx  context.Context
+	RCtx Context
+	Key  ExchangeRateKey
 } {
 	mock.lockDelete.RLock()
 	defer mock.lockDelete.RUnlock()
@@ -1114,66 +1170,71 @@ var _ TransactionStore = (*TransactionStoreMock)(nil)
 // TransactionStoreMock is a mock implementation of TransactionStore.
 type TransactionStoreMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, txn *Transaction) error
+	CreateFunc func(ctx context.Context, rCtx Context, txn *Transaction) error
 
 	// GetByIDFunc mocks the GetByID method.
-	GetByIDFunc func(ctx context.Context, spaceID SpaceID, id TransactionID) (*Transaction, error)
+	GetByIDFunc func(ctx context.Context, rCtx Context, id TransactionID) (*Transaction, error)
 
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(ctx context.Context, id TransactionID) error
+	DeleteFunc func(ctx context.Context, rCtx Context, id TransactionID) error
 
 	// UpdateFunc mocks the Update method.
-	UpdateFunc func(ctx context.Context, txn *Transaction) error
+	UpdateFunc func(ctx context.Context, rCtx Context, txn *Transaction) error
 
 	// ListBySpaceFunc mocks the ListBySpace method.
-	ListBySpaceFunc func(ctx context.Context, spaceID SpaceID, filter *TransactionFilter) (*paging.Page[*Transaction], error)
+	ListBySpaceFunc func(ctx context.Context, rCtx Context, filter *TransactionFilter) (*paging.Page[*Transaction], error)
 
 	// HasTransactionsFunc mocks the HasTransactions method.
-	HasTransactionsFunc func(ctx context.Context, spaceID SpaceID, filter *TransactionFilter) (bool, error)
+	HasTransactionsFunc func(ctx context.Context, rCtx Context, filter *TransactionFilter) (bool, error)
 
 	// AggregateSpentFunc mocks the AggregateSpent method.
-	AggregateSpentFunc func(ctx context.Context, periodID PeriodID, budgetCurrency Currency, exchangeRateToBase float64) (int64, int64, error)
+	AggregateSpentFunc func(ctx context.Context, fCtx Context, periodID PeriodID, budgetCurrency Currency, exchangeRateToBase float64) (int64, int64, error)
 
 	// AggregateSpentBatchFunc mocks the AggregateSpentBatch method.
-	AggregateSpentBatchFunc func(ctx context.Context, periodIDs []PeriodID) ([]PeriodSpent, error)
+	AggregateSpentBatchFunc func(ctx context.Context, fCtx Context, periodIDs []PeriodID) ([]PeriodSpent, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Create []struct {
-			Ctx context.Context
-			Txn *Transaction
+			Ctx  context.Context
+			RCtx Context
+			Txn  *Transaction
 		}
 		GetByID []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      TransactionID
+			Ctx  context.Context
+			RCtx Context
+			Id   TransactionID
 		}
 		Delete []struct {
-			Ctx context.Context
-			Id  TransactionID
+			Ctx  context.Context
+			RCtx Context
+			Id   TransactionID
 		}
 		Update []struct {
-			Ctx context.Context
-			Txn *Transaction
+			Ctx  context.Context
+			RCtx Context
+			Txn  *Transaction
 		}
 		ListBySpace []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Filter  *TransactionFilter
+			Ctx    context.Context
+			RCtx   Context
+			Filter *TransactionFilter
 		}
 		HasTransactions []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Filter  *TransactionFilter
+			Ctx    context.Context
+			RCtx   Context
+			Filter *TransactionFilter
 		}
 		AggregateSpent []struct {
 			Ctx                context.Context
+			FCtx               Context
 			PeriodID           PeriodID
 			BudgetCurrency     Currency
 			ExchangeRateToBase float64
 		}
 		AggregateSpentBatch []struct {
 			Ctx       context.Context
+			FCtx      Context
 			PeriodIDs []PeriodID
 		}
 	}
@@ -1188,26 +1249,29 @@ type TransactionStoreMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *TransactionStoreMock) Create(ctx context.Context, txn *Transaction) error {
+func (mock *TransactionStoreMock) Create(ctx context.Context, rCtx Context, txn *Transaction) error {
 	if mock.CreateFunc == nil {
 		panic("TransactionStoreMock.CreateFunc: method is nil but TransactionStore.Create was just called")
 	}
 	mock.lockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, struct {
-		Ctx context.Context
-		Txn *Transaction
+		Ctx  context.Context
+		RCtx Context
+		Txn  *Transaction
 	}{
-		Ctx: ctx,
-		Txn: txn,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Txn:  txn,
 	})
 	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, txn)
+	return mock.CreateFunc(ctx, rCtx, txn)
 }
 
 // CreateCalls returns all calls made to Create.
 func (mock *TransactionStoreMock) CreateCalls() []struct {
-	Ctx context.Context
-	Txn *Transaction
+	Ctx  context.Context
+	RCtx Context
+	Txn  *Transaction
 } {
 	mock.lockCreate.RLock()
 	defer mock.lockCreate.RUnlock()
@@ -1215,29 +1279,29 @@ func (mock *TransactionStoreMock) CreateCalls() []struct {
 }
 
 // GetByID calls GetByIDFunc.
-func (mock *TransactionStoreMock) GetByID(ctx context.Context, spaceID SpaceID, id TransactionID) (*Transaction, error) {
+func (mock *TransactionStoreMock) GetByID(ctx context.Context, rCtx Context, id TransactionID) (*Transaction, error) {
 	if mock.GetByIDFunc == nil {
 		panic("TransactionStoreMock.GetByIDFunc: method is nil but TransactionStore.GetByID was just called")
 	}
 	mock.lockGetByID.Lock()
 	mock.calls.GetByID = append(mock.calls.GetByID, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      TransactionID
+		Ctx  context.Context
+		RCtx Context
+		Id   TransactionID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockGetByID.Unlock()
-	return mock.GetByIDFunc(ctx, spaceID, id)
+	return mock.GetByIDFunc(ctx, rCtx, id)
 }
 
 // GetByIDCalls returns all calls made to GetByID.
 func (mock *TransactionStoreMock) GetByIDCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      TransactionID
+	Ctx  context.Context
+	RCtx Context
+	Id   TransactionID
 } {
 	mock.lockGetByID.RLock()
 	defer mock.lockGetByID.RUnlock()
@@ -1245,26 +1309,29 @@ func (mock *TransactionStoreMock) GetByIDCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *TransactionStoreMock) Delete(ctx context.Context, id TransactionID) error {
+func (mock *TransactionStoreMock) Delete(ctx context.Context, rCtx Context, id TransactionID) error {
 	if mock.DeleteFunc == nil {
 		panic("TransactionStoreMock.DeleteFunc: method is nil but TransactionStore.Delete was just called")
 	}
 	mock.lockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, struct {
-		Ctx context.Context
-		Id  TransactionID
+		Ctx  context.Context
+		RCtx Context
+		Id   TransactionID
 	}{
-		Ctx: ctx,
-		Id:  id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockDelete.Unlock()
-	return mock.DeleteFunc(ctx, id)
+	return mock.DeleteFunc(ctx, rCtx, id)
 }
 
 // DeleteCalls returns all calls made to Delete.
 func (mock *TransactionStoreMock) DeleteCalls() []struct {
-	Ctx context.Context
-	Id  TransactionID
+	Ctx  context.Context
+	RCtx Context
+	Id   TransactionID
 } {
 	mock.lockDelete.RLock()
 	defer mock.lockDelete.RUnlock()
@@ -1272,26 +1339,29 @@ func (mock *TransactionStoreMock) DeleteCalls() []struct {
 }
 
 // Update calls UpdateFunc.
-func (mock *TransactionStoreMock) Update(ctx context.Context, txn *Transaction) error {
+func (mock *TransactionStoreMock) Update(ctx context.Context, rCtx Context, txn *Transaction) error {
 	if mock.UpdateFunc == nil {
 		panic("TransactionStoreMock.UpdateFunc: method is nil but TransactionStore.Update was just called")
 	}
 	mock.lockUpdate.Lock()
 	mock.calls.Update = append(mock.calls.Update, struct {
-		Ctx context.Context
-		Txn *Transaction
+		Ctx  context.Context
+		RCtx Context
+		Txn  *Transaction
 	}{
-		Ctx: ctx,
-		Txn: txn,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Txn:  txn,
 	})
 	mock.lockUpdate.Unlock()
-	return mock.UpdateFunc(ctx, txn)
+	return mock.UpdateFunc(ctx, rCtx, txn)
 }
 
 // UpdateCalls returns all calls made to Update.
 func (mock *TransactionStoreMock) UpdateCalls() []struct {
-	Ctx context.Context
-	Txn *Transaction
+	Ctx  context.Context
+	RCtx Context
+	Txn  *Transaction
 } {
 	mock.lockUpdate.RLock()
 	defer mock.lockUpdate.RUnlock()
@@ -1299,29 +1369,29 @@ func (mock *TransactionStoreMock) UpdateCalls() []struct {
 }
 
 // ListBySpace calls ListBySpaceFunc.
-func (mock *TransactionStoreMock) ListBySpace(ctx context.Context, spaceID SpaceID, filter *TransactionFilter) (*paging.Page[*Transaction], error) {
+func (mock *TransactionStoreMock) ListBySpace(ctx context.Context, rCtx Context, filter *TransactionFilter) (*paging.Page[*Transaction], error) {
 	if mock.ListBySpaceFunc == nil {
 		panic("TransactionStoreMock.ListBySpaceFunc: method is nil but TransactionStore.ListBySpace was just called")
 	}
 	mock.lockListBySpace.Lock()
 	mock.calls.ListBySpace = append(mock.calls.ListBySpace, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Filter  *TransactionFilter
+		Ctx    context.Context
+		RCtx   Context
+		Filter *TransactionFilter
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Filter:  filter,
+		Ctx:    ctx,
+		RCtx:   rCtx,
+		Filter: filter,
 	})
 	mock.lockListBySpace.Unlock()
-	return mock.ListBySpaceFunc(ctx, spaceID, filter)
+	return mock.ListBySpaceFunc(ctx, rCtx, filter)
 }
 
 // ListBySpaceCalls returns all calls made to ListBySpace.
 func (mock *TransactionStoreMock) ListBySpaceCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Filter  *TransactionFilter
+	Ctx    context.Context
+	RCtx   Context
+	Filter *TransactionFilter
 } {
 	mock.lockListBySpace.RLock()
 	defer mock.lockListBySpace.RUnlock()
@@ -1329,29 +1399,29 @@ func (mock *TransactionStoreMock) ListBySpaceCalls() []struct {
 }
 
 // HasTransactions calls HasTransactionsFunc.
-func (mock *TransactionStoreMock) HasTransactions(ctx context.Context, spaceID SpaceID, filter *TransactionFilter) (bool, error) {
+func (mock *TransactionStoreMock) HasTransactions(ctx context.Context, rCtx Context, filter *TransactionFilter) (bool, error) {
 	if mock.HasTransactionsFunc == nil {
 		panic("TransactionStoreMock.HasTransactionsFunc: method is nil but TransactionStore.HasTransactions was just called")
 	}
 	mock.lockHasTransactions.Lock()
 	mock.calls.HasTransactions = append(mock.calls.HasTransactions, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Filter  *TransactionFilter
+		Ctx    context.Context
+		RCtx   Context
+		Filter *TransactionFilter
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Filter:  filter,
+		Ctx:    ctx,
+		RCtx:   rCtx,
+		Filter: filter,
 	})
 	mock.lockHasTransactions.Unlock()
-	return mock.HasTransactionsFunc(ctx, spaceID, filter)
+	return mock.HasTransactionsFunc(ctx, rCtx, filter)
 }
 
 // HasTransactionsCalls returns all calls made to HasTransactions.
 func (mock *TransactionStoreMock) HasTransactionsCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Filter  *TransactionFilter
+	Ctx    context.Context
+	RCtx   Context
+	Filter *TransactionFilter
 } {
 	mock.lockHasTransactions.RLock()
 	defer mock.lockHasTransactions.RUnlock()
@@ -1359,29 +1429,32 @@ func (mock *TransactionStoreMock) HasTransactionsCalls() []struct {
 }
 
 // AggregateSpent calls AggregateSpentFunc.
-func (mock *TransactionStoreMock) AggregateSpent(ctx context.Context, periodID PeriodID, budgetCurrency Currency, exchangeRateToBase float64) (int64, int64, error) {
+func (mock *TransactionStoreMock) AggregateSpent(ctx context.Context, fCtx Context, periodID PeriodID, budgetCurrency Currency, exchangeRateToBase float64) (int64, int64, error) {
 	if mock.AggregateSpentFunc == nil {
 		panic("TransactionStoreMock.AggregateSpentFunc: method is nil but TransactionStore.AggregateSpent was just called")
 	}
 	mock.lockAggregateSpent.Lock()
 	mock.calls.AggregateSpent = append(mock.calls.AggregateSpent, struct {
 		Ctx                context.Context
+		FCtx               Context
 		PeriodID           PeriodID
 		BudgetCurrency     Currency
 		ExchangeRateToBase float64
 	}{
 		Ctx:                ctx,
+		FCtx:               fCtx,
 		PeriodID:           periodID,
 		BudgetCurrency:     budgetCurrency,
 		ExchangeRateToBase: exchangeRateToBase,
 	})
 	mock.lockAggregateSpent.Unlock()
-	return mock.AggregateSpentFunc(ctx, periodID, budgetCurrency, exchangeRateToBase)
+	return mock.AggregateSpentFunc(ctx, fCtx, periodID, budgetCurrency, exchangeRateToBase)
 }
 
 // AggregateSpentCalls returns all calls made to AggregateSpent.
 func (mock *TransactionStoreMock) AggregateSpentCalls() []struct {
 	Ctx                context.Context
+	FCtx               Context
 	PeriodID           PeriodID
 	BudgetCurrency     Currency
 	ExchangeRateToBase float64
@@ -1392,25 +1465,28 @@ func (mock *TransactionStoreMock) AggregateSpentCalls() []struct {
 }
 
 // AggregateSpentBatch calls AggregateSpentBatchFunc.
-func (mock *TransactionStoreMock) AggregateSpentBatch(ctx context.Context, periodIDs []PeriodID) ([]PeriodSpent, error) {
+func (mock *TransactionStoreMock) AggregateSpentBatch(ctx context.Context, fCtx Context, periodIDs []PeriodID) ([]PeriodSpent, error) {
 	if mock.AggregateSpentBatchFunc == nil {
 		panic("TransactionStoreMock.AggregateSpentBatchFunc: method is nil but TransactionStore.AggregateSpentBatch was just called")
 	}
 	mock.lockAggregateSpentBatch.Lock()
 	mock.calls.AggregateSpentBatch = append(mock.calls.AggregateSpentBatch, struct {
 		Ctx       context.Context
+		FCtx      Context
 		PeriodIDs []PeriodID
 	}{
 		Ctx:       ctx,
+		FCtx:      fCtx,
 		PeriodIDs: periodIDs,
 	})
 	mock.lockAggregateSpentBatch.Unlock()
-	return mock.AggregateSpentBatchFunc(ctx, periodIDs)
+	return mock.AggregateSpentBatchFunc(ctx, fCtx, periodIDs)
 }
 
 // AggregateSpentBatchCalls returns all calls made to AggregateSpentBatch.
 func (mock *TransactionStoreMock) AggregateSpentBatchCalls() []struct {
 	Ctx       context.Context
+	FCtx      Context
 	PeriodIDs []PeriodID
 } {
 	mock.lockAggregateSpentBatch.RLock()
@@ -1424,21 +1500,22 @@ var _ TransactionEventStore = (*TransactionEventStoreMock)(nil)
 // TransactionEventStoreMock is a mock implementation of TransactionEventStore.
 type TransactionEventStoreMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, event *TransactionEvent) error
+	CreateFunc func(ctx context.Context, rCtx Context, event *TransactionEvent) error
 
 	// ListByTransactionFunc mocks the ListByTransaction method.
-	ListByTransactionFunc func(ctx context.Context, spaceID SpaceID, txnID TransactionID) ([]*TransactionEvent, error)
+	ListByTransactionFunc func(ctx context.Context, rCtx Context, txnID TransactionID) ([]*TransactionEvent, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Create []struct {
 			Ctx   context.Context
+			RCtx  Context
 			Event *TransactionEvent
 		}
 		ListByTransaction []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			TxnID   TransactionID
+			Ctx   context.Context
+			RCtx  Context
+			TxnID TransactionID
 		}
 	}
 	lockCreate            sync.RWMutex
@@ -1446,25 +1523,28 @@ type TransactionEventStoreMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *TransactionEventStoreMock) Create(ctx context.Context, event *TransactionEvent) error {
+func (mock *TransactionEventStoreMock) Create(ctx context.Context, rCtx Context, event *TransactionEvent) error {
 	if mock.CreateFunc == nil {
 		panic("TransactionEventStoreMock.CreateFunc: method is nil but TransactionEventStore.Create was just called")
 	}
 	mock.lockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, struct {
 		Ctx   context.Context
+		RCtx  Context
 		Event *TransactionEvent
 	}{
 		Ctx:   ctx,
+		RCtx:  rCtx,
 		Event: event,
 	})
 	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, event)
+	return mock.CreateFunc(ctx, rCtx, event)
 }
 
 // CreateCalls returns all calls made to Create.
 func (mock *TransactionEventStoreMock) CreateCalls() []struct {
 	Ctx   context.Context
+	RCtx  Context
 	Event *TransactionEvent
 } {
 	mock.lockCreate.RLock()
@@ -1473,29 +1553,29 @@ func (mock *TransactionEventStoreMock) CreateCalls() []struct {
 }
 
 // ListByTransaction calls ListByTransactionFunc.
-func (mock *TransactionEventStoreMock) ListByTransaction(ctx context.Context, spaceID SpaceID, txnID TransactionID) ([]*TransactionEvent, error) {
+func (mock *TransactionEventStoreMock) ListByTransaction(ctx context.Context, rCtx Context, txnID TransactionID) ([]*TransactionEvent, error) {
 	if mock.ListByTransactionFunc == nil {
 		panic("TransactionEventStoreMock.ListByTransactionFunc: method is nil but TransactionEventStore.ListByTransaction was just called")
 	}
 	mock.lockListByTransaction.Lock()
 	mock.calls.ListByTransaction = append(mock.calls.ListByTransaction, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		TxnID   TransactionID
+		Ctx   context.Context
+		RCtx  Context
+		TxnID TransactionID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		TxnID:   txnID,
+		Ctx:   ctx,
+		RCtx:  rCtx,
+		TxnID: txnID,
 	})
 	mock.lockListByTransaction.Unlock()
-	return mock.ListByTransactionFunc(ctx, spaceID, txnID)
+	return mock.ListByTransactionFunc(ctx, rCtx, txnID)
 }
 
 // ListByTransactionCalls returns all calls made to ListByTransaction.
 func (mock *TransactionEventStoreMock) ListByTransactionCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	TxnID   TransactionID
+	Ctx   context.Context
+	RCtx  Context
+	TxnID TransactionID
 } {
 	mock.lockListByTransaction.RLock()
 	defer mock.lockListByTransaction.RUnlock()
@@ -1508,47 +1588,53 @@ var _ InsightsStore = (*InsightsStoreMock)(nil)
 // InsightsStoreMock is a mock implementation of InsightsStore.
 type InsightsStoreMock struct {
 	// GetSpentTrendFunc mocks the GetSpentTrend method.
-	GetSpentTrendFunc func(ctx context.Context, filter *SpentTrendFilter) ([]*SpentTrend, error)
+	GetSpentTrendFunc func(ctx context.Context, rCtx Context, filter *SpentTrendFilter) ([]*SpentTrend, error)
 
 	// GetBudgetDistributionFunc mocks the GetBudgetDistribution method.
-	GetBudgetDistributionFunc func(ctx context.Context, filter *BudgetDistributionFilter) ([]*BudgetDistribution, error)
+	GetBudgetDistributionFunc func(ctx context.Context, rCtx Context, filter *BudgetDistributionFilter) ([]*BudgetDistribution, error)
 
 	// GetTopExpensesFunc mocks the GetTopExpenses method.
-	GetTopExpensesFunc func(ctx context.Context, filter *TopExpensesFilter) ([]*TopExpense, error)
+	GetTopExpensesFunc func(ctx context.Context, rCtx Context, filter *TopExpensesFilter) ([]*TopExpense, error)
 
 	// GetIncomeTrendFunc mocks the GetIncomeTrend method.
-	GetIncomeTrendFunc func(ctx context.Context, filter *IncomeTrendFilter) ([]*IncomeTrend, error)
+	GetIncomeTrendFunc func(ctx context.Context, rCtx Context, filter *IncomeTrendFilter) ([]*IncomeTrend, error)
 
 	// GetIncomeSourcesFunc mocks the GetIncomeSources method.
-	GetIncomeSourcesFunc func(ctx context.Context, filter *IncomeSourcesFilter) ([]*IncomeSourceRow, error)
+	GetIncomeSourcesFunc func(ctx context.Context, rCtx Context, filter *IncomeSourcesFilter) ([]*IncomeSourceRow, error)
 
 	// GetTopIncomesFunc mocks the GetTopIncomes method.
-	GetTopIncomesFunc func(ctx context.Context, filter *TopIncomesFilter) ([]*TopIncome, error)
+	GetTopIncomesFunc func(ctx context.Context, rCtx Context, filter *TopIncomesFilter) ([]*TopIncome, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		GetSpentTrend []struct {
 			Ctx    context.Context
+			RCtx   Context
 			Filter *SpentTrendFilter
 		}
 		GetBudgetDistribution []struct {
 			Ctx    context.Context
+			RCtx   Context
 			Filter *BudgetDistributionFilter
 		}
 		GetTopExpenses []struct {
 			Ctx    context.Context
+			RCtx   Context
 			Filter *TopExpensesFilter
 		}
 		GetIncomeTrend []struct {
 			Ctx    context.Context
+			RCtx   Context
 			Filter *IncomeTrendFilter
 		}
 		GetIncomeSources []struct {
 			Ctx    context.Context
+			RCtx   Context
 			Filter *IncomeSourcesFilter
 		}
 		GetTopIncomes []struct {
 			Ctx    context.Context
+			RCtx   Context
 			Filter *TopIncomesFilter
 		}
 	}
@@ -1561,25 +1647,28 @@ type InsightsStoreMock struct {
 }
 
 // GetSpentTrend calls GetSpentTrendFunc.
-func (mock *InsightsStoreMock) GetSpentTrend(ctx context.Context, filter *SpentTrendFilter) ([]*SpentTrend, error) {
+func (mock *InsightsStoreMock) GetSpentTrend(ctx context.Context, rCtx Context, filter *SpentTrendFilter) ([]*SpentTrend, error) {
 	if mock.GetSpentTrendFunc == nil {
 		panic("InsightsStoreMock.GetSpentTrendFunc: method is nil but InsightsStore.GetSpentTrend was just called")
 	}
 	mock.lockGetSpentTrend.Lock()
 	mock.calls.GetSpentTrend = append(mock.calls.GetSpentTrend, struct {
 		Ctx    context.Context
+		RCtx   Context
 		Filter *SpentTrendFilter
 	}{
 		Ctx:    ctx,
+		RCtx:   rCtx,
 		Filter: filter,
 	})
 	mock.lockGetSpentTrend.Unlock()
-	return mock.GetSpentTrendFunc(ctx, filter)
+	return mock.GetSpentTrendFunc(ctx, rCtx, filter)
 }
 
 // GetSpentTrendCalls returns all calls made to GetSpentTrend.
 func (mock *InsightsStoreMock) GetSpentTrendCalls() []struct {
 	Ctx    context.Context
+	RCtx   Context
 	Filter *SpentTrendFilter
 } {
 	mock.lockGetSpentTrend.RLock()
@@ -1588,25 +1677,28 @@ func (mock *InsightsStoreMock) GetSpentTrendCalls() []struct {
 }
 
 // GetBudgetDistribution calls GetBudgetDistributionFunc.
-func (mock *InsightsStoreMock) GetBudgetDistribution(ctx context.Context, filter *BudgetDistributionFilter) ([]*BudgetDistribution, error) {
+func (mock *InsightsStoreMock) GetBudgetDistribution(ctx context.Context, rCtx Context, filter *BudgetDistributionFilter) ([]*BudgetDistribution, error) {
 	if mock.GetBudgetDistributionFunc == nil {
 		panic("InsightsStoreMock.GetBudgetDistributionFunc: method is nil but InsightsStore.GetBudgetDistribution was just called")
 	}
 	mock.lockGetBudgetDistribution.Lock()
 	mock.calls.GetBudgetDistribution = append(mock.calls.GetBudgetDistribution, struct {
 		Ctx    context.Context
+		RCtx   Context
 		Filter *BudgetDistributionFilter
 	}{
 		Ctx:    ctx,
+		RCtx:   rCtx,
 		Filter: filter,
 	})
 	mock.lockGetBudgetDistribution.Unlock()
-	return mock.GetBudgetDistributionFunc(ctx, filter)
+	return mock.GetBudgetDistributionFunc(ctx, rCtx, filter)
 }
 
 // GetBudgetDistributionCalls returns all calls made to GetBudgetDistribution.
 func (mock *InsightsStoreMock) GetBudgetDistributionCalls() []struct {
 	Ctx    context.Context
+	RCtx   Context
 	Filter *BudgetDistributionFilter
 } {
 	mock.lockGetBudgetDistribution.RLock()
@@ -1615,25 +1707,28 @@ func (mock *InsightsStoreMock) GetBudgetDistributionCalls() []struct {
 }
 
 // GetTopExpenses calls GetTopExpensesFunc.
-func (mock *InsightsStoreMock) GetTopExpenses(ctx context.Context, filter *TopExpensesFilter) ([]*TopExpense, error) {
+func (mock *InsightsStoreMock) GetTopExpenses(ctx context.Context, rCtx Context, filter *TopExpensesFilter) ([]*TopExpense, error) {
 	if mock.GetTopExpensesFunc == nil {
 		panic("InsightsStoreMock.GetTopExpensesFunc: method is nil but InsightsStore.GetTopExpenses was just called")
 	}
 	mock.lockGetTopExpenses.Lock()
 	mock.calls.GetTopExpenses = append(mock.calls.GetTopExpenses, struct {
 		Ctx    context.Context
+		RCtx   Context
 		Filter *TopExpensesFilter
 	}{
 		Ctx:    ctx,
+		RCtx:   rCtx,
 		Filter: filter,
 	})
 	mock.lockGetTopExpenses.Unlock()
-	return mock.GetTopExpensesFunc(ctx, filter)
+	return mock.GetTopExpensesFunc(ctx, rCtx, filter)
 }
 
 // GetTopExpensesCalls returns all calls made to GetTopExpenses.
 func (mock *InsightsStoreMock) GetTopExpensesCalls() []struct {
 	Ctx    context.Context
+	RCtx   Context
 	Filter *TopExpensesFilter
 } {
 	mock.lockGetTopExpenses.RLock()
@@ -1642,25 +1737,28 @@ func (mock *InsightsStoreMock) GetTopExpensesCalls() []struct {
 }
 
 // GetIncomeTrend calls GetIncomeTrendFunc.
-func (mock *InsightsStoreMock) GetIncomeTrend(ctx context.Context, filter *IncomeTrendFilter) ([]*IncomeTrend, error) {
+func (mock *InsightsStoreMock) GetIncomeTrend(ctx context.Context, rCtx Context, filter *IncomeTrendFilter) ([]*IncomeTrend, error) {
 	if mock.GetIncomeTrendFunc == nil {
 		panic("InsightsStoreMock.GetIncomeTrendFunc: method is nil but InsightsStore.GetIncomeTrend was just called")
 	}
 	mock.lockGetIncomeTrend.Lock()
 	mock.calls.GetIncomeTrend = append(mock.calls.GetIncomeTrend, struct {
 		Ctx    context.Context
+		RCtx   Context
 		Filter *IncomeTrendFilter
 	}{
 		Ctx:    ctx,
+		RCtx:   rCtx,
 		Filter: filter,
 	})
 	mock.lockGetIncomeTrend.Unlock()
-	return mock.GetIncomeTrendFunc(ctx, filter)
+	return mock.GetIncomeTrendFunc(ctx, rCtx, filter)
 }
 
 // GetIncomeTrendCalls returns all calls made to GetIncomeTrend.
 func (mock *InsightsStoreMock) GetIncomeTrendCalls() []struct {
 	Ctx    context.Context
+	RCtx   Context
 	Filter *IncomeTrendFilter
 } {
 	mock.lockGetIncomeTrend.RLock()
@@ -1669,25 +1767,28 @@ func (mock *InsightsStoreMock) GetIncomeTrendCalls() []struct {
 }
 
 // GetIncomeSources calls GetIncomeSourcesFunc.
-func (mock *InsightsStoreMock) GetIncomeSources(ctx context.Context, filter *IncomeSourcesFilter) ([]*IncomeSourceRow, error) {
+func (mock *InsightsStoreMock) GetIncomeSources(ctx context.Context, rCtx Context, filter *IncomeSourcesFilter) ([]*IncomeSourceRow, error) {
 	if mock.GetIncomeSourcesFunc == nil {
 		panic("InsightsStoreMock.GetIncomeSourcesFunc: method is nil but InsightsStore.GetIncomeSources was just called")
 	}
 	mock.lockGetIncomeSources.Lock()
 	mock.calls.GetIncomeSources = append(mock.calls.GetIncomeSources, struct {
 		Ctx    context.Context
+		RCtx   Context
 		Filter *IncomeSourcesFilter
 	}{
 		Ctx:    ctx,
+		RCtx:   rCtx,
 		Filter: filter,
 	})
 	mock.lockGetIncomeSources.Unlock()
-	return mock.GetIncomeSourcesFunc(ctx, filter)
+	return mock.GetIncomeSourcesFunc(ctx, rCtx, filter)
 }
 
 // GetIncomeSourcesCalls returns all calls made to GetIncomeSources.
 func (mock *InsightsStoreMock) GetIncomeSourcesCalls() []struct {
 	Ctx    context.Context
+	RCtx   Context
 	Filter *IncomeSourcesFilter
 } {
 	mock.lockGetIncomeSources.RLock()
@@ -1696,25 +1797,28 @@ func (mock *InsightsStoreMock) GetIncomeSourcesCalls() []struct {
 }
 
 // GetTopIncomes calls GetTopIncomesFunc.
-func (mock *InsightsStoreMock) GetTopIncomes(ctx context.Context, filter *TopIncomesFilter) ([]*TopIncome, error) {
+func (mock *InsightsStoreMock) GetTopIncomes(ctx context.Context, rCtx Context, filter *TopIncomesFilter) ([]*TopIncome, error) {
 	if mock.GetTopIncomesFunc == nil {
 		panic("InsightsStoreMock.GetTopIncomesFunc: method is nil but InsightsStore.GetTopIncomes was just called")
 	}
 	mock.lockGetTopIncomes.Lock()
 	mock.calls.GetTopIncomes = append(mock.calls.GetTopIncomes, struct {
 		Ctx    context.Context
+		RCtx   Context
 		Filter *TopIncomesFilter
 	}{
 		Ctx:    ctx,
+		RCtx:   rCtx,
 		Filter: filter,
 	})
 	mock.lockGetTopIncomes.Unlock()
-	return mock.GetTopIncomesFunc(ctx, filter)
+	return mock.GetTopIncomesFunc(ctx, rCtx, filter)
 }
 
 // GetTopIncomesCalls returns all calls made to GetTopIncomes.
 func (mock *InsightsStoreMock) GetTopIncomesCalls() []struct {
 	Ctx    context.Context
+	RCtx   Context
 	Filter *TopIncomesFilter
 } {
 	mock.lockGetTopIncomes.RLock()
@@ -1728,55 +1832,58 @@ var _ RecurringTransactionStore = (*RecurringTransactionStoreMock)(nil)
 // RecurringTransactionStoreMock is a mock implementation of RecurringTransactionStore.
 type RecurringTransactionStoreMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, transaction *RecurringTransaction) error
+	CreateFunc func(ctx context.Context, rCtx Context, transaction *RecurringTransaction) error
 
 	// GetByIDFunc mocks the GetByID method.
-	GetByIDFunc func(ctx context.Context, spaceID SpaceID, id RecurringTransactionID) (*RecurringTransaction, error)
+	GetByIDFunc func(ctx context.Context, rCtx Context, id RecurringTransactionID) (*RecurringTransaction, error)
 
 	// GetByIDsFunc mocks the GetByIDs method.
-	GetByIDsFunc func(ctx context.Context, spaceID SpaceID, ids []RecurringTransactionID) ([]*RecurringTransaction, error)
+	GetByIDsFunc func(ctx context.Context, rCtx Context, ids []RecurringTransactionID) ([]*RecurringTransaction, error)
 
 	// UpdateFunc mocks the Update method.
-	UpdateFunc func(ctx context.Context, transaction *RecurringTransaction) error
+	UpdateFunc func(ctx context.Context, rCtx Context, transaction *RecurringTransaction) error
 
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(ctx context.Context, id RecurringTransactionID, opts DeleteOptions) error
+	DeleteFunc func(ctx context.Context, rCtx Context, id RecurringTransactionID, opts DeleteOptions) error
 
 	// ListBySpaceFunc mocks the ListBySpace method.
-	ListBySpaceFunc func(ctx context.Context, spaceID SpaceID, filter *ListRecurringTransactionsFilter) (*paging.Page[*RecurringTransaction], error)
+	ListBySpaceFunc func(ctx context.Context, rCtx Context, filter *ListRecurringTransactionsFilter) (*paging.Page[*RecurringTransaction], error)
 
 	// ListPendingGenerationFunc mocks the ListPendingGeneration method.
-	ListPendingGenerationFunc func(ctx context.Context, maxDueDate time.Time) ([]*RecurringTransaction, error)
+	ListPendingGenerationFunc func(ctx context.Context, maxDueDate time.Time) ([]PendingRecurringTransaction, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Create []struct {
 			Ctx         context.Context
+			RCtx        Context
 			Transaction *RecurringTransaction
 		}
 		GetByID []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      RecurringTransactionID
+			Ctx  context.Context
+			RCtx Context
+			Id   RecurringTransactionID
 		}
 		GetByIDs []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Ids     []RecurringTransactionID
+			Ctx  context.Context
+			RCtx Context
+			Ids  []RecurringTransactionID
 		}
 		Update []struct {
 			Ctx         context.Context
+			RCtx        Context
 			Transaction *RecurringTransaction
 		}
 		Delete []struct {
 			Ctx  context.Context
+			RCtx Context
 			Id   RecurringTransactionID
 			Opts DeleteOptions
 		}
 		ListBySpace []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Filter  *ListRecurringTransactionsFilter
+			Ctx    context.Context
+			RCtx   Context
+			Filter *ListRecurringTransactionsFilter
 		}
 		ListPendingGeneration []struct {
 			Ctx        context.Context
@@ -1793,25 +1900,28 @@ type RecurringTransactionStoreMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *RecurringTransactionStoreMock) Create(ctx context.Context, transaction *RecurringTransaction) error {
+func (mock *RecurringTransactionStoreMock) Create(ctx context.Context, rCtx Context, transaction *RecurringTransaction) error {
 	if mock.CreateFunc == nil {
 		panic("RecurringTransactionStoreMock.CreateFunc: method is nil but RecurringTransactionStore.Create was just called")
 	}
 	mock.lockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, struct {
 		Ctx         context.Context
+		RCtx        Context
 		Transaction *RecurringTransaction
 	}{
 		Ctx:         ctx,
+		RCtx:        rCtx,
 		Transaction: transaction,
 	})
 	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, transaction)
+	return mock.CreateFunc(ctx, rCtx, transaction)
 }
 
 // CreateCalls returns all calls made to Create.
 func (mock *RecurringTransactionStoreMock) CreateCalls() []struct {
 	Ctx         context.Context
+	RCtx        Context
 	Transaction *RecurringTransaction
 } {
 	mock.lockCreate.RLock()
@@ -1820,29 +1930,29 @@ func (mock *RecurringTransactionStoreMock) CreateCalls() []struct {
 }
 
 // GetByID calls GetByIDFunc.
-func (mock *RecurringTransactionStoreMock) GetByID(ctx context.Context, spaceID SpaceID, id RecurringTransactionID) (*RecurringTransaction, error) {
+func (mock *RecurringTransactionStoreMock) GetByID(ctx context.Context, rCtx Context, id RecurringTransactionID) (*RecurringTransaction, error) {
 	if mock.GetByIDFunc == nil {
 		panic("RecurringTransactionStoreMock.GetByIDFunc: method is nil but RecurringTransactionStore.GetByID was just called")
 	}
 	mock.lockGetByID.Lock()
 	mock.calls.GetByID = append(mock.calls.GetByID, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      RecurringTransactionID
+		Ctx  context.Context
+		RCtx Context
+		Id   RecurringTransactionID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockGetByID.Unlock()
-	return mock.GetByIDFunc(ctx, spaceID, id)
+	return mock.GetByIDFunc(ctx, rCtx, id)
 }
 
 // GetByIDCalls returns all calls made to GetByID.
 func (mock *RecurringTransactionStoreMock) GetByIDCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      RecurringTransactionID
+	Ctx  context.Context
+	RCtx Context
+	Id   RecurringTransactionID
 } {
 	mock.lockGetByID.RLock()
 	defer mock.lockGetByID.RUnlock()
@@ -1850,29 +1960,29 @@ func (mock *RecurringTransactionStoreMock) GetByIDCalls() []struct {
 }
 
 // GetByIDs calls GetByIDsFunc.
-func (mock *RecurringTransactionStoreMock) GetByIDs(ctx context.Context, spaceID SpaceID, ids []RecurringTransactionID) ([]*RecurringTransaction, error) {
+func (mock *RecurringTransactionStoreMock) GetByIDs(ctx context.Context, rCtx Context, ids []RecurringTransactionID) ([]*RecurringTransaction, error) {
 	if mock.GetByIDsFunc == nil {
 		panic("RecurringTransactionStoreMock.GetByIDsFunc: method is nil but RecurringTransactionStore.GetByIDs was just called")
 	}
 	mock.lockGetByIDs.Lock()
 	mock.calls.GetByIDs = append(mock.calls.GetByIDs, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Ids     []RecurringTransactionID
+		Ctx  context.Context
+		RCtx Context
+		Ids  []RecurringTransactionID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Ids:     ids,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Ids:  ids,
 	})
 	mock.lockGetByIDs.Unlock()
-	return mock.GetByIDsFunc(ctx, spaceID, ids)
+	return mock.GetByIDsFunc(ctx, rCtx, ids)
 }
 
 // GetByIDsCalls returns all calls made to GetByIDs.
 func (mock *RecurringTransactionStoreMock) GetByIDsCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Ids     []RecurringTransactionID
+	Ctx  context.Context
+	RCtx Context
+	Ids  []RecurringTransactionID
 } {
 	mock.lockGetByIDs.RLock()
 	defer mock.lockGetByIDs.RUnlock()
@@ -1880,25 +1990,28 @@ func (mock *RecurringTransactionStoreMock) GetByIDsCalls() []struct {
 }
 
 // Update calls UpdateFunc.
-func (mock *RecurringTransactionStoreMock) Update(ctx context.Context, transaction *RecurringTransaction) error {
+func (mock *RecurringTransactionStoreMock) Update(ctx context.Context, rCtx Context, transaction *RecurringTransaction) error {
 	if mock.UpdateFunc == nil {
 		panic("RecurringTransactionStoreMock.UpdateFunc: method is nil but RecurringTransactionStore.Update was just called")
 	}
 	mock.lockUpdate.Lock()
 	mock.calls.Update = append(mock.calls.Update, struct {
 		Ctx         context.Context
+		RCtx        Context
 		Transaction *RecurringTransaction
 	}{
 		Ctx:         ctx,
+		RCtx:        rCtx,
 		Transaction: transaction,
 	})
 	mock.lockUpdate.Unlock()
-	return mock.UpdateFunc(ctx, transaction)
+	return mock.UpdateFunc(ctx, rCtx, transaction)
 }
 
 // UpdateCalls returns all calls made to Update.
 func (mock *RecurringTransactionStoreMock) UpdateCalls() []struct {
 	Ctx         context.Context
+	RCtx        Context
 	Transaction *RecurringTransaction
 } {
 	mock.lockUpdate.RLock()
@@ -1907,27 +2020,30 @@ func (mock *RecurringTransactionStoreMock) UpdateCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *RecurringTransactionStoreMock) Delete(ctx context.Context, id RecurringTransactionID, opts DeleteOptions) error {
+func (mock *RecurringTransactionStoreMock) Delete(ctx context.Context, rCtx Context, id RecurringTransactionID, opts DeleteOptions) error {
 	if mock.DeleteFunc == nil {
 		panic("RecurringTransactionStoreMock.DeleteFunc: method is nil but RecurringTransactionStore.Delete was just called")
 	}
 	mock.lockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, struct {
 		Ctx  context.Context
+		RCtx Context
 		Id   RecurringTransactionID
 		Opts DeleteOptions
 	}{
 		Ctx:  ctx,
+		RCtx: rCtx,
 		Id:   id,
 		Opts: opts,
 	})
 	mock.lockDelete.Unlock()
-	return mock.DeleteFunc(ctx, id, opts)
+	return mock.DeleteFunc(ctx, rCtx, id, opts)
 }
 
 // DeleteCalls returns all calls made to Delete.
 func (mock *RecurringTransactionStoreMock) DeleteCalls() []struct {
 	Ctx  context.Context
+	RCtx Context
 	Id   RecurringTransactionID
 	Opts DeleteOptions
 } {
@@ -1937,29 +2053,29 @@ func (mock *RecurringTransactionStoreMock) DeleteCalls() []struct {
 }
 
 // ListBySpace calls ListBySpaceFunc.
-func (mock *RecurringTransactionStoreMock) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListRecurringTransactionsFilter) (*paging.Page[*RecurringTransaction], error) {
+func (mock *RecurringTransactionStoreMock) ListBySpace(ctx context.Context, rCtx Context, filter *ListRecurringTransactionsFilter) (*paging.Page[*RecurringTransaction], error) {
 	if mock.ListBySpaceFunc == nil {
 		panic("RecurringTransactionStoreMock.ListBySpaceFunc: method is nil but RecurringTransactionStore.ListBySpace was just called")
 	}
 	mock.lockListBySpace.Lock()
 	mock.calls.ListBySpace = append(mock.calls.ListBySpace, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Filter  *ListRecurringTransactionsFilter
+		Ctx    context.Context
+		RCtx   Context
+		Filter *ListRecurringTransactionsFilter
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Filter:  filter,
+		Ctx:    ctx,
+		RCtx:   rCtx,
+		Filter: filter,
 	})
 	mock.lockListBySpace.Unlock()
-	return mock.ListBySpaceFunc(ctx, spaceID, filter)
+	return mock.ListBySpaceFunc(ctx, rCtx, filter)
 }
 
 // ListBySpaceCalls returns all calls made to ListBySpace.
 func (mock *RecurringTransactionStoreMock) ListBySpaceCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Filter  *ListRecurringTransactionsFilter
+	Ctx    context.Context
+	RCtx   Context
+	Filter *ListRecurringTransactionsFilter
 } {
 	mock.lockListBySpace.RLock()
 	defer mock.lockListBySpace.RUnlock()
@@ -1967,7 +2083,7 @@ func (mock *RecurringTransactionStoreMock) ListBySpaceCalls() []struct {
 }
 
 // ListPendingGeneration calls ListPendingGenerationFunc.
-func (mock *RecurringTransactionStoreMock) ListPendingGeneration(ctx context.Context, maxDueDate time.Time) ([]*RecurringTransaction, error) {
+func (mock *RecurringTransactionStoreMock) ListPendingGeneration(ctx context.Context, maxDueDate time.Time) ([]PendingRecurringTransaction, error) {
 	if mock.ListPendingGenerationFunc == nil {
 		panic("RecurringTransactionStoreMock.ListPendingGenerationFunc: method is nil but RecurringTransactionStore.ListPendingGeneration was just called")
 	}
@@ -1999,59 +2115,63 @@ var _ ScheduledTransactionStore = (*ScheduledTransactionStoreMock)(nil)
 // ScheduledTransactionStoreMock is a mock implementation of ScheduledTransactionStore.
 type ScheduledTransactionStoreMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, payment *ScheduledTransaction) error
+	CreateFunc func(ctx context.Context, rCtx Context, payment *ScheduledTransaction) error
 
 	// GetByIDFunc mocks the GetByID method.
-	GetByIDFunc func(ctx context.Context, spaceID SpaceID, id ScheduledTransactionID) (*ScheduledTransaction, error)
+	GetByIDFunc func(ctx context.Context, rCtx Context, id ScheduledTransactionID) (*ScheduledTransaction, error)
 
 	// UpdateFunc mocks the Update method.
-	UpdateFunc func(ctx context.Context, payment *ScheduledTransaction) error
+	UpdateFunc func(ctx context.Context, rCtx Context, payment *ScheduledTransaction) error
 
 	// UpdateStatusFunc mocks the UpdateStatus method.
-	UpdateStatusFunc func(ctx context.Context, id ScheduledTransactionID, status ScheduledTransactionStatus) error
+	UpdateStatusFunc func(ctx context.Context, rCtx Context, id ScheduledTransactionID, status ScheduledTransactionStatus) error
 
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(ctx context.Context, id ScheduledTransactionID) error
+	DeleteFunc func(ctx context.Context, rCtx Context, id ScheduledTransactionID) error
 
 	// ListBySpaceFunc mocks the ListBySpace method.
-	ListBySpaceFunc func(ctx context.Context, spaceID SpaceID, filter *ListScheduledTransactionsFilter) (*paging.Page[*ScheduledTransaction], error)
+	ListBySpaceFunc func(ctx context.Context, rCtx Context, filter *ListScheduledTransactionsFilter) (*paging.Page[*ScheduledTransaction], error)
 
 	// HasScheduledTransactionsFunc mocks the HasScheduledTransactions method.
-	HasScheduledTransactionsFunc func(ctx context.Context, spaceID SpaceID, filter *ListScheduledTransactionsFilter) (bool, error)
+	HasScheduledTransactionsFunc func(ctx context.Context, rCtx Context, filter *ListScheduledTransactionsFilter) (bool, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Create []struct {
 			Ctx     context.Context
+			RCtx    Context
 			Payment *ScheduledTransaction
 		}
 		GetByID []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      ScheduledTransactionID
+			Ctx  context.Context
+			RCtx Context
+			Id   ScheduledTransactionID
 		}
 		Update []struct {
 			Ctx     context.Context
+			RCtx    Context
 			Payment *ScheduledTransaction
 		}
 		UpdateStatus []struct {
 			Ctx    context.Context
+			RCtx   Context
 			Id     ScheduledTransactionID
 			Status ScheduledTransactionStatus
 		}
 		Delete []struct {
-			Ctx context.Context
-			Id  ScheduledTransactionID
+			Ctx  context.Context
+			RCtx Context
+			Id   ScheduledTransactionID
 		}
 		ListBySpace []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Filter  *ListScheduledTransactionsFilter
+			Ctx    context.Context
+			RCtx   Context
+			Filter *ListScheduledTransactionsFilter
 		}
 		HasScheduledTransactions []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Filter  *ListScheduledTransactionsFilter
+			Ctx    context.Context
+			RCtx   Context
+			Filter *ListScheduledTransactionsFilter
 		}
 	}
 	lockCreate                   sync.RWMutex
@@ -2064,25 +2184,28 @@ type ScheduledTransactionStoreMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *ScheduledTransactionStoreMock) Create(ctx context.Context, payment *ScheduledTransaction) error {
+func (mock *ScheduledTransactionStoreMock) Create(ctx context.Context, rCtx Context, payment *ScheduledTransaction) error {
 	if mock.CreateFunc == nil {
 		panic("ScheduledTransactionStoreMock.CreateFunc: method is nil but ScheduledTransactionStore.Create was just called")
 	}
 	mock.lockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, struct {
 		Ctx     context.Context
+		RCtx    Context
 		Payment *ScheduledTransaction
 	}{
 		Ctx:     ctx,
+		RCtx:    rCtx,
 		Payment: payment,
 	})
 	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, payment)
+	return mock.CreateFunc(ctx, rCtx, payment)
 }
 
 // CreateCalls returns all calls made to Create.
 func (mock *ScheduledTransactionStoreMock) CreateCalls() []struct {
 	Ctx     context.Context
+	RCtx    Context
 	Payment *ScheduledTransaction
 } {
 	mock.lockCreate.RLock()
@@ -2091,29 +2214,29 @@ func (mock *ScheduledTransactionStoreMock) CreateCalls() []struct {
 }
 
 // GetByID calls GetByIDFunc.
-func (mock *ScheduledTransactionStoreMock) GetByID(ctx context.Context, spaceID SpaceID, id ScheduledTransactionID) (*ScheduledTransaction, error) {
+func (mock *ScheduledTransactionStoreMock) GetByID(ctx context.Context, rCtx Context, id ScheduledTransactionID) (*ScheduledTransaction, error) {
 	if mock.GetByIDFunc == nil {
 		panic("ScheduledTransactionStoreMock.GetByIDFunc: method is nil but ScheduledTransactionStore.GetByID was just called")
 	}
 	mock.lockGetByID.Lock()
 	mock.calls.GetByID = append(mock.calls.GetByID, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      ScheduledTransactionID
+		Ctx  context.Context
+		RCtx Context
+		Id   ScheduledTransactionID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockGetByID.Unlock()
-	return mock.GetByIDFunc(ctx, spaceID, id)
+	return mock.GetByIDFunc(ctx, rCtx, id)
 }
 
 // GetByIDCalls returns all calls made to GetByID.
 func (mock *ScheduledTransactionStoreMock) GetByIDCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      ScheduledTransactionID
+	Ctx  context.Context
+	RCtx Context
+	Id   ScheduledTransactionID
 } {
 	mock.lockGetByID.RLock()
 	defer mock.lockGetByID.RUnlock()
@@ -2121,25 +2244,28 @@ func (mock *ScheduledTransactionStoreMock) GetByIDCalls() []struct {
 }
 
 // Update calls UpdateFunc.
-func (mock *ScheduledTransactionStoreMock) Update(ctx context.Context, payment *ScheduledTransaction) error {
+func (mock *ScheduledTransactionStoreMock) Update(ctx context.Context, rCtx Context, payment *ScheduledTransaction) error {
 	if mock.UpdateFunc == nil {
 		panic("ScheduledTransactionStoreMock.UpdateFunc: method is nil but ScheduledTransactionStore.Update was just called")
 	}
 	mock.lockUpdate.Lock()
 	mock.calls.Update = append(mock.calls.Update, struct {
 		Ctx     context.Context
+		RCtx    Context
 		Payment *ScheduledTransaction
 	}{
 		Ctx:     ctx,
+		RCtx:    rCtx,
 		Payment: payment,
 	})
 	mock.lockUpdate.Unlock()
-	return mock.UpdateFunc(ctx, payment)
+	return mock.UpdateFunc(ctx, rCtx, payment)
 }
 
 // UpdateCalls returns all calls made to Update.
 func (mock *ScheduledTransactionStoreMock) UpdateCalls() []struct {
 	Ctx     context.Context
+	RCtx    Context
 	Payment *ScheduledTransaction
 } {
 	mock.lockUpdate.RLock()
@@ -2148,27 +2274,30 @@ func (mock *ScheduledTransactionStoreMock) UpdateCalls() []struct {
 }
 
 // UpdateStatus calls UpdateStatusFunc.
-func (mock *ScheduledTransactionStoreMock) UpdateStatus(ctx context.Context, id ScheduledTransactionID, status ScheduledTransactionStatus) error {
+func (mock *ScheduledTransactionStoreMock) UpdateStatus(ctx context.Context, rCtx Context, id ScheduledTransactionID, status ScheduledTransactionStatus) error {
 	if mock.UpdateStatusFunc == nil {
 		panic("ScheduledTransactionStoreMock.UpdateStatusFunc: method is nil but ScheduledTransactionStore.UpdateStatus was just called")
 	}
 	mock.lockUpdateStatus.Lock()
 	mock.calls.UpdateStatus = append(mock.calls.UpdateStatus, struct {
 		Ctx    context.Context
+		RCtx   Context
 		Id     ScheduledTransactionID
 		Status ScheduledTransactionStatus
 	}{
 		Ctx:    ctx,
+		RCtx:   rCtx,
 		Id:     id,
 		Status: status,
 	})
 	mock.lockUpdateStatus.Unlock()
-	return mock.UpdateStatusFunc(ctx, id, status)
+	return mock.UpdateStatusFunc(ctx, rCtx, id, status)
 }
 
 // UpdateStatusCalls returns all calls made to UpdateStatus.
 func (mock *ScheduledTransactionStoreMock) UpdateStatusCalls() []struct {
 	Ctx    context.Context
+	RCtx   Context
 	Id     ScheduledTransactionID
 	Status ScheduledTransactionStatus
 } {
@@ -2178,26 +2307,29 @@ func (mock *ScheduledTransactionStoreMock) UpdateStatusCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *ScheduledTransactionStoreMock) Delete(ctx context.Context, id ScheduledTransactionID) error {
+func (mock *ScheduledTransactionStoreMock) Delete(ctx context.Context, rCtx Context, id ScheduledTransactionID) error {
 	if mock.DeleteFunc == nil {
 		panic("ScheduledTransactionStoreMock.DeleteFunc: method is nil but ScheduledTransactionStore.Delete was just called")
 	}
 	mock.lockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, struct {
-		Ctx context.Context
-		Id  ScheduledTransactionID
+		Ctx  context.Context
+		RCtx Context
+		Id   ScheduledTransactionID
 	}{
-		Ctx: ctx,
-		Id:  id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockDelete.Unlock()
-	return mock.DeleteFunc(ctx, id)
+	return mock.DeleteFunc(ctx, rCtx, id)
 }
 
 // DeleteCalls returns all calls made to Delete.
 func (mock *ScheduledTransactionStoreMock) DeleteCalls() []struct {
-	Ctx context.Context
-	Id  ScheduledTransactionID
+	Ctx  context.Context
+	RCtx Context
+	Id   ScheduledTransactionID
 } {
 	mock.lockDelete.RLock()
 	defer mock.lockDelete.RUnlock()
@@ -2205,29 +2337,29 @@ func (mock *ScheduledTransactionStoreMock) DeleteCalls() []struct {
 }
 
 // ListBySpace calls ListBySpaceFunc.
-func (mock *ScheduledTransactionStoreMock) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListScheduledTransactionsFilter) (*paging.Page[*ScheduledTransaction], error) {
+func (mock *ScheduledTransactionStoreMock) ListBySpace(ctx context.Context, rCtx Context, filter *ListScheduledTransactionsFilter) (*paging.Page[*ScheduledTransaction], error) {
 	if mock.ListBySpaceFunc == nil {
 		panic("ScheduledTransactionStoreMock.ListBySpaceFunc: method is nil but ScheduledTransactionStore.ListBySpace was just called")
 	}
 	mock.lockListBySpace.Lock()
 	mock.calls.ListBySpace = append(mock.calls.ListBySpace, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Filter  *ListScheduledTransactionsFilter
+		Ctx    context.Context
+		RCtx   Context
+		Filter *ListScheduledTransactionsFilter
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Filter:  filter,
+		Ctx:    ctx,
+		RCtx:   rCtx,
+		Filter: filter,
 	})
 	mock.lockListBySpace.Unlock()
-	return mock.ListBySpaceFunc(ctx, spaceID, filter)
+	return mock.ListBySpaceFunc(ctx, rCtx, filter)
 }
 
 // ListBySpaceCalls returns all calls made to ListBySpace.
 func (mock *ScheduledTransactionStoreMock) ListBySpaceCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Filter  *ListScheduledTransactionsFilter
+	Ctx    context.Context
+	RCtx   Context
+	Filter *ListScheduledTransactionsFilter
 } {
 	mock.lockListBySpace.RLock()
 	defer mock.lockListBySpace.RUnlock()
@@ -2235,29 +2367,29 @@ func (mock *ScheduledTransactionStoreMock) ListBySpaceCalls() []struct {
 }
 
 // HasScheduledTransactions calls HasScheduledTransactionsFunc.
-func (mock *ScheduledTransactionStoreMock) HasScheduledTransactions(ctx context.Context, spaceID SpaceID, filter *ListScheduledTransactionsFilter) (bool, error) {
+func (mock *ScheduledTransactionStoreMock) HasScheduledTransactions(ctx context.Context, rCtx Context, filter *ListScheduledTransactionsFilter) (bool, error) {
 	if mock.HasScheduledTransactionsFunc == nil {
 		panic("ScheduledTransactionStoreMock.HasScheduledTransactionsFunc: method is nil but ScheduledTransactionStore.HasScheduledTransactions was just called")
 	}
 	mock.lockHasScheduledTransactions.Lock()
 	mock.calls.HasScheduledTransactions = append(mock.calls.HasScheduledTransactions, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Filter  *ListScheduledTransactionsFilter
+		Ctx    context.Context
+		RCtx   Context
+		Filter *ListScheduledTransactionsFilter
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Filter:  filter,
+		Ctx:    ctx,
+		RCtx:   rCtx,
+		Filter: filter,
 	})
 	mock.lockHasScheduledTransactions.Unlock()
-	return mock.HasScheduledTransactionsFunc(ctx, spaceID, filter)
+	return mock.HasScheduledTransactionsFunc(ctx, rCtx, filter)
 }
 
 // HasScheduledTransactionsCalls returns all calls made to HasScheduledTransactions.
 func (mock *ScheduledTransactionStoreMock) HasScheduledTransactionsCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Filter  *ListScheduledTransactionsFilter
+	Ctx    context.Context
+	RCtx   Context
+	Filter *ListScheduledTransactionsFilter
 } {
 	mock.lockHasScheduledTransactions.RLock()
 	defer mock.lockHasScheduledTransactions.RUnlock()
@@ -2270,43 +2402,46 @@ var _ BorrowingStore = (*BorrowingStoreMock)(nil)
 // BorrowingStoreMock is a mock implementation of BorrowingStore.
 type BorrowingStoreMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, b *Borrowing) error
+	CreateFunc func(ctx context.Context, rCtx Context, b *Borrowing) error
 
 	// GetByIDFunc mocks the GetByID method.
-	GetByIDFunc func(ctx context.Context, spaceID SpaceID, id BorrowingID) (*Borrowing, error)
+	GetByIDFunc func(ctx context.Context, rCtx Context, id BorrowingID) (*Borrowing, error)
 
 	// UpdateFunc mocks the Update method.
-	UpdateFunc func(ctx context.Context, b *Borrowing) error
+	UpdateFunc func(ctx context.Context, rCtx Context, b *Borrowing) error
 
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(ctx context.Context, id BorrowingID) error
+	DeleteFunc func(ctx context.Context, rCtx Context, id BorrowingID) error
 
 	// ListBySpaceFunc mocks the ListBySpace method.
-	ListBySpaceFunc func(ctx context.Context, spaceID SpaceID, filter *ListBorrowingsFilter) ([]*Borrowing, string, error)
+	ListBySpaceFunc func(ctx context.Context, rCtx Context, filter *ListBorrowingsFilter) ([]*Borrowing, string, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Create []struct {
-			Ctx context.Context
-			B   *Borrowing
+			Ctx  context.Context
+			RCtx Context
+			B    *Borrowing
 		}
 		GetByID []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      BorrowingID
+			Ctx  context.Context
+			RCtx Context
+			Id   BorrowingID
 		}
 		Update []struct {
-			Ctx context.Context
-			B   *Borrowing
+			Ctx  context.Context
+			RCtx Context
+			B    *Borrowing
 		}
 		Delete []struct {
-			Ctx context.Context
-			Id  BorrowingID
+			Ctx  context.Context
+			RCtx Context
+			Id   BorrowingID
 		}
 		ListBySpace []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Filter  *ListBorrowingsFilter
+			Ctx    context.Context
+			RCtx   Context
+			Filter *ListBorrowingsFilter
 		}
 	}
 	lockCreate      sync.RWMutex
@@ -2317,26 +2452,29 @@ type BorrowingStoreMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *BorrowingStoreMock) Create(ctx context.Context, b *Borrowing) error {
+func (mock *BorrowingStoreMock) Create(ctx context.Context, rCtx Context, b *Borrowing) error {
 	if mock.CreateFunc == nil {
 		panic("BorrowingStoreMock.CreateFunc: method is nil but BorrowingStore.Create was just called")
 	}
 	mock.lockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, struct {
-		Ctx context.Context
-		B   *Borrowing
+		Ctx  context.Context
+		RCtx Context
+		B    *Borrowing
 	}{
-		Ctx: ctx,
-		B:   b,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		B:    b,
 	})
 	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, b)
+	return mock.CreateFunc(ctx, rCtx, b)
 }
 
 // CreateCalls returns all calls made to Create.
 func (mock *BorrowingStoreMock) CreateCalls() []struct {
-	Ctx context.Context
-	B   *Borrowing
+	Ctx  context.Context
+	RCtx Context
+	B    *Borrowing
 } {
 	mock.lockCreate.RLock()
 	defer mock.lockCreate.RUnlock()
@@ -2344,29 +2482,29 @@ func (mock *BorrowingStoreMock) CreateCalls() []struct {
 }
 
 // GetByID calls GetByIDFunc.
-func (mock *BorrowingStoreMock) GetByID(ctx context.Context, spaceID SpaceID, id BorrowingID) (*Borrowing, error) {
+func (mock *BorrowingStoreMock) GetByID(ctx context.Context, rCtx Context, id BorrowingID) (*Borrowing, error) {
 	if mock.GetByIDFunc == nil {
 		panic("BorrowingStoreMock.GetByIDFunc: method is nil but BorrowingStore.GetByID was just called")
 	}
 	mock.lockGetByID.Lock()
 	mock.calls.GetByID = append(mock.calls.GetByID, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      BorrowingID
+		Ctx  context.Context
+		RCtx Context
+		Id   BorrowingID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockGetByID.Unlock()
-	return mock.GetByIDFunc(ctx, spaceID, id)
+	return mock.GetByIDFunc(ctx, rCtx, id)
 }
 
 // GetByIDCalls returns all calls made to GetByID.
 func (mock *BorrowingStoreMock) GetByIDCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      BorrowingID
+	Ctx  context.Context
+	RCtx Context
+	Id   BorrowingID
 } {
 	mock.lockGetByID.RLock()
 	defer mock.lockGetByID.RUnlock()
@@ -2374,26 +2512,29 @@ func (mock *BorrowingStoreMock) GetByIDCalls() []struct {
 }
 
 // Update calls UpdateFunc.
-func (mock *BorrowingStoreMock) Update(ctx context.Context, b *Borrowing) error {
+func (mock *BorrowingStoreMock) Update(ctx context.Context, rCtx Context, b *Borrowing) error {
 	if mock.UpdateFunc == nil {
 		panic("BorrowingStoreMock.UpdateFunc: method is nil but BorrowingStore.Update was just called")
 	}
 	mock.lockUpdate.Lock()
 	mock.calls.Update = append(mock.calls.Update, struct {
-		Ctx context.Context
-		B   *Borrowing
+		Ctx  context.Context
+		RCtx Context
+		B    *Borrowing
 	}{
-		Ctx: ctx,
-		B:   b,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		B:    b,
 	})
 	mock.lockUpdate.Unlock()
-	return mock.UpdateFunc(ctx, b)
+	return mock.UpdateFunc(ctx, rCtx, b)
 }
 
 // UpdateCalls returns all calls made to Update.
 func (mock *BorrowingStoreMock) UpdateCalls() []struct {
-	Ctx context.Context
-	B   *Borrowing
+	Ctx  context.Context
+	RCtx Context
+	B    *Borrowing
 } {
 	mock.lockUpdate.RLock()
 	defer mock.lockUpdate.RUnlock()
@@ -2401,26 +2542,29 @@ func (mock *BorrowingStoreMock) UpdateCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *BorrowingStoreMock) Delete(ctx context.Context, id BorrowingID) error {
+func (mock *BorrowingStoreMock) Delete(ctx context.Context, rCtx Context, id BorrowingID) error {
 	if mock.DeleteFunc == nil {
 		panic("BorrowingStoreMock.DeleteFunc: method is nil but BorrowingStore.Delete was just called")
 	}
 	mock.lockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, struct {
-		Ctx context.Context
-		Id  BorrowingID
+		Ctx  context.Context
+		RCtx Context
+		Id   BorrowingID
 	}{
-		Ctx: ctx,
-		Id:  id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockDelete.Unlock()
-	return mock.DeleteFunc(ctx, id)
+	return mock.DeleteFunc(ctx, rCtx, id)
 }
 
 // DeleteCalls returns all calls made to Delete.
 func (mock *BorrowingStoreMock) DeleteCalls() []struct {
-	Ctx context.Context
-	Id  BorrowingID
+	Ctx  context.Context
+	RCtx Context
+	Id   BorrowingID
 } {
 	mock.lockDelete.RLock()
 	defer mock.lockDelete.RUnlock()
@@ -2428,29 +2572,29 @@ func (mock *BorrowingStoreMock) DeleteCalls() []struct {
 }
 
 // ListBySpace calls ListBySpaceFunc.
-func (mock *BorrowingStoreMock) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBorrowingsFilter) ([]*Borrowing, string, error) {
+func (mock *BorrowingStoreMock) ListBySpace(ctx context.Context, rCtx Context, filter *ListBorrowingsFilter) ([]*Borrowing, string, error) {
 	if mock.ListBySpaceFunc == nil {
 		panic("BorrowingStoreMock.ListBySpaceFunc: method is nil but BorrowingStore.ListBySpace was just called")
 	}
 	mock.lockListBySpace.Lock()
 	mock.calls.ListBySpace = append(mock.calls.ListBySpace, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Filter  *ListBorrowingsFilter
+		Ctx    context.Context
+		RCtx   Context
+		Filter *ListBorrowingsFilter
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Filter:  filter,
+		Ctx:    ctx,
+		RCtx:   rCtx,
+		Filter: filter,
 	})
 	mock.lockListBySpace.Unlock()
-	return mock.ListBySpaceFunc(ctx, spaceID, filter)
+	return mock.ListBySpaceFunc(ctx, rCtx, filter)
 }
 
 // ListBySpaceCalls returns all calls made to ListBySpace.
 func (mock *BorrowingStoreMock) ListBySpaceCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Filter  *ListBorrowingsFilter
+	Ctx    context.Context
+	RCtx   Context
+	Filter *ListBorrowingsFilter
 } {
 	mock.lockListBySpace.RLock()
 	defer mock.lockListBySpace.RUnlock()
@@ -2463,35 +2607,37 @@ var _ BorrowingRepaymentStore = (*BorrowingRepaymentStoreMock)(nil)
 // BorrowingRepaymentStoreMock is a mock implementation of BorrowingRepaymentStore.
 type BorrowingRepaymentStoreMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, r *BorrowingRepayment) error
+	CreateFunc func(ctx context.Context, rCtx Context, r *BorrowingRepayment) error
 
 	// GetByIDFunc mocks the GetByID method.
-	GetByIDFunc func(ctx context.Context, spaceID SpaceID, id BorrowingRepaymentID) (*BorrowingRepayment, error)
+	GetByIDFunc func(ctx context.Context, rCtx Context, id BorrowingRepaymentID) (*BorrowingRepayment, error)
 
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(ctx context.Context, id BorrowingRepaymentID) error
+	DeleteFunc func(ctx context.Context, rCtx Context, id BorrowingRepaymentID) error
 
 	// ListByBorrowingFunc mocks the ListByBorrowing method.
-	ListByBorrowingFunc func(ctx context.Context, spaceID SpaceID, borrowingID BorrowingID) ([]*BorrowingRepayment, error)
+	ListByBorrowingFunc func(ctx context.Context, rCtx Context, borrowingID BorrowingID) ([]*BorrowingRepayment, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Create []struct {
-			Ctx context.Context
-			R   *BorrowingRepayment
+			Ctx  context.Context
+			RCtx Context
+			R    *BorrowingRepayment
 		}
 		GetByID []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      BorrowingRepaymentID
+			Ctx  context.Context
+			RCtx Context
+			Id   BorrowingRepaymentID
 		}
 		Delete []struct {
-			Ctx context.Context
-			Id  BorrowingRepaymentID
+			Ctx  context.Context
+			RCtx Context
+			Id   BorrowingRepaymentID
 		}
 		ListByBorrowing []struct {
 			Ctx         context.Context
-			SpaceID     SpaceID
+			RCtx        Context
 			BorrowingID BorrowingID
 		}
 	}
@@ -2502,26 +2648,29 @@ type BorrowingRepaymentStoreMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *BorrowingRepaymentStoreMock) Create(ctx context.Context, r *BorrowingRepayment) error {
+func (mock *BorrowingRepaymentStoreMock) Create(ctx context.Context, rCtx Context, r *BorrowingRepayment) error {
 	if mock.CreateFunc == nil {
 		panic("BorrowingRepaymentStoreMock.CreateFunc: method is nil but BorrowingRepaymentStore.Create was just called")
 	}
 	mock.lockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, struct {
-		Ctx context.Context
-		R   *BorrowingRepayment
+		Ctx  context.Context
+		RCtx Context
+		R    *BorrowingRepayment
 	}{
-		Ctx: ctx,
-		R:   r,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		R:    r,
 	})
 	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, r)
+	return mock.CreateFunc(ctx, rCtx, r)
 }
 
 // CreateCalls returns all calls made to Create.
 func (mock *BorrowingRepaymentStoreMock) CreateCalls() []struct {
-	Ctx context.Context
-	R   *BorrowingRepayment
+	Ctx  context.Context
+	RCtx Context
+	R    *BorrowingRepayment
 } {
 	mock.lockCreate.RLock()
 	defer mock.lockCreate.RUnlock()
@@ -2529,29 +2678,29 @@ func (mock *BorrowingRepaymentStoreMock) CreateCalls() []struct {
 }
 
 // GetByID calls GetByIDFunc.
-func (mock *BorrowingRepaymentStoreMock) GetByID(ctx context.Context, spaceID SpaceID, id BorrowingRepaymentID) (*BorrowingRepayment, error) {
+func (mock *BorrowingRepaymentStoreMock) GetByID(ctx context.Context, rCtx Context, id BorrowingRepaymentID) (*BorrowingRepayment, error) {
 	if mock.GetByIDFunc == nil {
 		panic("BorrowingRepaymentStoreMock.GetByIDFunc: method is nil but BorrowingRepaymentStore.GetByID was just called")
 	}
 	mock.lockGetByID.Lock()
 	mock.calls.GetByID = append(mock.calls.GetByID, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      BorrowingRepaymentID
+		Ctx  context.Context
+		RCtx Context
+		Id   BorrowingRepaymentID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockGetByID.Unlock()
-	return mock.GetByIDFunc(ctx, spaceID, id)
+	return mock.GetByIDFunc(ctx, rCtx, id)
 }
 
 // GetByIDCalls returns all calls made to GetByID.
 func (mock *BorrowingRepaymentStoreMock) GetByIDCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      BorrowingRepaymentID
+	Ctx  context.Context
+	RCtx Context
+	Id   BorrowingRepaymentID
 } {
 	mock.lockGetByID.RLock()
 	defer mock.lockGetByID.RUnlock()
@@ -2559,26 +2708,29 @@ func (mock *BorrowingRepaymentStoreMock) GetByIDCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *BorrowingRepaymentStoreMock) Delete(ctx context.Context, id BorrowingRepaymentID) error {
+func (mock *BorrowingRepaymentStoreMock) Delete(ctx context.Context, rCtx Context, id BorrowingRepaymentID) error {
 	if mock.DeleteFunc == nil {
 		panic("BorrowingRepaymentStoreMock.DeleteFunc: method is nil but BorrowingRepaymentStore.Delete was just called")
 	}
 	mock.lockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, struct {
-		Ctx context.Context
-		Id  BorrowingRepaymentID
+		Ctx  context.Context
+		RCtx Context
+		Id   BorrowingRepaymentID
 	}{
-		Ctx: ctx,
-		Id:  id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockDelete.Unlock()
-	return mock.DeleteFunc(ctx, id)
+	return mock.DeleteFunc(ctx, rCtx, id)
 }
 
 // DeleteCalls returns all calls made to Delete.
 func (mock *BorrowingRepaymentStoreMock) DeleteCalls() []struct {
-	Ctx context.Context
-	Id  BorrowingRepaymentID
+	Ctx  context.Context
+	RCtx Context
+	Id   BorrowingRepaymentID
 } {
 	mock.lockDelete.RLock()
 	defer mock.lockDelete.RUnlock()
@@ -2586,28 +2738,28 @@ func (mock *BorrowingRepaymentStoreMock) DeleteCalls() []struct {
 }
 
 // ListByBorrowing calls ListByBorrowingFunc.
-func (mock *BorrowingRepaymentStoreMock) ListByBorrowing(ctx context.Context, spaceID SpaceID, borrowingID BorrowingID) ([]*BorrowingRepayment, error) {
+func (mock *BorrowingRepaymentStoreMock) ListByBorrowing(ctx context.Context, rCtx Context, borrowingID BorrowingID) ([]*BorrowingRepayment, error) {
 	if mock.ListByBorrowingFunc == nil {
 		panic("BorrowingRepaymentStoreMock.ListByBorrowingFunc: method is nil but BorrowingRepaymentStore.ListByBorrowing was just called")
 	}
 	mock.lockListByBorrowing.Lock()
 	mock.calls.ListByBorrowing = append(mock.calls.ListByBorrowing, struct {
 		Ctx         context.Context
-		SpaceID     SpaceID
+		RCtx        Context
 		BorrowingID BorrowingID
 	}{
 		Ctx:         ctx,
-		SpaceID:     spaceID,
+		RCtx:        rCtx,
 		BorrowingID: borrowingID,
 	})
 	mock.lockListByBorrowing.Unlock()
-	return mock.ListByBorrowingFunc(ctx, spaceID, borrowingID)
+	return mock.ListByBorrowingFunc(ctx, rCtx, borrowingID)
 }
 
 // ListByBorrowingCalls returns all calls made to ListByBorrowing.
 func (mock *BorrowingRepaymentStoreMock) ListByBorrowingCalls() []struct {
 	Ctx         context.Context
-	SpaceID     SpaceID
+	RCtx        Context
 	BorrowingID BorrowingID
 } {
 	mock.lockListByBorrowing.RLock()
@@ -2621,75 +2773,77 @@ var _ AccountStore = (*AccountStoreMock)(nil)
 // AccountStoreMock is a mock implementation of AccountStore.
 type AccountStoreMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, account *Account) error
+	CreateFunc func(ctx context.Context, rCtx Context, account *Account) error
 
 	// GetByIDFunc mocks the GetByID method.
-	GetByIDFunc func(ctx context.Context, spaceID SpaceID, id AccountID) (*Account, error)
+	GetByIDFunc func(ctx context.Context, rCtx Context, id AccountID) (*Account, error)
 
 	// GetByIDsFunc mocks the GetByIDs method.
-	GetByIDsFunc func(ctx context.Context, spaceID SpaceID, ids []AccountID) ([]*Account, error)
+	GetByIDsFunc func(ctx context.Context, rCtx Context, ids []AccountID) ([]*Account, error)
 
 	// UpdateFunc mocks the Update method.
-	UpdateFunc func(ctx context.Context, account *Account) error
+	UpdateFunc func(ctx context.Context, rCtx Context, account *Account) error
 
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(ctx context.Context, spaceID SpaceID, id AccountID, opts DeleteOptions) error
+	DeleteFunc func(ctx context.Context, rCtx Context, id AccountID, opts DeleteOptions) error
 
 	// ListBySpaceFunc mocks the ListBySpace method.
-	ListBySpaceFunc func(ctx context.Context, spaceID SpaceID, filter *ListAccountsFilter) (*paging.Page[*Account], error)
+	ListBySpaceFunc func(ctx context.Context, rCtx Context, filter *ListAccountsFilter) (*paging.Page[*Account], error)
 
 	// HasDefaultFunc mocks the HasDefault method.
-	HasDefaultFunc func(ctx context.Context, spaceID SpaceID) (bool, error)
+	HasDefaultFunc func(ctx context.Context, rCtx Context) (bool, error)
 
 	// UnsetDefaultsExceptFunc mocks the UnsetDefaultsExcept method.
-	UnsetDefaultsExceptFunc func(ctx context.Context, spaceID SpaceID, id AccountID) error
+	UnsetDefaultsExceptFunc func(ctx context.Context, rCtx Context, id AccountID) error
 
 	// HasAnyFunc mocks the HasAny method.
-	HasAnyFunc func(ctx context.Context, spaceID SpaceID) (bool, error)
+	HasAnyFunc func(ctx context.Context, rCtx Context) (bool, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Create []struct {
 			Ctx     context.Context
+			RCtx    Context
 			Account *Account
 		}
 		GetByID []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      AccountID
+			Ctx  context.Context
+			RCtx Context
+			Id   AccountID
 		}
 		GetByIDs []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Ids     []AccountID
+			Ctx  context.Context
+			RCtx Context
+			Ids  []AccountID
 		}
 		Update []struct {
 			Ctx     context.Context
+			RCtx    Context
 			Account *Account
 		}
 		Delete []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      AccountID
-			Opts    DeleteOptions
+			Ctx  context.Context
+			RCtx Context
+			Id   AccountID
+			Opts DeleteOptions
 		}
 		ListBySpace []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Filter  *ListAccountsFilter
+			Ctx    context.Context
+			RCtx   Context
+			Filter *ListAccountsFilter
 		}
 		HasDefault []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
+			Ctx  context.Context
+			RCtx Context
 		}
 		UnsetDefaultsExcept []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      AccountID
+			Ctx  context.Context
+			RCtx Context
+			Id   AccountID
 		}
 		HasAny []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
+			Ctx  context.Context
+			RCtx Context
 		}
 	}
 	lockCreate              sync.RWMutex
@@ -2704,25 +2858,28 @@ type AccountStoreMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *AccountStoreMock) Create(ctx context.Context, account *Account) error {
+func (mock *AccountStoreMock) Create(ctx context.Context, rCtx Context, account *Account) error {
 	if mock.CreateFunc == nil {
 		panic("AccountStoreMock.CreateFunc: method is nil but AccountStore.Create was just called")
 	}
 	mock.lockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, struct {
 		Ctx     context.Context
+		RCtx    Context
 		Account *Account
 	}{
 		Ctx:     ctx,
+		RCtx:    rCtx,
 		Account: account,
 	})
 	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, account)
+	return mock.CreateFunc(ctx, rCtx, account)
 }
 
 // CreateCalls returns all calls made to Create.
 func (mock *AccountStoreMock) CreateCalls() []struct {
 	Ctx     context.Context
+	RCtx    Context
 	Account *Account
 } {
 	mock.lockCreate.RLock()
@@ -2731,29 +2888,29 @@ func (mock *AccountStoreMock) CreateCalls() []struct {
 }
 
 // GetByID calls GetByIDFunc.
-func (mock *AccountStoreMock) GetByID(ctx context.Context, spaceID SpaceID, id AccountID) (*Account, error) {
+func (mock *AccountStoreMock) GetByID(ctx context.Context, rCtx Context, id AccountID) (*Account, error) {
 	if mock.GetByIDFunc == nil {
 		panic("AccountStoreMock.GetByIDFunc: method is nil but AccountStore.GetByID was just called")
 	}
 	mock.lockGetByID.Lock()
 	mock.calls.GetByID = append(mock.calls.GetByID, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      AccountID
+		Ctx  context.Context
+		RCtx Context
+		Id   AccountID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockGetByID.Unlock()
-	return mock.GetByIDFunc(ctx, spaceID, id)
+	return mock.GetByIDFunc(ctx, rCtx, id)
 }
 
 // GetByIDCalls returns all calls made to GetByID.
 func (mock *AccountStoreMock) GetByIDCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      AccountID
+	Ctx  context.Context
+	RCtx Context
+	Id   AccountID
 } {
 	mock.lockGetByID.RLock()
 	defer mock.lockGetByID.RUnlock()
@@ -2761,29 +2918,29 @@ func (mock *AccountStoreMock) GetByIDCalls() []struct {
 }
 
 // GetByIDs calls GetByIDsFunc.
-func (mock *AccountStoreMock) GetByIDs(ctx context.Context, spaceID SpaceID, ids []AccountID) ([]*Account, error) {
+func (mock *AccountStoreMock) GetByIDs(ctx context.Context, rCtx Context, ids []AccountID) ([]*Account, error) {
 	if mock.GetByIDsFunc == nil {
 		panic("AccountStoreMock.GetByIDsFunc: method is nil but AccountStore.GetByIDs was just called")
 	}
 	mock.lockGetByIDs.Lock()
 	mock.calls.GetByIDs = append(mock.calls.GetByIDs, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Ids     []AccountID
+		Ctx  context.Context
+		RCtx Context
+		Ids  []AccountID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Ids:     ids,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Ids:  ids,
 	})
 	mock.lockGetByIDs.Unlock()
-	return mock.GetByIDsFunc(ctx, spaceID, ids)
+	return mock.GetByIDsFunc(ctx, rCtx, ids)
 }
 
 // GetByIDsCalls returns all calls made to GetByIDs.
 func (mock *AccountStoreMock) GetByIDsCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Ids     []AccountID
+	Ctx  context.Context
+	RCtx Context
+	Ids  []AccountID
 } {
 	mock.lockGetByIDs.RLock()
 	defer mock.lockGetByIDs.RUnlock()
@@ -2791,25 +2948,28 @@ func (mock *AccountStoreMock) GetByIDsCalls() []struct {
 }
 
 // Update calls UpdateFunc.
-func (mock *AccountStoreMock) Update(ctx context.Context, account *Account) error {
+func (mock *AccountStoreMock) Update(ctx context.Context, rCtx Context, account *Account) error {
 	if mock.UpdateFunc == nil {
 		panic("AccountStoreMock.UpdateFunc: method is nil but AccountStore.Update was just called")
 	}
 	mock.lockUpdate.Lock()
 	mock.calls.Update = append(mock.calls.Update, struct {
 		Ctx     context.Context
+		RCtx    Context
 		Account *Account
 	}{
 		Ctx:     ctx,
+		RCtx:    rCtx,
 		Account: account,
 	})
 	mock.lockUpdate.Unlock()
-	return mock.UpdateFunc(ctx, account)
+	return mock.UpdateFunc(ctx, rCtx, account)
 }
 
 // UpdateCalls returns all calls made to Update.
 func (mock *AccountStoreMock) UpdateCalls() []struct {
 	Ctx     context.Context
+	RCtx    Context
 	Account *Account
 } {
 	mock.lockUpdate.RLock()
@@ -2818,32 +2978,32 @@ func (mock *AccountStoreMock) UpdateCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *AccountStoreMock) Delete(ctx context.Context, spaceID SpaceID, id AccountID, opts DeleteOptions) error {
+func (mock *AccountStoreMock) Delete(ctx context.Context, rCtx Context, id AccountID, opts DeleteOptions) error {
 	if mock.DeleteFunc == nil {
 		panic("AccountStoreMock.DeleteFunc: method is nil but AccountStore.Delete was just called")
 	}
 	mock.lockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      AccountID
-		Opts    DeleteOptions
+		Ctx  context.Context
+		RCtx Context
+		Id   AccountID
+		Opts DeleteOptions
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
-		Opts:    opts,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
+		Opts: opts,
 	})
 	mock.lockDelete.Unlock()
-	return mock.DeleteFunc(ctx, spaceID, id, opts)
+	return mock.DeleteFunc(ctx, rCtx, id, opts)
 }
 
 // DeleteCalls returns all calls made to Delete.
 func (mock *AccountStoreMock) DeleteCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      AccountID
-	Opts    DeleteOptions
+	Ctx  context.Context
+	RCtx Context
+	Id   AccountID
+	Opts DeleteOptions
 } {
 	mock.lockDelete.RLock()
 	defer mock.lockDelete.RUnlock()
@@ -2851,29 +3011,29 @@ func (mock *AccountStoreMock) DeleteCalls() []struct {
 }
 
 // ListBySpace calls ListBySpaceFunc.
-func (mock *AccountStoreMock) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListAccountsFilter) (*paging.Page[*Account], error) {
+func (mock *AccountStoreMock) ListBySpace(ctx context.Context, rCtx Context, filter *ListAccountsFilter) (*paging.Page[*Account], error) {
 	if mock.ListBySpaceFunc == nil {
 		panic("AccountStoreMock.ListBySpaceFunc: method is nil but AccountStore.ListBySpace was just called")
 	}
 	mock.lockListBySpace.Lock()
 	mock.calls.ListBySpace = append(mock.calls.ListBySpace, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Filter  *ListAccountsFilter
+		Ctx    context.Context
+		RCtx   Context
+		Filter *ListAccountsFilter
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Filter:  filter,
+		Ctx:    ctx,
+		RCtx:   rCtx,
+		Filter: filter,
 	})
 	mock.lockListBySpace.Unlock()
-	return mock.ListBySpaceFunc(ctx, spaceID, filter)
+	return mock.ListBySpaceFunc(ctx, rCtx, filter)
 }
 
 // ListBySpaceCalls returns all calls made to ListBySpace.
 func (mock *AccountStoreMock) ListBySpaceCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Filter  *ListAccountsFilter
+	Ctx    context.Context
+	RCtx   Context
+	Filter *ListAccountsFilter
 } {
 	mock.lockListBySpace.RLock()
 	defer mock.lockListBySpace.RUnlock()
@@ -2881,26 +3041,26 @@ func (mock *AccountStoreMock) ListBySpaceCalls() []struct {
 }
 
 // HasDefault calls HasDefaultFunc.
-func (mock *AccountStoreMock) HasDefault(ctx context.Context, spaceID SpaceID) (bool, error) {
+func (mock *AccountStoreMock) HasDefault(ctx context.Context, rCtx Context) (bool, error) {
 	if mock.HasDefaultFunc == nil {
 		panic("AccountStoreMock.HasDefaultFunc: method is nil but AccountStore.HasDefault was just called")
 	}
 	mock.lockHasDefault.Lock()
 	mock.calls.HasDefault = append(mock.calls.HasDefault, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
+		Ctx  context.Context
+		RCtx Context
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
+		Ctx:  ctx,
+		RCtx: rCtx,
 	})
 	mock.lockHasDefault.Unlock()
-	return mock.HasDefaultFunc(ctx, spaceID)
+	return mock.HasDefaultFunc(ctx, rCtx)
 }
 
 // HasDefaultCalls returns all calls made to HasDefault.
 func (mock *AccountStoreMock) HasDefaultCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
+	Ctx  context.Context
+	RCtx Context
 } {
 	mock.lockHasDefault.RLock()
 	defer mock.lockHasDefault.RUnlock()
@@ -2908,29 +3068,29 @@ func (mock *AccountStoreMock) HasDefaultCalls() []struct {
 }
 
 // UnsetDefaultsExcept calls UnsetDefaultsExceptFunc.
-func (mock *AccountStoreMock) UnsetDefaultsExcept(ctx context.Context, spaceID SpaceID, id AccountID) error {
+func (mock *AccountStoreMock) UnsetDefaultsExcept(ctx context.Context, rCtx Context, id AccountID) error {
 	if mock.UnsetDefaultsExceptFunc == nil {
 		panic("AccountStoreMock.UnsetDefaultsExceptFunc: method is nil but AccountStore.UnsetDefaultsExcept was just called")
 	}
 	mock.lockUnsetDefaultsExcept.Lock()
 	mock.calls.UnsetDefaultsExcept = append(mock.calls.UnsetDefaultsExcept, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      AccountID
+		Ctx  context.Context
+		RCtx Context
+		Id   AccountID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockUnsetDefaultsExcept.Unlock()
-	return mock.UnsetDefaultsExceptFunc(ctx, spaceID, id)
+	return mock.UnsetDefaultsExceptFunc(ctx, rCtx, id)
 }
 
 // UnsetDefaultsExceptCalls returns all calls made to UnsetDefaultsExcept.
 func (mock *AccountStoreMock) UnsetDefaultsExceptCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      AccountID
+	Ctx  context.Context
+	RCtx Context
+	Id   AccountID
 } {
 	mock.lockUnsetDefaultsExcept.RLock()
 	defer mock.lockUnsetDefaultsExcept.RUnlock()
@@ -2938,26 +3098,26 @@ func (mock *AccountStoreMock) UnsetDefaultsExceptCalls() []struct {
 }
 
 // HasAny calls HasAnyFunc.
-func (mock *AccountStoreMock) HasAny(ctx context.Context, spaceID SpaceID) (bool, error) {
+func (mock *AccountStoreMock) HasAny(ctx context.Context, rCtx Context) (bool, error) {
 	if mock.HasAnyFunc == nil {
 		panic("AccountStoreMock.HasAnyFunc: method is nil but AccountStore.HasAny was just called")
 	}
 	mock.lockHasAny.Lock()
 	mock.calls.HasAny = append(mock.calls.HasAny, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
+		Ctx  context.Context
+		RCtx Context
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
+		Ctx:  ctx,
+		RCtx: rCtx,
 	})
 	mock.lockHasAny.Unlock()
-	return mock.HasAnyFunc(ctx, spaceID)
+	return mock.HasAnyFunc(ctx, rCtx)
 }
 
 // HasAnyCalls returns all calls made to HasAny.
 func (mock *AccountStoreMock) HasAnyCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
+	Ctx  context.Context
+	RCtx Context
 } {
 	mock.lockHasAny.RLock()
 	defer mock.lockHasAny.RUnlock()
@@ -2970,35 +3130,37 @@ var _ TransferStore = (*TransferStoreMock)(nil)
 // TransferStoreMock is a mock implementation of TransferStore.
 type TransferStoreMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, transfer *Transfer) error
+	CreateFunc func(ctx context.Context, rCtx Context, transfer *Transfer) error
 
 	// GetByIDFunc mocks the GetByID method.
-	GetByIDFunc func(ctx context.Context, spaceID SpaceID, id TransferID) (*Transfer, error)
+	GetByIDFunc func(ctx context.Context, rCtx Context, id TransferID) (*Transfer, error)
 
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(ctx context.Context, id TransferID) error
+	DeleteFunc func(ctx context.Context, rCtx Context, id TransferID) error
 
 	// ListBySpaceFunc mocks the ListBySpace method.
-	ListBySpaceFunc func(ctx context.Context, spaceID SpaceID, limit int32, pageToken string) ([]*Transfer, string, error)
+	ListBySpaceFunc func(ctx context.Context, rCtx Context, limit int32, pageToken string) ([]*Transfer, string, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Create []struct {
 			Ctx      context.Context
+			RCtx     Context
 			Transfer *Transfer
 		}
 		GetByID []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      TransferID
+			Ctx  context.Context
+			RCtx Context
+			Id   TransferID
 		}
 		Delete []struct {
-			Ctx context.Context
-			Id  TransferID
+			Ctx  context.Context
+			RCtx Context
+			Id   TransferID
 		}
 		ListBySpace []struct {
 			Ctx       context.Context
-			SpaceID   SpaceID
+			RCtx      Context
 			Limit     int32
 			PageToken string
 		}
@@ -3010,25 +3172,28 @@ type TransferStoreMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *TransferStoreMock) Create(ctx context.Context, transfer *Transfer) error {
+func (mock *TransferStoreMock) Create(ctx context.Context, rCtx Context, transfer *Transfer) error {
 	if mock.CreateFunc == nil {
 		panic("TransferStoreMock.CreateFunc: method is nil but TransferStore.Create was just called")
 	}
 	mock.lockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, struct {
 		Ctx      context.Context
+		RCtx     Context
 		Transfer *Transfer
 	}{
 		Ctx:      ctx,
+		RCtx:     rCtx,
 		Transfer: transfer,
 	})
 	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, transfer)
+	return mock.CreateFunc(ctx, rCtx, transfer)
 }
 
 // CreateCalls returns all calls made to Create.
 func (mock *TransferStoreMock) CreateCalls() []struct {
 	Ctx      context.Context
+	RCtx     Context
 	Transfer *Transfer
 } {
 	mock.lockCreate.RLock()
@@ -3037,29 +3202,29 @@ func (mock *TransferStoreMock) CreateCalls() []struct {
 }
 
 // GetByID calls GetByIDFunc.
-func (mock *TransferStoreMock) GetByID(ctx context.Context, spaceID SpaceID, id TransferID) (*Transfer, error) {
+func (mock *TransferStoreMock) GetByID(ctx context.Context, rCtx Context, id TransferID) (*Transfer, error) {
 	if mock.GetByIDFunc == nil {
 		panic("TransferStoreMock.GetByIDFunc: method is nil but TransferStore.GetByID was just called")
 	}
 	mock.lockGetByID.Lock()
 	mock.calls.GetByID = append(mock.calls.GetByID, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      TransferID
+		Ctx  context.Context
+		RCtx Context
+		Id   TransferID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockGetByID.Unlock()
-	return mock.GetByIDFunc(ctx, spaceID, id)
+	return mock.GetByIDFunc(ctx, rCtx, id)
 }
 
 // GetByIDCalls returns all calls made to GetByID.
 func (mock *TransferStoreMock) GetByIDCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      TransferID
+	Ctx  context.Context
+	RCtx Context
+	Id   TransferID
 } {
 	mock.lockGetByID.RLock()
 	defer mock.lockGetByID.RUnlock()
@@ -3067,26 +3232,29 @@ func (mock *TransferStoreMock) GetByIDCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *TransferStoreMock) Delete(ctx context.Context, id TransferID) error {
+func (mock *TransferStoreMock) Delete(ctx context.Context, rCtx Context, id TransferID) error {
 	if mock.DeleteFunc == nil {
 		panic("TransferStoreMock.DeleteFunc: method is nil but TransferStore.Delete was just called")
 	}
 	mock.lockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, struct {
-		Ctx context.Context
-		Id  TransferID
+		Ctx  context.Context
+		RCtx Context
+		Id   TransferID
 	}{
-		Ctx: ctx,
-		Id:  id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockDelete.Unlock()
-	return mock.DeleteFunc(ctx, id)
+	return mock.DeleteFunc(ctx, rCtx, id)
 }
 
 // DeleteCalls returns all calls made to Delete.
 func (mock *TransferStoreMock) DeleteCalls() []struct {
-	Ctx context.Context
-	Id  TransferID
+	Ctx  context.Context
+	RCtx Context
+	Id   TransferID
 } {
 	mock.lockDelete.RLock()
 	defer mock.lockDelete.RUnlock()
@@ -3094,30 +3262,30 @@ func (mock *TransferStoreMock) DeleteCalls() []struct {
 }
 
 // ListBySpace calls ListBySpaceFunc.
-func (mock *TransferStoreMock) ListBySpace(ctx context.Context, spaceID SpaceID, limit int32, pageToken string) ([]*Transfer, string, error) {
+func (mock *TransferStoreMock) ListBySpace(ctx context.Context, rCtx Context, limit int32, pageToken string) ([]*Transfer, string, error) {
 	if mock.ListBySpaceFunc == nil {
 		panic("TransferStoreMock.ListBySpaceFunc: method is nil but TransferStore.ListBySpace was just called")
 	}
 	mock.lockListBySpace.Lock()
 	mock.calls.ListBySpace = append(mock.calls.ListBySpace, struct {
 		Ctx       context.Context
-		SpaceID   SpaceID
+		RCtx      Context
 		Limit     int32
 		PageToken string
 	}{
 		Ctx:       ctx,
-		SpaceID:   spaceID,
+		RCtx:      rCtx,
 		Limit:     limit,
 		PageToken: pageToken,
 	})
 	mock.lockListBySpace.Unlock()
-	return mock.ListBySpaceFunc(ctx, spaceID, limit, pageToken)
+	return mock.ListBySpaceFunc(ctx, rCtx, limit, pageToken)
 }
 
 // ListBySpaceCalls returns all calls made to ListBySpace.
 func (mock *TransferStoreMock) ListBySpaceCalls() []struct {
 	Ctx       context.Context
-	SpaceID   SpaceID
+	RCtx      Context
 	Limit     int32
 	PageToken string
 } {
@@ -3132,44 +3300,46 @@ var _ InboxItemStore = (*InboxItemStoreMock)(nil)
 // InboxItemStoreMock is a mock implementation of InboxItemStore.
 type InboxItemStoreMock struct {
 	// InsertFunc mocks the Insert method.
-	InsertFunc func(ctx context.Context, item *InboxItem) error
+	InsertFunc func(ctx context.Context, rCtx Context, item *InboxItem) error
 
 	// GetFunc mocks the Get method.
-	GetFunc func(ctx context.Context, spaceID SpaceID, id string) (*InboxItem, error)
+	GetFunc func(ctx context.Context, rCtx Context, id string) (*InboxItem, error)
 
 	// ListBySpaceFunc mocks the ListBySpace method.
-	ListBySpaceFunc func(ctx context.Context, spaceID SpaceID, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error)
+	ListBySpaceFunc func(ctx context.Context, rCtx Context, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error)
 
 	// UpdateFunc mocks the Update method.
-	UpdateFunc func(ctx context.Context, item *InboxItem) error
+	UpdateFunc func(ctx context.Context, rCtx Context, item *InboxItem) error
 
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(ctx context.Context, spaceID SpaceID, id string) error
+	DeleteFunc func(ctx context.Context, rCtx Context, id string) error
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Insert []struct {
 			Ctx  context.Context
+			RCtx Context
 			Item *InboxItem
 		}
 		Get []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      string
+			Ctx  context.Context
+			RCtx Context
+			Id   string
 		}
 		ListBySpace []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Filter  *ListInboxItemsFilter
+			Ctx    context.Context
+			RCtx   Context
+			Filter *ListInboxItemsFilter
 		}
 		Update []struct {
 			Ctx  context.Context
+			RCtx Context
 			Item *InboxItem
 		}
 		Delete []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      string
+			Ctx  context.Context
+			RCtx Context
+			Id   string
 		}
 	}
 	lockInsert      sync.RWMutex
@@ -3180,25 +3350,28 @@ type InboxItemStoreMock struct {
 }
 
 // Insert calls InsertFunc.
-func (mock *InboxItemStoreMock) Insert(ctx context.Context, item *InboxItem) error {
+func (mock *InboxItemStoreMock) Insert(ctx context.Context, rCtx Context, item *InboxItem) error {
 	if mock.InsertFunc == nil {
 		panic("InboxItemStoreMock.InsertFunc: method is nil but InboxItemStore.Insert was just called")
 	}
 	mock.lockInsert.Lock()
 	mock.calls.Insert = append(mock.calls.Insert, struct {
 		Ctx  context.Context
+		RCtx Context
 		Item *InboxItem
 	}{
 		Ctx:  ctx,
+		RCtx: rCtx,
 		Item: item,
 	})
 	mock.lockInsert.Unlock()
-	return mock.InsertFunc(ctx, item)
+	return mock.InsertFunc(ctx, rCtx, item)
 }
 
 // InsertCalls returns all calls made to Insert.
 func (mock *InboxItemStoreMock) InsertCalls() []struct {
 	Ctx  context.Context
+	RCtx Context
 	Item *InboxItem
 } {
 	mock.lockInsert.RLock()
@@ -3207,29 +3380,29 @@ func (mock *InboxItemStoreMock) InsertCalls() []struct {
 }
 
 // Get calls GetFunc.
-func (mock *InboxItemStoreMock) Get(ctx context.Context, spaceID SpaceID, id string) (*InboxItem, error) {
+func (mock *InboxItemStoreMock) Get(ctx context.Context, rCtx Context, id string) (*InboxItem, error) {
 	if mock.GetFunc == nil {
 		panic("InboxItemStoreMock.GetFunc: method is nil but InboxItemStore.Get was just called")
 	}
 	mock.lockGet.Lock()
 	mock.calls.Get = append(mock.calls.Get, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      string
+		Ctx  context.Context
+		RCtx Context
+		Id   string
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockGet.Unlock()
-	return mock.GetFunc(ctx, spaceID, id)
+	return mock.GetFunc(ctx, rCtx, id)
 }
 
 // GetCalls returns all calls made to Get.
 func (mock *InboxItemStoreMock) GetCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      string
+	Ctx  context.Context
+	RCtx Context
+	Id   string
 } {
 	mock.lockGet.RLock()
 	defer mock.lockGet.RUnlock()
@@ -3237,29 +3410,29 @@ func (mock *InboxItemStoreMock) GetCalls() []struct {
 }
 
 // ListBySpace calls ListBySpaceFunc.
-func (mock *InboxItemStoreMock) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error) {
+func (mock *InboxItemStoreMock) ListBySpace(ctx context.Context, rCtx Context, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error) {
 	if mock.ListBySpaceFunc == nil {
 		panic("InboxItemStoreMock.ListBySpaceFunc: method is nil but InboxItemStore.ListBySpace was just called")
 	}
 	mock.lockListBySpace.Lock()
 	mock.calls.ListBySpace = append(mock.calls.ListBySpace, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Filter  *ListInboxItemsFilter
+		Ctx    context.Context
+		RCtx   Context
+		Filter *ListInboxItemsFilter
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Filter:  filter,
+		Ctx:    ctx,
+		RCtx:   rCtx,
+		Filter: filter,
 	})
 	mock.lockListBySpace.Unlock()
-	return mock.ListBySpaceFunc(ctx, spaceID, filter)
+	return mock.ListBySpaceFunc(ctx, rCtx, filter)
 }
 
 // ListBySpaceCalls returns all calls made to ListBySpace.
 func (mock *InboxItemStoreMock) ListBySpaceCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Filter  *ListInboxItemsFilter
+	Ctx    context.Context
+	RCtx   Context
+	Filter *ListInboxItemsFilter
 } {
 	mock.lockListBySpace.RLock()
 	defer mock.lockListBySpace.RUnlock()
@@ -3267,25 +3440,28 @@ func (mock *InboxItemStoreMock) ListBySpaceCalls() []struct {
 }
 
 // Update calls UpdateFunc.
-func (mock *InboxItemStoreMock) Update(ctx context.Context, item *InboxItem) error {
+func (mock *InboxItemStoreMock) Update(ctx context.Context, rCtx Context, item *InboxItem) error {
 	if mock.UpdateFunc == nil {
 		panic("InboxItemStoreMock.UpdateFunc: method is nil but InboxItemStore.Update was just called")
 	}
 	mock.lockUpdate.Lock()
 	mock.calls.Update = append(mock.calls.Update, struct {
 		Ctx  context.Context
+		RCtx Context
 		Item *InboxItem
 	}{
 		Ctx:  ctx,
+		RCtx: rCtx,
 		Item: item,
 	})
 	mock.lockUpdate.Unlock()
-	return mock.UpdateFunc(ctx, item)
+	return mock.UpdateFunc(ctx, rCtx, item)
 }
 
 // UpdateCalls returns all calls made to Update.
 func (mock *InboxItemStoreMock) UpdateCalls() []struct {
 	Ctx  context.Context
+	RCtx Context
 	Item *InboxItem
 } {
 	mock.lockUpdate.RLock()
@@ -3294,29 +3470,29 @@ func (mock *InboxItemStoreMock) UpdateCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *InboxItemStoreMock) Delete(ctx context.Context, spaceID SpaceID, id string) error {
+func (mock *InboxItemStoreMock) Delete(ctx context.Context, rCtx Context, id string) error {
 	if mock.DeleteFunc == nil {
 		panic("InboxItemStoreMock.DeleteFunc: method is nil but InboxItemStore.Delete was just called")
 	}
 	mock.lockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      string
+		Ctx  context.Context
+		RCtx Context
+		Id   string
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockDelete.Unlock()
-	return mock.DeleteFunc(ctx, spaceID, id)
+	return mock.DeleteFunc(ctx, rCtx, id)
 }
 
 // DeleteCalls returns all calls made to Delete.
 func (mock *InboxItemStoreMock) DeleteCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      string
+	Ctx  context.Context
+	RCtx Context
+	Id   string
 } {
 	mock.lockDelete.RLock()
 	defer mock.lockDelete.RUnlock()
@@ -3329,73 +3505,79 @@ var _ StatementStore = (*StatementStoreMock)(nil)
 // StatementStoreMock is a mock implementation of StatementStore.
 type StatementStoreMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, statement *Statement, lines []*StatementLine) error
+	CreateFunc func(ctx context.Context, rCtx Context, statement *Statement, lines []*StatementLine) error
 
 	// GetByIDFunc mocks the GetByID method.
-	GetByIDFunc func(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, error)
+	GetByIDFunc func(ctx context.Context, rCtx Context, id StatementID) (*Statement, error)
 
 	// ListFunc mocks the List method.
-	ListFunc func(ctx context.Context, spaceID SpaceID, filter *ListStatementsFilter) (*paging.Page[*Statement], error)
+	ListFunc func(ctx context.Context, rCtx Context, filter *ListStatementsFilter) (*paging.Page[*Statement], error)
 
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(ctx context.Context, spaceID SpaceID, id StatementID, opts DeleteOptions) error
+	DeleteFunc func(ctx context.Context, rCtx Context, id StatementID, opts DeleteOptions) error
 
 	// UpdateFunc mocks the Update method.
-	UpdateFunc func(ctx context.Context, statement *Statement) error
+	UpdateFunc func(ctx context.Context, rCtx Context, statement *Statement) error
 
 	// ListLinesFunc mocks the ListLines method.
-	ListLinesFunc func(ctx context.Context, statementID StatementID) ([]*StatementLine, error)
+	ListLinesFunc func(ctx context.Context, rCtx Context, statementID StatementID) ([]*StatementLine, error)
 
 	// GetLineByIDFunc mocks the GetLineByID method.
-	GetLineByIDFunc func(ctx context.Context, id StatementLineID) (*StatementLine, error)
+	GetLineByIDFunc func(ctx context.Context, rCtx Context, id StatementLineID) (*StatementLine, error)
 
 	// UpdateLineDraftFunc mocks the UpdateLineDraft method.
-	UpdateLineDraftFunc func(ctx context.Context, line *StatementLine) error
+	UpdateLineDraftFunc func(ctx context.Context, rCtx Context, line *StatementLine) error
 
 	// UpdateStatementWithLinesFunc mocks the UpdateStatementWithLines method.
-	UpdateStatementWithLinesFunc func(ctx context.Context, statement *Statement, lines []*StatementLine) error
+	UpdateStatementWithLinesFunc func(ctx context.Context, rCtx Context, statement *Statement, lines []*StatementLine) error
 
 	// calls tracks calls to the methods.
 	calls struct {
 		Create []struct {
 			Ctx       context.Context
+			RCtx      Context
 			Statement *Statement
 			Lines     []*StatementLine
 		}
 		GetByID []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      StatementID
+			Ctx  context.Context
+			RCtx Context
+			Id   StatementID
 		}
 		List []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Filter  *ListStatementsFilter
+			Ctx    context.Context
+			RCtx   Context
+			Filter *ListStatementsFilter
 		}
 		Delete []struct {
-			Ctx     context.Context
-			SpaceID SpaceID
-			Id      StatementID
-			Opts    DeleteOptions
+			Ctx  context.Context
+			RCtx Context
+			Id   StatementID
+			Opts DeleteOptions
 		}
 		Update []struct {
 			Ctx       context.Context
+			RCtx      Context
 			Statement *Statement
 		}
 		ListLines []struct {
 			Ctx         context.Context
+			RCtx        Context
 			StatementID StatementID
 		}
 		GetLineByID []struct {
-			Ctx context.Context
-			Id  StatementLineID
+			Ctx  context.Context
+			RCtx Context
+			Id   StatementLineID
 		}
 		UpdateLineDraft []struct {
 			Ctx  context.Context
+			RCtx Context
 			Line *StatementLine
 		}
 		UpdateStatementWithLines []struct {
 			Ctx       context.Context
+			RCtx      Context
 			Statement *Statement
 			Lines     []*StatementLine
 		}
@@ -3412,27 +3594,30 @@ type StatementStoreMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *StatementStoreMock) Create(ctx context.Context, statement *Statement, lines []*StatementLine) error {
+func (mock *StatementStoreMock) Create(ctx context.Context, rCtx Context, statement *Statement, lines []*StatementLine) error {
 	if mock.CreateFunc == nil {
 		panic("StatementStoreMock.CreateFunc: method is nil but StatementStore.Create was just called")
 	}
 	mock.lockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, struct {
 		Ctx       context.Context
+		RCtx      Context
 		Statement *Statement
 		Lines     []*StatementLine
 	}{
 		Ctx:       ctx,
+		RCtx:      rCtx,
 		Statement: statement,
 		Lines:     lines,
 	})
 	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, statement, lines)
+	return mock.CreateFunc(ctx, rCtx, statement, lines)
 }
 
 // CreateCalls returns all calls made to Create.
 func (mock *StatementStoreMock) CreateCalls() []struct {
 	Ctx       context.Context
+	RCtx      Context
 	Statement *Statement
 	Lines     []*StatementLine
 } {
@@ -3442,29 +3627,29 @@ func (mock *StatementStoreMock) CreateCalls() []struct {
 }
 
 // GetByID calls GetByIDFunc.
-func (mock *StatementStoreMock) GetByID(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, error) {
+func (mock *StatementStoreMock) GetByID(ctx context.Context, rCtx Context, id StatementID) (*Statement, error) {
 	if mock.GetByIDFunc == nil {
 		panic("StatementStoreMock.GetByIDFunc: method is nil but StatementStore.GetByID was just called")
 	}
 	mock.lockGetByID.Lock()
 	mock.calls.GetByID = append(mock.calls.GetByID, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      StatementID
+		Ctx  context.Context
+		RCtx Context
+		Id   StatementID
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockGetByID.Unlock()
-	return mock.GetByIDFunc(ctx, spaceID, id)
+	return mock.GetByIDFunc(ctx, rCtx, id)
 }
 
 // GetByIDCalls returns all calls made to GetByID.
 func (mock *StatementStoreMock) GetByIDCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      StatementID
+	Ctx  context.Context
+	RCtx Context
+	Id   StatementID
 } {
 	mock.lockGetByID.RLock()
 	defer mock.lockGetByID.RUnlock()
@@ -3472,29 +3657,29 @@ func (mock *StatementStoreMock) GetByIDCalls() []struct {
 }
 
 // List calls ListFunc.
-func (mock *StatementStoreMock) List(ctx context.Context, spaceID SpaceID, filter *ListStatementsFilter) (*paging.Page[*Statement], error) {
+func (mock *StatementStoreMock) List(ctx context.Context, rCtx Context, filter *ListStatementsFilter) (*paging.Page[*Statement], error) {
 	if mock.ListFunc == nil {
 		panic("StatementStoreMock.ListFunc: method is nil but StatementStore.List was just called")
 	}
 	mock.lockList.Lock()
 	mock.calls.List = append(mock.calls.List, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Filter  *ListStatementsFilter
+		Ctx    context.Context
+		RCtx   Context
+		Filter *ListStatementsFilter
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Filter:  filter,
+		Ctx:    ctx,
+		RCtx:   rCtx,
+		Filter: filter,
 	})
 	mock.lockList.Unlock()
-	return mock.ListFunc(ctx, spaceID, filter)
+	return mock.ListFunc(ctx, rCtx, filter)
 }
 
 // ListCalls returns all calls made to List.
 func (mock *StatementStoreMock) ListCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Filter  *ListStatementsFilter
+	Ctx    context.Context
+	RCtx   Context
+	Filter *ListStatementsFilter
 } {
 	mock.lockList.RLock()
 	defer mock.lockList.RUnlock()
@@ -3502,32 +3687,32 @@ func (mock *StatementStoreMock) ListCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *StatementStoreMock) Delete(ctx context.Context, spaceID SpaceID, id StatementID, opts DeleteOptions) error {
+func (mock *StatementStoreMock) Delete(ctx context.Context, rCtx Context, id StatementID, opts DeleteOptions) error {
 	if mock.DeleteFunc == nil {
 		panic("StatementStoreMock.DeleteFunc: method is nil but StatementStore.Delete was just called")
 	}
 	mock.lockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, struct {
-		Ctx     context.Context
-		SpaceID SpaceID
-		Id      StatementID
-		Opts    DeleteOptions
+		Ctx  context.Context
+		RCtx Context
+		Id   StatementID
+		Opts DeleteOptions
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
-		Opts:    opts,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
+		Opts: opts,
 	})
 	mock.lockDelete.Unlock()
-	return mock.DeleteFunc(ctx, spaceID, id, opts)
+	return mock.DeleteFunc(ctx, rCtx, id, opts)
 }
 
 // DeleteCalls returns all calls made to Delete.
 func (mock *StatementStoreMock) DeleteCalls() []struct {
-	Ctx     context.Context
-	SpaceID SpaceID
-	Id      StatementID
-	Opts    DeleteOptions
+	Ctx  context.Context
+	RCtx Context
+	Id   StatementID
+	Opts DeleteOptions
 } {
 	mock.lockDelete.RLock()
 	defer mock.lockDelete.RUnlock()
@@ -3535,25 +3720,28 @@ func (mock *StatementStoreMock) DeleteCalls() []struct {
 }
 
 // Update calls UpdateFunc.
-func (mock *StatementStoreMock) Update(ctx context.Context, statement *Statement) error {
+func (mock *StatementStoreMock) Update(ctx context.Context, rCtx Context, statement *Statement) error {
 	if mock.UpdateFunc == nil {
 		panic("StatementStoreMock.UpdateFunc: method is nil but StatementStore.Update was just called")
 	}
 	mock.lockUpdate.Lock()
 	mock.calls.Update = append(mock.calls.Update, struct {
 		Ctx       context.Context
+		RCtx      Context
 		Statement *Statement
 	}{
 		Ctx:       ctx,
+		RCtx:      rCtx,
 		Statement: statement,
 	})
 	mock.lockUpdate.Unlock()
-	return mock.UpdateFunc(ctx, statement)
+	return mock.UpdateFunc(ctx, rCtx, statement)
 }
 
 // UpdateCalls returns all calls made to Update.
 func (mock *StatementStoreMock) UpdateCalls() []struct {
 	Ctx       context.Context
+	RCtx      Context
 	Statement *Statement
 } {
 	mock.lockUpdate.RLock()
@@ -3562,25 +3750,28 @@ func (mock *StatementStoreMock) UpdateCalls() []struct {
 }
 
 // ListLines calls ListLinesFunc.
-func (mock *StatementStoreMock) ListLines(ctx context.Context, statementID StatementID) ([]*StatementLine, error) {
+func (mock *StatementStoreMock) ListLines(ctx context.Context, rCtx Context, statementID StatementID) ([]*StatementLine, error) {
 	if mock.ListLinesFunc == nil {
 		panic("StatementStoreMock.ListLinesFunc: method is nil but StatementStore.ListLines was just called")
 	}
 	mock.lockListLines.Lock()
 	mock.calls.ListLines = append(mock.calls.ListLines, struct {
 		Ctx         context.Context
+		RCtx        Context
 		StatementID StatementID
 	}{
 		Ctx:         ctx,
+		RCtx:        rCtx,
 		StatementID: statementID,
 	})
 	mock.lockListLines.Unlock()
-	return mock.ListLinesFunc(ctx, statementID)
+	return mock.ListLinesFunc(ctx, rCtx, statementID)
 }
 
 // ListLinesCalls returns all calls made to ListLines.
 func (mock *StatementStoreMock) ListLinesCalls() []struct {
 	Ctx         context.Context
+	RCtx        Context
 	StatementID StatementID
 } {
 	mock.lockListLines.RLock()
@@ -3589,26 +3780,29 @@ func (mock *StatementStoreMock) ListLinesCalls() []struct {
 }
 
 // GetLineByID calls GetLineByIDFunc.
-func (mock *StatementStoreMock) GetLineByID(ctx context.Context, id StatementLineID) (*StatementLine, error) {
+func (mock *StatementStoreMock) GetLineByID(ctx context.Context, rCtx Context, id StatementLineID) (*StatementLine, error) {
 	if mock.GetLineByIDFunc == nil {
 		panic("StatementStoreMock.GetLineByIDFunc: method is nil but StatementStore.GetLineByID was just called")
 	}
 	mock.lockGetLineByID.Lock()
 	mock.calls.GetLineByID = append(mock.calls.GetLineByID, struct {
-		Ctx context.Context
-		Id  StatementLineID
+		Ctx  context.Context
+		RCtx Context
+		Id   StatementLineID
 	}{
-		Ctx: ctx,
-		Id:  id,
+		Ctx:  ctx,
+		RCtx: rCtx,
+		Id:   id,
 	})
 	mock.lockGetLineByID.Unlock()
-	return mock.GetLineByIDFunc(ctx, id)
+	return mock.GetLineByIDFunc(ctx, rCtx, id)
 }
 
 // GetLineByIDCalls returns all calls made to GetLineByID.
 func (mock *StatementStoreMock) GetLineByIDCalls() []struct {
-	Ctx context.Context
-	Id  StatementLineID
+	Ctx  context.Context
+	RCtx Context
+	Id   StatementLineID
 } {
 	mock.lockGetLineByID.RLock()
 	defer mock.lockGetLineByID.RUnlock()
@@ -3616,25 +3810,28 @@ func (mock *StatementStoreMock) GetLineByIDCalls() []struct {
 }
 
 // UpdateLineDraft calls UpdateLineDraftFunc.
-func (mock *StatementStoreMock) UpdateLineDraft(ctx context.Context, line *StatementLine) error {
+func (mock *StatementStoreMock) UpdateLineDraft(ctx context.Context, rCtx Context, line *StatementLine) error {
 	if mock.UpdateLineDraftFunc == nil {
 		panic("StatementStoreMock.UpdateLineDraftFunc: method is nil but StatementStore.UpdateLineDraft was just called")
 	}
 	mock.lockUpdateLineDraft.Lock()
 	mock.calls.UpdateLineDraft = append(mock.calls.UpdateLineDraft, struct {
 		Ctx  context.Context
+		RCtx Context
 		Line *StatementLine
 	}{
 		Ctx:  ctx,
+		RCtx: rCtx,
 		Line: line,
 	})
 	mock.lockUpdateLineDraft.Unlock()
-	return mock.UpdateLineDraftFunc(ctx, line)
+	return mock.UpdateLineDraftFunc(ctx, rCtx, line)
 }
 
 // UpdateLineDraftCalls returns all calls made to UpdateLineDraft.
 func (mock *StatementStoreMock) UpdateLineDraftCalls() []struct {
 	Ctx  context.Context
+	RCtx Context
 	Line *StatementLine
 } {
 	mock.lockUpdateLineDraft.RLock()
@@ -3643,27 +3840,30 @@ func (mock *StatementStoreMock) UpdateLineDraftCalls() []struct {
 }
 
 // UpdateStatementWithLines calls UpdateStatementWithLinesFunc.
-func (mock *StatementStoreMock) UpdateStatementWithLines(ctx context.Context, statement *Statement, lines []*StatementLine) error {
+func (mock *StatementStoreMock) UpdateStatementWithLines(ctx context.Context, rCtx Context, statement *Statement, lines []*StatementLine) error {
 	if mock.UpdateStatementWithLinesFunc == nil {
 		panic("StatementStoreMock.UpdateStatementWithLinesFunc: method is nil but StatementStore.UpdateStatementWithLines was just called")
 	}
 	mock.lockUpdateStatementWithLines.Lock()
 	mock.calls.UpdateStatementWithLines = append(mock.calls.UpdateStatementWithLines, struct {
 		Ctx       context.Context
+		RCtx      Context
 		Statement *Statement
 		Lines     []*StatementLine
 	}{
 		Ctx:       ctx,
+		RCtx:      rCtx,
 		Statement: statement,
 		Lines:     lines,
 	})
 	mock.lockUpdateStatementWithLines.Unlock()
-	return mock.UpdateStatementWithLinesFunc(ctx, statement, lines)
+	return mock.UpdateStatementWithLinesFunc(ctx, rCtx, statement, lines)
 }
 
 // UpdateStatementWithLinesCalls returns all calls made to UpdateStatementWithLines.
 func (mock *StatementStoreMock) UpdateStatementWithLinesCalls() []struct {
 	Ctx       context.Context
+	RCtx      Context
 	Statement *Statement
 	Lines     []*StatementLine
 } {

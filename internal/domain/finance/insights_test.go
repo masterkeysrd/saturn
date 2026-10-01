@@ -70,27 +70,20 @@ func TestGranularity_FormatLabel(t *testing.T) {
 }
 
 func TestGetSpentInsightsRequest_ResolveRange(t *testing.T) {
-	validSpace := finance.SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	now := time.Now().UTC()
+	astLoc := time.FixedZone("AST", -4*3600)
 
 	tests := []struct {
 		name       string
 		req        finance.GetSpentInsightsRequest
+		loc        *time.Location
 		wantErr    bool
 		wantGran   finance.Granularity
 		checkDates bool
 	}{
 		{
-			name: "invalid space ID",
-			req: finance.GetSpentInsightsRequest{
-				SpaceID: "invalid_space",
-			},
-			wantErr: true,
-		},
-		{
 			name: "invalid granularity",
 			req: finance.GetSpentInsightsRequest{
-				SpaceID:     validSpace,
 				Granularity: "invalid_gran",
 			},
 			wantErr: true,
@@ -98,7 +91,6 @@ func TestGetSpentInsightsRequest_ResolveRange(t *testing.T) {
 		{
 			name: "default range daily",
 			req: finance.GetSpentInsightsRequest{
-				SpaceID:     validSpace,
 				Granularity: "daily",
 			},
 			wantErr:    false,
@@ -108,7 +100,6 @@ func TestGetSpentInsightsRequest_ResolveRange(t *testing.T) {
 		{
 			name: "default range weekly",
 			req: finance.GetSpentInsightsRequest{
-				SpaceID:     validSpace,
 				Granularity: "weekly",
 			},
 			wantErr:    false,
@@ -118,7 +109,6 @@ func TestGetSpentInsightsRequest_ResolveRange(t *testing.T) {
 		{
 			name: "default range monthly",
 			req: finance.GetSpentInsightsRequest{
-				SpaceID:     validSpace,
 				Granularity: "monthly",
 			},
 			wantErr:    false,
@@ -128,7 +118,6 @@ func TestGetSpentInsightsRequest_ResolveRange(t *testing.T) {
 		{
 			name: "default range yearly",
 			req: finance.GetSpentInsightsRequest{
-				SpaceID:     validSpace,
 				Granularity: "yearly",
 			},
 			wantErr:    false,
@@ -138,7 +127,6 @@ func TestGetSpentInsightsRequest_ResolveRange(t *testing.T) {
 		{
 			name: "explicit dates",
 			req: finance.GetSpentInsightsRequest{
-				SpaceID:     validSpace,
 				Granularity: "monthly",
 				StartDate:   now.AddDate(0, -2, 0),
 				EndDate:     now,
@@ -147,16 +135,51 @@ func TestGetSpentInsightsRequest_ResolveRange(t *testing.T) {
 			wantGran:   finance.GranularityMonthly,
 			checkDates: false,
 		},
+		{
+			name: "respects explicit location",
+			req: finance.GetSpentInsightsRequest{
+				Granularity: "monthly",
+			},
+			loc:        astLoc,
+			wantErr:    false,
+			wantGran:   finance.GranularityMonthly,
+			checkDates: false,
+		},
+		{
+			name: "nil location defaults to UTC",
+			req: finance.GetSpentInsightsRequest{
+				Granularity: "monthly",
+			},
+			loc:        nil,
+			wantErr:    false,
+			wantGran:   finance.GranularityMonthly,
+			checkDates: false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g, start, end, err := tt.req.ResolveRange()
+			g, start, end, err := tt.req.ResolveRange(tt.loc)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("ResolveRange() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.wantErr {
 				return
+			}
+			if tt.loc != nil {
+				name, offset := start.Zone()
+				expectedName, expectedOffset := time.Now().In(tt.loc).Zone()
+				if name != expectedName || offset != expectedOffset {
+					t.Errorf("start Zone = %s, offset = %d, want %s, %d", name, offset, expectedName, expectedOffset)
+				}
+				nameEnd, offsetEnd := end.Zone()
+				if nameEnd != expectedName || offsetEnd != expectedOffset {
+					t.Errorf("end Zone = %s, offset = %d, want %s, %d", nameEnd, offsetEnd, expectedName, expectedOffset)
+				}
+			} else {
+				if start.Location() != time.UTC || end.Location() != time.UTC {
+					t.Errorf("expected UTC location when loc is nil, got start=%v end=%v", start.Location(), end.Location())
+				}
 			}
 			if g != tt.wantGran {
 				t.Errorf("ResolveRange() granularity = %v, want %v", g, tt.wantGran)

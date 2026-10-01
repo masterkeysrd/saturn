@@ -28,6 +28,10 @@ func NewLoggingCoordinator(next Coordinator, logger log.Logger) *LoggingCoordina
 // Compile-time interface assertion.
 var _ Coordinator = (*LoggingCoordinator)(nil)
 
+func (l *LoggingCoordinator) ResolveContext(ctx context.Context) (finance.Context, error) {
+	return l.next.ResolveContext(ctx)
+}
+
 // ConfigureFinance executes next.ConfigureFinance and logs execution duration and errors.
 func (l *LoggingCoordinator) ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error) {
 	start := time.Now()
@@ -365,9 +369,9 @@ func (l *LoggingCoordinator) DeleteAccount(ctx context.Context, id finance.Accou
 }
 
 // AdjustAccountBalance executes next.AdjustAccountBalance and logs execution duration and errors.
-func (l *LoggingCoordinator) AdjustAccountBalance(ctx context.Context, id finance.AccountID, targetBalance int64, adjustmentDate string, note string) (*finance.Account, error) {
+func (l *LoggingCoordinator) AdjustAccountBalance(ctx context.Context, req *AdjustAccountBalanceRequest) (*finance.Account, error) {
 	start := time.Now()
-	res, err := l.next.AdjustAccountBalance(ctx, id, targetBalance, adjustmentDate, note)
+	res, err := l.next.AdjustAccountBalance(ctx, req)
 	duration := time.Since(start)
 
 	if err != nil {
@@ -1469,9 +1473,9 @@ func (l *LoggingCoordinator) ApproveInboxItem(ctx context.Context, id string) (*
 }
 
 // ProcessSignalPipeline executes next.ProcessSignalPipeline and logs execution duration and errors.
-func (l *LoggingCoordinator) ProcessSignalPipeline(ctx context.Context, spaceID string, req *IngestionRequest) (*IngestionState, error) {
+func (l *LoggingCoordinator) ProcessSignalPipeline(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*IngestionState, error) {
 	start := time.Now()
-	res, err := l.next.ProcessSignalPipeline(ctx, spaceID, req)
+	res, err := l.next.ProcessSignalPipeline(ctx, fCtx, req)
 	duration := time.Since(start)
 
 	if err != nil {
@@ -1493,9 +1497,9 @@ func (l *LoggingCoordinator) ProcessSignalPipeline(ctx context.Context, spaceID 
 }
 
 // GetSignalSuggestions executes next.GetSignalSuggestions and logs execution duration and errors.
-func (l *LoggingCoordinator) GetSignalSuggestions(ctx context.Context, spaceID string, req *IngestionRequest) (*SignalSuggestion, error) {
+func (l *LoggingCoordinator) GetSignalSuggestions(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*SignalSuggestion, error) {
 	start := time.Now()
-	res, err := l.next.GetSignalSuggestions(ctx, spaceID, req)
+	res, err := l.next.GetSignalSuggestions(ctx, fCtx, req)
 	duration := time.Since(start)
 
 	if err != nil {

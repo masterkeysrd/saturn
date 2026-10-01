@@ -3,8 +3,6 @@ package finance
 import (
 	"testing"
 	"time"
-
-	"github.com/masterkeysrd/saturn/internal/platform/id"
 )
 
 func TestExchangeRate_ComputeIDAndParse(t *testing.T) {
@@ -54,8 +52,6 @@ func TestParseExchangeRateID_Invalid(t *testing.T) {
 }
 
 func TestExchangeRate_Validate(t *testing.T) {
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	rateDate := time.Now()
 
 	tests := []struct {
@@ -66,7 +62,6 @@ func TestExchangeRate_Validate(t *testing.T) {
 		{
 			name: "valid rate",
 			rate: ExchangeRate{
-				SpaceID:      spaceID,
 				FromCurrency: "EUR",
 				ToCurrency:   "USD",
 				Rate:         1.08,
@@ -75,20 +70,8 @@ func TestExchangeRate_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "invalid space ID",
-			rate: ExchangeRate{
-				SpaceID:      "invalid_space",
-				FromCurrency: "EUR",
-				ToCurrency:   "USD",
-				Rate:         1.08,
-				RateDate:     rateDate,
-			},
-			wantErr: true,
-		},
-		{
 			name: "invalid from currency",
 			rate: ExchangeRate{
-				SpaceID:      spaceID,
 				FromCurrency: "INVALID",
 				ToCurrency:   "USD",
 				Rate:         1.08,
@@ -99,7 +82,6 @@ func TestExchangeRate_Validate(t *testing.T) {
 		{
 			name: "invalid to currency",
 			rate: ExchangeRate{
-				SpaceID:      spaceID,
 				FromCurrency: "EUR",
 				ToCurrency:   "INVALID",
 				Rate:         1.08,
@@ -110,7 +92,6 @@ func TestExchangeRate_Validate(t *testing.T) {
 		{
 			name: "zero rate",
 			rate: ExchangeRate{
-				SpaceID:      spaceID,
 				FromCurrency: "EUR",
 				ToCurrency:   "USD",
 				Rate:         0,
@@ -121,7 +102,6 @@ func TestExchangeRate_Validate(t *testing.T) {
 		{
 			name: "negative rate",
 			rate: ExchangeRate{
-				SpaceID:      spaceID,
 				FromCurrency: "EUR",
 				ToCurrency:   "USD",
 				Rate:         -1.5,
@@ -132,7 +112,6 @@ func TestExchangeRate_Validate(t *testing.T) {
 		{
 			name: "missing rate date",
 			rate: ExchangeRate{
-				SpaceID:      spaceID,
 				FromCurrency: "EUR",
 				ToCurrency:   "USD",
 				Rate:         1.08,

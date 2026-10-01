@@ -18,7 +18,7 @@ func TestCoordinator_CreateExpense(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *CreateExpenseRequest
-		mockFn        func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error)
 		expectedID    finance.TransactionID
 		expectedError bool
 	}{
@@ -34,11 +34,11 @@ func TestCoordinator_CreateExpense(t *testing.T) {
 				EffectiveDate:   effectiveDate,
 				AccountID:       &accID,
 			},
-			mockFn: func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
-				if txn.SpaceID != "spc_1" || txn.Amount != 4500 || txn.TransactionDate != customDate || txn.EffectiveDate != effectiveDate {
+			mockFn: func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error) {
+				if rCtx.SpaceID() != "spc_1" || txn.Amount != 4500 || txn.TransactionDate != customDate || txn.EffectiveDate != effectiveDate {
 					t.Errorf("unexpected expense payload: %+v", txn)
 				}
-				return &finance.Transaction{ID: "tx_exp_1", SpaceID: txn.SpaceID}, nil
+				return &finance.Transaction{ID: "tx_exp_1"}, nil
 			},
 			expectedID:    "tx_exp_1",
 			expectedError: false,
@@ -52,11 +52,11 @@ func TestCoordinator_CreateExpense(t *testing.T) {
 				Currency:    "USD",
 				Description: "Coffee",
 			},
-			mockFn: func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error) {
 				if txn.TransactionDate.IsZero() || txn.EffectiveDate.IsZero() {
 					t.Errorf("expected non-zero fallback dates")
 				}
-				return &finance.Transaction{ID: "tx_exp_2", SpaceID: txn.SpaceID}, nil
+				return &finance.Transaction{ID: "tx_exp_2"}, nil
 			},
 			expectedID:    "tx_exp_2",
 			expectedError: false,
@@ -71,7 +71,7 @@ func TestCoordinator_CreateExpense(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &CreateExpenseRequest{Amount: 1000},
-			mockFn: func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error) {
 				return nil, errors.New("budget limit exceeded")
 			},
 			expectedError: true,
@@ -107,7 +107,7 @@ func TestCoordinator_CreateIncome(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *CreateIncomeRequest
-		mockFn        func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error)
 		expectedID    finance.TransactionID
 		expectedError bool
 	}{
@@ -121,11 +121,11 @@ func TestCoordinator_CreateIncome(t *testing.T) {
 				TransactionDate: customDate,
 				EffectiveDate:   effectiveDate,
 			},
-			mockFn: func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
-				if txn.SpaceID != "spc_1" || txn.Amount != 150000 || txn.TransactionDate != customDate {
+			mockFn: func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error) {
+				if rCtx.SpaceID() != "spc_1" || txn.Amount != 150000 || txn.TransactionDate != customDate {
 					t.Errorf("unexpected income payload: %+v", txn)
 				}
-				return &finance.Transaction{ID: "tx_inc_1", SpaceID: txn.SpaceID}, nil
+				return &finance.Transaction{ID: "tx_inc_1"}, nil
 			},
 			expectedID:    "tx_inc_1",
 			expectedError: false,
@@ -138,11 +138,11 @@ func TestCoordinator_CreateIncome(t *testing.T) {
 				Currency:    "USD",
 				Description: "Bonus",
 			},
-			mockFn: func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error) {
 				if txn.TransactionDate.IsZero() || txn.EffectiveDate.IsZero() {
 					t.Errorf("expected non-zero fallback dates")
 				}
-				return &finance.Transaction{ID: "tx_inc_2", SpaceID: txn.SpaceID}, nil
+				return &finance.Transaction{ID: "tx_inc_2"}, nil
 			},
 			expectedID:    "tx_inc_2",
 			expectedError: false,
@@ -157,7 +157,7 @@ func TestCoordinator_CreateIncome(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &CreateIncomeRequest{Amount: 5000},
-			mockFn: func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error) {
 				return nil, errors.New("income creation failed")
 			},
 			expectedError: true,
@@ -193,7 +193,7 @@ func TestCoordinator_UpdateExpense(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *UpdateExpenseRequest
-		mockFn        func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error)
 		expectedID    finance.TransactionID
 		expectedError bool
 	}{
@@ -209,8 +209,8 @@ func TestCoordinator_UpdateExpense(t *testing.T) {
 				TransactionDate: customDate,
 				EffectiveDate:   effectiveDate,
 			},
-			mockFn: func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
-				if txn.ID != "tx_1" || txn.SpaceID != "spc_1" || txn.Amount != 6000 {
+			mockFn: func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error) {
+				if txn.ID != "tx_1" || rCtx.SpaceID() != "spc_1" || txn.Amount != 6000 {
 					t.Errorf("unexpected update expense payload: %+v", txn)
 				}
 				return &finance.Transaction{ID: txn.ID}, nil
@@ -226,7 +226,7 @@ func TestCoordinator_UpdateExpense(t *testing.T) {
 				BudgetID:      "bgt_1",
 				Amount:        1500,
 			},
-			mockFn: func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error) {
 				if txn.TransactionDate.IsZero() || txn.EffectiveDate.IsZero() {
 					t.Errorf("expected non-zero fallback dates")
 				}
@@ -245,7 +245,7 @@ func TestCoordinator_UpdateExpense(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &UpdateExpenseRequest{TransactionID: "tx_1"},
-			mockFn: func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error) {
 				return nil, errors.New("update expense failed")
 			},
 			expectedError: true,
@@ -281,7 +281,7 @@ func TestCoordinator_UpdateIncome(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *UpdateIncomeRequest
-		mockFn        func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error)
 		expectedID    finance.TransactionID
 		expectedError bool
 	}{
@@ -296,8 +296,8 @@ func TestCoordinator_UpdateIncome(t *testing.T) {
 				TransactionDate: customDate,
 				EffectiveDate:   effectiveDate,
 			},
-			mockFn: func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
-				if txn.ID != "tx_1" || txn.SpaceID != "spc_1" || txn.Amount != 8000 {
+			mockFn: func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error) {
+				if txn.ID != "tx_1" || rCtx.SpaceID() != "spc_1" || txn.Amount != 8000 {
 					t.Errorf("unexpected update income payload: %+v", txn)
 				}
 				return &finance.Transaction{ID: txn.ID}, nil
@@ -312,7 +312,7 @@ func TestCoordinator_UpdateIncome(t *testing.T) {
 				TransactionID: "tx_2",
 				Amount:        3000,
 			},
-			mockFn: func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error) {
 				if txn.TransactionDate.IsZero() || txn.EffectiveDate.IsZero() {
 					t.Errorf("expected non-zero fallback dates")
 				}
@@ -331,7 +331,7 @@ func TestCoordinator_UpdateIncome(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &UpdateIncomeRequest{TransactionID: "tx_1"},
-			mockFn: func(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error) {
 				return nil, errors.New("update income failed")
 			},
 			expectedError: true,
@@ -364,16 +364,16 @@ func TestCoordinator_DeleteTransaction(t *testing.T) {
 		name          string
 		ctx           context.Context
 		id            finance.TransactionID
-		mockFn        func(ctx context.Context, spaceID finance.SpaceID, id finance.TransactionID) error
+		mockFn        func(ctx context.Context, rCtx finance.Context, id finance.TransactionID) error
 		expectedError bool
 	}{
 		{
 			name: "Success",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			id:   "tx_1",
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.TransactionID) error {
-				if spaceID != "spc_1" || id != "tx_1" {
-					t.Errorf("unexpected delete args: space=%v id=%v", spaceID, id)
+			mockFn: func(ctx context.Context, rCtx finance.Context, id finance.TransactionID) error {
+				if rCtx.SpaceID() != "spc_1" || id != "tx_1" {
+					t.Errorf("unexpected delete args: space=%v id=%v", rCtx.SpaceID(), id)
 				}
 				return nil
 			},
@@ -389,7 +389,7 @@ func TestCoordinator_DeleteTransaction(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			id:   "tx_1",
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.TransactionID) error {
+			mockFn: func(ctx context.Context, rCtx finance.Context, id finance.TransactionID) error {
 				return errors.New("delete failed")
 			},
 			expectedError: true,
@@ -419,7 +419,7 @@ func TestCoordinator_ListTransactionEvents(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *ListTransactionEventsRequest
-		mockFn        func(ctx context.Context, spaceID finance.SpaceID, txnID finance.TransactionID) ([]*finance.TransactionEvent, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, txnID finance.TransactionID) ([]*finance.TransactionEvent, error)
 		expectedCount int
 		expectedError bool
 	}{
@@ -427,9 +427,9 @@ func TestCoordinator_ListTransactionEvents(t *testing.T) {
 			name: "Success",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &ListTransactionEventsRequest{TransactionID: "tx_1"},
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, txnID finance.TransactionID) ([]*finance.TransactionEvent, error) {
-				if spaceID != "spc_1" || txnID != "tx_1" {
-					t.Errorf("unexpected list events args: space=%v txn=%v", spaceID, txnID)
+			mockFn: func(ctx context.Context, rCtx finance.Context, txnID finance.TransactionID) ([]*finance.TransactionEvent, error) {
+				if rCtx.SpaceID() != "spc_1" || txnID != "tx_1" {
+					t.Errorf("unexpected list events args: space=%v txn=%v", rCtx.SpaceID(), txnID)
 				}
 				return []*finance.TransactionEvent{{ID: "ev_1"}, {ID: "ev_2"}}, nil
 			},
@@ -446,7 +446,7 @@ func TestCoordinator_ListTransactionEvents(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &ListTransactionEventsRequest{TransactionID: "tx_1"},
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, txnID finance.TransactionID) ([]*finance.TransactionEvent, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, txnID finance.TransactionID) ([]*finance.TransactionEvent, error) {
 				return nil, errors.New("event query failed")
 			},
 			expectedError: true,

@@ -60,8 +60,6 @@ func TestBorrowingID(t *testing.T) {
 
 func TestBorrowing_Validate(t *testing.T) {
 	bID, _ := NewBorrowingID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	accID, _ := NewAccountID()
 	now := time.Now()
 
@@ -74,7 +72,6 @@ func TestBorrowing_Validate(t *testing.T) {
 			name: "valid borrowing lent",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       BorrowingDirectionLent,
 				Counterparty:    "John Doe",
 				TotalAmount:     10000,
@@ -90,7 +87,6 @@ func TestBorrowing_Validate(t *testing.T) {
 			name: "valid borrowing borrowed paid off",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       BorrowingDirectionBorrowed,
 				Counterparty:    "Bank",
 				TotalAmount:     50000,
@@ -105,7 +101,6 @@ func TestBorrowing_Validate(t *testing.T) {
 			name: "invalid direction",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       "INVALID",
 				Counterparty:    "John",
 				TotalAmount:     10000,
@@ -120,7 +115,6 @@ func TestBorrowing_Validate(t *testing.T) {
 			name: "missing counterparty",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       BorrowingDirectionLent,
 				Counterparty:    "",
 				TotalAmount:     10000,
@@ -135,7 +129,6 @@ func TestBorrowing_Validate(t *testing.T) {
 			name: "invalid remaining amount greater than total",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       BorrowingDirectionLent,
 				Counterparty:    "John",
 				TotalAmount:     10000,
@@ -150,7 +143,6 @@ func TestBorrowing_Validate(t *testing.T) {
 			name: "negative remaining amount",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       BorrowingDirectionLent,
 				Counterparty:    "John",
 				TotalAmount:     10000,
@@ -246,13 +238,10 @@ func TestBorrowingRepaymentID(t *testing.T) {
 
 func TestBorrowing_ApplyPatch(t *testing.T) {
 	bID, _ := NewBorrowingID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	now := time.Now().UTC()
 
 	original := &Borrowing{
 		ID:              bID,
-		SpaceID:         spaceID,
 		Direction:       BorrowingDirectionLent,
 		Counterparty:    "Original Counterparty",
 		ContactInfo:     "old@email.com",
@@ -288,14 +277,11 @@ func TestBorrowing_ApplyPatch(t *testing.T) {
 
 func TestBorrowing_ApplyTransaction(t *testing.T) {
 	bID, _ := NewBorrowingID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	now := time.Now().UTC()
 
 	t.Run("Disbursement increases debt and total", func(t *testing.T) {
 		b := &Borrowing{
 			ID:              bID,
-			SpaceID:         spaceID,
 			Direction:       BorrowingDirectionLent,
 			Counterparty:    "Alice",
 			TotalAmount:     10000,
@@ -326,7 +312,6 @@ func TestBorrowing_ApplyTransaction(t *testing.T) {
 	t.Run("AdjustBalance updates remaining amount, delta, and status", func(t *testing.T) {
 		b := &Borrowing{
 			ID:              bID,
-			SpaceID:         spaceID,
 			Direction:       BorrowingDirectionBorrowed,
 			Counterparty:    "Bob",
 			TotalAmount:     10000,
@@ -362,7 +347,6 @@ func TestBorrowing_ApplyTransaction(t *testing.T) {
 	t.Run("Payment reduces debt and updates status to PAID_OFF when remaining reaches 0", func(t *testing.T) {
 		b := &Borrowing{
 			ID:              bID,
-			SpaceID:         spaceID,
 			Direction:       BorrowingDirectionBorrowed,
 			Counterparty:    "Bob",
 			TotalAmount:     10000,
@@ -393,14 +377,11 @@ func TestBorrowing_ApplyTransaction(t *testing.T) {
 
 func TestBorrowing_NewTransaction(t *testing.T) {
 	bID, _ := NewBorrowingID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	accID, _ := NewAccountID()
 	now := time.Now().UTC()
 
 	b := &Borrowing{
 		ID:            bID,
-		SpaceID:       spaceID,
 		Direction:     BorrowingDirectionLent,
 		Counterparty:  "Alice",
 		Currency:      "USD",
@@ -421,9 +402,6 @@ func TestBorrowing_NewTransaction(t *testing.T) {
 		t.Fatalf("NewTransaction failed: %v", err)
 	}
 
-	if txn.SpaceID != spaceID {
-		t.Errorf("SpaceID = %s, want %s", txn.SpaceID, spaceID)
-	}
 	if txn.Currency != "USD" {
 		t.Errorf("Currency = %s, want USD", txn.Currency)
 	}
@@ -437,14 +415,11 @@ func TestBorrowing_NewTransaction(t *testing.T) {
 
 func TestBorrowing_RollbackTransaction(t *testing.T) {
 	bID, _ := NewBorrowingID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	now := time.Now().UTC()
 
 	t.Run("Rollback REPAYMENT restores remaining balance and ACTIVE status", func(t *testing.T) {
 		b := &Borrowing{
 			ID:              bID,
-			SpaceID:         spaceID,
 			Direction:       BorrowingDirectionBorrowed,
 			Counterparty:    "Charlie",
 			TotalAmount:     10000,
@@ -465,7 +440,6 @@ func TestBorrowing_RollbackTransaction(t *testing.T) {
 	t.Run("Rollback DISBURSEMENT reduces total and remaining amount", func(t *testing.T) {
 		b := &Borrowing{
 			ID:              bID,
-			SpaceID:         spaceID,
 			Direction:       BorrowingDirectionLent,
 			Counterparty:    "David",
 			TotalAmount:     15000,
@@ -483,7 +457,6 @@ func TestBorrowing_RollbackTransaction(t *testing.T) {
 	t.Run("Rollback INITIAL_FUNDING sets remaining to 0 and status to PAID_OFF", func(t *testing.T) {
 		b := &Borrowing{
 			ID:              bID,
-			SpaceID:         spaceID,
 			Direction:       BorrowingDirectionBorrowed,
 			Counterparty:    "Eve",
 			TotalAmount:     10000,
@@ -573,8 +546,6 @@ func TestBorrowing_SortFields(t *testing.T) {
 
 func TestBorrowing_Validate_Table(t *testing.T) {
 	bID, _ := NewBorrowingID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	accID, _ := NewAccountID()
 	now := time.Now().UTC()
 
@@ -587,7 +558,6 @@ func TestBorrowing_Validate_Table(t *testing.T) {
 			name: "valid borrowed",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       BorrowingDirectionBorrowed,
 				Counterparty:    "Alice",
 				TotalAmount:     10000,
@@ -602,7 +572,6 @@ func TestBorrowing_Validate_Table(t *testing.T) {
 			name: "valid lent with account",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       BorrowingDirectionLent,
 				Counterparty:    "Bob",
 				AccountID:       &accID,
@@ -618,7 +587,6 @@ func TestBorrowing_Validate_Table(t *testing.T) {
 			name: "invalid direction",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       "INVALID_DIR",
 				Counterparty:    "Alice",
 				TotalAmount:     10000,
@@ -633,7 +601,6 @@ func TestBorrowing_Validate_Table(t *testing.T) {
 			name: "missing counterparty",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       BorrowingDirectionBorrowed,
 				Counterparty:    "",
 				TotalAmount:     10000,
@@ -648,7 +615,6 @@ func TestBorrowing_Validate_Table(t *testing.T) {
 			name: "zero total amount",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       BorrowingDirectionBorrowed,
 				Counterparty:    "Alice",
 				TotalAmount:     0,
@@ -663,7 +629,6 @@ func TestBorrowing_Validate_Table(t *testing.T) {
 			name: "remaining amount greater than total",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       BorrowingDirectionBorrowed,
 				Counterparty:    "Alice",
 				TotalAmount:     10000,
@@ -678,7 +643,6 @@ func TestBorrowing_Validate_Table(t *testing.T) {
 			name: "negative remaining amount",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       BorrowingDirectionBorrowed,
 				Counterparty:    "Alice",
 				TotalAmount:     10000,
@@ -693,7 +657,6 @@ func TestBorrowing_Validate_Table(t *testing.T) {
 			name: "invalid currency",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       BorrowingDirectionBorrowed,
 				Counterparty:    "Alice",
 				TotalAmount:     10000,
@@ -708,7 +671,6 @@ func TestBorrowing_Validate_Table(t *testing.T) {
 			name: "invalid status",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       BorrowingDirectionBorrowed,
 				Counterparty:    "Alice",
 				TotalAmount:     10000,
@@ -723,7 +685,6 @@ func TestBorrowing_Validate_Table(t *testing.T) {
 			name: "zero established date",
 			borrowing: Borrowing{
 				ID:              bID,
-				SpaceID:         spaceID,
 				Direction:       BorrowingDirectionBorrowed,
 				Counterparty:    "Alice",
 				TotalAmount:     10000,

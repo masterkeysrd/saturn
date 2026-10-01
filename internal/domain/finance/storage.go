@@ -13,8 +13,8 @@ import (
 // SettingsStore defines persistence for workspace settings.
 // @Mock
 type SettingsStore interface {
-	Create(ctx context.Context, settings *FinanceSettings) error
-	GetByID(ctx context.Context, spaceID SpaceID) (*FinanceSettings, error)
+	Create(ctx context.Context, rCtx Context, settings *FinanceSettings) error
+	GetByID(ctx context.Context, rCtx Context) (*FinanceSettings, error)
 }
 
 // DeleteOptions defines optional parameters for entity deletion (e.g. optimistic lock version checks).
@@ -25,12 +25,12 @@ type DeleteOptions struct {
 // BudgetStore defines persistence for budget templates.
 // @Mock
 type BudgetStore interface {
-	Create(ctx context.Context, budget *Budget) error
-	GetByID(ctx context.Context, spaceID SpaceID, id BudgetID) (*Budget, error)
-	GetByIDs(ctx context.Context, spaceID SpaceID, ids []BudgetID) ([]*Budget, error)
-	Update(ctx context.Context, budget *Budget) error
-	Delete(ctx context.Context, spaceID SpaceID, id BudgetID, opts DeleteOptions) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) (*paging.Page[*Budget], error)
+	Create(ctx context.Context, rCtx Context, budget *Budget) error
+	GetByID(ctx context.Context, rCtx Context, id BudgetID) (*Budget, error)
+	GetByIDs(ctx context.Context, rCtx Context, ids []BudgetID) ([]*Budget, error)
+	Update(ctx context.Context, rCtx Context, budget *Budget) error
+	Delete(ctx context.Context, rCtx Context, id BudgetID, opts DeleteOptions) error
+	ListBySpace(ctx context.Context, rCtx Context, filter *ListBudgetsFilter) (*paging.Page[*Budget], error)
 }
 
 // ListInstitutionsFilter contains parameters for searching and paging institutions.
@@ -43,13 +43,13 @@ type ListInstitutionsFilter struct {
 // InstitutionStore defines persistence for financial institutions.
 // @Mock
 type InstitutionStore interface {
-	Create(ctx context.Context, inst *Institution) error
-	GetByID(ctx context.Context, spaceID SpaceID, id InstitutionID) (*Institution, error)
-	GetByName(ctx context.Context, spaceID SpaceID, name string) (*Institution, error)
-	GetByIDs(ctx context.Context, spaceID SpaceID, ids []InstitutionID) ([]*Institution, error)
-	Update(ctx context.Context, inst *Institution) error
-	Delete(ctx context.Context, spaceID SpaceID, id InstitutionID, opts DeleteOptions) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListInstitutionsFilter) (*paging.Page[*Institution], error)
+	Create(ctx context.Context, rCtx Context, inst *Institution) error
+	GetByID(ctx context.Context, rCtx Context, id InstitutionID) (*Institution, error)
+	GetByName(ctx context.Context, rCtx Context, name string) (*Institution, error)
+	GetByIDs(ctx context.Context, rCtx Context, ids []InstitutionID) ([]*Institution, error)
+	Update(ctx context.Context, rCtx Context, inst *Institution) error
+	Delete(ctx context.Context, rCtx Context, id InstitutionID, opts DeleteOptions) error
+	ListBySpace(ctx context.Context, rCtx Context, filter *ListInstitutionsFilter) (*paging.Page[*Institution], error)
 }
 
 type PeriodRangeKey struct {
@@ -61,15 +61,14 @@ type PeriodRangeKey struct {
 // PeriodStore defines persistence for budget periods.
 // @Mock
 type PeriodStore interface {
-	Create(ctx context.Context, period *BudgetPeriod) error
-	GetByRange(ctx context.Context, budgetID BudgetID, startDate, endDate time.Time) (*BudgetPeriod, error)
-	GetByRanges(ctx context.Context, keys []PeriodRangeKey) ([]*BudgetPeriod, error)
-	UpdateLimit(ctx context.Context, periodID PeriodID, limitAmount int64) error
-	ListByBudget(ctx context.Context, budgetID BudgetID) ([]*BudgetPeriod, error)
+	Create(ctx context.Context, rCtx Context, period *BudgetPeriod) error
+	GetByRange(ctx context.Context, fCtx Context, key PeriodRangeKey) (*BudgetPeriod, error)
+	GetByRanges(ctx context.Context, fCtx Context, keys []PeriodRangeKey) ([]*BudgetPeriod, error)
+	UpdateLimit(ctx context.Context, fCtx Context, periodID PeriodID, limitAmount int64) error
+	ListByBudget(ctx context.Context, fCtx Context, budgetID BudgetID) ([]*BudgetPeriod, error)
 }
 
 type ExchangeRateKey struct {
-	SpaceID      SpaceID
 	FromCurrency Currency
 	ToCurrency   Currency
 	RateDate     time.Time
@@ -78,17 +77,17 @@ type ExchangeRateKey struct {
 // ExchangeRateStore defines persistence for exchange rates.
 // @Mock
 type ExchangeRateStore interface {
-	Create(ctx context.Context, rate *ExchangeRate) error
-	Update(ctx context.Context, rate *ExchangeRate) error
+	Create(ctx context.Context, rCtx Context, rate *ExchangeRate) error
+	Update(ctx context.Context, rCtx Context, rate *ExchangeRate) error
 	// GetRate retrieves the rate from fromCurrency to toCurrency on the closest date <= rateDate.
-	GetRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error)
+	GetRate(ctx context.Context, rCtx Context, key ExchangeRateKey) (*ExchangeRate, error)
 	// GetExactRate retrieves the exact rate for the given key on rateDate.
-	GetExactRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error)
+	GetExactRate(ctx context.Context, rCtx Context, key ExchangeRateKey) (*ExchangeRate, error)
 	// GetNextRate retrieves the rate from fromCurrency to toCurrency on the closest date > rateDate.
-	GetNextRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error)
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListExchangeRatesFilter) ([]*ExchangeRate, string, error)
-	GetLatestRates(ctx context.Context, spaceID SpaceID, fromCurrencies []Currency, toCurrency Currency) ([]*ExchangeRate, error)
-	Delete(ctx context.Context, key ExchangeRateKey) error
+	GetNextRate(ctx context.Context, rCtx Context, key ExchangeRateKey) (*ExchangeRate, error)
+	ListBySpace(ctx context.Context, rCtx Context, filter *ListExchangeRatesFilter) ([]*ExchangeRate, string, error)
+	GetLatestRates(ctx context.Context, rCtx Context, fromCurrencies []Currency, toCurrency Currency) ([]*ExchangeRate, error)
+	Delete(ctx context.Context, rCtx Context, key ExchangeRateKey) error
 }
 
 type PeriodSpent struct {
@@ -100,69 +99,63 @@ type PeriodSpent struct {
 // TransactionStore defines persistence for transactions.
 // @Mock
 type TransactionStore interface {
-	Create(ctx context.Context, txn *Transaction) error
-	GetByID(ctx context.Context, spaceID SpaceID, id TransactionID) (*Transaction, error)
-	Delete(ctx context.Context, id TransactionID) error
-	Update(ctx context.Context, txn *Transaction) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *TransactionFilter) (*paging.Page[*Transaction], error)
-	HasTransactions(ctx context.Context, spaceID SpaceID, filter *TransactionFilter) (bool, error)
-	AggregateSpent(ctx context.Context, periodID PeriodID, budgetCurrency Currency, exchangeRateToBase float64) (spentInBase int64, spentAmount int64, err error)
-	AggregateSpentBatch(ctx context.Context, periodIDs []PeriodID) ([]PeriodSpent, error)
+	Create(ctx context.Context, rCtx Context, txn *Transaction) error
+	GetByID(ctx context.Context, rCtx Context, id TransactionID) (*Transaction, error)
+	Delete(ctx context.Context, rCtx Context, id TransactionID) error
+	Update(ctx context.Context, rCtx Context, txn *Transaction) error
+	ListBySpace(ctx context.Context, rCtx Context, filter *TransactionFilter) (*paging.Page[*Transaction], error)
+	HasTransactions(ctx context.Context, rCtx Context, filter *TransactionFilter) (bool, error)
+	AggregateSpent(ctx context.Context, fCtx Context, periodID PeriodID, budgetCurrency Currency, exchangeRateToBase float64) (spentInBase int64, spentAmount int64, err error)
+	AggregateSpentBatch(ctx context.Context, fCtx Context, periodIDs []PeriodID) ([]PeriodSpent, error)
 }
 
 // TransactionEventStore defines persistence for transaction events.
 // @Mock
 type TransactionEventStore interface {
-	Create(ctx context.Context, event *TransactionEvent) error
-	ListByTransaction(ctx context.Context, spaceID SpaceID, txnID TransactionID) ([]*TransactionEvent, error)
+	Create(ctx context.Context, rCtx Context, event *TransactionEvent) error
+	ListByTransaction(ctx context.Context, rCtx Context, txnID TransactionID) ([]*TransactionEvent, error)
 }
 
 // InsightsStore defines persistence for read-only aggregation queries.
 // @Mock
 type InsightsStore interface {
-	GetSpentTrend(ctx context.Context, filter *SpentTrendFilter) ([]*SpentTrend, error)
-	GetBudgetDistribution(ctx context.Context, filter *BudgetDistributionFilter) ([]*BudgetDistribution, error)
-	GetTopExpenses(ctx context.Context, filter *TopExpensesFilter) ([]*TopExpense, error)
-	GetIncomeTrend(ctx context.Context, filter *IncomeTrendFilter) ([]*IncomeTrend, error)
-	GetIncomeSources(ctx context.Context, filter *IncomeSourcesFilter) ([]*IncomeSourceRow, error)
-	GetTopIncomes(ctx context.Context, filter *TopIncomesFilter) ([]*TopIncome, error)
+	GetSpentTrend(ctx context.Context, rCtx Context, filter *SpentTrendFilter) ([]*SpentTrend, error)
+	GetBudgetDistribution(ctx context.Context, rCtx Context, filter *BudgetDistributionFilter) ([]*BudgetDistribution, error)
+	GetTopExpenses(ctx context.Context, rCtx Context, filter *TopExpensesFilter) ([]*TopExpense, error)
+	GetIncomeTrend(ctx context.Context, rCtx Context, filter *IncomeTrendFilter) ([]*IncomeTrend, error)
+	GetIncomeSources(ctx context.Context, rCtx Context, filter *IncomeSourcesFilter) ([]*IncomeSourceRow, error)
+	GetTopIncomes(ctx context.Context, rCtx Context, filter *TopIncomesFilter) ([]*TopIncome, error)
 }
 
 type SpentTrendFilter struct {
-	SpaceID     SpaceID
 	Granularity Granularity
 	StartDate   time.Time
 	EndDate     time.Time
 }
 
 type BudgetDistributionFilter struct {
-	SpaceID   SpaceID
 	StartDate time.Time
 	EndDate   time.Time
 }
 
 type TopExpensesFilter struct {
-	SpaceID   SpaceID
 	StartDate time.Time
 	EndDate   time.Time
 	Limit     int
 }
 
 type IncomeTrendFilter struct {
-	SpaceID     SpaceID
 	Granularity Granularity
 	StartDate   time.Time
 	EndDate     time.Time
 }
 
 type IncomeSourcesFilter struct {
-	SpaceID   SpaceID
 	StartDate time.Time
 	EndDate   time.Time
 }
 
 type TopIncomesFilter struct {
-	SpaceID   SpaceID
 	StartDate time.Time
 	EndDate   time.Time
 	Limit     int
@@ -250,25 +243,31 @@ type TransactionFilter struct {
 // RecurringTransactionStore defines persistence for recurring transaction templates.
 // @Mock
 type RecurringTransactionStore interface {
-	Create(ctx context.Context, transaction *RecurringTransaction) error
-	GetByID(ctx context.Context, spaceID SpaceID, id RecurringTransactionID) (*RecurringTransaction, error)
-	GetByIDs(ctx context.Context, spaceID SpaceID, ids []RecurringTransactionID) ([]*RecurringTransaction, error)
-	Update(ctx context.Context, transaction *RecurringTransaction) error
-	Delete(ctx context.Context, id RecurringTransactionID, opts DeleteOptions) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListRecurringTransactionsFilter) (*paging.Page[*RecurringTransaction], error)
-	ListPendingGeneration(ctx context.Context, maxDueDate time.Time) ([]*RecurringTransaction, error)
+	Create(ctx context.Context, rCtx Context, transaction *RecurringTransaction) error
+	GetByID(ctx context.Context, rCtx Context, id RecurringTransactionID) (*RecurringTransaction, error)
+	GetByIDs(ctx context.Context, rCtx Context, ids []RecurringTransactionID) ([]*RecurringTransaction, error)
+	Update(ctx context.Context, rCtx Context, transaction *RecurringTransaction) error
+	Delete(ctx context.Context, rCtx Context, id RecurringTransactionID, opts DeleteOptions) error
+	ListBySpace(ctx context.Context, rCtx Context, filter *ListRecurringTransactionsFilter) (*paging.Page[*RecurringTransaction], error)
+	ListPendingGeneration(ctx context.Context, maxDueDate time.Time) ([]PendingRecurringTransaction, error)
+}
+
+// PendingRecurringTransaction associates a recurring transaction template with its workspace ID for background generation.
+type PendingRecurringTransaction struct {
+	SpaceID     SpaceID
+	Transaction *RecurringTransaction
 }
 
 // ScheduledTransactionStore defines persistence for scheduled transaction instances.
 // @Mock
 type ScheduledTransactionStore interface {
-	Create(ctx context.Context, payment *ScheduledTransaction) error
-	GetByID(ctx context.Context, spaceID SpaceID, id ScheduledTransactionID) (*ScheduledTransaction, error)
-	Update(ctx context.Context, payment *ScheduledTransaction) error
-	UpdateStatus(ctx context.Context, id ScheduledTransactionID, status ScheduledTransactionStatus) error
-	Delete(ctx context.Context, id ScheduledTransactionID) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListScheduledTransactionsFilter) (*paging.Page[*ScheduledTransaction], error)
-	HasScheduledTransactions(ctx context.Context, spaceID SpaceID, filter *ListScheduledTransactionsFilter) (bool, error)
+	Create(ctx context.Context, rCtx Context, payment *ScheduledTransaction) error
+	GetByID(ctx context.Context, rCtx Context, id ScheduledTransactionID) (*ScheduledTransaction, error)
+	Update(ctx context.Context, rCtx Context, payment *ScheduledTransaction) error
+	UpdateStatus(ctx context.Context, rCtx Context, id ScheduledTransactionID, status ScheduledTransactionStatus) error
+	Delete(ctx context.Context, rCtx Context, id ScheduledTransactionID) error
+	ListBySpace(ctx context.Context, rCtx Context, filter *ListScheduledTransactionsFilter) (*paging.Page[*ScheduledTransaction], error)
+	HasScheduledTransactions(ctx context.Context, rCtx Context, filter *ListScheduledTransactionsFilter) (bool, error)
 }
 
 // ListRecurringTransactionsFilter encapsulates filtering parameters for recurring transactions.
@@ -295,43 +294,43 @@ type ListScheduledTransactionsFilter struct {
 // BorrowingStore defines persistence for personal borrowing/lending agreements.
 // @Mock
 type BorrowingStore interface {
-	Create(ctx context.Context, b *Borrowing) error
-	GetByID(ctx context.Context, spaceID SpaceID, id BorrowingID) (*Borrowing, error)
-	Update(ctx context.Context, b *Borrowing) error
-	Delete(ctx context.Context, id BorrowingID) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBorrowingsFilter) ([]*Borrowing, string, error)
+	Create(ctx context.Context, rCtx Context, b *Borrowing) error
+	GetByID(ctx context.Context, rCtx Context, id BorrowingID) (*Borrowing, error)
+	Update(ctx context.Context, rCtx Context, b *Borrowing) error
+	Delete(ctx context.Context, rCtx Context, id BorrowingID) error
+	ListBySpace(ctx context.Context, rCtx Context, filter *ListBorrowingsFilter) ([]*Borrowing, string, error)
 }
 
 // BorrowingRepaymentStore defines persistence for repayments.
 // @Mock
 type BorrowingRepaymentStore interface {
-	Create(ctx context.Context, r *BorrowingRepayment) error
-	GetByID(ctx context.Context, spaceID SpaceID, id BorrowingRepaymentID) (*BorrowingRepayment, error)
-	Delete(ctx context.Context, id BorrowingRepaymentID) error
-	ListByBorrowing(ctx context.Context, spaceID SpaceID, borrowingID BorrowingID) ([]*BorrowingRepayment, error)
+	Create(ctx context.Context, rCtx Context, r *BorrowingRepayment) error
+	GetByID(ctx context.Context, rCtx Context, id BorrowingRepaymentID) (*BorrowingRepayment, error)
+	Delete(ctx context.Context, rCtx Context, id BorrowingRepaymentID) error
+	ListByBorrowing(ctx context.Context, rCtx Context, borrowingID BorrowingID) ([]*BorrowingRepayment, error)
 }
 
 // AccountStore defines persistence for physical or digital payment accounts.
 // @Mock
 type AccountStore interface {
-	Create(ctx context.Context, account *Account) error
-	GetByID(ctx context.Context, spaceID SpaceID, id AccountID) (*Account, error)
-	GetByIDs(ctx context.Context, spaceID SpaceID, ids []AccountID) ([]*Account, error)
-	Update(ctx context.Context, account *Account) error
-	Delete(ctx context.Context, spaceID SpaceID, id AccountID, opts DeleteOptions) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListAccountsFilter) (*paging.Page[*Account], error)
-	HasDefault(ctx context.Context, spaceID SpaceID) (bool, error)
-	UnsetDefaultsExcept(ctx context.Context, spaceID SpaceID, id AccountID) error
-	HasAny(ctx context.Context, spaceID SpaceID) (bool, error)
+	Create(ctx context.Context, rCtx Context, account *Account) error
+	GetByID(ctx context.Context, rCtx Context, id AccountID) (*Account, error)
+	GetByIDs(ctx context.Context, rCtx Context, ids []AccountID) ([]*Account, error)
+	Update(ctx context.Context, rCtx Context, account *Account) error
+	Delete(ctx context.Context, rCtx Context, id AccountID, opts DeleteOptions) error
+	ListBySpace(ctx context.Context, rCtx Context, filter *ListAccountsFilter) (*paging.Page[*Account], error)
+	HasDefault(ctx context.Context, rCtx Context) (bool, error)
+	UnsetDefaultsExcept(ctx context.Context, rCtx Context, id AccountID) error
+	HasAny(ctx context.Context, rCtx Context) (bool, error)
 }
 
 // TransferStore defines persistence for parent transfer logs.
 // @Mock
 type TransferStore interface {
-	Create(ctx context.Context, transfer *Transfer) error
-	GetByID(ctx context.Context, spaceID SpaceID, id TransferID) (*Transfer, error)
-	Delete(ctx context.Context, id TransferID) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, limit int32, pageToken string) ([]*Transfer, string, error)
+	Create(ctx context.Context, rCtx Context, transfer *Transfer) error
+	GetByID(ctx context.Context, rCtx Context, id TransferID) (*Transfer, error)
+	Delete(ctx context.Context, rCtx Context, id TransferID) error
+	ListBySpace(ctx context.Context, rCtx Context, limit int32, pageToken string) ([]*Transfer, string, error)
 }
 
 type ListInboxItemsFilter struct {
@@ -347,11 +346,11 @@ type ListInboxItemsFilter struct {
 // InboxItemStore defines repository operations for staged inbox items.
 // @Mock
 type InboxItemStore interface {
-	Insert(ctx context.Context, item *InboxItem) error
-	Get(ctx context.Context, spaceID SpaceID, id string) (*InboxItem, error)
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error)
-	Update(ctx context.Context, item *InboxItem) error
-	Delete(ctx context.Context, spaceID SpaceID, id string) error
+	Insert(ctx context.Context, rCtx Context, item *InboxItem) error
+	Get(ctx context.Context, rCtx Context, id string) (*InboxItem, error)
+	ListBySpace(ctx context.Context, rCtx Context, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error)
+	Update(ctx context.Context, rCtx Context, item *InboxItem) error
+	Delete(ctx context.Context, rCtx Context, id string) error
 }
 
 type ListStatementsFilter struct {
@@ -365,29 +364,29 @@ type ListStatementsFilter struct {
 // @Mock
 type StatementStore interface {
 	// Create creates a new statement and its associated lines inside a single database transaction.
-	Create(ctx context.Context, statement *Statement, lines []*StatementLine) error
+	Create(ctx context.Context, rCtx Context, statement *Statement, lines []*StatementLine) error
 
 	// GetByID retrieves a statement by its unique ID.
-	GetByID(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, error)
+	GetByID(ctx context.Context, rCtx Context, id StatementID) (*Statement, error)
 
 	// List lists statements for a specific workspace with filters and pagination.
-	List(ctx context.Context, spaceID SpaceID, filter *ListStatementsFilter) (*paging.Page[*Statement], error)
+	List(ctx context.Context, rCtx Context, filter *ListStatementsFilter) (*paging.Page[*Statement], error)
 
 	// Delete deletes a statement and all its associated lines.
-	Delete(ctx context.Context, spaceID SpaceID, id StatementID, opts DeleteOptions) error
+	Delete(ctx context.Context, rCtx Context, id StatementID, opts DeleteOptions) error
 
 	// Update updates a statement's properties (such as starting/ending balances).
-	Update(ctx context.Context, statement *Statement) error
+	Update(ctx context.Context, rCtx Context, statement *Statement) error
 
 	// ListLines lists all statement lines for a specific statement.
-	ListLines(ctx context.Context, statementID StatementID) ([]*StatementLine, error)
+	ListLines(ctx context.Context, rCtx Context, statementID StatementID) ([]*StatementLine, error)
 
 	// GetLineByID retrieves a specific statement line by ID.
-	GetLineByID(ctx context.Context, id StatementLineID) (*StatementLine, error)
+	GetLineByID(ctx context.Context, rCtx Context, id StatementLineID) (*StatementLine, error)
 
 	// UpdateLineDraft updates the draft choices (status, action, and matched_transaction_id) of a statement line.
-	UpdateLineDraft(ctx context.Context, line *StatementLine) error
+	UpdateLineDraft(ctx context.Context, rCtx Context, line *StatementLine) error
 
 	// UpdateStatementWithLines updates a statement and all its lines.
-	UpdateStatementWithLines(ctx context.Context, statement *Statement, lines []*StatementLine) error
+	UpdateStatementWithLines(ctx context.Context, rCtx Context, statement *Statement, lines []*StatementLine) error
 }

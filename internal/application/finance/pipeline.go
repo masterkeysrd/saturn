@@ -116,7 +116,7 @@ func (s *IngestionState) MetadataString(key string) string {
 
 // ProcessSignalPipeline executes the core Loom Graph (Classifier -> Extractor -> Resolver -> Deduplicator).
 // Returns the enriched IngestionState without performing side-effects (e.g. DB staging).
-func (c *coordinator) ProcessSignalPipeline(ctx context.Context, spaceID string, req *IngestionRequest) (*IngestionState, error) {
+func (c *coordinator) ProcessSignalPipeline(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*IngestionState, error) {
 	if req == nil {
 		req = &IngestionRequest{}
 	}
@@ -128,13 +128,15 @@ func (c *coordinator) ProcessSignalPipeline(ctx context.Context, spaceID string,
 		meta["received"] = time.Now().Format(time.RFC3339)
 	}
 
-	// Build the Loom Graph
+	spaceID := string(fCtx.SpaceID())
+
+	// Build the Loom Graph with higher-order functions binding fCtx
 	g, err := graph.New[*IngestionState]().
 		WithName("finance-signal-processing").
-		AddNode("classify", graph.NodeFunc(c.pipelineClassifyNode)).
-		AddNode("extract", graph.NodeFunc(c.pipelineExtractNode)).
-		AddNode("resolve", graph.NodeFunc(c.pipelineResolveNode)).
-		AddNode("deduplicate", graph.NodeFunc(c.pipelineDeduplicateNode)).
+		AddNode("classify", c.pipelineClassifyNode(fCtx)).
+		AddNode("extract", c.pipelineExtractNode(fCtx)).
+		AddNode("resolve", c.pipelineResolveNode(fCtx)).
+		AddNode("deduplicate", c.pipelineDeduplicateNode(fCtx)).
 		AddEdge(graph.START, "classify").
 		AddConditionalEdge("classify", "extract", func(s *IngestionState) bool {
 			return s.Classification != "UNKNOWN"
@@ -183,8 +185,8 @@ type SignalSuggestion struct {
 }
 
 // GetSignalSuggestions runs the signal pipeline without side-effects and returns prefill suggestions.
-func (c *coordinator) GetSignalSuggestions(ctx context.Context, spaceID string, req *IngestionRequest) (*SignalSuggestion, error) {
-	state, err := c.ProcessSignalPipeline(ctx, spaceID, req)
+func (c *coordinator) GetSignalSuggestions(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*SignalSuggestion, error) {
+	state, err := c.ProcessSignalPipeline(ctx, fCtx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -211,272 +213,282 @@ func (c *coordinator) GetSignalSuggestions(ctx context.Context, spaceID string, 
 }
 
 // 1. Classifier Node: Decides if document is INVOICE, RECEIPT, BANK_NOTIFICATION, SYSTEM_VERIFICATION, or UNKNOWN.
-func (c *coordinator) pipelineClassifyNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
-	textContent := ""
-	if state.Request != nil {
-		textContent = state.Request.TextContent
-	}
-	bodyLower := strings.ToLower(textContent)
-
-	subjectLower := ""
-	senderLower := ""
-	if state.Request != nil && state.Request.Metadata != nil {
-		if subj, ok := state.Request.Metadata["subject"].(string); ok {
-			subjectLower = strings.ToLower(subj)
+func (c *coordinator) pipelineClassifyNode(fCtx finance.Context) graph.Node[*IngestionState] {
+	return graph.NodeFunc(func(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
+		textContent := ""
+		if state.Request != nil {
+			textContent = state.Request.TextContent
 		}
-		if snd, ok := state.Request.Metadata["sender"].(string); ok {
-			senderLower = strings.ToLower(snd)
-		}
-	}
+		bodyLower := strings.ToLower(textContent)
 
-	if strings.Contains(bodyLower, "forwarding confirmation") ||
-		strings.Contains(subjectLower, "forwarding confirmation") ||
-		strings.Contains(bodyLower, "verification code") ||
-		strings.Contains(senderLower, "forwarding-noreply") ||
-		strings.Contains(senderLower, "no-reply@microsoft.com") {
+		subjectLower := ""
+		senderLower := ""
+		if state.Request != nil && state.Request.Metadata != nil {
+			if subj, ok := state.Request.Metadata["subject"].(string); ok {
+				subjectLower = strings.ToLower(subj)
+			}
+			if snd, ok := state.Request.Metadata["sender"].(string); ok {
+				senderLower = strings.ToLower(snd)
+			}
+		}
+
+		if strings.Contains(bodyLower, "forwarding confirmation") ||
+			strings.Contains(subjectLower, "forwarding confirmation") ||
+			strings.Contains(bodyLower, "verification code") ||
+			strings.Contains(senderLower, "forwarding-noreply") ||
+			strings.Contains(senderLower, "no-reply@microsoft.com") {
+			return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
+				s.Classification = "SYSTEM_VERIFICATION"
+				return s
+			}), nil
+		}
+
+		cls, err := c.classifier.Classify(ctx, fCtx, textContent)
+		if err != nil {
+			return nil, fmt.Errorf("classification agent failed: %w", err)
+		}
+
 		return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
-			s.Classification = "SYSTEM_VERIFICATION"
+			s.Classification = cls
 			return s
 		}), nil
-	}
-
-	cls, err := c.classifier.Classify(ctx, state.SpaceID, textContent)
-	if err != nil {
-		return nil, fmt.Errorf("classification agent failed: %w", err)
-	}
-
-	return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
-		s.Classification = cls
-		return s
-	}), nil
+	})
 }
 
 // 2. Extractor Node: Runs Hyperion to pull structured transaction details.
-func (c *coordinator) pipelineExtractNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
-	textContent := ""
-	if state.Request != nil {
-		textContent = state.Request.TextContent
-	}
+func (c *coordinator) pipelineExtractNode(fCtx finance.Context) graph.Node[*IngestionState] {
+	return graph.NodeFunc(func(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
+		textContent := ""
+		if state.Request != nil {
+			textContent = state.Request.TextContent
+		}
 
-	if state.Classification == "SYSTEM_VERIFICATION" {
+		if state.Classification == "SYSTEM_VERIFICATION" {
+			return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
+				vendor := "Email Forwarding Verification"
+				senderLower := ""
+				if snd, ok := s.Metadata["sender"].(string); ok {
+					senderLower = strings.ToLower(snd)
+				}
+				payloadLower := strings.ToLower(textContent)
+				if strings.Contains(senderLower, "google") || strings.Contains(payloadLower, "google") {
+					vendor = "Google Email Forwarding"
+				} else if strings.Contains(senderLower, "microsoft") {
+					vendor = "Microsoft Email Forwarding"
+				}
+				s.Vendor = vendor
+				s.Amount = 0
+				s.Currency = "USD"
+				s.Date = fCtx.Now().Format(time.RFC3339)
+				s.Metadata["transaction_type"] = "SYSTEM_VERIFICATION"
+				return s
+			}), nil
+		}
+
+		// Fetch active budgets, accounts, scheduled payments, and recurring expenses to guide matching context
+		page, err := c.financeService.ListBudgets(ctx, fCtx, &finance.ListBudgetsFilter{})
+		if err != nil {
+			return nil, fmt.Errorf("list budgets: %w", err)
+		}
+		budgets := page.Items
+
+		accPage, err := c.financeService.ListAccounts(ctx, fCtx, &finance.ListAccountsFilter{PageSize: 1000})
+		if err != nil {
+			return nil, fmt.Errorf("list accounts: %w", err)
+		}
+		accounts := accPage.Items
+
+		instPage, err := c.financeService.ListInstitutions(ctx, fCtx, &finance.ListInstitutionsFilter{PageSize: 1000})
+		var institutions []*finance.Institution
+		if err == nil {
+			institutions = instPage.Items
+		}
+
+		spPage, err := c.financeService.ListScheduledTransactions(ctx, fCtx, &finance.ListScheduledTransactionsFilter{})
+		if err != nil {
+			return nil, fmt.Errorf("list scheduled transactions: %w", err)
+		}
+		payments := spPage.Items
+
+		reePage, err := c.financeService.ListRecurringTransactions(ctx, fCtx, &finance.ListRecurringTransactionsFilter{})
+		if err != nil {
+			return nil, fmt.Errorf("list recurring transactions: %w", err)
+		}
+		expenses := reePage.Items
+
+		statusActive := finance.BorrowingStatusActive
+		borrowings, _, err := c.financeService.ListBorrowings(ctx, fCtx, &finance.ListBorrowingsFilter{
+			Status: &statusActive,
+		})
+		if err != nil {
+			// Log the error but don't fail ingestion if borrowings fail to query
+			borrowings = nil
+		}
+
+		refDate := fCtx.Now()
+
+		result, err := c.parser.Parse(ctx, fCtx, textContent, IngestionContext{
+			Budgets:               budgets,
+			Accounts:              accounts,
+			Institutions:          institutions,
+			ScheduledTransactions: payments,
+			RecurringTransactions: expenses,
+			Borrowings:            borrowings,
+			ReferenceDate:         refDate,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("extractor agent failed: %w", err)
+		}
+
 		return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
-			vendor := "Email Forwarding Verification"
-			senderLower := ""
-			if snd, ok := s.Metadata["sender"].(string); ok {
-				senderLower = strings.ToLower(snd)
-			}
-			payloadLower := strings.ToLower(textContent)
-			if strings.Contains(senderLower, "google") || strings.Contains(payloadLower, "google") {
-				vendor = "Google Email Forwarding"
-			} else if strings.Contains(senderLower, "microsoft") {
-				vendor = "Microsoft Email Forwarding"
-			}
-			s.Vendor = vendor
-			s.Amount = 0
-			s.Currency = "USD"
-			s.Date = time.Now().Format(time.RFC3339)
-			s.Metadata["transaction_type"] = "SYSTEM_VERIFICATION"
+			s.Vendor = result.Counterparty
+			s.Amount = result.Amount
+			s.Currency = result.Currency
+			s.Date = result.Date
+			s.CardLastFour = result.CardLastFour
+			s.SuggestedBudget = result.SuggestedBudget
+
+			s.Metadata["reference_number"] = result.ReferenceNumber
+			s.Metadata["suggested_account_id"] = result.SourceAccountID
+			s.Metadata["source_account_name"] = result.SourceAccountName
+			s.Metadata["destination_account_id"] = result.DestAccountID
+			s.Metadata["dest_account_name"] = result.DestAccountName
+			s.Metadata["dest_account_last_four"] = result.DestAccountLastFour
+			s.Metadata["suggested_borrowing_id"] = result.SuggestedBorrowing
+			s.Metadata["transaction_type"] = result.TransactionType
+			s.Metadata["suggested_transfer_leg"] = result.SuggestedTransferLeg
+			s.Metadata["raw_agent_output"] = result.RawOutput
 			return s
 		}), nil
-	}
-
-	// Fetch active budgets, accounts, scheduled payments, and recurring expenses to guide matching context
-	page, err := c.financeService.ListBudgets(ctx, finance.SpaceID(state.SpaceID), &finance.ListBudgetsFilter{})
-	if err != nil {
-		return nil, fmt.Errorf("list budgets: %w", err)
-	}
-	budgets := page.Items
-
-	accPage, err := c.financeService.ListAccounts(ctx, finance.SpaceID(state.SpaceID), &finance.ListAccountsFilter{PageSize: 1000})
-	if err != nil {
-		return nil, fmt.Errorf("list accounts: %w", err)
-	}
-	accounts := accPage.Items
-
-	instPage, err := c.financeService.ListInstitutions(ctx, finance.SpaceID(state.SpaceID), &finance.ListInstitutionsFilter{PageSize: 1000})
-	var institutions []*finance.Institution
-	if err == nil {
-		institutions = instPage.Items
-	}
-
-	spPage, err := c.financeService.ListScheduledTransactions(ctx, finance.SpaceID(state.SpaceID), &finance.ListScheduledTransactionsFilter{})
-	if err != nil {
-		return nil, fmt.Errorf("list scheduled transactions: %w", err)
-	}
-	payments := spPage.Items
-
-	reePage, err := c.financeService.ListRecurringTransactions(ctx, finance.SpaceID(state.SpaceID), &finance.ListRecurringTransactionsFilter{})
-	if err != nil {
-		return nil, fmt.Errorf("list recurring transactions: %w", err)
-	}
-	expenses := reePage.Items
-
-	statusActive := finance.BorrowingStatusActive
-	borrowings, _, err := c.financeService.ListBorrowings(ctx, finance.SpaceID(state.SpaceID), &finance.ListBorrowingsFilter{
-		Status: &statusActive,
 	})
-	if err != nil {
-		// Log the error but don't fail ingestion if borrowings fail to query
-		borrowings = nil
-	}
-
-	result, err := c.parser.Parse(ctx, state.SpaceID, textContent, IngestionContext{
-		Budgets:               budgets,
-		Accounts:              accounts,
-		Institutions:          institutions,
-		ScheduledTransactions: payments,
-		RecurringTransactions: expenses,
-		Borrowings:            borrowings,
-		ReferenceDate:         time.Now(),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("extractor agent failed: %w", err)
-	}
-
-	return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
-		s.Vendor = result.Counterparty
-		s.Amount = result.Amount
-		s.Currency = result.Currency
-		s.Date = result.Date
-		s.CardLastFour = result.CardLastFour
-		s.SuggestedBudget = result.SuggestedBudget
-
-		s.Metadata["reference_number"] = result.ReferenceNumber
-		s.Metadata["suggested_account_id"] = result.SourceAccountID
-		s.Metadata["source_account_name"] = result.SourceAccountName
-		s.Metadata["destination_account_id"] = result.DestAccountID
-		s.Metadata["dest_account_name"] = result.DestAccountName
-		s.Metadata["dest_account_last_four"] = result.DestAccountLastFour
-		s.Metadata["suggested_borrowing_id"] = result.SuggestedBorrowing
-		s.Metadata["transaction_type"] = result.TransactionType
-		s.Metadata["suggested_transfer_leg"] = result.SuggestedTransferLeg
-		s.Metadata["raw_agent_output"] = result.RawOutput
-		return s
-	}), nil
 }
 
 // 3. Resolve Node: Queries Saturn DB to match accounts, budgets, and categories.
-func (c *coordinator) pipelineResolveNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
-	// 1. Resolve Source Account via unified financeService domain resolver
-	srcAcc, err := c.financeService.ResolveAccount(ctx, finance.SpaceID(state.SpaceID), finance.ResolveAccountOpts{
-		AccountID:   state.MetadataString("suggested_account_id"),
-		AccountName: state.MetadataString("source_account_name"),
-		LastFour:    state.CardLastFour,
-		Currency:    state.Currency,
-	})
-	var accountID *string
-	if err == nil && srcAcc != nil {
-		accountID = new(string(srcAcc.ID))
-	}
+func (c *coordinator) pipelineResolveNode(fCtx finance.Context) graph.Node[*IngestionState] {
+	return graph.NodeFunc(func(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
+		// 1. Resolve Source Account via unified financeService domain resolver
+		srcAcc, err := c.financeService.ResolveAccount(ctx, fCtx, finance.ResolveAccountOpts{
+			AccountID:   state.MetadataString("suggested_account_id"),
+			AccountName: state.MetadataString("source_account_name"),
+			LastFour:    state.CardLastFour,
+			Currency:    state.Currency,
+		})
+		var accountID *string
+		if err == nil && srcAcc != nil {
+			accountID = new(string(srcAcc.ID))
+		}
 
-	// 2. Resolve Budget & Fallback to Budget Default Account
-	var budgetID *string
-	if state.SuggestedBudget != "" {
-		if bID, err := finance.ParseBudgetID(state.SuggestedBudget); err == nil {
-			if budget, err := c.financeService.GetBudget(ctx, finance.SpaceID(state.SpaceID), bID); err == nil && budget != nil && string(budget.SpaceID) == state.SpaceID {
-				budgetID = new(string(budget.ID))
-				if accountID == nil && budget.DefaultAccountID != nil {
-					accountID = new(string(*budget.DefaultAccountID))
-				}
-			}
-		} else if pageB, err := c.financeService.ListBudgets(ctx, finance.SpaceID(state.SpaceID), &finance.ListBudgetsFilter{PageSize: 1000}); err == nil {
-			for _, b := range pageB.Items {
-				if strings.EqualFold(b.Name, state.SuggestedBudget) {
-					budgetID = new(string(b.ID))
-					if accountID == nil && b.DefaultAccountID != nil {
-						accountID = new(string(*b.DefaultAccountID))
+		// 2. Resolve Budget & Fallback to Budget Default Account
+		var budgetID *string
+		if state.SuggestedBudget != "" {
+			if bID, err := finance.ParseBudgetID(state.SuggestedBudget); err == nil {
+				if budget, err := c.financeService.GetBudget(ctx, fCtx, bID); err == nil && budget != nil {
+					budgetID = new(string(budget.ID))
+					if accountID == nil && budget.DefaultAccountID != nil {
+						accountID = new(string(*budget.DefaultAccountID))
 					}
-					break
+				}
+			} else if pageB, err := c.financeService.ListBudgets(ctx, fCtx, &finance.ListBudgetsFilter{PageSize: 1000}); err == nil {
+				for _, b := range pageB.Items {
+					if strings.EqualFold(b.Name, state.SuggestedBudget) {
+						budgetID = new(string(b.ID))
+						if accountID == nil && b.DefaultAccountID != nil {
+							accountID = new(string(*b.DefaultAccountID))
+						}
+						break
+					}
 				}
 			}
 		}
-	}
 
-	// 3. Resolve Destination Account (for Transfers) via unified financeService domain resolver
-	destAcc, err := c.financeService.ResolveAccount(ctx, finance.SpaceID(state.SpaceID), finance.ResolveAccountOpts{
-		AccountID:   state.MetadataString("destination_account_id"),
-		AccountName: state.MetadataString("dest_account_name"),
-		LastFour:    state.MetadataString("dest_account_last_four"),
-		Currency:    state.Currency,
+		// 3. Resolve Destination Account (for Transfers) via unified financeService domain resolver
+		destAcc, err := c.financeService.ResolveAccount(ctx, fCtx, finance.ResolveAccountOpts{
+			AccountID:   state.MetadataString("destination_account_id"),
+			AccountName: state.MetadataString("dest_account_name"),
+			LastFour:    state.MetadataString("dest_account_last_four"),
+			Currency:    state.Currency,
+		})
+		if err == nil && destAcc != nil {
+			state.Metadata["destination_account_id"] = string(destAcc.ID)
+		}
+
+		return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
+			s.AccountID = accountID
+			s.BudgetID = budgetID
+			return s
+		}), nil
 	})
-	if err == nil && destAcc != nil {
-		state.Metadata["destination_account_id"] = string(destAcc.ID)
-	}
-
-	return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
-		s.AccountID = accountID
-		s.BudgetID = budgetID
-		return s
-	}), nil
 }
 
 // 4. Deduplicate Node: Audits recently logged transactions to flag double-entries.
-func (c *coordinator) pipelineDeduplicateNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
-	var parsedDate time.Time
-	if state.Date != "" {
-		if t, err := time.Parse(time.RFC3339, state.Date); err == nil {
-			parsedDate = t
-		} else if t, err := time.Parse("2006-01-02", state.Date); err == nil {
-			parsedDate = t
+func (c *coordinator) pipelineDeduplicateNode(fCtx finance.Context) graph.Node[*IngestionState] {
+	return graph.NodeFunc(func(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
+		var parsedDate time.Time
+		if state.Date != "" {
+			if t, err := time.Parse(time.RFC3339, state.Date); err == nil {
+				parsedDate = t
+			} else if t, err := time.Parse("2006-01-02", state.Date); err == nil {
+				parsedDate = t
+			}
 		}
-	}
-	if parsedDate.IsZero() {
-		parsedDate = time.Now()
-	}
+		if parsedDate.IsZero() {
+			parsedDate = fCtx.Now()
+		}
 
-	minAmt := int64(float64(state.Amount) * dedupAmountMinFactor)
-	maxAmt := int64(float64(state.Amount) * dedupAmountMaxFactor)
-	startDate := parsedDate.AddDate(0, 0, -dedupDateRangeDays)
-	endDate := parsedDate.AddDate(0, 0, dedupDateRangeDays)
+		minAmt := int64(float64(state.Amount) * dedupAmountMinFactor)
+		maxAmt := int64(float64(state.Amount) * dedupAmountMaxFactor)
+		startDate := parsedDate.AddDate(0, 0, -dedupDateRangeDays)
+		endDate := parsedDate.AddDate(0, 0, dedupDateRangeDays)
 
-	var searchQuery *string
-	if state.Vendor != "" {
-		searchQuery = &state.Vendor
-	}
+		var searchQuery *string
+		if state.Vendor != "" {
+			searchQuery = &state.Vendor
+		}
 
-	filter := &finance.TransactionFilter{
-		PageSize:  dedupMaxCandidates,
-		MinAmount: &minAmt,
-		MaxAmount: &maxAmt,
-		StartDate: &startDate,
-		EndDate:   &endDate,
-	}
-	if searchQuery != nil {
-		filter.SearchQuery = searchQuery
-	}
+		filter := &finance.TransactionFilter{
+			PageSize:  dedupMaxCandidates,
+			MinAmount: &minAmt,
+			MaxAmount: &maxAmt,
+			StartDate: &startDate,
+			EndDate:   &endDate,
+		}
+		if searchQuery != nil {
+			filter.SearchQuery = searchQuery
+		}
 
-	page, err := c.financeService.ListTransactions(ctx, finance.SpaceID(state.SpaceID), filter)
-	if err != nil {
-		return nil, fmt.Errorf("list transactions: %w", err)
-	}
-	transactions := page.Items
+		page, err := c.financeService.ListTransactions(ctx, fCtx, filter)
+		if err != nil {
+			return nil, fmt.Errorf("list transactions: %w", err)
+		}
+		transactions := page.Items
 
-	parsedTx := &ParsedTransaction{
-		Counterparty:    state.Vendor,
-		Amount:          state.Amount,
-		Currency:        state.Currency,
-		Date:            state.Date,
-		CardLastFour:    state.CardLastFour,
-		SuggestedBudget: state.SuggestedBudget,
-	}
+		parsedTx := &ParsedTransaction{
+			Counterparty:    state.Vendor,
+			Amount:          state.Amount,
+			Currency:        state.Currency,
+			Date:            state.Date,
+			CardLastFour:    state.CardLastFour,
+			SuggestedBudget: state.SuggestedBudget,
+		}
 
-	res, err := c.deduplicator.Deduplicate(ctx, state.SpaceID, parsedTx, transactions)
-	if err != nil {
-		// Log warning but don't fail ingestion if semantic deduplication fails (fall back to non-duplicate)
-		fmt.Printf("[Ingestion Pipeline] Warning: semantic deduplication failed: %v\n", err)
+		res, err := c.deduplicator.Deduplicate(ctx, fCtx, parsedTx, transactions)
+		if err != nil {
+			// Log warning but don't fail ingestion if semantic deduplication fails (fall back to non-duplicate)
+			fmt.Printf("[Ingestion Pipeline] Warning: semantic deduplication failed: %v\n", err)
+			return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
+				return s
+			}), nil
+		}
+
 		return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
+			if res.IsDuplicate {
+				dupID := res.DuplicateTransactionID
+				s.PotentialDuplicateID = &dupID
+				s.Metadata["duplicate_warning"] = true
+				s.Metadata["potential_duplicate_id"] = dupID
+				s.Metadata["duplicate_reason"] = res.Reason
+			}
 			return s
 		}), nil
-	}
-
-	return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
-		if res.IsDuplicate {
-			dupID := res.DuplicateTransactionID
-			s.PotentialDuplicateID = &dupID
-			s.Metadata["duplicate_warning"] = true
-			s.Metadata["potential_duplicate_id"] = dupID
-			s.Metadata["duplicate_reason"] = res.Reason
-		}
-		return s
-	}), nil
+	})
 }

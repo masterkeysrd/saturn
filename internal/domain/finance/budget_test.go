@@ -19,12 +19,9 @@ func TestBudget_ApplyPatch(t *testing.T) {
 		t.Fatalf("failed generating account ID: %v", err)
 	}
 
-	spaceID := finance.SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
-
 	createTime := time.Now().Add(-24 * time.Hour).UTC()
 	original := &finance.Budget{
 		ID:               budgetID,
-		SpaceID:          spaceID,
 		Name:             "Monthly Grocery",
 		LimitAmount:      50000,
 		Currency:         finance.Currency("USD"),
@@ -108,11 +105,8 @@ func TestBudget_Validate_OneTime(t *testing.T) {
 		t.Fatalf("failed generating budget ID: %v", err)
 	}
 
-	spaceID := finance.SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
-
 	budget := &finance.Budget{
 		ID:          budgetID,
-		SpaceID:     spaceID,
 		Name:        "Event Planning",
 		LimitAmount: 100000,
 		Currency:    finance.Currency("USD"),
@@ -142,11 +136,9 @@ func TestBudget_CalculateBounds_OneTime(t *testing.T) {
 
 func TestBudget_NewPeriod_And_Lifecycle(t *testing.T) {
 	budgetID, _ := finance.NewBudgetID()
-	spaceID := finance.SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 
 	budget := &finance.Budget{
 		ID:          budgetID,
-		SpaceID:     spaceID,
 		Name:        "Groceries",
 		LimitAmount: 50000,
 		Currency:    finance.Currency("USD"),
@@ -267,7 +259,6 @@ func TestBudgetID(t *testing.T) {
 
 func TestBudget_Validate_Table(t *testing.T) {
 	validID, _ := finance.NewBudgetID()
-	validSpace := finance.SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	validAcc, _ := finance.NewAccountID()
 	invalidAcc := finance.AccountID("invalid_acc")
 
@@ -280,7 +271,6 @@ func TestBudget_Validate_Table(t *testing.T) {
 			name: "valid monthly budget",
 			budget: finance.Budget{
 				ID:          validID,
-				SpaceID:     validSpace,
 				Name:        "Groceries",
 				LimitAmount: 50000,
 				Currency:    "USD",
@@ -293,7 +283,6 @@ func TestBudget_Validate_Table(t *testing.T) {
 			name: "valid with default account",
 			budget: finance.Budget{
 				ID:               validID,
-				SpaceID:          validSpace,
 				Name:             "Dining",
 				LimitAmount:      20000,
 				Currency:         "USD",
@@ -306,7 +295,6 @@ func TestBudget_Validate_Table(t *testing.T) {
 			name: "empty name",
 			budget: finance.Budget{
 				ID:          validID,
-				SpaceID:     validSpace,
 				Name:        "   ",
 				LimitAmount: 50000,
 				Currency:    "USD",
@@ -318,7 +306,6 @@ func TestBudget_Validate_Table(t *testing.T) {
 			name: "name exceeds 255 chars",
 			budget: finance.Budget{
 				ID:          validID,
-				SpaceID:     validSpace,
 				Name:        strings.Repeat("a", 256),
 				LimitAmount: 50000,
 				Currency:    "USD",
@@ -330,7 +317,6 @@ func TestBudget_Validate_Table(t *testing.T) {
 			name: "limit <= 0",
 			budget: finance.Budget{
 				ID:          validID,
-				SpaceID:     validSpace,
 				Name:        "Groceries",
 				LimitAmount: 0,
 				Currency:    "USD",
@@ -342,7 +328,6 @@ func TestBudget_Validate_Table(t *testing.T) {
 			name: "invalid currency",
 			budget: finance.Budget{
 				ID:          validID,
-				SpaceID:     validSpace,
 				Name:        "Groceries",
 				LimitAmount: 1000,
 				Currency:    "INVALID",
@@ -354,7 +339,6 @@ func TestBudget_Validate_Table(t *testing.T) {
 			name: "invalid interval",
 			budget: finance.Budget{
 				ID:          validID,
-				SpaceID:     validSpace,
 				Name:        "Groceries",
 				LimitAmount: 1000,
 				Currency:    "USD",
@@ -366,7 +350,6 @@ func TestBudget_Validate_Table(t *testing.T) {
 			name: "invalid status",
 			budget: finance.Budget{
 				ID:          validID,
-				SpaceID:     validSpace,
 				Name:        "Groceries",
 				LimitAmount: 1000,
 				Currency:    "USD",
@@ -379,19 +362,6 @@ func TestBudget_Validate_Table(t *testing.T) {
 			name: "invalid budget ID",
 			budget: finance.Budget{
 				ID:          "invalid_id",
-				SpaceID:     validSpace,
-				Name:        "Groceries",
-				LimitAmount: 1000,
-				Currency:    "USD",
-				Interval:    finance.IntervalMonthly,
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid space ID",
-			budget: finance.Budget{
-				ID:          validID,
-				SpaceID:     "invalid_space",
 				Name:        "Groceries",
 				LimitAmount: 1000,
 				Currency:    "USD",
@@ -403,7 +373,6 @@ func TestBudget_Validate_Table(t *testing.T) {
 			name: "invalid default account ID",
 			budget: finance.Budget{
 				ID:               validID,
-				SpaceID:          validSpace,
 				Name:             "Groceries",
 				LimitAmount:      1000,
 				Currency:         "USD",
@@ -581,5 +550,46 @@ func TestBudget_CalculateBounds_AllIntervals(t *testing.T) {
 				t.Errorf("target %v is not within bounds [%v, %v]", target, start, end)
 			}
 		})
+	}
+}
+
+func TestBudget_CalculateBounds_Timezone(t *testing.T) {
+	loc, err := time.LoadLocation("America/Santo_Domingo")
+	if err != nil {
+		t.Fatalf("failed to load location: %v", err)
+	}
+
+	// 2026-10-01 02:00:00 UTC is 2026-09-30 22:00:00 AST (September locally)
+	targetUTC := time.Date(2026, 10, 1, 2, 0, 0, 0, time.UTC)
+
+	b := &finance.Budget{Interval: finance.IntervalMonthly}
+
+	// 1. With explicit location parameter
+	start, end := b.CalculateBounds(targetUTC, loc)
+	expectedStart := time.Date(2026, 9, 1, 4, 0, 0, 0, time.UTC)  // 2026-09-01 00:00:00 AST
+	expectedEnd := time.Date(2026, 10, 1, 3, 59, 59, 0, time.UTC) // 2026-09-30 23:59:59 AST
+
+	if !start.Equal(expectedStart) {
+		t.Errorf("expected start %v, got %v", expectedStart, start)
+	}
+	if !end.Equal(expectedEnd) {
+		t.Errorf("expected end %v, got %v", expectedEnd, end)
+	}
+	if targetUTC.Before(start) || targetUTC.After(end) {
+		t.Errorf("target %v should fall within [%v, %v]", targetUTC, start, end)
+	}
+
+	// 2. With time already localized
+	targetLocal := targetUTC.In(loc)
+	start2, end2 := b.CalculateBounds(targetLocal)
+	if !start2.Equal(expectedStart) || !end2.Equal(expectedEnd) {
+		t.Errorf("expected localized time to produce same bounds [%v, %v], got [%v, %v]", expectedStart, expectedEnd, start2, end2)
+	}
+
+	// 3. Weekly interval timezone boundary
+	bWeekly := &finance.Budget{Interval: finance.IntervalWeekly}
+	wStart, wEnd := bWeekly.CalculateBounds(targetLocal)
+	if targetUTC.Before(wStart) || targetUTC.After(wEnd) {
+		t.Errorf("target %v should fall within weekly bounds [%v, %v]", targetUTC, wStart, wEnd)
 	}
 }

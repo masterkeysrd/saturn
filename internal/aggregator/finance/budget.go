@@ -28,7 +28,7 @@ type ListBudgetsFilter struct {
 // and applies filtering, dynamic sorting, and cursor-based pagination.
 func (s *Service) ListBudgets(
 	ctx context.Context,
-	spaceID finance.SpaceID,
+	rCtx finance.Context,
 	filter ListBudgetsFilter,
 ) (*paging.Page[*AggregatedBudget], error) {
 	if len(filter.Statuses) == 0 {
@@ -36,7 +36,7 @@ func (s *Service) ListBudgets(
 	}
 
 	// 1. Fetch raw budget templates from domain service (pre-filtered, sorted, and paginated!)
-	page, err := s.financeService.ListBudgets(ctx, spaceID, &filter.ListBudgetsFilter)
+	page, err := s.financeService.ListBudgets(ctx, rCtx, &filter.ListBudgetsFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -53,17 +53,17 @@ func (s *Service) ListBudgets(
 	if filter.View == ViewFull {
 		targetDate := filter.TargetDate
 		if targetDate.IsZero() {
-			targetDate = time.Now()
+			targetDate = rCtx.Now()
 		}
 
-		periods, err := s.financeService.GetOrCreatePeriods(ctx, budgets, targetDate)
+		periods, err := s.financeService.GetOrCreatePeriods(ctx, rCtx, budgets, targetDate)
 		if err == nil && periods != nil {
 			periodIDs := make([]finance.PeriodID, 0, len(periods))
 			for _, p := range periods {
 				periodIDs = append(periodIDs, p.ID)
 			}
 
-			stats, aggErr := s.financeService.AggregateSpentBatch(ctx, periodIDs)
+			stats, aggErr := s.financeService.AggregateSpentBatch(ctx, rCtx, periodIDs)
 			statsMap := make(map[finance.PeriodID]finance.PeriodSpent)
 			if aggErr == nil {
 				for _, s := range stats {
@@ -99,13 +99,13 @@ func (s *Service) ListBudgets(
 }
 
 // GetBudgetPeriod retrieves or lazily spawns a budget period, hydrating its spent progress.
-func (s *Service) GetBudgetPeriod(ctx context.Context, spaceID finance.SpaceID, budgetID finance.BudgetID, date time.Time) (*AggregatedBudgetPeriod, error) {
-	budget, err := s.financeService.GetBudget(ctx, spaceID, budgetID)
+func (s *Service) GetBudgetPeriod(ctx context.Context, rCtx finance.Context, budgetID finance.BudgetID, date time.Time) (*AggregatedBudgetPeriod, error) {
+	budget, err := s.financeService.GetBudget(ctx, rCtx, budgetID)
 	if err != nil {
 		return nil, err
 	}
 
-	periods, err := s.financeService.GetOrCreatePeriods(ctx, []*finance.Budget{budget}, date)
+	periods, err := s.financeService.GetOrCreatePeriods(ctx, rCtx, []*finance.Budget{budget}, date)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (s *Service) GetBudgetPeriod(ctx context.Context, spaceID finance.SpaceID, 
 		return nil, errors.E(errors.NotExist, finance.PeriodNotFound, "budget period not found")
 	}
 
-	stats, err := s.financeService.AggregateSpentBatch(ctx, []finance.PeriodID{period.ID})
+	stats, err := s.financeService.AggregateSpentBatch(ctx, rCtx, []finance.PeriodID{period.ID})
 	var spentInBase, spentAmount int64
 	if err == nil && len(stats) > 0 {
 		spentInBase = stats[0].SpentInBase

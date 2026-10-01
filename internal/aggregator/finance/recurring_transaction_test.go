@@ -13,48 +13,61 @@ import (
 )
 
 type mockRecurringTransactionStore struct {
-	expenses map[finance.RecurringTransactionID]*finance.RecurringTransaction
+	expenses map[finance.SpaceID]map[finance.RecurringTransactionID]*finance.RecurringTransaction
 }
 
-func (m *mockRecurringTransactionStore) Create(ctx context.Context, re *finance.RecurringTransaction) error {
-	m.expenses[re.ID] = re
+func (m *mockRecurringTransactionStore) Create(ctx context.Context, fCtx finance.Context, re *finance.RecurringTransaction) error {
+	if m.expenses[fCtx.SpaceID()] == nil {
+		m.expenses[fCtx.SpaceID()] = make(map[finance.RecurringTransactionID]*finance.RecurringTransaction)
+	}
+	m.expenses[fCtx.SpaceID()][re.ID] = re
 	return nil
 }
 
-func (m *mockRecurringTransactionStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.RecurringTransactionID) (*finance.RecurringTransaction, error) {
-	re, ok := m.expenses[id]
+func (m *mockRecurringTransactionStore) GetByID(ctx context.Context, fCtx finance.Context, id finance.RecurringTransactionID) (*finance.RecurringTransaction, error) {
+	spaceExpenses := m.expenses[fCtx.SpaceID()]
+	if spaceExpenses == nil {
+		return nil, errors.New("recurring transaction not found")
+	}
+	re, ok := spaceExpenses[id]
 	if !ok {
 		return nil, errors.New("recurring transaction not found")
 	}
 	return re, nil
 }
 
-func (m *mockRecurringTransactionStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, ids []finance.RecurringTransactionID) ([]*finance.RecurringTransaction, error) {
+func (m *mockRecurringTransactionStore) GetByIDs(ctx context.Context, fCtx finance.Context, ids []finance.RecurringTransactionID) ([]*finance.RecurringTransaction, error) {
+	spaceExpenses := m.expenses[fCtx.SpaceID()]
 	var list []*finance.RecurringTransaction
-	for _, id := range ids {
-		if re, ok := m.expenses[id]; ok {
-			list = append(list, re)
+	if spaceExpenses != nil {
+		for _, id := range ids {
+			if re, ok := spaceExpenses[id]; ok {
+				list = append(list, re)
+			}
 		}
 	}
 	return list, nil
 }
 
-func (m *mockRecurringTransactionStore) Update(ctx context.Context, re *finance.RecurringTransaction) error {
-	m.expenses[re.ID] = re
+func (m *mockRecurringTransactionStore) Update(ctx context.Context, fCtx finance.Context, re *finance.RecurringTransaction) error {
+	if m.expenses[fCtx.SpaceID()] == nil {
+		m.expenses[fCtx.SpaceID()] = make(map[finance.RecurringTransactionID]*finance.RecurringTransaction)
+	}
+	m.expenses[fCtx.SpaceID()][re.ID] = re
 	return nil
 }
 
-func (m *mockRecurringTransactionStore) Delete(ctx context.Context, id finance.RecurringTransactionID, opts finance.DeleteOptions) error {
-	delete(m.expenses, id)
+func (m *mockRecurringTransactionStore) Delete(ctx context.Context, fCtx finance.Context, id finance.RecurringTransactionID, opts finance.DeleteOptions) error {
+	if m.expenses[fCtx.SpaceID()] != nil {
+		delete(m.expenses[fCtx.SpaceID()], id)
+	}
 	return nil
 }
 
-func (m *mockRecurringTransactionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error) {
+func (m *mockRecurringTransactionStore) ListBySpace(ctx context.Context, fCtx finance.Context, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error) {
 	var list []*finance.RecurringTransaction
-	for _, re := range m.expenses {
-		if re.SpaceID == spaceID {
-			list = append(list, re)
-		}
+	for _, re := range m.expenses[fCtx.SpaceID()] {
+		list = append(list, re)
 	}
 	pageSize := int(filter.PageSize)
 	if pageSize <= 0 {
@@ -65,66 +78,75 @@ func (m *mockRecurringTransactionStore) ListBySpace(ctx context.Context, spaceID
 	}), nil
 }
 
-func (m *mockRecurringTransactionStore) ListPendingGeneration(ctx context.Context, maxDueDate time.Time) ([]*finance.RecurringTransaction, error) {
+func (m *mockRecurringTransactionStore) ListPendingGeneration(ctx context.Context, maxDueDate time.Time) ([]finance.PendingRecurringTransaction, error) {
 	return nil, nil
 }
 
 type mockScheduledTransactionStore struct {
-	payments map[finance.ScheduledTransactionID]*finance.ScheduledTransaction
+	payments map[finance.SpaceID]map[finance.ScheduledTransactionID]*finance.ScheduledTransaction
 }
 
-func (m *mockScheduledTransactionStore) Create(ctx context.Context, sp *finance.ScheduledTransaction) error {
-	m.payments[sp.ID] = sp
+func (m *mockScheduledTransactionStore) Create(ctx context.Context, fCtx finance.Context, sp *finance.ScheduledTransaction) error {
+	if m.payments[fCtx.SpaceID()] == nil {
+		m.payments[fCtx.SpaceID()] = make(map[finance.ScheduledTransactionID]*finance.ScheduledTransaction)
+	}
+	m.payments[fCtx.SpaceID()][sp.ID] = sp
 	return nil
 }
 
-func (m *mockScheduledTransactionStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error) {
-	sp, ok := m.payments[id]
+func (m *mockScheduledTransactionStore) GetByID(ctx context.Context, fCtx finance.Context, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error) {
+	spacePayments := m.payments[fCtx.SpaceID()]
+	if spacePayments == nil {
+		return nil, errors.New("scheduled transaction not found")
+	}
+	sp, ok := spacePayments[id]
 	if !ok {
 		return nil, errors.New("scheduled transaction not found")
 	}
 	return sp, nil
 }
 
-func (m *mockScheduledTransactionStore) Update(ctx context.Context, sp *finance.ScheduledTransaction) error {
-	if _, ok := m.payments[sp.ID]; ok {
-		m.payments[sp.ID] = sp
-		return nil
+func (m *mockScheduledTransactionStore) Update(ctx context.Context, fCtx finance.Context, sp *finance.ScheduledTransaction) error {
+	if m.payments[fCtx.SpaceID()] != nil {
+		if _, ok := m.payments[fCtx.SpaceID()][sp.ID]; ok {
+			m.payments[fCtx.SpaceID()][sp.ID] = sp
+			return nil
+		}
 	}
 	return errors.New("scheduled transaction not found")
 }
 
-func (m *mockScheduledTransactionStore) UpdateStatus(ctx context.Context, id finance.ScheduledTransactionID, status finance.ScheduledTransactionStatus) error {
-	if p, ok := m.payments[id]; ok {
-		p.Status = status
-		return nil
+func (m *mockScheduledTransactionStore) UpdateStatus(ctx context.Context, fCtx finance.Context, id finance.ScheduledTransactionID, status finance.ScheduledTransactionStatus) error {
+	if m.payments[fCtx.SpaceID()] != nil {
+		if p, ok := m.payments[fCtx.SpaceID()][id]; ok {
+			p.Status = status
+			return nil
+		}
 	}
 	return errors.New("scheduled transaction not found")
 }
 
-func (m *mockScheduledTransactionStore) Delete(ctx context.Context, id finance.ScheduledTransactionID) error {
-	delete(m.payments, id)
+func (m *mockScheduledTransactionStore) Delete(ctx context.Context, fCtx finance.Context, id finance.ScheduledTransactionID) error {
+	if m.payments[fCtx.SpaceID()] != nil {
+		delete(m.payments[fCtx.SpaceID()], id)
+	}
 	return nil
 }
 
-func (m *mockScheduledTransactionStore) HasScheduledTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledTransactionsFilter) (bool, error) {
-	for _, sp := range m.payments {
-		if sp.SpaceID == spaceID {
-			if filter != nil && filter.BudgetID != nil && (sp.BudgetID == nil || *sp.BudgetID != *filter.BudgetID) {
-				continue
-			}
-			return true, nil
+func (m *mockScheduledTransactionStore) HasScheduledTransactions(ctx context.Context, fCtx finance.Context, filter *finance.ListScheduledTransactionsFilter) (bool, error) {
+	for _, sp := range m.payments[fCtx.SpaceID()] {
+		if filter != nil && filter.BudgetID != nil && (sp.BudgetID == nil || *sp.BudgetID != *filter.BudgetID) {
+			continue
 		}
+		return true, nil
 	}
 	return false, nil
 }
 
-func (m *mockScheduledTransactionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error) {
+func (m *mockScheduledTransactionStore) ListBySpace(ctx context.Context, fCtx finance.Context, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error) {
 	var list []*finance.ScheduledTransaction
-	for _, sp := range m.payments {
-		if sp.SpaceID == spaceID {
-			list = append(list, sp)
-		}
+	for _, sp := range m.payments[fCtx.SpaceID()] {
+		list = append(list, sp)
 	}
 	pageSize := int(filter.PageSize)
 	if pageSize <= 0 {
@@ -138,25 +160,24 @@ func (m *mockScheduledTransactionStore) ListBySpace(ctx context.Context, spaceID
 func TestListRecurringTransactionsAndScheduledTransactionsAggregator(t *testing.T) {
 	ctx := context.Background()
 	spaceID := finance.SpaceID("spc_" + ksuid.New().String())
+	rCtx := finance.NewContext(spaceID, "usr_1", time.UTC, "USD")
 
 	// Mocks Setup
-	bStore := &mockBudgetStore{budgets: make(map[finance.BudgetID]*finance.Budget)}
-	reStore := &mockRecurringTransactionStore{expenses: make(map[finance.RecurringTransactionID]*finance.RecurringTransaction)}
-	spStore := &mockScheduledTransactionStore{payments: make(map[finance.ScheduledTransactionID]*finance.ScheduledTransaction)}
+	bStore := &mockBudgetStore{budgets: make(map[finance.SpaceID]map[finance.BudgetID]*finance.Budget)}
+	reStore := &mockRecurringTransactionStore{expenses: make(map[finance.SpaceID]map[finance.RecurringTransactionID]*finance.RecurringTransaction)}
+	spStore := &mockScheduledTransactionStore{payments: make(map[finance.SpaceID]map[finance.ScheduledTransactionID]*finance.ScheduledTransaction)}
 
 	budget := &finance.Budget{
 		ID:       finance.BudgetID("bgt_" + ksuid.New().String()),
-		SpaceID:  spaceID,
 		Name:     "Test Budget",
 		Color:    "red",
 		Icon:     "home",
 		Currency: finance.Currency("USD"),
 	}
-	_ = bStore.Create(ctx, budget)
+	_ = bStore.Create(ctx, rCtx, budget)
 
 	re := &finance.RecurringTransaction{
 		ID:          finance.RecurringTransactionID("rec_" + ksuid.New().String()),
-		SpaceID:     spaceID,
 		BudgetID:    &budget.ID,
 		Name:        "SaaS",
 		Amount:      1000,
@@ -166,11 +187,10 @@ func TestListRecurringTransactionsAndScheduledTransactionsAggregator(t *testing.
 		Status:      finance.RecurringTransactionActive,
 		Type:        finance.TransactionTypeExpense,
 	}
-	_ = reStore.Create(ctx, re)
+	_ = reStore.Create(ctx, rCtx, re)
 
 	sp := &finance.ScheduledTransaction{
 		ID:         finance.ScheduledTransactionID("sch_" + ksuid.New().String()),
-		SpaceID:    spaceID,
 		BudgetID:   &budget.ID,
 		SourceType: "recurrent_transaction",
 		SourceID:   string(re.ID),
@@ -180,7 +200,7 @@ func TestListRecurringTransactionsAndScheduledTransactionsAggregator(t *testing.
 		Status:     finance.ScheduledTransactionPending,
 		Type:       finance.TransactionTypeExpense,
 	}
-	_ = spStore.Create(ctx, sp)
+	_ = spStore.Create(ctx, rCtx, sp)
 
 	deps := finance.Dependencies{
 		BudgetStore:               bStore,
@@ -192,7 +212,7 @@ func TestListRecurringTransactionsAndScheduledTransactionsAggregator(t *testing.
 	agg := NewService(fs)
 
 	t.Run("ListRecurringTransactions Basic view", func(t *testing.T) {
-		page, err := agg.ListRecurringTransactions(ctx, spaceID, ViewBasic, finance.ListRecurringTransactionsFilter{})
+		page, err := agg.ListRecurringTransactions(ctx, rCtx, ViewBasic, finance.ListRecurringTransactionsFilter{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -205,7 +225,7 @@ func TestListRecurringTransactionsAndScheduledTransactionsAggregator(t *testing.
 	})
 
 	t.Run("ListRecurringTransactions Full view", func(t *testing.T) {
-		page, err := agg.ListRecurringTransactions(ctx, spaceID, ViewFull, finance.ListRecurringTransactionsFilter{})
+		page, err := agg.ListRecurringTransactions(ctx, rCtx, ViewFull, finance.ListRecurringTransactionsFilter{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -221,7 +241,7 @@ func TestListRecurringTransactionsAndScheduledTransactionsAggregator(t *testing.
 	})
 
 	t.Run("ListScheduledTransactions Basic view", func(t *testing.T) {
-		page, err := agg.ListScheduledTransactions(ctx, spaceID, ViewBasic, finance.ListScheduledTransactionsFilter{})
+		page, err := agg.ListScheduledTransactions(ctx, rCtx, ViewBasic, finance.ListScheduledTransactionsFilter{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -234,7 +254,7 @@ func TestListRecurringTransactionsAndScheduledTransactionsAggregator(t *testing.
 	})
 
 	t.Run("ListScheduledTransactions Full view", func(t *testing.T) {
-		page, err := agg.ListScheduledTransactions(ctx, spaceID, ViewFull, finance.ListScheduledTransactionsFilter{})
+		page, err := agg.ListScheduledTransactions(ctx, rCtx, ViewFull, finance.ListScheduledTransactionsFilter{})
 		if err != nil {
 			t.Fatal(err)
 		}

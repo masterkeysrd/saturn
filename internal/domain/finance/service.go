@@ -43,12 +43,12 @@ func NewService(deps Dependencies) *Service {
 }
 
 // ConfigureFinance initializes workspace base currency settings if not already configured.
-func (s *Service) ConfigureFinance(ctx context.Context, settings *FinanceSettings) (*FinanceSettings, error) {
+func (s *Service) ConfigureFinance(ctx context.Context, rCtx Context, settings *FinanceSettings) (*FinanceSettings, error) {
 	if err := settings.Validate(); err != nil {
 		return nil, err
 	}
 
-	existing, err := s.deps.SettingsStore.GetByID(ctx, settings.SpaceID)
+	existing, err := s.deps.SettingsStore.GetByID(ctx, rCtx)
 	if err == nil {
 		// Base currency is immutable once configured
 		return existing, nil
@@ -62,14 +62,15 @@ func (s *Service) ConfigureFinance(ctx context.Context, settings *FinanceSetting
 	settings.CreateTime = now
 	settings.UpdateTime = now
 
-	if err := s.deps.SettingsStore.Create(ctx, settings); err != nil {
+	if err := s.deps.SettingsStore.Create(ctx, rCtx, settings); err != nil {
 		return nil, err
 	}
 
 	// Automatically initialize a default Cash Account for this space
 	if defaultCashAcc, err := settings.NewDefaultCashAccount(); err == nil {
-		if _, err := s.CreateAccount(ctx, defaultCashAcc); err != nil {
-			log.Warn(ctx, "failed to create default cash account", log.String("space_id", string(settings.SpaceID)), log.Err(err))
+		systemCtx := NewRequestContext(rCtx.SpaceID(), "system", rCtx.Location(), settings.BaseCurrency)
+		if _, err := s.CreateAccount(ctx, systemCtx, defaultCashAcc); err != nil {
+			log.Warn(ctx, "failed to create default cash account", log.String("space_id", string(rCtx.SpaceID())), log.Err(err))
 		}
 	}
 
@@ -77,15 +78,15 @@ func (s *Service) ConfigureFinance(ctx context.Context, settings *FinanceSetting
 }
 
 // GetFinanceSettings retrieves settings for a workspace.
-func (s *Service) GetFinanceSettings(ctx context.Context, spaceID SpaceID) (*FinanceSettings, error) {
-	if string(spaceID) == "" {
+func (s *Service) GetFinanceSettings(ctx context.Context, rCtx Context) (*FinanceSettings, error) {
+	if string(rCtx.SpaceID()) == "" {
 		return nil, errors.New("space ID is required")
 	}
-	return s.deps.SettingsStore.GetByID(ctx, spaceID)
+	return s.deps.SettingsStore.GetByID(ctx, rCtx)
 }
 
 // CreateBudget creates a new budget template in a workspace.
-func (s *Service) CreateBudget(ctx context.Context, budget *Budget) (*Budget, error) {
+func (s *Service) CreateBudget(ctx context.Context, rCtx Context, budget *Budget) (*Budget, error) {
 	if err := budget.Init(); err != nil {
 		return nil, err
 	}
@@ -93,12 +94,12 @@ func (s *Service) CreateBudget(ctx context.Context, budget *Budget) (*Budget, er
 		return nil, err
 	}
 
-	// Verify workspace settings exist
-	if _, err := s.deps.SettingsStore.GetByID(ctx, budget.SpaceID); err != nil {
-		return nil, fmt.Errorf("verify workspace settings: %w", err)
+	// Verify workspace base currency is configured
+	if rCtx.BaseCurrency() == "" {
+		return nil, fmt.Errorf("workspace base currency is not configured")
 	}
 
-	if err := s.deps.BudgetStore.Create(ctx, budget); err != nil {
+	if err := s.deps.BudgetStore.Create(ctx, rCtx, budget); err != nil {
 		return nil, err
 	}
 
@@ -107,10 +108,10 @@ func (s *Service) CreateBudget(ctx context.Context, budget *Budget) (*Budget, er
 
 // UpdateBudget modifies an existing budget template, optionally applying a field mask.
 // If mask is nil or empty, all registered patchable fields are updated.
-func (s *Service) UpdateBudget(ctx context.Context, budget *Budget, mask []string) (*Budget, error) {
+func (s *Service) UpdateBudget(ctx context.Context, rCtx Context, budget *Budget, mask []string) (*Budget, error) {
 	const op errors.Op = "domain/finance.UpdateBudget"
 
-	existing, err := s.deps.BudgetStore.GetByID(ctx, budget.SpaceID, budget.ID)
+	existing, err := s.deps.BudgetStore.GetByID(ctx, rCtx, budget.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +124,7 @@ func (s *Service) UpdateBudget(ctx context.Context, budget *Budget, mask []strin
 		return nil, err
 	}
 
-	if err := s.deps.BudgetStore.Update(ctx, existing); err != nil {
+	if err := s.deps.BudgetStore.Update(ctx, rCtx, existing); err != nil {
 		return nil, err
 	}
 
@@ -131,14 +132,14 @@ func (s *Service) UpdateBudget(ctx context.Context, budget *Budget, mask []strin
 }
 
 // DeleteBudget removes a budget.
-func (s *Service) DeleteBudget(ctx context.Context, spaceID SpaceID, id BudgetID, opts DeleteOptions) error {
+func (s *Service) DeleteBudget(ctx context.Context, rCtx Context, id BudgetID, opts DeleteOptions) error {
 	const op errors.Op = "domain/finance.DeleteBudget"
 
 	if string(id) == "" {
 		return errors.E(op, errors.Invalid, "budget ID is required")
 	}
 
-	hasTxns, err := s.deps.TransactionStore.HasTransactions(ctx, spaceID, &TransactionFilter{
+	hasTxns, err := s.deps.TransactionStore.HasTransactions(ctx, rCtx, &TransactionFilter{
 		BudgetID: &id,
 	})
 	if err != nil {
@@ -148,7 +149,7 @@ func (s *Service) DeleteBudget(ctx context.Context, spaceID SpaceID, id BudgetID
 		return errors.E(op, errors.Precondition, BudgetHasTransactions, "cannot delete budget with existing transactions. deactivate it instead")
 	}
 
-	hasScheduled, err := s.deps.ScheduledTransactionStore.HasScheduledTransactions(ctx, spaceID, &ListScheduledTransactionsFilter{
+	hasScheduled, err := s.deps.ScheduledTransactionStore.HasScheduledTransactions(ctx, rCtx, &ListScheduledTransactionsFilter{
 		BudgetID: &id,
 	})
 	if err != nil {
@@ -158,33 +159,36 @@ func (s *Service) DeleteBudget(ctx context.Context, spaceID SpaceID, id BudgetID
 		return errors.E(op, errors.Precondition, BudgetHasScheduledTransactions, "cannot delete budget with active scheduled transactions. cancel or reassign scheduled transactions first")
 	}
 
-	return s.deps.BudgetStore.Delete(ctx, spaceID, id, opts)
+	return s.deps.BudgetStore.Delete(ctx, rCtx, id, opts)
 }
 
 // ListBudgets returns the workspace's budgets.
-func (s *Service) ListBudgets(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) (*paging.Page[*Budget], error) {
-	if string(spaceID) == "" {
+func (s *Service) ListBudgets(ctx context.Context, rCtx Context, filter *ListBudgetsFilter) (*paging.Page[*Budget], error) {
+	if string(rCtx.SpaceID()) == "" {
 		return nil, errors.New("space ID is required")
 	}
-	return s.deps.BudgetStore.ListBySpace(ctx, spaceID, filter)
+	return s.deps.BudgetStore.ListBySpace(ctx, rCtx, filter)
 }
 
 // GetOrCreatePeriod retrieves or lazily spawns a budget period for a target date.
-func (s *Service) GetOrCreatePeriod(ctx context.Context, spaceID SpaceID, budgetID BudgetID, date time.Time) (*BudgetPeriod, error) {
-	budget, err := s.deps.BudgetStore.GetByID(ctx, spaceID, budgetID)
+func (s *Service) GetOrCreatePeriod(ctx context.Context, rCtx Context, budgetID BudgetID, date time.Time) (*BudgetPeriod, error) {
+	budget, err := s.deps.BudgetStore.GetByID(ctx, rCtx, budgetID)
 	if err != nil {
 		return nil, err
 	}
 
-	settings, err := s.deps.SettingsStore.GetByID(ctx, budget.SpaceID)
-	if err != nil {
-		return nil, fmt.Errorf("fetch workspace base currency settings: %w", err)
+	if rCtx.BaseCurrency() == "" {
+		return nil, fmt.Errorf("workspace base currency is not configured")
 	}
 
-	startDate, endDate := budget.CalculateBounds(date)
+	startDate, endDate := budget.CalculateBounds(date, rCtx.Location())
 
 	// Try lookup
-	period, err := s.deps.PeriodStore.GetByRange(ctx, budgetID, startDate, endDate)
+	period, err := s.deps.PeriodStore.GetByRange(ctx, rCtx, PeriodRangeKey{
+		BudgetID:  budgetID,
+		StartDate: startDate,
+		EndDate:   endDate,
+	})
 	if err == nil {
 		return period, nil
 	}
@@ -193,21 +197,24 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, spaceID SpaceID, budget
 	}
 
 	// Determine exchange rate to base currency
-	rate, err := s.resolveExchangeRate(ctx, budget.SpaceID, budget.Currency, settings.BaseCurrency, date, true)
+	rate, err := s.resolveExchangeRate(ctx, rCtx, budget.Currency, rCtx.BaseCurrency(), date, true)
 	if err != nil {
 		return nil, err
 	}
 
 	newPeriod, err := budget.NewPeriod(NewPeriodOpts{
 		TargetDate:         date,
-		BaseCurrency:       settings.BaseCurrency,
+		StartDate:          startDate,
+		EndDate:            endDate,
+		BaseCurrency:       rCtx.BaseCurrency(),
 		ExchangeRateToBase: rate,
+		Location:           rCtx.Location(),
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.deps.PeriodStore.Create(ctx, newPeriod); err != nil {
+	if err := s.deps.PeriodStore.Create(ctx, rCtx, newPeriod); err != nil {
 		return nil, err
 	}
 
@@ -215,22 +222,20 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, spaceID SpaceID, budget
 }
 
 // GetOrCreatePeriods retrieves or lazily spawns budget periods for a slice of budgets in batch.
-func (s *Service) GetOrCreatePeriods(ctx context.Context, budgets []*Budget, date time.Time) (map[BudgetID]*BudgetPeriod, error) {
+func (s *Service) GetOrCreatePeriods(ctx context.Context, rCtx Context, budgets []*Budget, date time.Time) (map[BudgetID]*BudgetPeriod, error) {
 	if len(budgets) == 0 {
 		return make(map[BudgetID]*BudgetPeriod), nil
 	}
 
-	// Fetch workspace base currency settings once (using the SpaceID of the first budget)
-	settings, err := s.deps.SettingsStore.GetByID(ctx, budgets[0].SpaceID)
-	if err != nil {
-		return nil, fmt.Errorf("fetch workspace base currency settings: %w", err)
+	if rCtx.BaseCurrency() == "" {
+		return nil, fmt.Errorf("workspace base currency is not configured")
 	}
 
 	// Calculate bounds for each budget
 	keys := make([]PeriodRangeKey, len(budgets))
 	boundsMap := make(map[BudgetID]struct{ Start, End time.Time })
 	for i, b := range budgets {
-		start, end := b.CalculateBounds(date)
+		start, end := b.CalculateBounds(date, rCtx.Location())
 		keys[i] = PeriodRangeKey{
 			BudgetID:  b.ID,
 			StartDate: start,
@@ -240,7 +245,7 @@ func (s *Service) GetOrCreatePeriods(ctx context.Context, budgets []*Budget, dat
 	}
 
 	// 1. Bulk-retrieve existing periods in a single DB query
-	existingPeriods, err := s.deps.PeriodStore.GetByRanges(ctx, keys)
+	existingPeriods, err := s.deps.PeriodStore.GetByRanges(ctx, rCtx, keys)
 	if err != nil {
 		return nil, fmt.Errorf("bulk fetch existing budget periods: %w", err)
 	}
@@ -259,7 +264,7 @@ func (s *Service) GetOrCreatePeriods(ctx context.Context, budgets []*Budget, dat
 		bounds := boundsMap[b.ID]
 
 		// Determine exchange rate to base currency
-		rate, err := s.resolveExchangeRate(ctx, b.SpaceID, b.Currency, settings.BaseCurrency, date, true)
+		rate, err := s.resolveExchangeRate(ctx, rCtx, b.Currency, rCtx.BaseCurrency(), date, true)
 		if err != nil {
 			return nil, err
 		}
@@ -267,14 +272,15 @@ func (s *Service) GetOrCreatePeriods(ctx context.Context, budgets []*Budget, dat
 		newPeriod, err := b.NewPeriod(NewPeriodOpts{
 			StartDate:          bounds.Start,
 			EndDate:            bounds.End,
-			BaseCurrency:       settings.BaseCurrency,
+			BaseCurrency:       rCtx.BaseCurrency(),
 			ExchangeRateToBase: rate,
+			Location:           rCtx.Location(),
 		})
 		if err != nil {
 			return nil, err
 		}
 
-		if err := s.deps.PeriodStore.Create(ctx, newPeriod); err != nil {
+		if err := s.deps.PeriodStore.Create(ctx, rCtx, newPeriod); err != nil {
 			return nil, fmt.Errorf("create budget period: %w", err)
 		}
 
@@ -285,23 +291,21 @@ func (s *Service) GetOrCreatePeriods(ctx context.Context, budgets []*Budget, dat
 }
 
 // AggregateSpentBatch calculates dynamic transaction spent progress for a list of budget period IDs.
-func (s *Service) AggregateSpentBatch(ctx context.Context, periodIDs []PeriodID) ([]PeriodSpent, error) {
-	if s.deps.TransactionStore == nil {
-		return nil, nil
-	}
-	return s.deps.TransactionStore.AggregateSpentBatch(ctx, periodIDs)
+func (s *Service) AggregateSpentBatch(ctx context.Context, rCtx Context, periodIDs []PeriodID) ([]PeriodSpent, error) {
+	return s.deps.TransactionStore.AggregateSpentBatch(ctx, rCtx, periodIDs)
 }
 
 // UpdatePeriodLimit modifies the budget limit of a specific period.
-func (s *Service) UpdatePeriodLimit(ctx context.Context, id PeriodID, limit int64) error {
+func (s *Service) UpdatePeriodLimit(ctx context.Context, rCtx Context, id PeriodID, limit int64) error {
 	if limit <= 0 {
 		return errors.New("limit must be greater than zero")
 	}
-	return s.deps.PeriodStore.UpdateLimit(ctx, id, limit)
+	return s.deps.PeriodStore.UpdateLimit(ctx, rCtx, id, limit)
 }
 
 // CreateExchangeRate registers a new daily rate record.
-func (s *Service) CreateExchangeRate(ctx context.Context, rate *ExchangeRate) (*ExchangeRate, error) {
+func (s *Service) CreateExchangeRate(ctx context.Context, rCtx Context, rate *ExchangeRate) (*ExchangeRate, error) {
+	rate.RateDate = rCtx.Date(rate.RateDate)
 	if err := rate.Init(); err != nil {
 		return nil, err
 	}
@@ -309,17 +313,17 @@ func (s *Service) CreateExchangeRate(ctx context.Context, rate *ExchangeRate) (*
 		return nil, fmt.Errorf("validate exchange rate: %w", err)
 	}
 
-	if err := s.deps.ExchangeRateStore.Create(ctx, rate); err != nil {
+	if err := s.deps.ExchangeRateStore.Create(ctx, rCtx, rate); err != nil {
 		return nil, err
 	}
 	return rate, nil
 }
 
 // GetExchangeRateByID retrieves an exact exchange rate record by its ID.
-func (s *Service) GetExchangeRateByID(ctx context.Context, spaceID SpaceID, id string) (*ExchangeRate, error) {
+func (s *Service) GetExchangeRateByID(ctx context.Context, rCtx Context, id string) (*ExchangeRate, error) {
 	const op errors.Op = "domain/finance.GetExchangeRateByID"
 
-	if err := spaceID.Validate(); err != nil {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, errors.E(op, errors.Invalid, err)
 	}
 	from, to, t, err := ParseExchangeRateID(id)
@@ -327,19 +331,18 @@ func (s *Service) GetExchangeRateByID(ctx context.Context, spaceID SpaceID, id s
 		return nil, errors.E(op, errors.NotExist, ExchangeRateNotFound, err)
 	}
 	key := ExchangeRateKey{
-		SpaceID:      spaceID,
 		FromCurrency: from,
 		ToCurrency:   to,
 		RateDate:     t,
 	}
-	return s.deps.ExchangeRateStore.GetExactRate(ctx, key)
+	return s.deps.ExchangeRateStore.GetExactRate(ctx, rCtx, key)
 }
 
 // UpdateExchangeRate corrects the multiplier on an existing exchange rate record.
-func (s *Service) UpdateExchangeRate(ctx context.Context, spaceID SpaceID, id string, rate *ExchangeRate) (*ExchangeRate, error) {
+func (s *Service) UpdateExchangeRate(ctx context.Context, rCtx Context, id string, rate *ExchangeRate) (*ExchangeRate, error) {
 	const op errors.Op = "domain/finance.UpdateExchangeRate"
 
-	if err := spaceID.Validate(); err != nil {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, errors.E(op, errors.Invalid, err)
 	}
 
@@ -348,8 +351,7 @@ func (s *Service) UpdateExchangeRate(ctx context.Context, spaceID SpaceID, id st
 		return nil, errors.E(op, errors.NotExist, ExchangeRateNotFound, err)
 	}
 
-	existing, err := s.deps.ExchangeRateStore.GetExactRate(ctx, ExchangeRateKey{
-		SpaceID:      spaceID,
+	existing, err := s.deps.ExchangeRateStore.GetExactRate(ctx, rCtx, ExchangeRateKey{
 		FromCurrency: from,
 		ToCurrency:   to,
 		RateDate:     t,
@@ -363,25 +365,25 @@ func (s *Service) UpdateExchangeRate(ctx context.Context, spaceID SpaceID, id st
 		return nil, errors.E(op, errors.Invalid, err)
 	}
 
-	if err := s.deps.ExchangeRateStore.Update(ctx, existing); err != nil {
+	if err := s.deps.ExchangeRateStore.Update(ctx, rCtx, existing); err != nil {
 		return nil, err
 	}
 	return existing, nil
 }
 
 // ListExchangeRates retrieves paginated rate records.
-func (s *Service) ListExchangeRates(ctx context.Context, spaceID SpaceID, filter *ListExchangeRatesFilter) ([]*ExchangeRate, string, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) ListExchangeRates(ctx context.Context, rCtx Context, filter *ListExchangeRatesFilter) ([]*ExchangeRate, string, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, "", fmt.Errorf("validate space ID: %w", err)
 	}
-	return s.deps.ExchangeRateStore.ListBySpace(ctx, spaceID, filter)
+	return s.deps.ExchangeRateStore.ListBySpace(ctx, rCtx, filter)
 }
 
 // DeleteExchangeRateByID removes a daily rate conversion rule by ID.
-func (s *Service) DeleteExchangeRateByID(ctx context.Context, spaceID SpaceID, id string) error {
+func (s *Service) DeleteExchangeRateByID(ctx context.Context, rCtx Context, id string) error {
 	const op errors.Op = "domain/finance.DeleteExchangeRateByID"
 
-	if err := spaceID.Validate(); err != nil {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return errors.E(op, errors.Invalid, err)
 	}
 	from, to, t, err := ParseExchangeRateID(id)
@@ -389,19 +391,18 @@ func (s *Service) DeleteExchangeRateByID(ctx context.Context, spaceID SpaceID, i
 		return errors.E(op, errors.NotExist, ExchangeRateNotFound, err)
 	}
 	key := ExchangeRateKey{
-		SpaceID:      spaceID,
 		FromCurrency: from,
 		ToCurrency:   to,
 		RateDate:     t,
 	}
-	return s.deps.ExchangeRateStore.Delete(ctx, key)
+	return s.deps.ExchangeRateStore.Delete(ctx, rCtx, key)
 }
 
 // getExchangeRate resolves the exchange rate for the given key.
 // It first looks for the closest rate on or before the target date (backward).
 // If no such rate exists, it falls back to the closest rate after the target date (forward fallback).
-func (s *Service) getExchangeRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error) {
-	rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, key)
+func (s *Service) getExchangeRate(ctx context.Context, rCtx Context, key ExchangeRateKey) (*ExchangeRate, error) {
+	rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, rCtx, key)
 	if err == nil {
 		return rateRecord, nil
 	}
@@ -409,21 +410,20 @@ func (s *Service) getExchangeRate(ctx context.Context, key ExchangeRateKey) (*Ex
 		return nil, err
 	}
 
-	return s.deps.ExchangeRateStore.GetNextRate(ctx, key)
+	return s.deps.ExchangeRateStore.GetNextRate(ctx, rCtx, key)
 }
 
 // resolveExchangeRate returns 1.0 for matching currencies, or queries the exchange rate store for cross-currency rates.
 // If allowNotFoundFallback is true and no rate is configured, it returns 0.0 without failing.
-func (s *Service) resolveExchangeRate(ctx context.Context, spaceID SpaceID, from, to Currency, date time.Time, allowNotFoundFallback bool) (float64, error) {
+func (s *Service) resolveExchangeRate(ctx context.Context, rCtx Context, from, to Currency, date time.Time, allowNotFoundFallback bool) (float64, error) {
 	const op errors.Op = "domain/finance.resolveExchangeRate"
 	if from == to {
 		return 1.0, nil
 	}
-	rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
-		SpaceID:      spaceID,
+	rateRecord, err := s.getExchangeRate(ctx, rCtx, ExchangeRateKey{
 		FromCurrency: from,
 		ToCurrency:   to,
-		RateDate:     date,
+		RateDate:     rCtx.Date(date),
 	})
 	if err != nil {
 		if errors.Is(err, errors.NotExist) {
@@ -438,7 +438,7 @@ func (s *Service) resolveExchangeRate(ctx context.Context, spaceID SpaceID, from
 }
 
 // CreateExpense logs a new expense transaction.
-func (s *Service) CreateExpense(ctx context.Context, txn *Transaction) (*Transaction, error) {
+func (s *Service) CreateExpense(ctx context.Context, rCtx Context, txn *Transaction) (*Transaction, error) {
 	txn.Type = TransactionTypeExpense
 	if txn.BudgetID == nil {
 		return nil, errors.New("expense transaction requires a budget ID")
@@ -452,14 +452,14 @@ func (s *Service) CreateExpense(ctx context.Context, txn *Transaction) (*Transac
 		txn.ID = tID
 	}
 
-	if err := s.createTransaction(ctx, txn); err != nil {
+	if err := s.createTransaction(ctx, rCtx, txn); err != nil {
 		return nil, err
 	}
 	return txn, nil
 }
 
 // CreateIncome logs a new income transaction.
-func (s *Service) CreateIncome(ctx context.Context, txn *Transaction) (*Transaction, error) {
+func (s *Service) CreateIncome(ctx context.Context, rCtx Context, txn *Transaction) (*Transaction, error) {
 	txn.Type = TransactionTypeIncome
 	txn.BudgetID = nil
 
@@ -471,58 +471,57 @@ func (s *Service) CreateIncome(ctx context.Context, txn *Transaction) (*Transact
 		txn.ID = tID
 	}
 
-	if err := s.createTransaction(ctx, txn); err != nil {
+	if err := s.createTransaction(ctx, rCtx, txn); err != nil {
 		return nil, err
 	}
 	return txn, nil
 }
 
 // GetTransaction retrieves a transaction by ID for a space.
-func (s *Service) GetTransaction(ctx context.Context, spaceID SpaceID, id TransactionID) (*Transaction, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) GetTransaction(ctx context.Context, rCtx Context, id TransactionID) (*Transaction, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, fmt.Errorf("validate space ID: %w", err)
 	}
 	if err := id.Validate(); err != nil {
 		return nil, fmt.Errorf("validate transaction ID: %w", err)
 	}
-	return s.deps.TransactionStore.GetByID(ctx, spaceID, id)
+	return s.deps.TransactionStore.GetByID(ctx, rCtx, id)
 }
 
 // DeleteTransaction removes any logged transaction and reverts its account balance impact.
-func (s *Service) DeleteTransaction(ctx context.Context, spaceID SpaceID, id TransactionID) error {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) DeleteTransaction(ctx context.Context, rCtx Context, id TransactionID) error {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return fmt.Errorf("validate space ID: %w", err)
 	}
 	if err := id.Validate(); err != nil {
 		return fmt.Errorf("validate transaction ID: %w", err)
 	}
-	existing, err := s.deps.TransactionStore.GetByID(ctx, spaceID, id)
+	existing, err := s.deps.TransactionStore.GetByID(ctx, rCtx, id)
 	if err != nil {
 		return fmt.Errorf("fetch existing transaction to delete: %w", err)
 	}
-	return s.deleteTransaction(ctx, existing)
+	return s.deleteTransaction(ctx, rCtx, existing)
 }
 
 // UpdateExpense modifies an existing expense transaction.
-func (s *Service) UpdateExpense(ctx context.Context, txn *Transaction) (*Transaction, error) {
+func (s *Service) UpdateExpense(ctx context.Context, rCtx Context, txn *Transaction) (*Transaction, error) {
 	txn.Type = TransactionTypeExpense
 	if txn.BudgetID == nil {
 		return nil, errors.New("expense transaction requires a budget ID")
 	}
 
-	existing, err := s.deps.TransactionStore.GetByID(ctx, txn.SpaceID, txn.ID)
+	existing, err := s.deps.TransactionStore.GetByID(ctx, rCtx, txn.ID)
 	if err != nil {
 		return nil, fmt.Errorf("fetch existing transaction: %w", err)
 	}
 
-	if err := s.updateTransaction(ctx, txn, existing); err != nil {
+	if err := s.updateTransaction(ctx, rCtx, txn, existing); err != nil {
 		return nil, err
 	}
 
 	// Log manual edit transaction event with field diff
 	if diff := existing.Diff(txn); len(diff) > 0 {
-		_, _ = s.LogTransactionEvent(ctx, &TransactionEvent{
-			SpaceID:       txn.SpaceID,
+		_, _ = s.LogTransactionEvent(ctx, rCtx, &TransactionEvent{
 			TransactionID: txn.ID,
 			EventType:     "MANUAL_EDIT",
 			Metadata:      diff,
@@ -533,23 +532,22 @@ func (s *Service) UpdateExpense(ctx context.Context, txn *Transaction) (*Transac
 }
 
 // UpdateIncome modifies an existing income transaction.
-func (s *Service) UpdateIncome(ctx context.Context, txn *Transaction) (*Transaction, error) {
+func (s *Service) UpdateIncome(ctx context.Context, rCtx Context, txn *Transaction) (*Transaction, error) {
 	txn.Type = TransactionTypeIncome
 	txn.BudgetID = nil
 
-	existing, err := s.deps.TransactionStore.GetByID(ctx, txn.SpaceID, txn.ID)
+	existing, err := s.deps.TransactionStore.GetByID(ctx, rCtx, txn.ID)
 	if err != nil {
 		return nil, fmt.Errorf("fetch existing transaction: %w", err)
 	}
 
-	if err := s.updateTransaction(ctx, txn, existing); err != nil {
+	if err := s.updateTransaction(ctx, rCtx, txn, existing); err != nil {
 		return nil, err
 	}
 
 	// Log manual edit transaction event with field diff
 	if diff := existing.Diff(txn); len(diff) > 0 {
-		_, _ = s.LogTransactionEvent(ctx, &TransactionEvent{
-			SpaceID:       txn.SpaceID,
+		_, _ = s.LogTransactionEvent(ctx, rCtx, &TransactionEvent{
 			TransactionID: txn.ID,
 			EventType:     "MANUAL_EDIT",
 			Metadata:      diff,
@@ -560,27 +558,25 @@ func (s *Service) UpdateIncome(ctx context.Context, txn *Transaction) (*Transact
 }
 
 // ListTransactions retrieves paginated transactions.
-func (s *Service) ListTransactions(ctx context.Context, spaceID SpaceID, filter *TransactionFilter) (*paging.Page[*Transaction], error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) ListTransactions(ctx context.Context, rCtx Context, filter *TransactionFilter) (*paging.Page[*Transaction], error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, fmt.Errorf("validate space ID: %w", err)
 	}
-	return s.deps.TransactionStore.ListBySpace(ctx, spaceID, filter)
+	return s.deps.TransactionStore.ListBySpace(ctx, rCtx, filter)
 }
 
 // GetSpentInsights computes aggregated outflow analytics and trends for a space.
-func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsRequest) (*SpentInsights, error) {
-	g, start, end, err := req.ResolveRange()
+func (s *Service) GetSpentInsights(ctx context.Context, rCtx Context, req *GetSpentInsightsRequest) (*SpentInsights, error) {
+	if rCtx.BaseCurrency() == "" {
+		return nil, fmt.Errorf("workspace base currency is not configured")
+	}
+
+	g, start, end, err := req.ResolveRange(rCtx.Location())
 	if err != nil {
 		return nil, err
 	}
 
-	settings, err := s.deps.SettingsStore.GetByID(ctx, req.SpaceID)
-	if err != nil {
-		return nil, fmt.Errorf("verify workspace settings: %w", err)
-	}
-
-	trendRows, err := s.deps.InsightsStore.GetSpentTrend(ctx, &SpentTrendFilter{
-		SpaceID:     req.SpaceID,
+	trendRows, err := s.deps.InsightsStore.GetSpentTrend(ctx, rCtx, &SpentTrendFilter{
 		Granularity: g,
 		StartDate:   start,
 		EndDate:     end,
@@ -589,8 +585,7 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 		return nil, fmt.Errorf("fetch spent trend: %w", err)
 	}
 
-	distRows, err := s.deps.InsightsStore.GetBudgetDistribution(ctx, &BudgetDistributionFilter{
-		SpaceID:   req.SpaceID,
+	distRows, err := s.deps.InsightsStore.GetBudgetDistribution(ctx, rCtx, &BudgetDistributionFilter{
 		StartDate: start,
 		EndDate:   end,
 	})
@@ -598,8 +593,7 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 		return nil, fmt.Errorf("fetch budget distributions: %w", err)
 	}
 
-	topRows, err := s.deps.InsightsStore.GetTopExpenses(ctx, &TopExpensesFilter{
-		SpaceID:   req.SpaceID,
+	topRows, err := s.deps.InsightsStore.GetTopExpenses(ctx, rCtx, &TopExpensesFilter{
 		StartDate: start,
 		EndDate:   end,
 		Limit:     5,
@@ -608,23 +602,21 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 		return nil, fmt.Errorf("fetch top expenses: %w", err)
 	}
 
-	return BuildSpentInsights(g, start, end, string(settings.BaseCurrency), trendRows, distRows, topRows), nil
+	return BuildSpentInsights(g, start, end, string(rCtx.BaseCurrency()), trendRows, distRows, topRows), nil
 }
 
 // GetIncomeInsights computes aggregated inflow analytics and trends for a space.
-func (s *Service) GetIncomeInsights(ctx context.Context, req *GetSpentInsightsRequest) (*IncomeInsights, error) {
-	g, start, end, err := req.ResolveRange()
+func (s *Service) GetIncomeInsights(ctx context.Context, rCtx Context, req *GetSpentInsightsRequest) (*IncomeInsights, error) {
+	if rCtx.BaseCurrency() == "" {
+		return nil, fmt.Errorf("workspace base currency is not configured")
+	}
+
+	g, start, end, err := req.ResolveRange(rCtx.Location())
 	if err != nil {
 		return nil, err
 	}
 
-	settings, err := s.deps.SettingsStore.GetByID(ctx, req.SpaceID)
-	if err != nil {
-		return nil, fmt.Errorf("verify workspace settings: %w", err)
-	}
-
-	trendRows, err := s.deps.InsightsStore.GetIncomeTrend(ctx, &IncomeTrendFilter{
-		SpaceID:     req.SpaceID,
+	trendRows, err := s.deps.InsightsStore.GetIncomeTrend(ctx, rCtx, &IncomeTrendFilter{
 		Granularity: g,
 		StartDate:   start,
 		EndDate:     end,
@@ -633,8 +625,7 @@ func (s *Service) GetIncomeInsights(ctx context.Context, req *GetSpentInsightsRe
 		return nil, fmt.Errorf("fetch income trend: %w", err)
 	}
 
-	sourceRows, err := s.deps.InsightsStore.GetIncomeSources(ctx, &IncomeSourcesFilter{
-		SpaceID:   req.SpaceID,
+	sourceRows, err := s.deps.InsightsStore.GetIncomeSources(ctx, rCtx, &IncomeSourcesFilter{
 		StartDate: start,
 		EndDate:   end,
 	})
@@ -642,8 +633,7 @@ func (s *Service) GetIncomeInsights(ctx context.Context, req *GetSpentInsightsRe
 		return nil, fmt.Errorf("fetch income sources: %w", err)
 	}
 
-	topRows, err := s.deps.InsightsStore.GetTopIncomes(ctx, &TopIncomesFilter{
-		SpaceID:   req.SpaceID,
+	topRows, err := s.deps.InsightsStore.GetTopIncomes(ctx, rCtx, &TopIncomesFilter{
 		StartDate: start,
 		EndDate:   end,
 		Limit:     5,
@@ -652,11 +642,15 @@ func (s *Service) GetIncomeInsights(ctx context.Context, req *GetSpentInsightsRe
 		return nil, fmt.Errorf("fetch top incomes: %w", err)
 	}
 
-	return BuildIncomeInsights(g, start, end, string(settings.BaseCurrency), trendRows, sourceRows, topRows), nil
+	return BuildIncomeInsights(g, start, end, string(rCtx.BaseCurrency()), trendRows, sourceRows, topRows), nil
 }
 
 // CreateRecurringTransaction configures a new recurring transaction rule.
-func (s *Service) CreateRecurringTransaction(ctx context.Context, re *RecurringTransaction) (*RecurringTransaction, error) {
+// CreateRecurringTransaction configures a new recurring transaction rule.
+func (s *Service) CreateRecurringTransaction(ctx context.Context, rCtx Context, re *RecurringTransaction) (*RecurringTransaction, error) {
+	if !re.NextDueDate.IsZero() {
+		re.NextDueDate = rCtx.Date(re.NextDueDate)
+	}
 	if err := re.Init(); err != nil {
 		return nil, err
 	}
@@ -664,26 +658,26 @@ func (s *Service) CreateRecurringTransaction(ctx context.Context, re *RecurringT
 		return nil, err
 	}
 
-	if err := s.deps.RecurringTransactionStore.Create(ctx, re); err != nil {
+	if err := s.deps.RecurringTransactionStore.Create(ctx, rCtx, re); err != nil {
 		return nil, err
 	}
 	return re, nil
 }
 
 // GetRecurringTransaction retrieves a recurring transaction by ID for a space.
-func (s *Service) GetRecurringTransaction(ctx context.Context, spaceID SpaceID, id RecurringTransactionID) (*RecurringTransaction, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) GetRecurringTransaction(ctx context.Context, rCtx Context, id RecurringTransactionID) (*RecurringTransaction, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 	if err := id.Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.RecurringTransactionStore.GetByID(ctx, spaceID, id)
+	return s.deps.RecurringTransactionStore.GetByID(ctx, rCtx, id)
 }
 
 // GetRecurringTransactions retrieves a batch of recurring transactions by their IDs for a space.
-func (s *Service) GetRecurringTransactions(ctx context.Context, spaceID SpaceID, ids []RecurringTransactionID) ([]*RecurringTransaction, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) GetRecurringTransactions(ctx context.Context, rCtx Context, ids []RecurringTransactionID) ([]*RecurringTransaction, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 	for _, id := range ids {
@@ -691,15 +685,15 @@ func (s *Service) GetRecurringTransactions(ctx context.Context, spaceID SpaceID,
 			return nil, err
 		}
 	}
-	return s.deps.RecurringTransactionStore.GetByIDs(ctx, spaceID, ids)
+	return s.deps.RecurringTransactionStore.GetByIDs(ctx, rCtx, ids)
 }
 
 // UpdateRecurringTransaction modifies an existing recurring transaction template, optionally applying a field mask.
 // If mask is nil or empty, all registered patchable fields are updated.
-func (s *Service) UpdateRecurringTransaction(ctx context.Context, re *RecurringTransaction, mask []string) (*RecurringTransaction, error) {
+func (s *Service) UpdateRecurringTransaction(ctx context.Context, rCtx Context, re *RecurringTransaction, mask []string) (*RecurringTransaction, error) {
 	const op errors.Op = "domain/finance.UpdateRecurringTransaction"
 
-	existing, err := s.deps.RecurringTransactionStore.GetByID(ctx, re.SpaceID, re.ID)
+	existing, err := s.deps.RecurringTransactionStore.GetByID(ctx, rCtx, re.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -712,38 +706,42 @@ func (s *Service) UpdateRecurringTransaction(ctx context.Context, re *RecurringT
 		return nil, err
 	}
 
+	if !existing.NextDueDate.IsZero() {
+		existing.NextDueDate = rCtx.Date(existing.NextDueDate)
+	}
+
 	if err := existing.Validate(); err != nil {
 		return nil, err
 	}
 
-	if err := s.deps.RecurringTransactionStore.Update(ctx, existing); err != nil {
+	if err := s.deps.RecurringTransactionStore.Update(ctx, rCtx, existing); err != nil {
 		return nil, err
 	}
 	return existing, nil
 }
 
 // DeleteRecurringTransaction deletes a recurring transaction rule.
-func (s *Service) DeleteRecurringTransaction(ctx context.Context, id RecurringTransactionID, opts DeleteOptions) error {
+func (s *Service) DeleteRecurringTransaction(ctx context.Context, rCtx Context, id RecurringTransactionID, opts DeleteOptions) error {
 	if err := id.Validate(); err != nil {
 		return err
 	}
-	return s.deps.RecurringTransactionStore.Delete(ctx, id, opts)
+	return s.deps.RecurringTransactionStore.Delete(ctx, rCtx, id, opts)
 }
 
 // ListRecurringTransactions lists recurring transactions for a workspace.
-func (s *Service) ListRecurringTransactions(ctx context.Context, spaceID SpaceID, filter *ListRecurringTransactionsFilter) (*paging.Page[*RecurringTransaction], error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) ListRecurringTransactions(ctx context.Context, rCtx Context, filter *ListRecurringTransactionsFilter) (*paging.Page[*RecurringTransaction], error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.RecurringTransactionStore.ListBySpace(ctx, spaceID, filter)
+	return s.deps.RecurringTransactionStore.ListBySpace(ctx, rCtx, filter)
 }
 
 // ListScheduledTransactions lists scheduled transactions for a workspace.
-func (s *Service) ListScheduledTransactions(ctx context.Context, spaceID SpaceID, filter *ListScheduledTransactionsFilter) (*paging.Page[*ScheduledTransaction], error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) ListScheduledTransactions(ctx context.Context, rCtx Context, filter *ListScheduledTransactionsFilter) (*paging.Page[*ScheduledTransaction], error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.ScheduledTransactionStore.ListBySpace(ctx, spaceID, filter)
+	return s.deps.ScheduledTransactionStore.ListBySpace(ctx, rCtx, filter)
 }
 
 // ConfirmScheduledTransactionRequest represents parameters to confirm a scheduled transaction.
@@ -760,13 +758,12 @@ type ConfirmScheduledTransactionRequest struct {
 }
 
 // ConfirmScheduledTransaction clears a scheduled transaction by promoting it to a permanent transaction.
-func (s *Service) ConfirmScheduledTransaction(ctx context.Context, req ConfirmScheduledTransactionRequest) (*Transaction, error) {
-	payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, req.SpaceID, req.TransactionID)
-	if err != nil {
-		return nil, err
+func (s *Service) ConfirmScheduledTransaction(ctx context.Context, rCtx Context, req ConfirmScheduledTransactionRequest) (*Transaction, error) {
+	if rCtx.BaseCurrency() == "" {
+		return nil, fmt.Errorf("workspace base currency is not configured")
 	}
 
-	settings, err := s.deps.SettingsStore.GetByID(ctx, payment.SpaceID)
+	payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, rCtx, req.TransactionID)
 	if err != nil {
 		return nil, err
 	}
@@ -784,24 +781,29 @@ func (s *Service) ConfirmScheduledTransaction(ctx context.Context, req ConfirmSc
 		currency = *req.Currency
 	}
 
+	txnDate := req.TransactionDate
+	if txnDate.IsZero() {
+		txnDate = rCtx.Now()
+	} else {
+		txnDate = rCtx.Date(txnDate)
+	}
+
+	effDate := req.EffectiveDate
+	if effDate.IsZero() {
+		effDate = txnDate
+	} else {
+		effDate = rCtx.Date(effDate)
+	}
+
 	// Resolve budget period for the transaction based on effectiveDate if type is Expense and budgetID is set
 	var period *BudgetPeriod
 	if payment.Type == TransactionTypeExpense && budgetID != "" {
-		budget, err := s.deps.BudgetStore.GetByID(ctx, payment.SpaceID, budgetID)
+		budget, err := s.deps.BudgetStore.GetByID(ctx, rCtx, budgetID)
 		if err != nil {
 			return nil, err
 		}
 
-		effDate := req.EffectiveDate
-		if effDate.IsZero() {
-			if req.TransactionDate.IsZero() {
-				effDate = time.Now().UTC()
-			} else {
-				effDate = req.TransactionDate
-			}
-		}
-
-		period, err = s.GetOrCreatePeriod(ctx, payment.SpaceID, budget.ID, effDate)
+		period, err = s.GetOrCreatePeriod(ctx, rCtx, budget.ID, effDate)
 		if err != nil {
 			return nil, err
 		}
@@ -812,18 +814,8 @@ func (s *Service) ConfirmScheduledTransaction(ctx context.Context, req ConfirmSc
 		actualAmount = payment.Amount
 	}
 
-	txnDate := req.TransactionDate
-	if txnDate.IsZero() {
-		txnDate = time.Now().UTC()
-	}
-
-	effDate := req.EffectiveDate
-	if effDate.IsZero() {
-		effDate = txnDate
-	}
-
 	// Calculate base currency conversion
-	rate, err := s.resolveExchangeRate(ctx, payment.SpaceID, currency, settings.BaseCurrency, txnDate, false)
+	rate, err := s.resolveExchangeRate(ctx, rCtx, currency, rCtx.BaseCurrency(), txnDate, false)
 	if err != nil {
 		return nil, err
 	}
@@ -834,11 +826,11 @@ func (s *Service) ConfirmScheduledTransaction(ctx context.Context, req ConfirmSc
 	if req.Description == "" && payment.Metadata.Description == "" {
 		switch payment.SourceType {
 		case string(SourceTypeRecurrentTransaction):
-			if exp, err := s.deps.RecurringTransactionStore.GetByID(ctx, payment.SpaceID, RecurringTransactionID(payment.SourceID)); err == nil {
+			if exp, err := s.deps.RecurringTransactionStore.GetByID(ctx, rCtx, RecurringTransactionID(payment.SourceID)); err == nil {
 				sourceFallback = exp.Name
 			}
 		case "invoice":
-			if item, err := s.deps.InboxItemStore.Get(ctx, payment.SpaceID, payment.SourceID); err == nil {
+			if item, err := s.deps.InboxItemStore.Get(ctx, rCtx, payment.SourceID); err == nil {
 				if item.VendorName != "" {
 					sourceFallback = item.VendorName
 				}
@@ -878,23 +870,23 @@ func (s *Service) ConfirmScheduledTransaction(ctx context.Context, req ConfirmSc
 		return nil, err
 	}
 
-	if err := s.deps.TransactionStore.Create(ctx, txn); err != nil {
+	if err := s.deps.TransactionStore.Create(ctx, rCtx, txn); err != nil {
 		return nil, err
 	}
 
 	if accountID != nil && *accountID != "" {
-		if err := s.adjustAccountBalance(ctx, payment.SpaceID, *accountID, actualAmount, payment.Type, false); err != nil {
+		if err := s.adjustAccountBalance(ctx, rCtx, *accountID, actualAmount, payment.Type, false); err != nil {
 			return nil, fmt.Errorf("failed to adjust account balance: %w", err)
 		}
 	}
 
 	// Log the historical scheduled event with the deferred creation date
-	if _, err = s.LogTransactionEvent(ctx, payment.NewScheduledEvent(txn.ID)); err != nil {
+	if _, err = s.LogTransactionEvent(ctx, rCtx, payment.NewScheduledEvent(txn.ID)); err != nil {
 		return nil, fmt.Errorf("failed to log scheduled event: %w", err)
 	}
 
 	// Log the actual confirmation event with the transaction date
-	if _, err = s.LogTransactionEvent(ctx, txn.NewConfirmationEvent(actualAmount)); err != nil {
+	if _, err = s.LogTransactionEvent(ctx, rCtx, txn.NewConfirmationEvent(actualAmount)); err != nil {
 		return nil, fmt.Errorf("failed to log transaction confirmation event: %w", err)
 	}
 
@@ -902,7 +894,7 @@ func (s *Service) ConfirmScheduledTransaction(ctx context.Context, req ConfirmSc
 	if err := payment.MarkPaid(); err != nil {
 		return nil, err
 	}
-	if err := s.deps.ScheduledTransactionStore.Update(ctx, payment); err != nil {
+	if err := s.deps.ScheduledTransactionStore.Update(ctx, rCtx, payment); err != nil {
 		return nil, fmt.Errorf("failed to update scheduled transaction status: %w", err)
 	}
 
@@ -917,19 +909,15 @@ type MatchScheduledTransactionRequest struct {
 }
 
 // MatchScheduledTransaction links an existing transaction with a pending scheduled transaction, marking the transaction cleared.
-func (s *Service) MatchScheduledTransaction(ctx context.Context, req MatchScheduledTransactionRequest) (*Transaction, error) {
-	payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, req.SpaceID, req.TransactionID)
+func (s *Service) MatchScheduledTransaction(ctx context.Context, rCtx Context, req MatchScheduledTransactionRequest) (*Transaction, error) {
+	payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, rCtx, req.TransactionID)
 	if err != nil {
 		return nil, fmt.Errorf("scheduled transaction not found: %w", err)
 	}
 
-	txn, err := s.deps.TransactionStore.GetByID(ctx, req.SpaceID, req.MatchedID)
+	txn, err := s.deps.TransactionStore.GetByID(ctx, rCtx, req.MatchedID)
 	if err != nil {
 		return nil, fmt.Errorf("transaction not found: %w", err)
-	}
-
-	if txn.SpaceID != payment.SpaceID {
-		return nil, errors.New("transaction and scheduled transaction belong to different spaces")
 	}
 
 	// Update transaction link properties in metadata
@@ -941,13 +929,12 @@ func (s *Service) MatchScheduledTransaction(ctx context.Context, req MatchSchedu
 	spID := ScheduledTransactionID(payment.ID)
 	txn.LinkScheduledTransaction(spID, reID)
 
-	if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
+	if err := s.deps.TransactionStore.Update(ctx, rCtx, txn); err != nil {
 		return nil, fmt.Errorf("failed to link transaction: %w", err)
 	}
 
 	// Log event
-	_, err = s.LogTransactionEvent(ctx, &TransactionEvent{
-		SpaceID:       payment.SpaceID,
+	_, err = s.LogTransactionEvent(ctx, rCtx, &TransactionEvent{
 		TransactionID: txn.ID,
 		EventType:     "SCHEDULED_TRANSACTION_LINKED",
 		CreateTime:    time.Now().UTC(),
@@ -960,7 +947,7 @@ func (s *Service) MatchScheduledTransaction(ctx context.Context, req MatchSchedu
 	// Mark scheduled transaction as paid
 	payment.Status = ScheduledTransactionPaid
 	payment.UpdateTime = time.Now().UTC()
-	if err := s.deps.ScheduledTransactionStore.Update(ctx, payment); err != nil {
+	if err := s.deps.ScheduledTransactionStore.Update(ctx, rCtx, payment); err != nil {
 		return nil, fmt.Errorf("failed to update scheduled transaction status: %w", err)
 	}
 
@@ -968,40 +955,36 @@ func (s *Service) MatchScheduledTransaction(ctx context.Context, req MatchSchedu
 }
 
 // GetScheduledTransaction retrieves a scheduled transaction by ID for a space.
-func (s *Service) GetScheduledTransaction(ctx context.Context, spaceID SpaceID, id ScheduledTransactionID) (*ScheduledTransaction, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) GetScheduledTransaction(ctx context.Context, rCtx Context, id ScheduledTransactionID) (*ScheduledTransaction, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, fmt.Errorf("validate space ID: %w", err)
 	}
 	if err := id.Validate(); err != nil {
 		return nil, fmt.Errorf("validate scheduled transaction ID: %w", err)
 	}
-	return s.deps.ScheduledTransactionStore.GetByID(ctx, spaceID, id)
+	return s.deps.ScheduledTransactionStore.GetByID(ctx, rCtx, id)
 }
 
 // SkipScheduledTransaction marks a pending scheduled transaction as skipped for a cycle.
-func (s *Service) SkipScheduledTransaction(ctx context.Context, spaceID SpaceID, id ScheduledTransactionID) (*ScheduledTransaction, error) {
+func (s *Service) SkipScheduledTransaction(ctx context.Context, rCtx Context, id ScheduledTransactionID) (*ScheduledTransaction, error) {
 	const op errors.Op = "domain/finance.SkipScheduledTransaction"
 
-	if err := spaceID.Validate(); err != nil {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, errors.E(op, errors.Invalid, err)
 	}
 	if err := id.Validate(); err != nil {
 		return nil, errors.E(op, errors.Invalid, err)
 	}
 
-	payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, spaceID, id)
+	payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, rCtx, id)
 	if err != nil {
 		return nil, err
-	}
-
-	if payment.SpaceID != spaceID {
-		return nil, errors.E(op, errors.NotExist, ScheduledTransactionNotFound, "scheduled transaction not found")
 	}
 
 	if err := payment.MarkSkipped(); err != nil {
 		return nil, err
 	}
-	if err := s.deps.ScheduledTransactionStore.UpdateStatus(ctx, id, ScheduledTransactionSkipped); err != nil {
+	if err := s.deps.ScheduledTransactionStore.UpdateStatus(ctx, rCtx, id, ScheduledTransactionSkipped); err != nil {
 		return nil, fmt.Errorf("update scheduled transaction status: %w", err)
 	}
 
@@ -1012,12 +995,15 @@ func (s *Service) SkipScheduledTransaction(ctx context.Context, spaceID SpaceID,
 func (s *Service) GenerateScheduledTransactions(ctx context.Context) error {
 	// Query templates due in next 10 days
 	maxDueDate := time.Now().AddDate(0, 0, 10)
-	expenses, err := s.deps.RecurringTransactionStore.ListPendingGeneration(ctx, maxDueDate)
+	pending, err := s.deps.RecurringTransactionStore.ListPendingGeneration(ctx, maxDueDate)
 	if err != nil {
 		return err
 	}
 
-	for _, re := range expenses {
+	for _, item := range pending {
+		re := item.Transaction
+		// TODO: This is wrong doesn't follow the context pattern and doesn't retrieve the configured timezone.
+		rCtx := NewContext(item.SpaceID, "system", time.UTC, re.Currency)
 		// Generate all scheduled transactions up to 10 days in the future
 		for re.NextDueDate.Before(maxDueDate) || re.NextDueDate.Equal(maxDueDate) {
 			spID, err := NewScheduledTransactionID()
@@ -1030,7 +1016,7 @@ func (s *Service) GenerateScheduledTransactions(ctx context.Context) error {
 				return err
 			}
 
-			if err := s.deps.ScheduledTransactionStore.Create(ctx, payment); err != nil {
+			if err := s.deps.ScheduledTransactionStore.Create(ctx, rCtx, payment); err != nil {
 				return err
 			}
 
@@ -1039,7 +1025,7 @@ func (s *Service) GenerateScheduledTransactions(ctx context.Context) error {
 			}
 		}
 
-		if err := s.deps.RecurringTransactionStore.Update(ctx, re); err != nil {
+		if err := s.deps.RecurringTransactionStore.Update(ctx, rCtx, re); err != nil {
 			return err
 		}
 	}
@@ -1048,28 +1034,29 @@ func (s *Service) GenerateScheduledTransactions(ctx context.Context) error {
 }
 
 // createTransaction persists a transaction and adjusts the account balance.
-func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error {
+func (s *Service) createTransaction(ctx context.Context, rCtx Context, txn *Transaction) error {
 	// 1. Initialize transaction lifecycle defaults
 	if err := txn.Init(); err != nil {
 		return err
 	}
+	txn.TransactionDate = rCtx.Date(txn.TransactionDate)
+	txn.EffectiveDate = rCtx.Date(txn.EffectiveDate)
 
-	// 2. Fetch workspace settings
-	settings, err := s.deps.SettingsStore.GetByID(ctx, txn.SpaceID)
-	if err != nil {
-		return fmt.Errorf("verify workspace settings: %w", err)
+	// 2. Verify workspace base currency is configured
+	if rCtx.BaseCurrency() == "" {
+		return fmt.Errorf("workspace base currency is not configured")
 	}
 
 	// 3. Centralized Budget Period Resolution
 	if txn.BudgetID != nil {
-		budget, err := s.deps.BudgetStore.GetByID(ctx, txn.SpaceID, *txn.BudgetID)
+		budget, err := s.deps.BudgetStore.GetByID(ctx, rCtx, *txn.BudgetID)
 		if err != nil {
 			return fmt.Errorf("fetch budget template: %w", err)
 		}
 		if err := budget.EnsureActive(); err != nil {
 			return err
 		}
-		period, err := s.GetOrCreatePeriod(ctx, txn.SpaceID, budget.ID, txn.EffectiveDate)
+		period, err := s.GetOrCreatePeriod(ctx, rCtx, budget.ID, txn.EffectiveDate)
 		if err != nil {
 			return fmt.Errorf("resolve active budget period: %w", err)
 		}
@@ -1077,8 +1064,8 @@ func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error
 	}
 
 	// 4. Centralized Base Currency Exchange Rate Calculation
-	if txn.AmountInBase == 0 || txn.Currency != settings.BaseCurrency {
-		rate, err := s.resolveExchangeRate(ctx, txn.SpaceID, txn.Currency, settings.BaseCurrency, txn.TransactionDate, false)
+	if txn.AmountInBase == 0 || txn.Currency != rCtx.BaseCurrency() {
+		rate, err := s.resolveExchangeRate(ctx, rCtx, txn.Currency, rCtx.BaseCurrency(), txn.TransactionDate, false)
 		if err != nil {
 			return err
 		}
@@ -1090,13 +1077,13 @@ func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error
 	}
 
 	// 5. Persist the transaction
-	if err := s.deps.TransactionStore.Create(ctx, txn); err != nil {
+	if err := s.deps.TransactionStore.Create(ctx, rCtx, txn); err != nil {
 		return err
 	}
 
 	// 6. Adjust account balance
 	if txn.AccountID != nil && *txn.AccountID != "" {
-		if err := s.adjustAccountBalance(ctx, txn.SpaceID, *txn.AccountID, txn.ImpactAmount(), txn.Type, false); err != nil {
+		if err := s.adjustAccountBalance(ctx, rCtx, *txn.AccountID, txn.ImpactAmount(), txn.Type, false); err != nil {
 			return fmt.Errorf("failed to adjust account balance: %w", err)
 		}
 	}
@@ -1105,7 +1092,7 @@ func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error
 }
 
 // updateTransaction updates a transaction and recalculates account balances.
-func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, existing *Transaction) error {
+func (s *Service) updateTransaction(ctx context.Context, rCtx Context, txn *Transaction, existing *Transaction) error {
 	if existing.Type == TransactionTypeBalanceAdjustment {
 		return errors.New("balance adjustment transactions cannot be edited directly; perform a new balance adjustment or delete this record to revert")
 	}
@@ -1117,24 +1104,25 @@ func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, exist
 	if txn.EffectiveDate.IsZero() {
 		txn.EffectiveDate = txn.TransactionDate
 	}
+	txn.TransactionDate = rCtx.Date(txn.TransactionDate)
+	txn.EffectiveDate = rCtx.Date(txn.EffectiveDate)
 	txn.UpdateTime = time.Now().UTC()
 
-	// 2. Fetch workspace settings
-	settings, err := s.deps.SettingsStore.GetByID(ctx, txn.SpaceID)
-	if err != nil {
-		return fmt.Errorf("verify workspace settings: %w", err)
+	// 2. Verify workspace base currency is configured
+	if rCtx.BaseCurrency() == "" {
+		return fmt.Errorf("workspace base currency is not configured")
 	}
 
 	// 3. Centralized Budget Period Resolution
 	if txn.BudgetID != nil {
-		budget, err := s.deps.BudgetStore.GetByID(ctx, txn.SpaceID, *txn.BudgetID)
+		budget, err := s.deps.BudgetStore.GetByID(ctx, rCtx, *txn.BudgetID)
 		if err != nil {
 			return fmt.Errorf("fetch budget template: %w", err)
 		}
 		if err := budget.EnsureActive(); err != nil {
 			return err
 		}
-		period, err := s.GetOrCreatePeriod(ctx, txn.SpaceID, budget.ID, txn.EffectiveDate)
+		period, err := s.GetOrCreatePeriod(ctx, rCtx, budget.ID, txn.EffectiveDate)
 		if err != nil {
 			return fmt.Errorf("resolve active budget period: %w", err)
 		}
@@ -1143,8 +1131,8 @@ func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, exist
 		txn.PeriodID = nil
 	}
 
-	// 4. Centralized Base Currency Exchange Rate Calculation
-	rate, err := s.resolveExchangeRate(ctx, txn.SpaceID, txn.Currency, settings.BaseCurrency, txn.TransactionDate, false)
+	// 3. Centralized Base Currency Exchange Rate Calculation
+	rate, err := s.resolveExchangeRate(ctx, rCtx, txn.Currency, rCtx.BaseCurrency(), txn.TransactionDate, false)
 	if err != nil {
 		return err
 	}
@@ -1156,19 +1144,19 @@ func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, exist
 
 	// 5. Revert the old transaction's balance impact
 	if existing.AccountID != nil {
-		if err := s.adjustAccountBalance(ctx, existing.SpaceID, *existing.AccountID, existing.Amount, existing.Type, true); err != nil {
+		if err := s.adjustAccountBalance(ctx, rCtx, *existing.AccountID, existing.Amount, existing.Type, true); err != nil {
 			return fmt.Errorf("failed to revert account balance: %w", err)
 		}
 	}
 
 	// 6. Persist the updated transaction
-	if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
+	if err := s.deps.TransactionStore.Update(ctx, rCtx, txn); err != nil {
 		return err
 	}
 
 	// 7. Apply the new transaction's balance impact
 	if txn.AccountID != nil {
-		if err := s.adjustAccountBalance(ctx, txn.SpaceID, *txn.AccountID, txn.Amount, txn.Type, false); err != nil {
+		if err := s.adjustAccountBalance(ctx, rCtx, *txn.AccountID, txn.Amount, txn.Type, false); err != nil {
 			return fmt.Errorf("failed to apply updated account balance: %w", err)
 		}
 	}
@@ -1177,10 +1165,10 @@ func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, exist
 }
 
 // deleteTransaction deletes a transaction, reverts its account balance impact, and syncs linked borrowings.
-func (s *Service) deleteTransaction(ctx context.Context, txn *Transaction) error {
+func (s *Service) deleteTransaction(ctx context.Context, rCtx Context, txn *Transaction) error {
 	// 1. Revert the account balance impact using account_impact_amount if present
 	if txn.AccountID != nil && *txn.AccountID != "" {
-		if err := s.adjustAccountBalance(ctx, txn.SpaceID, *txn.AccountID, txn.ImpactAmount(), txn.Type, true); err != nil {
+		if err := s.adjustAccountBalance(ctx, rCtx, *txn.AccountID, txn.ImpactAmount(), txn.Type, true); err != nil {
 			return fmt.Errorf("failed to revert account balance on deletion: %w", err)
 		}
 	}
@@ -1193,19 +1181,19 @@ func (s *Service) deleteTransaction(ctx context.Context, txn *Transaction) error
 			borrowingAmount = txn.Metadata.BorrowingAmount
 		}
 
-		if b, err := s.deps.BorrowingStore.GetByID(ctx, txn.SpaceID, *txn.Metadata.BorrowingID); err == nil {
+		if b, err := s.deps.BorrowingStore.GetByID(ctx, rCtx, *txn.Metadata.BorrowingID); err == nil {
 			b.RollbackTransaction(role, txn.Type, borrowingAmount)
-			_ = s.deps.BorrowingStore.Update(ctx, b)
+			_ = s.deps.BorrowingStore.Update(ctx, rCtx, b)
 		}
 	}
 
 	// 3. Delete the transaction from persistence
-	return s.deps.TransactionStore.Delete(ctx, txn.ID)
+	return s.deps.TransactionStore.Delete(ctx, rCtx, txn.ID)
 }
 
 // adjustAccountBalance updates the balance of the specified account based on transaction changes.
-func (s *Service) adjustAccountBalance(ctx context.Context, spaceID SpaceID, accountID AccountID, amount int64, txnType TransactionType, revert bool) error {
-	acc, err := s.deps.AccountStore.GetByID(ctx, spaceID, accountID)
+func (s *Service) adjustAccountBalance(ctx context.Context, rCtx Context, accountID AccountID, amount int64, txnType TransactionType, revert bool) error {
+	acc, err := s.deps.AccountStore.GetByID(ctx, rCtx, accountID)
 	if err != nil {
 		return err
 	}
@@ -1216,11 +1204,11 @@ func (s *Service) adjustAccountBalance(ctx context.Context, spaceID SpaceID, acc
 		acc.ApplyTransaction(txnType, amount)
 	}
 
-	return s.deps.AccountStore.Update(ctx, acc)
+	return s.deps.AccountStore.Update(ctx, rCtx, acc)
 }
 
 // Helper to create or update associated borrowing transaction idempotently
-func (s *Service) syncBorrowingTransaction(ctx context.Context, targetTxn *Transaction) error {
+func (s *Service) syncBorrowingTransaction(ctx context.Context, rCtx Context, targetTxn *Transaction) error {
 	if targetTxn == nil || targetTxn.Metadata.BorrowingID == nil {
 		return errors.New("borrowing transaction metadata requires borrowing_id")
 	}
@@ -1230,7 +1218,7 @@ func (s *Service) syncBorrowingTransaction(ctx context.Context, targetTxn *Trans
 		role = "INITIAL_FUNDING"
 	}
 
-	page, err := s.deps.TransactionStore.ListBySpace(ctx, targetTxn.SpaceID, &TransactionFilter{
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, rCtx, &TransactionFilter{
 		BorrowingID:    targetTxn.Metadata.BorrowingID,
 		BorrowingRoles: []string{role},
 		PageSize:       1,
@@ -1242,34 +1230,38 @@ func (s *Service) syncBorrowingTransaction(ctx context.Context, targetTxn *Trans
 	if len(page.Items) > 0 {
 		existing := page.Items[0]
 		targetTxn.ID = existing.ID
-		return s.updateTransaction(ctx, targetTxn, existing)
+		return s.updateTransaction(ctx, rCtx, targetTxn, existing)
 	}
 
-	return s.createTransaction(ctx, targetTxn)
+	return s.createTransaction(ctx, rCtx, targetTxn)
 }
 
 // CreateBorrowing initializes a borrowing agreement and optionally logs its disbursement transaction.
-func (s *Service) CreateBorrowing(ctx context.Context, b *Borrowing, createAsTransaction bool) (*Borrowing, error) {
+func (s *Service) CreateBorrowing(ctx context.Context, rCtx Context, b *Borrowing, createAsTransaction bool) (*Borrowing, error) {
+	if rCtx.BaseCurrency() == "" {
+		return nil, fmt.Errorf("workspace base currency is not configured")
+	}
+
 	if err := b.Init(); err != nil {
 		return nil, err
+	}
+	b.EstablishedAt = rCtx.Date(b.EstablishedAt)
+	if b.DueAt != nil && !b.DueAt.IsZero() {
+		dueAt := rCtx.Date(*b.DueAt)
+		b.DueAt = &dueAt
 	}
 
 	if err := b.Validate(); err != nil {
 		return nil, err
 	}
 
-	settings, err := s.deps.SettingsStore.GetByID(ctx, b.SpaceID)
-	if err != nil {
-		return nil, err
-	}
-
 	if createAsTransaction {
-		if _, err := s.resolveExchangeRate(ctx, b.SpaceID, b.Currency, settings.BaseCurrency, b.EstablishedAt, false); err != nil {
+		if _, err := s.resolveExchangeRate(ctx, rCtx, b.Currency, rCtx.BaseCurrency(), b.EstablishedAt, false); err != nil {
 			return nil, err
 		}
 	}
 
-	if err := s.deps.BorrowingStore.Create(ctx, b); err != nil {
+	if err := s.deps.BorrowingStore.Create(ctx, rCtx, b); err != nil {
 		return nil, err
 	}
 
@@ -1284,7 +1276,7 @@ func (s *Service) CreateBorrowing(ctx context.Context, b *Borrowing, createAsTra
 			return nil, err
 		}
 
-		if err := s.syncBorrowingTransaction(ctx, initialTxn); err != nil {
+		if err := s.syncBorrowingTransaction(ctx, rCtx, initialTxn); err != nil {
 			return nil, err
 		}
 	}
@@ -1293,29 +1285,33 @@ func (s *Service) CreateBorrowing(ctx context.Context, b *Borrowing, createAsTra
 }
 
 // GetBorrowing retrieves a borrowing record.
-func (s *Service) GetBorrowing(ctx context.Context, spaceID SpaceID, id BorrowingID) (*Borrowing, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) GetBorrowing(ctx context.Context, rCtx Context, id BorrowingID) (*Borrowing, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 	if err := id.Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.BorrowingStore.GetByID(ctx, spaceID, id)
+	return s.deps.BorrowingStore.GetByID(ctx, rCtx, id)
 }
 
 // ListBorrowings lists borrowing records with filters.
-func (s *Service) ListBorrowings(ctx context.Context, spaceID SpaceID, filter *ListBorrowingsFilter) ([]*Borrowing, string, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) ListBorrowings(ctx context.Context, rCtx Context, filter *ListBorrowingsFilter) ([]*Borrowing, string, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, "", err
 	}
-	return s.deps.BorrowingStore.ListBySpace(ctx, spaceID, filter)
+	return s.deps.BorrowingStore.ListBySpace(ctx, rCtx, filter)
 }
 
 // UpdateBorrowing updates a borrowing record and its associated transaction.
-func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing, mask []string) (*Borrowing, error) {
+func (s *Service) UpdateBorrowing(ctx context.Context, rCtx Context, b *Borrowing, mask []string) (*Borrowing, error) {
 	const op errors.Op = "domain/finance.UpdateBorrowing"
 
-	existing, err := s.deps.BorrowingStore.GetByID(ctx, b.SpaceID, b.ID)
+	if rCtx.BaseCurrency() == "" {
+		return nil, fmt.Errorf("workspace base currency is not configured")
+	}
+
+	existing, err := s.deps.BorrowingStore.GetByID(ctx, rCtx, b.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -1336,13 +1332,8 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing, mask []stri
 		existing.RemainingAmount = existing.TotalAmount
 	}
 
-	settings, err := s.deps.SettingsStore.GetByID(ctx, existing.SpaceID)
-	if err != nil {
-		return nil, err
-	}
-
 	borID := existing.ID
-	page, err := s.deps.TransactionStore.ListBySpace(ctx, existing.SpaceID, &TransactionFilter{
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, rCtx, &TransactionFilter{
 		BorrowingID:    &borID,
 		BorrowingRoles: []string{"INITIAL_FUNDING"},
 		PageSize:       1,
@@ -1353,12 +1344,12 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing, mask []stri
 
 	hasInitialTxn := len(page.Items) > 0
 	if hasInitialTxn || existing.HasLinkedAccount() {
-		if _, err := s.resolveExchangeRate(ctx, existing.SpaceID, existing.Currency, settings.BaseCurrency, existing.EstablishedAt, false); err != nil {
+		if _, err := s.resolveExchangeRate(ctx, rCtx, existing.Currency, rCtx.BaseCurrency(), existing.EstablishedAt, false); err != nil {
 			return nil, err
 		}
 	}
 
-	if err := s.deps.BorrowingStore.Update(ctx, existing); err != nil {
+	if err := s.deps.BorrowingStore.Update(ctx, rCtx, existing); err != nil {
 		return nil, err
 	}
 
@@ -1373,7 +1364,7 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing, mask []stri
 			return nil, err
 		}
 
-		if err := s.syncBorrowingTransaction(ctx, initialTxn); err != nil {
+		if err := s.syncBorrowingTransaction(ctx, rCtx, initialTxn); err != nil {
 			return nil, err
 		}
 	}
@@ -1382,20 +1373,20 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing, mask []stri
 }
 
 // DeleteBorrowing removes a borrowing agreement if it has no linked transactions.
-func (s *Service) DeleteBorrowing(ctx context.Context, spaceID SpaceID, id BorrowingID) error {
+func (s *Service) DeleteBorrowing(ctx context.Context, rCtx Context, id BorrowingID) error {
 	const op errors.Op = "domain/finance.DeleteBorrowing"
 
-	b, err := s.deps.BorrowingStore.GetByID(ctx, spaceID, id)
+	if err := rCtx.SpaceID().Validate(); err != nil {
+		return errors.E(op, errors.Invalid, err)
+	}
+
+	_, err := s.deps.BorrowingStore.GetByID(ctx, rCtx, id)
 	if err != nil {
 		return err
 	}
 
-	if b.SpaceID != spaceID {
-		return errors.E(op, errors.Invalid, "borrowing does not belong to space")
-	}
-
 	// 1. Check if borrowing has linked transactions
-	page, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &TransactionFilter{
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, rCtx, &TransactionFilter{
 		BorrowingID: new(id),
 		PageSize:    1,
 	})
@@ -1407,12 +1398,11 @@ func (s *Service) DeleteBorrowing(ctx context.Context, spaceID SpaceID, id Borro
 	}
 
 	// 2. Delete borrowing agreement from DB
-	return s.deps.BorrowingStore.Delete(ctx, id)
+	return s.deps.BorrowingStore.Delete(ctx, rCtx, id)
 }
 
 // LogBorrowingTransactionRequest holds parameters to log a borrowing payment or disbursement.
 type LogBorrowingTransactionRequest struct {
-	SpaceID         SpaceID
 	BorrowingID     BorrowingID
 	Type            BorrowingTransactionType
 	Amount          int64
@@ -1423,7 +1413,6 @@ type LogBorrowingTransactionRequest struct {
 
 // UpdateBorrowingTransactionRequest holds parameters to update a borrowing transaction.
 type UpdateBorrowingTransactionRequest struct {
-	SpaceID         SpaceID
 	BorrowingID     BorrowingID
 	TransactionID   TransactionID
 	Type            BorrowingTransactionType
@@ -1435,21 +1424,24 @@ type UpdateBorrowingTransactionRequest struct {
 
 // DeleteBorrowingTransactionRequest holds parameters to delete a borrowing transaction.
 type DeleteBorrowingTransactionRequest struct {
-	SpaceID       SpaceID
 	BorrowingID   BorrowingID
 	TransactionID TransactionID
 }
 
 // LogBorrowingTransaction logs a repayment or disbursement transaction for a borrowing agreement.
-func (s *Service) LogBorrowingTransaction(ctx context.Context, req LogBorrowingTransactionRequest) (*Transaction, error) {
-	if err := req.SpaceID.Validate(); err != nil {
+func (s *Service) LogBorrowingTransaction(ctx context.Context, rCtx Context, req LogBorrowingTransactionRequest) (*Transaction, error) {
+	if rCtx.BaseCurrency() == "" {
+		return nil, fmt.Errorf("workspace base currency is not configured")
+	}
+
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 	if err := req.BorrowingID.Validate(); err != nil {
 		return nil, err
 	}
 
-	b, err := s.deps.BorrowingStore.GetByID(ctx, req.SpaceID, req.BorrowingID)
+	b, err := s.deps.BorrowingStore.GetByID(ctx, rCtx, req.BorrowingID)
 	if err != nil {
 		return nil, fmt.Errorf("fetch borrowing record: %w", err)
 	}
@@ -1466,15 +1458,12 @@ func (s *Service) LogBorrowingTransaction(ctx context.Context, req LogBorrowingT
 
 	date := req.TransactionDate
 	if date.IsZero() {
-		date = time.Now().UTC()
+		date = rCtx.Now()
+	} else {
+		date = rCtx.Date(date)
 	}
 
-	settings, err := s.deps.SettingsStore.GetByID(ctx, req.SpaceID)
-	if err != nil {
-		return nil, fmt.Errorf("verify workspace settings: %w", err)
-	}
-
-	rateToBase, err := s.resolveExchangeRate(ctx, req.SpaceID, b.Currency, settings.BaseCurrency, date, false)
+	rateToBase, err := s.resolveExchangeRate(ctx, rCtx, b.Currency, rCtx.BaseCurrency(), date, false)
 	if err != nil {
 		return nil, err
 	}
@@ -1482,18 +1471,18 @@ func (s *Service) LogBorrowingTransaction(ctx context.Context, req LogBorrowingT
 
 	accountImpactAmount := req.Amount
 	if req.AccountID != nil && *req.AccountID != "" {
-		acc, err := s.deps.AccountStore.GetByID(ctx, req.SpaceID, *req.AccountID)
+		acc, err := s.deps.AccountStore.GetByID(ctx, rCtx, *req.AccountID)
 		if err != nil {
 			return nil, fmt.Errorf("fetch payment account: %w", err)
 		}
-		rateToAcc, err := s.resolveExchangeRate(ctx, req.SpaceID, b.Currency, acc.Currency, date, false)
+		rateToAcc, err := s.resolveExchangeRate(ctx, rCtx, b.Currency, acc.Currency, date, false)
 		if err != nil {
 			return nil, err
 		}
 		accountImpactAmount = ConvertAmount(req.Amount, rateToAcc)
 	}
 
-	if err := s.deps.BorrowingStore.Update(ctx, b); err != nil {
+	if err := s.deps.BorrowingStore.Update(ctx, rCtx, b); err != nil {
 		return nil, fmt.Errorf("failed to update borrowing balance: %w", err)
 	}
 
@@ -1511,7 +1500,7 @@ func (s *Service) LogBorrowingTransaction(ctx context.Context, req LogBorrowingT
 		return nil, err
 	}
 
-	if err := s.createTransaction(ctx, txn); err != nil {
+	if err := s.createTransaction(ctx, rCtx, txn); err != nil {
 		return nil, fmt.Errorf("create borrowing transaction: %w", err)
 	}
 
@@ -1519,8 +1508,8 @@ func (s *Service) LogBorrowingTransaction(ctx context.Context, req LogBorrowingT
 }
 
 // UpdateBorrowingTransaction updates a borrowing transaction and recalculates all balance impacts.
-func (s *Service) UpdateBorrowingTransaction(ctx context.Context, req UpdateBorrowingTransactionRequest) (*Transaction, error) {
-	if err := req.SpaceID.Validate(); err != nil {
+func (s *Service) UpdateBorrowingTransaction(ctx context.Context, rCtx Context, req UpdateBorrowingTransactionRequest) (*Transaction, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 	if err := req.BorrowingID.Validate(); err != nil {
@@ -1530,7 +1519,7 @@ func (s *Service) UpdateBorrowingTransaction(ctx context.Context, req UpdateBorr
 		return nil, err
 	}
 
-	txn, err := s.deps.TransactionStore.GetByID(ctx, req.SpaceID, req.TransactionID)
+	txn, err := s.deps.TransactionStore.GetByID(ctx, rCtx, req.TransactionID)
 	if err != nil {
 		return nil, fmt.Errorf("fetch existing transaction: %w", err)
 	}
@@ -1539,12 +1528,11 @@ func (s *Service) UpdateBorrowingTransaction(ctx context.Context, req UpdateBorr
 		return nil, fmt.Errorf("transaction %s does not belong to borrowing %s", req.TransactionID, req.BorrowingID)
 	}
 
-	if err := s.deleteTransaction(ctx, txn); err != nil {
+	if err := s.deleteTransaction(ctx, rCtx, txn); err != nil {
 		return nil, fmt.Errorf("revert previous transaction impact: %w", err)
 	}
 
-	return s.LogBorrowingTransaction(ctx, LogBorrowingTransactionRequest{
-		SpaceID:         req.SpaceID,
+	return s.LogBorrowingTransaction(ctx, rCtx, LogBorrowingTransactionRequest{
 		BorrowingID:     req.BorrowingID,
 		Type:            req.Type,
 		Amount:          req.Amount,
@@ -1555,8 +1543,8 @@ func (s *Service) UpdateBorrowingTransaction(ctx context.Context, req UpdateBorr
 }
 
 // DeleteBorrowingTransaction deletes a borrowing transaction and reverts balance impacts.
-func (s *Service) DeleteBorrowingTransaction(ctx context.Context, req DeleteBorrowingTransactionRequest) error {
-	if err := req.SpaceID.Validate(); err != nil {
+func (s *Service) DeleteBorrowingTransaction(ctx context.Context, rCtx Context, req DeleteBorrowingTransactionRequest) error {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return err
 	}
 	if err := req.BorrowingID.Validate(); err != nil {
@@ -1566,7 +1554,7 @@ func (s *Service) DeleteBorrowingTransaction(ctx context.Context, req DeleteBorr
 		return err
 	}
 
-	txn, err := s.deps.TransactionStore.GetByID(ctx, req.SpaceID, req.TransactionID)
+	txn, err := s.deps.TransactionStore.GetByID(ctx, rCtx, req.TransactionID)
 	if err != nil {
 		return fmt.Errorf("fetch existing transaction: %w", err)
 	}
@@ -1575,12 +1563,11 @@ func (s *Service) DeleteBorrowingTransaction(ctx context.Context, req DeleteBorr
 		return fmt.Errorf("transaction %s does not belong to borrowing %s", req.TransactionID, req.BorrowingID)
 	}
 
-	return s.deleteTransaction(ctx, txn)
+	return s.deleteTransaction(ctx, rCtx, txn)
 }
 
 // AdjustBorrowingBalanceRequest holds parameters to adjust a borrowing's remaining balance.
 type AdjustBorrowingBalanceRequest struct {
-	SpaceID        SpaceID
 	BorrowingID    BorrowingID
 	TargetBalance  int64
 	AdjustmentDate string
@@ -1589,15 +1576,15 @@ type AdjustBorrowingBalanceRequest struct {
 }
 
 // AdjustBorrowingBalance reconciles a borrowing's remaining balance to a target balance.
-func (s *Service) AdjustBorrowingBalance(ctx context.Context, req AdjustBorrowingBalanceRequest) (*Borrowing, error) {
-	if err := req.SpaceID.Validate(); err != nil {
+func (s *Service) AdjustBorrowingBalance(ctx context.Context, rCtx Context, req AdjustBorrowingBalanceRequest) (*Borrowing, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 	if err := req.BorrowingID.Validate(); err != nil {
 		return nil, err
 	}
 
-	b, err := s.deps.BorrowingStore.GetByID(ctx, req.SpaceID, req.BorrowingID)
+	b, err := s.deps.BorrowingStore.GetByID(ctx, rCtx, req.BorrowingID)
 	if err != nil {
 		return nil, fmt.Errorf("fetch target borrowing: %w", err)
 	}
@@ -1607,16 +1594,16 @@ func (s *Service) AdjustBorrowingBalance(ctx context.Context, req AdjustBorrowin
 		return b, nil
 	}
 
-	parsedDate := time.Now().UTC()
+	parsedDate := rCtx.Now()
 	if req.AdjustmentDate != "" {
 		if t, parseErr := time.Parse(time.RFC3339, req.AdjustmentDate); parseErr == nil {
-			parsedDate = t
+			parsedDate = rCtx.Date(t)
 		} else if t, parseErr := time.Parse("2006-01-02", req.AdjustmentDate); parseErr == nil {
-			parsedDate = t
+			parsedDate = rCtx.Date(t)
 		}
 	}
 
-	if err := s.deps.BorrowingStore.Update(ctx, b); err != nil {
+	if err := s.deps.BorrowingStore.Update(ctx, rCtx, b); err != nil {
 		return nil, fmt.Errorf("failed to update borrowing balance: %w", err)
 	}
 
@@ -1653,7 +1640,6 @@ func (s *Service) AdjustBorrowingBalance(ctx context.Context, req AdjustBorrowin
 
 	txn := &Transaction{
 		ID:              txnID,
-		SpaceID:         req.SpaceID,
 		AccountID:       req.AccountID,
 		Type:            txnType,
 		Amount:          absDelta,
@@ -1668,11 +1654,11 @@ func (s *Service) AdjustBorrowingBalance(ctx context.Context, req AdjustBorrowin
 		},
 	}
 
-	if err := s.createTransaction(ctx, txn); err != nil {
+	if err := s.createTransaction(ctx, rCtx, txn); err != nil {
 		return nil, fmt.Errorf("record balance adjustment transaction: %w", err)
 	}
 
-	return s.deps.BorrowingStore.GetByID(ctx, req.SpaceID, req.BorrowingID)
+	return s.deps.BorrowingStore.GetByID(ctx, rCtx, req.BorrowingID)
 }
 
 // CurrencyInfo represents basic currency details.
@@ -1694,7 +1680,7 @@ func (s *Service) ListCurrencies(ctx context.Context) ([]CurrencyInfo, error) {
 }
 
 // CreateAccount creates a new account.
-func (s *Service) CreateAccount(ctx context.Context, a *Account) (*Account, error) {
+func (s *Service) CreateAccount(ctx context.Context, rCtx Context, a *Account) (*Account, error) {
 	if err := a.Init(); err != nil {
 		return nil, err
 	}
@@ -1704,7 +1690,7 @@ func (s *Service) CreateAccount(ctx context.Context, a *Account) (*Account, erro
 	}
 
 	// Check if first account in space
-	hasAny, err := s.deps.AccountStore.HasAny(ctx, a.SpaceID)
+	hasAny, err := s.deps.AccountStore.HasAny(ctx, rCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -1715,11 +1701,11 @@ func (s *Service) CreateAccount(ctx context.Context, a *Account) (*Account, erro
 			return nil, err
 		}
 		// Unset all other defaults space-wide atomically in the DB
-		if err := s.deps.AccountStore.UnsetDefaultsExcept(ctx, a.SpaceID, a.ID); err != nil {
+		if err := s.deps.AccountStore.UnsetDefaultsExcept(ctx, rCtx, a.ID); err != nil {
 			return nil, err
 		}
 	}
-	if err := s.deps.AccountStore.Create(ctx, a); err != nil {
+	if err := s.deps.AccountStore.Create(ctx, rCtx, a); err != nil {
 		return nil, err
 	}
 
@@ -1727,29 +1713,29 @@ func (s *Service) CreateAccount(ctx context.Context, a *Account) (*Account, erro
 }
 
 // GetAccount retrieves an account.
-func (s *Service) GetAccount(ctx context.Context, spaceID SpaceID, id AccountID) (*Account, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) GetAccount(ctx context.Context, rCtx Context, id AccountID) (*Account, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 	if err := id.Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.AccountStore.GetByID(ctx, spaceID, id)
+	return s.deps.AccountStore.GetByID(ctx, rCtx, id)
 }
 
 // GetAccounts retrieves a list of accounts by their identifiers for a space.
-func (s *Service) GetAccounts(ctx context.Context, spaceID SpaceID, ids []AccountID) ([]*Account, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) GetAccounts(ctx context.Context, rCtx Context, ids []AccountID) ([]*Account, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.AccountStore.GetByIDs(ctx, spaceID, ids)
+	return s.deps.AccountStore.GetByIDs(ctx, rCtx, ids)
 }
 
 // UpdateAccount updates account metadata with field masking and optimistic concurrency control.
-func (s *Service) UpdateAccount(ctx context.Context, account *Account, mask []string) (*Account, error) {
+func (s *Service) UpdateAccount(ctx context.Context, rCtx Context, account *Account, mask []string) (*Account, error) {
 	const op errors.Op = "domain/finance.UpdateAccount"
 
-	existing, err := s.deps.AccountStore.GetByID(ctx, account.SpaceID, account.ID)
+	existing, err := s.deps.AccountStore.GetByID(ctx, rCtx, account.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -1769,7 +1755,7 @@ func (s *Service) UpdateAccount(ctx context.Context, account *Account, mask []st
 			return nil, err
 		}
 		// Unset all other defaults space-wide atomically in the DB
-		if err := s.deps.AccountStore.UnsetDefaultsExcept(ctx, account.SpaceID, account.ID); err != nil {
+		if err := s.deps.AccountStore.UnsetDefaultsExcept(ctx, rCtx, account.ID); err != nil {
 			return nil, err
 		}
 	} else if !existing.IsDefault && wasDefault {
@@ -1783,40 +1769,48 @@ func (s *Service) UpdateAccount(ctx context.Context, account *Account, mask []st
 		}
 	}
 
-	if err := s.deps.AccountStore.Update(ctx, existing); err != nil {
+	if err := s.deps.AccountStore.Update(ctx, rCtx, existing); err != nil {
 		return nil, err
 	}
 
 	return existing, nil
 }
 
+// AdjustAccountBalanceRequest holds parameters to adjust an account's live balance.
+type AdjustAccountBalanceRequest struct {
+	AccountID      AccountID
+	TargetBalance  int64
+	AdjustmentDate string
+	Note           string
+}
+
 // AdjustAccountBalance reconciles an account's live balance to a target balance by logging a system reconciliation transaction.
-func (s *Service) AdjustAccountBalance(ctx context.Context, spaceID SpaceID, accountID AccountID, targetBalance int64, adjustmentDate string, note string) (*Account, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) AdjustAccountBalance(ctx context.Context, rCtx Context, req AdjustAccountBalanceRequest) (*Account, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
-	if err := accountID.Validate(); err != nil {
+	if err := req.AccountID.Validate(); err != nil {
 		return nil, err
 	}
 
-	acc, err := s.deps.AccountStore.GetByID(ctx, spaceID, accountID)
+	acc, err := s.deps.AccountStore.GetByID(ctx, rCtx, req.AccountID)
 	if err != nil {
 		return nil, fmt.Errorf("fetch target account: %w", err)
 	}
 
-	parsedDate := time.Now().UTC()
-	if adjustmentDate != "" {
-		if t, parseErr := time.Parse(time.RFC3339, adjustmentDate); parseErr == nil {
-			parsedDate = t
-		} else if t, parseErr := time.Parse("2006-01-02", adjustmentDate); parseErr == nil {
-			parsedDate = t
+	parsedDate := rCtx.Now()
+	if req.AdjustmentDate != "" {
+		if t, parseErr := time.Parse(time.RFC3339, req.AdjustmentDate); parseErr == nil {
+			parsedDate = rCtx.Date(t)
+		} else if t, parseErr := time.Parse("2006-01-02", req.AdjustmentDate); parseErr == nil {
+			parsedDate = rCtx.Date(t)
 		}
 	}
 
 	txn, err := acc.ReconcileBalance(ReconcileAccountOpts{
-		TargetBalance:  targetBalance,
+		TargetBalance:  req.TargetBalance,
 		AdjustmentDate: parsedDate,
-		Note:           note,
+		Note:           req.Note,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("reconcile balance: %w", err)
@@ -1825,18 +1819,18 @@ func (s *Service) AdjustAccountBalance(ctx context.Context, spaceID SpaceID, acc
 		return acc, nil
 	}
 
-	if err := s.createTransaction(ctx, txn); err != nil {
+	if err := s.createTransaction(ctx, rCtx, txn); err != nil {
 		return nil, fmt.Errorf("record balance adjustment transaction: %w", err)
 	}
 
-	return s.deps.AccountStore.GetByID(ctx, spaceID, accountID)
+	return s.deps.AccountStore.GetByID(ctx, rCtx, req.AccountID)
 }
 
 // DeleteAccount deletes an account and moves default status if necessary.
-func (s *Service) DeleteAccount(ctx context.Context, spaceID SpaceID, id AccountID, opts DeleteOptions) error {
+func (s *Service) DeleteAccount(ctx context.Context, rCtx Context, id AccountID, opts DeleteOptions) error {
 	const op errors.Op = "domain/finance.DeleteAccount"
 
-	existing, err := s.deps.AccountStore.GetByID(ctx, spaceID, id)
+	existing, err := s.deps.AccountStore.GetByID(ctx, rCtx, id)
 	if err != nil {
 		return err
 	}
@@ -1845,52 +1839,52 @@ func (s *Service) DeleteAccount(ctx context.Context, spaceID SpaceID, id Account
 		return errors.E(op, errors.Invalid, CannotDeleteDefaultAccount, "cannot delete the default account. please select another account as default first")
 	}
 
-	return s.deps.AccountStore.Delete(ctx, spaceID, id, opts)
+	return s.deps.AccountStore.Delete(ctx, rCtx, id, opts)
 }
 
 // ListAccounts lists all accounts for a space.
-func (s *Service) ListAccounts(ctx context.Context, spaceID SpaceID, filter *ListAccountsFilter) (*paging.Page[*Account], error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) ListAccounts(ctx context.Context, rCtx Context, filter *ListAccountsFilter) (*paging.Page[*Account], error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.AccountStore.ListBySpace(ctx, spaceID, filter)
+	return s.deps.AccountStore.ListBySpace(ctx, rCtx, filter)
 }
 
 // GetLatestRates retrieves the latest exchange rates for the given fromCurrencies to the target currency.
-func (s *Service) GetLatestRates(ctx context.Context, spaceID SpaceID, fromCurrencies []Currency, toCurrency Currency) ([]*ExchangeRate, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) GetLatestRates(ctx context.Context, rCtx Context, fromCurrencies []Currency, toCurrency Currency) ([]*ExchangeRate, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.ExchangeRateStore.GetLatestRates(ctx, spaceID, fromCurrencies, toCurrency)
+	return s.deps.ExchangeRateStore.GetLatestRates(ctx, rCtx, fromCurrencies, toCurrency)
 }
 
 // CreateTransfer logs a fund movement between accounts.
-func (s *Service) CreateTransfer(ctx context.Context, t *Transfer) (*Transfer, error) {
-	transfer, _, _, err := s.createTransfer(ctx, t, CreateTransferOpts{})
+func (s *Service) CreateTransfer(ctx context.Context, rCtx Context, t *Transfer) (*Transfer, error) {
+	transfer, _, _, err := s.createTransfer(ctx, rCtx, t, CreateTransferOpts{})
 	return transfer, err
 }
 
-func (s *Service) createTransfer(ctx context.Context, t *Transfer, opts CreateTransferOpts) (*Transfer, *Transaction, *Transaction, error) {
-	if t.ID == "" {
-		tID, err := NewTransferID()
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		t.ID = tID
+func (s *Service) createTransfer(ctx context.Context, rCtx Context, t *Transfer, opts CreateTransferOpts) (*Transfer, *Transaction, *Transaction, error) {
+	if t.TransferDate.IsZero() {
+		t.TransferDate = rCtx.Now()
+	} else {
+		t.TransferDate = rCtx.Date(t.TransferDate)
 	}
-	t.CreateTime = time.Now().UTC()
-	t.UpdateTime = time.Now().UTC()
+
+	if err := t.Init(); err != nil {
+		return nil, nil, nil, err
+	}
 
 	if err := t.Validate(); err != nil {
 		return nil, nil, nil, err
 	}
 
 	// Fetch both accounts to verify existence and check currencies
-	srcAcc, err := s.deps.AccountStore.GetByID(ctx, t.SpaceID, t.SourceAccountID)
+	srcAcc, err := s.deps.AccountStore.GetByID(ctx, rCtx, t.SourceAccountID)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("source account: %w", err)
 	}
-	destAcc, err := s.deps.AccountStore.GetByID(ctx, t.SpaceID, t.DestinationAccountID)
+	destAcc, err := s.deps.AccountStore.GetByID(ctx, rCtx, t.DestinationAccountID)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("destination account: %w", err)
 	}
@@ -1905,7 +1899,7 @@ func (s *Service) createTransfer(ctx context.Context, t *Transfer, opts CreateTr
 	}
 
 	// 1. Insert Transfer parent record
-	if err := s.deps.TransferStore.Create(ctx, t); err != nil {
+	if err := s.deps.TransferStore.Create(ctx, rCtx, t); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -1927,10 +1921,10 @@ func (s *Service) createTransfer(ctx context.Context, t *Transfer, opts CreateTr
 		inflowTxn.Metadata.Merge(*opts.InflowMetadata)
 	}
 
-	if err := s.createTransaction(ctx, outflowTxn); err != nil {
+	if err := s.createTransaction(ctx, rCtx, outflowTxn); err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to log transfer outflow leg: %w", err)
 	}
-	if err := s.createTransaction(ctx, inflowTxn); err != nil {
+	if err := s.createTransaction(ctx, rCtx, inflowTxn); err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to log transfer inflow leg: %w", err)
 	}
 
@@ -1938,25 +1932,25 @@ func (s *Service) createTransfer(ctx context.Context, t *Transfer, opts CreateTr
 }
 
 // GetTransfer retrieves a transfer for a space.
-func (s *Service) GetTransfer(ctx context.Context, spaceID SpaceID, id TransferID) (*Transfer, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) GetTransfer(ctx context.Context, rCtx Context, id TransferID) (*Transfer, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 	if err := id.Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.TransferStore.GetByID(ctx, spaceID, id)
+	return s.deps.TransferStore.GetByID(ctx, rCtx, id)
 }
 
 // DeleteTransfer deletes a transfer parent and deletes both linked ledger entries.
-func (s *Service) DeleteTransfer(ctx context.Context, spaceID SpaceID, id TransferID) error {
-	t, err := s.deps.TransferStore.GetByID(ctx, spaceID, id)
+func (s *Service) DeleteTransfer(ctx context.Context, rCtx Context, id TransferID) error {
+	_, err := s.deps.TransferStore.GetByID(ctx, rCtx, id)
 	if err != nil {
 		return err
 	}
 
 	// Find the associated transaction legs using TransferID
-	page, err := s.deps.TransactionStore.ListBySpace(ctx, t.SpaceID, &TransactionFilter{
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, rCtx, &TransactionFilter{
 		TransferID: &id,
 		PageSize:   10,
 	})
@@ -1967,58 +1961,51 @@ func (s *Service) DeleteTransfer(ctx context.Context, spaceID SpaceID, id Transf
 
 	// Delete both transaction legs
 	for _, leg := range legs {
-		if err := s.deleteTransaction(ctx, leg); err != nil {
+		if err := s.deleteTransaction(ctx, rCtx, leg); err != nil {
 			return fmt.Errorf("failed to delete transfer leg transaction: %w", err)
 		}
 	}
 
 	// Delete parent transfer record
-	return s.deps.TransferStore.Delete(ctx, id)
+	return s.deps.TransferStore.Delete(ctx, rCtx, id)
 }
 
 // ListTransfers lists transfer records inside a space.
-func (s *Service) ListTransfers(ctx context.Context, spaceID SpaceID, limit int32, pageToken string) ([]*Transfer, string, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) ListTransfers(ctx context.Context, rCtx Context, limit int32, pageToken string) ([]*Transfer, string, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, "", err
 	}
-	return s.deps.TransferStore.ListBySpace(ctx, spaceID, limit, pageToken)
+	return s.deps.TransferStore.ListBySpace(ctx, rCtx, limit, pageToken)
 }
 
 // LogTransactionEvent inserts a new lifecycle event for a transaction.
-func (s *Service) LogTransactionEvent(ctx context.Context, e *TransactionEvent) (*TransactionEvent, error) {
-	if e.ID == "" {
-		id, err := NewTransactionEventID()
-		if err != nil {
-			return nil, err
-		}
-		e.ID = id
-	}
-	if e.CreateTime.IsZero() {
-		e.CreateTime = time.Now().UTC()
+func (s *Service) LogTransactionEvent(ctx context.Context, rCtx Context, e *TransactionEvent) (*TransactionEvent, error) {
+	if err := e.Init(); err != nil {
+		return nil, err
 	}
 	if err := e.Validate(); err != nil {
 		return nil, err
 	}
-	if err := s.deps.TransactionEventStore.Create(ctx, e); err != nil {
+	if err := s.deps.TransactionEventStore.Create(ctx, rCtx, e); err != nil {
 		return nil, err
 	}
 	return e, nil
 }
 
 // ListTransactionEvents retrieves all lifecycle events for a specific transaction in a space.
-func (s *Service) ListTransactionEvents(ctx context.Context, spaceID SpaceID, txnID TransactionID) ([]*TransactionEvent, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) ListTransactionEvents(ctx context.Context, rCtx Context, txnID TransactionID) ([]*TransactionEvent, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, fmt.Errorf("validate space ID: %w", err)
 	}
 	if err := txnID.Validate(); err != nil {
 		return nil, fmt.Errorf("validate transaction ID: %w", err)
 	}
-	return s.deps.TransactionEventStore.ListByTransaction(ctx, spaceID, txnID)
+	return s.deps.TransactionEventStore.ListByTransaction(ctx, rCtx, txnID)
 }
 
 // StageInboxItem parses extraction suggestions and inserts a new draft entry into the inbox queue.
-func (s *Service) StageInboxItem(ctx context.Context, spaceID SpaceID, req *StageInboxItem) (*InboxItem, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) StageInboxItem(ctx context.Context, rCtx Context, req *StageInboxItem) (*InboxItem, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 
@@ -2034,7 +2021,7 @@ func (s *Service) StageInboxItem(ctx context.Context, spaceID SpaceID, req *Stag
 	if req.AccountID != nil {
 		reqAccID = *req.AccountID
 	}
-	acc, err := s.ResolveAccount(ctx, spaceID, ResolveAccountOpts{
+	acc, err := s.ResolveAccount(ctx, rCtx, ResolveAccountOpts{
 		AccountID: reqAccID,
 		LastFour:  req.CardLastFour,
 		Currency:  req.Currency,
@@ -2048,25 +2035,26 @@ func (s *Service) StageInboxItem(ctx context.Context, spaceID SpaceID, req *Stag
 	if req.SuggestedBudget != "" {
 		bID, err := ParseBudgetID(req.SuggestedBudget)
 		if err == nil {
-			budget, err := s.deps.BudgetStore.GetByID(ctx, spaceID, bID)
-			if err == nil && budget != nil && budget.SpaceID == spaceID {
+			budget, err := s.deps.BudgetStore.GetByID(ctx, rCtx, bID)
+			if err == nil && budget != nil {
 				budgetID = new(string(budget.ID))
 			}
 		}
 	}
 
 	// 4. Parse transaction timestamp
-	txDate := time.Now().UTC()
+	txDate := rCtx.Now()
 	if req.Date != "" {
 		if t, err := time.Parse(time.RFC3339, req.Date); err == nil {
-			txDate = t.UTC()
+			txDate = rCtx.Date(t)
+		} else if t, err := time.Parse("2006-01-02", req.Date); err == nil {
+			txDate = rCtx.Date(t)
 		}
 	}
 
 	// 5. Create and insert InboxItem
 	item := &InboxItem{
 		ID:              ibxID,
-		SpaceID:         string(spaceID),
 		IntegrationID:   req.IntegrationID,
 		Status:          InboxItemPending,
 		DocType:         req.DocType,
@@ -2081,7 +2069,7 @@ func (s *Service) StageInboxItem(ctx context.Context, spaceID SpaceID, req *Stag
 		CreateTime:      time.Now().UTC(),
 	}
 
-	if err := s.deps.InboxItemStore.Insert(ctx, item); err != nil {
+	if err := s.deps.InboxItemStore.Insert(ctx, rCtx, item); err != nil {
 		return nil, fmt.Errorf("insert inbox item: %w", err)
 	}
 
@@ -2089,27 +2077,26 @@ func (s *Service) StageInboxItem(ctx context.Context, spaceID SpaceID, req *Stag
 }
 
 // ListInboxItems lists all pending/staged items in the space inbox.
-func (s *Service) ListInboxItems(ctx context.Context, spaceID SpaceID, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) ListInboxItems(ctx context.Context, rCtx Context, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.InboxItemStore.ListBySpace(ctx, spaceID, filter)
+	return s.deps.InboxItemStore.ListBySpace(ctx, rCtx, filter)
 }
 
 // UpdateInboxItem updates a staging inbox item's draft properties.
-func (s *Service) UpdateInboxItem(ctx context.Context, spaceID SpaceID, item *InboxItem) (*InboxItem, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) UpdateInboxItem(ctx context.Context, rCtx Context, item *InboxItem) (*InboxItem, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 	if item.ID == "" {
 		return nil, errors.New("missing inbox item ID")
 	}
-	existing, err := s.deps.InboxItemStore.Get(ctx, spaceID, item.ID)
+	existing, err := s.deps.InboxItemStore.Get(ctx, rCtx, item.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	item.SpaceID = string(spaceID)
 	if item.Status == "" {
 		item.Status = existing.Status
 	}
@@ -2142,7 +2129,7 @@ func (s *Service) UpdateInboxItem(ctx context.Context, spaceID SpaceID, item *In
 	}
 
 	// Persist changes
-	if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+	if err := s.deps.InboxItemStore.Update(ctx, rCtx, item); err != nil {
 		return nil, err
 	}
 
@@ -2150,20 +2137,20 @@ func (s *Service) UpdateInboxItem(ctx context.Context, spaceID SpaceID, item *In
 }
 
 // DiscardInboxItem deletes an item from the inbox without ledger changes.
-func (s *Service) DiscardInboxItem(ctx context.Context, spaceID SpaceID, id string) error {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) DiscardInboxItem(ctx context.Context, rCtx Context, id string) error {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return err
 	}
-	return s.deps.InboxItemStore.Delete(ctx, spaceID, id)
+	return s.deps.InboxItemStore.Delete(ctx, rCtx, id)
 }
 
 // ApproveInboxItem promotes an inbox item to the ledger or updates a scheduled payment, returning the resolved item.
-func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id string) (*InboxItem, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) ApproveInboxItem(ctx context.Context, rCtx Context, id string) (*InboxItem, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 
-	item, err := s.deps.InboxItemStore.Get(ctx, spaceID, id)
+	item, err := s.deps.InboxItemStore.Get(ctx, rCtx, id)
 	if err != nil {
 		return nil, fmt.Errorf("get inbox item: %w", err)
 	}
@@ -2174,37 +2161,34 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 
 	switch {
 	case item.DocType == InboxItemDocSystemVerification:
-		return s.approveSystemVerification(ctx, item)
+		return s.approveSystemVerification(ctx, rCtx, item)
 	case item.TransactionID != nil && *item.TransactionID != "":
-		return s.approveLinkedTransaction(ctx, spaceID, item)
+		return s.approveLinkedTransaction(ctx, rCtx, item)
 	case item.ScheduledTransactionID != nil && *item.ScheduledTransactionID != "":
-		return s.approveScheduledTransaction(ctx, spaceID, item)
+		return s.approveScheduledTransaction(ctx, rCtx, item)
 	case item.DocType == InboxItemDocInvoice:
-		return s.approveStagedInvoice(ctx, spaceID, item)
+		return s.approveStagedInvoice(ctx, rCtx, item)
 	default:
-		return s.approveStandalonePromotion(ctx, spaceID, item)
+		return s.approveStandalonePromotion(ctx, rCtx, item)
 	}
 }
 
-func (s *Service) approveSystemVerification(ctx context.Context, item *InboxItem) (*InboxItem, error) {
+func (s *Service) approveSystemVerification(ctx context.Context, rCtx Context, item *InboxItem) (*InboxItem, error) {
 	item.MarkResolved(nil)
-	if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+	if err := s.deps.InboxItemStore.Update(ctx, rCtx, item); err != nil {
 		return nil, fmt.Errorf("resolve verification inbox item: %w", err)
 	}
 	return item, nil
 }
 
-func (s *Service) approveLinkedTransaction(ctx context.Context, spaceID SpaceID, item *InboxItem) (*InboxItem, error) {
+func (s *Service) approveLinkedTransaction(ctx context.Context, rCtx Context, item *InboxItem) (*InboxItem, error) {
 	txnID, err := ParseTransactionID(*item.TransactionID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid transaction ID: %w", err)
 	}
-	txn, err := s.deps.TransactionStore.GetByID(ctx, spaceID, txnID)
+	txn, err := s.deps.TransactionStore.GetByID(ctx, rCtx, txnID)
 	if err != nil {
 		return nil, fmt.Errorf("get transaction: %w", err)
-	}
-	if txn.SpaceID != spaceID {
-		return nil, fmt.Errorf("transaction does not belong to this space")
 	}
 	if txn.Type == TransactionTypeTransferOut || txn.Type == TransactionTypeTransferIn {
 		return nil, errors.E(errors.Invalid, CannotLinkReceiptToTransfer, "cannot link receipt to transfer transaction")
@@ -2220,7 +2204,7 @@ func (s *Service) approveLinkedTransaction(ctx context.Context, spaceID SpaceID,
 			if isReversal {
 				absDiff = -diff
 			}
-			if err := s.adjustAccountBalance(ctx, spaceID, *txn.AccountID, absDiff, txn.Type, isReversal); err != nil {
+			if err := s.adjustAccountBalance(ctx, rCtx, *txn.AccountID, absDiff, txn.Type, isReversal); err != nil {
 				return nil, fmt.Errorf("failed to adjust account balance delta: %w", err)
 			}
 		}
@@ -2232,7 +2216,7 @@ func (s *Service) approveLinkedTransaction(ctx context.Context, spaceID SpaceID,
 			updatedTxn.Description = item.VendorName
 		}
 
-		if err := s.deps.TransactionStore.Update(ctx, &updatedTxn); err != nil {
+		if err := s.deps.TransactionStore.Update(ctx, rCtx, &updatedTxn); err != nil {
 			return nil, fmt.Errorf("failed to update linked transaction: %w", err)
 		}
 		txn = &updatedTxn
@@ -2243,60 +2227,59 @@ func (s *Service) approveLinkedTransaction(ctx context.Context, spaceID SpaceID,
 		if item.BorrowingLinkType != nil {
 			linkType = *item.BorrowingLinkType
 		}
-		if err := s.handleBorrowingLinkForTransaction(ctx, spaceID, txn, *item.BorrowingID, linkType); err != nil {
+		if err := s.handleBorrowingLinkForTransaction(ctx, rCtx, txn, *item.BorrowingID, linkType); err != nil {
 			return nil, fmt.Errorf("link borrowing to existing transaction: %w", err)
 		}
 	}
 
 	if item.ScheduledTransactionID != nil && *item.ScheduledTransactionID != "" {
-		if err := s.handleScheduledTransactionLinkForTransaction(ctx, spaceID, txn, *item.ScheduledTransactionID); err != nil {
+		if err := s.handleScheduledTransactionLinkForTransaction(ctx, rCtx, txn, *item.ScheduledTransactionID); err != nil {
 			return nil, fmt.Errorf("link scheduled transaction to existing transaction: %w", err)
 		}
 		item.ScheduledTransactionID = nil
 	}
 
 	item.Status = InboxItemResolved
-	if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+	if err := s.deps.InboxItemStore.Update(ctx, rCtx, item); err != nil {
 		return nil, fmt.Errorf("resolve inbox item: %w", err)
 	}
 
-	if _, err := s.LogTransactionEvent(ctx, item.NewReceiptIngestedEvent(txn.ID)); err != nil {
+	if _, err := s.LogTransactionEvent(ctx, rCtx, item.NewReceiptIngestedEvent(txn.ID)); err != nil {
 		log.Warn(ctx, "failed to log receipt ingested event", log.String("transaction_id", string(txn.ID)), log.Err(err))
 	}
 
-	if _, err := s.LogTransactionEvent(ctx, item.NewTransactionLinkedEvent(txn.ID, overwrite)); err != nil {
+	if _, err := s.LogTransactionEvent(ctx, rCtx, item.NewTransactionLinkedEvent(txn.ID, overwrite)); err != nil {
 		log.Warn(ctx, "failed to log transaction linked event", log.String("transaction_id", string(txn.ID)), log.Err(err))
 	}
 
 	return item, nil
 }
 
-func (s *Service) approveScheduledTransaction(ctx context.Context, spaceID SpaceID, item *InboxItem) (*InboxItem, error) {
+func (s *Service) approveScheduledTransaction(ctx context.Context, rCtx Context, item *InboxItem) (*InboxItem, error) {
 	payID := ScheduledTransactionID(*item.ScheduledTransactionID)
 	if item.DocType == InboxItemDocInvoice {
-		payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, spaceID, payID)
+		payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, rCtx, payID)
 		if err != nil {
 			return nil, fmt.Errorf("get scheduled transaction: %w", err)
 		}
 		payment.Amount = item.Amount
 		payment.SourceType = item.VendorName
-		if err := s.deps.ScheduledTransactionStore.Update(ctx, payment); err != nil {
+		if err := s.deps.ScheduledTransactionStore.Update(ctx, rCtx, payment); err != nil {
 			return nil, fmt.Errorf("update scheduled transaction: %w", err)
 		}
 
 		item.Status = InboxItemResolved
-		if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+		if err := s.deps.InboxItemStore.Update(ctx, rCtx, item); err != nil {
 			return nil, fmt.Errorf("resolve inbox item: %w", err)
 		}
 		return item, nil
 	}
 
-	txn, err := s.ConfirmScheduledTransaction(ctx, ConfirmScheduledTransactionRequest{
-		SpaceID:         spaceID,
+	txn, err := s.ConfirmScheduledTransaction(ctx, rCtx, ConfirmScheduledTransactionRequest{
 		TransactionID:   payID,
 		AccountID:       (*AccountID)(item.AccountID),
 		TransactionDate: item.TransactionDate,
-		EffectiveDate:   time.Now().UTC(),
+		EffectiveDate:   rCtx.Now(),
 		ActualAmount:    item.Amount,
 		Description:     item.VendorName,
 	})
@@ -2305,33 +2288,33 @@ func (s *Service) approveScheduledTransaction(ctx context.Context, spaceID Space
 	}
 
 	item.MarkResolved(&txn.ID)
-	if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+	if err := s.deps.InboxItemStore.Update(ctx, rCtx, item); err != nil {
 		return nil, fmt.Errorf("resolve inbox item: %w", err)
 	}
 	return item, nil
 }
 
-func (s *Service) approveStagedInvoice(ctx context.Context, spaceID SpaceID, item *InboxItem) (*InboxItem, error) {
-	payment, err := item.NewScheduledTransactionFromInvoice(spaceID)
+func (s *Service) approveStagedInvoice(ctx context.Context, rCtx Context, item *InboxItem) (*InboxItem, error) {
+	payment, err := item.NewScheduledTransactionFromInvoice(rCtx.SpaceID())
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.deps.ScheduledTransactionStore.Create(ctx, payment); err != nil {
+	if err := s.deps.ScheduledTransactionStore.Create(ctx, rCtx, payment); err != nil {
 		return nil, fmt.Errorf("create scheduled transaction: %w", err)
 	}
 
 	item.Status = InboxItemResolved
 	pIDStr := string(payment.ID)
 	item.ScheduledTransactionID = &pIDStr
-	if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+	if err := s.deps.InboxItemStore.Update(ctx, rCtx, item); err != nil {
 		return nil, fmt.Errorf("resolve inbox item: %w", err)
 	}
 
 	return item, nil
 }
 
-func (s *Service) approveStandalonePromotion(ctx context.Context, spaceID SpaceID, item *InboxItem) (*InboxItem, error) {
+func (s *Service) approveStandalonePromotion(ctx context.Context, rCtx Context, item *InboxItem) (*InboxItem, error) {
 	transactionType := item.MetadataString("transaction_type")
 	destinationAccountID := item.MetadataString("destination_account_id")
 	transferLeg := item.MetadataString("transfer_leg")
@@ -2345,12 +2328,12 @@ func (s *Service) approveStandalonePromotion(ctx context.Context, spaceID SpaceI
 			return nil, fmt.Errorf("invalid destination account: %w", err)
 		}
 
-		transfer, err := item.NewTransfer(spaceID, destAccID)
+		transfer, err := item.NewTransfer(rCtx.SpaceID(), destAccID)
 		if err != nil {
 			return nil, err
 		}
 
-		_, outflowTxn, inflowTxn, err := s.createTransfer(ctx, transfer, CreateTransferOpts{})
+		_, outflowTxn, inflowTxn, err := s.createTransfer(ctx, rCtx, transfer, CreateTransferOpts{})
 		if err != nil {
 			return nil, fmt.Errorf("create transfer: %w", err)
 		}
@@ -2365,19 +2348,19 @@ func (s *Service) approveStandalonePromotion(ctx context.Context, spaceID SpaceI
 		item.MarkResolved(targetTxnID)
 		item.AccountID = &targetAccIDStr
 
-		if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+		if err := s.deps.InboxItemStore.Update(ctx, rCtx, item); err != nil {
 			return nil, fmt.Errorf("resolve inbox item: %w", err)
 		}
 
 		return item, nil
 	}
 
-	txn, err := item.NewTransaction(spaceID)
+	txn, err := item.NewTransaction(rCtx.SpaceID())
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.createTransaction(ctx, txn); err != nil {
+	if err := s.createTransaction(ctx, rCtx, txn); err != nil {
 		return nil, err
 	}
 
@@ -2386,27 +2369,27 @@ func (s *Service) approveStandalonePromotion(ctx context.Context, spaceID SpaceI
 		if item.BorrowingLinkType != nil {
 			linkType = *item.BorrowingLinkType
 		}
-		if err := s.handleBorrowingLinkForTransaction(ctx, spaceID, txn, *item.BorrowingID, linkType); err != nil {
+		if err := s.handleBorrowingLinkForTransaction(ctx, rCtx, txn, *item.BorrowingID, linkType); err != nil {
 			return nil, fmt.Errorf("link borrowing to new transaction: %w", err)
 		}
 	}
 
 	if item.ScheduledTransactionID != nil && *item.ScheduledTransactionID != "" {
-		if err := s.handleScheduledTransactionLinkForTransaction(ctx, spaceID, txn, *item.ScheduledTransactionID); err != nil {
+		if err := s.handleScheduledTransactionLinkForTransaction(ctx, rCtx, txn, *item.ScheduledTransactionID); err != nil {
 			return nil, fmt.Errorf("link scheduled transaction to new transaction: %w", err)
 		}
 		item.ScheduledTransactionID = nil
 	}
 
 	item.MarkResolved(&txn.ID)
-	if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+	if err := s.deps.InboxItemStore.Update(ctx, rCtx, item); err != nil {
 		return nil, fmt.Errorf("resolve inbox item: %w", err)
 	}
 
 	return item, nil
 }
 
-func (s *Service) handleBorrowingLinkForTransaction(ctx context.Context, spaceID SpaceID, txn *Transaction, borrowingIDStr string, linkType BorrowingLinkType) error {
+func (s *Service) handleBorrowingLinkForTransaction(ctx context.Context, rCtx Context, txn *Transaction, borrowingIDStr string, linkType BorrowingLinkType) error {
 	if borrowingIDStr == "" {
 		return nil
 	}
@@ -2414,7 +2397,7 @@ func (s *Service) handleBorrowingLinkForTransaction(ctx context.Context, spaceID
 	if err != nil {
 		return fmt.Errorf("invalid borrowing ID: %w", err)
 	}
-	borrowing, err := s.deps.BorrowingStore.GetByID(ctx, spaceID, bID)
+	borrowing, err := s.deps.BorrowingStore.GetByID(ctx, rCtx, bID)
 	if err != nil {
 		return fmt.Errorf("get borrowing: %w", err)
 	}
@@ -2440,7 +2423,7 @@ func (s *Service) handleBorrowingLinkForTransaction(ctx context.Context, spaceID
 			borrowing.Status = BorrowingStatusPaidOff
 		}
 		borrowing.UpdateTime = time.Now().UTC()
-		if err := s.deps.BorrowingStore.Update(ctx, borrowing); err != nil {
+		if err := s.deps.BorrowingStore.Update(ctx, rCtx, borrowing); err != nil {
 			return fmt.Errorf("update borrowing remaining balance: %w", err)
 		}
 
@@ -2449,7 +2432,7 @@ func (s *Service) handleBorrowingLinkForTransaction(ctx context.Context, spaceID
 		borrowing.TotalAmount += txn.Amount
 		borrowing.RemainingAmount += txn.Amount
 		borrowing.UpdateTime = time.Now().UTC()
-		if err := s.deps.BorrowingStore.Update(ctx, borrowing); err != nil {
+		if err := s.deps.BorrowingStore.Update(ctx, rCtx, borrowing); err != nil {
 			return fmt.Errorf("update borrowing total balance: %w", err)
 		}
 	}
@@ -2457,14 +2440,14 @@ func (s *Service) handleBorrowingLinkForTransaction(ctx context.Context, spaceID
 	// Update metadata with borrowing link details
 	txn.LinkBorrowing(borrowing.ID, role)
 
-	if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
+	if err := s.deps.TransactionStore.Update(ctx, rCtx, txn); err != nil {
 		return fmt.Errorf("update transaction borrowing metadata: %w", err)
 	}
 
 	return nil
 }
 
-func (s *Service) handleScheduledTransactionLinkForTransaction(ctx context.Context, spaceID SpaceID, txn *Transaction, paymentIDStr string) error {
+func (s *Service) handleScheduledTransactionLinkForTransaction(ctx context.Context, rCtx Context, txn *Transaction, paymentIDStr string) error {
 	if paymentIDStr == "" {
 		return nil
 	}
@@ -2472,7 +2455,7 @@ func (s *Service) handleScheduledTransactionLinkForTransaction(ctx context.Conte
 	if err != nil {
 		return fmt.Errorf("invalid scheduled transaction ID: %w", err)
 	}
-	payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, spaceID, pID)
+	payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, rCtx, pID)
 	if err != nil {
 		return fmt.Errorf("get scheduled transaction: %w", err)
 	}
@@ -2485,7 +2468,7 @@ func (s *Service) handleScheduledTransactionLinkForTransaction(ctx context.Conte
 		if payment.Status != ScheduledTransactionPaid {
 			payment.Status = ScheduledTransactionPaid
 			payment.UpdateTime = time.Now().UTC()
-			if err := s.deps.ScheduledTransactionStore.Update(ctx, payment); err != nil {
+			if err := s.deps.ScheduledTransactionStore.Update(ctx, rCtx, payment); err != nil {
 				return fmt.Errorf("update scheduled transaction status: %w", err)
 			}
 		}
@@ -2495,13 +2478,13 @@ func (s *Service) handleScheduledTransactionLinkForTransaction(ctx context.Conte
 	// Retroactively mark scheduled transaction as paid and link transaction
 	payment.Status = ScheduledTransactionPaid
 	payment.UpdateTime = time.Now().UTC()
-	if err := s.deps.ScheduledTransactionStore.Update(ctx, payment); err != nil {
+	if err := s.deps.ScheduledTransactionStore.Update(ctx, rCtx, payment); err != nil {
 		return fmt.Errorf("update scheduled transaction status: %w", err)
 	}
 
 	txn.Metadata.ScheduledTransactionID = &payment.ID
 	txn.UpdateTime = time.Now().UTC()
-	if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
+	if err := s.deps.TransactionStore.Update(ctx, rCtx, txn); err != nil {
 		return fmt.Errorf("update transaction scheduled transaction metadata: %w", err)
 	}
 
@@ -2509,22 +2492,22 @@ func (s *Service) handleScheduledTransactionLinkForTransaction(ctx context.Conte
 }
 
 // GetBudget retrieves a budget by its unique identifier for a space.
-func (s *Service) GetBudget(ctx context.Context, spaceID SpaceID, id BudgetID) (*Budget, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) GetBudget(ctx context.Context, rCtx Context, id BudgetID) (*Budget, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 	if err := id.Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.BudgetStore.GetByID(ctx, spaceID, id)
+	return s.deps.BudgetStore.GetByID(ctx, rCtx, id)
 }
 
 // GetBudgets retrieves a list of budgets by their identifiers for a space.
-func (s *Service) GetBudgets(ctx context.Context, spaceID SpaceID, ids []BudgetID) ([]*Budget, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) GetBudgets(ctx context.Context, rCtx Context, ids []BudgetID) ([]*Budget, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.BudgetStore.GetByIDs(ctx, spaceID, ids)
+	return s.deps.BudgetStore.GetByIDs(ctx, rCtx, ids)
 }
 
 type ResolveInstitutionResult struct {
@@ -2561,27 +2544,27 @@ func BuildInstitutionFaviconURL(domain string) string {
 	return fmt.Sprintf("https://www.google.com/s2/favicons?domain=%s&sz=64", domain)
 }
 
-func (s *Service) CreateInstitution(ctx context.Context, inst *Institution) (*Institution, error) {
+func (s *Service) CreateInstitution(ctx context.Context, rCtx Context, inst *Institution) (*Institution, error) {
 	if err := inst.Init(); err != nil {
 		return nil, err
 	}
 	if err := inst.Validate(); err != nil {
 		return nil, err
 	}
-	if err := s.deps.InstitutionStore.Create(ctx, inst); err != nil {
+	if err := s.deps.InstitutionStore.Create(ctx, rCtx, inst); err != nil {
 		return nil, err
 	}
 	return inst, nil
 }
 
-func (s *Service) GetInstitution(ctx context.Context, spaceID SpaceID, id InstitutionID) (*Institution, error) {
-	return s.deps.InstitutionStore.GetByID(ctx, spaceID, id)
+func (s *Service) GetInstitution(ctx context.Context, rCtx Context, id InstitutionID) (*Institution, error) {
+	return s.deps.InstitutionStore.GetByID(ctx, rCtx, id)
 }
 
-func (s *Service) UpdateInstitution(ctx context.Context, inst *Institution, mask []string) (*Institution, error) {
+func (s *Service) UpdateInstitution(ctx context.Context, rCtx Context, inst *Institution, mask []string) (*Institution, error) {
 	const op errors.Op = "domain/finance.UpdateInstitution"
 
-	existing, err := s.deps.InstitutionStore.GetByID(ctx, inst.SpaceID, inst.ID)
+	existing, err := s.deps.InstitutionStore.GetByID(ctx, rCtx, inst.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -2591,31 +2574,25 @@ func (s *Service) UpdateInstitution(ctx context.Context, inst *Institution, mask
 	if err := existing.ApplyPatch(inst, mask); err != nil {
 		return nil, err
 	}
-	if err := s.deps.InstitutionStore.Update(ctx, existing); err != nil {
+	if err := s.deps.InstitutionStore.Update(ctx, rCtx, existing); err != nil {
 		return nil, err
 	}
 	return existing, nil
 }
 
-func (s *Service) DeleteInstitution(ctx context.Context, spaceID SpaceID, id InstitutionID, opts DeleteOptions) error {
-	return s.deps.InstitutionStore.Delete(ctx, spaceID, id, opts)
+func (s *Service) DeleteInstitution(ctx context.Context, rCtx Context, id InstitutionID, opts DeleteOptions) error {
+	return s.deps.InstitutionStore.Delete(ctx, rCtx, id, opts)
 }
 
-func (s *Service) ListInstitutions(ctx context.Context, spaceID SpaceID, filter *ListInstitutionsFilter) (*paging.Page[*Institution], error) {
-	if s.deps.InstitutionStore == nil {
-		return &paging.Page[*Institution]{Items: []*Institution{}}, nil
-	}
-	return s.deps.InstitutionStore.ListBySpace(ctx, spaceID, filter)
+func (s *Service) ListInstitutions(ctx context.Context, rCtx Context, filter *ListInstitutionsFilter) (*paging.Page[*Institution], error) {
+	return s.deps.InstitutionStore.ListBySpace(ctx, rCtx, filter)
 }
 
-func (s *Service) GetInstitutionsByIDs(ctx context.Context, spaceID SpaceID, ids []InstitutionID) ([]*Institution, error) {
-	if s.deps.InstitutionStore == nil || len(ids) == 0 {
-		return nil, nil
-	}
-	return s.deps.InstitutionStore.GetByIDs(ctx, spaceID, ids)
+func (s *Service) GetInstitutionsByIDs(ctx context.Context, rCtx Context, ids []InstitutionID) ([]*Institution, error) {
+	return s.deps.InstitutionStore.GetByIDs(ctx, rCtx, ids)
 }
 
-func (s *Service) ResolveInstitution(ctx context.Context, spaceID SpaceID, name string) (*ResolveInstitutionResult, error) {
+func (s *Service) ResolveInstitution(ctx context.Context, rCtx Context, name string) (*ResolveInstitutionResult, error) {
 	cleanName := strings.TrimSpace(name)
 	domain := AutoResolveInstitutionDomain(cleanName)
 	logoURL := ""
@@ -2630,15 +2607,13 @@ func (s *Service) ResolveInstitution(ctx context.Context, spaceID SpaceID, name 
 		Color:   "indigo",
 	}
 
-	if s.deps.InstitutionStore != nil {
-		existing, err := s.deps.InstitutionStore.GetByName(ctx, spaceID, cleanName)
-		if err == nil && existing != nil {
-			result.ExistingInstitutionID = &existing.ID
-			result.ExistingInstitutionName = existing.Name
-			result.Domain = existing.Domain
-			result.LogoURL = existing.LogoURL
-			result.Color = existing.Color
-		}
+	existing, err := s.deps.InstitutionStore.GetByName(ctx, rCtx, cleanName)
+	if err == nil && existing != nil {
+		result.ExistingInstitutionID = &existing.ID
+		result.ExistingInstitutionName = existing.Name
+		result.Domain = existing.Domain
+		result.LogoURL = existing.LogoURL
+		result.Color = existing.Color
 	}
 
 	return result, nil
@@ -2653,16 +2628,13 @@ type ResolveAccountOpts struct {
 }
 
 // ResolveAccount resolves the best matching account for a given space using ID -> Name + Currency -> LastFour + Currency -> Single Active Account Fallback.
-func (s *Service) ResolveAccount(ctx context.Context, spaceID SpaceID, opts ResolveAccountOpts) (*Account, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) ResolveAccount(ctx context.Context, rCtx Context, opts ResolveAccountOpts) (*Account, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
-	}
-	if s.deps.AccountStore == nil {
-		return nil, nil
 	}
 
 	activeOnly := true
-	page, err := s.deps.AccountStore.ListBySpace(ctx, spaceID, &ListAccountsFilter{
+	page, err := s.deps.AccountStore.ListBySpace(ctx, rCtx, &ListAccountsFilter{
 		PageSize:   1000,
 		ActiveOnly: &activeOnly,
 	})
@@ -2723,11 +2695,11 @@ func (s *Service) ResolveAccount(ctx context.Context, spaceID SpaceID, opts Reso
 }
 
 // ImportStatement parses and saves a statement with its statement lines.
-func (s *Service) ImportStatement(ctx context.Context, accountID AccountID, stmt *Statement) (*Statement, error) {
+func (s *Service) ImportStatement(ctx context.Context, rCtx Context, accountID AccountID, stmt *Statement) (*Statement, error) {
 	if stmt == nil {
 		return nil, errors.New("statement is required")
 	}
-	if err := stmt.SpaceID.Validate(); err != nil {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 	if err := accountID.Validate(); err != nil {
@@ -2735,7 +2707,7 @@ func (s *Service) ImportStatement(ctx context.Context, accountID AccountID, stmt
 	}
 
 	// 1. Verify account exists
-	acc, err := s.deps.AccountStore.GetByID(ctx, stmt.SpaceID, accountID)
+	acc, err := s.deps.AccountStore.GetByID(ctx, rCtx, accountID)
 	if err != nil {
 		return nil, fmt.Errorf("verify account: %w", err)
 	}
@@ -2745,6 +2717,7 @@ func (s *Service) ImportStatement(ctx context.Context, accountID AccountID, stmt
 	if err := stmt.Init(); err != nil {
 		return nil, err
 	}
+	stmt.StatementDate = rCtx.Date(stmt.StatementDate)
 
 	// 3. Decode lines from the statement model
 	lines, err := stmt.DecodeLines()
@@ -2757,7 +2730,7 @@ func (s *Service) ImportStatement(ctx context.Context, accountID AccountID, stmt
 	}
 
 	// 4. Create statement and lines in database
-	if err := s.deps.StatementStore.Create(ctx, stmt, lines); err != nil {
+	if err := s.deps.StatementStore.Create(ctx, rCtx, stmt, lines); err != nil {
 		return nil, err
 	}
 
@@ -2765,61 +2738,61 @@ func (s *Service) ImportStatement(ctx context.Context, accountID AccountID, stmt
 }
 
 // GetStatement retrieves a statement by its ID.
-func (s *Service) GetStatement(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) GetStatement(ctx context.Context, rCtx Context, id StatementID) (*Statement, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 	if err := id.Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.StatementStore.GetByID(ctx, spaceID, id)
+	return s.deps.StatementStore.GetByID(ctx, rCtx, id)
 }
 
 // DeleteStatement deletes a statement and its lines (discarding it).
-func (s *Service) DeleteStatement(ctx context.Context, spaceID SpaceID, id StatementID, opts DeleteOptions) error {
-	if err := spaceID.Validate(); err != nil {
-		return spaceID.Validate()
+func (s *Service) DeleteStatement(ctx context.Context, rCtx Context, id StatementID, opts DeleteOptions) error {
+	if err := rCtx.SpaceID().Validate(); err != nil {
+		return err
 	}
 	if err := id.Validate(); err != nil {
-		return id.Validate()
+		return err
 	}
-	existing, err := s.deps.StatementStore.GetByID(ctx, spaceID, id)
+	existing, err := s.deps.StatementStore.GetByID(ctx, rCtx, id)
 	if err != nil {
 		return err
 	}
 	if existing.Status == StatementStatusCompleted {
 		return errors.New("cannot delete a completed statement reconciliation")
 	}
-	return s.deps.StatementStore.Delete(ctx, spaceID, id, opts)
+	return s.deps.StatementStore.Delete(ctx, rCtx, id, opts)
 }
 
 // ListStatements lists statements in a workspace with filters.
-func (s *Service) ListStatements(ctx context.Context, spaceID SpaceID, filter *ListStatementsFilter) (*paging.Page[*Statement], error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) ListStatements(ctx context.Context, rCtx Context, filter *ListStatementsFilter) (*paging.Page[*Statement], error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.StatementStore.List(ctx, spaceID, filter)
+	return s.deps.StatementStore.List(ctx, rCtx, filter)
 }
 
 // ListStatementLines lists all statement lines for a statement and resolves suggestions dynamically.
-func (s *Service) ListStatementLines(ctx context.Context, spaceID SpaceID, statementID StatementID) ([]*StatementLine, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) ListStatementLines(ctx context.Context, rCtx Context, statementID StatementID) ([]*StatementLine, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
 	if err := statementID.Validate(); err != nil {
 		return nil, err
 	}
-	stmt, err := s.deps.StatementStore.GetByID(ctx, spaceID, statementID)
+	stmt, err := s.deps.StatementStore.GetByID(ctx, rCtx, statementID)
 	if err != nil {
 		return nil, err
 	}
-	lines, err := s.deps.StatementStore.ListLines(ctx, statementID)
+	lines, err := s.deps.StatementStore.ListLines(ctx, rCtx, statementID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Resolve dynamic suggestions in memory
-	if err := s.resolveSuggestions(ctx, spaceID, stmt.AccountID, lines); err != nil {
+	if err := s.resolveSuggestions(ctx, rCtx, stmt.AccountID, lines); err != nil {
 		log.Error(ctx, "failed to resolve reconciliation suggestions", log.Err(err))
 	}
 
@@ -2827,17 +2800,17 @@ func (s *Service) ListStatementLines(ctx context.Context, spaceID SpaceID, state
 }
 
 // UpdateStatementLine updates a statement line draft choice.
-func (s *Service) UpdateStatementLine(ctx context.Context, spaceID SpaceID, line *StatementLine, mask []string) (*StatementLine, error) {
+func (s *Service) UpdateStatementLine(ctx context.Context, rCtx Context, line *StatementLine, mask []string) (*StatementLine, error) {
 	const op errors.Op = "domain/finance.UpdateStatementLine"
 
-	if err := spaceID.Validate(); err != nil {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, errors.E(op, errors.Invalid, err)
 	}
 	if err := line.ID.Validate(); err != nil {
 		return nil, errors.E(op, errors.Invalid, err)
 	}
 
-	existing, err := s.deps.StatementStore.GetLineByID(ctx, line.ID)
+	existing, err := s.deps.StatementStore.GetLineByID(ctx, rCtx, line.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -2845,7 +2818,7 @@ func (s *Service) UpdateStatementLine(ctx context.Context, spaceID SpaceID, line
 		return nil, errors.E(op, errors.Conflict, VersionMismatch, "update failed: statement line not found or version mismatch")
 	}
 
-	stmt, err := s.deps.StatementStore.GetByID(ctx, spaceID, existing.StatementID)
+	stmt, err := s.deps.StatementStore.GetByID(ctx, rCtx, existing.StatementID)
 	if err != nil {
 		return nil, err
 	}
@@ -2858,7 +2831,7 @@ func (s *Service) UpdateStatementLine(ctx context.Context, spaceID SpaceID, line
 		return nil, err
 	}
 
-	if err := s.deps.StatementStore.UpdateLineDraft(ctx, existing); err != nil {
+	if err := s.deps.StatementStore.UpdateLineDraft(ctx, rCtx, existing); err != nil {
 		return nil, err
 	}
 
@@ -2866,17 +2839,17 @@ func (s *Service) UpdateStatementLine(ctx context.Context, spaceID SpaceID, line
 }
 
 // UpdateStatement updates statement metadata and balances.
-func (s *Service) UpdateStatement(ctx context.Context, spaceID SpaceID, stmt *Statement, mask []string) (*Statement, error) {
+func (s *Service) UpdateStatement(ctx context.Context, rCtx Context, stmt *Statement, mask []string) (*Statement, error) {
 	const op errors.Op = "domain/finance.UpdateStatement"
 
-	if err := spaceID.Validate(); err != nil {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, errors.E(op, errors.Invalid, err)
 	}
 	if err := stmt.ID.Validate(); err != nil {
 		return nil, errors.E(op, errors.Invalid, err)
 	}
 
-	existing, err := s.deps.StatementStore.GetByID(ctx, spaceID, stmt.ID)
+	existing, err := s.deps.StatementStore.GetByID(ctx, rCtx, stmt.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -2891,8 +2864,11 @@ func (s *Service) UpdateStatement(ctx context.Context, spaceID SpaceID, stmt *St
 	if err := existing.ApplyPatch(stmt, mask); err != nil {
 		return nil, err
 	}
+	if !existing.StatementDate.IsZero() {
+		existing.StatementDate = rCtx.Date(existing.StatementDate)
+	}
 
-	if err := s.deps.StatementStore.Update(ctx, existing); err != nil {
+	if err := s.deps.StatementStore.Update(ctx, rCtx, existing); err != nil {
 		return nil, err
 	}
 
@@ -2900,19 +2876,19 @@ func (s *Service) UpdateStatement(ctx context.Context, spaceID SpaceID, stmt *St
 }
 
 // InvertStatementSigns inverts all line amounts and negates statement starting/ending balances in a single transaction.
-func (s *Service) InvertStatementSigns(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, []*StatementLine, error) {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) InvertStatementSigns(ctx context.Context, rCtx Context, id StatementID) (*Statement, []*StatementLine, error) {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, nil, err
 	}
 	if err := id.Validate(); err != nil {
 		return nil, nil, err
 	}
 
-	stmt, err := s.deps.StatementStore.GetByID(ctx, spaceID, id)
+	stmt, err := s.deps.StatementStore.GetByID(ctx, rCtx, id)
 	if err != nil {
 		return nil, nil, err
 	}
-	lines, err := s.deps.StatementStore.ListLines(ctx, id)
+	lines, err := s.deps.StatementStore.ListLines(ctx, rCtx, id)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -2925,9 +2901,9 @@ func (s *Service) InvertStatementSigns(ctx context.Context, spaceID SpaceID, id 
 	}
 
 	// Re-resolve dynamic suggestions on the inverted lines
-	_ = s.resolveSuggestions(ctx, spaceID, stmt.AccountID, lines)
+	_ = s.resolveSuggestions(ctx, rCtx, stmt.AccountID, lines)
 
-	if err := s.deps.StatementStore.UpdateStatementWithLines(ctx, stmt, lines); err != nil {
+	if err := s.deps.StatementStore.UpdateStatementWithLines(ctx, rCtx, stmt, lines); err != nil {
 		return nil, nil, err
 	}
 
@@ -2935,17 +2911,17 @@ func (s *Service) InvertStatementSigns(ctx context.Context, spaceID SpaceID, id 
 }
 
 // CompleteStatement finalizes and commits the statement.
-func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, error) {
+func (s *Service) CompleteStatement(ctx context.Context, rCtx Context, id StatementID) (*Statement, error) {
 	const op errors.Op = "domain/finance.CompleteStatement"
 
-	if err := spaceID.Validate(); err != nil {
+	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, errors.E(op, errors.Invalid, err)
 	}
 	if err := id.Validate(); err != nil {
 		return nil, errors.E(op, errors.Invalid, err)
 	}
 
-	stmt, err := s.deps.StatementStore.GetByID(ctx, spaceID, id)
+	stmt, err := s.deps.StatementStore.GetByID(ctx, rCtx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -2953,7 +2929,7 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 		return nil, errors.E(op, errors.Precondition, "statement reconciliation is already completed")
 	}
 
-	lines, err := s.deps.StatementStore.ListLines(ctx, id)
+	lines, err := s.deps.StatementStore.ListLines(ctx, rCtx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -2971,7 +2947,7 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 	}
 
 	// 2. Fetch account for default currency
-	acc, err := s.deps.AccountStore.GetByID(ctx, spaceID, stmt.AccountID)
+	acc, err := s.deps.AccountStore.GetByID(ctx, rCtx, stmt.AccountID)
 	if err != nil {
 		return nil, fmt.Errorf("fetch statement account: %w", err)
 	}
@@ -2983,7 +2959,7 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 				return nil, fmt.Errorf("line index %d status is MATCHED but matched_transaction_id is empty", l.RowIndex)
 			}
 			// Update matched transaction metadata with reconciliation flag
-			existingTxn, err := s.deps.TransactionStore.GetByID(ctx, spaceID, *l.MatchedTransactionID)
+			existingTxn, err := s.deps.TransactionStore.GetByID(ctx, rCtx, *l.MatchedTransactionID)
 			if err == nil {
 				if l.Action.OverwriteTransaction != nil && *l.Action.OverwriteTransaction {
 					absLineAmount := l.Amount
@@ -2997,7 +2973,7 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 						if isReversal {
 							absDiff = -diff
 						}
-						if err := s.adjustAccountBalance(ctx, spaceID, *existingTxn.AccountID, absDiff, existingTxn.Type, isReversal); err != nil {
+						if err := s.adjustAccountBalance(ctx, rCtx, *existingTxn.AccountID, absDiff, existingTxn.Type, isReversal); err != nil {
 							return nil, fmt.Errorf("failed to adjust account balance delta: %w", err)
 						}
 					}
@@ -3009,7 +2985,7 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 				existingTxn.Metadata.Reconciled = true
 				existingTxn.Metadata.ReconciliationStatementID = string(stmt.ID)
 				existingTxn.Metadata.ReconciledAt = new(time.Now().UTC())
-				_ = s.deps.TransactionStore.Update(ctx, existingTxn)
+				_ = s.deps.TransactionStore.Update(ctx, rCtx, existingTxn)
 			}
 
 		case StatementLineStatusSkipped:
@@ -3021,7 +2997,7 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 				if l.Action.TransactionID == nil || *l.Action.TransactionID == "" {
 					return nil, fmt.Errorf("line index %d Action MATCH requires transaction_id", l.RowIndex)
 				}
-				existingTxn, err := s.deps.TransactionStore.GetByID(ctx, spaceID, *l.Action.TransactionID)
+				existingTxn, err := s.deps.TransactionStore.GetByID(ctx, rCtx, *l.Action.TransactionID)
 				if err != nil {
 					return nil, fmt.Errorf("fetch matched transaction: %w", err)
 				}
@@ -3037,7 +3013,7 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 						if isReversal {
 							absDiff = -diff
 						}
-						if err := s.adjustAccountBalance(ctx, spaceID, *existingTxn.AccountID, absDiff, existingTxn.Type, isReversal); err != nil {
+						if err := s.adjustAccountBalance(ctx, rCtx, *existingTxn.AccountID, absDiff, existingTxn.Type, isReversal); err != nil {
 							return nil, fmt.Errorf("failed to adjust account balance delta: %w", err)
 						}
 					}
@@ -3049,7 +3025,7 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 				existingTxn.Metadata.Reconciled = true
 				existingTxn.Metadata.ReconciliationStatementID = string(stmt.ID)
 				existingTxn.Metadata.ReconciledAt = new(time.Now().UTC())
-				if err := s.deps.TransactionStore.Update(ctx, existingTxn); err != nil {
+				if err := s.deps.TransactionStore.Update(ctx, rCtx, existingTxn); err != nil {
 					return nil, fmt.Errorf("update matched transaction: %w", err)
 				}
 				l.MatchedTransactionID = l.Action.TransactionID
@@ -3057,17 +3033,17 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 
 			case StatementLineActionTypeCreateExpense:
 				txn, err := l.NewTransaction(StatementLineTransactionOpts{
-					SpaceID:      spaceID,
 					AccountID:    stmt.AccountID,
 					Currency:     acc.Currency,
 					Type:         TransactionTypeExpense,
 					BudgetID:     l.Action.BudgetID,
 					FallbackDate: stmt.StatementDate,
+					Location:     rCtx.Location(),
 				})
 				if err != nil {
 					return nil, err
 				}
-				if err := s.createTransaction(ctx, txn); err != nil {
+				if err := s.createTransaction(ctx, rCtx, txn); err != nil {
 					return nil, fmt.Errorf("create expense transaction for line %d: %w", l.RowIndex, err)
 				}
 				l.MatchedTransactionID = &txn.ID
@@ -3075,16 +3051,16 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 
 			case StatementLineActionTypeCreateIncome:
 				txn, err := l.NewTransaction(StatementLineTransactionOpts{
-					SpaceID:      spaceID,
 					AccountID:    stmt.AccountID,
 					Currency:     acc.Currency,
 					Type:         TransactionTypeIncome,
 					FallbackDate: stmt.StatementDate,
+					Location:     rCtx.Location(),
 				})
 				if err != nil {
 					return nil, err
 				}
-				if err := s.createTransaction(ctx, txn); err != nil {
+				if err := s.createTransaction(ctx, rCtx, txn); err != nil {
 					return nil, fmt.Errorf("create income transaction for line %d: %w", l.RowIndex, err)
 				}
 				l.MatchedTransactionID = &txn.ID
@@ -3096,16 +3072,16 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 				}
 
 				transfer, transferOpts, err := l.NewTransfer(StatementLineTransferOpts{
-					SpaceID:              spaceID,
 					StatementAccountID:   stmt.AccountID,
 					CounterpartAccountID: *l.Action.CounterpartAccountID,
 					FallbackDate:         stmt.StatementDate,
+					Location:             rCtx.Location(),
 				})
 				if err != nil {
 					return nil, err
 				}
 
-				_, outflowTxn, inflowTxn, err := s.createTransfer(ctx, transfer, transferOpts)
+				_, outflowTxn, inflowTxn, err := s.createTransfer(ctx, rCtx, transfer, transferOpts)
 				if err != nil {
 					return nil, fmt.Errorf("create transfer for line %d: %w", l.RowIndex, err)
 				}
@@ -3127,26 +3103,26 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 
 				budgetID := l.Action.BudgetID
 				if budgetID == nil {
-					if payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, spaceID, *l.Action.ScheduledTransactionID); err == nil {
+					if payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, rCtx, *l.Action.ScheduledTransactionID); err == nil {
 						budgetID = payment.BudgetID
 					}
 				}
 
 				txn, err := l.NewTransaction(StatementLineTransactionOpts{
-					SpaceID:      spaceID,
 					AccountID:    stmt.AccountID,
 					Currency:     acc.Currency,
 					Type:         TransactionTypeExpense,
 					BudgetID:     budgetID,
 					FallbackDate: stmt.StatementDate,
+					Location:     rCtx.Location(),
 				})
 				if err != nil {
 					return nil, err
 				}
-				if err := s.createTransaction(ctx, txn); err != nil {
+				if err := s.createTransaction(ctx, rCtx, txn); err != nil {
 					return nil, fmt.Errorf("create transaction for scheduled line %d: %w", l.RowIndex, err)
 				}
-				if err := s.handleScheduledTransactionLinkForTransaction(ctx, spaceID, txn, string(*l.Action.ScheduledTransactionID)); err != nil {
+				if err := s.handleScheduledTransactionLinkForTransaction(ctx, rCtx, txn, string(*l.Action.ScheduledTransactionID)); err != nil {
 					return nil, fmt.Errorf("link scheduled transaction for line %d: %w", l.RowIndex, err)
 				}
 				l.MatchedTransactionID = &txn.ID
@@ -3166,20 +3142,20 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 				}
 
 				txn, err := l.NewTransaction(StatementLineTransactionOpts{
-					SpaceID:      spaceID,
 					AccountID:    stmt.AccountID,
 					Currency:     acc.Currency,
 					Type:         txnType,
 					BudgetID:     l.Action.BudgetID,
 					FallbackDate: stmt.StatementDate,
+					Location:     rCtx.Location(),
 				})
 				if err != nil {
 					return nil, err
 				}
-				if err := s.createTransaction(ctx, txn); err != nil {
+				if err := s.createTransaction(ctx, rCtx, txn); err != nil {
 					return nil, fmt.Errorf("create transaction for repayment line %d: %w", l.RowIndex, err)
 				}
-				if err := s.handleBorrowingLinkForTransaction(ctx, spaceID, txn, string(*l.Action.BorrowingID), BorrowingLinkTypeRepayment); err != nil {
+				if err := s.handleBorrowingLinkForTransaction(ctx, rCtx, txn, string(*l.Action.BorrowingID), BorrowingLinkTypeRepayment); err != nil {
 					return nil, fmt.Errorf("link borrowing repayment for line %d: %w", l.RowIndex, err)
 				}
 				l.MatchedTransactionID = &txn.ID
@@ -3190,7 +3166,7 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 			}
 
 			// Persist updated line draft status & matched_transaction_id
-			if err := s.deps.StatementStore.UpdateLineDraft(ctx, l); err != nil {
+			if err := s.deps.StatementStore.UpdateLineDraft(ctx, rCtx, l); err != nil {
 				return nil, fmt.Errorf("update statement line %s: %w", l.ID, err)
 			}
 		}
@@ -3199,7 +3175,7 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 	// 3. Mark Statement status as completed
 	stmt.Status = StatementStatusCompleted
 	stmt.UpdateTime = time.Now().UTC()
-	if err := s.deps.StatementStore.Update(ctx, stmt); err != nil {
+	if err := s.deps.StatementStore.Update(ctx, rCtx, stmt); err != nil {
 		return nil, fmt.Errorf("update statement status: %w", err)
 	}
 
@@ -3207,9 +3183,9 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 }
 
 // resolveSuggestions computes dynamic suggestions in memory for fetched statement lines.
-func (s *Service) resolveSuggestions(ctx context.Context, spaceID SpaceID, accountID AccountID, lines []*StatementLine) error {
+func (s *Service) resolveSuggestions(ctx context.Context, rCtx Context, accountID AccountID, lines []*StatementLine) error {
 	// 1. Fetch transactions for the account
-	page, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &TransactionFilter{
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, rCtx, &TransactionFilter{
 		AccountID: &accountID,
 		PageSize:  1000,
 	})
@@ -3219,7 +3195,7 @@ func (s *Service) resolveSuggestions(ctx context.Context, spaceID SpaceID, accou
 	txns := page.Items
 
 	// 2. Fetch last 500 transactions in space to build category classification maps
-	historyPage, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &TransactionFilter{
+	historyPage, err := s.deps.TransactionStore.ListBySpace(ctx, rCtx, &TransactionFilter{
 		PageSize: 500,
 	})
 	var history []*Transaction

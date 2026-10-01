@@ -74,7 +74,6 @@ func TestPeriodID(t *testing.T) {
 func TestBudgetPeriod_Validate(t *testing.T) {
 	validPID, _ := finance.NewPeriodID()
 	validBID, _ := finance.NewBudgetID()
-	validSpace := finance.SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	now := time.Now().UTC()
 
 	tests := []struct {
@@ -87,7 +86,6 @@ func TestBudgetPeriod_Validate(t *testing.T) {
 			period: finance.BudgetPeriod{
 				ID:                 validPID,
 				BudgetID:           validBID,
-				SpaceID:            validSpace,
 				StartDate:          now,
 				EndDate:            now.AddDate(0, 1, 0),
 				LimitAmount:        50000,
@@ -102,7 +100,6 @@ func TestBudgetPeriod_Validate(t *testing.T) {
 			period: finance.BudgetPeriod{
 				ID:                 "invalid_pid",
 				BudgetID:           validBID,
-				SpaceID:            validSpace,
 				StartDate:          now,
 				EndDate:            now.AddDate(0, 1, 0),
 				LimitAmount:        50000,
@@ -117,22 +114,6 @@ func TestBudgetPeriod_Validate(t *testing.T) {
 			period: finance.BudgetPeriod{
 				ID:                 validPID,
 				BudgetID:           "invalid_bid",
-				SpaceID:            validSpace,
-				StartDate:          now,
-				EndDate:            now.AddDate(0, 1, 0),
-				LimitAmount:        50000,
-				Currency:           "USD",
-				BaseCurrency:       "USD",
-				ExchangeRateToBase: 1.0,
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid space ID",
-			period: finance.BudgetPeriod{
-				ID:                 validPID,
-				BudgetID:           validBID,
-				SpaceID:            "invalid_space",
 				StartDate:          now,
 				EndDate:            now.AddDate(0, 1, 0),
 				LimitAmount:        50000,
@@ -147,7 +128,6 @@ func TestBudgetPeriod_Validate(t *testing.T) {
 			period: finance.BudgetPeriod{
 				ID:                 validPID,
 				BudgetID:           validBID,
-				SpaceID:            validSpace,
 				StartDate:          now.AddDate(0, 1, 0),
 				EndDate:            now,
 				LimitAmount:        50000,
@@ -162,7 +142,6 @@ func TestBudgetPeriod_Validate(t *testing.T) {
 			period: finance.BudgetPeriod{
 				ID:                 validPID,
 				BudgetID:           validBID,
-				SpaceID:            validSpace,
 				StartDate:          now,
 				EndDate:            now.AddDate(0, 1, 0),
 				LimitAmount:        0,
@@ -177,7 +156,6 @@ func TestBudgetPeriod_Validate(t *testing.T) {
 			period: finance.BudgetPeriod{
 				ID:                 validPID,
 				BudgetID:           validBID,
-				SpaceID:            validSpace,
 				StartDate:          now,
 				EndDate:            now.AddDate(0, 1, 0),
 				LimitAmount:        50000,
@@ -192,7 +170,6 @@ func TestBudgetPeriod_Validate(t *testing.T) {
 			period: finance.BudgetPeriod{
 				ID:                 validPID,
 				BudgetID:           validBID,
-				SpaceID:            validSpace,
 				StartDate:          now,
 				EndDate:            now.AddDate(0, 1, 0),
 				LimitAmount:        50000,
@@ -207,7 +184,6 @@ func TestBudgetPeriod_Validate(t *testing.T) {
 			period: finance.BudgetPeriod{
 				ID:                 validPID,
 				BudgetID:           validBID,
-				SpaceID:            validSpace,
 				StartDate:          now,
 				EndDate:            now.AddDate(0, 1, 0),
 				LimitAmount:        50000,

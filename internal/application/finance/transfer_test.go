@@ -45,7 +45,7 @@ func TestCoordinator_CreateTransfer(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *CreateTransferRequest
-		mockFn        func(ctx context.Context, transfer *finance.Transfer) (*finance.Transfer, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, transfer *finance.Transfer) (*finance.Transfer, error)
 		expectedID    finance.TransferID
 		expectedError bool
 	}{
@@ -60,11 +60,11 @@ func TestCoordinator_CreateTransfer(t *testing.T) {
 				TransferDate:         now,
 				Notes:                "Test transfer",
 			},
-			mockFn: func(ctx context.Context, transfer *finance.Transfer) (*finance.Transfer, error) {
-				if transfer.SpaceID != "spc_1" || transfer.SourceAccountID != "acc_1" || transfer.DestinationAccountID != "acc_2" {
-					t.Errorf("unexpected transfer payload: %+v", transfer)
+			mockFn: func(ctx context.Context, rCtx finance.Context, transfer *finance.Transfer) (*finance.Transfer, error) {
+				if rCtx.SpaceID() != "spc_1" || transfer.SourceAccountID != "acc_1" || transfer.DestinationAccountID != "acc_2" {
+					t.Errorf("unexpected transfer payload: space=%v transfer=%+v", rCtx.SpaceID(), transfer)
 				}
-				return &finance.Transfer{ID: "trf_1", SpaceID: transfer.SpaceID}, nil
+				return &finance.Transfer{ID: "trf_1"}, nil
 			},
 			expectedID:    "trf_1",
 			expectedError: false,
@@ -79,7 +79,7 @@ func TestCoordinator_CreateTransfer(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &CreateTransferRequest{SourceAccountID: "acc_1"},
-			mockFn: func(ctx context.Context, transfer *finance.Transfer) (*finance.Transfer, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, transfer *finance.Transfer) (*finance.Transfer, error) {
 				return nil, errors.New("insufficient funds")
 			},
 			expectedError: true,
@@ -112,7 +112,7 @@ func TestCoordinator_GetTransfer(t *testing.T) {
 		name          string
 		ctx           context.Context
 		id            finance.TransferID
-		mockFn        func(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) (*finance.Transfer, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, id finance.TransferID) (*finance.Transfer, error)
 		expectedID    finance.TransferID
 		expectedError bool
 	}{
@@ -120,11 +120,11 @@ func TestCoordinator_GetTransfer(t *testing.T) {
 			name: "Success",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			id:   "trf_1",
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) (*finance.Transfer, error) {
-				if spaceID != "spc_1" || id != "trf_1" {
-					t.Errorf("unexpected get transfer args: space=%v id=%v", spaceID, id)
+			mockFn: func(ctx context.Context, rCtx finance.Context, id finance.TransferID) (*finance.Transfer, error) {
+				if rCtx.SpaceID() != "spc_1" || id != "trf_1" {
+					t.Errorf("unexpected get transfer args: space=%v id=%v", rCtx.SpaceID(), id)
 				}
-				return &finance.Transfer{ID: id, SpaceID: spaceID}, nil
+				return &finance.Transfer{ID: id}, nil
 			},
 			expectedID:    "trf_1",
 			expectedError: false,
@@ -139,7 +139,7 @@ func TestCoordinator_GetTransfer(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			id:   "trf_1",
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) (*finance.Transfer, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, id finance.TransferID) (*finance.Transfer, error) {
 				return nil, errors.New("transfer not found")
 			},
 			expectedError: true,
@@ -172,16 +172,16 @@ func TestCoordinator_DeleteTransfer(t *testing.T) {
 		name          string
 		ctx           context.Context
 		id            finance.TransferID
-		mockFn        func(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) error
+		mockFn        func(ctx context.Context, rCtx finance.Context, id finance.TransferID) error
 		expectedError bool
 	}{
 		{
 			name: "Success",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			id:   "trf_1",
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) error {
-				if spaceID != "spc_1" || id != "trf_1" {
-					t.Errorf("unexpected delete args: space=%v id=%v", spaceID, id)
+			mockFn: func(ctx context.Context, rCtx finance.Context, id finance.TransferID) error {
+				if rCtx.SpaceID() != "spc_1" || id != "trf_1" {
+					t.Errorf("unexpected delete args: space=%v id=%v", rCtx.SpaceID(), id)
 				}
 				return nil
 			},
@@ -197,7 +197,7 @@ func TestCoordinator_DeleteTransfer(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			id:   "trf_1",
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) error {
+			mockFn: func(ctx context.Context, rCtx finance.Context, id finance.TransferID) error {
 				return errors.New("delete failed")
 			},
 			expectedError: true,
@@ -227,7 +227,7 @@ func TestCoordinator_ListTransfers(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *ListTransfersRequest
-		mockFn        func(ctx context.Context, spaceID finance.SpaceID, limit int32, pageToken string) ([]*finance.Transfer, string, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, limit int32, pageToken string) ([]*finance.Transfer, string, error)
 		expectedCount int
 		expectedToken string
 		expectedError bool
@@ -239,9 +239,9 @@ func TestCoordinator_ListTransfers(t *testing.T) {
 				Limit:     25,
 				PageToken: "page_tok",
 			},
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, limit int32, pageToken string) ([]*finance.Transfer, string, error) {
-				if spaceID != "spc_1" || limit != 25 || pageToken != "page_tok" {
-					t.Errorf("unexpected list transfers args: space=%v limit=%v tok=%v", spaceID, limit, pageToken)
+			mockFn: func(ctx context.Context, rCtx finance.Context, limit int32, pageToken string) ([]*finance.Transfer, string, error) {
+				if rCtx.SpaceID() != "spc_1" || limit != 25 || pageToken != "page_tok" {
+					t.Errorf("unexpected list transfers args: space=%v limit=%v tok=%v", rCtx.SpaceID(), limit, pageToken)
 				}
 				return []*finance.Transfer{{ID: "trf_1"}, {ID: "trf_2"}}, "next_page", nil
 			},
@@ -259,7 +259,7 @@ func TestCoordinator_ListTransfers(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &ListTransfersRequest{},
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, limit int32, pageToken string) ([]*finance.Transfer, string, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, limit int32, pageToken string) ([]*finance.Transfer, string, error) {
 				return nil, "", errors.New("list failed")
 			},
 			expectedError: true,

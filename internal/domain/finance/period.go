@@ -53,7 +53,6 @@ const periodPrefix = "bgp_"
 type BudgetPeriod struct {
 	ID                 PeriodID
 	BudgetID           BudgetID
-	SpaceID            SpaceID
 	StartDate          time.Time
 	EndDate            time.Time
 	LimitAmount        int64
@@ -71,9 +70,6 @@ func (p *BudgetPeriod) Validate() error {
 	}
 	if err := p.BudgetID.Validate(); err != nil {
 		return fmt.Errorf("validate budget ID: %w", err)
-	}
-	if err := p.SpaceID.Validate(); err != nil {
-		return fmt.Errorf("validate space ID: %w", err)
 	}
 	if p.StartDate.After(p.EndDate) {
 		return errors.New("start date cannot be after end date")

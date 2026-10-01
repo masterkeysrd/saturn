@@ -88,7 +88,6 @@ const budgetPrefix = "bgt_"
 // Budget represents a budget template definition.
 type Budget struct {
 	ID               BudgetID
-	SpaceID          SpaceID
 	Name             string
 	LimitAmount      int64
 	Currency         Currency
@@ -197,9 +196,6 @@ func (b *Budget) Validate() error {
 	if err := b.ID.Validate(); err != nil {
 		return fmt.Errorf("validate budget ID: %w", err)
 	}
-	if err := b.SpaceID.Validate(); err != nil {
-		return fmt.Errorf("validate space ID: %w", err)
-	}
 	if b.DefaultAccountID != nil {
 		if err := b.DefaultAccountID.Validate(); err != nil {
 			return fmt.Errorf("validate default account ID: %w", err)
@@ -208,9 +204,17 @@ func (b *Budget) Validate() error {
 	return nil
 }
 
-// CalculateBounds computes the start and end time boundaries around a given date in UTC.
-func (b *Budget) CalculateBounds(t time.Time) (time.Time, time.Time) {
-	t = t.UTC()
+// CalculateBounds computes the start and end time boundaries around a given date in UTC,
+// respecting the location of the provided time or an optional explicit location.
+func (b *Budget) CalculateBounds(t time.Time, loc ...*time.Location) (time.Time, time.Time) {
+	l := t.Location()
+	if len(loc) > 0 && loc[0] != nil {
+		l = loc[0]
+	}
+	if l == nil {
+		l = time.UTC
+	}
+	t = t.In(l)
 	switch b.Interval {
 	case IntervalOneTime:
 		start := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -218,26 +222,26 @@ func (b *Budget) CalculateBounds(t time.Time) (time.Time, time.Time) {
 		return start, end
 
 	case IntervalWeekly:
-		// Go back to Monday
+		// Go back to Monday in target timezone
 		offset := int(t.Weekday()) - int(time.Monday)
 		if offset < 0 {
 			offset += 7
 		}
-		start := time.Date(t.Year(), t.Month(), t.Day()-offset, 0, 0, 0, 0, time.UTC)
-		end := start.AddDate(0, 0, 7).Add(-time.Second)
-		return start, end
+		localStart := time.Date(t.Year(), t.Month(), t.Day()-offset, 0, 0, 0, 0, l)
+		localEnd := localStart.AddDate(0, 0, 7).Add(-time.Second)
+		return localStart.UTC(), localEnd.UTC()
 
 	case IntervalYearly:
-		start := time.Date(t.Year(), 1, 1, 0, 0, 0, 0, time.UTC)
-		end := start.AddDate(1, 0, 0).Add(-time.Second)
-		return start, end
+		localStart := time.Date(t.Year(), 1, 1, 0, 0, 0, 0, l)
+		localEnd := localStart.AddDate(1, 0, 0).Add(-time.Second)
+		return localStart.UTC(), localEnd.UTC()
 
 	case IntervalMonthly:
 		fallthrough
 	default:
-		start := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
-		end := start.AddDate(0, 1, 0).Add(-time.Second)
-		return start, end
+		localStart := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, l)
+		localEnd := localStart.AddDate(0, 1, 0).Add(-time.Second)
+		return localStart.UTC(), localEnd.UTC()
 	}
 }
 
@@ -249,13 +253,14 @@ type NewPeriodOpts struct {
 	EndDate            time.Time
 	BaseCurrency       Currency
 	ExchangeRateToBase float64
+	Location           *time.Location
 }
 
 // NewPeriod constructs a validated BudgetPeriod instance for the budget at the specified date.
 func (b *Budget) NewPeriod(opts NewPeriodOpts) (*BudgetPeriod, error) {
 	start, end := opts.StartDate, opts.EndDate
 	if start.IsZero() || end.IsZero() {
-		start, end = b.CalculateBounds(opts.TargetDate)
+		start, end = b.CalculateBounds(opts.TargetDate, opts.Location)
 	}
 	pID := opts.PeriodID
 	if pID == "" {
@@ -274,7 +279,6 @@ func (b *Budget) NewPeriod(opts NewPeriodOpts) (*BudgetPeriod, error) {
 	period := &BudgetPeriod{
 		ID:                 pID,
 		BudgetID:           b.ID,
-		SpaceID:            b.SpaceID,
 		StartDate:          start,
 		EndDate:            end,
 		LimitAmount:        b.LimitAmount,

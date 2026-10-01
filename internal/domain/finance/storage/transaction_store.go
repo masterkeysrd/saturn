@@ -15,7 +15,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
-type transactionDB struct {
+type TransactionRecord struct {
 	ID              string         `db:"id"`
 	SpaceID         string         `db:"space_id"`
 	Type            string         `db:"type"`
@@ -41,7 +41,7 @@ func NewTransactionStore(database db.DB) *TransactionStore {
 	return &TransactionStore{db: database}
 }
 
-func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) error {
+func (s *TransactionStore) Create(ctx context.Context, rCtx finance.Context, t *finance.Transaction) error {
 	const op errors.Op = "domain/finance/storage.CreateTransaction"
 	metaJSON, _ := json.Marshal(t.Metadata)
 	if len(metaJSON) == 0 || string(metaJSON) == "null" {
@@ -50,7 +50,7 @@ func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) e
 
 	ds := pgDialect.Insert(goqu.S("finance").Table("transaction")).Rows(goqu.Record{
 		"id":               string(t.ID),
-		"space_id":         string(t.SpaceID),
+		"space_id":         string(rCtx.SpaceID()),
 		"type":             string(t.Type),
 		"budget_id":        conv.StringPtr(t.BudgetID),
 		"period_id":        conv.StringPtr(t.PeriodID),
@@ -75,61 +75,67 @@ func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) e
 	return nil
 }
 
-func (row *transactionDB) toDomain() *finance.Transaction {
-	var budgetIDPtr *finance.BudgetID
-	if row.BudgetID.Valid {
-		budgetIDPtr = new(finance.BudgetID(row.BudgetID.String))
+func (r *TransactionRecord) toModel() *finance.Transaction {
+	var budgetID *finance.BudgetID
+	if r.BudgetID.Valid {
+		budgetID = new(finance.BudgetID(r.BudgetID.String))
 	}
-	var periodIDPtr *finance.PeriodID
-	if row.PeriodID.Valid {
-		periodIDPtr = new(finance.PeriodID(row.PeriodID.String))
+	var periodID *finance.PeriodID
+	if r.PeriodID.Valid {
+		periodID = new(finance.PeriodID(r.PeriodID.String))
 	}
-	var accountIDPtr *finance.AccountID
-	if row.AccountID.Valid {
-		accountIDPtr = new(finance.AccountID(row.AccountID.String))
+	var accountID *finance.AccountID
+	if r.AccountID.Valid {
+		accountID = new(finance.AccountID(r.AccountID.String))
 	}
 
 	var meta finance.TransactionMetadata
-	if row.Metadata.Valid && row.Metadata.String != "" {
-		_ = json.Unmarshal([]byte(row.Metadata.String), &meta)
+	if r.Metadata.Valid && r.Metadata.String != "" {
+		_ = json.Unmarshal([]byte(r.Metadata.String), &meta)
 	}
 
 	return &finance.Transaction{
-		ID:              finance.TransactionID(row.ID),
-		SpaceID:         finance.SpaceID(row.SpaceID),
-		Type:            finance.TransactionType(row.Type),
-		BudgetID:        budgetIDPtr,
-		PeriodID:        periodIDPtr,
-		AccountID:       accountIDPtr,
-		Amount:          row.Amount,
-		Currency:        finance.Currency(row.Currency),
-		AmountInBase:    row.AmountInBase,
-		Description:     row.Description,
-		TransactionDate: nullTimeToTime(row.TransactionDate),
-		EffectiveDate:   nullTimeToTime(row.EffectiveDate),
+		ID:              finance.TransactionID(r.ID),
+		Type:            finance.TransactionType(r.Type),
+		BudgetID:        budgetID,
+		PeriodID:        periodID,
+		AccountID:       accountID,
+		Amount:          r.Amount,
+		Currency:        finance.Currency(r.Currency),
+		AmountInBase:    r.AmountInBase,
+		Description:     r.Description,
+		TransactionDate: nullTimeToTime(r.TransactionDate),
+		EffectiveDate:   nullTimeToTime(r.EffectiveDate),
 		Metadata:        meta,
-		CreateTime:      nullTimeToTime(row.CreateTime),
-		UpdateTime:      nullTimeToTime(row.UpdateTime),
+		CreateTime:      nullTimeToTime(r.CreateTime),
+		UpdateTime:      nullTimeToTime(r.UpdateTime),
 	}
 }
 
-func (s *TransactionStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.TransactionID) (*finance.Transaction, error) {
+func (s *TransactionStore) GetByID(ctx context.Context, rCtx finance.Context, id finance.TransactionID) (*finance.Transaction, error) {
 	const op errors.Op = "domain/finance/storage.GetTransactionByID"
-	ds := pgDialect.From(goqu.S("finance").Table("transaction")).Select("*").Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
+	ds := pgDialect.
+		From(goqu.S("finance").Table("transaction")).
+		Select("*").
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID()), "id": string(id)})
+
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
-	var row transactionDB
+	var row TransactionRecord
 	if err := s.db.Get(ctx, &row, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
-	return row.toDomain(), nil
+	return row.toModel(), nil
 }
 
-func (s *TransactionStore) Delete(ctx context.Context, id finance.TransactionID) error {
+func (s *TransactionStore) Delete(ctx context.Context, rCtx finance.Context, id finance.TransactionID) error {
 	const op errors.Op = "domain/finance/storage.DeleteTransaction"
-	ds := pgDialect.Delete(goqu.S("finance").Table("transaction")).Where(goqu.Ex{"id": string(id)})
+	ds := pgDialect.
+		Delete(goqu.S("finance").Table("transaction")).
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID()), "id": string(id)})
+
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return errors.E(op, err)
@@ -140,7 +146,7 @@ func (s *TransactionStore) Delete(ctx context.Context, id finance.TransactionID)
 	return nil
 }
 
-func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) error {
+func (s *TransactionStore) Update(ctx context.Context, rCtx finance.Context, t *finance.Transaction) error {
 	const op errors.Op = "domain/finance/storage.UpdateTransaction"
 	metaJSON, _ := json.Marshal(t.Metadata)
 	if len(metaJSON) == 0 || string(metaJSON) == "null" {
@@ -161,7 +167,7 @@ func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) e
 			"metadata":         goqu.L("?::jsonb", string(metaJSON)),
 			"update_time":      t.UpdateTime,
 		}).
-		Where(goqu.Ex{"id": string(t.ID)})
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID()), "id": string(t.ID)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return errors.E(op, err)
@@ -172,16 +178,16 @@ func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) e
 	return nil
 }
 
-func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
+func (s *TransactionStore) ListBySpace(ctx context.Context, rCtx finance.Context, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
 	const op errors.Op = "domain/finance/storage.ListTransactionsBySpace"
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
 
-	ds := pgDialect.From(goqu.S("finance").Table("transaction")).Select("*")
-
-	// Apply filtering conditions
-	ds = ds.Where(goqu.Ex{"space_id": string(spaceID)})
+	ds := pgDialect.
+		From(goqu.S("finance").Table("transaction")).
+		Select("*").
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID())})
 
 	if filter.BudgetID != nil {
 		ds = ds.Where(goqu.Ex{"budget_id": string(*filter.BudgetID)})
@@ -246,14 +252,14 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 		return nil, errors.E(op, err)
 	}
 
-	var dbRows []transactionDB
+	var dbRows []TransactionRecord
 	if err := s.db.Select(ctx, &dbRows, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
 
 	txns := make([]*finance.Transaction, len(dbRows))
 	for i := range dbRows {
-		txns[i] = dbRows[i].toDomain()
+		txns[i] = dbRows[i].toModel()
 	}
 
 	page := paging.NewPage(txns, int(filter.PageSize), func(t *finance.Transaction) paging.Cursor {
@@ -266,7 +272,7 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 	return page, nil
 }
 
-func (s *TransactionStore) AggregateSpent(ctx context.Context, periodID finance.PeriodID, budgetCurrency finance.Currency, exchangeRateToBase float64) (int64, int64, error) {
+func (s *TransactionStore) AggregateSpent(ctx context.Context, fCtx finance.Context, periodID finance.PeriodID, budgetCurrency finance.Currency, exchangeRateToBase float64) (int64, int64, error) {
 	const op errors.Op = "domain/finance/storage.AggregateSpent"
 	query := `SELECT 
 		COALESCE(SUM(amount_in_base), 0) as spent_in_base,
@@ -278,21 +284,21 @@ func (s *TransactionStore) AggregateSpent(ctx context.Context, periodID finance.
 			END
 		), 0) as spent_amount
 	FROM finance.transaction 
-	WHERE period_id = $1 AND type = 'EXPENSE'`
+	WHERE space_id = $4 AND period_id = $1 AND type = 'EXPENSE'`
 
 	var row struct {
 		SpentInBase int64 `db:"spent_in_base"`
 		SpentAmount int64 `db:"spent_amount"`
 	}
 
-	err := s.db.Get(ctx, &row, query, string(periodID), string(budgetCurrency), exchangeRateToBase)
+	err := s.db.Get(ctx, &row, query, string(periodID), string(budgetCurrency), exchangeRateToBase, string(fCtx.SpaceID()))
 	if err != nil {
 		return 0, 0, errors.E(op, err)
 	}
 	return row.SpentInBase, row.SpentAmount, nil
 }
 
-func (s *TransactionStore) AggregateSpentBatch(ctx context.Context, periodIDs []finance.PeriodID) ([]finance.PeriodSpent, error) {
+func (s *TransactionStore) AggregateSpentBatch(ctx context.Context, fCtx finance.Context, periodIDs []finance.PeriodID) ([]finance.PeriodSpent, error) {
 	const op errors.Op = "domain/finance/storage.AggregateSpentBatch"
 	if len(periodIDs) == 0 {
 		return nil, nil
@@ -316,9 +322,9 @@ func (s *TransactionStore) AggregateSpentBatch(ctx context.Context, periodIDs []
 			), 0) as spent_amount
 		FROM finance.transaction t
 		JOIN finance.budget_period p ON t.period_id = p.id
-		WHERE t.period_id IN (?) AND t.type = 'EXPENSE'
+		WHERE t.space_id = ? AND t.period_id IN (?) AND t.type = 'EXPENSE'
 		GROUP BY t.period_id
-	`, idStrings)
+	`, string(fCtx.SpaceID()), idStrings)
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
@@ -346,9 +352,12 @@ func (s *TransactionStore) AggregateSpentBatch(ctx context.Context, periodIDs []
 	return results, nil
 }
 
-func (s *TransactionStore) HasTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (bool, error) {
+func (s *TransactionStore) HasTransactions(ctx context.Context, rCtx finance.Context, filter *finance.TransactionFilter) (bool, error) {
 	const op errors.Op = "domain/finance/storage.HasTransactions"
-	ds := pgDialect.From(goqu.S("finance").Table("transaction")).Select(goqu.L("1")).Where(goqu.Ex{"space_id": string(spaceID)})
+	ds := pgDialect.
+		From(goqu.S("finance").Table("transaction")).
+		Select(goqu.L("1")).
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID())})
 
 	if filter != nil {
 		if filter.BudgetID != nil {

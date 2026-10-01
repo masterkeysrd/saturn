@@ -8,6 +8,6 @@ import (
 )
 
 // ListInstitutions returns a paginated list of institutions in the specified space.
-func (s *Service) ListInstitutions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListInstitutionsFilter) (*paging.Page[*finance.Institution], error) {
-	return s.financeService.ListInstitutions(ctx, spaceID, filter)
+func (s *Service) ListInstitutions(ctx context.Context, rCtx finance.Context, filter *finance.ListInstitutionsFilter) (*paging.Page[*finance.Institution], error) {
+	return s.financeService.ListInstitutions(ctx, rCtx, filter)
 }

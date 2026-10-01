@@ -113,7 +113,7 @@ type ParsedStatementLine struct {
 // StatementExtractor defines the contract for extracting statement text into structured documents.
 // @Mock
 type StatementExtractor interface {
-	Extract(ctx context.Context, spaceID string, docText string, accounts []*finance.Account) (*ParsedStatementDocument, error)
+	Extract(ctx context.Context, fCtx finance.Context, docText string, accounts []*finance.Account) (*ParsedStatementDocument, error)
 }
 
 // AgentStatementExtractor implements StatementExtractor using agent coordinator.
@@ -151,7 +151,7 @@ type rawStatementJSON struct {
 }
 
 // Extract analyzes statement text and converts it into a typed ParsedStatementDocument.
-func (a *AgentStatementExtractor) Extract(ctx context.Context, spaceID string, docText string, accounts []*finance.Account) (*ParsedStatementDocument, error) {
+func (a *AgentStatementExtractor) Extract(ctx context.Context, fCtx finance.Context, docText string, accounts []*finance.Account) (*ParsedStatementDocument, error) {
 	type accountInfo struct {
 		ID       string `json:"ID"`
 		Name     string `json:"Name"`
@@ -172,7 +172,7 @@ func (a *AgentStatementExtractor) Extract(ctx context.Context, spaceID string, d
 	}
 
 	rawJSON, err := a.coordinator.ExecuteAgent(ctx, agentapp.ExecutionRequest{
-		SpaceID: spaceID,
+		SpaceID: string(fCtx.SpaceID()),
 		Purpose: "STATEMENT_PARSER",
 		Params: map[string]any{
 			"document_text": docText,

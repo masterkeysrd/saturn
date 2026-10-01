@@ -54,26 +54,20 @@ func (c *coordinator) CreateRecurringTransaction(ctx context.Context, req *Creat
 		return nil, err
 	}
 
-	dueDate := req.DueDate
-	if dueDate.IsZero() {
-		dueDate = time.Now().UTC()
-	}
-
 	expense := &finance.RecurringTransaction{
-		SpaceID:         rCtx.SpaceID,
 		BudgetID:        req.BudgetID,
 		Name:            req.Name,
 		Amount:          req.Amount,
 		Currency:        req.Currency,
 		Interval:        finance.RecurrenceInterval(req.Interval),
-		NextDueDate:     dueDate,
+		NextDueDate:     rCtx.Date(req.DueDate),
 		IsVariable:      req.IsVariable,
 		GracePeriodDays: req.GracePeriodDays,
 		Type:            finance.TransactionType(req.Type),
 		AccountID:       req.AccountID,
 	}
 
-	res, err := c.financeService.CreateRecurringTransaction(ctx, expense)
+	res, err := c.financeService.CreateRecurringTransaction(ctx, rCtx, expense)
 	if err != nil {
 		return nil, err
 	}
@@ -88,15 +82,19 @@ func (c *coordinator) UpdateRecurringTransaction(ctx context.Context, req *Updat
 		return nil, err
 	}
 
+	nextDueDate := req.DueDate
+	if !nextDueDate.IsZero() {
+		nextDueDate = rCtx.Date(nextDueDate)
+	}
+
 	expense := &finance.RecurringTransaction{
 		ID:              req.ID,
-		SpaceID:         rCtx.SpaceID,
 		BudgetID:        req.BudgetID,
 		Name:            req.Name,
 		Amount:          req.Amount,
 		Currency:        req.Currency,
 		Interval:        finance.RecurrenceInterval(req.Interval),
-		NextDueDate:     req.DueDate,
+		NextDueDate:     nextDueDate,
 		IsVariable:      req.IsVariable,
 		Status:          finance.RecurringTransactionStatus(req.Status),
 		GracePeriodDays: req.GracePeriodDays,
@@ -105,15 +103,15 @@ func (c *coordinator) UpdateRecurringTransaction(ctx context.Context, req *Updat
 		Version:         req.Version,
 	}
 
-	return c.financeService.UpdateRecurringTransaction(ctx, expense, req.UpdateMask)
+	return c.financeService.UpdateRecurringTransaction(ctx, rCtx, expense, req.UpdateMask)
 }
 
 func (c *coordinator) DeleteRecurringTransaction(ctx context.Context, id finance.RecurringTransactionID, opts finance.DeleteOptions) error {
-	_, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
 	}
-	return c.financeService.DeleteRecurringTransaction(ctx, id, opts)
+	return c.financeService.DeleteRecurringTransaction(ctx, rCtx, id, opts)
 }
 
 func (c *coordinator) ConfirmScheduledTransaction(ctx context.Context, req *ConfirmScheduledTransactionRequest) (*finance.Transaction, error) {
@@ -122,11 +120,14 @@ func (c *coordinator) ConfirmScheduledTransaction(ctx context.Context, req *Conf
 		return nil, err
 	}
 
-	return c.financeService.ConfirmScheduledTransaction(ctx, finance.ConfirmScheduledTransactionRequest{
-		SpaceID:         rCtx.SpaceID,
+	if req.EffectiveDate.IsZero() {
+		req.EffectiveDate = req.TransactionDate
+	}
+
+	return c.financeService.ConfirmScheduledTransaction(ctx, rCtx, finance.ConfirmScheduledTransactionRequest{
 		TransactionID:   req.TransactionID,
-		TransactionDate: req.TransactionDate,
-		EffectiveDate:   req.EffectiveDate,
+		TransactionDate: rCtx.Date(req.TransactionDate),
+		EffectiveDate:   rCtx.Date(req.EffectiveDate),
 		ActualAmount:    req.ActualAmount,
 		Description:     req.Description,
 		AccountID:       req.AccountID,
@@ -146,8 +147,7 @@ func (c *coordinator) MatchScheduledTransaction(ctx context.Context, req *MatchS
 		return nil, err
 	}
 
-	return c.financeService.MatchScheduledTransaction(ctx, finance.MatchScheduledTransactionRequest{
-		SpaceID:       rCtx.SpaceID,
+	return c.financeService.MatchScheduledTransaction(ctx, rCtx, finance.MatchScheduledTransactionRequest{
 		TransactionID: req.TransactionID,
 		MatchedID:     req.MatchedID,
 	})
@@ -159,7 +159,7 @@ func (c *coordinator) SkipScheduledTransaction(ctx context.Context, id finance.S
 		return nil, err
 	}
 
-	return c.financeService.SkipScheduledTransaction(ctx, rCtx.SpaceID, id)
+	return c.financeService.SkipScheduledTransaction(ctx, rCtx, id)
 }
 
 func (c *coordinator) GetScheduledTransaction(ctx context.Context, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error) {
@@ -168,7 +168,7 @@ func (c *coordinator) GetScheduledTransaction(ctx context.Context, id finance.Sc
 		return nil, err
 	}
 
-	return c.financeService.GetScheduledTransaction(ctx, rCtx.SpaceID, id)
+	return c.financeService.GetScheduledTransaction(ctx, rCtx, id)
 }
 
 func (c *coordinator) GenerateScheduledTransactions(ctx context.Context) error {

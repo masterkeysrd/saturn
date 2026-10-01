@@ -29,7 +29,6 @@ func (row *periodDB) toDomain() *finance.BudgetPeriod {
 	return &finance.BudgetPeriod{
 		ID:                 finance.PeriodID(row.ID),
 		BudgetID:           finance.BudgetID(row.BudgetID),
-		SpaceID:            finance.SpaceID(row.SpaceID),
 		StartDate:          row.StartDate,
 		EndDate:            row.EndDate,
 		LimitAmount:        row.LimitAmount,
@@ -49,12 +48,12 @@ func NewPeriodStore(database db.DB) *PeriodStore {
 	return &PeriodStore{db: database}
 }
 
-func (s *PeriodStore) Create(ctx context.Context, p *finance.BudgetPeriod) error {
+func (s *PeriodStore) Create(ctx context.Context, rCtx finance.Context, p *finance.BudgetPeriod) error {
 	const op errors.Op = "domain/finance/storage.CreatePeriod"
 	ds := pgDialect.Insert(goqu.S("finance").Table("budget_period")).Rows(goqu.Record{
 		"id":                    string(p.ID),
 		"budget_id":             string(p.BudgetID),
-		"space_id":              string(p.SpaceID),
+		"space_id":              string(rCtx.SpaceID()),
 		"start_date":            p.StartDate,
 		"end_date":              p.EndDate,
 		"limit_amount":          p.LimitAmount,
@@ -74,14 +73,15 @@ func (s *PeriodStore) Create(ctx context.Context, p *finance.BudgetPeriod) error
 	return nil
 }
 
-func (s *PeriodStore) GetByRange(ctx context.Context, budgetID finance.BudgetID, startDate, endDate time.Time) (*finance.BudgetPeriod, error) {
+func (s *PeriodStore) GetByRange(ctx context.Context, fCtx finance.Context, key finance.PeriodRangeKey) (*finance.BudgetPeriod, error) {
 	const op errors.Op = "domain/finance/storage.GetPeriodByRange"
 	ds := pgDialect.From(goqu.S("finance").Table("budget_period")).
 		Select("*").
 		Where(goqu.Ex{
-			"budget_id":  string(budgetID),
-			"start_date": startDate,
-			"end_date":   endDate,
+			"space_id":   string(fCtx.SpaceID()),
+			"budget_id":  string(key.BudgetID),
+			"start_date": key.StartDate,
+			"end_date":   key.EndDate,
 		})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
@@ -94,7 +94,7 @@ func (s *PeriodStore) GetByRange(ctx context.Context, budgetID finance.BudgetID,
 	return row.toDomain(), nil
 }
 
-func (s *PeriodStore) GetByRanges(ctx context.Context, keys []finance.PeriodRangeKey) ([]*finance.BudgetPeriod, error) {
+func (s *PeriodStore) GetByRanges(ctx context.Context, fCtx finance.Context, keys []finance.PeriodRangeKey) ([]*finance.BudgetPeriod, error) {
 	const op errors.Op = "domain/finance/storage.GetPeriodsByRanges"
 	if len(keys) == 0 {
 		return nil, nil
@@ -103,6 +103,7 @@ func (s *PeriodStore) GetByRanges(ctx context.Context, keys []finance.PeriodRang
 	var orExprs []goqu.Expression
 	for _, key := range keys {
 		orExprs = append(orExprs, goqu.And(
+			goqu.C("space_id").Eq(string(fCtx.SpaceID())),
 			goqu.C("budget_id").Eq(string(key.BudgetID)),
 			goqu.C("start_date").Eq(key.StartDate),
 			goqu.C("end_date").Eq(key.EndDate),
@@ -128,14 +129,17 @@ func (s *PeriodStore) GetByRanges(ctx context.Context, keys []finance.PeriodRang
 	return periods, nil
 }
 
-func (s *PeriodStore) UpdateLimit(ctx context.Context, id finance.PeriodID, limit int64) error {
+func (s *PeriodStore) UpdateLimit(ctx context.Context, fCtx finance.Context, id finance.PeriodID, limit int64) error {
 	const op errors.Op = "domain/finance/storage.UpdatePeriodLimit"
 	ds := pgDialect.Update(goqu.S("finance").Table("budget_period")).
 		Set(goqu.Record{
 			"limit_amount": limit,
 			"update_time":  goqu.L("NOW()"),
 		}).
-		Where(goqu.Ex{"id": string(id)})
+		Where(goqu.Ex{
+			"space_id": string(fCtx.SpaceID()),
+			"id":       string(id),
+		})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return errors.E(op, err)
@@ -146,11 +150,14 @@ func (s *PeriodStore) UpdateLimit(ctx context.Context, id finance.PeriodID, limi
 	return nil
 }
 
-func (s *PeriodStore) ListByBudget(ctx context.Context, budgetID finance.BudgetID) ([]*finance.BudgetPeriod, error) {
+func (s *PeriodStore) ListByBudget(ctx context.Context, fCtx finance.Context, budgetID finance.BudgetID) ([]*finance.BudgetPeriod, error) {
 	const op errors.Op = "domain/finance/storage.ListPeriodsByBudget"
 	ds := pgDialect.From(goqu.S("finance").Table("budget_period")).
 		Select("*").
-		Where(goqu.Ex{"budget_id": string(budgetID)}).
+		Where(goqu.Ex{
+			"space_id":  string(fCtx.SpaceID()),
+			"budget_id": string(budgetID),
+		}).
 		Order(goqu.I("start_date").Desc())
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {

@@ -202,7 +202,6 @@ func TestTransaction_Diff(t *testing.T) {
 
 func TestTransaction_Validate_Table(t *testing.T) {
 	validTID, _ := NewTransactionID()
-	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	validAcc, _ := NewAccountID()
 	validBudget, _ := NewBudgetID()
 	validPeriod, _ := NewPeriodID()
@@ -217,7 +216,6 @@ func TestTransaction_Validate_Table(t *testing.T) {
 			name: "valid expense transaction",
 			txn: Transaction{
 				ID:              validTID,
-				SpaceID:         validSpace,
 				AccountID:       &validAcc,
 				BudgetID:        &validBudget,
 				PeriodID:        &validPeriod,
@@ -233,7 +231,6 @@ func TestTransaction_Validate_Table(t *testing.T) {
 			name: "valid income transaction without budget",
 			txn: Transaction{
 				ID:              validTID,
-				SpaceID:         validSpace,
 				AccountID:       &validAcc,
 				Amount:          5000,
 				AmountInBase:    5000,
@@ -247,7 +244,6 @@ func TestTransaction_Validate_Table(t *testing.T) {
 			name: "missing budget for expense",
 			txn: Transaction{
 				ID:              validTID,
-				SpaceID:         validSpace,
 				AccountID:       &validAcc,
 				Amount:          5000,
 				Currency:        "USD",
@@ -260,7 +256,6 @@ func TestTransaction_Validate_Table(t *testing.T) {
 			name: "amount <= 0",
 			txn: Transaction{
 				ID:              validTID,
-				SpaceID:         validSpace,
 				AccountID:       &validAcc,
 				BudgetID:        &validBudget,
 				Amount:          0,
@@ -274,7 +269,6 @@ func TestTransaction_Validate_Table(t *testing.T) {
 			name: "invalid currency",
 			txn: Transaction{
 				ID:              validTID,
-				SpaceID:         validSpace,
 				AccountID:       &validAcc,
 				BudgetID:        &validBudget,
 				Amount:          5000,
@@ -288,7 +282,6 @@ func TestTransaction_Validate_Table(t *testing.T) {
 			name: "zero transaction date",
 			txn: Transaction{
 				ID:        validTID,
-				SpaceID:   validSpace,
 				AccountID: &validAcc,
 				BudgetID:  &validBudget,
 				Amount:    5000,

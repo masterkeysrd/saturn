@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
@@ -153,7 +154,8 @@ func TestAgentStatementExtractor_Extract(t *testing.T) {
 			extractor := NewAgentStatementExtractor(&mockAgentCoordinator{
 				executeAgentFunc: tc.mockExec,
 			})
-			doc, err := extractor.Extract(context.Background(), "spc_1", tc.docText, tc.accounts)
+			fCtx := finance.NewContext("spc_1", "usr_1", time.UTC, "USD")
+			doc, err := extractor.Extract(context.Background(), fCtx, tc.docText, tc.accounts)
 			if tc.expectedError {
 				if err == nil {
 					t.Fatal("expected error, got nil")

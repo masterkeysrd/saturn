@@ -136,7 +136,7 @@ func TestPipeline_ClassifyNode(t *testing.T) {
 	tests := []struct {
 		name          string
 		state         *IngestionState
-		mockFn        func(ctx context.Context, spaceID string, doc string) (string, error)
+		mockFn        func(ctx context.Context, fCtx finance.Context, doc string) (string, error)
 		expectedCls   string
 		expectedError bool
 	}{
@@ -192,7 +192,7 @@ func TestPipeline_ClassifyNode(t *testing.T) {
 					TextContent: "Store receipt",
 				},
 			},
-			mockFn: func(ctx context.Context, spaceID string, doc string) (string, error) {
+			mockFn: func(ctx context.Context, fCtx finance.Context, doc string) (string, error) {
 				return "RECEIPT", nil
 			},
 			expectedCls:   "RECEIPT",
@@ -204,7 +204,7 @@ func TestPipeline_ClassifyNode(t *testing.T) {
 				SpaceID: "spc_1",
 				Request: &IngestionRequest{TextContent: "Error doc"},
 			},
-			mockFn: func(ctx context.Context, spaceID string, doc string) (string, error) {
+			mockFn: func(ctx context.Context, fCtx finance.Context, doc string) (string, error) {
 				return "", errors.New("agent timeout")
 			},
 			expectedError: true,
@@ -216,7 +216,8 @@ func TestPipeline_ClassifyNode(t *testing.T) {
 			coord := &coordinator{
 				classifier: &DocumentClassifierMock{ClassifyFunc: tc.mockFn},
 			}
-			cmd, err := coord.pipelineClassifyNode(context.Background(), tc.state)
+			fCtx := finance.NewContext(finance.SpaceID(tc.state.SpaceID), "usr_1", time.UTC, "USD")
+			cmd, err := coord.pipelineClassifyNode(fCtx).Execute(context.Background(), tc.state)
 			if tc.expectedError {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -240,12 +241,12 @@ func TestPipeline_ExtractNode(t *testing.T) {
 	tests := []struct {
 		name           string
 		state          *IngestionState
-		mockBudgets    func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error)
-		mockAccounts   func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error)
-		mockPayments   func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error)
-		mockExpenses   func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error)
-		mockBorrowings func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error)
-		mockParser     func(ctx context.Context, spaceID string, doc string, ingCtx IngestionContext) (*ParsedTransaction, error)
+		mockBudgets    func(ctx context.Context, rCtx finance.Context, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error)
+		mockAccounts   func(ctx context.Context, rCtx finance.Context, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error)
+		mockPayments   func(ctx context.Context, rCtx finance.Context, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error)
+		mockExpenses   func(ctx context.Context, rCtx finance.Context, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error)
+		mockBorrowings func(ctx context.Context, rCtx finance.Context, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error)
+		mockParser     func(ctx context.Context, fCtx finance.Context, doc string, ingCtx IngestionContext) (*ParsedTransaction, error)
 		expectedVendor string
 		expectedError  bool
 	}{
@@ -283,7 +284,7 @@ func TestPipeline_ExtractNode(t *testing.T) {
 				Classification: "RECEIPT",
 				Metadata:       map[string]any{},
 			},
-			mockBudgets: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
+			mockBudgets: func(ctx context.Context, rCtx finance.Context, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
 				return nil, errors.New("budget db error")
 			},
 			expectedError: true,
@@ -295,7 +296,7 @@ func TestPipeline_ExtractNode(t *testing.T) {
 				Classification: "RECEIPT",
 				Metadata:       map[string]any{},
 			},
-			mockAccounts: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
+			mockAccounts: func(ctx context.Context, rCtx finance.Context, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
 				return nil, errors.New("account db error")
 			},
 			expectedError: true,
@@ -307,7 +308,7 @@ func TestPipeline_ExtractNode(t *testing.T) {
 				Classification: "RECEIPT",
 				Metadata:       map[string]any{},
 			},
-			mockPayments: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error) {
+			mockPayments: func(ctx context.Context, rCtx finance.Context, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error) {
 				return nil, errors.New("scheduled db error")
 			},
 			expectedError: true,
@@ -319,7 +320,7 @@ func TestPipeline_ExtractNode(t *testing.T) {
 				Classification: "RECEIPT",
 				Metadata:       map[string]any{},
 			},
-			mockExpenses: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error) {
+			mockExpenses: func(ctx context.Context, rCtx finance.Context, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error) {
 				return nil, errors.New("recurring db error")
 			},
 			expectedError: true,
@@ -331,7 +332,7 @@ func TestPipeline_ExtractNode(t *testing.T) {
 				Classification: "RECEIPT",
 				Metadata:       map[string]any{},
 			},
-			mockParser: func(ctx context.Context, spaceID string, doc string, ingCtx IngestionContext) (*ParsedTransaction, error) {
+			mockParser: func(ctx context.Context, fCtx finance.Context, doc string, ingCtx IngestionContext) (*ParsedTransaction, error) {
 				return nil, errors.New("parser fail")
 			},
 			expectedError: true,
@@ -343,10 +344,10 @@ func TestPipeline_ExtractNode(t *testing.T) {
 				Classification: "RECEIPT",
 				Metadata:       map[string]any{},
 			},
-			mockBorrowings: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error) {
+			mockBorrowings: func(ctx context.Context, rCtx finance.Context, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error) {
 				return nil, "", errors.New("borrowing query error")
 			},
-			mockParser: func(ctx context.Context, spaceID string, doc string, ingCtx IngestionContext) (*ParsedTransaction, error) {
+			mockParser: func(ctx context.Context, fCtx finance.Context, doc string, ingCtx IngestionContext) (*ParsedTransaction, error) {
 				return &ParsedTransaction{
 					Counterparty: "Target",
 					Amount:       1500,
@@ -361,36 +362,36 @@ func TestPipeline_ExtractNode(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			fsMock := &FinanceServiceMock{
-				ListBudgetsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
+				ListBudgetsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
 					if tc.mockBudgets != nil {
-						return tc.mockBudgets(ctx, spaceID, filter)
+						return tc.mockBudgets(ctx, rCtx, filter)
 					}
 					return &paging.Page[*finance.Budget]{}, nil
 				},
-				ListAccountsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
+				ListAccountsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
 					if tc.mockAccounts != nil {
-						return tc.mockAccounts(ctx, spaceID, filter)
+						return tc.mockAccounts(ctx, rCtx, filter)
 					}
 					return &paging.Page[*finance.Account]{}, nil
 				},
-				ListInstitutionsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListInstitutionsFilter) (*paging.Page[*finance.Institution], error) {
+				ListInstitutionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListInstitutionsFilter) (*paging.Page[*finance.Institution], error) {
 					return &paging.Page[*finance.Institution]{}, nil
 				},
-				ListScheduledTransactionsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error) {
+				ListScheduledTransactionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error) {
 					if tc.mockPayments != nil {
-						return tc.mockPayments(ctx, spaceID, filter)
+						return tc.mockPayments(ctx, rCtx, filter)
 					}
 					return &paging.Page[*finance.ScheduledTransaction]{}, nil
 				},
-				ListRecurringTransactionsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error) {
+				ListRecurringTransactionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error) {
 					if tc.mockExpenses != nil {
-						return tc.mockExpenses(ctx, spaceID, filter)
+						return tc.mockExpenses(ctx, rCtx, filter)
 					}
 					return &paging.Page[*finance.RecurringTransaction]{}, nil
 				},
-				ListBorrowingsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error) {
+				ListBorrowingsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error) {
 					if tc.mockBorrowings != nil {
-						return tc.mockBorrowings(ctx, spaceID, filter)
+						return tc.mockBorrowings(ctx, rCtx, filter)
 					}
 					return nil, "", nil
 				},
@@ -399,7 +400,8 @@ func TestPipeline_ExtractNode(t *testing.T) {
 				financeService: fsMock,
 				parser:         &IngestionParserMock{ParseFunc: tc.mockParser},
 			}
-			cmd, err := coord.pipelineExtractNode(context.Background(), tc.state)
+			fCtx := finance.NewContext(finance.SpaceID(tc.state.SpaceID), "usr_1", time.UTC, "USD")
+			cmd, err := coord.pipelineExtractNode(fCtx).Execute(context.Background(), tc.state)
 			if tc.expectedError {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -425,9 +427,9 @@ func TestPipeline_ResolveNode(t *testing.T) {
 	tests := []struct {
 		name              string
 		state             *IngestionState
-		mockResolveAcc    func(ctx context.Context, spaceID finance.SpaceID, opts finance.ResolveAccountOpts) (*finance.Account, error)
-		mockGetBudget     func(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID) (*finance.Budget, error)
-		mockListBudgets   func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error)
+		mockResolveAcc    func(ctx context.Context, rCtx finance.Context, opts finance.ResolveAccountOpts) (*finance.Account, error)
+		mockGetBudget     func(ctx context.Context, rCtx finance.Context, id finance.BudgetID) (*finance.Budget, error)
+		mockListBudgets   func(ctx context.Context, rCtx finance.Context, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error)
 		expectedAccountID *string
 		expectedBudgetID  *string
 	}{
@@ -438,10 +440,10 @@ func TestPipeline_ResolveNode(t *testing.T) {
 				SuggestedBudget: "Groceries",
 				Metadata:        map[string]any{},
 			},
-			mockResolveAcc: func(ctx context.Context, spaceID finance.SpaceID, opts finance.ResolveAccountOpts) (*finance.Account, error) {
+			mockResolveAcc: func(ctx context.Context, rCtx finance.Context, opts finance.ResolveAccountOpts) (*finance.Account, error) {
 				return nil, errors.New("not resolved")
 			},
-			mockListBudgets: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
+			mockListBudgets: func(ctx context.Context, rCtx finance.Context, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
 				return &paging.Page[*finance.Budget]{
 					Items: []*finance.Budget{
 						{ID: "bgt_groceries", Name: "Groceries", DefaultAccountID: &defaultAccID},
@@ -459,7 +461,7 @@ func TestPipeline_ResolveNode(t *testing.T) {
 					"destination_account_id": "acc_dest_1",
 				},
 			},
-			mockResolveAcc: func(ctx context.Context, spaceID finance.SpaceID, opts finance.ResolveAccountOpts) (*finance.Account, error) {
+			mockResolveAcc: func(ctx context.Context, rCtx finance.Context, opts finance.ResolveAccountOpts) (*finance.Account, error) {
 				if opts.AccountID == "acc_dest_1" {
 					return &finance.Account{ID: "acc_dest_resolved"}, nil
 				}
@@ -475,15 +477,16 @@ func TestPipeline_ResolveNode(t *testing.T) {
 			fsMock := &FinanceServiceMock{
 				ResolveAccountFunc: tc.mockResolveAcc,
 				GetBudgetFunc:      tc.mockGetBudget,
-				ListBudgetsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
+				ListBudgetsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
 					if tc.mockListBudgets != nil {
-						return tc.mockListBudgets(ctx, spaceID, filter)
+						return tc.mockListBudgets(ctx, rCtx, filter)
 					}
 					return &paging.Page[*finance.Budget]{}, nil
 				},
 			}
 			coord := &coordinator{financeService: fsMock}
-			cmd, err := coord.pipelineResolveNode(context.Background(), tc.state)
+			fCtx := finance.NewContext(finance.SpaceID(tc.state.SpaceID), "usr_1", time.UTC, "USD")
+			cmd, err := coord.pipelineResolveNode(fCtx).Execute(context.Background(), tc.state)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -506,8 +509,8 @@ func TestPipeline_DeduplicateNode(t *testing.T) {
 	tests := []struct {
 		name          string
 		state         *IngestionState
-		mockListTx    func(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error)
-		mockDedup     func(ctx context.Context, spaceID string, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error)
+		mockListTx    func(ctx context.Context, rCtx finance.Context, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error)
+		mockDedup     func(ctx context.Context, fCtx finance.Context, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error)
 		expectedDupID *string
 		expectedError bool
 	}{
@@ -521,10 +524,10 @@ func TestPipeline_DeduplicateNode(t *testing.T) {
 				Date:     time.Now().Format(time.RFC3339),
 				Metadata: map[string]any{},
 			},
-			mockListTx: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
+			mockListTx: func(ctx context.Context, rCtx finance.Context, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
 				return &paging.Page[*finance.Transaction]{Items: []*finance.Transaction{{ID: "tx_orig_1"}}}, nil
 			},
-			mockDedup: func(ctx context.Context, spaceID string, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error) {
+			mockDedup: func(ctx context.Context, fCtx finance.Context, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error) {
 				return &DeduplicationResult{IsDuplicate: true, DuplicateTransactionID: "tx_orig_1"}, nil
 			},
 			expectedDupID: new(string("tx_orig_1")),
@@ -539,10 +542,10 @@ func TestPipeline_DeduplicateNode(t *testing.T) {
 				Date:     "2026-09-17",
 				Metadata: map[string]any{},
 			},
-			mockListTx: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
+			mockListTx: func(ctx context.Context, rCtx finance.Context, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
 				return &paging.Page[*finance.Transaction]{}, nil
 			},
-			mockDedup: func(ctx context.Context, spaceID string, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error) {
+			mockDedup: func(ctx context.Context, fCtx finance.Context, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error) {
 				return &DeduplicationResult{IsDuplicate: false}, nil
 			},
 			expectedDupID: nil,
@@ -556,10 +559,10 @@ func TestPipeline_DeduplicateNode(t *testing.T) {
 				Date:     "",
 				Metadata: map[string]any{},
 			},
-			mockListTx: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
+			mockListTx: func(ctx context.Context, rCtx finance.Context, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
 				return &paging.Page[*finance.Transaction]{}, nil
 			},
-			mockDedup: func(ctx context.Context, spaceID string, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error) {
+			mockDedup: func(ctx context.Context, fCtx finance.Context, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error) {
 				return nil, errors.New("dedup failure")
 			},
 			expectedDupID: nil,
@@ -573,7 +576,8 @@ func TestPipeline_DeduplicateNode(t *testing.T) {
 				financeService: &FinanceServiceMock{ListTransactionsFunc: tc.mockListTx},
 				deduplicator:   &IngestionDeduplicatorMock{DeduplicateFunc: tc.mockDedup},
 			}
-			cmd, err := coord.pipelineDeduplicateNode(context.Background(), tc.state)
+			fCtx := finance.NewContext(finance.SpaceID(tc.state.SpaceID), "usr_1", time.UTC, "USD")
+			cmd, err := coord.pipelineDeduplicateNode(fCtx).Execute(context.Background(), tc.state)
 			if tc.expectedError {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -603,9 +607,9 @@ func TestCoordinator_IngestEmail(t *testing.T) {
 		sender        string
 		subject       string
 		body          string
-		classifyFn    func(ctx context.Context, spaceID string, doc string) (string, error)
-		parserFn      func(ctx context.Context, spaceID string, doc string, ingCtx IngestionContext) (*ParsedTransaction, error)
-		stageFn       func(ctx context.Context, spaceID finance.SpaceID, item *finance.StageInboxItem) (*finance.InboxItem, error)
+		classifyFn    func(ctx context.Context, fCtx finance.Context, doc string) (string, error)
+		parserFn      func(ctx context.Context, fCtx finance.Context, doc string, ingCtx IngestionContext) (*ParsedTransaction, error)
+		stageFn       func(ctx context.Context, rCtx finance.Context, item *finance.StageInboxItem) (*finance.InboxItem, error)
 		expectedError bool
 		expectedID    string
 	}{
@@ -614,17 +618,17 @@ func TestCoordinator_IngestEmail(t *testing.T) {
 			sender:  "billing@uber.com",
 			subject: "Your Uber receipt",
 			body:    "Trip receipt: $25.50",
-			classifyFn: func(ctx context.Context, spaceID string, doc string) (string, error) {
+			classifyFn: func(ctx context.Context, fCtx finance.Context, doc string) (string, error) {
 				return "RECEIPT", nil
 			},
-			parserFn: func(ctx context.Context, spaceID string, doc string, ingCtx IngestionContext) (*ParsedTransaction, error) {
+			parserFn: func(ctx context.Context, fCtx finance.Context, doc string, ingCtx IngestionContext) (*ParsedTransaction, error) {
 				return &ParsedTransaction{
 					Counterparty: "Uber",
 					Amount:       2550,
 					Currency:     "USD",
 				}, nil
 			},
-			stageFn: func(ctx context.Context, spaceID finance.SpaceID, item *finance.StageInboxItem) (*finance.InboxItem, error) {
+			stageFn: func(ctx context.Context, rCtx finance.Context, item *finance.StageInboxItem) (*finance.InboxItem, error) {
 				if item.Vendor != "Uber" || item.Amount != 2550 || item.DocType != finance.InboxItemDocReceipt {
 					t.Errorf("unexpected stage item: %+v", item)
 				}
@@ -638,7 +642,7 @@ func TestCoordinator_IngestEmail(t *testing.T) {
 			sender:  "newsletter@test.com",
 			subject: "Weekly update",
 			body:    "Hello world",
-			classifyFn: func(ctx context.Context, spaceID string, doc string) (string, error) {
+			classifyFn: func(ctx context.Context, fCtx finance.Context, doc string) (string, error) {
 				return "UNKNOWN", nil
 			},
 			expectedError: true,
@@ -648,7 +652,7 @@ func TestCoordinator_IngestEmail(t *testing.T) {
 			sender:  "someone@test.com",
 			subject: "Test",
 			body:    "Test body",
-			classifyFn: func(ctx context.Context, spaceID string, doc string) (string, error) {
+			classifyFn: func(ctx context.Context, fCtx finance.Context, doc string) (string, error) {
 				return "", errors.New("classify failed")
 			},
 			expectedError: true,
@@ -658,13 +662,13 @@ func TestCoordinator_IngestEmail(t *testing.T) {
 			sender:  "billing@store.com",
 			subject: "Invoice",
 			body:    "Invoice body",
-			classifyFn: func(ctx context.Context, spaceID string, doc string) (string, error) {
+			classifyFn: func(ctx context.Context, fCtx finance.Context, doc string) (string, error) {
 				return "INVOICE", nil
 			},
-			parserFn: func(ctx context.Context, spaceID string, doc string, ingCtx IngestionContext) (*ParsedTransaction, error) {
+			parserFn: func(ctx context.Context, fCtx finance.Context, doc string, ingCtx IngestionContext) (*ParsedTransaction, error) {
 				return &ParsedTransaction{Counterparty: "Store", Amount: 1000}, nil
 			},
-			stageFn: func(ctx context.Context, spaceID finance.SpaceID, item *finance.StageInboxItem) (*finance.InboxItem, error) {
+			stageFn: func(ctx context.Context, rCtx finance.Context, item *finance.StageInboxItem) (*finance.InboxItem, error) {
 				return nil, errors.New("database failure")
 			},
 			expectedError: true,
@@ -675,36 +679,36 @@ func TestCoordinator_IngestEmail(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			deps := Dependencies{
 				FinanceService: &FinanceServiceMock{
-					ListBudgetsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
+					ListBudgetsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
 						return &paging.Page[*finance.Budget]{}, nil
 					},
-					ListAccountsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
+					ListAccountsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
 						return &paging.Page[*finance.Account]{}, nil
 					},
-					ListInstitutionsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListInstitutionsFilter) (*paging.Page[*finance.Institution], error) {
+					ListInstitutionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListInstitutionsFilter) (*paging.Page[*finance.Institution], error) {
 						return &paging.Page[*finance.Institution]{}, nil
 					},
-					ListScheduledTransactionsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error) {
+					ListScheduledTransactionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error) {
 						return &paging.Page[*finance.ScheduledTransaction]{}, nil
 					},
-					ListRecurringTransactionsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error) {
+					ListRecurringTransactionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error) {
 						return &paging.Page[*finance.RecurringTransaction]{}, nil
 					},
-					ListBorrowingsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error) {
+					ListBorrowingsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error) {
 						return nil, "", nil
 					},
-					ListTransactionsFunc: func(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
+					ListTransactionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
 						return &paging.Page[*finance.Transaction]{}, nil
 					},
 					StageInboxItemFunc: tc.stageFn,
-					ResolveAccountFunc: func(ctx context.Context, spaceID finance.SpaceID, opts finance.ResolveAccountOpts) (*finance.Account, error) {
+					ResolveAccountFunc: func(ctx context.Context, rCtx finance.Context, opts finance.ResolveAccountOpts) (*finance.Account, error) {
 						return nil, nil
 					},
 				},
 				Classifier: &DocumentClassifierMock{ClassifyFunc: tc.classifyFn},
 				Parser:     &IngestionParserMock{ParseFunc: tc.parserFn},
 				Deduplicator: &IngestionDeduplicatorMock{
-					DeduplicateFunc: func(ctx context.Context, spaceID string, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error) {
+					DeduplicateFunc: func(ctx context.Context, fCtx finance.Context, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error) {
 						return &DeduplicationResult{IsDuplicate: false}, nil
 					},
 				},

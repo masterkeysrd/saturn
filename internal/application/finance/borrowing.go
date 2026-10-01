@@ -27,19 +27,18 @@ func (c *coordinator) CreateBorrowing(ctx context.Context, req *CreateBorrowingR
 	}
 
 	b := &finance.Borrowing{
-		SpaceID:       rCtx.SpaceID,
 		Direction:     finance.BorrowingDirection(req.Direction),
 		Counterparty:  req.Counterparty,
 		ContactInfo:   req.ContactInfo,
 		TotalAmount:   req.TotalAmount,
 		Currency:      finance.Currency(req.Currency),
-		EstablishedAt: req.EstablishedAt,
+		EstablishedAt: rCtx.Date(req.EstablishedAt),
 		DueAt:         req.DueAt,
 		Notes:         req.Notes,
 		AccountID:     req.AccountID,
 	}
 
-	return c.financeService.CreateBorrowing(ctx, b, req.CreateAsTransaction)
+	return c.financeService.CreateBorrowing(ctx, rCtx, b, req.CreateAsTransaction)
 }
 
 type UpdateBorrowingRequest struct {
@@ -65,7 +64,6 @@ func (c *coordinator) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingR
 
 	b := &finance.Borrowing{
 		ID:            req.ID,
-		SpaceID:       rCtx.SpaceID,
 		Direction:     finance.BorrowingDirection(req.Direction),
 		Counterparty:  req.Counterparty,
 		ContactInfo:   req.ContactInfo,
@@ -78,7 +76,7 @@ func (c *coordinator) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingR
 		Version:       req.Version,
 	}
 
-	return c.financeService.UpdateBorrowing(ctx, b, req.UpdateMask)
+	return c.financeService.UpdateBorrowing(ctx, rCtx, b, req.UpdateMask)
 }
 
 func (c *coordinator) DeleteBorrowing(ctx context.Context, id finance.BorrowingID) error {
@@ -87,7 +85,7 @@ func (c *coordinator) DeleteBorrowing(ctx context.Context, id finance.BorrowingI
 		return err
 	}
 
-	return c.financeService.DeleteBorrowing(ctx, rCtx.SpaceID, id)
+	return c.financeService.DeleteBorrowing(ctx, rCtx, id)
 }
 
 type AdjustBorrowingBalanceRequest struct {
@@ -104,8 +102,7 @@ func (c *coordinator) AdjustBorrowingBalance(ctx context.Context, req *AdjustBor
 		return nil, err
 	}
 
-	return c.financeService.AdjustBorrowingBalance(ctx, finance.AdjustBorrowingBalanceRequest{
-		SpaceID:        rCtx.SpaceID,
+	return c.financeService.AdjustBorrowingBalance(ctx, rCtx, finance.AdjustBorrowingBalanceRequest{
 		BorrowingID:    req.BorrowingID,
 		TargetBalance:  req.TargetBalance,
 		AdjustmentDate: req.AdjustmentDate,
@@ -129,12 +126,11 @@ func (c *coordinator) LogBorrowingTransaction(ctx context.Context, req *LogBorro
 		return nil, err
 	}
 
-	return c.financeService.LogBorrowingTransaction(ctx, finance.LogBorrowingTransactionRequest{
-		SpaceID:         rCtx.SpaceID,
+	return c.financeService.LogBorrowingTransaction(ctx, rCtx, finance.LogBorrowingTransactionRequest{
 		BorrowingID:     req.BorrowingID,
 		Type:            req.Type,
 		Amount:          req.Amount,
-		TransactionDate: req.TransactionDate,
+		TransactionDate: rCtx.Date(req.TransactionDate),
 		AccountID:       req.AccountID,
 		Notes:           req.Notes,
 	})
@@ -156,13 +152,12 @@ func (c *coordinator) UpdateBorrowingTransaction(ctx context.Context, req *Updat
 		return nil, err
 	}
 
-	return c.financeService.UpdateBorrowingTransaction(ctx, finance.UpdateBorrowingTransactionRequest{
-		SpaceID:         rCtx.SpaceID,
+	return c.financeService.UpdateBorrowingTransaction(ctx, rCtx, finance.UpdateBorrowingTransactionRequest{
 		BorrowingID:     req.BorrowingID,
 		TransactionID:   req.TransactionID,
 		Type:            req.Type,
 		Amount:          req.Amount,
-		TransactionDate: req.TransactionDate,
+		TransactionDate: rCtx.Date(req.TransactionDate),
 		AccountID:       req.AccountID,
 		Notes:           req.Notes,
 	})
@@ -179,8 +174,7 @@ func (c *coordinator) DeleteBorrowingTransaction(ctx context.Context, req *Delet
 		return err
 	}
 
-	return c.financeService.DeleteBorrowingTransaction(ctx, finance.DeleteBorrowingTransactionRequest{
-		SpaceID:       rCtx.SpaceID,
+	return c.financeService.DeleteBorrowingTransaction(ctx, rCtx, finance.DeleteBorrowingTransactionRequest{
 		BorrowingID:   req.BorrowingID,
 		TransactionID: req.TransactionID,
 	})

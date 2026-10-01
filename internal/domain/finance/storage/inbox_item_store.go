@@ -15,7 +15,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
-type inboxItemDB struct {
+type InboxItemRecord struct {
 	ID                     string         `db:"id"`
 	SpaceID                string         `db:"space_id"`
 	IntegrationID          string         `db:"integration_id"`
@@ -36,60 +36,60 @@ type inboxItemDB struct {
 	CreateTime             sql.NullTime   `db:"create_time"`
 }
 
-func toInboxItemDomain(db inboxItemDB) *finance.InboxItem {
+// func toInboxItemDomain(db InboxItemRecord) *finance.InboxItem {
+func (ibi InboxItemRecord) toInboxItemDomain() *finance.InboxItem {
 	var accountID, budgetID, paymentID, transactionID, borrowingID *string
 	var linkType *finance.BorrowingLinkType
-	if db.AccountID.Valid {
-		accountID = new(db.AccountID.String)
+	if ibi.AccountID.Valid {
+		accountID = new(ibi.AccountID.String)
 	}
-	if db.BudgetID.Valid {
-		budgetID = new(db.BudgetID.String)
+	if ibi.BudgetID.Valid {
+		budgetID = new(ibi.BudgetID.String)
 	}
-	if db.ScheduledTransactionID.Valid {
-		paymentID = new(db.ScheduledTransactionID.String)
+	if ibi.ScheduledTransactionID.Valid {
+		paymentID = new(ibi.ScheduledTransactionID.String)
 	}
-	if db.TransactionID.Valid {
-		transactionID = new(db.TransactionID.String)
+	if ibi.TransactionID.Valid {
+		transactionID = new(ibi.TransactionID.String)
 	}
-	if db.BorrowingID.Valid {
-		borrowingID = new(db.BorrowingID.String)
+	if ibi.BorrowingID.Valid {
+		borrowingID = new(ibi.BorrowingID.String)
 	}
-	if db.BorrowingLinkType.Valid {
-		linkType = new(finance.BorrowingLinkType(db.BorrowingLinkType.String))
+	if ibi.BorrowingLinkType.Valid {
+		linkType = new(finance.BorrowingLinkType(ibi.BorrowingLinkType.String))
 	}
 
 	var amount int64
-	if db.Amount.Valid {
-		amount = db.Amount.Int64
+	if ibi.Amount.Valid {
+		amount = ibi.Amount.Int64
 	}
 
 	var metadata map[string]any
-	if db.MetadataJSON != "" {
-		_ = json.Unmarshal([]byte(db.MetadataJSON), &metadata)
+	if ibi.MetadataJSON != "" {
+		_ = json.Unmarshal([]byte(ibi.MetadataJSON), &metadata)
 	}
 	if metadata == nil {
 		metadata = make(map[string]any)
 	}
 
 	return &finance.InboxItem{
-		ID:                     db.ID,
-		SpaceID:                db.SpaceID,
-		IntegrationID:          db.IntegrationID,
-		Status:                 finance.InboxItemStatus(db.Status),
-		DocType:                finance.InboxItemDocType(db.DocType),
+		ID:                     ibi.ID,
+		IntegrationID:          ibi.IntegrationID,
+		Status:                 finance.InboxItemStatus(ibi.Status),
+		DocType:                finance.InboxItemDocType(ibi.DocType),
 		Amount:                 amount,
-		Currency:               db.Currency.String,
-		VendorName:             db.VendorName.String,
-		TransactionDate:        db.TransactionDate.Time,
+		Currency:               ibi.Currency.String,
+		VendorName:             ibi.VendorName.String,
+		TransactionDate:        ibi.TransactionDate.Time,
 		AccountID:              accountID,
 		BudgetID:               budgetID,
 		ScheduledTransactionID: paymentID,
 		TransactionID:          transactionID,
 		BorrowingID:            borrowingID,
 		BorrowingLinkType:      linkType,
-		RawPayload:             db.RawPayload,
+		RawPayload:             ibi.RawPayload,
 		Metadata:               metadata,
-		CreateTime:             db.CreateTime.Time,
+		CreateTime:             ibi.CreateTime.Time,
 	}
 }
 
@@ -101,7 +101,7 @@ func NewInboxItemStore(database db.DB) *InboxItemStore {
 	return &InboxItemStore{db: database}
 }
 
-func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) error {
+func (s *InboxItemStore) Insert(ctx context.Context, rCtx finance.Context, item *finance.InboxItem) error {
 	const op errors.Op = "domain/finance/storage.InsertInboxItem"
 	createTime := item.CreateTime
 	if createTime.IsZero() {
@@ -123,7 +123,7 @@ func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) er
 
 	ds := pgDialect.Insert(goqu.S("finance").Table("inbox_item")).Rows(goqu.Record{
 		"id":                       item.ID,
-		"space_id":                 item.SpaceID,
+		"space_id":                 string(rCtx.SpaceID()),
 		"integration_id":           item.IntegrationID,
 		"status":                   string(item.Status),
 		"doc_type":                 string(item.DocType),
@@ -151,24 +151,24 @@ func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) er
 	return nil
 }
 
-func (s *InboxItemStore) Get(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.InboxItem, error) {
+func (s *InboxItemStore) Get(ctx context.Context, rCtx finance.Context, id string) (*finance.InboxItem, error) {
 	const op errors.Op = "domain/finance/storage.GetInboxItem"
 	ds := pgDialect.From(goqu.S("finance").Table("inbox_item")).Select("*").Where(goqu.Ex{
-		"space_id": string(spaceID),
+		"space_id": string(rCtx.SpaceID()),
 		"id":       id,
 	})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
-	var db inboxItemDB
+	var db InboxItemRecord
 	if err := s.db.Get(ctx, &db, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
-	return toInboxItemDomain(db), nil
+	return db.toInboxItemDomain(), nil
 }
 
-func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListInboxItemsFilter) (*paging.Page[*finance.InboxItem], error) {
+func (s *InboxItemStore) ListBySpace(ctx context.Context, rCtx finance.Context, filter *finance.ListInboxItemsFilter) (*paging.Page[*finance.InboxItem], error) {
 	const op errors.Op = "domain/finance/storage.ListInboxItems"
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
@@ -187,7 +187,7 @@ func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID finance.SpaceI
 	}
 
 	// Apply filtering conditions
-	ds = ds.Where(goqu.Ex{"space_id": spaceID})
+	ds = ds.Where(goqu.Ex{"space_id": string(rCtx.SpaceID())})
 
 	if filter.Status != nil {
 		ds = ds.Where(goqu.Ex{"status": string(*filter.Status)})
@@ -225,14 +225,14 @@ func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID finance.SpaceI
 		return nil, errors.E(op, err)
 	}
 
-	var dbRows []inboxItemDB
+	var dbRows []InboxItemRecord
 	if err := s.db.Select(ctx, &dbRows, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
 
 	items := make([]*finance.InboxItem, len(dbRows))
 	for i := range dbRows {
-		items[i] = toInboxItemDomain(dbRows[i])
+		items[i] = dbRows[i].toInboxItemDomain()
 	}
 
 	page := paging.NewPage(items, int(filter.PageSize), func(i *finance.InboxItem) paging.Cursor {
@@ -245,10 +245,10 @@ func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID finance.SpaceI
 	return page, nil
 }
 
-func (s *InboxItemStore) Delete(ctx context.Context, spaceID finance.SpaceID, id string) error {
+func (s *InboxItemStore) Delete(ctx context.Context, rCtx finance.Context, id string) error {
 	const op errors.Op = "domain/finance/storage.DeleteInboxItem"
 	ds := pgDialect.Delete(goqu.S("finance").Table("inbox_item")).Where(goqu.Ex{
-		"space_id": string(spaceID),
+		"space_id": string(rCtx.SpaceID()),
 		"id":       id,
 	})
 	query, args, err := ds.Prepared(true).ToSQL()
@@ -261,7 +261,7 @@ func (s *InboxItemStore) Delete(ctx context.Context, spaceID finance.SpaceID, id
 	return nil
 }
 
-func (s *InboxItemStore) Update(ctx context.Context, item *finance.InboxItem) error {
+func (s *InboxItemStore) Update(ctx context.Context, rCtx finance.Context, item *finance.InboxItem) error {
 	const op errors.Op = "domain/finance/storage.UpdateInboxItem"
 	var linkTypeStr *string
 	if item.BorrowingLinkType != nil {
@@ -294,7 +294,7 @@ func (s *InboxItemStore) Update(ctx context.Context, item *finance.InboxItem) er
 			"metadata":                 metaJSON,
 		}).
 		Where(goqu.Ex{
-			"space_id": item.SpaceID,
+			"space_id": string(rCtx.SpaceID()),
 			"id":       item.ID,
 		})
 

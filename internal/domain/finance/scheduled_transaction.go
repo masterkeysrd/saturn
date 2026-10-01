@@ -52,7 +52,6 @@ type ScheduledTransactionMetadata struct {
 
 type ScheduledTransaction struct {
 	ID         ScheduledTransactionID
-	SpaceID    SpaceID
 	BudgetID   *BudgetID // Nullable, required for EXPENSE type
 	SourceType string    // "recurrent_transaction", "loan", "tax"
 	SourceID   string
@@ -70,9 +69,6 @@ type ScheduledTransaction struct {
 func (sp *ScheduledTransaction) Validate() error {
 	if err := sp.ID.Validate(); err != nil {
 		return fmt.Errorf("validate scheduled transaction ID: %w", err)
-	}
-	if err := sp.SpaceID.Validate(); err != nil {
-		return fmt.Errorf("validate space ID: %w", err)
 	}
 	if sp.Type == TransactionTypeExpense {
 		if sp.BudgetID == nil {
@@ -194,7 +190,6 @@ func (sp *ScheduledTransaction) NewConfirmationTransaction(opts ConfirmOpts) (*T
 	}
 
 	t := &Transaction{
-		SpaceID:         sp.SpaceID,
 		Type:            sp.Type,
 		BudgetID:        budgetID,
 		PeriodID:        opts.PeriodID,
@@ -260,7 +255,6 @@ func (sp *ScheduledTransaction) NewScheduledEvent(txnID TransactionID) *Transact
 		eventType = "INCOME_SCHEDULED"
 	}
 	return &TransactionEvent{
-		SpaceID:       sp.SpaceID,
 		TransactionID: txnID,
 		EventType:     eventType,
 		CreateTime:    sp.CreateTime,

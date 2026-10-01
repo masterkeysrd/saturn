@@ -2,7 +2,6 @@ package financeapp
 
 import (
 	"context"
-	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
@@ -30,8 +29,7 @@ func (c *coordinator) CreateBudget(ctx context.Context, req *CreateBudgetRequest
 		return nil, errors.E(op, errors.Invalid, "budget payload is required")
 	}
 
-	req.Budget.SpaceID = rCtx.SpaceID
-	return c.financeService.CreateBudget(ctx, req.Budget)
+	return c.financeService.CreateBudget(ctx, rCtx, req.Budget)
 }
 
 // UpdateBudget orchestrates budget template updates.
@@ -45,18 +43,17 @@ func (c *coordinator) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest
 		return nil, errors.E(op, errors.Invalid, "budget payload is required")
 	}
 
-	req.Budget.SpaceID = rCtx.SpaceID
-	updated, err := c.financeService.UpdateBudget(ctx, req.Budget, req.UpdateMask)
+	updated, err := c.financeService.UpdateBudget(ctx, rCtx, req.Budget, req.UpdateMask)
 	if err != nil {
 		return nil, err
 	}
 
 	// Handle limit propagation to the current active period if requested
 	if req.Propagation == finance.PropagationCurrentPeriod && req.Budget.LimitAmount > 0 {
-		period, err := c.financeService.GetOrCreatePeriod(ctx, updated.SpaceID, updated.ID, time.Now())
+		period, err := c.financeService.GetOrCreatePeriod(ctx, rCtx, updated.ID, rCtx.Now())
 		if err == nil {
 			// Update the current period's limit in the database
-			_ = c.financeService.UpdatePeriodLimit(ctx, period.ID, req.Budget.LimitAmount)
+			_ = c.financeService.UpdatePeriodLimit(ctx, rCtx, period.ID, req.Budget.LimitAmount)
 		}
 	}
 
@@ -70,7 +67,7 @@ func (c *coordinator) GetBudget(ctx context.Context, id finance.BudgetID) (*fina
 		return nil, err
 	}
 
-	return c.financeService.GetBudget(ctx, rCtx.SpaceID, id)
+	return c.financeService.GetBudget(ctx, rCtx, id)
 }
 
 type DeleteBudgetRequest struct {
@@ -89,7 +86,7 @@ func (c *coordinator) DeleteBudget(ctx context.Context, req *DeleteBudgetRequest
 		return errors.E(op, errors.Invalid, "delete request is required")
 	}
 
-	return c.financeService.DeleteBudget(ctx, rCtx.SpaceID, req.ID, finance.DeleteOptions{
+	return c.financeService.DeleteBudget(ctx, rCtx, req.ID, finance.DeleteOptions{
 		Version: req.Version,
 	})
 }

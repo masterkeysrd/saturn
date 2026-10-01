@@ -121,7 +121,6 @@ type HighValueExpense struct {
 
 // GetSpentInsightsRequest encapsulates parameter options for retrieving spent insights.
 type GetSpentInsightsRequest struct {
-	SpaceID     SpaceID
 	Granularity string
 	StartDate   time.Time
 	EndDate     time.Time
@@ -144,19 +143,23 @@ func (g Granularity) FormatLabel(t time.Time) string {
 	}
 }
 
-// ResolveRange validates the request options, parses granularity, and computes default date boundaries.
-func (req *GetSpentInsightsRequest) ResolveRange() (Granularity, time.Time, time.Time, error) {
-	if err := req.SpaceID.Validate(); err != nil {
-		return "", time.Time{}, time.Time{}, fmt.Errorf("validate space ID: %w", err)
+// ResolveRange validates the request options, parses granularity, and computes default date boundaries
+// localized to the workspace location.
+func (req *GetSpentInsightsRequest) ResolveRange(loc *time.Location) (Granularity, time.Time, time.Time, error) {
+	if loc == nil {
+		loc = time.UTC
 	}
+
 	g, err := ParseGranularity(req.Granularity)
 	if err != nil {
 		return "", time.Time{}, time.Time{}, err
 	}
 
+	now := time.Now().In(loc)
 	start := req.StartDate
-	if start.IsZero() {
-		now := time.Now().UTC()
+	if !start.IsZero() {
+		start = start.In(loc)
+	} else {
 		switch g {
 		case GranularityDaily:
 			start = now.AddDate(0, 0, -30)
@@ -168,9 +171,12 @@ func (req *GetSpentInsightsRequest) ResolveRange() (Granularity, time.Time, time
 			start = now.AddDate(-5, 0, 0)
 		}
 	}
+
 	end := req.EndDate
-	if end.IsZero() {
-		end = time.Now().UTC()
+	if !end.IsZero() {
+		end = end.In(loc)
+	} else {
+		end = now
 	}
 
 	return g, start, end, nil

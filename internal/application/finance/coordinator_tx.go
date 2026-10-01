@@ -28,6 +28,10 @@ func NewTransactionalCoordinator(next Coordinator, txr db.Transactor) *Transacti
 // Compile-time interface assertion.
 var _ Coordinator = (*TransactionalCoordinator)(nil)
 
+func (t *TransactionalCoordinator) ResolveContext(ctx context.Context) (finance.Context, error) {
+	return t.next.ResolveContext(ctx)
+}
+
 // ConfigureFinance executes next.ConfigureFinance inside a database transaction.
 func (t *TransactionalCoordinator) ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error) {
 	ctx, tx, err := t.txr.Begin(ctx)
@@ -243,14 +247,14 @@ func (t *TransactionalCoordinator) DeleteAccount(ctx context.Context, id finance
 }
 
 // AdjustAccountBalance executes next.AdjustAccountBalance inside a database transaction.
-func (t *TransactionalCoordinator) AdjustAccountBalance(ctx context.Context, id finance.AccountID, targetBalance int64, adjustmentDate string, note string) (*finance.Account, error) {
+func (t *TransactionalCoordinator) AdjustAccountBalance(ctx context.Context, req *AdjustAccountBalanceRequest) (*finance.Account, error) {
 	ctx, tx, err := t.txr.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	res, err := t.next.AdjustAccountBalance(ctx, id, targetBalance, adjustmentDate, note)
+	res, err := t.next.AdjustAccountBalance(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -960,10 +964,10 @@ func (t *TransactionalCoordinator) ApproveInboxItem(ctx context.Context, id stri
 	return res, nil
 }
 
-func (t *TransactionalCoordinator) ProcessSignalPipeline(ctx context.Context, spaceID string, req *IngestionRequest) (*IngestionState, error) {
-	return t.next.ProcessSignalPipeline(ctx, spaceID, req)
+func (t *TransactionalCoordinator) ProcessSignalPipeline(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*IngestionState, error) {
+	return t.next.ProcessSignalPipeline(ctx, fCtx, req)
 }
 
-func (t *TransactionalCoordinator) GetSignalSuggestions(ctx context.Context, spaceID string, req *IngestionRequest) (*SignalSuggestion, error) {
-	return t.next.GetSignalSuggestions(ctx, spaceID, req)
+func (t *TransactionalCoordinator) GetSignalSuggestions(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*SignalSuggestion, error) {
+	return t.next.GetSignalSuggestions(ctx, fCtx, req)
 }

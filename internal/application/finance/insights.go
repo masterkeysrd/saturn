@@ -20,18 +20,17 @@ func (c *coordinator) GetInsights(ctx context.Context, req *GetInsightsRequest) 
 	}
 
 	appReq := &finance.GetSpentInsightsRequest{
-		SpaceID:     rCtx.SpaceID,
 		Granularity: req.Granularity,
-		StartDate:   req.StartDate,
-		EndDate:     req.EndDate,
+		StartDate:   toLocation(req.StartDate, rCtx.Location()),
+		EndDate:     toLocation(req.EndDate, rCtx.Location()),
 	}
 
-	spent, err := c.financeService.GetSpentInsights(ctx, appReq)
+	spent, err := c.financeService.GetSpentInsights(ctx, rCtx, appReq)
 	if err != nil {
 		return nil, err
 	}
 
-	income, err := c.financeService.GetIncomeInsights(ctx, appReq)
+	income, err := c.financeService.GetIncomeInsights(ctx, rCtx, appReq)
 	if err != nil {
 		return nil, err
 	}

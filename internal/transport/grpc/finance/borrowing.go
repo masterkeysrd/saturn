@@ -11,7 +11,6 @@ import (
 	financeaggregator "github.com/masterkeysrd/saturn/internal/aggregator/finance"
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
-	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
@@ -32,8 +31,6 @@ func (h *Handler) CreateBorrowing(ctx context.Context, req *financev1.CreateBorr
 	var establishedAt time.Time
 	if input.GetEstablishedAt() != nil {
 		establishedAt = input.GetEstablishedAt().AsTime()
-	} else {
-		establishedAt = time.Now().UTC()
 	}
 
 	var dueAt *time.Time
@@ -76,13 +73,12 @@ func (h *Handler) GetBorrowing(ctx context.Context, req *financev1.GetBorrowingR
 		return nil, errors.E(op, errors.Invalid, err)
 	}
 
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
-	b, err := h.Aggregator.GetBorrowing(ctx, spaceID, bID)
+	b, err := h.Aggregator.GetBorrowing(ctx, rCtx, bID)
 	if err != nil {
 		return nil, err
 	}
@@ -93,11 +89,10 @@ func (h *Handler) GetBorrowing(ctx context.Context, req *financev1.GetBorrowingR
 func (h *Handler) ListBorrowings(ctx context.Context, req *financev1.ListBorrowingsRequest) (*financev1.ListBorrowingsResponse, error) {
 	const op errors.Op = "grpc/finance.ListBorrowings"
 
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	filter := financeaggregator.ListBorrowingsFilter{
 		ListBorrowingsFilter: finance.ListBorrowingsFilter{
@@ -131,7 +126,7 @@ func (h *Handler) ListBorrowings(ctx context.Context, req *financev1.ListBorrowi
 		filter.Direction = &directionVal
 	}
 
-	list, nextToken, err := h.Aggregator.ListBorrowings(ctx, spaceID, filter)
+	list, nextToken, err := h.Aggregator.ListBorrowings(ctx, rCtx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -163,8 +158,6 @@ func (h *Handler) UpdateBorrowing(ctx context.Context, req *financev1.UpdateBorr
 	var establishedAt time.Time
 	if input.GetEstablishedAt() != nil {
 		establishedAt = input.GetEstablishedAt().AsTime()
-	} else {
-		establishedAt = time.Now().UTC()
 	}
 
 	var dueAt *time.Time
@@ -440,7 +433,6 @@ func toProtoBorrowing(b *finance.Borrowing) *financev1.Borrowing {
 
 	return &financev1.Borrowing{
 		Id:                  string(b.ID),
-		SpaceId:             string(b.SpaceID),
 		Direction:           toProtoBorrowingDirection(b.Direction),
 		Counterparty:        b.Counterparty,
 		ContactInfo:         b.ContactInfo,

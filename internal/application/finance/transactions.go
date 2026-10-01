@@ -23,28 +23,21 @@ func (c *coordinator) CreateExpense(ctx context.Context, req *CreateExpenseReque
 		return nil, err
 	}
 
-	date := req.TransactionDate
-	if date.IsZero() {
-		date = time.Now().UTC()
-	}
-
-	effectiveDate := req.EffectiveDate
-	if effectiveDate.IsZero() {
-		effectiveDate = date
+	if req.EffectiveDate.IsZero() {
+		req.EffectiveDate = req.TransactionDate
 	}
 
 	txn := &finance.Transaction{
-		SpaceID:         rCtx.SpaceID,
 		BudgetID:        &req.BudgetID,
 		Amount:          req.Amount,
 		Currency:        req.Currency,
 		Description:     req.Description,
-		TransactionDate: date.UTC(),
-		EffectiveDate:   effectiveDate.UTC(),
+		TransactionDate: rCtx.Date(req.TransactionDate),
+		EffectiveDate:   rCtx.Date(req.EffectiveDate),
 		AccountID:       req.AccountID,
 	}
 
-	return c.financeService.CreateExpense(ctx, txn)
+	return c.financeService.CreateExpense(ctx, rCtx, txn)
 }
 
 type CreateIncomeRequest struct {
@@ -62,27 +55,20 @@ func (c *coordinator) CreateIncome(ctx context.Context, req *CreateIncomeRequest
 		return nil, err
 	}
 
-	date := req.TransactionDate
-	if date.IsZero() {
-		date = time.Now().UTC()
-	}
-
-	effectiveDate := req.EffectiveDate
-	if effectiveDate.IsZero() {
-		effectiveDate = date
+	if req.EffectiveDate.IsZero() {
+		req.EffectiveDate = req.TransactionDate
 	}
 
 	txn := &finance.Transaction{
-		SpaceID:         rCtx.SpaceID,
 		Amount:          req.Amount,
 		Currency:        req.Currency,
 		Description:     req.Description,
-		TransactionDate: date.UTC(),
-		EffectiveDate:   effectiveDate.UTC(),
+		TransactionDate: rCtx.Date(req.TransactionDate),
+		EffectiveDate:   rCtx.Date(req.EffectiveDate),
 		AccountID:       req.AccountID,
 	}
 
-	return c.financeService.CreateIncome(ctx, txn)
+	return c.financeService.CreateIncome(ctx, rCtx, txn)
 }
 
 func (c *coordinator) DeleteTransaction(ctx context.Context, id finance.TransactionID) error {
@@ -90,7 +76,7 @@ func (c *coordinator) DeleteTransaction(ctx context.Context, id finance.Transact
 	if err != nil {
 		return err
 	}
-	return c.financeService.DeleteTransaction(ctx, rCtx.SpaceID, id)
+	return c.financeService.DeleteTransaction(ctx, rCtx, id)
 }
 
 type UpdateExpenseRequest struct {
@@ -110,29 +96,22 @@ func (c *coordinator) UpdateExpense(ctx context.Context, req *UpdateExpenseReque
 		return nil, err
 	}
 
-	date := req.TransactionDate
-	if date.IsZero() {
-		date = time.Now().UTC()
-	}
-
-	effectiveDate := req.EffectiveDate
-	if effectiveDate.IsZero() {
-		effectiveDate = date
+	if req.EffectiveDate.IsZero() {
+		req.EffectiveDate = req.TransactionDate
 	}
 
 	txn := &finance.Transaction{
 		ID:              req.TransactionID,
-		SpaceID:         rCtx.SpaceID,
 		BudgetID:        &req.BudgetID,
 		Amount:          req.Amount,
 		Currency:        req.Currency,
 		Description:     req.Description,
-		TransactionDate: date.UTC(),
-		EffectiveDate:   effectiveDate.UTC(),
+		TransactionDate: rCtx.Date(req.TransactionDate),
+		EffectiveDate:   rCtx.Date(req.EffectiveDate),
 		AccountID:       req.AccountID,
 	}
 
-	return c.financeService.UpdateExpense(ctx, txn)
+	return c.financeService.UpdateExpense(ctx, rCtx, txn)
 }
 
 type UpdateIncomeRequest struct {
@@ -151,28 +130,21 @@ func (c *coordinator) UpdateIncome(ctx context.Context, req *UpdateIncomeRequest
 		return nil, err
 	}
 
-	date := req.TransactionDate
-	if date.IsZero() {
-		date = time.Now().UTC()
-	}
-
-	effectiveDate := req.EffectiveDate
-	if effectiveDate.IsZero() {
-		effectiveDate = date
+	if req.EffectiveDate.IsZero() {
+		req.EffectiveDate = req.TransactionDate
 	}
 
 	txn := &finance.Transaction{
 		ID:              req.TransactionID,
-		SpaceID:         rCtx.SpaceID,
 		Amount:          req.Amount,
 		Currency:        req.Currency,
 		Description:     req.Description,
-		TransactionDate: date.UTC(),
-		EffectiveDate:   effectiveDate.UTC(),
+		TransactionDate: rCtx.Date(req.TransactionDate),
+		EffectiveDate:   rCtx.Date(req.EffectiveDate),
 		AccountID:       req.AccountID,
 	}
 
-	return c.financeService.UpdateIncome(ctx, txn)
+	return c.financeService.UpdateIncome(ctx, rCtx, txn)
 }
 
 type ListTransactionEventsRequest struct {
@@ -184,5 +156,5 @@ func (c *coordinator) ListTransactionEvents(ctx context.Context, req *ListTransa
 	if err != nil {
 		return nil, err
 	}
-	return c.financeService.ListTransactionEvents(ctx, rCtx.SpaceID, req.TransactionID)
+	return c.financeService.ListTransactionEvents(ctx, rCtx, req.TransactionID)
 }

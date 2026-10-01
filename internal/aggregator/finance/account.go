@@ -22,15 +22,15 @@ type ListAccountsFilter struct {
 }
 
 // ListAccounts retrieves workspace accounts hydrated with base currency balances.
-func (s *Service) ListAccounts(ctx context.Context, spaceID finance.SpaceID, view ViewType, filter ListAccountsFilter) (*paging.Page[*AggregatedAccount], error) {
+func (s *Service) ListAccounts(ctx context.Context, rCtx finance.Context, view ViewType, filter ListAccountsFilter) (*paging.Page[*AggregatedAccount], error) {
 	// 1. Fetch raw accounts from the domain service
-	page, err := s.financeService.ListAccounts(ctx, spaceID, &filter.ListAccountsFilter)
+	page, err := s.financeService.ListAccounts(ctx, rCtx, &filter.ListAccountsFilter)
 	if err != nil {
 		return nil, err
 	}
 
 	// 2. Hydrate accounts using centralized helper
-	aggregated, err := s.hydrateAccounts(ctx, spaceID, page.Items, view)
+	aggregated, err := s.hydrateAccounts(ctx, rCtx, page.Items, view)
 	if err != nil {
 		return nil, err
 	}
@@ -47,13 +47,13 @@ func (s *Service) ListAccounts(ctx context.Context, spaceID finance.SpaceID, vie
 }
 
 // GetAccount retrieves a single account, optionally hydrating conversion metrics.
-func (s *Service) GetAccount(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID, view ViewType) (*AggregatedAccount, error) {
-	acc, err := s.financeService.GetAccount(ctx, spaceID, id)
+func (s *Service) GetAccount(ctx context.Context, rCtx finance.Context, id finance.AccountID, view ViewType) (*AggregatedAccount, error) {
+	acc, err := s.financeService.GetAccount(ctx, rCtx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	aggregated, err := s.hydrateAccounts(ctx, spaceID, []*finance.Account{acc}, view)
+	aggregated, err := s.hydrateAccounts(ctx, rCtx, []*finance.Account{acc}, view)
 	if err != nil {
 		return nil, err
 	}
@@ -62,29 +62,21 @@ func (s *Service) GetAccount(ctx context.Context, spaceID finance.SpaceID, id fi
 }
 
 // GetAccounts retrieves multiple accounts in batch, optionally hydrating conversion metrics.
-func (s *Service) GetAccounts(ctx context.Context, spaceID finance.SpaceID, ids []finance.AccountID, view ViewType) ([]*AggregatedAccount, error) {
+func (s *Service) GetAccounts(ctx context.Context, rCtx finance.Context, ids []finance.AccountID, view ViewType) ([]*AggregatedAccount, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
 
-	accounts, err := s.financeService.GetAccounts(ctx, spaceID, ids)
+	accounts, err := s.financeService.GetAccounts(ctx, rCtx, ids)
 	if err != nil {
 		return nil, err
 	}
 
-	// Safety check: ensure all fetched accounts belong to the target space
-	var spaceAccounts []*finance.Account
-	for _, acc := range accounts {
-		if acc.SpaceID == spaceID {
-			spaceAccounts = append(spaceAccounts, acc)
-		}
-	}
-
-	return s.hydrateAccounts(ctx, spaceID, spaceAccounts, view)
+	return s.hydrateAccounts(ctx, rCtx, accounts, view)
 }
 
 // hydrateAccounts is a centralized helper to convert balances and query exchange rates in a single batch.
-func (s *Service) hydrateAccounts(ctx context.Context, spaceID finance.SpaceID, accounts []*finance.Account, view ViewType) ([]*AggregatedAccount, error) {
+func (s *Service) hydrateAccounts(ctx context.Context, rCtx finance.Context, accounts []*finance.Account, view ViewType) ([]*AggregatedAccount, error) {
 	if len(accounts) == 0 {
 		return nil, nil
 	}
@@ -102,7 +94,7 @@ func (s *Service) hydrateAccounts(ctx context.Context, spaceID finance.SpaceID, 
 	}
 
 	// Fetch settings to get base currency
-	settings, err := s.financeService.GetFinanceSettings(ctx, spaceID)
+	settings, err := s.financeService.GetFinanceSettings(ctx, rCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +107,7 @@ func (s *Service) hydrateAccounts(ctx context.Context, spaceID finance.SpaceID, 
 	fromCurrencies := currencySet.ToSlice()
 
 	// Fetch latest rates in a single batch query
-	rates, err := s.financeService.GetLatestRates(ctx, spaceID, fromCurrencies, settings.BaseCurrency)
+	rates, err := s.financeService.GetLatestRates(ctx, rCtx, fromCurrencies, settings.BaseCurrency)
 	ratesMap := make(map[string]float64)
 	if err == nil {
 		for _, rate := range rates {
@@ -134,7 +126,7 @@ func (s *Service) hydrateAccounts(ctx context.Context, spaceID finance.SpaceID, 
 	instMap := make(map[finance.InstitutionID]*finance.Institution)
 	instSlice := instIDSet.ToSlice()
 	if len(instSlice) > 0 {
-		insts, err := s.financeService.GetInstitutionsByIDs(ctx, spaceID, instSlice)
+		insts, err := s.financeService.GetInstitutionsByIDs(ctx, rCtx, instSlice)
 		if err == nil {
 			for _, inst := range insts {
 				instMap[inst.ID] = inst

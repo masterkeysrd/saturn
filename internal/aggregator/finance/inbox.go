@@ -8,6 +8,6 @@ import (
 )
 
 // ListInboxItems retrieves staging inbox items for a space.
-func (s *Service) ListInboxItems(ctx context.Context, spaceID finance.SpaceID, filter finance.ListInboxItemsFilter) (*paging.Page[*finance.InboxItem], error) {
-	return s.financeService.ListInboxItems(ctx, spaceID, &filter)
+func (s *Service) ListInboxItems(ctx context.Context, rCtx finance.Context, filter finance.ListInboxItemsFilter) (*paging.Page[*finance.InboxItem], error) {
+	return s.financeService.ListInboxItems(ctx, rCtx, &filter)
 }

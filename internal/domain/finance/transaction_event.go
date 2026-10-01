@@ -53,20 +53,30 @@ func (teid TransactionEventID) Validate() error {
 // TransactionEvent represents a historical lifecycle event for a transaction.
 type TransactionEvent struct {
 	ID            TransactionEventID
-	SpaceID       SpaceID
 	TransactionID TransactionID
 	EventType     string
 	Metadata      map[string]interface{}
 	CreateTime    time.Time
 }
 
+func (e *TransactionEvent) Init() error {
+	if e.ID == "" {
+		id, err := NewTransactionEventID()
+		if err != nil {
+			return fmt.Errorf("generate event ID: %w", err)
+		}
+		e.ID = id
+	}
+	if e.CreateTime.IsZero() {
+		e.CreateTime = time.Now().UTC()
+	}
+	return nil
+}
+
 // Validate checks the basic properties of a transaction event.
 func (e *TransactionEvent) Validate() error {
 	if err := e.ID.Validate(); err != nil {
 		return fmt.Errorf("validate event ID: %w", err)
-	}
-	if err := e.SpaceID.Validate(); err != nil {
-		return fmt.Errorf("validate space ID: %w", err)
 	}
 	if err := e.TransactionID.Validate(); err != nil {
 		return fmt.Errorf("validate transaction ID: %w", err)
@@ -100,7 +110,6 @@ func (e *TransactionEvent) ParseMetadataJSON(data []byte) error {
 // NewConfirmationEvent constructs a BANK_CONFIRM_RECEIVED audit event for a confirmed transaction.
 func (t *Transaction) NewConfirmationEvent(actualAmount int64) *TransactionEvent {
 	return &TransactionEvent{
-		SpaceID:       t.SpaceID,
 		TransactionID: t.ID,
 		EventType:     "BANK_CONFIRM_RECEIVED",
 		CreateTime:    t.TransactionDate,

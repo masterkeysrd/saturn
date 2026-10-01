@@ -3,8 +3,6 @@ package finance
 import (
 	"testing"
 	"time"
-
-	"github.com/masterkeysrd/saturn/internal/platform/id"
 )
 
 func TestTransferID(t *testing.T) {
@@ -32,8 +30,6 @@ func TestTransferID(t *testing.T) {
 
 func TestTransfer_Validate(t *testing.T) {
 	trsfID, _ := NewTransferID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	srcAccID, _ := NewAccountID()
 	dstAccID, _ := NewAccountID()
 	now := time.Now()
@@ -47,7 +43,6 @@ func TestTransfer_Validate(t *testing.T) {
 			name: "valid transfer",
 			transfer: Transfer{
 				ID:                   trsfID,
-				SpaceID:              spaceID,
 				SourceAccountID:      srcAccID,
 				DestinationAccountID: dstAccID,
 				SourceAmount:         10000,
@@ -60,7 +55,6 @@ func TestTransfer_Validate(t *testing.T) {
 			name: "same source and destination account",
 			transfer: Transfer{
 				ID:                   trsfID,
-				SpaceID:              spaceID,
 				SourceAccountID:      srcAccID,
 				DestinationAccountID: srcAccID,
 				SourceAmount:         10000,
@@ -73,7 +67,6 @@ func TestTransfer_Validate(t *testing.T) {
 			name: "zero source amount",
 			transfer: Transfer{
 				ID:                   trsfID,
-				SpaceID:              spaceID,
 				SourceAccountID:      srcAccID,
 				DestinationAccountID: dstAccID,
 				SourceAmount:         0,
@@ -86,7 +79,6 @@ func TestTransfer_Validate(t *testing.T) {
 			name: "zero destination amount",
 			transfer: Transfer{
 				ID:                   trsfID,
-				SpaceID:              spaceID,
 				SourceAccountID:      srcAccID,
 				DestinationAccountID: dstAccID,
 				SourceAmount:         10000,
@@ -99,7 +91,6 @@ func TestTransfer_Validate(t *testing.T) {
 			name: "zero transfer date",
 			transfer: Transfer{
 				ID:                   trsfID,
-				SpaceID:              spaceID,
 				SourceAccountID:      srcAccID,
 				DestinationAccountID: dstAccID,
 				SourceAmount:         10000,
@@ -112,7 +103,6 @@ func TestTransfer_Validate(t *testing.T) {
 			name: "invalid transfer ID",
 			transfer: Transfer{
 				ID:                   "invalid_id",
-				SpaceID:              spaceID,
 				SourceAccountID:      srcAccID,
 				DestinationAccountID: dstAccID,
 				SourceAmount:         10000,
@@ -161,15 +151,12 @@ func TestParseTransferID_Table(t *testing.T) {
 
 func TestTransfer_NewLegTransactions(t *testing.T) {
 	trsfID, _ := NewTransferID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	srcAccID, _ := NewAccountID()
 	dstAccID, _ := NewAccountID()
 	now := time.Now().UTC()
 
 	transfer := &Transfer{
 		ID:                   trsfID,
-		SpaceID:              spaceID,
 		SourceAccountID:      srcAccID,
 		DestinationAccountID: dstAccID,
 		SourceAmount:         10000,

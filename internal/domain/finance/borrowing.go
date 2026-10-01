@@ -86,7 +86,6 @@ func MustBorrowingRepaymentID(s string) BorrowingRepaymentID {
 // Borrowing represents a personal borrowing or lending agreement.
 type Borrowing struct {
 	ID              BorrowingID
-	SpaceID         SpaceID
 	Direction       BorrowingDirection
 	Counterparty    string
 	ContactInfo     string
@@ -131,9 +130,6 @@ func (b *Borrowing) Init() error {
 func (b *Borrowing) Validate() error {
 	if err := b.ID.Validate(); err != nil {
 		return fmt.Errorf("validate borrowing ID: %w", err)
-	}
-	if err := b.SpaceID.Validate(); err != nil {
-		return fmt.Errorf("validate space ID: %w", err)
 	}
 	if b.Direction != BorrowingDirectionBorrowed && b.Direction != BorrowingDirectionLent {
 		return fmt.Errorf("invalid borrowing direction: %s", b.Direction)
@@ -366,7 +362,6 @@ func (b *Borrowing) NewTransaction(opts BorrowingTransactionOpts) (*Transaction,
 	bID := b.ID
 	t := &Transaction{
 		ID:              txnID,
-		SpaceID:         b.SpaceID,
 		Type:            txnType,
 		AccountID:       opts.AccountID,
 		Amount:          opts.Amount,

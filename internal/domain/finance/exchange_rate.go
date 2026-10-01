@@ -10,7 +10,6 @@ import (
 // ExchangeRate represents a daily rate record.
 type ExchangeRate struct {
 	ID           string
-	SpaceID      SpaceID
 	FromCurrency Currency
 	ToCurrency   Currency
 	Rate         float64
@@ -56,9 +55,6 @@ func ParseExchangeRateID(id string) (Currency, Currency, time.Time, error) {
 
 // Validate checks exchange rate constraints.
 func (r *ExchangeRate) Validate() error {
-	if err := r.SpaceID.Validate(); err != nil {
-		return fmt.Errorf("validate space ID: %w", err)
-	}
 	if err := r.FromCurrency.Validate(); err != nil {
 		return fmt.Errorf("validate from currency: %w", err)
 	}

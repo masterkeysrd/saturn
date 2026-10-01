@@ -3,8 +3,6 @@ package finance
 import (
 	"testing"
 	"time"
-
-	"github.com/masterkeysrd/saturn/internal/platform/id"
 )
 
 func TestParseAmountToCents(t *testing.T) {
@@ -38,7 +36,6 @@ func TestParseAmountToCents(t *testing.T) {
 
 func TestStatementLine_NewTransaction(t *testing.T) {
 	stID, _ := NewStatementID()
-	spID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	accID, _ := NewAccountID()
 	bgtID, _ := NewBudgetID()
 	fallback := time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC)
@@ -51,19 +48,9 @@ func TestStatementLine_NewTransaction(t *testing.T) {
 		checkTxn func(t *testing.T, txn *Transaction)
 	}{
 		{
-			name: "invalid space ID",
-			line: &StatementLine{StatementID: stID, Amount: -1000},
-			opts: StatementLineTransactionOpts{
-				SpaceID:   "invalid",
-				AccountID: accID,
-			},
-			wantErr: true,
-		},
-		{
 			name: "invalid account ID",
 			line: &StatementLine{StatementID: stID, Amount: -1000},
 			opts: StatementLineTransactionOpts{
-				SpaceID:   spID,
 				AccountID: "invalid",
 			},
 			wantErr: true,
@@ -77,7 +64,6 @@ func TestStatementLine_NewTransaction(t *testing.T) {
 				Description: "Lunch",
 			},
 			opts: StatementLineTransactionOpts{
-				SpaceID:   spID,
 				AccountID: accID,
 				BudgetID:  &bgtID,
 				Currency:  "USD",
@@ -104,7 +90,6 @@ func TestStatementLine_NewTransaction(t *testing.T) {
 				Description: "Salary",
 			},
 			opts: StatementLineTransactionOpts{
-				SpaceID:      spID,
 				AccountID:    accID,
 				FallbackDate: fallback,
 				Currency:     "USD",
@@ -130,7 +115,6 @@ func TestStatementLine_NewTransaction(t *testing.T) {
 				DateStr:     "bad-date",
 			},
 			opts: StatementLineTransactionOpts{
-				SpaceID:   spID,
 				AccountID: accID,
 				Currency:  "USD",
 			},
@@ -149,7 +133,6 @@ func TestStatementLine_NewTransaction(t *testing.T) {
 				DateStr:     "2026-08-01",
 			},
 			opts: StatementLineTransactionOpts{
-				SpaceID:   spID,
 				AccountID: accID,
 				Type:      TransactionTypeExpense,
 				BudgetID:  &bgtID,
@@ -159,6 +142,31 @@ func TestStatementLine_NewTransaction(t *testing.T) {
 			checkTxn: func(t *testing.T, txn *Transaction) {
 				if txn.Type != TransactionTypeExpense {
 					t.Errorf("Type = %s, want EXPENSE", txn.Type)
+				}
+			},
+		},
+		{
+			name: "parsed date in explicit timezone location",
+			line: &StatementLine{
+				StatementID: stID,
+				Amount:      -2500,
+				DateStr:     "2026-08-01",
+				Description: "Lunch",
+			},
+			opts: StatementLineTransactionOpts{
+				AccountID: accID,
+				BudgetID:  &bgtID,
+				Currency:  "USD",
+				Location:  time.FixedZone("AST", -4*3600),
+			},
+			wantErr: false,
+			checkTxn: func(t *testing.T, txn *Transaction) {
+				name, offset := txn.TransactionDate.Zone()
+				if name != "AST" || offset != -4*3600 {
+					t.Errorf("Zone = %s, offset = %d, want AST, -14400", name, offset)
+				}
+				if txn.TransactionDate.Format("2006-01-02") != "2026-08-01" {
+					t.Errorf("TransactionDate string = %s, want 2026-08-01", txn.TransactionDate.Format("2006-01-02"))
 				}
 			},
 		},
@@ -179,7 +187,6 @@ func TestStatementLine_NewTransaction(t *testing.T) {
 
 func TestStatementLine_NewTransfer(t *testing.T) {
 	stID, _ := NewStatementID()
-	spID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	srcAccID, _ := NewAccountID()
 	destAccID, _ := NewAccountID()
 	fallback := time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC)
@@ -192,20 +199,9 @@ func TestStatementLine_NewTransfer(t *testing.T) {
 		checkTrf func(t *testing.T, trf *Transfer, trfOpts CreateTransferOpts)
 	}{
 		{
-			name: "invalid space ID",
-			line: &StatementLine{StatementID: stID, Amount: -500},
-			opts: StatementLineTransferOpts{
-				SpaceID:              "invalid",
-				StatementAccountID:   srcAccID,
-				CounterpartAccountID: destAccID,
-			},
-			wantErr: true,
-		},
-		{
 			name: "invalid statement account ID",
 			line: &StatementLine{StatementID: stID, Amount: -500},
 			opts: StatementLineTransferOpts{
-				SpaceID:              spID,
 				StatementAccountID:   "invalid",
 				CounterpartAccountID: destAccID,
 			},
@@ -215,7 +211,6 @@ func TestStatementLine_NewTransfer(t *testing.T) {
 			name: "invalid counterpart account ID",
 			line: &StatementLine{StatementID: stID, Amount: -500},
 			opts: StatementLineTransferOpts{
-				SpaceID:              spID,
 				StatementAccountID:   srcAccID,
 				CounterpartAccountID: "invalid",
 			},
@@ -230,7 +225,6 @@ func TestStatementLine_NewTransfer(t *testing.T) {
 				Description: "Transfer to Savings",
 			},
 			opts: StatementLineTransferOpts{
-				SpaceID:              spID,
 				StatementAccountID:   srcAccID,
 				CounterpartAccountID: destAccID,
 			},
@@ -256,7 +250,6 @@ func TestStatementLine_NewTransfer(t *testing.T) {
 				Description: "Transfer from Checking",
 			},
 			opts: StatementLineTransferOpts{
-				SpaceID:              spID,
 				StatementAccountID:   destAccID,
 				CounterpartAccountID: srcAccID,
 				FallbackDate:         fallback,
@@ -282,7 +275,6 @@ func TestStatementLine_NewTransfer(t *testing.T) {
 				DateStr:     "bad-date",
 			},
 			opts: StatementLineTransferOpts{
-				SpaceID:              spID,
 				StatementAccountID:   destAccID,
 				CounterpartAccountID: srcAccID,
 			},
@@ -290,6 +282,30 @@ func TestStatementLine_NewTransfer(t *testing.T) {
 			checkTrf: func(t *testing.T, trf *Transfer, trfOpts CreateTransferOpts) {
 				if trf.TransferDate.IsZero() {
 					t.Error("expected non-zero TransferDate")
+				}
+			},
+		},
+		{
+			name: "parsed date in explicit timezone location",
+			line: &StatementLine{
+				StatementID: stID,
+				Amount:      -5000,
+				DateStr:     "2026-08-01",
+				Description: "Transfer to Savings",
+			},
+			opts: StatementLineTransferOpts{
+				StatementAccountID:   srcAccID,
+				CounterpartAccountID: destAccID,
+				Location:             time.FixedZone("AST", -4*3600),
+			},
+			wantErr: false,
+			checkTrf: func(t *testing.T, trf *Transfer, trfOpts CreateTransferOpts) {
+				name, offset := trf.TransferDate.Zone()
+				if name != "AST" || offset != -4*3600 {
+					t.Errorf("Zone = %s, offset = %d, want AST, -14400", name, offset)
+				}
+				if trf.TransferDate.Format("2006-01-02") != "2026-08-01" {
+					t.Errorf("TransferDate string = %s, want 2026-08-01", trf.TransferDate.Format("2006-01-02"))
 				}
 			},
 		},
@@ -507,8 +523,6 @@ func TestStatement_Init(t *testing.T) {
 
 func TestStatement_Validate_Table(t *testing.T) {
 	stID, _ := NewStatementID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	accID, _ := NewAccountID()
 	now := time.Now().UTC()
 
@@ -521,7 +535,6 @@ func TestStatement_Validate_Table(t *testing.T) {
 			name: "valid statement in progress",
 			statement: Statement{
 				ID:            stID,
-				SpaceID:       spaceID,
 				AccountID:     accID,
 				Status:        StatementStatusInProgress,
 				StatementDate: now,
@@ -535,7 +548,6 @@ func TestStatement_Validate_Table(t *testing.T) {
 			name: "valid statement completed",
 			statement: Statement{
 				ID:            stID,
-				SpaceID:       spaceID,
 				AccountID:     accID,
 				Status:        StatementStatusCompleted,
 				StatementDate: now,
@@ -549,7 +561,6 @@ func TestStatement_Validate_Table(t *testing.T) {
 			name: "invalid status",
 			statement: Statement{
 				ID:            stID,
-				SpaceID:       spaceID,
 				AccountID:     accID,
 				Status:        "PENDING",
 				StatementDate: now,
@@ -563,7 +574,6 @@ func TestStatement_Validate_Table(t *testing.T) {
 			name: "zero statement date",
 			statement: Statement{
 				ID:            stID,
-				SpaceID:       spaceID,
 				AccountID:     accID,
 				Status:        StatementStatusInProgress,
 				StatementDate: time.Time{},
@@ -577,7 +587,6 @@ func TestStatement_Validate_Table(t *testing.T) {
 			name: "empty filename",
 			statement: Statement{
 				ID:            stID,
-				SpaceID:       spaceID,
 				AccountID:     accID,
 				Status:        StatementStatusInProgress,
 				StatementDate: now,
@@ -591,7 +600,6 @@ func TestStatement_Validate_Table(t *testing.T) {
 			name: "empty config format",
 			statement: Statement{
 				ID:            stID,
-				SpaceID:       spaceID,
 				AccountID:     accID,
 				Status:        StatementStatusInProgress,
 				StatementDate: now,
@@ -605,7 +613,6 @@ func TestStatement_Validate_Table(t *testing.T) {
 			name: "empty raw content",
 			statement: Statement{
 				ID:            stID,
-				SpaceID:       spaceID,
 				AccountID:     accID,
 				Status:        StatementStatusInProgress,
 				StatementDate: now,
@@ -629,8 +636,6 @@ func TestStatement_Validate_Table(t *testing.T) {
 
 func TestStatement_DecodeLines_Table(t *testing.T) {
 	stID, _ := NewStatementID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	accID, _ := NewAccountID()
 	now := time.Now().UTC()
 
@@ -658,7 +663,6 @@ func TestStatement_DecodeLines_Table(t *testing.T) {
 			name: "valid CSV decode",
 			statement: Statement{
 				ID:            stID,
-				SpaceID:       spaceID,
 				AccountID:     accID,
 				Status:        StatementStatusInProgress,
 				StatementDate: now,
@@ -696,14 +700,11 @@ func TestStatement_DecodeLines_Table(t *testing.T) {
 
 func TestStatement_ApplyPatch_Table(t *testing.T) {
 	stID, _ := NewStatementID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	accID, _ := NewAccountID()
 	now := time.Now().UTC()
 
 	original := &Statement{
 		ID:                       stID,
-		SpaceID:                  spaceID,
 		AccountID:                accID,
 		Status:                   StatementStatusInProgress,
 		StatementStartingBalance: 1000,
@@ -902,7 +903,6 @@ func TestStatementLine_ApplyPatch_Table(t *testing.T) {
 
 func TestStatement_ApplyPatch(t *testing.T) {
 	stID, _ := NewStatementID()
-	spID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	accID, _ := NewAccountID()
 	now := time.Now().UTC()
 
@@ -934,7 +934,6 @@ func TestStatement_ApplyPatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			stmt := &Statement{
 				ID:            stID,
-				SpaceID:       spID,
 				AccountID:     accID,
 				Status:        StatementStatusInProgress,
 				StatementDate: now,

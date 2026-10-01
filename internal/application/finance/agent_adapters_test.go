@@ -47,7 +47,8 @@ func TestAgentDocumentClassifier(t *testing.T) {
 			classifier := NewAgentDocumentClassifier(&mockAgentCoordinator{
 				executeAgentFunc: tc.mockExec,
 			})
-			cls, err := classifier.Classify(context.Background(), "spc_1", "email text")
+			fCtx := finance.NewContext("spc_1", "usr_1", time.UTC, "USD")
+			cls, err := classifier.Classify(context.Background(), fCtx, "email text")
 			if tc.expectedError {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -178,7 +179,8 @@ func TestAgentIngestionParser(t *testing.T) {
 			parser := NewAgentIngestionParser(&mockAgentCoordinator{
 				executeAgentFunc: tc.mockExec,
 			})
-			res, err := parser.Parse(context.Background(), "spc_1", "email body", ingCtx)
+			fCtx := finance.NewContext("spc_1", "usr_1", time.UTC, "USD")
+			res, err := parser.Parse(context.Background(), fCtx, "email body", ingCtx)
 			if tc.expectedError {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -264,7 +266,8 @@ func TestAgentIngestionDeduplicator(t *testing.T) {
 			dedup := NewAgentIngestionDeduplicator(&mockAgentCoordinator{
 				executeAgentFunc: tc.mockExec,
 			})
-			res, err := dedup.Deduplicate(context.Background(), "spc_1", parsedTx, recent)
+			fCtx := finance.NewContext("spc_1", "usr_1", time.UTC, "USD")
+			res, err := dedup.Deduplicate(context.Background(), fCtx, parsedTx, recent)
 			if tc.expectedError {
 				if err == nil {
 					t.Fatal("expected error, got nil")

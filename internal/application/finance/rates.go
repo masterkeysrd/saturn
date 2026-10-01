@@ -45,14 +45,13 @@ func (c *coordinator) CreateExchangeRate(ctx context.Context, req *CreateExchang
 	}
 
 	rate := &finance.ExchangeRate{
-		SpaceID:      rCtx.SpaceID,
 		FromCurrency: req.FromCurrency,
 		ToCurrency:   req.ToCurrency,
 		Rate:         req.Rate,
-		RateDate:     req.RateDate,
+		RateDate:     rCtx.Date(req.RateDate),
 	}
 
-	return c.financeService.CreateExchangeRate(ctx, rate)
+	return c.financeService.CreateExchangeRate(ctx, rCtx, rate)
 }
 
 func (c *coordinator) GetExchangeRate(ctx context.Context, req *GetExchangeRateRequest) (*finance.ExchangeRate, error) {
@@ -61,7 +60,7 @@ func (c *coordinator) GetExchangeRate(ctx context.Context, req *GetExchangeRateR
 		return nil, err
 	}
 
-	return c.financeService.GetExchangeRateByID(ctx, rCtx.SpaceID, req.ID)
+	return c.financeService.GetExchangeRateByID(ctx, rCtx, req.ID)
 }
 
 func (c *coordinator) UpdateExchangeRate(ctx context.Context, req *UpdateExchangeRateRequest) (*finance.ExchangeRate, error) {
@@ -74,7 +73,7 @@ func (c *coordinator) UpdateExchangeRate(ctx context.Context, req *UpdateExchang
 		Rate: req.Rate,
 	}
 
-	return c.financeService.UpdateExchangeRate(ctx, rCtx.SpaceID, req.ID, rate)
+	return c.financeService.UpdateExchangeRate(ctx, rCtx, req.ID, rate)
 }
 
 func (c *coordinator) ListExchangeRates(ctx context.Context, req *ListExchangeRatesRequest) ([]*finance.ExchangeRate, string, error) {
@@ -93,7 +92,7 @@ func (c *coordinator) ListExchangeRates(ctx context.Context, req *ListExchangeRa
 		Sort:          sorting.Parse(req.OrderBy),
 	}
 
-	return c.financeService.ListExchangeRates(ctx, rCtx.SpaceID, filter)
+	return c.financeService.ListExchangeRates(ctx, rCtx, filter)
 }
 
 func (c *coordinator) DeleteExchangeRate(ctx context.Context, req *DeleteExchangeRateRequest) error {
@@ -102,5 +101,5 @@ func (c *coordinator) DeleteExchangeRate(ctx context.Context, req *DeleteExchang
 		return err
 	}
 
-	return c.financeService.DeleteExchangeRateByID(ctx, rCtx.SpaceID, req.ID)
+	return c.financeService.DeleteExchangeRateByID(ctx, rCtx, req.ID)
 }

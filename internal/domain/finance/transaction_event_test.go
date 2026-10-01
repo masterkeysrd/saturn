@@ -59,7 +59,6 @@ func TestTransactionEventID(t *testing.T) {
 func TestTransactionEvent_Validate(t *testing.T) {
 	validEID, _ := finance.NewTransactionEventID()
 	validTID, _ := finance.NewTransactionID()
-	validSpace := finance.SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	now := time.Now().UTC()
 
 	tests := []struct {
@@ -71,7 +70,6 @@ func TestTransactionEvent_Validate(t *testing.T) {
 			name: "valid event",
 			event: finance.TransactionEvent{
 				ID:            validEID,
-				SpaceID:       validSpace,
 				TransactionID: validTID,
 				EventType:     "MANUAL_CREATION",
 				CreateTime:    now,
@@ -82,18 +80,6 @@ func TestTransactionEvent_Validate(t *testing.T) {
 			name: "invalid event ID",
 			event: finance.TransactionEvent{
 				ID:            "invalid_id",
-				SpaceID:       validSpace,
-				TransactionID: validTID,
-				EventType:     "MANUAL_CREATION",
-				CreateTime:    now,
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid space ID",
-			event: finance.TransactionEvent{
-				ID:            validEID,
-				SpaceID:       "invalid_space",
 				TransactionID: validTID,
 				EventType:     "MANUAL_CREATION",
 				CreateTime:    now,
@@ -104,7 +90,6 @@ func TestTransactionEvent_Validate(t *testing.T) {
 			name: "invalid transaction ID",
 			event: finance.TransactionEvent{
 				ID:            validEID,
-				SpaceID:       validSpace,
 				TransactionID: "invalid_tid",
 				EventType:     "MANUAL_CREATION",
 				CreateTime:    now,
@@ -115,7 +100,6 @@ func TestTransactionEvent_Validate(t *testing.T) {
 			name: "missing event type",
 			event: finance.TransactionEvent{
 				ID:            validEID,
-				SpaceID:       validSpace,
 				TransactionID: validTID,
 				EventType:     "",
 				CreateTime:    now,
@@ -126,7 +110,6 @@ func TestTransactionEvent_Validate(t *testing.T) {
 			name: "zero create time",
 			event: finance.TransactionEvent{
 				ID:            validEID,
-				SpaceID:       validSpace,
 				TransactionID: validTID,
 				EventType:     "MANUAL_CREATION",
 			},
@@ -186,12 +169,10 @@ func TestTransactionEvent_MetadataJSON(t *testing.T) {
 
 func TestTransaction_NewConfirmationEvent(t *testing.T) {
 	validTID, _ := finance.NewTransactionID()
-	validSpace := finance.SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	now := time.Now().UTC()
 
 	txn := &finance.Transaction{
 		ID:              validTID,
-		SpaceID:         validSpace,
 		TransactionDate: now,
 	}
 
@@ -201,9 +182,6 @@ func TestTransaction_NewConfirmationEvent(t *testing.T) {
 	}
 	if event.EventType != "BANK_CONFIRM_RECEIVED" {
 		t.Errorf("EventType = %q, want BANK_CONFIRM_RECEIVED", event.EventType)
-	}
-	if event.SpaceID != validSpace {
-		t.Errorf("SpaceID = %q, want %q", event.SpaceID, validSpace)
 	}
 	if event.TransactionID != validTID {
 		t.Errorf("TransactionID = %q, want %q", event.TransactionID, validTID)

@@ -59,7 +59,7 @@ func TestCoordinator_CreateBudget(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *CreateBudgetRequest
-		mockFn        func(ctx context.Context, budget *finance.Budget) (*finance.Budget, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, budget *finance.Budget) (*finance.Budget, error)
 		expectedID    finance.BudgetID
 		expectedError bool
 	}{
@@ -69,11 +69,11 @@ func TestCoordinator_CreateBudget(t *testing.T) {
 			req: &CreateBudgetRequest{
 				Budget: &finance.Budget{Name: "Dining", LimitAmount: 50000},
 			},
-			mockFn: func(ctx context.Context, budget *finance.Budget) (*finance.Budget, error) {
-				if budget.SpaceID != "spc_1" || budget.Name != "Dining" {
-					t.Errorf("unexpected budget payload: %+v", budget)
+			mockFn: func(ctx context.Context, rCtx finance.Context, budget *finance.Budget) (*finance.Budget, error) {
+				if rCtx.SpaceID() != "spc_1" || budget.Name != "Dining" {
+					t.Errorf("unexpected budget payload: space=%v budget=%+v", rCtx.SpaceID(), budget)
 				}
-				return &finance.Budget{ID: "bgt_1", SpaceID: budget.SpaceID, Name: budget.Name}, nil
+				return &finance.Budget{ID: "bgt_1", Name: budget.Name}, nil
 			},
 			expectedID:    "bgt_1",
 			expectedError: false,
@@ -100,7 +100,7 @@ func TestCoordinator_CreateBudget(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &CreateBudgetRequest{Budget: &finance.Budget{Name: "Dining"}},
-			mockFn: func(ctx context.Context, budget *finance.Budget) (*finance.Budget, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, budget *finance.Budget) (*finance.Budget, error) {
 				return nil, errors.New("budget name exists")
 			},
 			expectedError: true,
@@ -135,9 +135,9 @@ func TestCoordinator_UpdateBudget(t *testing.T) {
 		name                 string
 		ctx                  context.Context
 		req                  *UpdateBudgetRequest
-		mockUpdateFn         func(ctx context.Context, budget *finance.Budget, mask []string) (*finance.Budget, error)
-		mockGetPeriodFn      func(ctx context.Context, spaceID finance.SpaceID, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error)
-		mockUpdatePeriodFn   func(ctx context.Context, id finance.PeriodID, limit int64) error
+		mockUpdateFn         func(ctx context.Context, rCtx finance.Context, budget *finance.Budget, mask []string) (*finance.Budget, error)
+		mockGetPeriodFn      func(ctx context.Context, rCtx finance.Context, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error)
+		mockUpdatePeriodFn   func(ctx context.Context, rCtx finance.Context, id finance.PeriodID, limit int64) error
 		expectedID           finance.BudgetID
 		assertPeriodPropaged bool
 		expectedError        bool
@@ -149,9 +149,9 @@ func TestCoordinator_UpdateBudget(t *testing.T) {
 				Budget:     &finance.Budget{ID: "bgt_1", Name: "Groceries", LimitAmount: 60000},
 				UpdateMask: []string{"name", "limit_amount"},
 			},
-			mockUpdateFn: func(ctx context.Context, budget *finance.Budget, mask []string) (*finance.Budget, error) {
-				if budget.SpaceID != "spc_1" || len(mask) != 2 {
-					t.Errorf("unexpected update args: %+v, mask=%v", budget, mask)
+			mockUpdateFn: func(ctx context.Context, rCtx finance.Context, budget *finance.Budget, mask []string) (*finance.Budget, error) {
+				if rCtx.SpaceID() != "spc_1" || len(mask) != 2 {
+					t.Errorf("unexpected update args: space=%v budget=%+v, mask=%v", rCtx.SpaceID(), budget, mask)
 				}
 				return &finance.Budget{ID: budget.ID, Name: budget.Name}, nil
 			},
@@ -166,13 +166,13 @@ func TestCoordinator_UpdateBudget(t *testing.T) {
 				Propagation: finance.PropagationCurrentPeriod,
 				UpdateMask:  []string{"limit_amount"},
 			},
-			mockUpdateFn: func(ctx context.Context, budget *finance.Budget, mask []string) (*finance.Budget, error) {
-				return &finance.Budget{ID: budget.ID, SpaceID: budget.SpaceID, LimitAmount: 75000}, nil
+			mockUpdateFn: func(ctx context.Context, rCtx finance.Context, budget *finance.Budget, mask []string) (*finance.Budget, error) {
+				return &finance.Budget{ID: budget.ID, LimitAmount: 75000}, nil
 			},
-			mockGetPeriodFn: func(ctx context.Context, spaceID finance.SpaceID, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error) {
+			mockGetPeriodFn: func(ctx context.Context, rCtx finance.Context, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error) {
 				return &finance.BudgetPeriod{ID: "prd_1", BudgetID: budgetID}, nil
 			},
-			mockUpdatePeriodFn: func(ctx context.Context, id finance.PeriodID, limit int64) error {
+			mockUpdatePeriodFn: func(ctx context.Context, rCtx finance.Context, id finance.PeriodID, limit int64) error {
 				if id == "prd_1" && limit == 75000 {
 					periodLimitUpdated = true
 				}
@@ -189,10 +189,10 @@ func TestCoordinator_UpdateBudget(t *testing.T) {
 				Budget:      &finance.Budget{ID: "bgt_1", LimitAmount: 75000},
 				Propagation: finance.PropagationCurrentPeriod,
 			},
-			mockUpdateFn: func(ctx context.Context, budget *finance.Budget, mask []string) (*finance.Budget, error) {
-				return &finance.Budget{ID: budget.ID, SpaceID: budget.SpaceID}, nil
+			mockUpdateFn: func(ctx context.Context, rCtx finance.Context, budget *finance.Budget, mask []string) (*finance.Budget, error) {
+				return &finance.Budget{ID: budget.ID}, nil
 			},
-			mockGetPeriodFn: func(ctx context.Context, spaceID finance.SpaceID, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error) {
+			mockGetPeriodFn: func(ctx context.Context, rCtx finance.Context, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error) {
 				return nil, errors.New("period not found")
 			},
 			expectedID:    "bgt_1",
@@ -220,7 +220,7 @@ func TestCoordinator_UpdateBudget(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &UpdateBudgetRequest{Budget: &finance.Budget{ID: "bgt_1"}},
-			mockUpdateFn: func(ctx context.Context, budget *finance.Budget, mask []string) (*finance.Budget, error) {
+			mockUpdateFn: func(ctx context.Context, rCtx finance.Context, budget *finance.Budget, mask []string) (*finance.Budget, error) {
 				return nil, errors.New("conflict")
 			},
 			expectedError: true,
@@ -261,7 +261,7 @@ func TestCoordinator_GetBudget(t *testing.T) {
 		name          string
 		ctx           context.Context
 		id            finance.BudgetID
-		mockFn        func(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID) (*finance.Budget, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, id finance.BudgetID) (*finance.Budget, error)
 		expectedID    finance.BudgetID
 		expectedError bool
 	}{
@@ -269,11 +269,11 @@ func TestCoordinator_GetBudget(t *testing.T) {
 			name: "Success",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			id:   "bgt_1",
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID) (*finance.Budget, error) {
-				if spaceID != "spc_1" || id != "bgt_1" {
-					t.Errorf("unexpected get budget args: space=%v id=%v", spaceID, id)
+			mockFn: func(ctx context.Context, rCtx finance.Context, id finance.BudgetID) (*finance.Budget, error) {
+				if rCtx.SpaceID() != "spc_1" || id != "bgt_1" {
+					t.Errorf("unexpected get budget args: space=%v id=%v", rCtx.SpaceID(), id)
 				}
-				return &finance.Budget{ID: id, SpaceID: spaceID}, nil
+				return &finance.Budget{ID: id}, nil
 			},
 			expectedID:    "bgt_1",
 			expectedError: false,
@@ -288,7 +288,7 @@ func TestCoordinator_GetBudget(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			id:   "bgt_1",
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID) (*finance.Budget, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, id finance.BudgetID) (*finance.Budget, error) {
 				return nil, errors.New("budget not found")
 			},
 			expectedError: true,
@@ -321,16 +321,16 @@ func TestCoordinator_DeleteBudget(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *DeleteBudgetRequest
-		mockFn        func(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID, opts finance.DeleteOptions) error
+		mockFn        func(ctx context.Context, rCtx finance.Context, id finance.BudgetID, opts finance.DeleteOptions) error
 		expectedError bool
 	}{
 		{
 			name: "Success",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &DeleteBudgetRequest{ID: "bgt_1", Version: 2},
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID, opts finance.DeleteOptions) error {
-				if spaceID != "spc_1" || id != "bgt_1" || opts.Version != 2 {
-					t.Errorf("unexpected delete args: space=%v id=%v opts=%+v", spaceID, id, opts)
+			mockFn: func(ctx context.Context, rCtx finance.Context, id finance.BudgetID, opts finance.DeleteOptions) error {
+				if rCtx.SpaceID() != "spc_1" || id != "bgt_1" || opts.Version != 2 {
+					t.Errorf("unexpected delete args: space=%v id=%v opts=%+v", rCtx.SpaceID(), id, opts)
 				}
 				return nil
 			},
@@ -352,7 +352,7 @@ func TestCoordinator_DeleteBudget(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &DeleteBudgetRequest{ID: "bgt_1"},
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID, opts finance.DeleteOptions) error {
+			mockFn: func(ctx context.Context, rCtx finance.Context, id finance.BudgetID, opts finance.DeleteOptions) error {
 				return errors.New("cannot delete budget")
 			},
 			expectedError: true,

@@ -46,7 +46,6 @@ func getSpaceID(ctx context.Context, op errors.Op) (finance.SpaceID, error) {
 
 func toProtoSettings(s *finance.FinanceSettings) *financev1.FinanceSettings {
 	return &financev1.FinanceSettings{
-		SpaceId:      string(s.SpaceID),
 		BaseCurrency: string(s.BaseCurrency),
 		CreateTime:   timestamppb.New(s.CreateTime),
 		UpdateTime:   timestamppb.New(s.UpdateTime),
@@ -128,7 +127,6 @@ func toProtoBudget(b *finance.Budget) *financev1.Budget {
 	}
 	return &financev1.Budget{
 		Id:               string(b.ID),
-		SpaceId:          string(b.SpaceID),
 		Name:             b.Name,
 		LimitAmount:      b.LimitAmount,
 		Currency:         string(b.Currency),
@@ -167,7 +165,6 @@ func toDomainBudget(pb *financev1.Budget) (*finance.Budget, error) {
 
 	return &finance.Budget{
 		ID:               finance.BudgetID(pb.GetId()),
-		SpaceID:          finance.SpaceID(pb.GetSpaceId()),
 		Name:             pb.GetName(),
 		LimitAmount:      pb.GetLimitAmount(),
 		Currency:         currency,
@@ -184,7 +181,6 @@ func toProtoBudgetPeriod(p *financeaggregator.AggregatedBudgetPeriod) *financev1
 	return &financev1.BudgetPeriod{
 		Id:                 string(p.ID),
 		BudgetId:           string(p.BudgetID),
-		SpaceId:            string(p.SpaceID),
 		StartDate:          timestamppb.New(p.StartDate),
 		EndDate:            timestamppb.New(p.EndDate),
 		LimitAmount:        p.LimitAmount,
@@ -316,7 +312,7 @@ func (h *Handler) DeleteBudget(ctx context.Context, req *financev1.DeleteBudgetR
 func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsRequest) (*financev1.ListBudgetsResponse, error) {
 	const op errors.Op = "grpc/finance.ListBudgets"
 
-	spaceID, err := getSpaceID(ctx, op)
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +325,7 @@ func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsReq
 	if req.GetTargetDate() != nil {
 		targetDate = req.GetTargetDate().AsTime()
 	} else {
-		targetDate = time.Now()
+		targetDate = rCtx.Now()
 	}
 
 	var searchQuery *string
@@ -351,7 +347,7 @@ func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsReq
 		}
 	}
 
-	page, err := h.Aggregator.ListBudgets(ctx, spaceID, financeaggregator.ListBudgetsFilter{
+	page, err := h.Aggregator.ListBudgets(ctx, rCtx, financeaggregator.ListBudgetsFilter{
 		ListBudgetsFilter: finance.ListBudgetsFilter{
 			PageSize:      int32(pageSize),
 			NextPageToken: req.GetPageToken(),
@@ -392,7 +388,7 @@ func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsReq
 func (h *Handler) GetBudgetPeriod(ctx context.Context, req *financev1.GetBudgetPeriodRequest) (*financev1.BudgetPeriod, error) {
 	const op errors.Op = "grpc/finance.GetBudgetPeriod"
 
-	spaceID, err := getSpaceID(ctx, op)
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -401,11 +397,11 @@ func (h *Handler) GetBudgetPeriod(ctx context.Context, req *financev1.GetBudgetP
 	if req.GetDate() != nil {
 		targetDate = req.GetDate().AsTime()
 	} else {
-		targetDate = time.Now()
+		targetDate = rCtx.Now()
 	}
 
 	bID := finance.BudgetID(req.GetBudgetId())
-	period, err := h.Aggregator.GetBudgetPeriod(ctx, spaceID, bID, targetDate)
+	period, err := h.Aggregator.GetBudgetPeriod(ctx, rCtx, bID, targetDate)
 	if err != nil {
 		return nil, err
 	}
@@ -455,12 +451,12 @@ func (h *Handler) GetExchangeRate(ctx context.Context, req *financev1.GetExchang
 		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 
-	spaceID, err := getSpaceID(ctx, op)
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	rate, err := h.Aggregator.GetExchangeRate(ctx, spaceID, req.GetId())
+	rate, err := h.Aggregator.GetExchangeRate(ctx, rCtx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
@@ -495,7 +491,7 @@ func (h *Handler) UpdateExchangeRate(ctx context.Context, req *financev1.UpdateE
 func (h *Handler) ListExchangeRates(ctx context.Context, req *financev1.ListExchangeRatesRequest) (*financev1.ListExchangeRatesResponse, error) {
 	const op errors.Op = "grpc/finance.ListExchangeRates"
 
-	spaceID, err := getSpaceID(ctx, op)
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -531,7 +527,7 @@ func (h *Handler) ListExchangeRates(ctx context.Context, req *financev1.ListExch
 		filter.EndDate = &et
 	}
 
-	rates, nextToken, err := h.Aggregator.ListExchangeRates(ctx, spaceID, filter)
+	rates, nextToken, err := h.Aggregator.ListExchangeRates(ctx, rCtx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -575,7 +571,6 @@ func toProtoExchangeRate(rate *finance.ExchangeRate) *financev1.ExchangeRate {
 	}
 	return &financev1.ExchangeRate{
 		Id:           rate.ID,
-		SpaceId:      string(rate.SpaceID),
 		FromCurrency: string(rate.FromCurrency),
 		ToCurrency:   string(rate.ToCurrency),
 		Rate:         rate.Rate,
@@ -600,8 +595,6 @@ func (h *Handler) CreateExpense(ctx context.Context, req *financev1.CreateExpens
 	var transactionDate time.Time
 	if expense.GetTransactionDate() != nil {
 		transactionDate = expense.GetTransactionDate().AsTime()
-	} else {
-		transactionDate = time.Now().UTC()
 	}
 
 	var effectiveDate time.Time
@@ -651,8 +644,6 @@ func (h *Handler) CreateIncome(ctx context.Context, req *financev1.CreateIncomeR
 	var transactionDate time.Time
 	if income.GetTransactionDate() != nil {
 		transactionDate = income.GetTransactionDate().AsTime()
-	} else {
-		transactionDate = time.Now().UTC()
 	}
 
 	var effectiveDate time.Time
@@ -809,7 +800,7 @@ func (h *Handler) DeleteTransaction(ctx context.Context, req *financev1.DeleteTr
 func (h *Handler) GetTransaction(ctx context.Context, req *financev1.GetTransactionRequest) (*financev1.Transaction, error) {
 	const op errors.Op = "grpc/finance.GetTransaction"
 
-	spaceID, err := getSpaceID(ctx, op)
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -823,7 +814,7 @@ func (h *Handler) GetTransaction(ctx context.Context, req *financev1.GetTransact
 	if req.GetView() == financev1.Transaction_FULL {
 		view = financeaggregator.ViewFull
 	}
-	aggTxn, err := h.Aggregator.GetTransaction(ctx, spaceID, view, tID)
+	aggTxn, err := h.Aggregator.GetTransaction(ctx, rCtx, view, tID)
 	if err != nil {
 		return nil, err
 	}
@@ -834,7 +825,7 @@ func (h *Handler) GetTransaction(ctx context.Context, req *financev1.GetTransact
 func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTransactionsRequest) (*financev1.ListTransactionsResponse, error) {
 	const op errors.Op = "grpc/finance.ListTransactions"
 
-	spaceID, err := getSpaceID(ctx, op)
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -903,7 +894,7 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 		view = financeaggregator.ViewFull
 	}
 
-	page, err := h.Aggregator.ListTransactions(ctx, spaceID, view, filter)
+	page, err := h.Aggregator.ListTransactions(ctx, rCtx, view, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -988,7 +979,6 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 
 	return &financev1.Transaction{
 		Id:              string(t.ID),
-		SpaceId:         string(t.SpaceID),
 		Type:            protoType,
 		BudgetId:        budgetID,
 		PeriodId:        periodID,
@@ -1064,7 +1054,6 @@ func toProtoTransactionEvent(e *finance.TransactionEvent) *financev1.Transaction
 	metadataBytes, _ := e.MetadataJSON()
 	return &financev1.TransactionEvent{
 		Id:         string(e.ID),
-		SpaceId:    string(e.SpaceID),
 		TxnId:      string(e.TransactionID),
 		EventType:  e.EventType,
 		Metadata:   string(metadataBytes),
@@ -1333,7 +1322,6 @@ func toProtoTransfer(t *finance.Transfer) *financev1.Transfer {
 	}
 	return &financev1.Transfer{
 		Id:                   string(t.ID),
-		SpaceId:              string(t.SpaceID),
 		SourceAccountId:      string(t.SourceAccountID),
 		DestinationAccountId: string(t.DestinationAccountID),
 		SourceAmount:         t.SourceAmount,
@@ -1394,7 +1382,7 @@ func toProtoAggregatedAccount(a *financeaggregator.AggregatedAccount, viewType f
 func (h *Handler) GetAccount(ctx context.Context, req *financev1.GetAccountRequest) (*financev1.Account, error) {
 	const op errors.Op = "grpc/finance.GetAccount"
 
-	spaceID, err := getSpaceID(ctx, op)
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1409,7 +1397,7 @@ func (h *Handler) GetAccount(ctx context.Context, req *financev1.GetAccountReque
 		viewType = financeaggregator.ViewFull
 	}
 
-	a, err := h.Aggregator.GetAccount(ctx, spaceID, aID, viewType)
+	a, err := h.Aggregator.GetAccount(ctx, rCtx, aID, viewType)
 	if err != nil {
 		return nil, err
 	}
@@ -1474,7 +1462,12 @@ func (h *Handler) AdjustAccountBalance(ctx context.Context, req *financev1.Adjus
 		return nil, errors.E(op, errors.Invalid, err)
 	}
 
-	acc, err := h.Coordinator.AdjustAccountBalance(ctx, aID, req.GetTargetBalance(), req.GetAdjustmentDate(), req.GetNote())
+	acc, err := h.Coordinator.AdjustAccountBalance(ctx, &financeapp.AdjustAccountBalanceRequest{
+		AccountID:      aID,
+		TargetBalance:  req.GetTargetBalance(),
+		AdjustmentDate: req.GetAdjustmentDate(),
+		Note:           req.GetNote(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -1501,7 +1494,7 @@ func (h *Handler) DeleteAccount(ctx context.Context, req *financev1.DeleteAccoun
 func (h *Handler) ListAccounts(ctx context.Context, req *financev1.ListAccountsRequest) (*financev1.ListAccountsResponse, error) {
 	const op errors.Op = "grpc/finance.ListAccounts"
 
-	spaceID, err := getSpaceID(ctx, op)
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1533,7 +1526,7 @@ func (h *Handler) ListAccounts(ctx context.Context, req *financev1.ListAccountsR
 		},
 	}
 
-	page, err := h.Aggregator.ListAccounts(ctx, spaceID, viewType, filter)
+	page, err := h.Aggregator.ListAccounts(ctx, rCtx, viewType, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -1553,8 +1546,6 @@ func (h *Handler) CreateTransfer(ctx context.Context, req *financev1.CreateTrans
 	var transferDate time.Time
 	if req.GetTransferDate() != nil {
 		transferDate = req.GetTransferDate().AsTime()
-	} else {
-		transferDate = time.Now().UTC()
 	}
 
 	appReq := &financeapp.CreateTransferRequest{
@@ -1730,7 +1721,6 @@ func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
 
 	return &financev1.InboxItem{
 		Id:                     pt.ID,
-		SpaceId:                pt.SpaceID,
 		IntegrationId:          pt.IntegrationID,
 		Status:                 toProtoInboxStatus(pt.Status),
 		DocType:                toProtoInboxDocType(pt.DocType),
@@ -1789,7 +1779,6 @@ func toDomainInboxItem(pb *financev1.InboxItem) *finance.InboxItem {
 
 	return &finance.InboxItem{
 		ID:                     pb.GetId(),
-		SpaceID:                pb.GetSpaceId(),
 		IntegrationID:          pb.GetIntegrationId(),
 		Status:                 toDomainInboxStatus(pb.GetStatus()),
 		DocType:                toDomainInboxDocType(pb.GetDocType()),
@@ -1832,7 +1821,7 @@ func (h *Handler) UpdateInboxItem(ctx context.Context, req *financev1.UpdateInbo
 func (h *Handler) ListInboxItems(ctx context.Context, req *financev1.ListInboxItemsRequest) (*financev1.ListInboxItemsResponse, error) {
 	const op errors.Op = "grpc/finance.ListInboxItems"
 
-	spaceID, err := getSpaceID(ctx, op)
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1867,7 +1856,7 @@ func (h *Handler) ListInboxItems(ctx context.Context, req *financev1.ListInboxIt
 		ExcludePayload: excludePayload,
 	}
 
-	page, err := h.Aggregator.ListInboxItems(ctx, spaceID, *filter)
+	page, err := h.Aggregator.ListInboxItems(ctx, rCtx, *filter)
 	if err != nil {
 		return nil, err
 	}
@@ -1999,7 +1988,7 @@ func (h *Handler) DeleteInstitution(ctx context.Context, req *financev1.DeleteIn
 func (h *Handler) ListInstitutions(ctx context.Context, req *financev1.ListInstitutionsRequest) (*financev1.ListInstitutionsResponse, error) {
 	const op errors.Op = "grpc/finance.ListInstitutions"
 
-	spaceID, err := getSpaceID(ctx, op)
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -2012,7 +2001,7 @@ func (h *Handler) ListInstitutions(ctx context.Context, req *financev1.ListInsti
 		filter.SearchQuery = req.SearchQuery
 	}
 
-	page, err := h.Aggregator.ListInstitutions(ctx, spaceID, filter)
+	page, err := h.Aggregator.ListInstitutions(ctx, rCtx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -2214,12 +2203,12 @@ func (h *Handler) GetStatement(ctx context.Context, req *financev1.GetStatementR
 		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 
-	spaceID, err := getSpaceID(ctx, op)
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := h.Aggregator.GetStatement(ctx, spaceID, finance.StatementID(req.Id))
+	res, err := h.Aggregator.GetStatement(ctx, rCtx, finance.StatementID(req.Id))
 	if err != nil {
 		return nil, err
 	}
@@ -2246,7 +2235,7 @@ func (h *Handler) DeleteStatement(ctx context.Context, req *financev1.DeleteStat
 func (h *Handler) ListStatements(ctx context.Context, req *financev1.ListStatementsRequest) (*financev1.ListStatementsResponse, error) {
 	const op errors.Op = "grpc/finance.ListStatements"
 
-	spaceID, err := getSpaceID(ctx, op)
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -2276,7 +2265,7 @@ func (h *Handler) ListStatements(ctx context.Context, req *financev1.ListStateme
 		}
 	}
 
-	page, err := h.Aggregator.ListStatements(ctx, spaceID, filter)
+	page, err := h.Aggregator.ListStatements(ctx, rCtx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -2299,12 +2288,12 @@ func (h *Handler) ListStatementLines(ctx context.Context, req *financev1.ListSta
 		return nil, errors.E(op, errors.Invalid, "statement_id is required")
 	}
 
-	spaceID, err := getSpaceID(ctx, op)
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	lines, err := h.Aggregator.ListStatementLines(ctx, spaceID, finance.StatementID(req.StatementId))
+	lines, err := h.Aggregator.ListStatementLines(ctx, rCtx, finance.StatementID(req.StatementId))
 	if err != nil {
 		return nil, err
 	}
@@ -2460,7 +2449,6 @@ func toProtoStatement(s *finance.Statement) *financev1.Statement {
 
 	return &financev1.Statement{
 		Id:                       string(s.ID),
-		SpaceId:                  string(s.SpaceID),
 		AccountId:                string(s.AccountID),
 		Status:                   protoStatus,
 		StatementDate:            s.StatementDate.Format("2006-01-02"),
@@ -2742,7 +2730,6 @@ func toDomainStatement(pb *financev1.Statement) *finance.Statement {
 
 	return &finance.Statement{
 		ID:                       finance.StatementID(pb.Id),
-		SpaceID:                  finance.SpaceID(pb.SpaceId),
 		AccountID:                finance.AccountID(pb.AccountId),
 		StatementDate:            stmtDate,
 		StatementStartingBalance: pb.StatementStartingBalance,

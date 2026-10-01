@@ -28,16 +28,15 @@ func (c *coordinator) CreateTransfer(ctx context.Context, req *CreateTransferReq
 	}
 
 	transfer := &finance.Transfer{
-		SpaceID:              rCtx.SpaceID,
 		SourceAccountID:      finance.AccountID(req.SourceAccountID),
 		DestinationAccountID: finance.AccountID(req.DestinationAccountID),
 		SourceAmount:         req.SourceAmount,
 		DestinationAmount:    req.DestinationAmount,
-		TransferDate:         req.TransferDate,
+		TransferDate:         rCtx.Date(req.TransferDate),
 		Notes:                req.Notes,
 	}
 
-	return c.financeService.CreateTransfer(ctx, transfer)
+	return c.financeService.CreateTransfer(ctx, rCtx, transfer)
 }
 
 func (c *coordinator) GetTransfer(ctx context.Context, id finance.TransferID) (*finance.Transfer, error) {
@@ -46,7 +45,7 @@ func (c *coordinator) GetTransfer(ctx context.Context, id finance.TransferID) (*
 		return nil, err
 	}
 
-	return c.financeService.GetTransfer(ctx, rCtx.SpaceID, id)
+	return c.financeService.GetTransfer(ctx, rCtx, id)
 }
 
 func (c *coordinator) DeleteTransfer(ctx context.Context, id finance.TransferID) error {
@@ -55,7 +54,7 @@ func (c *coordinator) DeleteTransfer(ctx context.Context, id finance.TransferID)
 		return err
 	}
 
-	return c.financeService.DeleteTransfer(ctx, rCtx.SpaceID, id)
+	return c.financeService.DeleteTransfer(ctx, rCtx, id)
 }
 
 func (c *coordinator) ListTransfers(ctx context.Context, req *ListTransfersRequest) ([]*finance.Transfer, string, error) {
@@ -64,5 +63,5 @@ func (c *coordinator) ListTransfers(ctx context.Context, req *ListTransfersReque
 		return nil, "", err
 	}
 
-	return c.financeService.ListTransfers(ctx, rCtx.SpaceID, req.Limit, req.PageToken)
+	return c.financeService.ListTransfers(ctx, rCtx, req.Limit, req.PageToken)
 }

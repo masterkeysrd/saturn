@@ -14,7 +14,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
-type statementDB struct {
+type StatementRecord struct {
 	ID                       string       `db:"id"`
 	SpaceID                  string       `db:"space_id"`
 	AccountID                string       `db:"account_id"`
@@ -30,30 +30,29 @@ type statementDB struct {
 	UpdateTime               sql.NullTime `db:"update_time"`
 }
 
-func (row *statementDB) toDomain() *finance.Statement {
+func (r *StatementRecord) toModel() *finance.Statement {
 	var config finance.StatementConfig
-	if row.ConfigJSON != "" {
-		_ = json.Unmarshal([]byte(row.ConfigJSON), &config)
+	if r.ConfigJSON != "" {
+		_ = json.Unmarshal([]byte(r.ConfigJSON), &config)
 	}
 
 	return &finance.Statement{
-		ID:                       finance.StatementID(row.ID),
-		SpaceID:                  finance.SpaceID(row.SpaceID),
-		AccountID:                finance.AccountID(row.AccountID),
-		Status:                   finance.StatementStatus(row.Status),
-		StatementDate:            row.StatementDate,
-		StatementStartingBalance: row.StatementStartingBalance,
-		StatementEndingBalance:   row.StatementEndingBalance,
-		Filename:                 row.Filename,
+		ID:                       finance.StatementID(r.ID),
+		AccountID:                finance.AccountID(r.AccountID),
+		Status:                   finance.StatementStatus(r.Status),
+		StatementDate:            r.StatementDate,
+		StatementStartingBalance: r.StatementStartingBalance,
+		StatementEndingBalance:   r.StatementEndingBalance,
+		Filename:                 r.Filename,
 		Config:                   config,
-		RawContent:               row.RawContent,
-		Version:                  row.Version,
-		CreateTime:               nullTimeToTime(row.CreateTime),
-		UpdateTime:               nullTimeToTime(row.UpdateTime),
+		RawContent:               r.RawContent,
+		Version:                  r.Version,
+		CreateTime:               nullTimeToTime(r.CreateTime),
+		UpdateTime:               nullTimeToTime(r.UpdateTime),
 	}
 }
 
-type statementLineDB struct {
+type StatementLineRecord struct {
 	ID                   string         `db:"id"`
 	StatementID          string         `db:"statement_id"`
 	RowIndex             int32          `db:"row_index"`
@@ -67,34 +66,34 @@ type statementLineDB struct {
 	Version              int64          `db:"version"`
 }
 
-func (row *statementLineDB) toDomain() *finance.StatementLine {
+func (r *StatementLineRecord) toModel() *finance.StatementLine {
 	var ref *string
-	if row.Reference.Valid {
-		ref = &row.Reference.String
+	if r.Reference.Valid {
+		ref = &r.Reference.String
 	}
 	var matchedTxnID *finance.TransactionID
-	if row.MatchedTransactionID.Valid {
-		id := finance.TransactionID(row.MatchedTransactionID.String)
+	if r.MatchedTransactionID.Valid {
+		id := finance.TransactionID(r.MatchedTransactionID.String)
 		matchedTxnID = &id
 	}
 
 	var action finance.StatementLineAction
-	if row.Action.Valid && row.Action.String != "" {
-		_ = json.Unmarshal([]byte(row.Action.String), &action)
+	if r.Action.Valid && r.Action.String != "" {
+		_ = json.Unmarshal([]byte(r.Action.String), &action)
 	}
 
 	return &finance.StatementLine{
-		ID:                   finance.StatementLineID(row.ID),
-		StatementID:          finance.StatementID(row.StatementID),
-		RowIndex:             row.RowIndex,
-		DateStr:              row.DateStr,
-		Description:          row.Description,
-		Amount:               row.Amount,
+		ID:                   finance.StatementLineID(r.ID),
+		StatementID:          finance.StatementID(r.StatementID),
+		RowIndex:             r.RowIndex,
+		DateStr:              r.DateStr,
+		Description:          r.Description,
+		Amount:               r.Amount,
 		Reference:            ref,
 		Action:               action,
-		Status:               finance.StatementLineStatus(row.Status),
+		Status:               finance.StatementLineStatus(r.Status),
 		MatchedTransactionID: matchedTxnID,
-		Version:              row.Version,
+		Version:              r.Version,
 	}
 }
 
@@ -106,7 +105,7 @@ func NewStatementStore(database db.DB) *StatementStore {
 	return &StatementStore{db: database}
 }
 
-func (s *StatementStore) Create(ctx context.Context, stmt *finance.Statement, lines []*finance.StatementLine) error {
+func (s *StatementStore) Create(ctx context.Context, rCtx finance.Context, stmt *finance.Statement, lines []*finance.StatementLine) error {
 	const op errors.Op = "domain/finance/storage.CreateStatement"
 
 	if stmt.Version == 0 {
@@ -117,7 +116,7 @@ func (s *StatementStore) Create(ctx context.Context, stmt *finance.Statement, li
 
 	stmtDS := pgDialect.Insert(goqu.S("finance").Table("statement")).Rows(goqu.Record{
 		"id":                         string(stmt.ID),
-		"space_id":                   string(stmt.SpaceID),
+		"space_id":                   string(rCtx.SpaceID()),
 		"account_id":                 string(stmt.AccountID),
 		"status":                     string(stmt.Status),
 		"statement_date":             stmt.StatementDate,
@@ -173,30 +172,30 @@ func (s *StatementStore) Create(ctx context.Context, stmt *finance.Statement, li
 	return nil
 }
 
-func (s *StatementStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, error) {
+func (s *StatementStore) GetByID(ctx context.Context, rCtx finance.Context, id finance.StatementID) (*finance.Statement, error) {
 	const op errors.Op = "domain/finance/storage.GetStatementByID"
 	ds := pgDialect.From(goqu.S("finance").Table("statement")).
 		Select("*").
-		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID()), "id": string(id)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
-	var row statementDB
+	var row StatementRecord
 	if err := s.db.Get(ctx, &row, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
-	return row.toDomain(), nil
+	return row.toModel(), nil
 }
 
-func (s *StatementStore) List(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListStatementsFilter) (*paging.Page[*finance.Statement], error) {
+func (s *StatementStore) List(ctx context.Context, rCtx finance.Context, filter *finance.ListStatementsFilter) (*paging.Page[*finance.Statement], error) {
 	const op errors.Op = "domain/finance/storage.ListStatements"
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
 
 	ds := pgDialect.From(goqu.S("finance").Table("statement")).Select("*")
-	ds = ds.Where(goqu.Ex{"space_id": string(spaceID)})
+	ds = ds.Where(goqu.Ex{"space_id": string(rCtx.SpaceID())})
 
 	if filter.AccountID != nil {
 		ds = ds.Where(goqu.Ex{"account_id": string(*filter.AccountID)})
@@ -223,14 +222,14 @@ func (s *StatementStore) List(ctx context.Context, spaceID finance.SpaceID, filt
 		return nil, errors.E(op, err)
 	}
 
-	var rows []statementDB
+	var rows []StatementRecord
 	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
 
 	statements := make([]*finance.Statement, len(rows))
 	for i := range rows {
-		statements[i] = rows[i].toDomain()
+		statements[i] = rows[i].toModel()
 	}
 
 	page := paging.NewPage(statements, int(filter.PageSize), func(stmt *finance.Statement) paging.Cursor {
@@ -243,10 +242,10 @@ func (s *StatementStore) List(ctx context.Context, spaceID finance.SpaceID, filt
 	return page, nil
 }
 
-func (s *StatementStore) Delete(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID, opts finance.DeleteOptions) error {
+func (s *StatementStore) Delete(ctx context.Context, rCtx finance.Context, id finance.StatementID, opts finance.DeleteOptions) error {
 	const op errors.Op = "domain/finance/storage.DeleteStatement"
 	ex := goqu.Ex{
-		"space_id": string(spaceID),
+		"space_id": string(rCtx.SpaceID()),
 		"id":       string(id),
 	}
 	if opts.Version > 0 {
@@ -266,7 +265,7 @@ func (s *StatementStore) Delete(ctx context.Context, spaceID finance.SpaceID, id
 	return nil
 }
 
-func (s *StatementStore) Update(ctx context.Context, stmt *finance.Statement) error {
+func (s *StatementStore) Update(ctx context.Context, rCtx finance.Context, stmt *finance.Statement) error {
 	const op errors.Op = "domain/finance/storage.UpdateStatement"
 	stmt.UpdateTime = time.Now().UTC()
 	rec := goqu.Record{
@@ -277,7 +276,7 @@ func (s *StatementStore) Update(ctx context.Context, stmt *finance.Statement) er
 		"version":                    goqu.L("version + 1"),
 		"update_time":                stmt.UpdateTime,
 	}
-	ex := goqu.Ex{"id": string(stmt.ID), "space_id": string(stmt.SpaceID)}
+	ex := goqu.Ex{"id": string(stmt.ID), "space_id": string(rCtx.SpaceID())}
 	if stmt.Version > 0 {
 		ex["version"] = stmt.Version
 	}
@@ -298,7 +297,7 @@ func (s *StatementStore) Update(ctx context.Context, stmt *finance.Statement) er
 	return nil
 }
 
-func (s *StatementStore) ListLines(ctx context.Context, statementID finance.StatementID) ([]*finance.StatementLine, error) {
+func (s *StatementStore) ListLines(ctx context.Context, rCtx finance.Context, statementID finance.StatementID) ([]*finance.StatementLine, error) {
 	const op errors.Op = "domain/finance/storage.ListStatementLines"
 	ds := pgDialect.From(goqu.S("finance").Table("statement_line")).
 		Select("*").
@@ -308,18 +307,18 @@ func (s *StatementStore) ListLines(ctx context.Context, statementID finance.Stat
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
-	var rows []statementLineDB
+	var rows []StatementLineRecord
 	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
 	lines := make([]*finance.StatementLine, len(rows))
 	for i := range rows {
-		lines[i] = rows[i].toDomain()
+		lines[i] = rows[i].toModel()
 	}
 	return lines, nil
 }
 
-func (s *StatementStore) GetLineByID(ctx context.Context, id finance.StatementLineID) (*finance.StatementLine, error) {
+func (s *StatementStore) GetLineByID(ctx context.Context, rCtx finance.Context, id finance.StatementLineID) (*finance.StatementLine, error) {
 	const op errors.Op = "domain/finance/storage.GetStatementLineByID"
 	ds := pgDialect.From(goqu.S("finance").Table("statement_line")).
 		Select("*").
@@ -328,14 +327,14 @@ func (s *StatementStore) GetLineByID(ctx context.Context, id finance.StatementLi
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
-	var row statementLineDB
+	var row StatementLineRecord
 	if err := s.db.Get(ctx, &row, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
-	return row.toDomain(), nil
+	return row.toModel(), nil
 }
 
-func (s *StatementStore) UpdateLineDraft(ctx context.Context, line *finance.StatementLine) error {
+func (s *StatementStore) UpdateLineDraft(ctx context.Context, rCtx finance.Context, line *finance.StatementLine) error {
 	const op errors.Op = "domain/finance/storage.UpdateStatementLineDraft"
 	actionJSON, _ := json.Marshal(line.Action)
 	if len(actionJSON) == 0 || string(actionJSON) == "null" {
@@ -375,7 +374,7 @@ func (s *StatementStore) UpdateLineDraft(ctx context.Context, line *finance.Stat
 }
 
 // UpdateStatementWithLines updates a statement and all its lines.
-func (s *StatementStore) UpdateStatementWithLines(ctx context.Context, stmt *finance.Statement, lines []*finance.StatementLine) error {
+func (s *StatementStore) UpdateStatementWithLines(ctx context.Context, rCtx finance.Context, stmt *finance.Statement, lines []*finance.StatementLine) error {
 	const op errors.Op = "domain/finance/storage.UpdateStatementWithLines"
 
 	now := time.Now().UTC()
@@ -386,7 +385,7 @@ func (s *StatementStore) UpdateStatementWithLines(ctx context.Context, stmt *fin
 		    version = version + 1,
 		    update_time = $3
 		WHERE space_id = $4 AND id = $5`
-	if err := s.db.ExecOne(ctx, updateStmtQuery, stmt.StatementStartingBalance, stmt.StatementEndingBalance, now, string(stmt.SpaceID), string(stmt.ID)); err != nil {
+	if err := s.db.ExecOne(ctx, updateStmtQuery, stmt.StatementStartingBalance, stmt.StatementEndingBalance, now, string(rCtx.SpaceID()), string(stmt.ID)); err != nil {
 		return errors.E(op, err)
 	}
 

@@ -38,7 +38,6 @@ func TestInstitutionID(t *testing.T) {
 
 func TestInstitution_Validate(t *testing.T) {
 	validID, _ := finance.NewInstitutionID()
-	validSpace := finance.SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 
 	tests := []struct {
 		name    string
@@ -49,7 +48,6 @@ func TestInstitution_Validate(t *testing.T) {
 			name: "valid institution",
 			inst: finance.Institution{
 				ID:      validID,
-				SpaceID: validSpace,
 				Name:    "Chase",
 				Domain:  "chase.com",
 				LogoURL: "https://chase.com/favicon.ico",
@@ -60,36 +58,24 @@ func TestInstitution_Validate(t *testing.T) {
 		{
 			name: "empty name",
 			inst: finance.Institution{
-				ID:      validID,
-				SpaceID: validSpace,
-				Name:    "   ",
+				ID:   validID,
+				Name: "   ",
 			},
 			wantErr: true,
 		},
 		{
 			name: "name exceeds 255 chars",
 			inst: finance.Institution{
-				ID:      validID,
-				SpaceID: validSpace,
-				Name:    strings.Repeat("a", 256),
+				ID:   validID,
+				Name: strings.Repeat("a", 256),
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid institution ID",
 			inst: finance.Institution{
-				ID:      "invalid_id",
-				SpaceID: validSpace,
-				Name:    "Chase",
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid space ID",
-			inst: finance.Institution{
-				ID:      validID,
-				SpaceID: "invalid_space",
-				Name:    "Chase",
+				ID:   "invalid_id",
+				Name: "Chase",
 			},
 			wantErr: true,
 		},
@@ -157,11 +143,9 @@ func TestInstitution_Init(t *testing.T) {
 
 func TestInstitution_ApplyPatch(t *testing.T) {
 	validID, _ := finance.NewInstitutionID()
-	validSpace := finance.SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 
 	original := &finance.Institution{
 		ID:      validID,
-		SpaceID: validSpace,
 		Name:    "Old Bank",
 		Domain:  "oldbank.com",
 		LogoURL: "https://oldbank.com/icon.png",

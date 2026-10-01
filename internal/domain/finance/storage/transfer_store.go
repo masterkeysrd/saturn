@@ -32,11 +32,11 @@ func NewTransferStore(database db.DB) *TransferStore {
 	return &TransferStore{db: database}
 }
 
-func (s *TransferStore) Create(ctx context.Context, t *finance.Transfer) error {
+func (s *TransferStore) Create(ctx context.Context, rCtx finance.Context, t *finance.Transfer) error {
 	const op errors.Op = "domain/finance/storage.CreateTransfer"
 	ds := pgDialect.Insert(goqu.S("finance").Table("transfer")).Rows(goqu.Record{
 		"id":                     string(t.ID),
-		"space_id":               string(t.SpaceID),
+		"space_id":               string(rCtx.SpaceID()),
 		"source_account_id":      string(t.SourceAccountID),
 		"destination_account_id": string(t.DestinationAccountID),
 		"source_amount":          t.SourceAmount,
@@ -56,11 +56,11 @@ func (s *TransferStore) Create(ctx context.Context, t *finance.Transfer) error {
 	return nil
 }
 
-func (s *TransferStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) (*finance.Transfer, error) {
+func (s *TransferStore) GetByID(ctx context.Context, rCtx finance.Context, id finance.TransferID) (*finance.Transfer, error) {
 	const op errors.Op = "domain/finance/storage.GetTransferByID"
 	ds := pgDialect.From(goqu.S("finance").Table("transfer")).
 		Select("*").
-		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID()), "id": string(id)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, errors.E(op, err)
@@ -71,7 +71,6 @@ func (s *TransferStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id
 	}
 	return &finance.Transfer{
 		ID:                   finance.TransferID(row.ID),
-		SpaceID:              finance.SpaceID(row.SpaceID),
 		SourceAccountID:      finance.AccountID(row.SourceAccountID),
 		DestinationAccountID: finance.AccountID(row.DestinationAccountID),
 		SourceAmount:         row.SourceAmount,
@@ -83,10 +82,10 @@ func (s *TransferStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id
 	}, nil
 }
 
-func (s *TransferStore) Delete(ctx context.Context, id finance.TransferID) error {
+func (s *TransferStore) Delete(ctx context.Context, rCtx finance.Context, id finance.TransferID) error {
 	const op errors.Op = "domain/finance/storage.DeleteTransfer"
 	ds := pgDialect.Delete(goqu.S("finance").Table("transfer")).
-		Where(goqu.Ex{"id": string(id)})
+		Where(goqu.Ex{"id": string(id), "space_id": string(rCtx.SpaceID())})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return errors.E(op, err)
@@ -97,7 +96,7 @@ func (s *TransferStore) Delete(ctx context.Context, id finance.TransferID) error
 	return nil
 }
 
-func (s *TransferStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, limit int32, pageToken string) ([]*finance.Transfer, string, error) {
+func (s *TransferStore) ListBySpace(ctx context.Context, rCtx finance.Context, limit int32, pageToken string) ([]*finance.Transfer, string, error) {
 	const op errors.Op = "domain/finance/storage.ListTransfersBySpace"
 	if limit <= 0 || limit > 100 {
 		limit = 20
@@ -112,7 +111,7 @@ func (s *TransferStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID
 
 	ds := pgDialect.From(goqu.S("finance").Table("transfer")).
 		Select("*").
-		Where(goqu.Ex{"space_id": string(spaceID)})
+		Where(goqu.Ex{"space_id": string(rCtx.SpaceID())})
 
 	if cursorID != "" {
 		ds = ds.Where(goqu.I("id").Lt(cursorID))
@@ -139,7 +138,6 @@ func (s *TransferStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID
 	for i := range rows {
 		transfers = append(transfers, &finance.Transfer{
 			ID:                   finance.TransferID(rows[i].ID),
-			SpaceID:              finance.SpaceID(rows[i].SpaceID),
 			SourceAccountID:      finance.AccountID(rows[i].SourceAccountID),
 			DestinationAccountID: finance.AccountID(rows[i].DestinationAccountID),
 			SourceAmount:         rowAmount(rows[i].SourceAmount),

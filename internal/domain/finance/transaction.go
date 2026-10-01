@@ -123,7 +123,6 @@ func (m *TransactionMetadata) Merge(other TransactionMetadata) {
 // Transaction represents a financial record in the space ledger.
 type Transaction struct {
 	ID              TransactionID
-	SpaceID         SpaceID
 	Type            TransactionType
 	BudgetID        *BudgetID  // Nullable
 	PeriodID        *PeriodID  // Nullable
@@ -169,9 +168,6 @@ func (t *Transaction) Validate() error {
 	}
 	if err := t.ID.Validate(); err != nil {
 		return fmt.Errorf("validate transaction ID: %w", err)
-	}
-	if err := t.SpaceID.Validate(); err != nil {
-		return fmt.Errorf("validate space ID: %w", err)
 	}
 	if t.Type != TransactionTypeExpense && t.Type != TransactionTypeIncome && t.Type != TransactionTypeTransferOut && t.Type != TransactionTypeTransferIn && t.Type != TransactionTypeBalanceAdjustment {
 		return fmt.Errorf("invalid transaction type: %s", t.Type)

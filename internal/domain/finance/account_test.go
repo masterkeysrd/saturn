@@ -2,8 +2,6 @@ package finance
 
 import (
 	"testing"
-
-	"github.com/masterkeysrd/saturn/internal/platform/id"
 )
 
 func TestAccountID(t *testing.T) {
@@ -45,8 +43,6 @@ func TestAccountID_Invalid(t *testing.T) {
 
 func TestAccount_Validate(t *testing.T) {
 	accID, _ := NewAccountID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 
 	tests := []struct {
 		name    string
@@ -57,7 +53,6 @@ func TestAccount_Validate(t *testing.T) {
 			name: "valid bank account",
 			account: Account{
 				ID:       accID,
-				SpaceID:  spaceID,
 				Name:     "Checking Account",
 				Type:     AccountTypeBank,
 				Currency: "USD",
@@ -68,7 +63,6 @@ func TestAccount_Validate(t *testing.T) {
 			name: "valid credit card account with last four",
 			account: Account{
 				ID:          accID,
-				SpaceID:     spaceID,
 				Name:        "Visa Card",
 				Type:        AccountTypeCreditCard,
 				Currency:    "USD",
@@ -81,7 +75,6 @@ func TestAccount_Validate(t *testing.T) {
 			name: "missing name",
 			account: Account{
 				ID:       accID,
-				SpaceID:  spaceID,
 				Name:     "",
 				Type:     AccountTypeBank,
 				Currency: "USD",
@@ -92,7 +85,6 @@ func TestAccount_Validate(t *testing.T) {
 			name: "invalid type",
 			account: Account{
 				ID:       accID,
-				SpaceID:  spaceID,
 				Name:     "Account",
 				Type:     "INVALID_TYPE",
 				Currency: "USD",
@@ -103,7 +95,6 @@ func TestAccount_Validate(t *testing.T) {
 			name: "negative credit limit",
 			account: Account{
 				ID:          accID,
-				SpaceID:     spaceID,
 				Name:        "Credit Card",
 				Type:        AccountTypeCreditCard,
 				Currency:    "USD",
@@ -115,7 +106,6 @@ func TestAccount_Validate(t *testing.T) {
 			name: "invalid last four - wrong length",
 			account: Account{
 				ID:       accID,
-				SpaceID:  spaceID,
 				Name:     "Card",
 				Type:     AccountTypeBank,
 				Currency: "USD",
@@ -127,7 +117,6 @@ func TestAccount_Validate(t *testing.T) {
 			name: "invalid last four - non-digit characters",
 			account: Account{
 				ID:       accID,
-				SpaceID:  spaceID,
 				Name:     "Card",
 				Type:     AccountTypeBank,
 				Currency: "USD",
@@ -167,13 +156,10 @@ func TestAccount_SortFields(t *testing.T) {
 
 func TestAccount_ApplyAndRollbackTransaction(t *testing.T) {
 	accID, _ := NewAccountID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 
 	t.Run("Asset Bank Account: Expense decreases balance, Income increases balance", func(t *testing.T) {
 		acc := &Account{
 			ID:             accID,
-			SpaceID:        spaceID,
 			Name:           "Bank Account",
 			Type:           AccountTypeBank,
 			CurrentBalance: 10000,
@@ -198,7 +184,6 @@ func TestAccount_ApplyAndRollbackTransaction(t *testing.T) {
 	t.Run("Liability Credit Card Account: Expense increases debt, Payment/Income decreases debt", func(t *testing.T) {
 		acc := &Account{
 			ID:             accID,
-			SpaceID:        spaceID,
 			Name:           "Credit Card",
 			Type:           AccountTypeCreditCard,
 			CurrentBalance: 1000,
@@ -219,12 +204,9 @@ func TestAccount_ApplyAndRollbackTransaction(t *testing.T) {
 func TestAccount_ReconcileLifecycleAndTransfer(t *testing.T) {
 	accID1, _ := NewAccountID()
 	accID2, _ := NewAccountID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 
 	acc1 := &Account{
 		ID:             accID1,
-		SpaceID:        spaceID,
 		Name:           "Checking",
 		Type:           AccountTypeBank,
 		Currency:       "USD",
@@ -235,7 +217,6 @@ func TestAccount_ReconcileLifecycleAndTransfer(t *testing.T) {
 
 	acc2 := &Account{
 		ID:             accID2,
-		SpaceID:        spaceID,
 		Name:           "Savings",
 		Type:           AccountTypeBank,
 		Currency:       "USD",
@@ -282,11 +263,6 @@ func TestAccount_ReconcileLifecycleAndTransfer(t *testing.T) {
 
 		if err := acc1.SetAsDefault(); err == nil {
 			t.Error("expected error setting inactive account as default")
-		}
-
-		acc1.Activate()
-		if !acc1.IsActive {
-			t.Error("expected IsActive = true after Activate()")
 		}
 	})
 
@@ -348,8 +324,6 @@ func TestAccount_Init(t *testing.T) {
 
 func TestAccount_ApplyPatch(t *testing.T) {
 	accID, _ := NewAccountID()
-	rawSpace, _ := id.Generate("spc_")
-	spaceID := SpaceID(rawSpace)
 	instID := InstitutionID("inst_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 
 	tests := []struct {
@@ -363,7 +337,6 @@ func TestAccount_ApplyPatch(t *testing.T) {
 			name: "patch name and credit limit",
 			initial: Account{
 				ID:          accID,
-				SpaceID:     spaceID,
 				Type:        AccountTypeCreditCard,
 				Currency:    "USD",
 				Name:        "Old Name",
@@ -381,7 +354,6 @@ func TestAccount_ApplyPatch(t *testing.T) {
 			name: "patch color, notes, last_four, and institution_id",
 			initial: Account{
 				ID:       accID,
-				SpaceID:  spaceID,
 				Type:     AccountTypeBank,
 				Currency: "USD",
 				Name:     "Main Checking",
@@ -517,10 +489,6 @@ func TestAccount_RollbackTransaction_Table(t *testing.T) {
 }
 
 func TestAccount_ValidateTransferTo_Table(t *testing.T) {
-	rawSpace1, _ := id.Generate("spc_")
-	rawSpace2, _ := id.Generate("spc_")
-	space1 := SpaceID(rawSpace1)
-	space2 := SpaceID(rawSpace2)
 	id1, _ := NewAccountID()
 	id2, _ := NewAccountID()
 
@@ -533,57 +501,50 @@ func TestAccount_ValidateTransferTo_Table(t *testing.T) {
 	}{
 		{
 			name:    "nil destination account",
-			source:  Account{ID: id1, SpaceID: space1, IsActive: true},
+			source:  Account{ID: id1, IsActive: true},
 			dest:    nil,
 			amount:  1000,
 			wantErr: true,
 		},
 		{
 			name:    "same source and destination ID",
-			source:  Account{ID: id1, SpaceID: space1, IsActive: true},
-			dest:    &Account{ID: id1, SpaceID: space1, IsActive: true},
-			amount:  1000,
-			wantErr: true,
-		},
-		{
-			name:    "different spaces",
-			source:  Account{ID: id1, SpaceID: space1, IsActive: true},
-			dest:    &Account{ID: id2, SpaceID: space2, IsActive: true},
+			source:  Account{ID: id1, IsActive: true},
+			dest:    &Account{ID: id1, IsActive: true},
 			amount:  1000,
 			wantErr: true,
 		},
 		{
 			name:    "source account inactive",
-			source:  Account{ID: id1, SpaceID: space1, IsActive: false},
-			dest:    &Account{ID: id2, SpaceID: space1, IsActive: true},
+			source:  Account{ID: id1, IsActive: false},
+			dest:    &Account{ID: id2, IsActive: true},
 			amount:  1000,
 			wantErr: true,
 		},
 		{
 			name:    "destination account inactive",
-			source:  Account{ID: id1, SpaceID: space1, IsActive: true},
-			dest:    &Account{ID: id2, SpaceID: space1, IsActive: false},
+			source:  Account{ID: id1, IsActive: true},
+			dest:    &Account{ID: id2, IsActive: false},
 			amount:  1000,
 			wantErr: true,
 		},
 		{
 			name:    "amount zero",
-			source:  Account{ID: id1, SpaceID: space1, IsActive: true},
-			dest:    &Account{ID: id2, SpaceID: space1, IsActive: true},
+			source:  Account{ID: id1, IsActive: true},
+			dest:    &Account{ID: id2, IsActive: true},
 			amount:  0,
 			wantErr: true,
 		},
 		{
 			name:    "amount negative",
-			source:  Account{ID: id1, SpaceID: space1, IsActive: true},
-			dest:    &Account{ID: id2, SpaceID: space1, IsActive: true},
+			source:  Account{ID: id1, IsActive: true},
+			dest:    &Account{ID: id2, IsActive: true},
 			amount:  -500,
 			wantErr: true,
 		},
 		{
 			name:    "valid transfer",
-			source:  Account{ID: id1, SpaceID: space1, IsActive: true},
-			dest:    &Account{ID: id2, SpaceID: space1, IsActive: true},
+			source:  Account{ID: id1, IsActive: true},
+			dest:    &Account{ID: id2, IsActive: true},
 			amount:  5000,
 			wantErr: false,
 		},

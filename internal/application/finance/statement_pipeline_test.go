@@ -16,7 +16,7 @@ type mockStatementExtractor struct {
 	err error
 }
 
-func (m *mockStatementExtractor) Extract(ctx context.Context, spaceID string, docText string, accounts []*finance.Account) (*ParsedStatementDocument, error) {
+func (m *mockStatementExtractor) Extract(ctx context.Context, fCtx finance.Context, docText string, accounts []*finance.Account) (*ParsedStatementDocument, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -24,149 +24,12 @@ func (m *mockStatementExtractor) Extract(ctx context.Context, spaceID string, do
 }
 
 type mockFinanceServiceForPipeline struct {
+	FinanceService
 	accounts           []*finance.Account
 	importedStatements []*finance.Statement
 }
 
-func (m *mockFinanceServiceForPipeline) ConfigureFinance(ctx context.Context, settings *finance.FinanceSettings) (*finance.FinanceSettings, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) GetFinanceSettings(ctx context.Context, spaceID finance.SpaceID) (*finance.FinanceSettings, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) CreateBudget(ctx context.Context, budget *finance.Budget) (*finance.Budget, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) UpdateBudget(ctx context.Context, budget *finance.Budget, mask []string) (*finance.Budget, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) DeleteBudget(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID, opts finance.DeleteOptions) error {
-	return nil
-}
-func (m *mockFinanceServiceForPipeline) ListBudgets(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
-	return &paging.Page[*finance.Budget]{}, nil
-}
-func (m *mockFinanceServiceForPipeline) GetBudget(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID) (*finance.Budget, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) GetOrCreatePeriod(ctx context.Context, spaceID finance.SpaceID, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) UpdatePeriodLimit(ctx context.Context, id finance.PeriodID, limit int64) error {
-	return nil
-}
-func (m *mockFinanceServiceForPipeline) CreateExchangeRate(ctx context.Context, rate *finance.ExchangeRate) (*finance.ExchangeRate, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) GetExchangeRateByID(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.ExchangeRate, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) UpdateExchangeRate(ctx context.Context, spaceID finance.SpaceID, id string, rate *finance.ExchangeRate) (*finance.ExchangeRate, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) ListExchangeRates(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error) {
-	return nil, "", nil
-}
-func (m *mockFinanceServiceForPipeline) DeleteExchangeRateByID(ctx context.Context, spaceID finance.SpaceID, id string) error {
-	return nil
-}
-func (m *mockFinanceServiceForPipeline) CreateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) CreateIncome(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) GetTransaction(ctx context.Context, spaceID finance.SpaceID, id finance.TransactionID) (*finance.Transaction, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) UpdateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) UpdateIncome(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) DeleteTransaction(ctx context.Context, spaceID finance.SpaceID, id finance.TransactionID) error {
-	return nil
-}
-func (m *mockFinanceServiceForPipeline) ListTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
-	return &paging.Page[*finance.Transaction]{}, nil
-}
-func (m *mockFinanceServiceForPipeline) ListTransactionEvents(ctx context.Context, spaceID finance.SpaceID, txnID finance.TransactionID) ([]*finance.TransactionEvent, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) GetSpentInsights(ctx context.Context, req *finance.GetSpentInsightsRequest) (*finance.SpentInsights, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) GetIncomeInsights(ctx context.Context, req *finance.GetSpentInsightsRequest) (*finance.IncomeInsights, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) CreateRecurringTransaction(ctx context.Context, transaction *finance.RecurringTransaction) (*finance.RecurringTransaction, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) GetRecurringTransaction(ctx context.Context, spaceID finance.SpaceID, id finance.RecurringTransactionID) (*finance.RecurringTransaction, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) UpdateRecurringTransaction(ctx context.Context, transaction *finance.RecurringTransaction, mask []string) (*finance.RecurringTransaction, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) DeleteRecurringTransaction(ctx context.Context, id finance.RecurringTransactionID, opts finance.DeleteOptions) error {
-	return nil
-}
-func (m *mockFinanceServiceForPipeline) ListRecurringTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error) {
-	return &paging.Page[*finance.RecurringTransaction]{}, nil
-}
-func (m *mockFinanceServiceForPipeline) ListScheduledTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error) {
-	return &paging.Page[*finance.ScheduledTransaction]{}, nil
-}
-func (m *mockFinanceServiceForPipeline) GetScheduledTransaction(ctx context.Context, spaceID finance.SpaceID, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) ConfirmScheduledTransaction(ctx context.Context, req finance.ConfirmScheduledTransactionRequest) (*finance.Transaction, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) MatchScheduledTransaction(ctx context.Context, req finance.MatchScheduledTransactionRequest) (*finance.Transaction, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) SkipScheduledTransaction(ctx context.Context, spaceID finance.SpaceID, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) GenerateScheduledTransactions(ctx context.Context) error {
-	return nil
-}
-func (m *mockFinanceServiceForPipeline) CreateBorrowing(ctx context.Context, b *finance.Borrowing, createAsTransaction bool) (*finance.Borrowing, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) GetBorrowing(ctx context.Context, spaceID finance.SpaceID, id finance.BorrowingID) (*finance.Borrowing, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) ListBorrowings(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error) {
-	return nil, "", nil
-}
-func (m *mockFinanceServiceForPipeline) UpdateBorrowing(ctx context.Context, b *finance.Borrowing, mask []string) (*finance.Borrowing, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) DeleteBorrowing(ctx context.Context, spaceID finance.SpaceID, id finance.BorrowingID) error {
-	return nil
-}
-func (m *mockFinanceServiceForPipeline) LogBorrowingTransaction(ctx context.Context, req finance.LogBorrowingTransactionRequest) (*finance.Transaction, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) UpdateBorrowingTransaction(ctx context.Context, req finance.UpdateBorrowingTransactionRequest) (*finance.Transaction, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) DeleteBorrowingTransaction(ctx context.Context, req finance.DeleteBorrowingTransactionRequest) error {
-	return nil
-}
-func (m *mockFinanceServiceForPipeline) AdjustBorrowingBalance(ctx context.Context, req finance.AdjustBorrowingBalanceRequest) (*finance.Borrowing, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) ListCurrencies(ctx context.Context) ([]finance.CurrencyInfo, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) CreateAccount(ctx context.Context, account *finance.Account) (*finance.Account, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) GetAccount(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID) (*finance.Account, error) {
+func (m *mockFinanceServiceForPipeline) GetAccount(ctx context.Context, rCtx finance.Context, id finance.AccountID) (*finance.Account, error) {
 	for _, a := range m.accounts {
 		if a.ID == id {
 			return a, nil
@@ -174,19 +37,12 @@ func (m *mockFinanceServiceForPipeline) GetAccount(ctx context.Context, spaceID 
 	}
 	return nil, nil
 }
-func (m *mockFinanceServiceForPipeline) UpdateAccount(ctx context.Context, account *finance.Account, mask []string) (*finance.Account, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) AdjustAccountBalance(ctx context.Context, spaceID finance.SpaceID, accountID finance.AccountID, targetBalance int64, adjustmentDate string, note string) (*finance.Account, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) DeleteAccount(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID, opts finance.DeleteOptions) error {
-	return nil
-}
-func (m *mockFinanceServiceForPipeline) ListAccounts(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
+
+func (m *mockFinanceServiceForPipeline) ListAccounts(ctx context.Context, rCtx finance.Context, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
 	return &paging.Page[*finance.Account]{Items: m.accounts}, nil
 }
-func (m *mockFinanceServiceForPipeline) ResolveAccount(ctx context.Context, spaceID finance.SpaceID, opts finance.ResolveAccountOpts) (*finance.Account, error) {
+
+func (m *mockFinanceServiceForPipeline) ResolveAccount(ctx context.Context, rCtx finance.Context, opts finance.ResolveAccountOpts) (*finance.Account, error) {
 	for _, a := range m.accounts {
 		if opts.Currency != "" && string(a.Currency) != opts.Currency {
 			continue
@@ -198,63 +54,10 @@ func (m *mockFinanceServiceForPipeline) ResolveAccount(ctx context.Context, spac
 	}
 	return nil, nil
 }
-func (m *mockFinanceServiceForPipeline) CreateTransfer(ctx context.Context, transfer *finance.Transfer) (*finance.Transfer, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) GetTransfer(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) (*finance.Transfer, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) DeleteTransfer(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) error {
-	return nil
-}
-func (m *mockFinanceServiceForPipeline) ListTransfers(ctx context.Context, spaceID finance.SpaceID, limit int32, pageToken string) ([]*finance.Transfer, string, error) {
-	return nil, "", nil
-}
-func (m *mockFinanceServiceForPipeline) StageInboxItem(ctx context.Context, spaceID finance.SpaceID, req *finance.StageInboxItem) (*finance.InboxItem, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) UpdateInboxItem(ctx context.Context, spaceID finance.SpaceID, item *finance.InboxItem) (*finance.InboxItem, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) DiscardInboxItem(ctx context.Context, spaceID finance.SpaceID, id string) error {
-	return nil
-}
-func (m *mockFinanceServiceForPipeline) ApproveInboxItem(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.InboxItem, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) CreateInstitution(ctx context.Context, inst *finance.Institution) (*finance.Institution, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) UpdateInstitution(ctx context.Context, inst *finance.Institution, mask []string) (*finance.Institution, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) DeleteInstitution(ctx context.Context, spaceID finance.SpaceID, id finance.InstitutionID, opts finance.DeleteOptions) error {
-	return nil
-}
-func (m *mockFinanceServiceForPipeline) ResolveInstitution(ctx context.Context, spaceID finance.SpaceID, name string) (*finance.ResolveInstitutionResult, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) ListInstitutions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListInstitutionsFilter) (*paging.Page[*finance.Institution], error) {
-	return &paging.Page[*finance.Institution]{}, nil
-}
-func (m *mockFinanceServiceForPipeline) ImportStatement(ctx context.Context, accountID finance.AccountID, stmt *finance.Statement) (*finance.Statement, error) {
+
+func (m *mockFinanceServiceForPipeline) ImportStatement(ctx context.Context, rCtx finance.Context, accountID finance.AccountID, stmt *finance.Statement) (*finance.Statement, error) {
 	m.importedStatements = append(m.importedStatements, stmt)
 	return stmt, nil
-}
-func (m *mockFinanceServiceForPipeline) DeleteStatement(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID, opts finance.DeleteOptions) error {
-	return nil
-}
-func (m *mockFinanceServiceForPipeline) UpdateStatement(ctx context.Context, spaceID finance.SpaceID, stmt *finance.Statement, mask []string) (*finance.Statement, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) UpdateStatementLine(ctx context.Context, spaceID finance.SpaceID, line *finance.StatementLine, mask []string) (*finance.StatementLine, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) CompleteStatement(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, error) {
-	return nil, nil
-}
-func (m *mockFinanceServiceForPipeline) InvertStatementSigns(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error) {
-	return nil, nil, nil
 }
 
 func TestStatementPipeline_AnalyzeDocument_MultiCurrencyAndMathValidation(t *testing.T) {
@@ -318,8 +121,10 @@ func TestStatementPipeline_AnalyzeDocument_MultiCurrencyAndMathValidation(t *tes
 		DocumentBytes: []byte("Example Bank Statement August 2026"),
 	}
 
+	fCtx := finance.NewContext("spc_test123", "usr_1", time.UTC, "USD")
+
 	// 1. Analyze Document (Dry-run / Preview)
-	state, err := pipeline.AnalyzeDocument(ctx, "spc_test123", req)
+	state, err := pipeline.AnalyzeDocument(ctx, fCtx, req)
 	if err != nil {
 		t.Fatalf("AnalyzeDocument failed: %v", err)
 	}
@@ -361,7 +166,7 @@ func TestStatementPipeline_AnalyzeDocument_MultiCurrencyAndMathValidation(t *tes
 	}
 
 	// 2. Ingest Document (Persistence outside the graph)
-	ingestRes, err := pipeline.IngestDocument(ctx, "spc_test123", req)
+	ingestRes, err := pipeline.IngestDocument(ctx, fCtx, req)
 	if err != nil {
 		t.Fatalf("IngestDocument failed: %v", err)
 	}
@@ -514,7 +319,8 @@ func TestStatementPipeline_CreditCardDualCurrencyLiability(t *testing.T) {
 		Extractor:      extractor,
 	})
 
-	res, err := pipeline.IngestDocument(ctx, "spc_123", &StatementDocumentRequest{
+	fCtx := finance.NewContext("spc_123", "usr_1", time.UTC, "USD")
+	res, err := pipeline.IngestDocument(ctx, fCtx, &StatementDocumentRequest{
 		Filename:      "statement.txt",
 		ContentType:   "text/plain",
 		DocumentBytes: []byte("Sample statement document text"),
@@ -604,7 +410,8 @@ func TestStatementPipeline_CreditCardInvertedPositiveCharges(t *testing.T) {
 		Extractor:      extractor,
 	})
 
-	res, err := pipeline.IngestDocument(ctx, "spc_123", &StatementDocumentRequest{
+	fCtx := finance.NewContext("spc_123", "usr_1", time.UTC, "USD")
+	res, err := pipeline.IngestDocument(ctx, fCtx, &StatementDocumentRequest{
 		Filename:      "chase_stmt.txt",
 		ContentType:   "text/plain",
 		DocumentBytes: []byte("Sample statement text"),
@@ -782,7 +589,8 @@ func TestStatementPipeline_Nodes(t *testing.T) {
 					SpaceID:       "spc_1",
 					ExtractedText: tc.docText,
 				}
-				cmd, err := p.nodeExtract(context.Background(), state)
+				fCtx := finance.NewContext(finance.SpaceID(state.SpaceID), "usr_1", time.UTC, "USD")
+				cmd, err := p.nodeExtract(fCtx).Execute(context.Background(), state)
 				if err != nil {
 					t.Fatalf("unexpected node error: %v", err)
 				}
@@ -881,7 +689,8 @@ func TestStatementPipeline_Nodes(t *testing.T) {
 					Request:        tc.req,
 					ParsedDocument: tc.parsedDoc,
 				}
-				cmd, err := p.nodeResolveAccounts(context.Background(), state)
+				fCtx := finance.NewContext(finance.SpaceID(state.SpaceID), "usr_1", time.UTC, "USD")
+				cmd, err := p.nodeResolveAccounts(fCtx).Execute(context.Background(), state)
 				if err != nil {
 					t.Fatalf("unexpected node error: %v", err)
 				}

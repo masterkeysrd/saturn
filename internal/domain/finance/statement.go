@@ -143,7 +143,6 @@ type StatementConfig struct {
 // Statement represents an uploaded bank/credit card/wallet statement.
 type Statement struct {
 	ID                       StatementID
-	SpaceID                  SpaceID
 	AccountID                AccountID
 	Status                   StatementStatus
 	StatementDate            time.Time
@@ -185,9 +184,6 @@ func (s *Statement) Init() error {
 func (s *Statement) Validate() error {
 	if err := s.ID.Validate(); err != nil {
 		return fmt.Errorf("validate ID: %w", err)
-	}
-	if err := s.SpaceID.Validate(); err != nil {
-		return fmt.Errorf("validate space ID: %w", err)
 	}
 	if err := s.AccountID.Validate(); err != nil {
 		return fmt.Errorf("validate account ID: %w", err)
@@ -500,19 +496,16 @@ func (sl *StatementLine) ApplyPatch(incoming *StatementLine, mask []string) erro
 
 // StatementLineTransactionOpts defines parameters for constructing a Transaction from a StatementLine.
 type StatementLineTransactionOpts struct {
-	SpaceID      SpaceID
 	AccountID    AccountID
 	Currency     Currency
 	Type         TransactionType
 	BudgetID     *BudgetID
 	FallbackDate time.Time
+	Location     *time.Location
 }
 
 // NewTransaction constructs a valid Transaction entity linked to this StatementLine.
 func (sl *StatementLine) NewTransaction(opts StatementLineTransactionOpts) (*Transaction, error) {
-	if err := opts.SpaceID.Validate(); err != nil {
-		return nil, fmt.Errorf("validate space ID: %w", err)
-	}
 	if err := opts.AccountID.Validate(); err != nil {
 		return nil, fmt.Errorf("validate account ID: %w", err)
 	}
@@ -531,18 +524,25 @@ func (sl *StatementLine) NewTransaction(opts StatementLineTransactionOpts) (*Tra
 		}
 	}
 
-	tDate, _ := time.Parse("2006-01-02", sl.DateStr)
+	loc := opts.Location
+	if loc == nil && !opts.FallbackDate.IsZero() {
+		loc = opts.FallbackDate.Location()
+	}
+	if loc == nil {
+		loc = time.UTC
+	}
+
+	tDate, _ := time.ParseInLocation("2006-01-02", sl.DateStr, loc)
 	if tDate.IsZero() {
 		if !opts.FallbackDate.IsZero() {
 			tDate = opts.FallbackDate
 		} else {
-			tDate = time.Now().UTC()
+			tDate = time.Now().In(loc)
 		}
 	}
 
 	now := time.Now().UTC()
 	txn := &Transaction{
-		SpaceID:         opts.SpaceID,
 		Type:            txnType,
 		BudgetID:        opts.BudgetID,
 		AccountID:       &opts.AccountID,
@@ -563,17 +563,14 @@ func (sl *StatementLine) NewTransaction(opts StatementLineTransactionOpts) (*Tra
 
 // StatementLineTransferOpts defines parameters for constructing a Transfer from a StatementLine.
 type StatementLineTransferOpts struct {
-	SpaceID              SpaceID
 	StatementAccountID   AccountID
 	CounterpartAccountID AccountID
 	FallbackDate         time.Time
+	Location             *time.Location
 }
 
 // NewTransfer constructs a valid Transfer entity and leg options linked to this StatementLine.
 func (sl *StatementLine) NewTransfer(opts StatementLineTransferOpts) (*Transfer, CreateTransferOpts, error) {
-	if err := opts.SpaceID.Validate(); err != nil {
-		return nil, CreateTransferOpts{}, fmt.Errorf("validate space ID: %w", err)
-	}
 	if err := opts.StatementAccountID.Validate(); err != nil {
 		return nil, CreateTransferOpts{}, fmt.Errorf("validate statement account ID: %w", err)
 	}
@@ -586,12 +583,20 @@ func (sl *StatementLine) NewTransfer(opts StatementLineTransferOpts) (*Transfer,
 		absAmount = -absAmount
 	}
 
-	tDate, _ := time.Parse("2006-01-02", sl.DateStr)
+	loc := opts.Location
+	if loc == nil && !opts.FallbackDate.IsZero() {
+		loc = opts.FallbackDate.Location()
+	}
+	if loc == nil {
+		loc = time.UTC
+	}
+
+	tDate, _ := time.ParseInLocation("2006-01-02", sl.DateStr, loc)
 	if tDate.IsZero() {
 		if !opts.FallbackDate.IsZero() {
 			tDate = opts.FallbackDate
 		} else {
-			tDate = time.Now().UTC()
+			tDate = time.Now().In(loc)
 		}
 	}
 
@@ -617,7 +622,6 @@ func (sl *StatementLine) NewTransfer(opts StatementLineTransferOpts) (*Transfer,
 	}
 
 	transfer := &Transfer{
-		SpaceID:              opts.SpaceID,
 		SourceAccountID:      srcAccID,
 		DestinationAccountID: destAccID,
 		SourceAmount:         absAmount,

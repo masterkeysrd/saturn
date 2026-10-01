@@ -16,13 +16,13 @@ type AggregatedTransaction struct {
 }
 
 // GetTransaction retrieves a single transaction by ID for a space, optionally hydrating associated accounts and budgets.
-func (s *Service) GetTransaction(ctx context.Context, spaceID finance.SpaceID, view ViewType, id finance.TransactionID) (*AggregatedTransaction, error) {
-	txn, err := s.financeService.GetTransaction(ctx, spaceID, id)
+func (s *Service) GetTransaction(ctx context.Context, rCtx finance.Context, view ViewType, id finance.TransactionID) (*AggregatedTransaction, error) {
+	txn, err := s.financeService.GetTransaction(ctx, rCtx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	page, err := s.hydrateTransactions(ctx, spaceID, view, []*finance.Transaction{txn}, "")
+	page, err := s.hydrateTransactions(ctx, rCtx, view, []*finance.Transaction{txn}, "")
 	if err != nil || len(page.Items) == 0 {
 		return &AggregatedTransaction{Transaction: txn}, nil
 	}
@@ -30,15 +30,15 @@ func (s *Service) GetTransaction(ctx context.Context, spaceID finance.SpaceID, v
 }
 
 // ListTransactions retrieves space transactions, optionally hydrating associated accounts and budgets.
-func (s *Service) ListTransactions(ctx context.Context, spaceID finance.SpaceID, view ViewType, filter finance.TransactionFilter) (*paging.Page[*AggregatedTransaction], error) {
-	page, err := s.financeService.ListTransactions(ctx, spaceID, &filter)
+func (s *Service) ListTransactions(ctx context.Context, rCtx finance.Context, view ViewType, filter finance.TransactionFilter) (*paging.Page[*AggregatedTransaction], error) {
+	page, err := s.financeService.ListTransactions(ctx, rCtx, &filter)
 	if err != nil {
 		return nil, err
 	}
-	return s.hydrateTransactions(ctx, spaceID, view, page.Items, page.NextPageToken)
+	return s.hydrateTransactions(ctx, rCtx, view, page.Items, page.NextPageToken)
 }
 
-func (s *Service) hydrateTransactions(ctx context.Context, spaceID finance.SpaceID, view ViewType, txns []*finance.Transaction, nextToken string) (*paging.Page[*AggregatedTransaction], error) {
+func (s *Service) hydrateTransactions(ctx context.Context, rCtx finance.Context, view ViewType, txns []*finance.Transaction, nextToken string) (*paging.Page[*AggregatedTransaction], error) {
 	if len(txns) == 0 {
 		return &paging.Page[*AggregatedTransaction]{
 			Items:         []*AggregatedTransaction{},
@@ -71,7 +71,7 @@ func (s *Service) hydrateTransactions(ctx context.Context, spaceID finance.Space
 	accountIDs := accountIDsSet.ToSlice()
 	accountsMap := make(map[finance.AccountID]*AggregatedAccount)
 	if len(accountIDs) > 0 {
-		accountsList, err := s.GetAccounts(ctx, spaceID, accountIDs, ViewFull)
+		accountsList, err := s.GetAccounts(ctx, rCtx, accountIDs, ViewFull)
 		if err == nil {
 			for _, acc := range accountsList {
 				accountsMap[acc.ID] = acc
@@ -89,7 +89,7 @@ func (s *Service) hydrateTransactions(ctx context.Context, spaceID finance.Space
 	budgetIDs := budgetIDsSet.ToSlice()
 	budgetsMap := make(map[finance.BudgetID]*AggregatedBudget)
 	if len(budgetIDs) > 0 {
-		budgetsList, err := s.financeService.GetBudgets(ctx, spaceID, budgetIDs)
+		budgetsList, err := s.financeService.GetBudgets(ctx, rCtx, budgetIDs)
 		if err == nil {
 			for _, b := range budgetsList {
 				budgetsMap[b.ID] = &AggregatedBudget{

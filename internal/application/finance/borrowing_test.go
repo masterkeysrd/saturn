@@ -57,7 +57,7 @@ func TestCoordinator_CreateBorrowing(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *CreateBorrowingRequest
-		mockFn        func(ctx context.Context, b *finance.Borrowing, createAsTransaction bool) (*finance.Borrowing, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, b *finance.Borrowing, createAsTransaction bool) (*finance.Borrowing, error)
 		expectedID    finance.BorrowingID
 		expectedError bool
 	}{
@@ -74,11 +74,11 @@ func TestCoordinator_CreateBorrowing(t *testing.T) {
 				CreateAsTransaction: true,
 				AccountID:           &accID,
 			},
-			mockFn: func(ctx context.Context, b *finance.Borrowing, createAsTransaction bool) (*finance.Borrowing, error) {
-				if b.SpaceID != "spc_1" || !createAsTransaction || b.TotalAmount != 100000 {
+			mockFn: func(ctx context.Context, rCtx finance.Context, b *finance.Borrowing, createAsTransaction bool) (*finance.Borrowing, error) {
+				if rCtx.SpaceID() != "spc_1" || !createAsTransaction || b.TotalAmount != 100000 {
 					t.Errorf("unexpected borrowing args: %+v, asTx=%v", b, createAsTransaction)
 				}
-				return &finance.Borrowing{ID: "bor_1", SpaceID: b.SpaceID, TotalAmount: b.TotalAmount}, nil
+				return &finance.Borrowing{ID: "bor_1", TotalAmount: b.TotalAmount}, nil
 			},
 			expectedID:    "bor_1",
 			expectedError: false,
@@ -93,11 +93,11 @@ func TestCoordinator_CreateBorrowing(t *testing.T) {
 				Currency:            "EUR",
 				CreateAsTransaction: false,
 			},
-			mockFn: func(ctx context.Context, b *finance.Borrowing, createAsTransaction bool) (*finance.Borrowing, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, b *finance.Borrowing, createAsTransaction bool) (*finance.Borrowing, error) {
 				if createAsTransaction {
 					t.Errorf("expected createAsTransaction false")
 				}
-				return &finance.Borrowing{ID: "bor_2", SpaceID: b.SpaceID}, nil
+				return &finance.Borrowing{ID: "bor_2"}, nil
 			},
 			expectedID:    "bor_2",
 			expectedError: false,
@@ -112,7 +112,7 @@ func TestCoordinator_CreateBorrowing(t *testing.T) {
 			name: "Domain service error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &CreateBorrowingRequest{Counterparty: "Bob"},
-			mockFn: func(ctx context.Context, b *finance.Borrowing, createAsTransaction bool) (*finance.Borrowing, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, b *finance.Borrowing, createAsTransaction bool) (*finance.Borrowing, error) {
 				return nil, errors.New("domain error")
 			},
 			expectedError: true,
@@ -145,7 +145,7 @@ func TestCoordinator_UpdateBorrowing(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *UpdateBorrowingRequest
-		mockFn        func(ctx context.Context, b *finance.Borrowing, mask []string) (*finance.Borrowing, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, b *finance.Borrowing, mask []string) (*finance.Borrowing, error)
 		expectedID    finance.BorrowingID
 		expectedError bool
 	}{
@@ -160,8 +160,8 @@ func TestCoordinator_UpdateBorrowing(t *testing.T) {
 				Version:      1,
 				UpdateMask:   []string{"counterparty", "total_amount"},
 			},
-			mockFn: func(ctx context.Context, b *finance.Borrowing, mask []string) (*finance.Borrowing, error) {
-				if b.ID != "bor_1" || b.SpaceID != "spc_1" || len(mask) != 2 {
+			mockFn: func(ctx context.Context, rCtx finance.Context, b *finance.Borrowing, mask []string) (*finance.Borrowing, error) {
+				if b.ID != "bor_1" || rCtx.SpaceID() != "spc_1" || len(mask) != 2 {
 					t.Errorf("unexpected update args: %+v, mask=%v", b, mask)
 				}
 				return &finance.Borrowing{ID: b.ID, Version: 2}, nil
@@ -179,7 +179,7 @@ func TestCoordinator_UpdateBorrowing(t *testing.T) {
 			name: "Domain service error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &UpdateBorrowingRequest{ID: "bor_1"},
-			mockFn: func(ctx context.Context, b *finance.Borrowing, mask []string) (*finance.Borrowing, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, b *finance.Borrowing, mask []string) (*finance.Borrowing, error) {
 				return nil, errors.New("update conflict")
 			},
 			expectedError: true,
@@ -212,16 +212,16 @@ func TestCoordinator_DeleteBorrowing(t *testing.T) {
 		name          string
 		ctx           context.Context
 		id            finance.BorrowingID
-		mockFn        func(ctx context.Context, spaceID finance.SpaceID, id finance.BorrowingID) error
+		mockFn        func(ctx context.Context, rCtx finance.Context, id finance.BorrowingID) error
 		expectedError bool
 	}{
 		{
 			name: "Success",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			id:   "bor_1",
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.BorrowingID) error {
-				if spaceID != "spc_1" || id != "bor_1" {
-					t.Errorf("unexpected delete args: space=%v id=%v", spaceID, id)
+			mockFn: func(ctx context.Context, rCtx finance.Context, id finance.BorrowingID) error {
+				if rCtx.SpaceID() != "spc_1" || id != "bor_1" {
+					t.Errorf("unexpected delete args: space=%v id=%v", rCtx.SpaceID(), id)
 				}
 				return nil
 			},
@@ -237,7 +237,7 @@ func TestCoordinator_DeleteBorrowing(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			id:   "bor_1",
-			mockFn: func(ctx context.Context, spaceID finance.SpaceID, id finance.BorrowingID) error {
+			mockFn: func(ctx context.Context, rCtx finance.Context, id finance.BorrowingID) error {
 				return errors.New("delete error")
 			},
 			expectedError: true,
@@ -268,7 +268,7 @@ func TestCoordinator_AdjustBorrowingBalance(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *AdjustBorrowingBalanceRequest
-		mockFn        func(ctx context.Context, req finance.AdjustBorrowingBalanceRequest) (*finance.Borrowing, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, req finance.AdjustBorrowingBalanceRequest) (*finance.Borrowing, error)
 		expectedID    finance.BorrowingID
 		expectedError bool
 	}{
@@ -282,9 +282,9 @@ func TestCoordinator_AdjustBorrowingBalance(t *testing.T) {
 				Notes:          "Adjustment",
 				AccountID:      &accID,
 			},
-			mockFn: func(ctx context.Context, req finance.AdjustBorrowingBalanceRequest) (*finance.Borrowing, error) {
-				if req.SpaceID != "spc_1" || req.BorrowingID != "bor_1" || req.TargetBalance != 10000 {
-					t.Errorf("unexpected adjust args: %+v", req)
+			mockFn: func(ctx context.Context, rCtx finance.Context, req finance.AdjustBorrowingBalanceRequest) (*finance.Borrowing, error) {
+				if rCtx.SpaceID() != "spc_1" || req.BorrowingID != "bor_1" || req.TargetBalance != 10000 {
+					t.Errorf("unexpected adjust args: space=%v req=%+v", rCtx.SpaceID(), req)
 				}
 				return &finance.Borrowing{ID: req.BorrowingID}, nil
 			},
@@ -301,7 +301,7 @@ func TestCoordinator_AdjustBorrowingBalance(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &AdjustBorrowingBalanceRequest{BorrowingID: "bor_1"},
-			mockFn: func(ctx context.Context, req finance.AdjustBorrowingBalanceRequest) (*finance.Borrowing, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, req finance.AdjustBorrowingBalanceRequest) (*finance.Borrowing, error) {
 				return nil, errors.New("adjust failed")
 			},
 			expectedError: true,
@@ -338,7 +338,7 @@ func TestCoordinator_BorrowingTransactions(t *testing.T) {
 			name          string
 			ctx           context.Context
 			req           *LogBorrowingTransactionRequest
-			mockFn        func(ctx context.Context, req finance.LogBorrowingTransactionRequest) (*finance.Transaction, error)
+			mockFn        func(ctx context.Context, rCtx finance.Context, req finance.LogBorrowingTransactionRequest) (*finance.Transaction, error)
 			expectedID    finance.TransactionID
 			expectedError bool
 		}{
@@ -353,9 +353,9 @@ func TestCoordinator_BorrowingTransactions(t *testing.T) {
 					AccountID:       &accID,
 					Notes:           "repayment",
 				},
-				mockFn: func(ctx context.Context, req finance.LogBorrowingTransactionRequest) (*finance.Transaction, error) {
-					if req.SpaceID != "spc_1" || req.BorrowingID != "bor_1" || req.Amount != 2500 {
-						t.Errorf("unexpected log tx args: %+v", req)
+				mockFn: func(ctx context.Context, rCtx finance.Context, req finance.LogBorrowingTransactionRequest) (*finance.Transaction, error) {
+					if rCtx.SpaceID() != "spc_1" || req.BorrowingID != "bor_1" || req.Amount != 2500 {
+						t.Errorf("unexpected log tx args: space=%v req=%+v", rCtx.SpaceID(), req)
 					}
 					return &finance.Transaction{ID: "tx_1"}, nil
 				},
@@ -372,7 +372,7 @@ func TestCoordinator_BorrowingTransactions(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				req:  &LogBorrowingTransactionRequest{BorrowingID: "bor_1"},
-				mockFn: func(ctx context.Context, req finance.LogBorrowingTransactionRequest) (*finance.Transaction, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, req finance.LogBorrowingTransactionRequest) (*finance.Transaction, error) {
 					return nil, errors.New("log failed")
 				},
 				expectedError: true,
@@ -405,7 +405,7 @@ func TestCoordinator_BorrowingTransactions(t *testing.T) {
 			name          string
 			ctx           context.Context
 			req           *UpdateBorrowingTransactionRequest
-			mockFn        func(ctx context.Context, req finance.UpdateBorrowingTransactionRequest) (*finance.Transaction, error)
+			mockFn        func(ctx context.Context, rCtx finance.Context, req finance.UpdateBorrowingTransactionRequest) (*finance.Transaction, error)
 			expectedID    finance.TransactionID
 			expectedError bool
 		}{
@@ -421,9 +421,9 @@ func TestCoordinator_BorrowingTransactions(t *testing.T) {
 					AccountID:       &accID,
 					Notes:           "updated payment",
 				},
-				mockFn: func(ctx context.Context, req finance.UpdateBorrowingTransactionRequest) (*finance.Transaction, error) {
-					if req.SpaceID != "spc_1" || req.TransactionID != "tx_1" || req.Amount != 3000 {
-						t.Errorf("unexpected update tx args: %+v", req)
+				mockFn: func(ctx context.Context, rCtx finance.Context, req finance.UpdateBorrowingTransactionRequest) (*finance.Transaction, error) {
+					if rCtx.SpaceID() != "spc_1" || req.TransactionID != "tx_1" || req.Amount != 3000 {
+						t.Errorf("unexpected update tx args: space=%v req=%+v", rCtx.SpaceID(), req)
 					}
 					return &finance.Transaction{ID: req.TransactionID}, nil
 				},
@@ -440,7 +440,7 @@ func TestCoordinator_BorrowingTransactions(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				req:  &UpdateBorrowingTransactionRequest{BorrowingID: "bor_1"},
-				mockFn: func(ctx context.Context, req finance.UpdateBorrowingTransactionRequest) (*finance.Transaction, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, req finance.UpdateBorrowingTransactionRequest) (*finance.Transaction, error) {
 					return nil, errors.New("update failed")
 				},
 				expectedError: true,
@@ -473,7 +473,7 @@ func TestCoordinator_BorrowingTransactions(t *testing.T) {
 			name          string
 			ctx           context.Context
 			req           *DeleteBorrowingTransactionRequest
-			mockFn        func(ctx context.Context, req finance.DeleteBorrowingTransactionRequest) error
+			mockFn        func(ctx context.Context, rCtx finance.Context, req finance.DeleteBorrowingTransactionRequest) error
 			expectedError bool
 		}{
 			{
@@ -483,9 +483,9 @@ func TestCoordinator_BorrowingTransactions(t *testing.T) {
 					BorrowingID:   "bor_1",
 					TransactionID: "tx_1",
 				},
-				mockFn: func(ctx context.Context, req finance.DeleteBorrowingTransactionRequest) error {
-					if req.SpaceID != "spc_1" || req.BorrowingID != "bor_1" || req.TransactionID != "tx_1" {
-						t.Errorf("unexpected delete tx args: %+v", req)
+				mockFn: func(ctx context.Context, rCtx finance.Context, req finance.DeleteBorrowingTransactionRequest) error {
+					if rCtx.SpaceID() != "spc_1" || req.BorrowingID != "bor_1" || req.TransactionID != "tx_1" {
+						t.Errorf("unexpected delete tx args: space=%v req=%+v", rCtx.SpaceID(), req)
 					}
 					return nil
 				},
@@ -501,7 +501,7 @@ func TestCoordinator_BorrowingTransactions(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				req:  &DeleteBorrowingTransactionRequest{BorrowingID: "bor_1"},
-				mockFn: func(ctx context.Context, req finance.DeleteBorrowingTransactionRequest) error {
+				mockFn: func(ctx context.Context, rCtx finance.Context, req finance.DeleteBorrowingTransactionRequest) error {
 					return errors.New("delete failed")
 				},
 				expectedError: true,
