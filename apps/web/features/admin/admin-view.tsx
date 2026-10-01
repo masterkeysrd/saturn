@@ -46,6 +46,7 @@ export function AdminView() {
   const [ttlMinutes, setTtlMinutes] = useState(15)
   const [generatedUrl, setGeneratedUrl] = useState("")
   const [copied, setCopied] = useState(false)
+  const [now] = useState(() => Date.now())
 
   const resetPasswordMutation = useResetPasswordMutation()
 
@@ -282,7 +283,7 @@ export function AdminView() {
                     approveMutation.isPending || rejectMutation.isPending
                   const isLocked = Boolean(
                     account.lockedUntil &&
-                    new Date(account.lockedUntil).getTime() > Date.now()
+                    new Date(account.lockedUntil).getTime() > now
                   )
 
                   return (

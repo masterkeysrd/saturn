@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { useParams, Link } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { useActiveSpaceContext } from "@/features/space/use-space"
@@ -77,24 +77,18 @@ export function SpacePreferences() {
   const updateMutation = useUpdateSettingsMutation()
 
   const serverTimezone = settings?.timezone || "UTC"
-  const [selectedTimezone, setSelectedTimezone] =
-    useState<string>(serverTimezone)
+  const [selectedTimezone, setSelectedTimezone] = useState<string | null>(null)
+  const currentTimezone = selectedTimezone ?? serverTimezone
   const [search, setSearch] = useState("")
   const [open, setOpen] = useState(false)
-
-  // Keep local selection synced with server when data arrives or changes
-  useEffect(() => {
-    if (settings?.timezone) {
-      setSelectedTimezone(settings.timezone)
-    }
-  }, [settings?.timezone])
 
   const canManage =
     user?.role === "admin" ||
     spaceRole?.toLowerCase() === "owner" ||
     spaceRole?.toLowerCase() === "admin"
 
-  const isDirty = selectedTimezone !== serverTimezone
+  const isDirty =
+    selectedTimezone !== null && selectedTimezone !== serverTimezone
 
   const filteredTimezones = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -115,7 +109,7 @@ export function SpacePreferences() {
         req: {
           spaceId,
           settings: {
-            timezone: selectedTimezone,
+            timezone: currentTimezone,
             version: settings?.version,
           },
           updateMask: {
@@ -133,10 +127,11 @@ export function SpacePreferences() {
         queryKey: [`/api/v1/spaces/${spaceId}/settings`],
       })
 
+      setSelectedTimezone(null)
       toast.add({
         type: "success",
         title: "Preferences Saved",
-        description: `Workspace timezone set to ${updated.timezone || selectedTimezone}.`,
+        description: `Workspace timezone set to ${updated.timezone || currentTimezone}.`,
       })
     } catch (err: unknown) {
       const message =
@@ -166,7 +161,7 @@ export function SpacePreferences() {
   }
 
   const handleReset = () => {
-    setSelectedTimezone(serverTimezone)
+    setSelectedTimezone(null)
     setSearch("")
   }
 
@@ -264,7 +259,7 @@ export function SpacePreferences() {
               </Label>
               <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
                 <Clock className="h-3.5 w-3.5 text-primary" />
-                Live: {formatTimezonePreview(selectedTimezone)}
+                Live: {formatTimezonePreview(currentTimezone)}
               </span>
             </div>
 
@@ -285,10 +280,10 @@ export function SpacePreferences() {
                   <div className="flex min-w-0 items-center gap-2.5">
                     <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <span className="truncate text-sm font-medium text-foreground">
-                      {selectedTimezone}
+                      {currentTimezone}
                     </span>
                     <span className="hidden font-mono text-xs text-muted-foreground/80 sm:inline">
-                      • {formatTimezonePreview(selectedTimezone)}
+                      • {formatTimezonePreview(currentTimezone)}
                     </span>
                   </div>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -314,7 +309,7 @@ export function SpacePreferences() {
                         </div>
                       ) : (
                         filteredTimezones.map((tz) => {
-                          const isSelected = tz === selectedTimezone
+                          const isSelected = tz === currentTimezone
                           return (
                             <button
                               key={tz}

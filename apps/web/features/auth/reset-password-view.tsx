@@ -19,9 +19,12 @@ export function ResetPasswordView() {
   const token = searchParams.get("token") || ""
   const navigate = useNavigate()
 
+  const hasToken = Boolean(token.trim())
   const [username, setUsername] = useState<string | null>(null)
-  const [isValidating, setIsValidating] = useState(true)
-  const [validationError, setValidationError] = useState<string | null>(null)
+  const [isValidating, setIsValidating] = useState(hasToken)
+  const [validationError, setValidationError] = useState<string | null>(
+    hasToken ? null : "No password reset token was provided."
+  )
 
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -35,9 +38,7 @@ export function ResetPasswordView() {
   useEffect(() => {
     document.title = "Reset Password | Saturn"
 
-    if (!token.trim()) {
-      setIsValidating(false)
-      setValidationError("No password reset token was provided.")
+    if (!hasToken) {
       return
     }
 
@@ -57,7 +58,7 @@ export function ResetPasswordView() {
         },
       }
     )
-  }, [token])
+  }, [token, hasToken, validateMutation])
 
   const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
