@@ -1,11 +1,4 @@
-import { SettingsIcon } from "lucide-react"
 import type { FeatureMenu } from "@/lib/navigation"
 
-export const menu: FeatureMenu = {
-  title: "Settings",
-  url: "/space/settings",
-  icon: SettingsIcon,
-  weight: 80,
-  group: "main",
-  requiresSpace: true,
-}
+// Empty menu array - Settings is consolidated into the unified Settings hub at /settings/*
+export const menu: FeatureMenu[] = []

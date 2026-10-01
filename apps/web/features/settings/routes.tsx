@@ -19,14 +19,8 @@ export const routes: SaturnRouteObject[] = [
   },
   {
     path: "/space/settings",
-    element: createElement(
-      lazy(() =>
-        import("./space-settings-view").then((m) => ({
-          default: m.SpaceSettingsView,
-        }))
-      )
-    ),
-    requiresSpace: true,
+    element: <Navigate to="/settings/preferences" replace />,
+    requiresSpace: false,
   },
 ]
 export default routes

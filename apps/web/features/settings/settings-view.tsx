@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import {
   Routes,
   Route,
@@ -14,14 +14,20 @@ import {
   LaptopIcon,
   KeyRoundIcon,
   ActivityIcon,
+  Sliders,
+  Blocks,
 } from "lucide-react"
 import { PageLayout } from "@/components/ui/page-layout"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/features/auth/use-auth"
+import { useActiveSpaceContext } from "@/features/space/use-space"
 import { AccountSettingsView } from "./account-settings-view"
 import { CredentialsSettingsView } from "./credentials-settings-view"
 import { SessionsDevicesSettingsView } from "./sessions-devices-settings-view"
 import { ActivityLogSettingsView } from "./activity-log-settings-view"
 import { SpaceSettings } from "./components/space-settings"
+import { SpacePreferences } from "./components/space-preferences"
+import { IntegrationSettings } from "./components/integration-settings"
 
 interface NavItem {
   to: string
@@ -34,52 +40,76 @@ interface NavSection {
   items: NavItem[]
 }
 
-const navSections: NavSection[] = [
-  {
-    title: "Personal Account",
-    items: [
-      {
-        to: "/settings/account",
-        label: "Profile & Identity",
-        icon: UserIcon,
-      },
-    ],
-  },
-  {
-    title: "Access & Security",
-    items: [
-      {
-        to: "/settings/security/credentials",
-        label: "Credentials & Auth",
-        icon: KeyRoundIcon,
-      },
-      {
-        to: "/settings/security/devices",
-        label: "Sessions & Devices",
-        icon: LaptopIcon,
-      },
-      {
-        to: "/settings/security/activity",
-        label: "Security Activity Log",
-        icon: ActivityIcon,
-      },
-    ],
-  },
-  {
-    title: "Organization",
-    items: [
-      {
-        to: "/settings/spaces",
-        label: "Workspaces",
-        icon: Building2Icon,
-      },
-    ],
-  },
-]
-
 export function SettingsView() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const { spaceRole } = useActiveSpaceContext()
+
+  const isWorkspaceAdmin =
+    user?.role === "admin" ||
+    spaceRole?.toLowerCase() === "owner" ||
+    spaceRole?.toLowerCase() === "admin"
+
+  const navSections: NavSection[] = useMemo(
+    () => [
+      {
+        title: "Personal Account",
+        items: [
+          {
+            to: "/settings/account",
+            label: "Profile & Identity",
+            icon: UserIcon,
+          },
+        ],
+      },
+      {
+        title: "Access & Security",
+        items: [
+          {
+            to: "/settings/security/credentials",
+            label: "Credentials & Auth",
+            icon: KeyRoundIcon,
+          },
+          {
+            to: "/settings/security/devices",
+            label: "Sessions & Devices",
+            icon: LaptopIcon,
+          },
+          {
+            to: "/settings/security/activity",
+            label: "Security Activity Log",
+            icon: ActivityIcon,
+          },
+        ],
+      },
+      {
+        title: "Workspace",
+        items: [
+          {
+            to: "/settings/spaces",
+            label: "Workspaces",
+            icon: Building2Icon,
+          },
+          ...(isWorkspaceAdmin
+            ? [
+                {
+                  to: "/settings/preferences",
+                  label: "Preferences",
+                  icon: Sliders,
+                },
+              ]
+            : []),
+          {
+            to: "/settings/integrations",
+            label: "Integrations",
+            icon: Blocks,
+          },
+        ],
+      },
+    ],
+    [isWorkspaceAdmin]
+  )
 
   // Backward-compatibility: redirect old query param links (?tab=...) to slash paths
   useEffect(() => {
@@ -90,13 +120,17 @@ export function SettingsView() {
       else if (tab === "account")
         navigate("/settings/account", { replace: true })
       else if (tab === "spaces") navigate("/settings/spaces", { replace: true })
+      else if (tab === "preferences")
+        navigate("/settings/preferences", { replace: true })
+      else if (tab === "integrations")
+        navigate("/settings/integrations", { replace: true })
     }
   }, [searchParams, navigate])
 
   return (
     <PageLayout
       title="Settings"
-      description="Manage your account profile, security credentials, active sessions, and workspaces."
+      description="Manage your account profile, security credentials, active sessions, and workspace."
       icon={Settings}
       className="max-w-6xl py-4"
     >
@@ -143,37 +177,35 @@ export function SettingsView() {
                 {section.title}
               </div>
               <div className="space-y-0.5">
-                {navSections
-                  .find((s) => s.title === section.title)
-                  ?.items.map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      end
-                      className={({ isActive }) =>
-                        cn(
-                          "group flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
-                          isActive
-                            ? "bg-muted font-semibold text-foreground"
-                            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                        )
-                      }
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <item.icon
-                            className={cn(
-                              "h-4 w-4 shrink-0 transition-colors",
-                              isActive
-                                ? "text-primary"
-                                : "text-muted-foreground group-hover:text-foreground"
-                            )}
-                          />
-                          <span className="truncate">{item.label}</span>
-                        </>
-                      )}
-                    </NavLink>
-                  ))}
+                {section.items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end
+                    className={({ isActive }) =>
+                      cn(
+                        "group flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-muted font-semibold text-foreground"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      )
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <item.icon
+                          className={cn(
+                            "h-4 w-4 shrink-0 transition-colors",
+                            isActive
+                              ? "text-primary"
+                              : "text-muted-foreground group-hover:text-foreground"
+                          )}
+                        />
+                        <span className="truncate">{item.label}</span>
+                      </>
+                    )}
+                  </NavLink>
+                ))}
               </div>
             </div>
           ))}
@@ -220,8 +252,14 @@ export function SettingsView() {
               element={<Navigate to="/settings/security/credentials" replace />}
             />
 
-            {/* Workspaces */}
+            {/* Workspaces, Preferences & Integrations */}
             <Route path="spaces" element={<SpaceSettings />} />
+            <Route path="preferences" element={<SpacePreferences />} />
+            <Route path="integrations" element={<IntegrationSettings />} />
+            <Route
+              path="workspace"
+              element={<Navigate to="/settings/preferences" replace />}
+            />
 
             {/* Fallback */}
             <Route
