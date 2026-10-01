@@ -87,8 +87,6 @@ func (h *Handler) GetBorrowing(ctx context.Context, req *financev1.GetBorrowingR
 }
 
 func (h *Handler) ListBorrowings(ctx context.Context, req *financev1.ListBorrowingsRequest) (*financev1.ListBorrowingsResponse, error) {
-	const op errors.Op = "grpc/finance.ListBorrowings"
-
 	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err

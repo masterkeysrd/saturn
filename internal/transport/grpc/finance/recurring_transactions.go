@@ -166,8 +166,6 @@ func (h *Handler) DeleteRecurringTransaction(ctx context.Context, req *financev1
 }
 
 func (h *Handler) ListRecurringTransactions(ctx context.Context, req *financev1.ListRecurringTransactionsRequest) (*financev1.ListRecurringTransactionsResponse, error) {
-	const op errors.Op = "grpc/finance.ListRecurringTransactions"
-
 	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -212,8 +210,6 @@ func (h *Handler) ListRecurringTransactions(ctx context.Context, req *financev1.
 }
 
 func (h *Handler) ListScheduledTransactions(ctx context.Context, req *financev1.ListScheduledTransactionsRequest) (*financev1.ListScheduledTransactionsResponse, error) {
-	const op errors.Op = "grpc/finance.ListScheduledTransactions"
-
 	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err

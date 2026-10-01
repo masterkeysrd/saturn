@@ -44,10 +44,19 @@ func TestECDSAVerifier(t *testing.T) {
 	}
 
 	// ANSI X9.62 uncompressed point (65 bytes)
-	ansiUncompressed := elliptic.Marshal(elliptic.P256(), privKey.PublicKey.X, privKey.PublicKey.Y)
+	ansiUncompressed, err := privKey.PublicKey.Bytes()
+	if err != nil {
+		t.Fatalf("failed to marshal uncompressed: %v", err)
+	}
 
 	// ANSI X9.62 compressed point (33 bytes)
-	ansiCompressed := elliptic.MarshalCompressed(elliptic.P256(), privKey.PublicKey.X, privKey.PublicKey.Y)
+	ansiCompressed := make([]byte, 33)
+	if ansiUncompressed[64]&1 == 0 {
+		ansiCompressed[0] = 0x02
+	} else {
+		ansiCompressed[0] = 0x03
+	}
+	copy(ansiCompressed[1:], ansiUncompressed[1:33])
 
 	verifier := crypto.NewECDSAVerifier()
 

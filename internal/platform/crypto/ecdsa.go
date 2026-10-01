@@ -78,9 +78,8 @@ func parseECDSAP256PublicKey(data []byte) (*ecdsa.PublicKey, error) {
 	// 2. Attempt ANSI X9.62 uncompressed point (65 bytes: 0x04 || X || Y)
 	curve := elliptic.P256()
 	if len(data) == 65 && data[0] == 0x04 {
-		x, y := elliptic.Unmarshal(curve, data)
-		if x != nil && y != nil {
-			return &ecdsa.PublicKey{Curve: curve, X: x, Y: y}, nil
+		if pubKey, err := ecdsa.ParseUncompressedPublicKey(curve, data); err == nil {
+			return pubKey, nil
 		}
 	}
 
@@ -88,16 +87,21 @@ func parseECDSAP256PublicKey(data []byte) (*ecdsa.PublicKey, error) {
 	if len(data) == 33 && (data[0] == 0x02 || data[0] == 0x03) {
 		x, y := elliptic.UnmarshalCompressed(curve, data)
 		if x != nil && y != nil {
-			return &ecdsa.PublicKey{Curve: curve, X: x, Y: y}, nil
+			uncompressed := make([]byte, 65)
+			uncompressed[0] = 0x04
+			x.FillBytes(uncompressed[1:33])
+			y.FillBytes(uncompressed[33:65])
+			if pubKey, err := ecdsa.ParseUncompressedPublicKey(curve, uncompressed); err == nil {
+				return pubKey, nil
+			}
 		}
 	}
 
 	// 4. Attempt raw coordinates without prefix (64 bytes: X || Y)
 	if len(data) == 64 {
 		prefixed := append([]byte{0x04}, data...)
-		x, y := elliptic.Unmarshal(curve, prefixed)
-		if x != nil && y != nil {
-			return &ecdsa.PublicKey{Curve: curve, X: x, Y: y}, nil
+		if pubKey, err := ecdsa.ParseUncompressedPublicKey(curve, prefixed); err == nil {
+			return pubKey, nil
 		}
 	}
 

@@ -13,7 +13,6 @@ import (
 	financeaggregator "github.com/masterkeysrd/saturn/internal/aggregator/finance"
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
-	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/conv"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/settings"
@@ -33,14 +32,6 @@ func NewHandler(coordinator financeapp.Coordinator, financeAggregator *financeag
 		Coordinator: coordinator,
 		Aggregator:  financeAggregator,
 	}
-}
-
-func getSpaceID(ctx context.Context, op errors.Op) (finance.SpaceID, error) {
-	spaceID, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return "", errors.E(op, errors.Unauthenticated, "missing space-id context")
-	}
-	return finance.SpaceID(spaceID), nil
 }
 
 // --- Mappers ---
@@ -315,8 +306,6 @@ func (h *Handler) DeleteBudget(ctx context.Context, req *financev1.DeleteBudgetR
 }
 
 func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsRequest) (*financev1.ListBudgetsResponse, error) {
-	const op errors.Op = "grpc/finance.ListBudgets"
-
 	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -391,8 +380,6 @@ func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsReq
 }
 
 func (h *Handler) GetBudgetPeriod(ctx context.Context, req *financev1.GetBudgetPeriodRequest) (*financev1.BudgetPeriod, error) {
-	const op errors.Op = "grpc/finance.GetBudgetPeriod"
-
 	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -828,8 +815,6 @@ func (h *Handler) GetTransaction(ctx context.Context, req *financev1.GetTransact
 }
 
 func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTransactionsRequest) (*financev1.ListTransactionsResponse, error) {
-	const op errors.Op = "grpc/finance.ListTransactions"
-
 	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -1497,8 +1482,6 @@ func (h *Handler) DeleteAccount(ctx context.Context, req *financev1.DeleteAccoun
 }
 
 func (h *Handler) ListAccounts(ctx context.Context, req *financev1.ListAccountsRequest) (*financev1.ListAccountsResponse, error) {
-	const op errors.Op = "grpc/finance.ListAccounts"
-
 	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -1824,8 +1807,6 @@ func (h *Handler) UpdateInboxItem(ctx context.Context, req *financev1.UpdateInbo
 }
 
 func (h *Handler) ListInboxItems(ctx context.Context, req *financev1.ListInboxItemsRequest) (*financev1.ListInboxItemsResponse, error) {
-	const op errors.Op = "grpc/finance.ListInboxItems"
-
 	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -1991,8 +1972,6 @@ func (h *Handler) DeleteInstitution(ctx context.Context, req *financev1.DeleteIn
 }
 
 func (h *Handler) ListInstitutions(ctx context.Context, req *financev1.ListInstitutionsRequest) (*financev1.ListInstitutionsResponse, error) {
-	const op errors.Op = "grpc/finance.ListInstitutions"
-
 	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -2238,8 +2217,6 @@ func (h *Handler) DeleteStatement(ctx context.Context, req *financev1.DeleteStat
 }
 
 func (h *Handler) ListStatements(ctx context.Context, req *financev1.ListStatementsRequest) (*financev1.ListStatementsResponse, error) {
-	const op errors.Op = "grpc/finance.ListStatements"
-
 	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
