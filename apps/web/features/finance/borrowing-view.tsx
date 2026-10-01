@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { useUrlState } from "@/lib/use-url-state"
 import { useDebounce } from "@/lib/use-debounce"
 import { useSpacePermissions } from "@/features/space/use-space"
+import { useTimezone } from "@saturn/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   useListBorrowingsQuery,
@@ -53,6 +54,7 @@ const BORROWING_FILTER_DEFAULTS = {
 
 export function BorrowingView() {
   const queryClient = useQueryClient()
+  const tz = useTimezone()
   const [now] = useState(() => Date.now())
   const { spaceId, isWritable } = useSpacePermissions()
 
@@ -401,13 +403,10 @@ export function BorrowingView() {
                     <div className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
                       <span>
-                        {new Date(b.establishedAt).toLocaleDateString(
-                          undefined,
-                          {
-                            month: "short",
-                            day: "numeric",
-                          }
-                        )}
+                        {tz.format(b.establishedAt, {
+                          month: "short",
+                          day: "numeric",
+                        })}
                       </span>
                     </div>
 

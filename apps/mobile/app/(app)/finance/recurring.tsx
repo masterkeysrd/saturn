@@ -40,7 +40,10 @@ import {
   formatInterval,
   formatNextDueDate,
   isStatusActive,
+  parseDate,
+  getStartOfDay,
 } from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
@@ -95,16 +98,16 @@ const deleteIcon = Icon.select({
   android: require("@expo/material-symbols/delete.xml"),
 })
 
-function getDueDateBadge(dueDateStr?: string) {
+function getDueDateBadge(dueDateStr?: string, timezone: string = "UTC") {
   if (!dueDateStr) return null
-  const due = new Date(dueDateStr)
-  if (isNaN(due.getTime())) return null
+  const due = parseDate(dueDateStr)
+  if (!due) return null
 
   const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const dueDateOnly = new Date(due.getFullYear(), due.getMonth(), due.getDate())
+  const startToday = getStartOfDay(now, timezone)
+  const startDue = getStartOfDay(due, timezone)
 
-  const diffMs = dueDateOnly.getTime() - today.getTime()
+  const diffMs = startDue.getTime() - startToday.getTime()
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
 
   if (diffDays < 0) {
@@ -152,6 +155,7 @@ type TypeFilter = "ALL" | "EXPENSE" | "INCOME"
 export default function RecurringScreen() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
+  const tz = useTimezone()
   const queryClient = useQueryClient()
   const toast = useToast()
 
@@ -660,7 +664,7 @@ export default function RecurringScreen() {
             <Card style={styles.listCard}>
               {filteredScheduled.map((st, idx) => {
                 const isIncome = st.type === "INCOME"
-                const dueBadge = getDueDateBadge(st.dueDate)
+                const dueBadge = getDueDateBadge(st.dueDate, tz.timezone)
                 const title = getScheduledDisplayName(st, recurringList)
 
                 return (
@@ -715,7 +719,10 @@ export default function RecurringScreen() {
                           <View style={styles.badgeRow}>
                             {st.dueDate ? (
                               <Text style={styles.txMeta}>
-                                {formatDate(st.dueDate)}
+                                {tz.format(st.dueDate, {
+                                  month: "short",
+                                  day: "numeric",
+                                })}
                               </Text>
                             ) : null}
                             {isIncome ? (
@@ -833,7 +840,8 @@ export default function RecurringScreen() {
               const isIncome = rt.type === "INCOME"
               const isActive = rt.status === "ACTIVE" || !rt.status
               const nextDueStr = formatNextDueDate(
-                rt.executionState?.nextDueDate
+                rt.executionState?.nextDueDate,
+                tz.timezone
               )
 
               return (

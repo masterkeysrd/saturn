@@ -30,36 +30,7 @@ import {
   Building2,
 } from "lucide-react"
 
-// Complete list of standard IANA timezones supported by modern browsers
-const ALL_TIMEZONES: string[] = (() => {
-  try {
-    const list = Intl.supportedValuesOf("timeZone")
-    if (!list.includes("UTC")) {
-      return ["UTC", ...list]
-    }
-    return list
-  } catch {
-    return [
-      "UTC",
-      "America/New_York",
-      "America/Chicago",
-      "America/Denver",
-      "America/Los_Angeles",
-      "America/Santo_Domingo",
-      "America/Sao_Paulo",
-      "Europe/London",
-      "Europe/Paris",
-      "Europe/Berlin",
-      "Europe/Madrid",
-      "Asia/Tokyo",
-      "Asia/Hong_Kong",
-      "Asia/Singapore",
-      "Asia/Dubai",
-      "Australia/Sydney",
-      "Pacific/Auckland",
-    ]
-  }
-})()
+import { COMMON_TIMEZONES as ALL_TIMEZONES } from "@saturn/core"
 
 function formatTimezonePreview(tz: string): string {
   try {

@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { type Budget } from "@saturn/api/gen/saturn/finance/v1/finance"
+import { useTimezone } from "@saturn/hooks"
 import { AlertTriangle, Calendar } from "lucide-react"
 import { formatCents, formatAmount, getBudgetColors } from "../utils"
 import { cn } from "@/lib/utils"
@@ -13,6 +14,7 @@ export function BudgetPeriodProgress({
   budget,
   onPeriodLoaded,
 }: BudgetPeriodProgressProps) {
+  const tz = useTimezone()
   const period = budget.currentPeriod
 
   // Propagate total limit in base currency to parent for dashboard overview stats
@@ -56,18 +58,13 @@ export function BudgetPeriodProgress({
   const isOneTime = budget.interval === "ONE_TIME"
 
   // Bounds display formatting
-  const startStr = new Date(period.startDate || "").toLocaleDateString(
-    undefined,
-    {
-      month: "short",
-      day: "numeric",
-      timeZone: "UTC",
-    }
-  )
-  const endStr = new Date(period.endDate || "").toLocaleDateString(undefined, {
+  const startStr = tz.format(period.startDate, {
     month: "short",
     day: "numeric",
-    timeZone: "UTC",
+  })
+  const endStr = tz.format(period.endDate, {
+    month: "short",
+    day: "numeric",
   })
   const dateRangeStr = isOneTime ? "Lifetime" : `${startStr} - ${endStr}`
 

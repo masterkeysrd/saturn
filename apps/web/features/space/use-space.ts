@@ -7,7 +7,11 @@ import {
   createElement,
   type ReactNode,
 } from "react"
-import { useListSpacesQuery } from "@saturn/api/gen/saturn/space/v1/space"
+import {
+  useListSpacesQuery,
+  useGetSettingsQuery,
+} from "@saturn/api/gen/saturn/space/v1/space"
+import { TimezoneProvider } from "@saturn/hooks"
 import { useAuth } from "@/features/auth/use-auth"
 
 const ACTIVE_SPACE_KEY = "active_space_id"
@@ -71,10 +75,17 @@ const ActiveSpaceContext = createContext<ActiveSpaceContextType | null>(null)
 
 export function ActiveSpaceProvider({ children }: { children: ReactNode }) {
   const activeSpaceState = useActiveSpace()
+  const { data: settings } = useGetSettingsQuery(
+    { spaceId: activeSpaceState.spaceId },
+    { enabled: !!activeSpaceState.spaceId }
+  )
+
+  const timezone = settings?.timezone || "UTC"
+
   return createElement(
     ActiveSpaceContext.Provider,
     { value: activeSpaceState },
-    children
+    createElement(TimezoneProvider, { timezone }, children)
   )
 }
 
@@ -107,6 +118,12 @@ export function useActiveSpaceContext() {
   const { spaces, isLoading } = useMySpaces()
   const { user } = useAuth()
 
+  const { data: settings } = useGetSettingsQuery(
+    { spaceId },
+    { enabled: !!spaceId }
+  )
+  const timezone = settings?.timezone || "UTC"
+
   const activeSpace = useMemo(() => {
     return spaces.find((s) => s.id === spaceId) ?? null
   }, [spaces, spaceId])
@@ -123,6 +140,7 @@ export function useActiveSpaceContext() {
     spaceId,
     spaceName,
     spaceRole: currentRole,
+    timezone,
     switchSpace,
     clearActiveSpace,
     isLoading,

@@ -4,6 +4,7 @@ import {
   useSpacePermissions,
   resolveSpacePath,
 } from "@/features/space/use-space"
+import { useTimezone } from "@saturn/hooks"
 import {
   type Account,
   type Account_Type,
@@ -63,6 +64,7 @@ const ACCOUNTS_FILTER_DEFAULTS = {
 export function AccountsView() {
   const navigate = useNavigate()
   const { spaceId, isWritable } = useSpacePermissions()
+  const tz = useTimezone()
   const [urlState, setUrlState] = useUrlState(ACCOUNTS_FILTER_DEFAULTS)
   const [searchQuery, setSearchQuery] = useState(urlState.q || "")
 
@@ -779,9 +781,7 @@ export function AccountsView() {
                       className="relative rounded-3xl border border-border/30 bg-card/25 p-5 shadow-sm backdrop-blur-sm transition-colors hover:border-border/50"
                     >
                       <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
-                        <span>
-                          {new Date(t.transferDate).toLocaleDateString()}
-                        </span>
+                        <span>{tz.format(t.transferDate)}</span>
                         <span className="font-semibold text-primary">
                           Transfer Record
                         </span>

@@ -30,6 +30,7 @@ import {
   type Budget,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { groupTransactionsByDate } from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { useDebounce } from "@/lib/use-debounce"
 import { theme } from "@/lib/theme"
@@ -47,6 +48,7 @@ import { useToast } from "@/components/ui/toast"
 export default function TransactionsScreen() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
+  const tz = useTimezone()
   const toast = useToast()
   const queryClient = useQueryClient()
 
@@ -135,8 +137,8 @@ export default function TransactionsScreen() {
 
   // Grouped into Sections by Date
   const sections = useMemo(
-    () => groupTransactionsByDate(allTransactions),
-    [allTransactions]
+    () => groupTransactionsByDate(allTransactions, tz.timezone),
+    [allTransactions, tz.timezone]
   )
 
   const activeFilterCount =

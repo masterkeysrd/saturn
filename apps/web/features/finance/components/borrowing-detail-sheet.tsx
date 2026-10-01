@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQueryClient } from "@tanstack/react-query"
+import { useTimezone } from "@saturn/hooks"
 import {
   useListTransactionsQuery,
   useLogBorrowingTransactionMutation,
@@ -46,6 +47,7 @@ export function BorrowingDetailSheet({
   refetchBorrowings,
 }: BorrowingDetailSheetProps) {
   const queryClient = useQueryClient()
+  const tz = useTimezone()
   const [openAdjustModal, setOpenAdjustModal] = useState<boolean>(false)
   const { data: settings } = useGetSettingsQuery(
     {},
@@ -292,19 +294,16 @@ export function BorrowingDetailSheet({
                   <span className="font-semibold text-foreground">
                     Established:
                   </span>{" "}
-                  {new Date(borrowing.establishedAt).toLocaleDateString(
-                    undefined,
-                    {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    }
-                  )}
+                  {tz.format(borrowing.establishedAt, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
                 </div>
                 {borrowing.dueAt && (
                   <div className="text-right whitespace-nowrap">
                     <span className="font-semibold text-foreground">Due:</span>{" "}
-                    {new Date(borrowing.dueAt).toLocaleDateString(undefined, {
+                    {tz.format(borrowing.dueAt, {
                       year: "numeric",
                       month: "short",
                       day: "numeric",
@@ -356,13 +355,14 @@ export function BorrowingDetailSheet({
                             {currency}
                           </span>
                           <span className="text-[10px] text-muted-foreground">
-                            {new Date(
-                              r.transactionDate || r.createTime || ""
-                            ).toLocaleDateString(undefined, {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })}
+                            {tz.format(
+                              r.transactionDate || r.createTime || "",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              }
+                            )}
                           </span>
                         </div>
                         {r.description && (

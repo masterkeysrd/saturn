@@ -28,7 +28,14 @@ import {
   useGetSettingsQuery,
   type Borrowing,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { formatAmount, formatCents } from "@saturn/core"
+import {
+  formatAmount,
+  parseDate,
+  getStartOfDay,
+  getTimezoneParts,
+  formatDateWithTimezone,
+} from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -58,26 +65,32 @@ const deleteIcon = Icon.select({
   android: require("@expo/material-symbols/delete.xml"),
 })
 
-function getDaysDiff(dateStr?: string): number | null {
+function getDaysDiff(
+  dateStr?: string,
+  timezone: string = "UTC"
+): number | null {
   if (!dateStr) return null
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return null
+  const target = parseDate(dateStr)
+  if (!target) return null
   const now = new Date()
-  now.setHours(0, 0, 0, 0)
-  const target = new Date(d)
-  target.setHours(0, 0, 0, 0)
-  const diffTime = target.getTime() - now.getTime()
+  const startToday = getStartOfDay(now, timezone)
+  const startTarget = getStartOfDay(target, timezone)
+  const diffTime = startTarget.getTime() - startToday.getTime()
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 }
 
-function formatDate(dateStr?: string): string {
+function formatDate(dateStr?: string, timezone: string = "UTC"): string {
   if (!dateStr) return ""
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return ""
-  return d.toLocaleDateString(undefined, {
+  const d = parseDate(dateStr)
+  if (!d) return ""
+  const now = new Date()
+  const dParts = getTimezoneParts(d, timezone)
+  const nowParts = getTimezoneParts(now, timezone)
+  const showYear = dParts && nowParts ? dParts.year !== nowParts.year : false
+  return formatDateWithTimezone(d, timezone, {
     month: "short",
     day: "numeric",
-    year: d.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
+    year: showYear ? "numeric" : undefined,
   })
 }
 
@@ -86,6 +99,7 @@ export default function BorrowingScreen() {
   const queryClient = useQueryClient()
   const toast = useToast()
   const { activeSpaceId } = useSpace()
+  const tz = useTimezone()
   const [refreshing, setRefreshing] = useState(false)
   const [activeTab, setActiveTab] = useState<FilterTab>("ALL")
 
@@ -476,7 +490,7 @@ export default function BorrowingScreen() {
                   ? Math.min(100, Math.max(0, (paidAmount / total) * 100))
                   : 100
 
-              const daysDiff = getDaysDiff(b.dueAt)
+              const daysDiff = getDaysDiff(b.dueAt, tz.timezone)
               const isOverdue = !isPaid && daysDiff !== null && daysDiff < 0
               const isDueToday = !isPaid && daysDiff === 0
               const isDueSoon =
@@ -730,19 +744,19 @@ export default function BorrowingScreen() {
                             ]}
                           >
                             {isPaid
-                              ? `Due ${formatDate(b.dueAt)}`
+                              ? `Due ${formatDate(b.dueAt, tz.timezone)}`
                               : isOverdue
-                                ? `Overdue by ${Math.abs(daysDiff!)}d (${formatDate(b.dueAt)})`
+                                ? `Overdue by ${Math.abs(daysDiff!)}d (${formatDate(b.dueAt, tz.timezone)})`
                                 : isDueToday
                                   ? "Due Today"
-                                  : `Due in ${daysDiff}d (${formatDate(b.dueAt)})`}
+                                  : `Due in ${daysDiff}d (${formatDate(b.dueAt, tz.timezone)})`}
                           </Text>
                         </View>
                       ) : (
                         <View style={styles.dueDateWrap}>
                           <Calendar size={13} color={theme.colors.textMuted} />
                           <Text style={styles.footerDateText}>
-                            Started {formatDate(b.establishedAt)}
+                            Started {formatDate(b.establishedAt, tz.timezone)}
                           </Text>
                         </View>
                       )}

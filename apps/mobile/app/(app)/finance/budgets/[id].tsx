@@ -34,6 +34,7 @@ import {
   formatInterval,
   groupTransactionsByDate,
 } from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
 import { getBudgetIcon } from "@/lib/budget-icons"
@@ -64,6 +65,7 @@ export default function BudgetDetailScreen() {
   const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
   const { activeSpaceId } = useSpace()
+  const tz = useTimezone()
   const [refreshing, setRefreshing] = useState(false)
 
   // Fetch base currency settings
@@ -141,8 +143,8 @@ export default function BudgetDetailScreen() {
   const transactions = txnsData?.transactions || []
 
   const sections = useMemo(
-    () => groupTransactionsByDate(transactions),
-    [transactions]
+    () => groupTransactionsByDate(transactions, tz.timezone),
+    [transactions, tz.timezone]
   )
 
   const transactionsSpentInPeriodCents = useMemo(() => {
@@ -247,17 +249,15 @@ export default function BudgetDetailScreen() {
     !isOver && daysLeft > 0 ? Math.round(remainingCents / daysLeft) : 0
 
   const startStr = currentPeriod?.startDate
-    ? new Date(currentPeriod.startDate).toLocaleDateString(undefined, {
+    ? tz.format(currentPeriod.startDate, {
         month: "short",
         day: "numeric",
-        timeZone: "UTC",
       })
     : ""
   const endStr = currentPeriod?.endDate
-    ? new Date(currentPeriod.endDate).toLocaleDateString(undefined, {
+    ? tz.format(currentPeriod.endDate, {
         month: "short",
         day: "numeric",
-        timeZone: "UTC",
       })
     : ""
   const dateRangeStr =

@@ -16,6 +16,7 @@ import {
   useGetSettingsQuery,
   useListBudgetsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
+import { useTimezone } from "@saturn/hooks"
 import { Inbox } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -61,6 +62,7 @@ const TRANSACTIONS_FILTER_DEFAULTS = {
 
 export function TransactionsView() {
   const { spaceId, isWritable } = useSpacePermissions()
+  const tz = useTimezone()
 
   const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
   const baseCurrency = settings?.baseCurrency || "USD"
@@ -645,15 +647,11 @@ export function TransactionsView() {
                               )
                             })()}
                             <span className="font-mono text-[10px] text-muted-foreground/80 sm:hidden">
-                              {new Date(t.transactionDate).toLocaleDateString(
-                                undefined,
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                  timeZone: "UTC",
-                                }
-                              )}
+                              {tz.format(t.transactionDate, {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
                             </span>
                           </div>
                         </div>
@@ -682,15 +680,11 @@ export function TransactionsView() {
 
                       {/* Column 3: Date (col-span-2) */}
                       <div className="hidden font-mono text-xs text-muted-foreground/80 sm:col-span-2 sm:block">
-                        {new Date(t.transactionDate).toLocaleDateString(
-                          undefined,
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                            timeZone: "UTC",
-                          }
-                        )}
+                        {tz.format(t.transactionDate, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
                       </div>
 
                       {/* Column 4: Amount & Actions (col-span-3 text-right) */}

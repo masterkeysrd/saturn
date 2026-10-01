@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useSpacePermissions } from "@/features/space/use-space"
+import { useTimezone } from "@saturn/hooks"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import {
   useListRecurringTransactionsQuery,
@@ -63,6 +64,7 @@ const HISTORY_PAGE_SIZE = 50
 
 export function RecurringView() {
   const { spaceId, isWritable } = useSpacePermissions()
+  const tz = useTimezone()
 
   const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
   const baseCurrency = settings?.baseCurrency || "USD"
@@ -465,7 +467,11 @@ export function RecurringView() {
                                     </span>
                                     <span className="flex items-center gap-1 font-medium text-muted-foreground">
                                       <CalendarIcon className="h-3 w-3 text-primary/70" />
-                                      Next: {formatNextDueDate(nextDueDateVal)}
+                                      Next:{" "}
+                                      {formatNextDueDate(
+                                        nextDueDateVal,
+                                        tz.timezone
+                                      )}
                                     </span>
                                     {exp.isVariable && (
                                       <span className="rounded bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-bold text-sky-500">
@@ -640,14 +646,10 @@ export function RecurringView() {
                                         <AlertCircleIcon className="h-2.5 w-2.5" />
                                       )}
                                       Due:{" "}
-                                      {new Date(pay.dueDate).toLocaleDateString(
-                                        undefined,
-                                        {
-                                          month: "short",
-                                          day: "numeric",
-                                          timeZone: "UTC",
-                                        }
-                                      )}
+                                      {tz.format(pay.dueDate, {
+                                        month: "short",
+                                        day: "numeric",
+                                      })}
                                     </span>
                                   </div>
                                 </div>
@@ -819,13 +821,10 @@ export function RecurringView() {
                                 <div className="mt-0.5 flex items-center gap-1.5 text-[9px] text-muted-foreground">
                                   <span>
                                     Cleared:{" "}
-                                    {new Date(
-                                      txn.transactionDate
-                                    ).toLocaleDateString(undefined, {
+                                    {tz.format(txn.transactionDate, {
                                       month: "short",
                                       day: "numeric",
                                       year: "numeric",
-                                      timeZone: "UTC",
                                     })}
                                   </span>
                                   <span>•</span>

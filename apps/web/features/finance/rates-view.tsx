@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useSpacePermissions } from "@/features/space/use-space"
+import { useTimezone } from "@saturn/hooks"
 import {
   type ExchangeRate,
   useDeleteExchangeRateMutation,
@@ -13,6 +14,7 @@ import { CreateRateSheet } from "./components/create-rate-sheet"
 
 export function RatesView() {
   const { spaceId, isWritable } = useSpacePermissions()
+  const tz = useTimezone()
 
   const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
   const { data: ratesData, refetch: refetchRates } = useListExchangeRatesQuery(
@@ -29,7 +31,7 @@ export function RatesView() {
       `rate_${rate.fromCurrency}_${rate.toCurrency}_${rate.rateDate.split("T")[0].replace(/-/g, "")}`
     if (
       !confirm(
-        `Are you sure you want to delete exchange rate for ${rate.fromCurrency} to ${rate.toCurrency} on ${new Date(rate.rateDate).toLocaleDateString(undefined, { timeZone: "UTC" })}?`
+        `Are you sure you want to delete exchange rate for ${rate.fromCurrency} to ${rate.toCurrency} on ${tz.format(rate.rateDate, { month: "short", day: "numeric", year: "numeric" })}?`
       )
     )
       return
@@ -114,11 +116,10 @@ export function RatesView() {
                       </span>
                     </div>
                     <span className="font-mono text-[10px] text-muted-foreground/80">
-                      {new Date(r.rateDate).toLocaleDateString(undefined, {
+                      {tz.format(r.rateDate, {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
-                        timeZone: "UTC",
                       })}
                     </span>
                   </div>

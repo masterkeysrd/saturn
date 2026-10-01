@@ -10,6 +10,7 @@ import {
   type ScheduledTransaction,
   type RecurringTransaction,
 } from "@saturn/api/saturn/finance/v1/finance"
+import { useTimezone } from "@saturn/hooks"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
 import { getScheduledDisplayName } from "../finance-utils"
@@ -40,6 +41,7 @@ export const ScheduledPickerSheet = forwardRef<
     ref
   ) => {
     const insets = useSafeAreaInsets()
+    const tz = useTimezone()
 
     const handleClose = () => {
       if (ref && "current" in ref && ref.current) {
@@ -111,7 +113,10 @@ export const ScheduledPickerSheet = forwardRef<
                   <Text style={sheetStyles.accountItemSubtitle}>
                     Due:{" "}
                     {st.dueDate
-                      ? new Date(st.dueDate).toLocaleDateString()
+                      ? tz.format(st.dueDate, {
+                          month: "short",
+                          day: "numeric",
+                        })
                       : "Pending"}
                   </Text>
                 </View>

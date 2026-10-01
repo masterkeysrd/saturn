@@ -1,3 +1,11 @@
+import {
+  formatDateWithTimezone,
+  getStartOfDay,
+  getTimezoneParts,
+  isSameDayInTimezone,
+  parseDate,
+} from "../timezone"
+
 export function formatCents(cents: string | number | undefined | null): number {
   if (cents === undefined || cents === null) return 0
   const val = typeof cents === "number" ? cents : parseFloat(cents)
@@ -29,17 +37,21 @@ export function formatInterval(interval: string | undefined | null): string {
   return clean.charAt(0).toUpperCase() + clean.slice(1)
 }
 
-export function formatNextDueDate(dateStr: string | undefined | null): string {
+export function formatNextDueDate(
+  dateStr: string | undefined | null,
+  timezone: string = "UTC"
+): string {
   if (!dateStr) return "N/A"
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime()) || d.getFullYear() <= 1970) return "N/A"
+  const d = parseDate(dateStr)
+  if (!d || d.getFullYear() <= 1970) return "N/A"
   const now = new Date()
-  const showYear = d.getFullYear() !== now.getFullYear()
-  return d.toLocaleDateString(undefined, {
+  const dParts = getTimezoneParts(d, timezone)
+  const nowParts = getTimezoneParts(now, timezone)
+  const showYear = dParts && nowParts ? dParts.year !== nowParts.year : true
+  return formatDateWithTimezone(d, timezone, {
     month: "short",
     day: "numeric",
     year: showYear ? "numeric" : undefined,
-    timeZone: "UTC",
   })
 }
 
@@ -101,28 +113,32 @@ export function getCurrencySymbol(
   }
 }
 
-export function getSectionDateTitle(dateStr?: string): string {
+export function getSectionDateTitle(
+  dateStr?: string,
+  timezone: string = "UTC"
+): string {
   if (!dateStr) return "Older"
-  const date = new Date(dateStr)
-  if (isNaN(date.getTime())) return "Older"
+  const date = parseDate(dateStr)
+  if (!date) return "Older"
 
   const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const txDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  if (isSameDayInTimezone(date, now, timezone)) return "Today"
 
-  const diffTime = today.getTime() - txDate.getTime()
-  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+  const startOfToday = getStartOfDay(now, timezone)
+  const yesterdayInstant = new Date(startOfToday.getTime() - 1000)
+  if (isSameDayInTimezone(date, yesterdayInstant, timezone)) return "Yesterday"
 
-  if (diffDays === 0) return "Today"
-  if (diffDays === 1) return "Yesterday"
+  const dateParts = getTimezoneParts(date, timezone)
+  const nowParts = getTimezoneParts(now, timezone)
+  const showYear =
+    dateParts && nowParts ? dateParts.year !== nowParts.year : false
 
-  const options: Intl.DateTimeFormatOptions = {
+  return formatDateWithTimezone(date, timezone, {
     weekday: "short",
     month: "short",
     day: "numeric",
-    year: txDate.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
-  }
-  return txDate.toLocaleDateString("en-US", options)
+    year: showYear ? "numeric" : undefined,
+  })
 }
 
 export interface DateGroupedSection<T> {
@@ -131,7 +147,8 @@ export interface DateGroupedSection<T> {
 }
 
 export function groupTransactionsByDate<T extends { transactionDate?: string }>(
-  transactions: T[]
+  transactions: T[],
+  timezone: string = "UTC"
 ): DateGroupedSection<T>[] {
   const sorted = [...transactions].sort((a, b) => {
     const timeA = a.transactionDate ? new Date(a.transactionDate).getTime() : 0
@@ -141,7 +158,7 @@ export function groupTransactionsByDate<T extends { transactionDate?: string }>(
 
   const map = new Map<string, T[]>()
   sorted.forEach((tx) => {
-    const title = getSectionDateTitle(tx.transactionDate)
+    const title = getSectionDateTitle(tx.transactionDate, timezone)
     if (!map.has(title)) {
       map.set(title, [])
     }

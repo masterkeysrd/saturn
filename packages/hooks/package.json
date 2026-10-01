@@ -20,6 +20,11 @@
       "types": "./finance/*.ts",
       "import": "./finance/*.ts",
       "default": "./finance/*.ts"
+    },
+    "./timezone": {
+      "types": "./timezone/index.ts",
+      "import": "./timezone/index.ts",
+      "default": "./timezone/index.ts"
     }
   },
   "scripts": {

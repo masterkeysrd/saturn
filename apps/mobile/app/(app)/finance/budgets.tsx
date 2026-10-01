@@ -14,6 +14,7 @@ import {
   useListBudgetsQuery,
   type Budget,
 } from "@saturn/api/saturn/finance/v1/finance"
+import { useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
 import { getBudgetIcon } from "@/lib/budget-icons"
@@ -28,6 +29,7 @@ import { haptics } from "@/lib/haptics"
 export default function BudgetsScreen() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
+  const tz = useTimezone()
   const [refreshing, setRefreshing] = useState(false)
 
   const {
@@ -144,24 +146,16 @@ export default function BudgetsScreen() {
                   : 0
 
               const startStr = b.currentPeriod?.startDate
-                ? new Date(b.currentPeriod.startDate).toLocaleDateString(
-                    undefined,
-                    {
-                      month: "short",
-                      day: "numeric",
-                      timeZone: "UTC",
-                    }
-                  )
+                ? tz.format(b.currentPeriod.startDate, {
+                    month: "short",
+                    day: "numeric",
+                  })
                 : ""
               const endStr = b.currentPeriod?.endDate
-                ? new Date(b.currentPeriod.endDate).toLocaleDateString(
-                    undefined,
-                    {
-                      month: "short",
-                      day: "numeric",
-                      timeZone: "UTC",
-                    }
-                  )
+                ? tz.format(b.currentPeriod.endDate, {
+                    month: "short",
+                    day: "numeric",
+                  })
                 : ""
               const dateRangeStr =
                 b.interval === "ONE_TIME"

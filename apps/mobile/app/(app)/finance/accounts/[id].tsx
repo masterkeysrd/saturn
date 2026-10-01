@@ -27,6 +27,7 @@ import {
   type Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { formatAmount, groupTransactionsByDate } from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
@@ -42,6 +43,7 @@ export default function AccountDetailScreen() {
   const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
   const { activeSpaceId } = useSpace()
+  const tz = useTimezone()
   const [refreshing, setRefreshing] = useState(false)
 
   // Fetch settings & base currency
@@ -111,8 +113,8 @@ export default function AccountDetailScreen() {
   const transactions = txnsData?.transactions || []
 
   const sections = useMemo(
-    () => groupTransactionsByDate(transactions),
-    [transactions]
+    () => groupTransactionsByDate(transactions, tz.timezone),
+    [transactions, tz.timezone]
   )
 
   const handleRefresh = async () => {

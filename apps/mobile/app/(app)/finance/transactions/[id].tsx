@@ -37,6 +37,7 @@ import {
   type TransactionEvent,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useSpace } from "@/lib/space-context"
+import { useTimezone } from "@saturn/hooks"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
 import { getBudgetIcon } from "@/lib/budget-icons"
 import { haptics } from "@/lib/haptics"
@@ -48,29 +49,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useToast } from "@/components/ui/toast"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 
-function formatDateString(dateStr?: string): string {
-  if (!dateStr) return "N/A"
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return "N/A"
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  })
-}
-
-function formatTimeString(dateStr?: string): string {
-  if (!dateStr) return "N/A"
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return "N/A"
-  return d.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })
-}
-
 export default function TransactionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
@@ -78,6 +56,24 @@ export default function TransactionDetailScreen() {
   const toast = useToast()
   const queryClient = useQueryClient()
   const { activeSpaceId } = useSpace()
+  const tz = useTimezone()
+
+  const formatDateString = (dateStr?: string): string => {
+    if (!dateStr) return "N/A"
+    return (
+      tz.format(dateStr, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }) || "N/A"
+    )
+  }
+
+  const formatTimeString = (dateStr?: string): string => {
+    if (!dateStr) return "N/A"
+    return tz.formatTime(dateStr) || "N/A"
+  }
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)

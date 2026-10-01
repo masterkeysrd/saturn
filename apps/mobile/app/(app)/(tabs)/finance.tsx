@@ -29,7 +29,9 @@ import {
   formatAmount,
   calculateAccountMetrics,
   getScheduledDisplayName,
+  parseDate,
 } from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import {
   useListTransactionsQuery,
   useGetInsightsQuery,
@@ -92,6 +94,7 @@ export default function FinanceHubScreen() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const { activeSpaceId } = useSpace()
+  const tz = useTimezone()
   const [refreshing, setRefreshing] = useState(false)
 
   // 1. Settings & Base Currency
@@ -316,27 +319,20 @@ export default function FinanceHubScreen() {
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return ""
-    const d = new Date(dateStr)
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    return tz.format(dateStr, { month: "short", day: "numeric" })
   }
 
   const getDueDateBadge = (dueDateStr?: string) => {
     if (!dueDateStr) return null
-    const due = new Date(dueDateStr)
-    if (isNaN(due.getTime())) return null
+    const due = parseDate(dueDateStr)
+    if (!due) return null
     const now = new Date()
 
-    const utcDue = Date.UTC(
-      due.getUTCFullYear(),
-      due.getUTCMonth(),
-      due.getUTCDate()
+    const startToday = tz.startOfDay(now)
+    const startDue = tz.startOfDay(due)
+    const diffDays = Math.round(
+      (startDue.getTime() - startToday.getTime()) / (1000 * 60 * 60 * 24)
     )
-    const utcNow = Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate()
-    )
-    const diffDays = Math.round((utcDue - utcNow) / (1000 * 60 * 60 * 24))
 
     if (diffDays < 0) {
       const absDays = Math.abs(diffDays)

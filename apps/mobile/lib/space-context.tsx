@@ -1,4 +1,4 @@
-import React, {
+import {
   createContext,
   useContext,
   useState,
@@ -10,9 +10,10 @@ import React, {
 import { useQueryClient } from "@tanstack/react-query"
 import {
   useListSpacesQuery,
+  useGetSettingsQuery,
   type Space,
-  type SpaceMember_Role,
 } from "@saturn/api/saturn/space/v1/space"
+import { TimezoneProvider } from "@saturn/hooks"
 import { useAuth } from "./auth-context"
 import { mobileStorage } from "./storage"
 import { haptics } from "./haptics"
@@ -26,6 +27,7 @@ export interface SpaceContextType {
   isSwitching: boolean
   isOwner: boolean
   canManageMembers: boolean
+  timezone: string
   switchSpace: (spaceId: string) => Promise<void>
   refetchSpaces: () => void
 }
@@ -127,6 +129,16 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
     [activeSpaceId, queryClient, setAuthActiveSpace]
   )
 
+  const { data: settingsData } = useGetSettingsQuery(
+    { spaceId: activeSpaceId ?? "" },
+    {
+      enabled: !!activeSpaceId,
+      staleTime: 1000 * 60 * 5,
+    }
+  )
+
+  const timezone = settingsData?.timezone || "UTC"
+
   return (
     <SpaceContext.Provider
       value={{
@@ -138,11 +150,12 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
         isSwitching,
         isOwner,
         canManageMembers,
+        timezone,
         switchSpace,
         refetchSpaces,
       }}
     >
-      {children}
+      <TimezoneProvider timezone={timezone}>{children}</TimezoneProvider>
     </SpaceContext.Provider>
   )
 }

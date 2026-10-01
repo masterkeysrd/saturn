@@ -8,6 +8,7 @@ import {
   Coins,
 } from "lucide-react-native"
 import { formatAmount } from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import {
   type Transaction,
   type Budget,
@@ -27,19 +28,6 @@ export interface TransactionListItemProps {
   showDate?: boolean
   showBudget?: boolean
   showAccount?: boolean
-}
-
-function formatRowDate(dateStr?: string): string {
-  if (!dateStr) return ""
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return ""
-  const now = new Date()
-  const sameYear = d.getFullYear() === now.getFullYear()
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: sameYear ? undefined : "numeric",
-  })
 }
 
 export function TransactionListItem({
@@ -76,7 +64,14 @@ export function TransactionListItem({
   const hasBudget = Boolean(budgetName || budgetIcon)
   const BudgetIcon = getBudgetIcon(budgetIcon, budgetName)
 
-  const dateStr = formatRowDate(item.transactionDate)
+  const tz = useTimezone()
+  const itemYear = tz.parts(item.transactionDate)?.year
+  const currentYear = tz.parts(new Date())?.year
+  const dateStr = tz.format(item.transactionDate, {
+    month: "short",
+    day: "numeric",
+    year: itemYear === currentYear ? undefined : "numeric",
+  })
 
   const isRecurring = Boolean(item.metadata?.recurring_transaction_id)
   const isBorrowing = Boolean(item.metadata?.borrowing_id)

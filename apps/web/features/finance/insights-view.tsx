@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useActiveSpaceContext } from "@/features/space/use-space"
+import { useTimezone } from "@saturn/hooks"
 import {
   useGetInsightsQuery,
   type InsightGranularity,
@@ -47,6 +48,7 @@ function getAccountColor(index: number) {
 
 export function InsightsView() {
   const { spaceId } = useActiveSpaceContext()
+  const tz = useTimezone()
   const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
   const [granularity, setGranularity] = useState<InsightGranularity>("MONTHLY")
   const [activeTab, setActiveTab] = useState<
@@ -1063,14 +1065,10 @@ export function InsightsView() {
                             </span>
                             <span className="block text-[9px] text-muted-foreground">
                               {exp.budgetName} •{" "}
-                              {new Date(exp.transactionDate).toLocaleDateString(
-                                undefined,
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  timeZone: "UTC",
-                                }
-                              )}
+                              {tz.format(exp.transactionDate, {
+                                month: "short",
+                                day: "numeric",
+                              })}
                             </span>
                           </div>
                         </div>
@@ -1213,14 +1211,10 @@ export function InsightsView() {
                               {inc.description || "Unspecified Income"}
                             </span>
                             <span className="block text-[9px] text-muted-foreground">
-                              {new Date(inc.transactionDate).toLocaleDateString(
-                                undefined,
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  timeZone: "UTC",
-                                }
-                              )}
+                              {tz.format(inc.transactionDate, {
+                                month: "short",
+                                day: "numeric",
+                              })}
                             </span>
                           </div>
                         </div>
@@ -1280,14 +1274,10 @@ export function InsightsView() {
                             {inc.description || "Unspecified Income"}
                           </span>
                           <span className="block text-[9px] text-muted-foreground">
-                            {new Date(inc.transactionDate).toLocaleDateString(
-                              undefined,
-                              {
-                                month: "short",
-                                day: "numeric",
-                                timeZone: "UTC",
-                              }
-                            )}
+                            {tz.format(inc.transactionDate, {
+                              month: "short",
+                              day: "numeric",
+                            })}
                           </span>
                         </div>
                         <div className="text-right">
@@ -1330,14 +1320,10 @@ export function InsightsView() {
                           </span>
                           <span className="block text-[9px] text-muted-foreground">
                             {exp.budgetName} •{" "}
-                            {new Date(exp.transactionDate).toLocaleDateString(
-                              undefined,
-                              {
-                                month: "short",
-                                day: "numeric",
-                                timeZone: "UTC",
-                              }
-                            )}
+                            {tz.format(exp.transactionDate, {
+                              month: "short",
+                              day: "numeric",
+                            })}
                           </span>
                         </div>
                         <div className="text-right">
