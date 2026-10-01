@@ -8,6 +8,7 @@ import (
 	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
 // TransactionalCoordinator wraps a Coordinator and manages database transactions
@@ -32,15 +33,15 @@ func (t *TransactionalCoordinator) ResolveContext(ctx context.Context) (finance.
 	return t.next.ResolveContext(ctx)
 }
 
-// ConfigureFinance executes next.ConfigureFinance inside a database transaction.
-func (t *TransactionalCoordinator) ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error) {
+// Setup executes next.Setup inside a database transaction.
+func (t *TransactionalCoordinator) Setup(ctx context.Context, req *SetupRequest) (*settings.Entry[finance.Settings], error) {
 	ctx, tx, err := t.txr.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	res, err := t.next.ConfigureFinance(ctx, req)
+	res, err := t.next.Setup(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -52,8 +53,8 @@ func (t *TransactionalCoordinator) ConfigureFinance(ctx context.Context, req *Co
 	return res, nil
 }
 
-func (t *TransactionalCoordinator) GetFinanceSettings(ctx context.Context) (*finance.FinanceSettings, error) {
-	return t.next.GetFinanceSettings(ctx)
+func (t *TransactionalCoordinator) GetSettings(ctx context.Context) (*settings.Entry[finance.Settings], error) {
+	return t.next.GetSettings(ctx)
 }
 
 func (t *TransactionalCoordinator) ListCurrencies(ctx context.Context) ([]finance.CurrencyInfo, error) {

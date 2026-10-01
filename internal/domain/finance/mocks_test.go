@@ -8,90 +8,87 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
 // Compile-time interface assertion.
-var _ SettingsStore = (*SettingsStoreMock)(nil)
+var _ SettingsClient = (*SettingsClientMock)(nil)
 
-// SettingsStoreMock is a mock implementation of SettingsStore.
-type SettingsStoreMock struct {
-	// CreateFunc mocks the Create method.
-	CreateFunc func(ctx context.Context, rCtx Context, settings *FinanceSettings) error
+// SettingsClientMock is a mock implementation of SettingsClient.
+type SettingsClientMock struct {
+	// GetFunc mocks the Get method.
+	GetFunc func(ctx context.Context, scopeID string) (*settings.Entry[Settings], error)
 
-	// GetByIDFunc mocks the GetByID method.
-	GetByIDFunc func(ctx context.Context, rCtx Context) (*FinanceSettings, error)
+	// SaveFunc mocks the Save method.
+	SaveFunc func(ctx context.Context, entry *settings.Entry[Settings]) error
 
 	// calls tracks calls to the methods.
 	calls struct {
-		Create []struct {
-			Ctx      context.Context
-			RCtx     Context
-			Settings *FinanceSettings
+		Get []struct {
+			Ctx     context.Context
+			ScopeID string
 		}
-		GetByID []struct {
-			Ctx  context.Context
-			RCtx Context
+		Save []struct {
+			Ctx   context.Context
+			Entry *settings.Entry[Settings]
 		}
 	}
-	lockCreate  sync.RWMutex
-	lockGetByID sync.RWMutex
+	lockGet  sync.RWMutex
+	lockSave sync.RWMutex
 }
 
-// Create calls CreateFunc.
-func (mock *SettingsStoreMock) Create(ctx context.Context, rCtx Context, settings *FinanceSettings) error {
-	if mock.CreateFunc == nil {
-		panic("SettingsStoreMock.CreateFunc: method is nil but SettingsStore.Create was just called")
+// Get calls GetFunc.
+func (mock *SettingsClientMock) Get(ctx context.Context, scopeID string) (*settings.Entry[Settings], error) {
+	if mock.GetFunc == nil {
+		panic("SettingsClientMock.GetFunc: method is nil but SettingsClient.Get was just called")
 	}
-	mock.lockCreate.Lock()
-	mock.calls.Create = append(mock.calls.Create, struct {
-		Ctx      context.Context
-		RCtx     Context
-		Settings *FinanceSettings
+	mock.lockGet.Lock()
+	mock.calls.Get = append(mock.calls.Get, struct {
+		Ctx     context.Context
+		ScopeID string
 	}{
-		Ctx:      ctx,
-		RCtx:     rCtx,
-		Settings: settings,
+		Ctx:     ctx,
+		ScopeID: scopeID,
 	})
-	mock.lockCreate.Unlock()
-	return mock.CreateFunc(ctx, rCtx, settings)
+	mock.lockGet.Unlock()
+	return mock.GetFunc(ctx, scopeID)
 }
 
-// CreateCalls returns all calls made to Create.
-func (mock *SettingsStoreMock) CreateCalls() []struct {
-	Ctx      context.Context
-	RCtx     Context
-	Settings *FinanceSettings
+// GetCalls returns all calls made to Get.
+func (mock *SettingsClientMock) GetCalls() []struct {
+	Ctx     context.Context
+	ScopeID string
 } {
-	mock.lockCreate.RLock()
-	defer mock.lockCreate.RUnlock()
-	return mock.calls.Create
+	mock.lockGet.RLock()
+	defer mock.lockGet.RUnlock()
+	return mock.calls.Get
 }
 
-// GetByID calls GetByIDFunc.
-func (mock *SettingsStoreMock) GetByID(ctx context.Context, rCtx Context) (*FinanceSettings, error) {
-	if mock.GetByIDFunc == nil {
-		panic("SettingsStoreMock.GetByIDFunc: method is nil but SettingsStore.GetByID was just called")
+// Save calls SaveFunc.
+func (mock *SettingsClientMock) Save(ctx context.Context, entry *settings.Entry[Settings]) error {
+	if mock.SaveFunc == nil {
+		panic("SettingsClientMock.SaveFunc: method is nil but SettingsClient.Save was just called")
 	}
-	mock.lockGetByID.Lock()
-	mock.calls.GetByID = append(mock.calls.GetByID, struct {
-		Ctx  context.Context
-		RCtx Context
+	mock.lockSave.Lock()
+	mock.calls.Save = append(mock.calls.Save, struct {
+		Ctx   context.Context
+		Entry *settings.Entry[Settings]
 	}{
-		Ctx:  ctx,
-		RCtx: rCtx,
+		Ctx:   ctx,
+		Entry: entry,
 	})
-	mock.lockGetByID.Unlock()
-	return mock.GetByIDFunc(ctx, rCtx)
+	mock.lockSave.Unlock()
+	return mock.SaveFunc(ctx, entry)
 }
 
-// GetByIDCalls returns all calls made to GetByID.
-func (mock *SettingsStoreMock) GetByIDCalls() []struct {
-	Ctx  context.Context
-	RCtx Context
+// SaveCalls returns all calls made to Save.
+func (mock *SettingsClientMock) SaveCalls() []struct {
+	Ctx   context.Context
+	Entry *settings.Entry[Settings]
 } {
-	mock.lockGetByID.RLock()
-	defer mock.lockGetByID.RUnlock()
-	return mock.calls.GetByID
+	mock.lockSave.RLock()
+	defer mock.lockSave.RUnlock()
+	return mock.calls.Save
 }
 
 // Compile-time interface assertion.

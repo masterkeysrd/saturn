@@ -39,7 +39,7 @@ import {
   useListCurrenciesQuery,
   useListAccountsQuery,
   useListInstitutionsQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   type Borrowing,
   type Borrowing_Direction,
   type Account,
@@ -82,7 +82,7 @@ export default function ManageBorrowingModal() {
   const dateSheetRef = useRef<BottomSheet>(null)
 
   // 1. Settings & Base Currency
-  const { data: settingsData } = useGetFinanceSettingsQuery(
+  const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )

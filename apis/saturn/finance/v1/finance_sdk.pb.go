@@ -28,9 +28,9 @@ func NewClient(cfg saturn.Config) *Client {
 	return &Client{base: saturn.NewClient(cfg)}
 }
 
-// ConfigureFinance executes POST /api/v1/finance/settings.
-func (c *Client) ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequest) (*FinanceSettings, error) {
-	var resp FinanceSettings
+// Setup executes POST /api/v1/finance/settings.
+func (c *Client) Setup(ctx context.Context, req *SetupRequest) (*Settings, error) {
+	var resp Settings
 	path := "/api/v1/finance/settings"
 	var query []string
 	if len(query) > 0 {
@@ -42,9 +42,9 @@ func (c *Client) ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequ
 	return &resp, nil
 }
 
-// GetFinanceSettings executes GET /api/v1/finance/settings.
-func (c *Client) GetFinanceSettings(ctx context.Context, req *GetFinanceSettingsRequest) (*FinanceSettings, error) {
-	var resp FinanceSettings
+// GetSettings executes GET /api/v1/finance/settings.
+func (c *Client) GetSettings(ctx context.Context, req *GetSettingsRequest) (*Settings, error) {
+	var resp Settings
 	path := "/api/v1/finance/settings"
 	var query []string
 	if len(query) > 0 {

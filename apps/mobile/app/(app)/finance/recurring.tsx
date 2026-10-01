@@ -29,7 +29,7 @@ import {
   useUpdateRecurringTransactionMutation,
   useDeleteRecurringTransactionMutation,
   useSkipScheduledTransactionMutation,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   type RecurringTransaction,
   type ScheduledTransaction,
   type ListScheduledTransactionsRequest,
@@ -160,7 +160,7 @@ export default function RecurringScreen() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL")
 
   // 1. Settings & Base Currency
-  const { data: settingsData } = useGetFinanceSettingsQuery(
+  const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )

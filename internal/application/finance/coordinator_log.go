@@ -9,6 +9,7 @@ import (
 	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
 // LoggingCoordinator wraps a Coordinator and logs operation durations and errors.
@@ -32,49 +33,49 @@ func (l *LoggingCoordinator) ResolveContext(ctx context.Context) (finance.Contex
 	return l.next.ResolveContext(ctx)
 }
 
-// ConfigureFinance executes next.ConfigureFinance and logs execution duration and errors.
-func (l *LoggingCoordinator) ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error) {
+// Setup executes next.Setup and logs execution duration and errors.
+func (l *LoggingCoordinator) Setup(ctx context.Context, req *SetupRequest) (*settings.Entry[finance.Settings], error) {
 	start := time.Now()
-	res, err := l.next.ConfigureFinance(ctx, req)
+	res, err := l.next.Setup(ctx, req)
 	duration := time.Since(start)
 
 	if err != nil {
-		l.logger.Error(ctx, "finance.ConfigureFinance failed",
+		l.logger.Error(ctx, "finance.Setup failed",
 			log.String("component", "finance"),
-			log.String("operation", "ConfigureFinance"),
+			log.String("operation", "Setup"),
 			log.Duration("duration", duration),
 			log.Err(err),
 		)
 		return nil, err
 	}
 
-	l.logger.Info(ctx, "finance.ConfigureFinance completed",
+	l.logger.Info(ctx, "finance.Setup completed",
 		log.String("component", "finance"),
-		log.String("operation", "ConfigureFinance"),
+		log.String("operation", "Setup"),
 		log.Duration("duration", duration),
 	)
 	return res, nil
 }
 
-// GetFinanceSettings executes next.GetFinanceSettings and logs execution duration and errors.
-func (l *LoggingCoordinator) GetFinanceSettings(ctx context.Context) (*finance.FinanceSettings, error) {
+// GetSettings executes next.GetSettings and logs execution duration and errors.
+func (l *LoggingCoordinator) GetSettings(ctx context.Context) (*settings.Entry[finance.Settings], error) {
 	start := time.Now()
-	res, err := l.next.GetFinanceSettings(ctx)
+	res, err := l.next.GetSettings(ctx)
 	duration := time.Since(start)
 
 	if err != nil {
-		l.logger.Error(ctx, "finance.GetFinanceSettings failed",
+		l.logger.Error(ctx, "finance.GetSettings failed",
 			log.String("component", "finance"),
-			log.String("operation", "GetFinanceSettings"),
+			log.String("operation", "GetSettings"),
 			log.Duration("duration", duration),
 			log.Err(err),
 		)
 		return nil, err
 	}
 
-	l.logger.Info(ctx, "finance.GetFinanceSettings completed",
+	l.logger.Info(ctx, "finance.GetSettings completed",
 		log.String("component", "finance"),
-		log.String("operation", "GetFinanceSettings"),
+		log.String("operation", "GetSettings"),
 		log.Duration("duration", duration),
 	)
 	return res, nil

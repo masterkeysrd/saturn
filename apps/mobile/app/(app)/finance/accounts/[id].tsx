@@ -22,7 +22,7 @@ import {
   useListTransactionsQuery,
   useListBudgetsQuery,
   useListInstitutionsQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   type Budget,
   type Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
@@ -45,7 +45,7 @@ export default function AccountDetailScreen() {
   const [refreshing, setRefreshing] = useState(false)
 
   // Fetch settings & base currency
-  const { data: settingsData } = useGetFinanceSettingsQuery(
+  const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )

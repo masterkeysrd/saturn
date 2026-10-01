@@ -254,7 +254,6 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	spacev1.RegisterSpacesServer(s.grpc, spaceHandler)
 
 	// Wire Finance service
-	settingsStore := financestorage.NewSettingsStore(dbClient)
 	budgetStore := financestorage.NewBudgetStore(dbClient)
 	periodStore := financestorage.NewPeriodStore(dbClient)
 	rateStore := financestorage.NewExchangeRateStore(dbClient)
@@ -271,7 +270,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	statementStore := financestorage.NewStatementStore(dbClient)
 
 	financeService := finance.NewService(finance.Dependencies{
-		SettingsStore:             settingsStore,
+		Settings:                  settings.Bind(platformSettingsStore, finance.SettingsKey),
 		BudgetStore:               budgetStore,
 		PeriodStore:               periodStore,
 		ExchangeRateStore:         rateStore,

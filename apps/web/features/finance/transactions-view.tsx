@@ -13,7 +13,7 @@ import {
   type Transaction_Type,
   useListAccountsQuery,
   useListInboxItemsQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   useListBudgetsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { Inbox } from "lucide-react"
@@ -62,10 +62,7 @@ const TRANSACTIONS_FILTER_DEFAULTS = {
 export function TransactionsView() {
   const { spaceId, isWritable } = useSpacePermissions()
 
-  const { data: settings } = useGetFinanceSettingsQuery(
-    {},
-    { enabled: !!spaceId }
-  )
+  const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
   const baseCurrency = settings?.baseCurrency || "USD"
 
   const { data: budgetsData, refetch: refetchBudgets } = useListBudgetsQuery(

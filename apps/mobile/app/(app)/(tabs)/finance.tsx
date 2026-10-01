@@ -35,7 +35,7 @@ import {
   useGetInsightsQuery,
   useListAccountsQuery,
   useListInstitutionsQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   useListScheduledTransactionsQuery,
   useListRecurringTransactionsQuery,
   useSkipScheduledTransactionMutation,
@@ -95,7 +95,7 @@ export default function FinanceHubScreen() {
   const [refreshing, setRefreshing] = useState(false)
 
   // 1. Settings & Base Currency
-  const { data: settingsData } = useGetFinanceSettingsQuery(
+  const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )

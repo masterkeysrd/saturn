@@ -126,7 +126,7 @@ TRUNCATE TABLE
     finance.account,
     finance.transfer,
     finance.inbox_item,
-    finance.settings,
+    platform.settings,
     space.member,
     space.space,
     identity.sessions,

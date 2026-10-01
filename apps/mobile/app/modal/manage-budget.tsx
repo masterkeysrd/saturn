@@ -23,7 +23,7 @@ import {
   useListCurrenciesQuery,
   useListAccountsQuery,
   useListInstitutionsQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   type Budget,
   type Budget_RecurrenceInterval,
   type CurrencyInfo,
@@ -68,7 +68,7 @@ export default function ManageBudgetModal() {
   const accountSheetRef = useRef<BottomSheet>(null)
 
   // Fetch settings & base currency
-  const { data: settingsData } = useGetFinanceSettingsQuery(
+  const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )

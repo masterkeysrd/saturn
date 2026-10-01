@@ -18,8 +18,7 @@ type FinanceService interface {
 	GetAccount(ctx context.Context, rCtx finance.Context, id finance.AccountID) (*finance.Account, error)
 	GetAccounts(ctx context.Context, rCtx finance.Context, ids []finance.AccountID) ([]*finance.Account, error)
 
-	// Settings & Exchange Rates
-	GetFinanceSettings(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error)
+	// Exchange Rates
 	GetLatestRates(ctx context.Context, rCtx finance.Context, fromCurrencies []finance.Currency, toCurrency finance.Currency) ([]*finance.ExchangeRate, error)
 	ListExchangeRates(ctx context.Context, rCtx finance.Context, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error)
 	GetExchangeRateByID(ctx context.Context, rCtx finance.Context, id string) (*finance.ExchangeRate, error)

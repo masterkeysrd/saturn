@@ -527,9 +527,9 @@ export type StatementLine_Status =
   | "SKIPPED"
 
 /**
- * FinanceSettings represents the workspace configuration.
+ * Settings represents the workspace configuration.
  */
-export interface FinanceSettings {
+export interface Settings {
   /**
    * Output only. Associated space identifier.
    */
@@ -709,9 +709,9 @@ export interface BudgetPeriod {
 
 /**
  * The request for
- * [ConfigureFinance][saturn.finance.v1.Finance.ConfigureFinance].
+ * [Setup][saturn.finance.v1.Finance.Setup].
  */
-export interface ConfigureFinanceRequest {
+export interface SetupRequest {
   /**
    * Required. Base currency for conversions and insights (e.g. "USD").
    * Conversions and aggregated spent statistics will default to this currency.
@@ -721,9 +721,9 @@ export interface ConfigureFinanceRequest {
 
 /**
  * The request for
- * [GetFinanceSettings][saturn.finance.v1.Finance.GetFinanceSettings].
+ * [GetSettings][saturn.finance.v1.Finance.GetSettings].
  */
-export type GetFinanceSettingsRequest = Record<string, never>
+export type GetSettingsRequest = Record<string, never>
 
 /**
  * The request for
@@ -3862,21 +3862,19 @@ export interface AnalyzeStatementDocumentResponse {
  * Configures the base currency of a space. The base currency acts as the unified
  * currency in which financial insights and multi-currency conversions are performed.
  */
-export async function configureFinance(
-  req: ConfigureFinanceRequest
-): Promise<FinanceSettings> {
-  return request<FinanceSettings>({
+export async function setup(req: SetupRequest): Promise<Settings> {
+  return request<Settings>({
     method: "POST",
     url: "/api/v1/finance/settings",
     data: req,
   })
 }
 
-export function useConfigureFinanceMutation(
-  options?: UseMutationOptions<FinanceSettings, Error, ConfigureFinanceRequest>
+export function useSetupMutation(
+  options?: UseMutationOptions<Settings, Error, SetupRequest>
 ) {
-  return useMutation<FinanceSettings, Error, ConfigureFinanceRequest>({
-    mutationFn: (req) => configureFinance(req),
+  return useMutation<Settings, Error, SetupRequest>({
+    mutationFn: (req) => setup(req),
     ...options,
   })
 }
@@ -3884,25 +3882,22 @@ export function useConfigureFinanceMutation(
 /**
  * Retrieves the current finance settings, including the configured base currency.
  */
-export async function getFinanceSettings(
-  _req?: GetFinanceSettingsRequest
-): Promise<FinanceSettings> {
-  return request<FinanceSettings>({
+export async function getSettings(
+  _req?: GetSettingsRequest
+): Promise<Settings> {
+  return request<Settings>({
     method: "GET",
     url: "/api/v1/finance/settings",
   })
 }
 
-export function useGetFinanceSettingsQuery(
-  req: GetFinanceSettingsRequest,
-  options?: Omit<
-    UseQueryOptions<FinanceSettings, Error>,
-    "queryKey" | "queryFn"
-  >
+export function useGetSettingsQuery(
+  req: GetSettingsRequest,
+  options?: Omit<UseQueryOptions<Settings, Error>, "queryKey" | "queryFn">
 ) {
-  return useQuery<FinanceSettings, Error>({
+  return useQuery<Settings, Error>({
     queryKey: ["/api/v1/finance/settings", req],
-    queryFn: () => getFinanceSettings(req),
+    queryFn: () => getSettings(req),
     ...options,
   })
 }

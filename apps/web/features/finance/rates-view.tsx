@@ -3,7 +3,7 @@ import { useSpacePermissions } from "@/features/space/use-space"
 import {
   type ExchangeRate,
   useDeleteExchangeRateMutation,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   useListExchangeRatesQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
@@ -14,10 +14,7 @@ import { CreateRateSheet } from "./components/create-rate-sheet"
 export function RatesView() {
   const { spaceId, isWritable } = useSpacePermissions()
 
-  const { data: settings } = useGetFinanceSettingsQuery(
-    {},
-    { enabled: !!spaceId }
-  )
+  const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
   const { data: ratesData, refetch: refetchRates } = useListExchangeRatesQuery(
     { pageSize: 100, pageToken: "" },
     { enabled: !!settings }

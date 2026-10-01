@@ -31,7 +31,7 @@ import {
   useListActiveSessionsQuery,
   useListMFAFactorsQuery,
 } from "@saturn/api/saturn/identity/v1/identity"
-import { useGetFinanceSettingsQuery } from "@saturn/api/saturn/finance/v1/finance"
+import { useGetSettingsQuery } from "@saturn/api/saturn/finance/v1/finance"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
@@ -68,7 +68,7 @@ export default function SettingsScreen() {
   const hasActiveMfa = Boolean(mfaData?.factors && mfaData.factors.length > 0)
 
   // 3. Query workspace finance settings for base currency
-  const { data: financeSettings } = useGetFinanceSettingsQuery(
+  const { data: financeSettings } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )

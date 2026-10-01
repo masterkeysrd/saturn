@@ -9,7 +9,7 @@ import {
   type Borrowing,
   type Borrowing_Status,
   type Borrowing_Direction,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { Button } from "@/components/ui/button"
@@ -56,10 +56,7 @@ export function BorrowingView() {
   const [now] = useState(() => Date.now())
   const { spaceId, isWritable } = useSpacePermissions()
 
-  const { data: settings } = useGetFinanceSettingsQuery(
-    {},
-    { enabled: !!spaceId }
-  )
+  const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
   const baseCurrency = settings?.baseCurrency || "USD"
 
   const [urlState, setUrlState] = useUrlState(BORROWING_FILTER_DEFAULTS)

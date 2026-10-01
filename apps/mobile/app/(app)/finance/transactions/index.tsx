@@ -23,7 +23,7 @@ import {
   listTransactions,
   useListAccountsQuery,
   useListBudgetsQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   type Transaction,
   type Transaction_Type,
   type Account,
@@ -64,7 +64,7 @@ export default function TransactionsScreen() {
   const filterSheetRef = useRef<BottomSheet>(null)
 
   // Queries
-  const { data: settingsData } = useGetFinanceSettingsQuery(
+  const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )

@@ -32,7 +32,7 @@ import {
   useDeleteTransactionMutation,
   useListAccountsQuery,
   useListBudgetsQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   useListTransactionEventsQuery,
   type TransactionEvent,
 } from "@saturn/api/saturn/finance/v1/finance"
@@ -89,7 +89,7 @@ export default function TransactionDetailScreen() {
     error: txError,
   } = useGetTransactionQuery({ id: id || "", view: "FULL" }, { enabled: !!id })
 
-  const { data: settingsData } = useGetFinanceSettingsQuery(
+  const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )

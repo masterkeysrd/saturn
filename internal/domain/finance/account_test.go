@@ -267,6 +267,7 @@ func TestAccount_ReconcileLifecycleAndTransfer(t *testing.T) {
 	})
 
 	t.Run("ValidateTransferTo rules", func(t *testing.T) {
+		acc1.IsActive = true
 		if err := acc1.ValidateTransferTo(acc2, 1000); err != nil {
 			t.Errorf("unexpected error for valid transfer: %v", err)
 		}

@@ -1,11 +1,21 @@
 package finance
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
+
+// SettingsClient defines the settings operations required by the finance domain.
+//
+// @Mock
+type SettingsClient interface {
+	Get(ctx context.Context, scopeID string) (*settings.Entry[Settings], error)
+	Save(ctx context.Context, entry *settings.Entry[Settings]) error
+}
 
 // SpaceID is a custom string type representing a space's identifier.
 type SpaceID string
@@ -30,24 +40,25 @@ func (sid SpaceID) Validate() error {
 
 const spacePrefix = "spc_"
 
-// FinanceSettings stores workspace-scoped configurations.
-type FinanceSettings struct {
-	BaseCurrency Currency
-	CreateTime   time.Time
-	UpdateTime   time.Time
+// Settings stores workspace-scoped configurations.
+type Settings struct {
+	BaseCurrency Currency `json:"base_currency"`
 }
 
+// SettingsKey is the typed descriptor for workspace finance settings.
+var SettingsKey = settings.NewKey[Settings](settings.ScopeSpace, "finance")
+
 // Validate checks the settings validity.
-func (fs *FinanceSettings) Validate() error {
-	if err := fs.BaseCurrency.Validate(); err != nil {
+func (s *Settings) Validate() error {
+	if err := s.BaseCurrency.Validate(); err != nil {
 		return fmt.Errorf("validate base currency: %w", err)
 	}
 	return nil
 }
 
 // NewDefaultCashAccount instantiates the standard default Cash account for a workspace.
-func (fs *FinanceSettings) NewDefaultCashAccount() (*Account, error) {
-	if err := fs.Validate(); err != nil {
+func (s *Settings) NewDefaultCashAccount() (*Account, error) {
+	if err := s.Validate(); err != nil {
 		return nil, fmt.Errorf("validate finance settings: %w", err)
 	}
 
@@ -60,7 +71,7 @@ func (fs *FinanceSettings) NewDefaultCashAccount() (*Account, error) {
 		ID:             accID,
 		Name:           "Cash",
 		Type:           AccountTypeCash,
-		Currency:       fs.BaseCurrency,
+		Currency:       s.BaseCurrency,
 		IsActive:       true,
 		InitialBalance: 0,
 		CurrentBalance: 0,

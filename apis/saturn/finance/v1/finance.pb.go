@@ -1443,8 +1443,8 @@ func (StatementLine_Status) EnumDescriptor() ([]byte, []int) {
 	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{93, 0}
 }
 
-// FinanceSettings represents the workspace configuration.
-type FinanceSettings struct {
+// Settings represents the workspace configuration.
+type Settings struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Output only. Associated space identifier.
 	SpaceId string `protobuf:"bytes,1,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
@@ -1459,20 +1459,20 @@ type FinanceSettings struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *FinanceSettings) Reset() {
-	*x = FinanceSettings{}
+func (x *Settings) Reset() {
+	*x = Settings{}
 	mi := &file_saturn_finance_v1_finance_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *FinanceSettings) String() string {
+func (x *Settings) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*FinanceSettings) ProtoMessage() {}
+func (*Settings) ProtoMessage() {}
 
-func (x *FinanceSettings) ProtoReflect() protoreflect.Message {
+func (x *Settings) ProtoReflect() protoreflect.Message {
 	mi := &file_saturn_finance_v1_finance_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1484,33 +1484,33 @@ func (x *FinanceSettings) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use FinanceSettings.ProtoReflect.Descriptor instead.
-func (*FinanceSettings) Descriptor() ([]byte, []int) {
+// Deprecated: Use Settings.ProtoReflect.Descriptor instead.
+func (*Settings) Descriptor() ([]byte, []int) {
 	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *FinanceSettings) GetSpaceId() string {
+func (x *Settings) GetSpaceId() string {
 	if x != nil {
 		return x.SpaceId
 	}
 	return ""
 }
 
-func (x *FinanceSettings) GetBaseCurrency() string {
+func (x *Settings) GetBaseCurrency() string {
 	if x != nil {
 		return x.BaseCurrency
 	}
 	return ""
 }
 
-func (x *FinanceSettings) GetCreateTime() *timestamppb.Timestamp {
+func (x *Settings) GetCreateTime() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreateTime
 	}
 	return nil
 }
 
-func (x *FinanceSettings) GetUpdateTime() *timestamppb.Timestamp {
+func (x *Settings) GetUpdateTime() *timestamppb.Timestamp {
 	if x != nil {
 		return x.UpdateTime
 	}
@@ -1839,8 +1839,8 @@ func (x *BudgetPeriod) GetSpentInBase() int64 {
 }
 
 // The request for
-// [ConfigureFinance][saturn.finance.v1.Finance.ConfigureFinance].
-type ConfigureFinanceRequest struct {
+// [Setup][saturn.finance.v1.Finance.Setup].
+type SetupRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. Base currency for conversions and insights (e.g. "USD").
 	// Conversions and aggregated spent statistics will default to this currency.
@@ -1849,20 +1849,20 @@ type ConfigureFinanceRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ConfigureFinanceRequest) Reset() {
-	*x = ConfigureFinanceRequest{}
+func (x *SetupRequest) Reset() {
+	*x = SetupRequest{}
 	mi := &file_saturn_finance_v1_finance_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ConfigureFinanceRequest) String() string {
+func (x *SetupRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ConfigureFinanceRequest) ProtoMessage() {}
+func (*SetupRequest) ProtoMessage() {}
 
-func (x *ConfigureFinanceRequest) ProtoReflect() protoreflect.Message {
+func (x *SetupRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_saturn_finance_v1_finance_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1874,12 +1874,12 @@ func (x *ConfigureFinanceRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ConfigureFinanceRequest.ProtoReflect.Descriptor instead.
-func (*ConfigureFinanceRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use SetupRequest.ProtoReflect.Descriptor instead.
+func (*SetupRequest) Descriptor() ([]byte, []int) {
 	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *ConfigureFinanceRequest) GetBaseCurrency() string {
+func (x *SetupRequest) GetBaseCurrency() string {
 	if x != nil {
 		return x.BaseCurrency
 	}
@@ -1887,27 +1887,27 @@ func (x *ConfigureFinanceRequest) GetBaseCurrency() string {
 }
 
 // The request for
-// [GetFinanceSettings][saturn.finance.v1.Finance.GetFinanceSettings].
-type GetFinanceSettingsRequest struct {
+// [GetSettings][saturn.finance.v1.Finance.GetSettings].
+type GetSettingsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetFinanceSettingsRequest) Reset() {
-	*x = GetFinanceSettingsRequest{}
+func (x *GetSettingsRequest) Reset() {
+	*x = GetSettingsRequest{}
 	mi := &file_saturn_finance_v1_finance_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetFinanceSettingsRequest) String() string {
+func (x *GetSettingsRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetFinanceSettingsRequest) ProtoMessage() {}
+func (*GetSettingsRequest) ProtoMessage() {}
 
-func (x *GetFinanceSettingsRequest) ProtoReflect() protoreflect.Message {
+func (x *GetSettingsRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_saturn_finance_v1_finance_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1919,8 +1919,8 @@ func (x *GetFinanceSettingsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetFinanceSettingsRequest.ProtoReflect.Descriptor instead.
-func (*GetFinanceSettingsRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetSettingsRequest.ProtoReflect.Descriptor instead.
+func (*GetSettingsRequest) Descriptor() ([]byte, []int) {
 	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{4}
 }
 
@@ -12075,8 +12075,8 @@ var File_saturn_finance_v1_finance_proto protoreflect.FileDescriptor
 
 const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\n" +
-	"\x1fsaturn/finance/v1/finance.proto\x12\x11saturn.finance.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a*saturn/platform/scheduler/v1/options.proto\"\xdf\x01\n" +
-	"\x0fFinanceSettings\x12\x1e\n" +
+	"\x1fsaturn/finance/v1/finance.proto\x12\x11saturn.finance.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a*saturn/platform/scheduler/v1/options.proto\"\xd8\x01\n" +
+	"\bSettings\x12\x1e\n" +
 	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x03R\aspaceId\x12(\n" +
 	"\rbase_currency\x18\x02 \x01(\tB\x03\xe0A\x02R\fbaseCurrency\x12@\n" +
 	"\vcreate_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
@@ -12148,10 +12148,10 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"updateTime\x12&\n" +
 	"\fspent_amount\x18\f \x01(\x03B\x03\xe0A\x03R\vspentAmount\x12'\n" +
-	"\rspent_in_base\x18\r \x01(\x03B\x03\xe0A\x03R\vspentInBase\"C\n" +
-	"\x17ConfigureFinanceRequest\x12(\n" +
-	"\rbase_currency\x18\x01 \x01(\tB\x03\xe0A\x02R\fbaseCurrency\"\x1b\n" +
-	"\x19GetFinanceSettingsRequest\"'\n" +
+	"\rspent_in_base\x18\r \x01(\x03B\x03\xe0A\x03R\vspentInBase\"8\n" +
+	"\fSetupRequest\x12(\n" +
+	"\rbase_currency\x18\x01 \x01(\tB\x03\xe0A\x02R\fbaseCurrency\"\x14\n" +
+	"\x12GetSettingsRequest\"'\n" +
 	"\x10GetBudgetRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"M\n" +
 	"\x13CreateBudgetRequest\x126\n" +
@@ -13191,10 +13191,10 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x1fBORROWING_LINK_TYPE_UNSPECIFIED\x10\x00\x12'\n" +
 	"#BORROWING_LINK_TYPE_INITIAL_RECEIPT\x10\x01\x12!\n" +
 	"\x1dBORROWING_LINK_TYPE_REPAYMENT\x10\x02\x12'\n" +
-	"#BORROWING_LINK_TYPE_ADDITIONAL_LOAN\x10\x032\xa8O\n" +
-	"\aFinance\x12\x83\x01\n" +
-	"\x10ConfigureFinance\x12*.saturn.finance.v1.ConfigureFinanceRequest\x1a\".saturn.finance.v1.FinanceSettings\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/finance/settings\x12\x84\x01\n" +
-	"\x12GetFinanceSettings\x12,.saturn.finance.v1.GetFinanceSettingsRequest\x1a\".saturn.finance.v1.FinanceSettings\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/finance/settings\x12v\n" +
+	"#BORROWING_LINK_TYPE_ADDITIONAL_LOAN\x10\x032\xf4N\n" +
+	"\aFinance\x12f\n" +
+	"\x05Setup\x12\x1f.saturn.finance.v1.SetupRequest\x1a\x1b.saturn.finance.v1.Settings\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/finance/settings\x12o\n" +
+	"\vGetSettings\x12%.saturn.finance.v1.GetSettingsRequest\x1a\x1b.saturn.finance.v1.Settings\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/finance/settings\x12v\n" +
 	"\fCreateBudget\x12&.saturn.finance.v1.CreateBudgetRequest\x1a\x19.saturn.finance.v1.Budget\"#\x82\xd3\xe4\x93\x02\x1d:\x06budget\"\x13/v1/finance/budgets\x12m\n" +
 	"\tGetBudget\x12#.saturn.finance.v1.GetBudgetRequest\x1a\x19.saturn.finance.v1.Budget\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/finance/budgets/{id}\x12{\n" +
 	"\fUpdateBudget\x12&.saturn.finance.v1.UpdateBudgetRequest\x1a\x19.saturn.finance.v1.Budget\"(\x82\xd3\xe4\x93\x02\":\x06budget2\x18/v1/finance/budgets/{id}\x12p\n" +
@@ -13305,11 +13305,11 @@ var file_saturn_finance_v1_finance_proto_goTypes = []any{
 	(InboxItem_View)(0),                                   // 22: saturn.finance.v1.InboxItem.View
 	(Statement_Status)(0),                                 // 23: saturn.finance.v1.Statement.Status
 	(StatementLine_Status)(0),                             // 24: saturn.finance.v1.StatementLine.Status
-	(*FinanceSettings)(nil),                               // 25: saturn.finance.v1.FinanceSettings
+	(*Settings)(nil),                                      // 25: saturn.finance.v1.Settings
 	(*Budget)(nil),                                        // 26: saturn.finance.v1.Budget
 	(*BudgetPeriod)(nil),                                  // 27: saturn.finance.v1.BudgetPeriod
-	(*ConfigureFinanceRequest)(nil),                       // 28: saturn.finance.v1.ConfigureFinanceRequest
-	(*GetFinanceSettingsRequest)(nil),                     // 29: saturn.finance.v1.GetFinanceSettingsRequest
+	(*SetupRequest)(nil),                                  // 28: saturn.finance.v1.SetupRequest
+	(*GetSettingsRequest)(nil),                            // 29: saturn.finance.v1.GetSettingsRequest
 	(*GetBudgetRequest)(nil),                              // 30: saturn.finance.v1.GetBudgetRequest
 	(*CreateBudgetRequest)(nil),                           // 31: saturn.finance.v1.CreateBudgetRequest
 	(*UpdateBudgetRequest)(nil),                           // 32: saturn.finance.v1.UpdateBudgetRequest
@@ -13451,8 +13451,8 @@ var file_saturn_finance_v1_finance_proto_goTypes = []any{
 	(*emptypb.Empty)(nil),                                 // 168: google.protobuf.Empty
 }
 var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
-	166, // 0: saturn.finance.v1.FinanceSettings.create_time:type_name -> google.protobuf.Timestamp
-	166, // 1: saturn.finance.v1.FinanceSettings.update_time:type_name -> google.protobuf.Timestamp
+	166, // 0: saturn.finance.v1.Settings.create_time:type_name -> google.protobuf.Timestamp
+	166, // 1: saturn.finance.v1.Settings.update_time:type_name -> google.protobuf.Timestamp
 	5,   // 2: saturn.finance.v1.Budget.interval:type_name -> saturn.finance.v1.Budget.RecurrenceInterval
 	7,   // 3: saturn.finance.v1.Budget.status:type_name -> saturn.finance.v1.Budget.Status
 	136, // 4: saturn.finance.v1.Budget.current_period:type_name -> saturn.finance.v1.Budget.ActivePeriod
@@ -13629,8 +13629,8 @@ var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
 	157, // 175: saturn.finance.v1.Statement.Config.csv:type_name -> saturn.finance.v1.Statement.Config.CsvConfig
 	8,   // 176: saturn.finance.v1.StatementLine.Suggestions.transaction_type:type_name -> saturn.finance.v1.Transaction.Type
 	44,  // 177: saturn.finance.v1.StatementLine.Suggestions.matches:type_name -> saturn.finance.v1.Transaction
-	28,  // 178: saturn.finance.v1.Finance.ConfigureFinance:input_type -> saturn.finance.v1.ConfigureFinanceRequest
-	29,  // 179: saturn.finance.v1.Finance.GetFinanceSettings:input_type -> saturn.finance.v1.GetFinanceSettingsRequest
+	28,  // 178: saturn.finance.v1.Finance.Setup:input_type -> saturn.finance.v1.SetupRequest
+	29,  // 179: saturn.finance.v1.Finance.GetSettings:input_type -> saturn.finance.v1.GetSettingsRequest
 	31,  // 180: saturn.finance.v1.Finance.CreateBudget:input_type -> saturn.finance.v1.CreateBudgetRequest
 	30,  // 181: saturn.finance.v1.Finance.GetBudget:input_type -> saturn.finance.v1.GetBudgetRequest
 	32,  // 182: saturn.finance.v1.Finance.UpdateBudget:input_type -> saturn.finance.v1.UpdateBudgetRequest
@@ -13698,8 +13698,8 @@ var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
 	127, // 244: saturn.finance.v1.Finance.UpdateStatement:input_type -> saturn.finance.v1.UpdateStatementRequest
 	128, // 245: saturn.finance.v1.Finance.CompleteStatement:input_type -> saturn.finance.v1.CompleteStatementRequest
 	129, // 246: saturn.finance.v1.Finance.InvertStatementSigns:input_type -> saturn.finance.v1.InvertStatementSignsRequest
-	25,  // 247: saturn.finance.v1.Finance.ConfigureFinance:output_type -> saturn.finance.v1.FinanceSettings
-	25,  // 248: saturn.finance.v1.Finance.GetFinanceSettings:output_type -> saturn.finance.v1.FinanceSettings
+	25,  // 247: saturn.finance.v1.Finance.Setup:output_type -> saturn.finance.v1.Settings
+	25,  // 248: saturn.finance.v1.Finance.GetSettings:output_type -> saturn.finance.v1.Settings
 	26,  // 249: saturn.finance.v1.Finance.CreateBudget:output_type -> saturn.finance.v1.Budget
 	26,  // 250: saturn.finance.v1.Finance.GetBudget:output_type -> saturn.finance.v1.Budget
 	26,  // 251: saturn.finance.v1.Finance.UpdateBudget:output_type -> saturn.finance.v1.Budget

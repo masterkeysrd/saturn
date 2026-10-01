@@ -24,7 +24,7 @@ import {
   useListBudgetsQuery,
   useListTransactionsQuery,
   useListAccountsQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   type Account,
   type Budget,
   type Transaction,
@@ -67,7 +67,7 @@ export default function BudgetDetailScreen() {
   const [refreshing, setRefreshing] = useState(false)
 
   // Fetch base currency settings
-  const { data: settingsData } = useGetFinanceSettingsQuery(
+  const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )

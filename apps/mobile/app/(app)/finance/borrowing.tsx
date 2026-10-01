@@ -25,7 +25,7 @@ import { MenuView } from "@expo/ui/community/menu"
 import {
   useListBorrowingsQuery,
   useDeleteBorrowingMutation,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   type Borrowing,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { formatAmount, formatCents } from "@saturn/core"
@@ -89,7 +89,7 @@ export default function BorrowingScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [activeTab, setActiveTab] = useState<FilterTab>("ALL")
 
-  const { data: settingsData } = useGetFinanceSettingsQuery(
+  const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )

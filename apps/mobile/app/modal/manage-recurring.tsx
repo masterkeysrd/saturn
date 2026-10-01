@@ -34,7 +34,7 @@ import {
   useListCurrenciesQuery,
   useListBudgetsQuery,
   useListAccountsQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   type RecurringTransaction,
   type RecurringTransaction_Interval,
   type RecurringTransaction_Status,
@@ -84,7 +84,7 @@ export default function ManageRecurringModal() {
   const dateSheetRef = useRef<BottomSheet>(null)
 
   // 1. Settings & Base Currency
-  const { data: settingsData } = useGetFinanceSettingsQuery(
+  const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )

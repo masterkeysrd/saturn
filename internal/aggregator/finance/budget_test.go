@@ -13,25 +13,32 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
 // --- In-Memory Mocks for Stores ---
 
 type mockSettingsStore struct {
-	settings map[finance.SpaceID]*finance.FinanceSettings
+	settings map[finance.SpaceID]*finance.Settings
 }
 
-func (m *mockSettingsStore) Create(ctx context.Context, fCtx finance.Context, s *finance.FinanceSettings) error {
-	m.settings[fCtx.SpaceID()] = s
-	return nil
-}
-func (m *mockSettingsStore) GetByID(ctx context.Context, fCtx finance.Context) (*finance.FinanceSettings, error) {
-	s, ok := m.settings[fCtx.SpaceID()]
+func (m *mockSettingsStore) Get(ctx context.Context, scopeID string) (*settings.Entry[finance.Settings], error) {
+	s, ok := m.settings[finance.SpaceID(scopeID)]
 	if !ok {
 		return nil, errors.E(errors.NotExist, finance.SettingsNotFound, "finance settings not found")
 	}
-	return s, nil
+	return &settings.Entry[finance.Settings]{
+		Target:  finance.SettingsKey.For(scopeID),
+		Value:   *s,
+		Version: 1,
+	}, nil
+}
+
+func (m *mockSettingsStore) Save(ctx context.Context, entry *settings.Entry[finance.Settings]) error {
+	val := entry.Value
+	m.settings[finance.SpaceID(entry.Target.ScopeID())] = &val
+	return nil
 }
 
 type mockBudgetStore struct {
@@ -252,17 +259,17 @@ func TestListAggregatedBudgets(t *testing.T) {
 	rCtx := finance.NewContext(spaceID, "usr_test", time.UTC, "USD")
 
 	// Setup domain service with mocks
-	settings := &finance.FinanceSettings{
+	settings := &finance.Settings{
 		BaseCurrency: finance.Currency("USD"),
 	}
 
-	ss := &mockSettingsStore{settings: map[finance.SpaceID]*finance.FinanceSettings{spaceID: settings}}
+	ss := &mockSettingsStore{settings: map[finance.SpaceID]*finance.Settings{spaceID: settings}}
 	bs := &mockBudgetStore{budgets: make(map[finance.SpaceID]map[finance.BudgetID]*finance.Budget)}
 	ps := &mockPeriodStore{periods: make(map[string]*finance.BudgetPeriod)}
 	ts := &mockTransactionStore{}
 
 	domainService := finance.NewService(finance.Dependencies{
-		SettingsStore:    ss,
+		Settings:         ss,
 		BudgetStore:      bs,
 		PeriodStore:      ps,
 		TransactionStore: ts,

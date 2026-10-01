@@ -8,7 +8,7 @@ import {
   type ExchangeRateFormValues,
 } from "@saturn/schemas"
 import {
-  type FinanceSettings,
+  type Settings,
   useCreateExchangeRateMutation,
   useListCurrenciesQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
@@ -21,7 +21,7 @@ interface CreateRateSheetProps {
   onOpenChange: (open: boolean) => void
   spaceId?: string
   baseCurr?: string
-  settings?: FinanceSettings
+  settings?: Settings
   refetchRates?: () => void
 }
 

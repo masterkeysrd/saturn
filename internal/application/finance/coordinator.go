@@ -26,8 +26,8 @@ type SpaceService interface {
 // FinanceService defines the interface for underlying finance domain rules.
 // @Mock
 type FinanceService interface {
-	ConfigureFinance(ctx context.Context, rCtx finance.Context, settings *finance.FinanceSettings) (*finance.FinanceSettings, error)
-	GetFinanceSettings(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error)
+	Setup(ctx context.Context, spaceID finance.SpaceID, settings *finance.Settings) (*settings.Entry[finance.Settings], error)
+	GetSettings(ctx context.Context, spaceID finance.SpaceID) (*settings.Entry[finance.Settings], error)
 	CreateBudget(ctx context.Context, rCtx finance.Context, budget *finance.Budget) (*finance.Budget, error)
 	UpdateBudget(ctx context.Context, rCtx finance.Context, budget *finance.Budget, mask []string) (*finance.Budget, error)
 	DeleteBudget(ctx context.Context, rCtx finance.Context, id finance.BudgetID, opts finance.DeleteOptions) error
@@ -181,8 +181,8 @@ type Coordinator interface {
 	ResolveContext(ctx context.Context) (finance.Context, error)
 
 	// @transactional
-	ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error)
-	GetFinanceSettings(ctx context.Context) (*finance.FinanceSettings, error)
+	Setup(ctx context.Context, req *SetupRequest) (*settings.Entry[finance.Settings], error)
+	GetSettings(ctx context.Context) (*settings.Entry[finance.Settings], error)
 	ListCurrencies(ctx context.Context) ([]finance.CurrencyInfo, error)
 
 	// @transactional
@@ -335,7 +335,7 @@ type RequestContext struct {
 	spaceSettings     *space.Settings
 	spaceSettingsOnce sync.Once
 
-	financeSettings     *finance.FinanceSettings
+	financeSettings     *settings.Entry[finance.Settings]
 	financeSettingsOnce sync.Once
 
 	loc          *time.Location
@@ -412,23 +412,21 @@ func (r *RequestContext) Location() *time.Location {
 	return r.loc
 }
 
-// FinanceSettings lazily loads and returns the workspace finance.FinanceSettings.
-func (r *RequestContext) FinanceSettings() *finance.FinanceSettings {
+// FinanceSettings lazily loads and returns the workspace finance.Settings entry.
+func (r *RequestContext) FinanceSettings() *settings.Entry[finance.Settings] {
 	if r == nil {
 		return nil
 	}
 	r.financeSettingsOnce.Do(func() {
 		if r.coord == nil || r.coord.financeService == nil {
-			r.baseCurrency = "USD"
 			return
 		}
-		settings, err := r.coord.financeService.GetFinanceSettings(r.ctx, r)
-		if err != nil || settings == nil {
-			r.baseCurrency = "USD"
+		entry, err := r.coord.financeService.GetSettings(r.ctx, r.spaceID)
+		if err != nil || entry == nil {
 			return
 		}
-		r.financeSettings = settings
-		r.baseCurrency = settings.BaseCurrency
+		r.financeSettings = entry
+		r.baseCurrency = entry.Value.BaseCurrency
 	})
 	return r.financeSettings
 }
@@ -436,12 +434,9 @@ func (r *RequestContext) FinanceSettings() *finance.FinanceSettings {
 // BaseCurrency returns the workspace base currency, resolving it lazily if not yet loaded.
 func (r *RequestContext) BaseCurrency() finance.Currency {
 	if r == nil {
-		return "USD"
+		return ""
 	}
 	r.FinanceSettings()
-	if r.baseCurrency == "" {
-		return "USD"
-	}
 	return r.baseCurrency
 }
 
@@ -506,33 +501,33 @@ func toLocation(t time.Time, loc *time.Location) time.Time {
 	return t.In(loc)
 }
 
-// ConfigureFinanceRequest represents settings setup inputs.
-type ConfigureFinanceRequest struct {
+// SetupRequest represents settings setup inputs.
+type SetupRequest struct {
 	BaseCurrency finance.Currency
 }
 
-// ConfigureFinance sets up base currency preferences for a workspace.
-func (c *coordinator) ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error) {
+// Setup sets up base currency preferences for a workspace.
+func (c *coordinator) Setup(ctx context.Context, req *SetupRequest) (*settings.Entry[finance.Settings], error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	settings := &finance.FinanceSettings{
+	st := &finance.Settings{
 		BaseCurrency: req.BaseCurrency,
 	}
 
-	return c.financeService.ConfigureFinance(ctx, rCtx, settings)
+	return c.financeService.Setup(ctx, rCtx.SpaceID(), st)
 }
 
-// GetFinanceSettings fetches workspace configuration.
-func (c *coordinator) GetFinanceSettings(ctx context.Context) (*finance.FinanceSettings, error) {
+// GetSettings fetches workspace configuration.
+func (c *coordinator) GetSettings(ctx context.Context) (*settings.Entry[finance.Settings], error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.financeService.GetFinanceSettings(ctx, rCtx)
+	return c.financeService.GetSettings(ctx, rCtx.SpaceID())
 }
 
 // ListCurrencies returns the list of supported currencies.

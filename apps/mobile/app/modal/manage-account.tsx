@@ -32,7 +32,7 @@ import {
   useGetAccountQuery,
   useListInstitutionsQuery,
   useListCurrenciesQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   type Account,
   type Account_Type,
   type Account_InstitutionInfo,
@@ -83,7 +83,7 @@ export default function ManageAccountModal() {
   const institutionSheetRef = useRef<BottomSheet>(null)
 
   // Fetch settings & base currency
-  const { data: settingsData } = useGetFinanceSettingsQuery(
+  const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )

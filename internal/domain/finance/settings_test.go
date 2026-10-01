@@ -35,29 +35,29 @@ func TestSpaceID(t *testing.T) {
 	}
 }
 
-func TestFinanceSettings_Validate(t *testing.T) {
+func TestSettings_Validate(t *testing.T) {
 	tests := []struct {
 		name     string
-		settings finance.FinanceSettings
+		settings finance.Settings
 		wantErr  bool
 	}{
 		{
 			name: "valid settings",
-			settings: finance.FinanceSettings{
+			settings: finance.Settings{
 				BaseCurrency: "USD",
 			},
 			wantErr: false,
 		},
 		{
 			name: "invalid base currency",
-			settings: finance.FinanceSettings{
+			settings: finance.Settings{
 				BaseCurrency: "INVALID",
 			},
 			wantErr: true,
 		},
 		{
 			name: "empty base currency",
-			settings: finance.FinanceSettings{
+			settings: finance.Settings{
 				BaseCurrency: "",
 			},
 			wantErr: true,
@@ -74,22 +74,22 @@ func TestFinanceSettings_Validate(t *testing.T) {
 	}
 }
 
-func TestFinanceSettings_NewDefaultCashAccount(t *testing.T) {
+func TestSettings_NewDefaultCashAccount(t *testing.T) {
 	tests := []struct {
 		name     string
-		settings finance.FinanceSettings
+		settings finance.Settings
 		wantErr  bool
 	}{
 		{
 			name: "valid cash account generation",
-			settings: finance.FinanceSettings{
+			settings: finance.Settings{
 				BaseCurrency: "USD",
 			},
 			wantErr: false,
 		},
 		{
 			name: "invalid settings fails account validation",
-			settings: finance.FinanceSettings{
+			settings: finance.Settings{
 				BaseCurrency: "INVALID",
 			},
 			wantErr: true,

@@ -8,7 +8,7 @@ import {
 import {
   useListTransactionsQuery,
   type RecurringTransaction,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -28,7 +28,7 @@ export function RecurringTransactionHistorySheet({
   transaction,
 }: RecurringTransactionHistorySheetProps) {
   const { spaceId } = useActiveSpaceContext()
-  const { data: settings } = useGetFinanceSettingsQuery(
+  const { data: settings } = useGetSettingsQuery(
     {},
     { enabled: open && !!spaceId }
   )

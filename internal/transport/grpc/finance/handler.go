@@ -16,6 +16,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/conv"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
@@ -44,11 +45,15 @@ func getSpaceID(ctx context.Context, op errors.Op) (finance.SpaceID, error) {
 
 // --- Mappers ---
 
-func toProtoSettings(s *finance.FinanceSettings) *financev1.FinanceSettings {
-	return &financev1.FinanceSettings{
-		BaseCurrency: string(s.BaseCurrency),
-		CreateTime:   timestamppb.New(s.CreateTime),
-		UpdateTime:   timestamppb.New(s.UpdateTime),
+func toProtoSettings(entry *settings.Entry[finance.Settings]) *financev1.Settings {
+	if entry == nil {
+		return nil
+	}
+	return &financev1.Settings{
+		SpaceId:      entry.Target.ScopeID(),
+		BaseCurrency: string(entry.Value.BaseCurrency),
+		CreateTime:   timestamppb.New(entry.CreateTime),
+		UpdateTime:   timestamppb.New(entry.UpdateTime),
 	}
 }
 
@@ -196,19 +201,19 @@ func toProtoBudgetPeriod(p *financeaggregator.AggregatedBudgetPeriod) *financev1
 
 // --- gRPC Service Methods ---
 
-func (h *Handler) ConfigureFinance(ctx context.Context, req *financev1.ConfigureFinanceRequest) (*financev1.FinanceSettings, error) {
-	const op errors.Op = "grpc/finance.ConfigureFinance"
+func (h *Handler) Setup(ctx context.Context, req *financev1.SetupRequest) (*financev1.Settings, error) {
+	const op errors.Op = "grpc/finance.Setup"
 
 	baseCurrency, err := finance.ParseCurrency(req.GetBaseCurrency())
 	if err != nil {
 		return nil, errors.E(op, errors.Invalid, err)
 	}
 
-	appReq := &financeapp.ConfigureFinanceRequest{
+	appReq := &financeapp.SetupRequest{
 		BaseCurrency: baseCurrency,
 	}
 
-	settings, err := h.Coordinator.ConfigureFinance(ctx, appReq)
+	settings, err := h.Coordinator.Setup(ctx, appReq)
 	if err != nil {
 		return nil, err
 	}
@@ -216,8 +221,8 @@ func (h *Handler) ConfigureFinance(ctx context.Context, req *financev1.Configure
 	return toProtoSettings(settings), nil
 }
 
-func (h *Handler) GetFinanceSettings(ctx context.Context, req *financev1.GetFinanceSettingsRequest) (*financev1.FinanceSettings, error) {
-	settings, err := h.Coordinator.GetFinanceSettings(ctx)
+func (h *Handler) GetSettings(ctx context.Context, req *financev1.GetSettingsRequest) (*financev1.Settings, error) {
+	settings, err := h.Coordinator.GetSettings(ctx)
 	if err != nil {
 		return nil, err
 	}

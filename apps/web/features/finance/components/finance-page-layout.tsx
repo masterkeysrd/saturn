@@ -2,8 +2,8 @@ import { useState } from "react"
 import type { ElementType } from "react"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import {
-  useGetFinanceSettingsQuery,
-  useConfigureFinanceMutation,
+  useGetSettingsQuery,
+  useSetupMutation,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { Button } from "@/components/ui/button"
 import { Coins, Loader2, PiggyBank } from "lucide-react"
@@ -42,7 +42,7 @@ export function FinancePageLayout({
     isLoading: settingsLoading,
     error: settingsError,
     refetch: refetchSettings,
-  } = useGetFinanceSettingsQuery(
+  } = useGetSettingsQuery(
     {},
     {
       enabled: !!spaceId,
@@ -54,11 +54,11 @@ export function FinancePageLayout({
   const isNotConfigured = !!settingsError && !settingsLoading
 
   const [setupCurrency, setSetupCurrency] = useState("USD")
-  const configureMutation = useConfigureFinanceMutation()
+  const setupMutation = useSetupMutation()
 
   const handleSetup = async (e: React.FormEvent) => {
     e.preventDefault()
-    await configureMutation.mutateAsync({
+    await setupMutation.mutateAsync({
       baseCurrency: setupCurrency,
     })
     refetchSettings()
@@ -123,10 +123,10 @@ export function FinancePageLayout({
 
             <Button
               type="submit"
-              disabled={configureMutation.isPending || !isWritable}
+              disabled={setupMutation.isPending || !isWritable}
               className="h-12 w-full rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] hover:opacity-95"
             >
-              {configureMutation.isPending && (
+              {setupMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Initialize Finance Module

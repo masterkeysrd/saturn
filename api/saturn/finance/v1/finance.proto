@@ -16,7 +16,7 @@ option go_package = "github.com/masterkeysrd/saturn/apis/saturn/finance/v1;finan
 service Finance {
   // Configures the base currency of a space. The base currency acts as the unified
   // currency in which financial insights and multi-currency conversions are performed.
-  rpc ConfigureFinance(ConfigureFinanceRequest) returns (FinanceSettings) {
+  rpc Setup(SetupRequest) returns (Settings) {
     option (google.api.http) = {
       post: "/v1/finance/settings"
       body: "*"
@@ -24,7 +24,7 @@ service Finance {
   }
 
   // Retrieves the current finance settings, including the configured base currency.
-  rpc GetFinanceSettings(GetFinanceSettingsRequest) returns (FinanceSettings) {
+  rpc GetSettings(GetSettingsRequest) returns (Settings) {
     option (google.api.http) = {get: "/v1/finance/settings"};
   }
 
@@ -467,8 +467,8 @@ service Finance {
   }
 }
 
-// FinanceSettings represents the workspace configuration.
-message FinanceSettings {
+// Settings represents the workspace configuration.
+message Settings {
   // Output only. Associated space identifier.
   string space_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 
@@ -635,16 +635,16 @@ message BudgetPeriod {
 }
 
 // The request for
-// [ConfigureFinance][saturn.finance.v1.Finance.ConfigureFinance].
-message ConfigureFinanceRequest {
+// [Setup][saturn.finance.v1.Finance.Setup].
+message SetupRequest {
   // Required. Base currency for conversions and insights (e.g. "USD").
   // Conversions and aggregated spent statistics will default to this currency.
   string base_currency = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // The request for
-// [GetFinanceSettings][saturn.finance.v1.Finance.GetFinanceSettings].
-message GetFinanceSettingsRequest {}
+// [GetSettings][saturn.finance.v1.Finance.GetSettings].
+message GetSettingsRequest {}
 
 // The request for
 // [GetBudget][saturn.finance.v1.Finance.GetBudget].

@@ -21,7 +21,7 @@ func TestUpdateBudget(t *testing.T) {
 
 	budgetStore := newBudgetStoreMock(nil)
 	settingsStore := newSettingsStoreMock(nil)
-	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+	_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: "USD"})
 
 	_ = budgetStore.Create(ctx, rCtx, &Budget{
 		ID:          bID,
@@ -33,8 +33,8 @@ func TestUpdateBudget(t *testing.T) {
 	})
 
 	svc := NewService(Dependencies{
-		BudgetStore:   budgetStore,
-		SettingsStore: settingsStore,
+		BudgetStore: budgetStore,
+		Settings:    settingsStore,
 	})
 
 	tests := []struct {
@@ -248,7 +248,7 @@ func TestGetOrCreatePeriod_MultiCurrencyRateResolution(t *testing.T) {
 	periodStore := newPeriodStoreMock(nil)
 	rateStore := newExchangeRateStoreMock(nil)
 
-	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+	_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: "USD"})
 	_ = budgetStore.Create(ctx, rCtx, &Budget{
 		ID:          bID,
 		Name:        "Travel EUR",
@@ -260,7 +260,7 @@ func TestGetOrCreatePeriod_MultiCurrencyRateResolution(t *testing.T) {
 
 	svc := NewService(Dependencies{
 		BudgetStore:       budgetStore,
-		SettingsStore:     settingsStore,
+		Settings:          settingsStore,
 		PeriodStore:       periodStore,
 		ExchangeRateStore: rateStore,
 	})
@@ -339,10 +339,10 @@ func TestCalculateBounds(t *testing.T) {
 	}
 }
 
-func TestConfigureFinance(t *testing.T) {
-	settingsStore := newSettingsStoreMock(nil)
+func TestSetup(t *testing.T) {
+	settingsStore := newSettingsClientMock(nil)
 	svc := NewService(Dependencies{
-		SettingsStore:         settingsStore,
+		Settings:              settingsStore,
 		AccountStore:          newAccountStoreMock(nil),
 		TransferStore:         newTransferStoreMock(nil),
 		TransactionEventStore: newTransactionEventStoreMock(nil),
@@ -350,40 +350,39 @@ func TestConfigureFinance(t *testing.T) {
 
 	spIDStr, _ := id.Generate("spc_")
 	spID := SpaceID(spIDStr)
-	rCtx := NewRequestContext(spID, "usr_1", time.UTC, "USD")
 
-	settings := &FinanceSettings{
+	settings := &Settings{
 		BaseCurrency: Currency("USD"),
 	}
 
-	res, err := svc.ConfigureFinance(context.Background(), rCtx, settings)
+	res, err := svc.Setup(context.Background(), spID, settings)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if res.BaseCurrency != Currency("USD") {
-		t.Errorf("BaseCurrency = %s, want USD", res.BaseCurrency)
+	if res.Value.BaseCurrency != Currency("USD") {
+		t.Errorf("BaseCurrency = %s, want USD", res.Value.BaseCurrency)
 	}
 
 	// Verify settings exist
-	retrieved, err := settingsStore.GetByID(context.Background(), rCtx)
+	retrieved, err := svc.GetSettings(context.Background(), spID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if retrieved.BaseCurrency != Currency("USD") {
-		t.Errorf("stored BaseCurrency = %s, want USD", retrieved.BaseCurrency)
+	if retrieved.Value.BaseCurrency != Currency("USD") {
+		t.Errorf("stored BaseCurrency = %s, want USD", retrieved.Value.BaseCurrency)
 	}
 
 	// Verify base currency cannot be modified (immutable test)
-	newSettings := &FinanceSettings{
+	newSettings := &Settings{
 		BaseCurrency: Currency("EUR"),
 	}
-	res2, err := svc.ConfigureFinance(context.Background(), rCtx, newSettings)
+	res2, err := svc.Setup(context.Background(), spID, newSettings)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res2.BaseCurrency != Currency("USD") {
-		t.Errorf("immutable currency got updated to %s", res2.BaseCurrency)
+	if res2.Value.BaseCurrency != Currency("USD") {
+		t.Errorf("immutable currency got updated to %s", res2.Value.BaseCurrency)
 	}
 }
 
@@ -396,7 +395,7 @@ func TestGetOrCreatePeriod(t *testing.T) {
 	txnStore := newTransactionStoreMock(nil)
 
 	svc := NewService(Dependencies{
-		SettingsStore:         settingsStore,
+		Settings:              settingsStore,
 		BudgetStore:           budgetStore,
 		PeriodStore:           periodStore,
 		ExchangeRateStore:     rateStore,
@@ -413,7 +412,7 @@ func TestGetOrCreatePeriod(t *testing.T) {
 	rCtx := NewRequestContext(spID, "usr_1", time.UTC, "USD")
 
 	// 1. Setup workspace base currency
-	_, err := svc.ConfigureFinance(ctx, rCtx, &FinanceSettings{BaseCurrency: Currency("USD")})
+	_, err := svc.Setup(ctx, spID, &Settings{BaseCurrency: Currency("USD")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -479,7 +478,7 @@ func TestTransactions(t *testing.T) {
 	txnStore := newTransactionStoreMock(nil)
 
 	svc := NewService(Dependencies{
-		SettingsStore:         settingsStore,
+		Settings:              settingsStore,
 		BudgetStore:           budgetStore,
 		PeriodStore:           periodStore,
 		ExchangeRateStore:     rateStore,
@@ -496,7 +495,7 @@ func TestTransactions(t *testing.T) {
 	rCtx := NewRequestContext(spID, "usr_1", time.UTC, "USD")
 
 	// 1. Setup settings
-	_, err := svc.ConfigureFinance(ctx, rCtx, &FinanceSettings{BaseCurrency: Currency("USD")})
+	_, err := svc.Setup(ctx, spID, &Settings{BaseCurrency: Currency("USD")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -635,11 +634,11 @@ func TestExchangeRateFallback(t *testing.T) {
 	// Create service
 	svc := NewService(Dependencies{
 		ExchangeRateStore: rateStore,
-		SettingsStore:     settingsStore,
+		Settings:          settingsStore,
 	})
 
 	// Configure finance settings
-	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{
+	_ = settingsStore.Create(ctx, rCtx, &Settings{
 		BaseCurrency: "USD",
 	})
 
@@ -717,7 +716,7 @@ func TestAdjustAccountBalance(t *testing.T) {
 	settingsStore := newSettingsStoreMock(nil)
 	eventStore := newTransactionEventStoreMock(nil)
 
-	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{
+	_ = settingsStore.Create(ctx, rCtx, &Settings{
 		BaseCurrency: "USD",
 	})
 
@@ -732,7 +731,7 @@ func TestAdjustAccountBalance(t *testing.T) {
 	_ = accountStore.Create(ctx, rCtx, initialAcc)
 
 	svc := NewService(Dependencies{
-		SettingsStore:         settingsStore,
+		Settings:              settingsStore,
 		AccountStore:          accountStore,
 		TransactionStore:      txnStore,
 		TransactionEventStore: eventStore,
@@ -805,7 +804,7 @@ func TestCreateBorrowingRepayment_SameCurrencyLent(t *testing.T) {
 	borrowingStore := newBorrowingStoreMock(nil)
 	settingsStore := newSettingsStoreMock(nil)
 
-	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+	_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: "USD"})
 	_ = accountStore.Create(ctx, rCtx, &Account{
 		ID:             accID,
 		Name:           "Checking Account",
@@ -826,7 +825,7 @@ func TestCreateBorrowingRepayment_SameCurrencyLent(t *testing.T) {
 	})
 
 	svc := NewService(Dependencies{
-		SettingsStore:    settingsStore,
+		Settings:         settingsStore,
 		AccountStore:     accountStore,
 		BorrowingStore:   borrowingStore,
 		TransactionStore: txnStore,
@@ -883,7 +882,7 @@ func TestCreateBorrowingRepayment_MultiCurrency(t *testing.T) {
 	settingsStore := newSettingsStoreMock(nil)
 	rateStore := newExchangeRateStoreMock(nil)
 
-	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+	_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: "USD"})
 	_ = rateStore.Create(ctx, rCtx, &ExchangeRate{
 		FromCurrency: "USD",
 		ToCurrency:   "DOP",
@@ -911,7 +910,7 @@ func TestCreateBorrowingRepayment_MultiCurrency(t *testing.T) {
 	})
 
 	svc := NewService(Dependencies{
-		SettingsStore:     settingsStore,
+		Settings:          settingsStore,
 		ExchangeRateStore: rateStore,
 		AccountStore:      accountStore,
 		BorrowingStore:    borrowingStore,
@@ -1060,7 +1059,7 @@ func TestAdjustBorrowingBalance(t *testing.T) {
 			borrowingStore := newBorrowingStoreMock(nil)
 			settingsStore := newSettingsStoreMock(nil)
 
-			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+			_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: "USD"})
 			_ = accountStore.Create(ctx, rCtx, &Account{
 				ID:             accID,
 				Name:           "Checking",
@@ -1081,7 +1080,7 @@ func TestAdjustBorrowingBalance(t *testing.T) {
 			})
 
 			svc := NewService(Dependencies{
-				SettingsStore:    settingsStore,
+				Settings:         settingsStore,
 				AccountStore:     accountStore,
 				BorrowingStore:   borrowingStore,
 				TransactionStore: txnStore,
@@ -1209,7 +1208,7 @@ func TestLogAndUpdateBorrowingTransaction(t *testing.T) {
 			borrowingStore := newBorrowingStoreMock(nil)
 			settingsStore := newSettingsStoreMock(nil)
 
-			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+			_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: "USD"})
 			_ = accountStore.Create(ctx, rCtx, &Account{
 				ID:             accID,
 				Name:           "Checking",
@@ -1230,7 +1229,7 @@ func TestLogAndUpdateBorrowingTransaction(t *testing.T) {
 			})
 
 			svc := NewService(Dependencies{
-				SettingsStore:    settingsStore,
+				Settings:         settingsStore,
 				AccountStore:     accountStore,
 				BorrowingStore:   borrowingStore,
 				TransactionStore: txnStore,
@@ -1300,7 +1299,7 @@ func TestDeleteBorrowingAdjustment(t *testing.T) {
 	borrowingStore := newBorrowingStoreMock(nil)
 	settingsStore := newSettingsStoreMock(nil)
 
-	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+	_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: "USD"})
 	_ = borrowingStore.Create(ctx, rCtx, &Borrowing{
 		ID:              borID,
 		Direction:       BorrowingDirectionLent,
@@ -1313,7 +1312,7 @@ func TestDeleteBorrowingAdjustment(t *testing.T) {
 	})
 
 	svc := NewService(Dependencies{
-		SettingsStore:    settingsStore,
+		Settings:         settingsStore,
 		BorrowingStore:   borrowingStore,
 		TransactionStore: txnStore,
 	})
@@ -1359,13 +1358,13 @@ func TestDeleteBorrowing_BlockedWhenTransactionsExist(t *testing.T) {
 	rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 
 	settingsStore := newSettingsStoreMock(nil)
-	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+	_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: "USD"})
 
 	borrowingStore := newBorrowingStoreMock(nil)
 	txnStore := newTransactionStoreMock(nil)
 
 	svc := NewService(Dependencies{
-		SettingsStore:    settingsStore,
+		Settings:         settingsStore,
 		BorrowingStore:   borrowingStore,
 		TransactionStore: txnStore,
 	})
@@ -1447,7 +1446,7 @@ func TestUpdateBorrowing(t *testing.T) {
 			borrowingStore := newBorrowingStoreMock(nil)
 			settingsStore := newSettingsStoreMock(nil)
 
-			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+			_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: "USD"})
 			_ = borrowingStore.Create(ctx, rCtx, &Borrowing{
 				ID:              borID,
 				Direction:       tt.direction,
@@ -1460,7 +1459,7 @@ func TestUpdateBorrowing(t *testing.T) {
 			})
 
 			svc := NewService(Dependencies{
-				SettingsStore:    settingsStore,
+				Settings:         settingsStore,
 				BorrowingStore:   borrowingStore,
 				TransactionStore: txnStore,
 			})
@@ -1616,8 +1615,8 @@ func TestService_CreateTransfer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			settingsStore := newSettingsStoreMock(nil)
-			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
-			_ = settingsStore.Create(ctx, otherRCtx, &FinanceSettings{BaseCurrency: "USD"})
+			_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: "USD"})
+			_ = settingsStore.Create(ctx, otherRCtx, &Settings{BaseCurrency: "USD"})
 
 			rateStore := newExchangeRateStoreMock(nil)
 			_ = rateStore.Create(ctx, rCtx, &ExchangeRate{
@@ -1635,7 +1634,7 @@ func TestService_CreateTransfer(t *testing.T) {
 			transferStore := newTransferStoreMock(nil)
 
 			svc := NewService(Dependencies{
-				SettingsStore:         settingsStore,
+				Settings:              settingsStore,
 				ExchangeRateStore:     rateStore,
 				AccountStore:          accountStore,
 				TransactionStore:      transactionStore,
@@ -1739,14 +1738,14 @@ func TestService_DeleteTransfer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			settingsStore := newSettingsStoreMock(nil)
-			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+			_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: "USD"})
 
 			accountStore := newAccountStoreMock(nil)
 			transactionStore := newTransactionStoreMock(nil)
 			transferStore := newTransferStoreMock(nil)
 
 			svc := NewService(Dependencies{
-				SettingsStore:         settingsStore,
+				Settings:              settingsStore,
 				AccountStore:          accountStore,
 				TransactionStore:      transactionStore,
 				TransferStore:         transferStore,
@@ -1795,14 +1794,14 @@ func TestService_GetAndListTransfers(t *testing.T) {
 	rCtx := NewRequestContext(spID, "usr_1", time.UTC, "USD")
 
 	settingsStore := newSettingsStoreMock(nil)
-	_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+	_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: "USD"})
 
 	accountStore := newAccountStoreMock(nil)
 	transactionStore := newTransactionStoreMock(nil)
 	transferStore := newTransferStoreMock(nil)
 
 	svc := NewService(Dependencies{
-		SettingsStore:         settingsStore,
+		Settings:              settingsStore,
 		AccountStore:          accountStore,
 		TransactionStore:      transactionStore,
 		TransferStore:         transferStore,
@@ -1970,7 +1969,7 @@ func TestService_ApproveInboxItem(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			settingsStore := newSettingsStoreMock(nil)
-			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: Currency("USD")})
+			_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: Currency("USD")})
 
 			accountStore := newAccountStoreMock(nil)
 			srcAccID, _ := NewAccountID()
@@ -2013,7 +2012,7 @@ func TestService_ApproveInboxItem(t *testing.T) {
 			inboxStore := newInboxItemStoreMock(nil)
 
 			svc := NewService(Dependencies{
-				SettingsStore:             settingsStore,
+				Settings:                  settingsStore,
 				AccountStore:              accountStore,
 				TransactionStore:          txnStore,
 				TransactionEventStore:     eventStore,
@@ -2140,7 +2139,7 @@ func TestService_SystemVerification(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			settingsStore := newSettingsStoreMock(nil)
-			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: Currency("USD")})
+			_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: Currency("USD")})
 
 			txnData := make(map[TransactionID]*Transaction)
 			txnStore := newTransactionStoreMock(txnData)
@@ -2153,7 +2152,7 @@ func TestService_SystemVerification(t *testing.T) {
 			accStore := newAccountStoreMock(nil)
 
 			svc := NewService(Dependencies{
-				SettingsStore:             settingsStore,
+				Settings:                  settingsStore,
 				AccountStore:              accStore,
 				TransactionStore:          txnStore,
 				TransactionEventStore:     eventStore,
@@ -2274,7 +2273,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			settingsStore := newSettingsStoreMock(nil)
-			_ = settingsStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: Currency("USD")})
+			_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: Currency("USD")})
 
 			accountStore := newAccountStoreMock(nil)
 			accID, _ := NewAccountID()
@@ -2306,7 +2305,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 			inboxStore := newInboxItemStoreMock(nil)
 
 			svc := NewService(Dependencies{
-				SettingsStore:             settingsStore,
+				Settings:                  settingsStore,
 				AccountStore:              accountStore,
 				TransactionStore:          txnStore,
 				TransactionEventStore:     eventStore,
@@ -2803,7 +2802,7 @@ func TestService_ImportStatement(t *testing.T) {
 			statementStore := newStatementStoreMock(nil, linesMap)
 
 			deps := Dependencies{
-				SettingsStore: newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+				Settings: newSettingsStoreMock(map[SpaceID]*Settings{
 					spaceID: {BaseCurrency: Currency("USD")},
 				}),
 				AccountStore: newAccountStoreMock(map[AccountID]*Account{
@@ -3461,7 +3460,7 @@ func TestService_CompleteStatement(t *testing.T) {
 			borData := make(map[BorrowingID]*Borrowing)
 			transferData := make(map[TransferID]*Transfer)
 
-			settingsData := map[SpaceID]*FinanceSettings{
+			settingsData := map[SpaceID]*Settings{
 				spaceID: {
 					BaseCurrency: Currency("USD"),
 				},
@@ -3504,7 +3503,7 @@ func TestService_CompleteStatement(t *testing.T) {
 			}
 
 			deps := Dependencies{
-				SettingsStore:             newSettingsStoreMock(settingsData),
+				Settings:                  newSettingsStoreMock(settingsData),
 				BudgetStore:               newBudgetStoreMock(budgetData),
 				PeriodStore:               newPeriodStoreMock(periodData),
 				AccountStore:              newAccountStoreMock(accountData),
@@ -4357,13 +4356,13 @@ func TestService_AdjustAccountBalance(t *testing.T) {
 				},
 			})
 			txnStore := newTransactionStoreMock(nil)
-			settingsStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+			settingsStore := newSettingsStoreMock(map[SpaceID]*Settings{
 				validSpace: {BaseCurrency: "USD"},
 			})
 			svc := NewService(Dependencies{
 				AccountStore:     accStore,
 				TransactionStore: txnStore,
-				SettingsStore:    settingsStore,
+				Settings:         settingsStore,
 			})
 			rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
 			res, err := svc.AdjustAccountBalance(ctx, rCtx, AdjustAccountBalanceRequest{
@@ -4612,7 +4611,7 @@ func TestService_Borrowings(t *testing.T) {
 				}
 				txnStore := newTransactionStoreMock(txnMap)
 
-				setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+				setStore := newSettingsStoreMock(map[SpaceID]*Settings{
 					validSpace: {BaseCurrency: "USD"},
 				})
 
@@ -4628,7 +4627,7 @@ func TestService_Borrowings(t *testing.T) {
 				svc := NewService(Dependencies{
 					BorrowingStore:   bStore,
 					TransactionStore: txnStore,
-					SettingsStore:    setStore,
+					Settings:         setStore,
 					AccountStore:     accStore,
 				})
 
@@ -4704,7 +4703,7 @@ func TestService_Borrowings(t *testing.T) {
 				createAsTransaction: true,
 				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *AccountStoreMock, *TransactionStoreMock) {
 					return newBorrowingStoreMock(nil),
-						newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
+						newSettingsStoreMock(map[SpaceID]*Settings{validSpace: {BaseCurrency: "USD"}}),
 						newAccountStoreMock(nil),
 						newTransactionStoreMock(nil)
 				},
@@ -4726,7 +4725,7 @@ func TestService_Borrowings(t *testing.T) {
 				createAsTransaction: true,
 				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *AccountStoreMock, *TransactionStoreMock) {
 					return newBorrowingStoreMock(nil),
-						newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
+						newSettingsStoreMock(map[SpaceID]*Settings{validSpace: {BaseCurrency: "USD"}}),
 						newAccountStoreMock(nil),
 						newTransactionStoreMock(nil)
 				},
@@ -4747,7 +4746,7 @@ func TestService_Borrowings(t *testing.T) {
 				createAsTransaction: false,
 				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *AccountStoreMock, *TransactionStoreMock) {
 					return newBorrowingStoreMock(nil),
-						newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
+						newSettingsStoreMock(map[SpaceID]*Settings{validSpace: {BaseCurrency: "USD"}}),
 						newAccountStoreMock(nil),
 						newTransactionStoreMock(nil)
 				},
@@ -4769,7 +4768,7 @@ func TestService_Borrowings(t *testing.T) {
 				createAsTransaction: true,
 				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *AccountStoreMock, *TransactionStoreMock) {
 					return newBorrowingStoreMock(nil),
-						newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
+						newSettingsStoreMock(map[SpaceID]*Settings{validSpace: {BaseCurrency: "USD"}}),
 						newAccountStoreMock(map[AccountID]*Account{
 							validAccID: {ID: validAccID, Currency: "USD", IsActive: true},
 						}),
@@ -4793,7 +4792,7 @@ func TestService_Borrowings(t *testing.T) {
 				createAsTransaction: true,
 				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *AccountStoreMock, *TransactionStoreMock) {
 					return newBorrowingStoreMock(nil),
-						newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
+						newSettingsStoreMock(map[SpaceID]*Settings{validSpace: {BaseCurrency: "USD"}}),
 						newAccountStoreMock(map[AccountID]*Account{
 							validAccID: {ID: validAccID, Currency: "USD", IsActive: true, CurrentBalance: 20000},
 						}),
@@ -4819,14 +4818,14 @@ func TestService_Borrowings(t *testing.T) {
 				bStore, setStore, accStore, txnStore := tt.setupStore()
 				svc := NewService(Dependencies{
 					BorrowingStore:    bStore,
-					SettingsStore:     setStore,
+					Settings:          setStore,
 					AccountStore:      accStore,
 					TransactionStore:  txnStore,
 					ExchangeRateStore: newExchangeRateStoreMock(nil),
 				})
 				baseCurrency := Currency("")
-				if s, err := setStore.GetByID(ctx, NewRequestContext(validSpace, "", nil, "")); err == nil && s != nil {
-					baseCurrency = s.BaseCurrency
+				if entry, err := setStore.Get(ctx, string(validSpace)); err == nil && entry != nil {
+					baseCurrency = entry.Value.BaseCurrency
 				}
 				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, baseCurrency)
 				res, err := svc.CreateBorrowing(ctx, rCtx, tt.borrowing, tt.createAsTransaction)
@@ -4884,7 +4883,7 @@ func TestService_Borrowings(t *testing.T) {
 							Version:         1,
 						},
 					})
-					setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}})
+					setStore := newSettingsStoreMock(map[SpaceID]*Settings{validSpace: {BaseCurrency: "USD"}})
 					txnStore := newTransactionStoreMock(nil)
 					return bStore, setStore, txnStore
 				},
@@ -4897,7 +4896,7 @@ func TestService_Borrowings(t *testing.T) {
 				bStore, setStore, txnStore := tt.setupStore()
 				svc := NewService(Dependencies{
 					BorrowingStore:   bStore,
-					SettingsStore:    setStore,
+					Settings:         setStore,
 					TransactionStore: txnStore,
 				})
 				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD")
@@ -5276,9 +5275,9 @@ func TestService_GetOrCreatePeriods(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sStoreData := make(map[SpaceID]*FinanceSettings)
+			sStoreData := make(map[SpaceID]*Settings)
 			if tt.setupSettings {
-				sStoreData[validSpace] = &FinanceSettings{BaseCurrency: "USD"}
+				sStoreData[validSpace] = &Settings{BaseCurrency: "USD"}
 			}
 			sStore := newSettingsStoreMock(sStoreData)
 
@@ -5305,7 +5304,7 @@ func TestService_GetOrCreatePeriods(t *testing.T) {
 
 			rateStore := newExchangeRateStoreMock(nil)
 			svc := NewService(Dependencies{
-				SettingsStore:     sStore,
+				Settings:          sStore,
 				PeriodStore:       pStore,
 				ExchangeRateStore: rateStore,
 			})
@@ -5421,7 +5420,7 @@ func TestService_BudgetCRUD(t *testing.T) {
 				},
 				setupStore: func() (*BudgetStoreMock, *SettingsStoreMock) {
 					return newBudgetStoreMock(nil),
-						newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+						newSettingsStoreMock(map[SpaceID]*Settings{
 							validSpace: {BaseCurrency: "USD"},
 						})
 				},
@@ -5433,12 +5432,12 @@ func TestService_BudgetCRUD(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				bStore, setStore := tt.setupStore()
 				svc := NewService(Dependencies{
-					BudgetStore:   bStore,
-					SettingsStore: setStore,
+					BudgetStore: bStore,
+					Settings:    setStore,
 				})
 				baseCurrency := Currency("")
-				if s, err := setStore.GetByID(ctx, NewRequestContext(validSpace, "", nil, "")); err == nil && s != nil {
-					baseCurrency = s.BaseCurrency
+				if entry, err := setStore.Get(ctx, string(validSpace)); err == nil && entry != nil {
+					baseCurrency = entry.Value.BaseCurrency
 				}
 				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, baseCurrency)
 				res, err := svc.CreateBudget(ctx, rCtx, tt.budget)
@@ -6438,7 +6437,7 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 					return Dependencies{
 						InboxItemStore:            newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
 						ScheduledTransactionStore: newScheduledTransactionStoreMock(map[ScheduledTransactionID]*ScheduledTransaction{validPID: pay}),
-						SettingsStore:             newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
+						Settings:                  newSettingsStoreMock(map[SpaceID]*Settings{validSpace: {BaseCurrency: "USD"}}),
 						AccountStore: newAccountStoreMock(map[AccountID]*Account{
 							validAccID: {ID: validAccID, Currency: "USD", IsActive: true, CurrentBalance: 10000},
 						}),
@@ -6537,7 +6536,7 @@ func TestService_ApproveInboxItem_Extended(t *testing.T) {
 						AccountStore: newAccountStoreMock(map[AccountID]*Account{
 							validAccID: {ID: validAccID, Currency: "USD", IsActive: true, CurrentBalance: 10000},
 						}),
-						SettingsStore:    newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
+						Settings:         newSettingsStoreMock(map[SpaceID]*Settings{validSpace: {BaseCurrency: "USD"}}),
 						TransactionStore: newTransactionStoreMock(nil),
 						BorrowingStore:   newBorrowingStoreMock(map[BorrowingID]*Borrowing{validBrwID: brw}),
 					}
@@ -6624,7 +6623,7 @@ func TestService_Insights(t *testing.T) {
 				}
 				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, baseCurrency)
 				if tt.setupSet {
-					_ = setStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+					_ = setStore.Create(ctx, rCtx, &Settings{BaseCurrency: "USD"})
 				}
 				insStore := newInsightsStoreMock(
 					[]*SpentTrend{},
@@ -6636,7 +6635,7 @@ func TestService_Insights(t *testing.T) {
 					tt.storeErr,
 				)
 				svc := NewService(Dependencies{
-					SettingsStore: setStore,
+					Settings:      setStore,
 					InsightsStore: insStore,
 				})
 
@@ -6706,7 +6705,7 @@ func TestService_Insights(t *testing.T) {
 				}
 				rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, baseCurrency)
 				if tt.setupSet {
-					_ = setStore.Create(ctx, rCtx, &FinanceSettings{BaseCurrency: "USD"})
+					_ = setStore.Create(ctx, rCtx, &Settings{BaseCurrency: "USD"})
 				}
 				insStore := newInsightsStoreMock(
 					nil,
@@ -6718,7 +6717,7 @@ func TestService_Insights(t *testing.T) {
 					tt.storeErr,
 				)
 				svc := NewService(Dependencies{
-					SettingsStore: setStore,
+					Settings:      setStore,
 					InsightsStore: insStore,
 				})
 
@@ -7891,7 +7890,7 @@ func TestService_ScheduledTransactions(t *testing.T) {
 					},
 				})
 
-				setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+				setStore := newSettingsStoreMock(map[SpaceID]*Settings{
 					validSpace: {BaseCurrency: "USD"},
 				})
 
@@ -7909,7 +7908,7 @@ func TestService_ScheduledTransactions(t *testing.T) {
 					ScheduledTransactionStore: stStore,
 					BudgetStore:               bStore,
 					PeriodStore:               pStore,
-					SettingsStore:             setStore,
+					Settings:                  setStore,
 					AccountStore:              accStore,
 					TransactionStore:          txnStore,
 					TransactionEventStore:     eventStore,
@@ -8099,7 +8098,7 @@ func TestService_ScheduledTransactions(t *testing.T) {
 
 // --- Tests from service_settings_test.go ---
 
-func TestService_GetFinanceSettings(t *testing.T) {
+func TestService_GetSettings(t *testing.T) {
 	ctx := context.Background()
 	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	otherSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pX")
@@ -8107,13 +8106,13 @@ func TestService_GetFinanceSettings(t *testing.T) {
 	tests := []struct {
 		name      string
 		spaceID   SpaceID
-		setupData map[SpaceID]*FinanceSettings
+		setupData map[SpaceID]*Settings
 		wantErr   bool
 	}{
 		{
 			name:    "successful retrieval",
 			spaceID: validSpace,
-			setupData: map[SpaceID]*FinanceSettings{
+			setupData: map[SpaceID]*Settings{
 				validSpace: {BaseCurrency: "USD"},
 			},
 			wantErr: false,
@@ -8127,31 +8126,21 @@ func TestService_GetFinanceSettings(t *testing.T) {
 		{
 			name:      "settings not found",
 			spaceID:   otherSpace,
-			setupData: map[SpaceID]*FinanceSettings{},
+			setupData: map[SpaceID]*Settings{},
 			wantErr:   true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store := &SettingsStoreMock{
-				GetByIDFunc: func(ctx context.Context, rCtx Context) (*FinanceSettings, error) {
-					if tt.setupData != nil {
-						if s, ok := tt.setupData[rCtx.SpaceID()]; ok {
-							return s, nil
-						}
-					}
-					return nil, errors.E(errors.NotExist, SettingsNotFound, "finance settings not found")
-				},
-			}
-			svc := NewService(Dependencies{SettingsStore: store})
-			rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
-			res, err := svc.GetFinanceSettings(ctx, rCtx)
+			store := newSettingsClientMock(tt.setupData)
+			svc := NewService(Dependencies{Settings: store})
+			res, err := svc.GetSettings(ctx, tt.spaceID)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetFinanceSettings() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetSettings() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if !tt.wantErr && res.BaseCurrency != "USD" {
-				t.Errorf("res.BaseCurrency = %v, want USD", res.BaseCurrency)
+			if !tt.wantErr && res.Value.BaseCurrency != "USD" {
+				t.Errorf("res.Value.BaseCurrency = %v, want USD", res.Value.BaseCurrency)
 			}
 		})
 	}
@@ -9014,7 +9003,7 @@ func TestService_Statements(t *testing.T) {
 						},
 					})
 					pStore := newPeriodStoreMock(nil)
-					setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+					setStore := newSettingsStoreMock(map[SpaceID]*Settings{
 						validSpace: {BaseCurrency: "USD"},
 					})
 					txnStore := newTransactionStoreMock(nil)
@@ -9024,7 +9013,7 @@ func TestService_Statements(t *testing.T) {
 						AccountStore:     accStore,
 						BudgetStore:      bgtStore,
 						PeriodStore:      pStore,
-						SettingsStore:    setStore,
+						Settings:         setStore,
 						TransactionStore: txnStore,
 					}
 				},
@@ -9092,7 +9081,7 @@ func TestService_Statements(t *testing.T) {
 						validAccID:   {ID: validAccID, Currency: "USD", CurrentBalance: 10000, IsActive: true},
 						counterAccID: {ID: counterAccID, Currency: "USD", CurrentBalance: 5000, IsActive: true},
 					})
-					setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+					setStore := newSettingsStoreMock(map[SpaceID]*Settings{
 						validSpace: {BaseCurrency: "USD"},
 					})
 					txnStore := newTransactionStoreMock(nil)
@@ -9100,7 +9089,7 @@ func TestService_Statements(t *testing.T) {
 					return Dependencies{
 						StatementStore:   store,
 						AccountStore:     accStore,
-						SettingsStore:    setStore,
+						Settings:         setStore,
 						TransactionStore: txnStore,
 						TransferStore:    newTransferStoreMock(nil),
 					}
@@ -9154,7 +9143,7 @@ func TestService_Statements(t *testing.T) {
 						},
 					})
 					pStore := newPeriodStoreMock(nil)
-					setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+					setStore := newSettingsStoreMock(map[SpaceID]*Settings{
 						validSpace: {BaseCurrency: "USD"},
 					})
 					txnStore := newTransactionStoreMock(nil)
@@ -9165,7 +9154,7 @@ func TestService_Statements(t *testing.T) {
 						ScheduledTransactionStore: schedStore,
 						BudgetStore:               bgtStore,
 						PeriodStore:               pStore,
-						SettingsStore:             setStore,
+						Settings:                  setStore,
 						TransactionStore:          txnStore,
 					}
 				},
@@ -9219,7 +9208,7 @@ func TestService_Statements(t *testing.T) {
 						},
 					})
 					pStore := newPeriodStoreMock(nil)
-					setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+					setStore := newSettingsStoreMock(map[SpaceID]*Settings{
 						validSpace: {BaseCurrency: "USD"},
 					})
 					txnStore := newTransactionStoreMock(nil)
@@ -9230,7 +9219,7 @@ func TestService_Statements(t *testing.T) {
 						BorrowingStore:   brwStore,
 						BudgetStore:      bgtStore,
 						PeriodStore:      pStore,
-						SettingsStore:    setStore,
+						Settings:         setStore,
 						TransactionStore: txnStore,
 					}
 				},
@@ -9406,7 +9395,7 @@ func TestService_TransferOperations(t *testing.T) {
 					return accStore,
 						newTransferStoreMock(nil),
 						newTransactionStoreMock(nil),
-						newSettingsStoreMock(map[SpaceID]*FinanceSettings{spaceID: {BaseCurrency: "USD"}})
+						newSettingsStoreMock(map[SpaceID]*Settings{spaceID: {BaseCurrency: "USD"}})
 				},
 				wantErr: true,
 			},
@@ -9428,7 +9417,7 @@ func TestService_TransferOperations(t *testing.T) {
 					return accStore,
 						newTransferStoreMock(nil),
 						newTransactionStoreMock(nil),
-						newSettingsStoreMock(map[SpaceID]*FinanceSettings{spaceID: {BaseCurrency: "USD"}})
+						newSettingsStoreMock(map[SpaceID]*Settings{spaceID: {BaseCurrency: "USD"}})
 				},
 				wantErr: false,
 			},
@@ -9441,7 +9430,7 @@ func TestService_TransferOperations(t *testing.T) {
 					AccountStore:     accStore,
 					TransferStore:    trsfStore,
 					TransactionStore: txnStore,
-					SettingsStore:    settingsStore,
+					Settings:         settingsStore,
 				})
 				rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")
 				created, outLeg, inLeg, err := svc.createTransfer(ctx, rCtx, tt.transfer, CreateTransferOpts{})
@@ -9597,9 +9586,9 @@ func TestService_Transactions(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				setData := make(map[SpaceID]*FinanceSettings)
+				setData := make(map[SpaceID]*Settings)
 				if tt.setupSet {
-					setData[validSpace] = &FinanceSettings{BaseCurrency: "USD"}
+					setData[validSpace] = &Settings{BaseCurrency: "USD"}
 				}
 				accData := make(map[AccountID]*Account)
 				if tt.setupAcc {
@@ -9616,7 +9605,7 @@ func TestService_Transactions(t *testing.T) {
 				eventStore := newTransactionEventStoreMock(nil)
 
 				svc := NewService(Dependencies{
-					SettingsStore:         setStore,
+					Settings:              setStore,
 					AccountStore:          accStore,
 					TransactionStore:      txnStore,
 					TransactionEventStore: eventStore,
@@ -9748,7 +9737,7 @@ func TestService_Transactions(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+				setStore := newSettingsStoreMock(map[SpaceID]*Settings{
 					validSpace: {BaseCurrency: "USD"},
 				})
 				accStore := newAccountStoreMock(map[AccountID]*Account{
@@ -9763,7 +9752,7 @@ func TestService_Transactions(t *testing.T) {
 				eventStore := newTransactionEventStoreMock(nil)
 
 				svc := NewService(Dependencies{
-					SettingsStore:         setStore,
+					Settings:              setStore,
 					AccountStore:          accStore,
 					TransactionStore:      txnStore,
 					TransactionEventStore: eventStore,
@@ -9974,7 +9963,7 @@ func TestService_Transactions(t *testing.T) {
 						},
 					})
 					pStore := newPeriodStoreMock(nil)
-					setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+					setStore := newSettingsStoreMock(map[SpaceID]*Settings{
 						validSpace: {BaseCurrency: "USD"},
 					})
 					txnStore := newTransactionStoreMock(nil)
@@ -9998,7 +9987,7 @@ func TestService_Transactions(t *testing.T) {
 				svc := NewService(Dependencies{
 					BudgetStore:      bStore,
 					PeriodStore:      pStore,
-					SettingsStore:    setStore,
+					Settings:         setStore,
 					TransactionStore: txnStore,
 					AccountStore:     accStore,
 				})

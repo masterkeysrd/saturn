@@ -206,7 +206,7 @@ func TestListRecurringTransactionsAndScheduledTransactionsAggregator(t *testing.
 		BudgetStore:               bStore,
 		RecurringTransactionStore: reStore,
 		ScheduledTransactionStore: spStore,
-		SettingsStore:             &mockSettingsStore{settings: make(map[finance.SpaceID]*finance.FinanceSettings)},
+		Settings:                  &mockSettingsStore{settings: make(map[finance.SpaceID]*finance.Settings)},
 	}
 	fs := finance.NewService(deps)
 	agg := NewService(fs)

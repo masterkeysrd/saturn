@@ -25,9 +25,6 @@ type FinanceServiceMock struct {
 	// GetAccountsFunc mocks the GetAccounts method.
 	GetAccountsFunc func(ctx context.Context, rCtx finance.Context, ids []finance.AccountID) ([]*finance.Account, error)
 
-	// GetFinanceSettingsFunc mocks the GetFinanceSettings method.
-	GetFinanceSettingsFunc func(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error)
-
 	// GetLatestRatesFunc mocks the GetLatestRates method.
 	GetLatestRatesFunc func(ctx context.Context, rCtx finance.Context, fromCurrencies []finance.Currency, toCurrency finance.Currency) ([]*finance.ExchangeRate, error)
 
@@ -107,10 +104,6 @@ type FinanceServiceMock struct {
 			Ctx  context.Context
 			RCtx finance.Context
 			Ids  []finance.AccountID
-		}
-		GetFinanceSettings []struct {
-			Ctx  context.Context
-			RCtx finance.Context
 		}
 		GetLatestRates []struct {
 			Ctx            context.Context
@@ -223,7 +216,6 @@ type FinanceServiceMock struct {
 	lockListAccounts              sync.RWMutex
 	lockGetAccount                sync.RWMutex
 	lockGetAccounts               sync.RWMutex
-	lockGetFinanceSettings        sync.RWMutex
 	lockGetLatestRates            sync.RWMutex
 	lockListExchangeRates         sync.RWMutex
 	lockGetExchangeRateByID       sync.RWMutex
@@ -335,33 +327,6 @@ func (mock *FinanceServiceMock) GetAccountsCalls() []struct {
 	mock.lockGetAccounts.RLock()
 	defer mock.lockGetAccounts.RUnlock()
 	return mock.calls.GetAccounts
-}
-
-// GetFinanceSettings calls GetFinanceSettingsFunc.
-func (mock *FinanceServiceMock) GetFinanceSettings(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error) {
-	if mock.GetFinanceSettingsFunc == nil {
-		panic("FinanceServiceMock.GetFinanceSettingsFunc: method is nil but FinanceService.GetFinanceSettings was just called")
-	}
-	mock.lockGetFinanceSettings.Lock()
-	mock.calls.GetFinanceSettings = append(mock.calls.GetFinanceSettings, struct {
-		Ctx  context.Context
-		RCtx finance.Context
-	}{
-		Ctx:  ctx,
-		RCtx: rCtx,
-	})
-	mock.lockGetFinanceSettings.Unlock()
-	return mock.GetFinanceSettingsFunc(ctx, rCtx)
-}
-
-// GetFinanceSettingsCalls returns all calls made to GetFinanceSettings.
-func (mock *FinanceServiceMock) GetFinanceSettingsCalls() []struct {
-	Ctx  context.Context
-	RCtx finance.Context
-} {
-	mock.lockGetFinanceSettings.RLock()
-	defer mock.lockGetFinanceSettings.RUnlock()
-	return mock.calls.GetFinanceSettings
 }
 
 // GetLatestRates calls GetLatestRatesFunc.

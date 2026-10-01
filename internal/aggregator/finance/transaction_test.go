@@ -55,9 +55,6 @@ func TestGetTransaction(t *testing.T) {
 			GetAccountsFunc: func(ctx context.Context, rCtx finance.Context, ids []finance.AccountID) ([]*finance.Account, error) {
 				return []*finance.Account{acc}, nil
 			},
-			GetFinanceSettingsFunc: func(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error) {
-				return &finance.FinanceSettings{BaseCurrency: "USD"}, nil
-			},
 			GetLatestRatesFunc: func(ctx context.Context, rCtx finance.Context, from []finance.Currency, to finance.Currency) ([]*finance.ExchangeRate, error) {
 				return nil, nil
 			},

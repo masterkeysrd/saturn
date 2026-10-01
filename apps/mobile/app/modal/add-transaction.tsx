@@ -22,7 +22,7 @@ import {
   useGetTransactionQuery,
   useListBudgetsQuery,
   useListAccountsQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   useListExchangeRatesQuery,
   useListScheduledTransactionsQuery,
   useListRecurringTransactionsQuery,
@@ -77,7 +77,7 @@ export default function AddTransactionModal() {
   >(initialAccountId)
 
   // Queries
-  const { data: settingsData } = useGetFinanceSettingsQuery(
+  const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )

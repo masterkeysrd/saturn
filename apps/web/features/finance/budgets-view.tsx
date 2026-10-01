@@ -3,7 +3,7 @@ import { useSpacePermissions } from "@/features/space/use-space"
 import {
   type Budget,
   useDeleteBudgetMutation,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   useListBudgetsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
@@ -32,10 +32,7 @@ export function BudgetsView() {
   const { spaceId, isWritable } = useSpacePermissions()
 
   // 1. Fetch settings
-  const { data: settings } = useGetFinanceSettingsQuery(
-    {},
-    { enabled: !!spaceId }
-  )
+  const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
 
   const [statusFilter, setStatusFilter] = useState<
     "ACTIVE" | "PAUSED" | "CLOSED" | "ALL"

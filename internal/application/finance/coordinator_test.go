@@ -15,37 +15,39 @@ import (
 )
 
 func TestCoordinator_SettingsAndCurrencies(t *testing.T) {
-	t.Run("ConfigureFinance", func(t *testing.T) {
+	t.Run("Setup", func(t *testing.T) {
 		tests := []struct {
 			name          string
 			ctx           context.Context
-			req           *ConfigureFinanceRequest
-			mockFn        func(ctx context.Context, rCtx finance.Context, settings *finance.FinanceSettings) (*finance.FinanceSettings, error)
+			req           *SetupRequest
+			mockFn        func(ctx context.Context, spaceID finance.SpaceID, settings *finance.Settings) (*settings.Entry[finance.Settings], error)
 			expectedError bool
 		}{
 			{
 				name: "Success",
 				ctx:  newTestContext("spc_1", "usr_1"),
-				req:  &ConfigureFinanceRequest{BaseCurrency: "USD"},
-				mockFn: func(ctx context.Context, rCtx finance.Context, settings *finance.FinanceSettings) (*finance.FinanceSettings, error) {
-					if rCtx.SpaceID() != "spc_1" || settings.BaseCurrency != "USD" {
-						t.Errorf("unexpected settings payload: space=%v settings=%+v", rCtx.SpaceID(), settings)
+				req:  &SetupRequest{BaseCurrency: "USD"},
+				mockFn: func(ctx context.Context, spaceID finance.SpaceID, s *finance.Settings) (*settings.Entry[finance.Settings], error) {
+					if spaceID != "spc_1" || s.BaseCurrency != "USD" {
+						t.Errorf("unexpected settings payload: space=%v settings=%+v", spaceID, s)
 					}
-					return &finance.FinanceSettings{BaseCurrency: settings.BaseCurrency}, nil
+					return &settings.Entry[finance.Settings]{
+						Value: finance.Settings{BaseCurrency: s.BaseCurrency},
+					}, nil
 				},
 				expectedError: false,
 			},
 			{
 				name:          "Unauthenticated",
 				ctx:           context.Background(),
-				req:           &ConfigureFinanceRequest{BaseCurrency: "USD"},
+				req:           &SetupRequest{BaseCurrency: "USD"},
 				expectedError: true,
 			},
 			{
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
-				req:  &ConfigureFinanceRequest{BaseCurrency: "USD"},
-				mockFn: func(ctx context.Context, rCtx finance.Context, settings *finance.FinanceSettings) (*finance.FinanceSettings, error) {
+				req:  &SetupRequest{BaseCurrency: "USD"},
+				mockFn: func(ctx context.Context, spaceID finance.SpaceID, settings *finance.Settings) (*settings.Entry[finance.Settings], error) {
 					return nil, errors.New("cannot configure finance")
 				},
 				expectedError: true,
@@ -54,9 +56,9 @@ func TestCoordinator_SettingsAndCurrencies(t *testing.T) {
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				fsMock := &FinanceServiceMock{ConfigureFinanceFunc: tc.mockFn}
+				fsMock := &FinanceServiceMock{SetupFunc: tc.mockFn}
 				coord := NewCoordinator(Dependencies{FinanceService: fsMock})
-				res, err := coord.ConfigureFinance(tc.ctx, tc.req)
+				res, err := coord.Setup(tc.ctx, tc.req)
 				if tc.expectedError {
 					if err == nil {
 						t.Fatal("expected error, got nil")
@@ -66,28 +68,30 @@ func TestCoordinator_SettingsAndCurrencies(t *testing.T) {
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				if res == nil || res.BaseCurrency != tc.req.BaseCurrency {
+				if res == nil || res.Value.BaseCurrency != tc.req.BaseCurrency {
 					t.Errorf("expected currency %v, got %+v", tc.req.BaseCurrency, res)
 				}
 			})
 		}
 	})
 
-	t.Run("GetFinanceSettings", func(t *testing.T) {
+	t.Run("GetSettings", func(t *testing.T) {
 		tests := []struct {
 			name          string
 			ctx           context.Context
-			mockFn        func(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error)
+			mockFn        func(ctx context.Context, spaceID finance.SpaceID) (*settings.Entry[finance.Settings], error)
 			expectedError bool
 		}{
 			{
 				name: "Success",
 				ctx:  newTestContext("spc_1", "usr_1"),
-				mockFn: func(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error) {
-					if rCtx.SpaceID() != "spc_1" {
-						t.Errorf("unexpected space ID: %v", rCtx.SpaceID())
+				mockFn: func(ctx context.Context, spaceID finance.SpaceID) (*settings.Entry[finance.Settings], error) {
+					if spaceID != "spc_1" {
+						t.Errorf("unexpected space ID: %v", spaceID)
 					}
-					return &finance.FinanceSettings{BaseCurrency: "EUR"}, nil
+					return &settings.Entry[finance.Settings]{
+						Value: finance.Settings{BaseCurrency: "EUR"},
+					}, nil
 				},
 				expectedError: false,
 			},
@@ -99,7 +103,7 @@ func TestCoordinator_SettingsAndCurrencies(t *testing.T) {
 			{
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
-				mockFn: func(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error) {
+				mockFn: func(ctx context.Context, spaceID finance.SpaceID) (*settings.Entry[finance.Settings], error) {
 					return nil, errors.New("settings not found")
 				},
 				expectedError: true,
@@ -108,9 +112,9 @@ func TestCoordinator_SettingsAndCurrencies(t *testing.T) {
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				fsMock := &FinanceServiceMock{GetFinanceSettingsFunc: tc.mockFn}
+				fsMock := &FinanceServiceMock{GetSettingsFunc: tc.mockFn}
 				coord := NewCoordinator(Dependencies{FinanceService: fsMock})
-				res, err := coord.GetFinanceSettings(tc.ctx)
+				res, err := coord.GetSettings(tc.ctx)
 				if tc.expectedError {
 					if err == nil {
 						t.Fatal("expected error, got nil")
@@ -120,11 +124,47 @@ func TestCoordinator_SettingsAndCurrencies(t *testing.T) {
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				if res == nil || res.BaseCurrency != "EUR" {
+				if res == nil || res.Value.BaseCurrency != "EUR" {
 					t.Errorf("expected EUR, got %+v", res)
 				}
 			})
 		}
+	})
+
+	t.Run("RequestContext_BaseCurrency_NoFallback", func(t *testing.T) {
+		t.Run("returns empty when settings not found (no USD fallback)", func(t *testing.T) {
+			fsMock := &FinanceServiceMock{
+				GetSettingsFunc: func(ctx context.Context, spaceID finance.SpaceID) (*settings.Entry[finance.Settings], error) {
+					return nil, errors.New("not found")
+				},
+			}
+			coord := NewCoordinator(Dependencies{FinanceService: fsMock}).(*coordinator)
+			rCtx, err := coord.resolveContext(newTestContext("spc_1", "usr_1"))
+			if err != nil {
+				t.Fatalf("unexpected error resolving context: %v", err)
+			}
+			if curr := rCtx.BaseCurrency(); curr != "" {
+				t.Fatalf("expected empty currency without fallback, got %q", curr)
+			}
+		})
+
+		t.Run("returns configured currency when settings present", func(t *testing.T) {
+			fsMock := &FinanceServiceMock{
+				GetSettingsFunc: func(ctx context.Context, spaceID finance.SpaceID) (*settings.Entry[finance.Settings], error) {
+					return &settings.Entry[finance.Settings]{
+						Value: finance.Settings{BaseCurrency: "GBP"},
+					}, nil
+				},
+			}
+			coord := NewCoordinator(Dependencies{FinanceService: fsMock}).(*coordinator)
+			rCtx, err := coord.resolveContext(newTestContext("spc_1", "usr_1"))
+			if err != nil {
+				t.Fatalf("unexpected error resolving context: %v", err)
+			}
+			if curr := rCtx.BaseCurrency(); curr != "GBP" {
+				t.Fatalf("expected GBP, got %q", curr)
+			}
+		})
 	})
 
 	t.Run("ListCurrencies", func(t *testing.T) {
@@ -863,13 +903,13 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 	var getTxSugCalled, processSugCalled, processSignalCalled, getSignalSugCalled bool
 
 	coordMock := &CoordinatorMock{
-		ConfigureFinanceFunc: func(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error) {
+		SetupFunc: func(ctx context.Context, req *SetupRequest) (*settings.Entry[finance.Settings], error) {
 			configureCalled = true
-			return &finance.FinanceSettings{}, nil
+			return &settings.Entry[finance.Settings]{}, nil
 		},
-		GetFinanceSettingsFunc: func(ctx context.Context) (*finance.FinanceSettings, error) {
+		GetSettingsFunc: func(ctx context.Context) (*settings.Entry[finance.Settings], error) {
 			getSettingsCalled = true
-			return &finance.FinanceSettings{}, nil
+			return &settings.Entry[finance.Settings]{}, nil
 		},
 		ListCurrenciesFunc: func(ctx context.Context) ([]finance.CurrencyInfo, error) {
 			listCurrenciesCalled = true
@@ -1116,8 +1156,8 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 	logged := NewLoggingCoordinator(coordMock, logger)
 
 	// Execute every logged method once to verify transparent delegation and logging
-	_, _ = logged.ConfigureFinance(ctx, &ConfigureFinanceRequest{})
-	_, _ = logged.GetFinanceSettings(ctx)
+	_, _ = logged.Setup(ctx, &SetupRequest{})
+	_, _ = logged.GetSettings(ctx)
 	_, _ = logged.ListCurrencies(ctx)
 	_, _ = logged.CreateAccount(ctx, &CreateAccountRequest{})
 	_, _ = logged.UpdateAccount(ctx, &UpdateAccountRequest{})
@@ -1205,10 +1245,10 @@ func TestLoggingCoordinator_Errors(t *testing.T) {
 	expectedErr := errors.New("underlying error")
 
 	coordMock := &CoordinatorMock{
-		ConfigureFinanceFunc: func(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error) {
+		SetupFunc: func(ctx context.Context, req *SetupRequest) (*settings.Entry[finance.Settings], error) {
 			return nil, expectedErr
 		},
-		GetFinanceSettingsFunc: func(ctx context.Context) (*finance.FinanceSettings, error) {
+		GetSettingsFunc: func(ctx context.Context) (*settings.Entry[finance.Settings], error) {
 			return nil, expectedErr
 		},
 		ListCurrenciesFunc: func(ctx context.Context) ([]finance.CurrencyInfo, error) {
@@ -1395,10 +1435,10 @@ func TestLoggingCoordinator_Errors(t *testing.T) {
 
 	logged := NewLoggingCoordinator(coordMock, logger)
 
-	if _, err := logged.ConfigureFinance(ctx, &ConfigureFinanceRequest{}); err != expectedErr {
+	if _, err := logged.Setup(ctx, &SetupRequest{}); err != expectedErr {
 		t.Errorf("expected %v, got %v", expectedErr, err)
 	}
-	if _, err := logged.GetFinanceSettings(ctx); err != expectedErr {
+	if _, err := logged.GetSettings(ctx); err != expectedErr {
 		t.Errorf("expected %v, got %v", expectedErr, err)
 	}
 	if _, err := logged.ListCurrencies(ctx); err != expectedErr {

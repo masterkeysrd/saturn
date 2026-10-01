@@ -1,6 +1,6 @@
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import {
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   useListExchangeRatesQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
@@ -8,10 +8,7 @@ import { AlertTriangle, CheckCircle2, Settings } from "lucide-react"
 
 export function SettingsView() {
   const { spaceId } = useActiveSpaceContext()
-  const { data: settings } = useGetFinanceSettingsQuery(
-    {},
-    { enabled: !!spaceId }
-  )
+  const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
   const { data: ratesData } = useListExchangeRatesQuery(
     { pageSize: 100, pageToken: "" },
     { enabled: !!settings }

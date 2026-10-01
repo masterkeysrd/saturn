@@ -9,25 +9,51 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
-func newSettingsStoreMock(data map[SpaceID]*FinanceSettings) *SettingsStoreMock {
+type SettingsStoreMock = SettingsClientMock
+
+func newSettingsClientMock(data map[SpaceID]*Settings) *SettingsClientMock {
 	if data == nil {
-		data = make(map[SpaceID]*FinanceSettings)
+		data = make(map[SpaceID]*Settings)
 	}
-	return &SettingsStoreMock{
-		CreateFunc: func(ctx context.Context, rCtx Context, settings *FinanceSettings) error {
-			data[rCtx.SpaceID()] = settings
-			return nil
-		},
-		GetByIDFunc: func(ctx context.Context, rCtx Context) (*FinanceSettings, error) {
-			s, ok := data[rCtx.SpaceID()]
+	return &SettingsClientMock{
+		GetFunc: func(ctx context.Context, scopeID string) (*settings.Entry[Settings], error) {
+			s, ok := data[SpaceID(scopeID)]
 			if !ok {
 				return nil, errors.E(errors.NotExist, SettingsNotFound, "finance settings not found")
 			}
-			return s, nil
+			return &settings.Entry[Settings]{
+				Target:  SettingsKey.For(scopeID),
+				Value:   *s,
+				Version: 1,
+			}, nil
+		},
+		SaveFunc: func(ctx context.Context, entry *settings.Entry[Settings]) error {
+			val := entry.Value
+			data[SpaceID(entry.Target.ScopeID())] = &val
+			return nil
 		},
 	}
+}
+
+func newSettingsStoreMock(data map[SpaceID]*Settings) *SettingsClientMock {
+	return newSettingsClientMock(data)
+}
+
+func (mock *SettingsClientMock) Create(ctx context.Context, rCtx Context, s *Settings) error {
+	return mock.Save(ctx, SettingsKey.For(string(rCtx.SpaceID())).Entry(*s))
+}
+
+func (mock *SettingsClientMock) GetByID(ctx context.Context, rCtx Context) (*Settings, error) {
+	entry, err := mock.Get(ctx, string(rCtx.SpaceID()))
+	if err != nil {
+		return nil, err
+	}
+	return &Settings{
+		BaseCurrency: entry.Value.BaseCurrency,
+	}, nil
 }
 
 func newBudgetStoreMock(data map[BudgetID]*Budget) *BudgetStoreMock {

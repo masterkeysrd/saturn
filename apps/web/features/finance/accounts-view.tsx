@@ -11,7 +11,7 @@ import {
   useUpdateAccountMutation,
   useDeleteAccountMutation,
   useListTransfersQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   useListInstitutionsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
@@ -68,10 +68,7 @@ export function AccountsView() {
 
   const debouncedSearch = useDebounce(searchQuery, 300)
 
-  const { data: settingsData } = useGetFinanceSettingsQuery(
-    {},
-    { enabled: !!spaceId }
-  )
+  const { data: settingsData } = useGetSettingsQuery({}, { enabled: !!spaceId })
   const settings = settingsData
 
   const { data: accountsData, refetch: refetchAccounts } = useListAccountsQuery(

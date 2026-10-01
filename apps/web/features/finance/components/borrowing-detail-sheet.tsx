@@ -9,7 +9,7 @@ import {
   type BorrowingTransactionType,
   type Borrowing,
   useListAccountsQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import {
@@ -47,7 +47,7 @@ export function BorrowingDetailSheet({
 }: BorrowingDetailSheetProps) {
   const queryClient = useQueryClient()
   const [openAdjustModal, setOpenAdjustModal] = useState<boolean>(false)
-  const { data: settings } = useGetFinanceSettingsQuery(
+  const { data: settings } = useGetSettingsQuery(
     {},
     { enabled: open && !!spaceId }
   )

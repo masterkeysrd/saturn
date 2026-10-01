@@ -99,11 +99,11 @@ var _ FinanceService = (*FinanceServiceMock)(nil)
 
 // FinanceServiceMock is a mock implementation of FinanceService.
 type FinanceServiceMock struct {
-	// ConfigureFinanceFunc mocks the ConfigureFinance method.
-	ConfigureFinanceFunc func(ctx context.Context, rCtx finance.Context, settings *finance.FinanceSettings) (*finance.FinanceSettings, error)
+	// SetupFunc mocks the Setup method.
+	SetupFunc func(ctx context.Context, spaceID finance.SpaceID, settings *finance.Settings) (*settings.Entry[finance.Settings], error)
 
-	// GetFinanceSettingsFunc mocks the GetFinanceSettings method.
-	GetFinanceSettingsFunc func(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error)
+	// GetSettingsFunc mocks the GetSettings method.
+	GetSettingsFunc func(ctx context.Context, spaceID finance.SpaceID) (*settings.Entry[finance.Settings], error)
 
 	// CreateBudgetFunc mocks the CreateBudget method.
 	CreateBudgetFunc func(ctx context.Context, rCtx finance.Context, budget *finance.Budget) (*finance.Budget, error)
@@ -314,14 +314,14 @@ type FinanceServiceMock struct {
 
 	// calls tracks calls to the methods.
 	calls struct {
-		ConfigureFinance []struct {
+		Setup []struct {
 			Ctx      context.Context
-			RCtx     finance.Context
-			Settings *finance.FinanceSettings
+			SpaceID  finance.SpaceID
+			Settings *finance.Settings
 		}
-		GetFinanceSettings []struct {
-			Ctx  context.Context
-			RCtx finance.Context
+		GetSettings []struct {
+			Ctx     context.Context
+			SpaceID finance.SpaceID
 		}
 		CreateBudget []struct {
 			Ctx    context.Context
@@ -683,8 +683,8 @@ type FinanceServiceMock struct {
 			Id   finance.StatementID
 		}
 	}
-	lockConfigureFinance              sync.RWMutex
-	lockGetFinanceSettings            sync.RWMutex
+	lockSetup                         sync.RWMutex
+	lockGetSettings                   sync.RWMutex
 	lockCreateBudget                  sync.RWMutex
 	lockUpdateBudget                  sync.RWMutex
 	lockDeleteBudget                  sync.RWMutex
@@ -756,61 +756,61 @@ type FinanceServiceMock struct {
 	lockInvertStatementSigns          sync.RWMutex
 }
 
-// ConfigureFinance calls ConfigureFinanceFunc.
-func (mock *FinanceServiceMock) ConfigureFinance(ctx context.Context, rCtx finance.Context, settings *finance.FinanceSettings) (*finance.FinanceSettings, error) {
-	if mock.ConfigureFinanceFunc == nil {
-		panic("FinanceServiceMock.ConfigureFinanceFunc: method is nil but FinanceService.ConfigureFinance was just called")
+// Setup calls SetupFunc.
+func (mock *FinanceServiceMock) Setup(ctx context.Context, spaceID finance.SpaceID, settings *finance.Settings) (*settings.Entry[finance.Settings], error) {
+	if mock.SetupFunc == nil {
+		panic("FinanceServiceMock.SetupFunc: method is nil but FinanceService.Setup was just called")
 	}
-	mock.lockConfigureFinance.Lock()
-	mock.calls.ConfigureFinance = append(mock.calls.ConfigureFinance, struct {
+	mock.lockSetup.Lock()
+	mock.calls.Setup = append(mock.calls.Setup, struct {
 		Ctx      context.Context
-		RCtx     finance.Context
-		Settings *finance.FinanceSettings
+		SpaceID  finance.SpaceID
+		Settings *finance.Settings
 	}{
 		Ctx:      ctx,
-		RCtx:     rCtx,
+		SpaceID:  spaceID,
 		Settings: settings,
 	})
-	mock.lockConfigureFinance.Unlock()
-	return mock.ConfigureFinanceFunc(ctx, rCtx, settings)
+	mock.lockSetup.Unlock()
+	return mock.SetupFunc(ctx, spaceID, settings)
 }
 
-// ConfigureFinanceCalls returns all calls made to ConfigureFinance.
-func (mock *FinanceServiceMock) ConfigureFinanceCalls() []struct {
+// SetupCalls returns all calls made to Setup.
+func (mock *FinanceServiceMock) SetupCalls() []struct {
 	Ctx      context.Context
-	RCtx     finance.Context
-	Settings *finance.FinanceSettings
+	SpaceID  finance.SpaceID
+	Settings *finance.Settings
 } {
-	mock.lockConfigureFinance.RLock()
-	defer mock.lockConfigureFinance.RUnlock()
-	return mock.calls.ConfigureFinance
+	mock.lockSetup.RLock()
+	defer mock.lockSetup.RUnlock()
+	return mock.calls.Setup
 }
 
-// GetFinanceSettings calls GetFinanceSettingsFunc.
-func (mock *FinanceServiceMock) GetFinanceSettings(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error) {
-	if mock.GetFinanceSettingsFunc == nil {
-		panic("FinanceServiceMock.GetFinanceSettingsFunc: method is nil but FinanceService.GetFinanceSettings was just called")
+// GetSettings calls GetSettingsFunc.
+func (mock *FinanceServiceMock) GetSettings(ctx context.Context, spaceID finance.SpaceID) (*settings.Entry[finance.Settings], error) {
+	if mock.GetSettingsFunc == nil {
+		panic("FinanceServiceMock.GetSettingsFunc: method is nil but FinanceService.GetSettings was just called")
 	}
-	mock.lockGetFinanceSettings.Lock()
-	mock.calls.GetFinanceSettings = append(mock.calls.GetFinanceSettings, struct {
-		Ctx  context.Context
-		RCtx finance.Context
+	mock.lockGetSettings.Lock()
+	mock.calls.GetSettings = append(mock.calls.GetSettings, struct {
+		Ctx     context.Context
+		SpaceID finance.SpaceID
 	}{
-		Ctx:  ctx,
-		RCtx: rCtx,
+		Ctx:     ctx,
+		SpaceID: spaceID,
 	})
-	mock.lockGetFinanceSettings.Unlock()
-	return mock.GetFinanceSettingsFunc(ctx, rCtx)
+	mock.lockGetSettings.Unlock()
+	return mock.GetSettingsFunc(ctx, spaceID)
 }
 
-// GetFinanceSettingsCalls returns all calls made to GetFinanceSettings.
-func (mock *FinanceServiceMock) GetFinanceSettingsCalls() []struct {
-	Ctx  context.Context
-	RCtx finance.Context
+// GetSettingsCalls returns all calls made to GetSettings.
+func (mock *FinanceServiceMock) GetSettingsCalls() []struct {
+	Ctx     context.Context
+	SpaceID finance.SpaceID
 } {
-	mock.lockGetFinanceSettings.RLock()
-	defer mock.lockGetFinanceSettings.RUnlock()
-	return mock.calls.GetFinanceSettings
+	mock.lockGetSettings.RLock()
+	defer mock.lockGetSettings.RUnlock()
+	return mock.calls.GetSettings
 }
 
 // CreateBudget calls CreateBudgetFunc.
@@ -3088,11 +3088,11 @@ type CoordinatorMock struct {
 	// ResolveContextFunc mocks the ResolveContext method.
 	ResolveContextFunc func(ctx context.Context) (finance.Context, error)
 
-	// ConfigureFinanceFunc mocks the ConfigureFinance method.
-	ConfigureFinanceFunc func(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error)
+	// SetupFunc mocks the Setup method.
+	SetupFunc func(ctx context.Context, req *SetupRequest) (*settings.Entry[finance.Settings], error)
 
-	// GetFinanceSettingsFunc mocks the GetFinanceSettings method.
-	GetFinanceSettingsFunc func(ctx context.Context) (*finance.FinanceSettings, error)
+	// GetSettingsFunc mocks the GetSettings method.
+	GetSettingsFunc func(ctx context.Context) (*settings.Entry[finance.Settings], error)
 
 	// ListCurrenciesFunc mocks the ListCurrencies method.
 	ListCurrenciesFunc func(ctx context.Context) ([]finance.CurrencyInfo, error)
@@ -3279,11 +3279,11 @@ type CoordinatorMock struct {
 		ResolveContext []struct {
 			Ctx context.Context
 		}
-		ConfigureFinance []struct {
+		Setup []struct {
 			Ctx context.Context
-			Req *ConfigureFinanceRequest
+			Req *SetupRequest
 		}
-		GetFinanceSettings []struct {
+		GetSettings []struct {
 			Ctx context.Context
 		}
 		ListCurrencies []struct {
@@ -3541,8 +3541,8 @@ type CoordinatorMock struct {
 		}
 	}
 	lockResolveContext                sync.RWMutex
-	lockConfigureFinance              sync.RWMutex
-	lockGetFinanceSettings            sync.RWMutex
+	lockSetup                         sync.RWMutex
+	lockGetSettings                   sync.RWMutex
 	lockListCurrencies                sync.RWMutex
 	lockImportStatement               sync.RWMutex
 	lockDeleteStatement               sync.RWMutex
@@ -3629,55 +3629,55 @@ func (mock *CoordinatorMock) ResolveContextCalls() []struct {
 	return mock.calls.ResolveContext
 }
 
-// ConfigureFinance calls ConfigureFinanceFunc.
-func (mock *CoordinatorMock) ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error) {
-	if mock.ConfigureFinanceFunc == nil {
-		panic("CoordinatorMock.ConfigureFinanceFunc: method is nil but Coordinator.ConfigureFinance was just called")
+// Setup calls SetupFunc.
+func (mock *CoordinatorMock) Setup(ctx context.Context, req *SetupRequest) (*settings.Entry[finance.Settings], error) {
+	if mock.SetupFunc == nil {
+		panic("CoordinatorMock.SetupFunc: method is nil but Coordinator.Setup was just called")
 	}
-	mock.lockConfigureFinance.Lock()
-	mock.calls.ConfigureFinance = append(mock.calls.ConfigureFinance, struct {
+	mock.lockSetup.Lock()
+	mock.calls.Setup = append(mock.calls.Setup, struct {
 		Ctx context.Context
-		Req *ConfigureFinanceRequest
+		Req *SetupRequest
 	}{
 		Ctx: ctx,
 		Req: req,
 	})
-	mock.lockConfigureFinance.Unlock()
-	return mock.ConfigureFinanceFunc(ctx, req)
+	mock.lockSetup.Unlock()
+	return mock.SetupFunc(ctx, req)
 }
 
-// ConfigureFinanceCalls returns all calls made to ConfigureFinance.
-func (mock *CoordinatorMock) ConfigureFinanceCalls() []struct {
+// SetupCalls returns all calls made to Setup.
+func (mock *CoordinatorMock) SetupCalls() []struct {
 	Ctx context.Context
-	Req *ConfigureFinanceRequest
+	Req *SetupRequest
 } {
-	mock.lockConfigureFinance.RLock()
-	defer mock.lockConfigureFinance.RUnlock()
-	return mock.calls.ConfigureFinance
+	mock.lockSetup.RLock()
+	defer mock.lockSetup.RUnlock()
+	return mock.calls.Setup
 }
 
-// GetFinanceSettings calls GetFinanceSettingsFunc.
-func (mock *CoordinatorMock) GetFinanceSettings(ctx context.Context) (*finance.FinanceSettings, error) {
-	if mock.GetFinanceSettingsFunc == nil {
-		panic("CoordinatorMock.GetFinanceSettingsFunc: method is nil but Coordinator.GetFinanceSettings was just called")
+// GetSettings calls GetSettingsFunc.
+func (mock *CoordinatorMock) GetSettings(ctx context.Context) (*settings.Entry[finance.Settings], error) {
+	if mock.GetSettingsFunc == nil {
+		panic("CoordinatorMock.GetSettingsFunc: method is nil but Coordinator.GetSettings was just called")
 	}
-	mock.lockGetFinanceSettings.Lock()
-	mock.calls.GetFinanceSettings = append(mock.calls.GetFinanceSettings, struct {
+	mock.lockGetSettings.Lock()
+	mock.calls.GetSettings = append(mock.calls.GetSettings, struct {
 		Ctx context.Context
 	}{
 		Ctx: ctx,
 	})
-	mock.lockGetFinanceSettings.Unlock()
-	return mock.GetFinanceSettingsFunc(ctx)
+	mock.lockGetSettings.Unlock()
+	return mock.GetSettingsFunc(ctx)
 }
 
-// GetFinanceSettingsCalls returns all calls made to GetFinanceSettings.
-func (mock *CoordinatorMock) GetFinanceSettingsCalls() []struct {
+// GetSettingsCalls returns all calls made to GetSettings.
+func (mock *CoordinatorMock) GetSettingsCalls() []struct {
 	Ctx context.Context
 } {
-	mock.lockGetFinanceSettings.RLock()
-	defer mock.lockGetFinanceSettings.RUnlock()
-	return mock.calls.GetFinanceSettings
+	mock.lockGetSettings.RLock()
+	defer mock.lockGetSettings.RUnlock()
+	return mock.calls.GetSettings
 }
 
 // ListCurrencies calls ListCurrenciesFunc.

@@ -12,7 +12,7 @@ import { formatAmount } from "@saturn/core"
 import {
   useListAccountsQuery,
   useListInstitutionsQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   type Account,
   type Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
@@ -30,7 +30,7 @@ export default function AccountsScreen() {
   const { activeSpaceId } = useSpace()
   const [refreshing, setRefreshing] = useState(false)
 
-  const { data: settingsData } = useGetFinanceSettingsQuery(
+  const { data: settingsData } = useGetSettingsQuery(
     {},
     { enabled: !!activeSpaceId }
   )

@@ -5,6 +5,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/collections"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
@@ -93,10 +94,9 @@ func (s *Service) hydrateAccounts(ctx context.Context, rCtx finance.Context, acc
 		return aggregated, nil
 	}
 
-	// Fetch settings to get base currency
-	settings, err := s.financeService.GetFinanceSettings(ctx, rCtx)
-	if err != nil {
-		return nil, err
+	baseCurrency := rCtx.BaseCurrency()
+	if baseCurrency == "" {
+		return nil, errors.E(errors.Precondition, finance.SettingsNotFound, "workspace base currency is not configured")
 	}
 
 	// Extract unique currencies from the batch
@@ -107,7 +107,7 @@ func (s *Service) hydrateAccounts(ctx context.Context, rCtx finance.Context, acc
 	fromCurrencies := currencySet.ToSlice()
 
 	// Fetch latest rates in a single batch query
-	rates, err := s.financeService.GetLatestRates(ctx, rCtx, fromCurrencies, settings.BaseCurrency)
+	rates, err := s.financeService.GetLatestRates(ctx, rCtx, fromCurrencies, baseCurrency)
 	ratesMap := make(map[string]float64)
 	if err == nil {
 		for _, rate := range rates {
@@ -139,8 +139,8 @@ func (s *Service) hydrateAccounts(ctx context.Context, rCtx finance.Context, acc
 	for i, acc := range accounts {
 		balanceInBase := acc.CurrentBalance
 		rateToBase := 1.0
-		if settings.BaseCurrency != acc.Currency {
-			key := string(acc.Currency) + "->" + string(settings.BaseCurrency)
+		if baseCurrency != acc.Currency {
+			key := string(acc.Currency) + "->" + string(baseCurrency)
 			if rate, ok := ratesMap[key]; ok {
 				balanceInBase = int64(float64(acc.CurrentBalance) * rate)
 				rateToBase = rate

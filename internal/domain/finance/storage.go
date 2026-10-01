@@ -10,13 +10,6 @@ import (
 
 //go:generate go run github.com/masterkeysrd/saturn/tools/mockgen .
 
-// SettingsStore defines persistence for workspace settings.
-// @Mock
-type SettingsStore interface {
-	Create(ctx context.Context, rCtx Context, settings *FinanceSettings) error
-	GetByID(ctx context.Context, rCtx Context) (*FinanceSettings, error)
-}
-
 // DeleteOptions defines optional parameters for entity deletion (e.g. optimistic lock version checks).
 type DeleteOptions struct {
 	Version int64

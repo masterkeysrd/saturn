@@ -10,7 +10,7 @@ import {
   type RecurringTransaction,
   type ScheduledTransaction,
   type ListScheduledTransactionsRequest,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   useListBudgetsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { getScheduledDisplayName } from "@saturn/core"
@@ -64,10 +64,7 @@ const HISTORY_PAGE_SIZE = 50
 export function RecurringView() {
   const { spaceId, isWritable } = useSpacePermissions()
 
-  const { data: settings } = useGetFinanceSettingsQuery(
-    {},
-    { enabled: !!spaceId }
-  )
+  const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
   const baseCurrency = settings?.baseCurrency || "USD"
 
   const { data: budgetsData } = useListBudgetsQuery(

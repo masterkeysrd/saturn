@@ -69,11 +69,6 @@ func TestListAccounts(t *testing.T) {
 					Items: []*finance.Account{acc1, acc2},
 				}, nil
 			},
-			GetFinanceSettingsFunc: func(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error) {
-				return &finance.FinanceSettings{
-					BaseCurrency: "USD",
-				}, nil
-			},
 			GetLatestRatesFunc: func(ctx context.Context, rCtx finance.Context, from []finance.Currency, to finance.Currency) ([]*finance.ExchangeRate, error) {
 				return []*finance.ExchangeRate{
 					{FromCurrency: "EUR", ToCurrency: "USD", Rate: 1.1},
@@ -125,18 +120,16 @@ func TestListAccounts(t *testing.T) {
 		}
 	})
 
-	t.Run("Error from GetFinanceSettings in Full View", func(t *testing.T) {
+	t.Run("Error when base currency is not configured in context", func(t *testing.T) {
 		mockFS := &FinanceServiceMock{
 			ListAccountsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
 				return &paging.Page[*finance.Account]{Items: []*finance.Account{acc1}}, nil
 			},
-			GetFinanceSettingsFunc: func(ctx context.Context, rCtx finance.Context) (*finance.FinanceSettings, error) {
-				return nil, errors.New("settings error")
-			},
 		}
 
 		svc := NewService(mockFS)
-		_, err := svc.ListAccounts(ctx, rCtx, ViewFull, ListAccountsFilter{
+		noBaseRCtx := finance.NewContext(spaceID, "usr_1", time.UTC, "")
+		_, err := svc.ListAccounts(ctx, noBaseRCtx, ViewFull, ListAccountsFilter{
 			ListAccountsFilter: finance.ListAccountsFilter{PageSize: 10},
 		})
 		if err == nil {

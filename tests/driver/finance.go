@@ -83,11 +83,11 @@ func (f *FinanceDriver) InitSettings(tb testing.TB, baseCurrency string) *Financ
 		return f
 	}
 	client := f.getClient()
-	_, err := client.ConfigureFinance(tb.Context(), &financev1.ConfigureFinanceRequest{
+	_, err := client.Setup(tb.Context(), &financev1.SetupRequest{
 		BaseCurrency: baseCurrency,
 	})
 	if err != nil {
-		tb.Fatalf("ConfigureFinance SDK call failed: %v", err)
+		tb.Fatalf("Setup SDK call failed: %v", err)
 	}
 	return f
 }

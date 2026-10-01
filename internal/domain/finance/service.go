@@ -11,11 +11,12 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
 // Dependencies defines the required persistence adapters for the service.
 type Dependencies struct {
-	SettingsStore             SettingsStore
+	Settings                  SettingsClient
 	BudgetStore               BudgetStore
 	PeriodStore               PeriodStore
 	ExchangeRateStore         ExchangeRateStore
@@ -42,47 +43,54 @@ func NewService(deps Dependencies) *Service {
 	return &Service{deps: deps}
 }
 
-// ConfigureFinance initializes workspace base currency settings if not already configured.
-func (s *Service) ConfigureFinance(ctx context.Context, rCtx Context, settings *FinanceSettings) (*FinanceSettings, error) {
+// Setup initializes workspace base currency settings if not already configured.
+func (s *Service) Setup(ctx context.Context, spaceID SpaceID, settings *Settings) (*settings.Entry[Settings], error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, fmt.Errorf("validate space ID: %w", err)
+	}
 	if err := settings.Validate(); err != nil {
 		return nil, err
 	}
 
-	existing, err := s.deps.SettingsStore.GetByID(ctx, rCtx)
+	entry, err := s.deps.Settings.Get(ctx, string(spaceID))
 	if err == nil {
 		// Base currency is immutable once configured
-		return existing, nil
+		return entry, nil
 	}
 
 	if !errors.Is(err, errors.NotExist) {
 		return nil, err
 	}
 
-	now := time.Now().UTC()
-	settings.CreateTime = now
-	settings.UpdateTime = now
-
-	if err := s.deps.SettingsStore.Create(ctx, rCtx, settings); err != nil {
+	newEntry := SettingsKey.For(string(spaceID)).Entry(*settings)
+	if err := s.deps.Settings.Save(ctx, newEntry); err != nil {
 		return nil, err
 	}
 
 	// Automatically initialize a default Cash Account for this space
 	if defaultCashAcc, err := settings.NewDefaultCashAccount(); err == nil {
-		systemCtx := NewRequestContext(rCtx.SpaceID(), "system", rCtx.Location(), settings.BaseCurrency)
+		systemCtx := NewRequestContext(spaceID, "system", time.UTC, settings.BaseCurrency)
 		if _, err := s.CreateAccount(ctx, systemCtx, defaultCashAcc); err != nil {
-			log.Warn(ctx, "failed to create default cash account", log.String("space_id", string(rCtx.SpaceID())), log.Err(err))
+			log.Warn(ctx, "failed to create default cash account", log.String("space_id", string(spaceID)), log.Err(err))
 		}
 	}
 
-	return settings, nil
+	return newEntry, nil
 }
 
-// GetFinanceSettings retrieves settings for a workspace.
-func (s *Service) GetFinanceSettings(ctx context.Context, rCtx Context) (*FinanceSettings, error) {
-	if string(rCtx.SpaceID()) == "" {
+// GetSettings retrieves settings for a workspace.
+func (s *Service) GetSettings(ctx context.Context, spaceID SpaceID) (*settings.Entry[Settings], error) {
+	if string(spaceID) == "" {
 		return nil, errors.New("space ID is required")
 	}
-	return s.deps.SettingsStore.GetByID(ctx, rCtx)
+	entry, err := s.deps.Settings.Get(ctx, string(spaceID))
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(errors.NotExist, SettingsNotFound, "workspace finance settings are not configured")
+		}
+		return nil, err
+	}
+	return entry, nil
 }
 
 // CreateBudget creates a new budget template in a workspace.
@@ -96,7 +104,7 @@ func (s *Service) CreateBudget(ctx context.Context, rCtx Context, budget *Budget
 
 	// Verify workspace base currency is configured
 	if rCtx.BaseCurrency() == "" {
-		return nil, fmt.Errorf("workspace base currency is not configured")
+		return nil, errors.E(errors.Precondition, SettingsNotFound, "workspace base currency is not configured")
 	}
 
 	if err := s.deps.BudgetStore.Create(ctx, rCtx, budget); err != nil {
@@ -178,7 +186,7 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, rCtx Context, budgetID 
 	}
 
 	if rCtx.BaseCurrency() == "" {
-		return nil, fmt.Errorf("workspace base currency is not configured")
+		return nil, errors.E(errors.Precondition, SettingsNotFound, "workspace base currency is not configured")
 	}
 
 	startDate, endDate := budget.CalculateBounds(date, rCtx.Location())
@@ -228,7 +236,7 @@ func (s *Service) GetOrCreatePeriods(ctx context.Context, rCtx Context, budgets 
 	}
 
 	if rCtx.BaseCurrency() == "" {
-		return nil, fmt.Errorf("workspace base currency is not configured")
+		return nil, errors.E(errors.Precondition, SettingsNotFound, "workspace base currency is not configured")
 	}
 
 	// Calculate bounds for each budget
@@ -568,7 +576,7 @@ func (s *Service) ListTransactions(ctx context.Context, rCtx Context, filter *Tr
 // GetSpentInsights computes aggregated outflow analytics and trends for a space.
 func (s *Service) GetSpentInsights(ctx context.Context, rCtx Context, req *GetSpentInsightsRequest) (*SpentInsights, error) {
 	if rCtx.BaseCurrency() == "" {
-		return nil, fmt.Errorf("workspace base currency is not configured")
+		return nil, errors.E(errors.Precondition, SettingsNotFound, "workspace base currency is not configured")
 	}
 
 	g, start, end, err := req.ResolveRange(rCtx.Location())
@@ -608,7 +616,7 @@ func (s *Service) GetSpentInsights(ctx context.Context, rCtx Context, req *GetSp
 // GetIncomeInsights computes aggregated inflow analytics and trends for a space.
 func (s *Service) GetIncomeInsights(ctx context.Context, rCtx Context, req *GetSpentInsightsRequest) (*IncomeInsights, error) {
 	if rCtx.BaseCurrency() == "" {
-		return nil, fmt.Errorf("workspace base currency is not configured")
+		return nil, errors.E(errors.Precondition, SettingsNotFound, "workspace base currency is not configured")
 	}
 
 	g, start, end, err := req.ResolveRange(rCtx.Location())
@@ -760,7 +768,7 @@ type ConfirmScheduledTransactionRequest struct {
 // ConfirmScheduledTransaction clears a scheduled transaction by promoting it to a permanent transaction.
 func (s *Service) ConfirmScheduledTransaction(ctx context.Context, rCtx Context, req ConfirmScheduledTransactionRequest) (*Transaction, error) {
 	if rCtx.BaseCurrency() == "" {
-		return nil, fmt.Errorf("workspace base currency is not configured")
+		return nil, errors.E(errors.Precondition, SettingsNotFound, "workspace base currency is not configured")
 	}
 
 	payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, rCtx, req.TransactionID)
@@ -1044,7 +1052,7 @@ func (s *Service) createTransaction(ctx context.Context, rCtx Context, txn *Tran
 
 	// 2. Verify workspace base currency is configured
 	if rCtx.BaseCurrency() == "" {
-		return fmt.Errorf("workspace base currency is not configured")
+		return errors.E(errors.Precondition, SettingsNotFound, "workspace base currency is not configured")
 	}
 
 	// 3. Centralized Budget Period Resolution
@@ -1110,7 +1118,7 @@ func (s *Service) updateTransaction(ctx context.Context, rCtx Context, txn *Tran
 
 	// 2. Verify workspace base currency is configured
 	if rCtx.BaseCurrency() == "" {
-		return fmt.Errorf("workspace base currency is not configured")
+		return errors.E(errors.Precondition, SettingsNotFound, "workspace base currency is not configured")
 	}
 
 	// 3. Centralized Budget Period Resolution
@@ -1239,7 +1247,7 @@ func (s *Service) syncBorrowingTransaction(ctx context.Context, rCtx Context, ta
 // CreateBorrowing initializes a borrowing agreement and optionally logs its disbursement transaction.
 func (s *Service) CreateBorrowing(ctx context.Context, rCtx Context, b *Borrowing, createAsTransaction bool) (*Borrowing, error) {
 	if rCtx.BaseCurrency() == "" {
-		return nil, fmt.Errorf("workspace base currency is not configured")
+		return nil, errors.E(errors.Precondition, SettingsNotFound, "workspace base currency is not configured")
 	}
 
 	if err := b.Init(); err != nil {
@@ -1308,7 +1316,7 @@ func (s *Service) UpdateBorrowing(ctx context.Context, rCtx Context, b *Borrowin
 	const op errors.Op = "domain/finance.UpdateBorrowing"
 
 	if rCtx.BaseCurrency() == "" {
-		return nil, fmt.Errorf("workspace base currency is not configured")
+		return nil, errors.E(errors.Precondition, SettingsNotFound, "workspace base currency is not configured")
 	}
 
 	existing, err := s.deps.BorrowingStore.GetByID(ctx, rCtx, b.ID)
@@ -1431,7 +1439,7 @@ type DeleteBorrowingTransactionRequest struct {
 // LogBorrowingTransaction logs a repayment or disbursement transaction for a borrowing agreement.
 func (s *Service) LogBorrowingTransaction(ctx context.Context, rCtx Context, req LogBorrowingTransactionRequest) (*Transaction, error) {
 	if rCtx.BaseCurrency() == "" {
-		return nil, fmt.Errorf("workspace base currency is not configured")
+		return nil, errors.E(errors.Precondition, SettingsNotFound, "workspace base currency is not configured")
 	}
 
 	if err := rCtx.SpaceID().Validate(); err != nil {

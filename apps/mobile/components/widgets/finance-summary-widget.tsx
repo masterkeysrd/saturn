@@ -11,7 +11,7 @@ import {
 import { formatAmount, calculateAccountMetrics } from "@saturn/core"
 import {
   useListAccountsQuery,
-  useGetFinanceSettingsQuery,
+  useGetSettingsQuery,
   useGetInsightsQuery,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
@@ -28,7 +28,7 @@ export function FinanceSummaryWidget() {
 
   // 1. Fetch space finance settings (base currency)
   const { data: settingsData, isLoading: settingsLoading } =
-    useGetFinanceSettingsQuery({}, { enabled: !!activeSpaceId })
+    useGetSettingsQuery({}, { enabled: !!activeSpaceId })
 
   const baseCurrency = settingsData?.baseCurrency || "USD"
 
