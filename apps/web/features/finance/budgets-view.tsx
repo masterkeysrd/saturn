@@ -2,10 +2,12 @@ import { useState, useMemo } from "react"
 import { useSpacePermissions } from "@/features/space/use-space"
 import {
   type Budget,
+  type Budget_Status,
   useDeleteBudgetMutation,
   useGetSettingsQuery,
   useListAccountsQuery,
   useListBudgetsQuery,
+  useUpdateBudgetMutation,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { Globe, DollarSign, PieChart, PiggyBank } from "lucide-react"
@@ -39,8 +41,8 @@ export function BudgetsView() {
     "ACTIVE" | "PAUSED" | "CLOSED" | "ALL"
   >("ACTIVE")
 
-  const statusesParam = useMemo(() => {
-    if (statusFilter === "ALL") return []
+  const statusesParam = useMemo<Budget_Status[]>(() => {
+    if (statusFilter === "ALL") return ["ACTIVE", "PAUSED", "CLOSED"]
     return [statusFilter]
   }, [statusFilter])
 
@@ -137,6 +139,53 @@ export function BudgetsView() {
       setIsDeleting(false)
     }
   }
+
+  const updateMutation = useUpdateBudgetMutation()
+
+  const handleUpdateStatus = async (
+    budget: Budget,
+    newStatus: "ACTIVE" | "PAUSED" | "CLOSED",
+    actionLabel: string
+  ) => {
+    if (!budget.id) return
+    try {
+      await updateMutation.mutateAsync({
+        id: budget.id,
+        req: {
+          id: budget.id,
+          version: budget.version,
+          budget: {
+            ...budget,
+            status: newStatus,
+          },
+          propagation: "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY",
+          updateMask: { paths: ["status"] },
+        },
+      })
+      toast.add({
+        type: "success",
+        title: `Budget ${actionLabel}`,
+        description: `Budget "${budget.name}" is now ${newStatus.toLowerCase()}.`,
+      })
+      refetchBudgets()
+    } catch (err) {
+      toast.add({
+        type: "error",
+        title: `Failed to ${actionLabel.toLowerCase()} budget`,
+        description:
+          err instanceof Error ? err.message : "An unexpected error occurred.",
+      })
+    }
+  }
+
+  const handlePause = (budget: Budget) =>
+    handleUpdateStatus(budget, "PAUSED", "Paused")
+  const handleResume = (budget: Budget) =>
+    handleUpdateStatus(budget, "ACTIVE", "Resumed")
+  const handleClose = (budget: Budget) =>
+    handleUpdateStatus(budget, "CLOSED", "Closed")
+  const handleReopen = (budget: Budget) =>
+    handleUpdateStatus(budget, "ACTIVE", "Reopened")
 
   const handleEditTrigger = (budget: Budget) => {
     setActiveBudget(budget)
@@ -261,6 +310,10 @@ export function BudgetsView() {
                 isWritable={isWritable}
                 onEdit={handleEditTrigger}
                 onDelete={handleDelete}
+                onPause={handlePause}
+                onResume={handleResume}
+                onClose={handleClose}
+                onReopen={handleReopen}
                 onAddExpense={handleAddExpenseTrigger}
                 onPeriodLoaded={handlePeriodLoaded}
                 onViewHistory={handleViewHistoryTrigger}

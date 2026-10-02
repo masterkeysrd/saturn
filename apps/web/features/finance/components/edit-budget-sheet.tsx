@@ -55,7 +55,8 @@ interface EditBudgetSheetProps {
 
 const STATUS_ITEMS = [
   { value: "ACTIVE", label: "Active" },
-  { value: "ARCHIVED", label: "Archived / Disabled" },
+  { value: "PAUSED", label: "Paused (Temporarily Suspended)" },
+  { value: "CLOSED", label: "Closed" },
 ]
 
 export function EditBudgetSheet({
@@ -85,15 +86,37 @@ export function EditBudgetSheet({
   >({
     entityKey: "budgets",
     mutationFn: (vars) => updateMutation.mutateAsync(vars),
-    buildVariables: (id, payload, _dirtyPaths, expectedVersion) => ({
-      id,
-      req: {
+    buildVariables: (id, payload, dirtyPaths, expectedVersion) => {
+      const fieldPathMap: Record<string, string> = {
+        name: "name",
+        limit: "limit_amount",
+        limitAmount: "limit_amount",
+        currency: "currency",
+        interval: "interval",
+        status: "status",
+        icon: "icon",
+        color: "color",
+        defaultAccountId: "default_account_id",
+      }
+      const paths = Array.from(
+        new Set(dirtyPaths.map((p) => fieldPathMap[p] || p))
+      )
+      return {
         id,
-        version: expectedVersion,
-        budget: payload as Budget,
-        propagation,
-      },
-    }),
+        req: {
+          id,
+          version: expectedVersion,
+          budget: {
+            ...(activeBudget || {}),
+            ...payload,
+            limitAmount:
+              payload.limitAmount || activeBudget?.limitAmount || "0",
+          } as Budget,
+          propagation,
+          updateMask: { paths },
+        },
+      }
+    },
   })
 
   const { data: currenciesData } = useListCurrenciesQuery(
@@ -163,6 +186,7 @@ export function EditBudgetSheet({
         expectedVersion: activeBudget.version,
         payload: {
           name: data.name,
+          limit: data.limit,
           limitAmount: toCentsString(data.limit),
           currency: data.currency,
           interval: data.interval,
@@ -170,7 +194,7 @@ export function EditBudgetSheet({
           icon: data.icon,
           color: data.color,
           defaultAccountId: data.defaultAccountId || "",
-        },
+        } as unknown as Partial<Budget>,
         dirtyFields,
       })
       onOpenChange(false)

@@ -12,12 +12,14 @@ import {
 import { Button } from "@/components/ui/button"
 import {
   PauseCircle,
+  PlayCircle,
   MoreVertical,
   Edit2,
   Trash2,
   Plus,
   History,
   Lock,
+  Unlock,
   CreditCard,
 } from "lucide-react"
 import { getBudgetColors, getBudgetIcon, formatAmount } from "../utils"
@@ -29,6 +31,10 @@ interface BudgetCardProps {
   isWritable: boolean
   onEdit: (budget: Budget) => void
   onDelete: (budget: Budget) => void
+  onPause?: (budget: Budget) => void
+  onResume?: (budget: Budget) => void
+  onClose?: (budget: Budget) => void
+  onReopen?: (budget: Budget) => void
   onPeriodLoaded: (budgetId: string, limitInBase: number) => void
   onAddExpense?: (budget: Budget) => void
   onViewHistory: (budget: Budget) => void
@@ -40,6 +46,10 @@ export function BudgetCard({
   isWritable,
   onEdit,
   onDelete,
+  onPause,
+  onResume,
+  onClose,
+  onReopen,
   onPeriodLoaded,
   onAddExpense,
   onViewHistory,
@@ -146,6 +156,42 @@ export function BudgetCard({
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Record Expense
+                    </DropdownMenuItem>
+                  )}
+                  {isActive && onPause && (
+                    <DropdownMenuItem
+                      onClick={() => onPause(budget)}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm hover:bg-muted/60"
+                    >
+                      <PauseCircle className="h-3.5 w-3.5 text-amber-500" />
+                      Pause Budget
+                    </DropdownMenuItem>
+                  )}
+                  {isPaused && onResume && (
+                    <DropdownMenuItem
+                      onClick={() => onResume(budget)}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm hover:bg-muted/60"
+                    >
+                      <PlayCircle className="h-3.5 w-3.5 text-emerald-500" />
+                      Resume Budget
+                    </DropdownMenuItem>
+                  )}
+                  {!isClosed && onClose && (
+                    <DropdownMenuItem
+                      onClick={() => onClose(budget)}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-amber-600 hover:bg-amber-500/10 dark:text-amber-400"
+                    >
+                      <Lock className="h-3.5 w-3.5" />
+                      Close Budget
+                    </DropdownMenuItem>
+                  )}
+                  {isClosed && onReopen && (
+                    <DropdownMenuItem
+                      onClick={() => onReopen(budget)}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm hover:bg-muted/60"
+                    >
+                      <Unlock className="h-3.5 w-3.5 text-emerald-500" />
+                      Reopen Budget
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem
