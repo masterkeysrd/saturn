@@ -57,6 +57,26 @@ func (t *TransactionalCoordinator) GetSettings(ctx context.Context) (*settings.E
 	return t.next.GetSettings(ctx)
 }
 
+// UpdateSettings executes next.UpdateSettings inside a database transaction.
+func (t *TransactionalCoordinator) UpdateSettings(ctx context.Context, req *UpdateSettingsRequest) (*settings.Entry[finance.Settings], error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.UpdateSettings(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 func (t *TransactionalCoordinator) ListCurrencies(ctx context.Context) ([]finance.CurrencyInfo, error) {
 	return t.next.ListCurrencies(ctx)
 }

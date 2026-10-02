@@ -312,7 +312,7 @@ func TestListAggregatedBudgets(t *testing.T) {
 	_ = bs.Create(ctx, rCtx, b3)
 
 	// Pre-create periods in mock database so GetOrCreatePeriod retrieves them and updates spent metrics
-	startDate, endDate := b1.CalculateBounds(time.Now())
+	startDate, endDate := b1.CalculateBounds(finance.BudgetBoundsOpts{TargetDate: time.Now()})
 	p1 := &finance.BudgetPeriod{
 		ID:                 finance.PeriodID("prd_" + ksuid.New().String()),
 		BudgetID:           b1ID,

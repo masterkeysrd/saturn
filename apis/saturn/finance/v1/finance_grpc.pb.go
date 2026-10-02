@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	Finance_Setup_FullMethodName                       = "/saturn.finance.v1.Finance/Setup"
 	Finance_GetSettings_FullMethodName                 = "/saturn.finance.v1.Finance/GetSettings"
+	Finance_UpdateSettings_FullMethodName              = "/saturn.finance.v1.Finance/UpdateSettings"
 	Finance_CreateBudget_FullMethodName                = "/saturn.finance.v1.Finance/CreateBudget"
 	Finance_GetBudget_FullMethodName                   = "/saturn.finance.v1.Finance/GetBudget"
 	Finance_UpdateBudget_FullMethodName                = "/saturn.finance.v1.Finance/UpdateBudget"
@@ -103,6 +104,8 @@ type FinanceClient interface {
 	Setup(ctx context.Context, in *SetupRequest, opts ...grpc.CallOption) (*Settings, error)
 	// Retrieves the current finance settings, including the configured base currency.
 	GetSettings(ctx context.Context, in *GetSettingsRequest, opts ...grpc.CallOption) (*Settings, error)
+	// Updates workspace finance settings (e.g. financial year start month).
+	UpdateSettings(ctx context.Context, in *UpdateSettingsRequest, opts ...grpc.CallOption) (*Settings, error)
 	// Creates a budget category template. Budgets track spent thresholds over repeating intervals.
 	CreateBudget(ctx context.Context, in *CreateBudgetRequest, opts ...grpc.CallOption) (*Budget, error)
 	// Retrieves details of a specific budget category template.
@@ -265,6 +268,16 @@ func (c *financeClient) GetSettings(ctx context.Context, in *GetSettingsRequest,
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Settings)
 	err := c.cc.Invoke(ctx, Finance_GetSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) UpdateSettings(ctx context.Context, in *UpdateSettingsRequest, opts ...grpc.CallOption) (*Settings, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Settings)
+	err := c.cc.Invoke(ctx, Finance_UpdateSettings_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -953,6 +966,8 @@ type FinanceServer interface {
 	Setup(context.Context, *SetupRequest) (*Settings, error)
 	// Retrieves the current finance settings, including the configured base currency.
 	GetSettings(context.Context, *GetSettingsRequest) (*Settings, error)
+	// Updates workspace finance settings (e.g. financial year start month).
+	UpdateSettings(context.Context, *UpdateSettingsRequest) (*Settings, error)
 	// Creates a budget category template. Budgets track spent thresholds over repeating intervals.
 	CreateBudget(context.Context, *CreateBudgetRequest) (*Budget, error)
 	// Retrieves details of a specific budget category template.
@@ -1105,6 +1120,9 @@ func (UnimplementedFinanceServer) Setup(context.Context, *SetupRequest) (*Settin
 }
 func (UnimplementedFinanceServer) GetSettings(context.Context, *GetSettingsRequest) (*Settings, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSettings not implemented")
+}
+func (UnimplementedFinanceServer) UpdateSettings(context.Context, *UpdateSettingsRequest) (*Settings, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateSettings not implemented")
 }
 func (UnimplementedFinanceServer) CreateBudget(context.Context, *CreateBudgetRequest) (*Budget, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateBudget not implemented")
@@ -1359,6 +1377,24 @@ func _Finance_GetSettings_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FinanceServer).GetSettings(ctx, req.(*GetSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_UpdateSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).UpdateSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_UpdateSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).UpdateSettings(ctx, req.(*UpdateSettingsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2583,6 +2619,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSettings",
 			Handler:    _Finance_GetSettings_Handler,
+		},
+		{
+			MethodName: "UpdateSettings",
+			Handler:    _Finance_UpdateSettings_Handler,
 		},
 		{
 			MethodName: "CreateBudget",

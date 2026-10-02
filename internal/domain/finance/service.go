@@ -93,6 +93,34 @@ func (s *Service) GetSettings(ctx context.Context, spaceID SpaceID) (*settings.E
 	return entry, nil
 }
 
+// UpdateSettings applies partial updates to workspace finance settings using field mask.
+func (s *Service) UpdateSettings(ctx context.Context, spaceID SpaceID, incoming *Settings, mask []string) (*settings.Entry[Settings], error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, fmt.Errorf("validate space ID: %w", err)
+	}
+	if incoming == nil {
+		return nil, errors.New("incoming settings are required")
+	}
+
+	entry, err := s.deps.Settings.Get(ctx, string(spaceID))
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(errors.NotExist, SettingsNotFound, "workspace finance settings are not configured")
+		}
+		return nil, err
+	}
+
+	if err := entry.Value.ApplyPatch(incoming, mask); err != nil {
+		return nil, err
+	}
+
+	if err := s.deps.Settings.Save(ctx, entry); err != nil {
+		return nil, err
+	}
+
+	return entry, nil
+}
+
 // CreateBudget creates a new budget template in a workspace.
 func (s *Service) CreateBudget(ctx context.Context, rCtx Context, budget *Budget) (*Budget, error) {
 	if err := budget.Init(); err != nil {
@@ -189,7 +217,11 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, rCtx Context, budgetID 
 		return nil, errors.E(errors.Precondition, SettingsNotFound, "workspace base currency is not configured")
 	}
 
-	startDate, endDate := budget.CalculateBounds(date, rCtx.Location())
+	startDate, endDate := budget.CalculateBounds(BudgetBoundsOpts{
+		TargetDate:           date,
+		Location:             rCtx.Location(),
+		FiscalYearStartMonth: rCtx.FiscalYearStartMonth(),
+	})
 
 	// Try lookup
 	period, err := s.deps.PeriodStore.GetByRange(ctx, rCtx, PeriodRangeKey{
@@ -211,12 +243,13 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, rCtx Context, budgetID 
 	}
 
 	newPeriod, err := budget.NewPeriod(NewPeriodOpts{
-		TargetDate:         date,
-		StartDate:          startDate,
-		EndDate:            endDate,
-		BaseCurrency:       rCtx.BaseCurrency(),
-		ExchangeRateToBase: rate,
-		Location:           rCtx.Location(),
+		TargetDate:           date,
+		StartDate:            startDate,
+		EndDate:              endDate,
+		BaseCurrency:         rCtx.BaseCurrency(),
+		ExchangeRateToBase:   rate,
+		Location:             rCtx.Location(),
+		FiscalYearStartMonth: rCtx.FiscalYearStartMonth(),
 	})
 	if err != nil {
 		return nil, err
@@ -243,7 +276,11 @@ func (s *Service) GetOrCreatePeriods(ctx context.Context, rCtx Context, budgets 
 	keys := make([]PeriodRangeKey, len(budgets))
 	boundsMap := make(map[BudgetID]struct{ Start, End time.Time })
 	for i, b := range budgets {
-		start, end := b.CalculateBounds(date, rCtx.Location())
+		start, end := b.CalculateBounds(BudgetBoundsOpts{
+			TargetDate:           date,
+			Location:             rCtx.Location(),
+			FiscalYearStartMonth: rCtx.FiscalYearStartMonth(),
+		})
 		keys[i] = PeriodRangeKey{
 			BudgetID:  b.ID,
 			StartDate: start,

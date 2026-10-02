@@ -8,6 +8,7 @@ type Context interface {
 	UserID() string
 	Location() *time.Location
 	BaseCurrency() Currency
+	FiscalYearStartMonth() int
 	Now() time.Time
 	Date(t time.Time) time.Time
 }
@@ -17,10 +18,11 @@ type RequestContext = Context
 
 // SimpleContext provides an in-memory implementation of RequestContext for tests and callers with known parameters.
 type SimpleContext struct {
-	spaceID      SpaceID
-	userID       string
-	location     *time.Location
-	baseCurrency Currency
+	spaceID              SpaceID
+	userID               string
+	location             *time.Location
+	baseCurrency         Currency
+	fiscalYearStartMonth int
 }
 
 // NewRequestContext creates a new SimpleContext with safe defaults (time.UTC if loc is nil).
@@ -29,16 +31,27 @@ func NewRequestContext(spaceID SpaceID, userID string, loc *time.Location, baseC
 		loc = time.UTC
 	}
 	return &SimpleContext{
-		spaceID:      spaceID,
-		userID:       userID,
-		location:     loc,
-		baseCurrency: baseCurrency,
+		spaceID:              spaceID,
+		userID:               userID,
+		location:             loc,
+		baseCurrency:         baseCurrency,
+		fiscalYearStartMonth: 1,
 	}
 }
 
 // NewContext creates a new SimpleContext with safe defaults (time.UTC if loc is nil).
 func NewContext(spaceID SpaceID, userID string, loc *time.Location, baseCurrency Currency) Context {
 	return NewRequestContext(spaceID, userID, loc, baseCurrency)
+}
+
+// WithFiscalYearStartMonth sets the fiscal year start month on the SimpleContext and returns it.
+func (c *SimpleContext) WithFiscalYearStartMonth(m int) *SimpleContext {
+	if m >= 1 && m <= 12 {
+		c.fiscalYearStartMonth = m
+	} else {
+		c.fiscalYearStartMonth = 1
+	}
+	return c
 }
 
 // SpaceID returns the active workspace ID.
@@ -52,6 +65,14 @@ func (c *SimpleContext) Location() *time.Location { return c.location }
 
 // BaseCurrency returns the workspace base currency.
 func (c *SimpleContext) BaseCurrency() Currency { return c.baseCurrency }
+
+// FiscalYearStartMonth returns the workspace fiscal year start month.
+func (c *SimpleContext) FiscalYearStartMonth() int {
+	if c == nil || c.fiscalYearStartMonth < 1 || c.fiscalYearStartMonth > 12 {
+		return 1
+	}
+	return c.fiscalYearStartMonth
+}
 
 // Now returns the current time in the workspace timezone.
 func (c *SimpleContext) Now() time.Time { return time.Now().In(c.location) }

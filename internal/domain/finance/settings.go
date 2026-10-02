@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/id"
+	"github.com/masterkeysrd/saturn/internal/platform/patch"
 	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
@@ -42,18 +44,48 @@ const spacePrefix = "spc_"
 
 // Settings stores workspace-scoped configurations.
 type Settings struct {
-	BaseCurrency Currency `json:"base_currency"`
+	BaseCurrency         Currency `json:"base_currency"`
+	FiscalYearStartMonth int      `json:"fiscal_year_start_month,omitempty"`
 }
 
 // SettingsKey is the typed descriptor for workspace finance settings.
 var SettingsKey = settings.NewKey[Settings](settings.ScopeSpace, "finance")
 
+// FiscalYearStart returns the normalized fiscal year start month (1-12, default 1).
+func (s *Settings) FiscalYearStart() int {
+	if s == nil || s.FiscalYearStartMonth < 1 || s.FiscalYearStartMonth > 12 {
+		return 1
+	}
+	return s.FiscalYearStartMonth
+}
+
 // Validate checks the settings validity.
 func (s *Settings) Validate() error {
+	if s == nil {
+		return errors.E(errors.Invalid, "settings payload is required")
+	}
 	if err := s.BaseCurrency.Validate(); err != nil {
 		return fmt.Errorf("validate base currency: %w", err)
 	}
+	if s.FiscalYearStartMonth != 0 && (s.FiscalYearStartMonth < 1 || s.FiscalYearStartMonth > 12) {
+		return errors.E(errors.Invalid, "fiscal year start month must be between 1 and 12")
+	}
 	return nil
+}
+
+// SettingsPatchSchema defines all patchable fields for a Settings entity.
+var SettingsPatchSchema = patch.NewSchema[Settings]().
+	Register("fiscal_year_start_month", patch.Field(func(s *Settings) *int { return &s.FiscalYearStartMonth }))
+
+// ApplyPatch applies partial updates from an incoming settings based on the field mask.
+func (s *Settings) ApplyPatch(incoming *Settings, mask []string) error {
+	if incoming == nil {
+		return errors.E(errors.Invalid, "settings payload is required")
+	}
+	if err := SettingsPatchSchema.Apply(s, incoming, mask); err != nil {
+		return errors.E(errors.Invalid, err)
+	}
+	return s.Validate()
 }
 
 // NewDefaultCashAccount instantiates the standard default Cash account for a workspace.

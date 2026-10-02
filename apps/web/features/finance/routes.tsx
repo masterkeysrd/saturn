@@ -1,4 +1,5 @@
 import { lazy, createElement } from "react"
+import { Navigate } from "react-router-dom"
 import type { SaturnRouteObject } from "@/lib/navigation"
 
 export const routes: SaturnRouteObject[] = [
@@ -96,11 +97,7 @@ export const routes: SaturnRouteObject[] = [
   },
   {
     path: "/finance/settings",
-    element: createElement(
-      lazy(() =>
-        import("./settings-view").then((m) => ({ default: m.SettingsView }))
-      )
-    ),
+    element: <Navigate to="/settings/finance" replace />,
     requiresSpace: true,
   },
 ]

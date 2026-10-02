@@ -124,7 +124,7 @@ func TestBudget_CalculateBounds_OneTime(t *testing.T) {
 		Interval: finance.IntervalOneTime,
 	}
 	now := time.Now()
-	start, end := budget.CalculateBounds(now)
+	start, end := budget.CalculateBounds(finance.BudgetBoundsOpts{TargetDate: now})
 
 	if start.Year() != 1970 {
 		t.Errorf("expected start year 1970, got %d", start.Year())
@@ -542,7 +542,7 @@ func TestBudget_CalculateBounds_AllIntervals(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(string(tt.interval), func(t *testing.T) {
 			b := &finance.Budget{Interval: tt.interval}
-			start, end := b.CalculateBounds(target)
+			start, end := b.CalculateBounds(finance.BudgetBoundsOpts{TargetDate: target})
 			if start.After(end) {
 				t.Errorf("start %v is after end %v", start, end)
 			}
@@ -565,7 +565,7 @@ func TestBudget_CalculateBounds_Timezone(t *testing.T) {
 	b := &finance.Budget{Interval: finance.IntervalMonthly}
 
 	// 1. With explicit location parameter
-	start, end := b.CalculateBounds(targetUTC, loc)
+	start, end := b.CalculateBounds(finance.BudgetBoundsOpts{TargetDate: targetUTC, Location: loc})
 	expectedStart := time.Date(2026, 9, 1, 4, 0, 0, 0, time.UTC)  // 2026-09-01 00:00:00 AST
 	expectedEnd := time.Date(2026, 10, 1, 3, 59, 59, 0, time.UTC) // 2026-09-30 23:59:59 AST
 
@@ -581,15 +581,102 @@ func TestBudget_CalculateBounds_Timezone(t *testing.T) {
 
 	// 2. With time already localized
 	targetLocal := targetUTC.In(loc)
-	start2, end2 := b.CalculateBounds(targetLocal)
+	start2, end2 := b.CalculateBounds(finance.BudgetBoundsOpts{TargetDate: targetLocal})
 	if !start2.Equal(expectedStart) || !end2.Equal(expectedEnd) {
 		t.Errorf("expected localized time to produce same bounds [%v, %v], got [%v, %v]", expectedStart, expectedEnd, start2, end2)
 	}
 
 	// 3. Weekly interval timezone boundary
 	bWeekly := &finance.Budget{Interval: finance.IntervalWeekly}
-	wStart, wEnd := bWeekly.CalculateBounds(targetLocal)
+	wStart, wEnd := bWeekly.CalculateBounds(finance.BudgetBoundsOpts{TargetDate: targetLocal})
 	if targetUTC.Before(wStart) || targetUTC.After(wEnd) {
 		t.Errorf("target %v should fall within weekly bounds [%v, %v]", targetUTC, wStart, wEnd)
+	}
+}
+
+func TestBudget_CalculateBounds_FiscalYear(t *testing.T) {
+	b := &finance.Budget{Interval: finance.IntervalYearly}
+
+	tests := []struct {
+		name             string
+		target           time.Time
+		fiscalStartMonth int
+		expectedStart    time.Time
+		expectedEnd      time.Time
+	}{
+		{
+			name:             "default calendar year (start month 1) - mid year",
+			target:           time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC),
+			fiscalStartMonth: 1,
+			expectedStart:    time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			expectedEnd:      time.Date(2026, 12, 31, 23, 59, 59, 0, time.UTC),
+		},
+		{
+			name:             "October start (US Federal) - in first calendar quarter of FY (Nov 2026)",
+			target:           time.Date(2026, 11, 20, 10, 0, 0, 0, time.UTC),
+			fiscalStartMonth: 10,
+			expectedStart:    time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC),
+			expectedEnd:      time.Date(2027, 9, 30, 23, 59, 59, 0, time.UTC),
+		},
+		{
+			name:             "October start (US Federal) - in second calendar year of FY (Feb 2027)",
+			target:           time.Date(2027, 2, 14, 8, 0, 0, 0, time.UTC),
+			fiscalStartMonth: 10,
+			expectedStart:    time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC),
+			expectedEnd:      time.Date(2027, 9, 30, 23, 59, 59, 0, time.UTC),
+		},
+		{
+			name:             "October start (US Federal) - on final day of FY (Sep 30 2027)",
+			target:           time.Date(2027, 9, 30, 23, 59, 58, 0, time.UTC),
+			fiscalStartMonth: 10,
+			expectedStart:    time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC),
+			expectedEnd:      time.Date(2027, 9, 30, 23, 59, 59, 0, time.UTC),
+		},
+		{
+			name:             "April start (UK/India) - before start month (March 2026)",
+			target:           time.Date(2026, 3, 31, 23, 59, 0, 0, time.UTC),
+			fiscalStartMonth: 4,
+			expectedStart:    time.Date(2025, 4, 1, 0, 0, 0, 0, time.UTC),
+			expectedEnd:      time.Date(2026, 3, 31, 23, 59, 59, 0, time.UTC),
+		},
+		{
+			name:             "April start (UK/India) - exactly on start month (April 1 2026)",
+			target:           time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
+			fiscalStartMonth: 4,
+			expectedStart:    time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
+			expectedEnd:      time.Date(2027, 3, 31, 23, 59, 59, 0, time.UTC),
+		},
+		{
+			name:             "July start (Australia) - in November 2026",
+			target:           time.Date(2026, 11, 5, 14, 0, 0, 0, time.UTC),
+			fiscalStartMonth: 7,
+			expectedStart:    time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
+			expectedEnd:      time.Date(2027, 6, 30, 23, 59, 59, 0, time.UTC),
+		},
+		{
+			name:             "unspecified/invalid fiscal start month (0) defaults to January",
+			target:           time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC),
+			fiscalStartMonth: 0,
+			expectedStart:    time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			expectedEnd:      time.Date(2026, 12, 31, 23, 59, 59, 0, time.UTC),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			start, end := b.CalculateBounds(finance.BudgetBoundsOpts{
+				TargetDate:           tt.target,
+				FiscalYearStartMonth: tt.fiscalStartMonth,
+			})
+			if !start.Equal(tt.expectedStart) {
+				t.Errorf("start = %v, want %v", start, tt.expectedStart)
+			}
+			if !end.Equal(tt.expectedEnd) {
+				t.Errorf("end = %v, want %v", end, tt.expectedEnd)
+			}
+			if tt.target.Before(start) || tt.target.After(end) {
+				t.Errorf("target %v should fall within [%v, %v]", tt.target, start, end)
+			}
+		})
 	}
 }

@@ -328,7 +328,7 @@ func TestCalculateBounds(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := &Budget{Interval: tt.interval}
-			start, end := b.CalculateBounds(tt.date)
+			start, end := b.CalculateBounds(BudgetBoundsOpts{TargetDate: tt.date})
 			if !start.Equal(tt.wantStart) {
 				t.Errorf("start date = %s, want %s", start, tt.wantStart)
 			}
@@ -383,6 +383,119 @@ func TestSetup(t *testing.T) {
 	}
 	if res2.Value.BaseCurrency != Currency("USD") {
 		t.Errorf("immutable currency got updated to %s", res2.Value.BaseCurrency)
+	}
+}
+
+func TestUpdateSettings(t *testing.T) {
+	spIDStr, _ := id.Generate("spc_")
+	spID := SpaceID(spIDStr)
+
+	tests := []struct {
+		name          string
+		setupSettings bool
+		spaceID       SpaceID
+		incoming      *Settings
+		mask          []string
+		wantErr       bool
+		wantMonth     int
+	}{
+		{
+			name:          "successfully update fiscal year start month to 10 (October)",
+			setupSettings: true,
+			spaceID:       spID,
+			incoming: &Settings{
+				FiscalYearStartMonth: 10,
+			},
+			mask:      []string{"fiscal_year_start_month"},
+			wantErr:   false,
+			wantMonth: 10,
+		},
+		{
+			name:          "invalid fiscal year start month (13) returns error",
+			setupSettings: true,
+			spaceID:       spID,
+			incoming: &Settings{
+				FiscalYearStartMonth: 13,
+			},
+			mask:    []string{"fiscal_year_start_month"},
+			wantErr: true,
+		},
+		{
+			name:          "invalid fiscal year start month (-1) returns error",
+			setupSettings: true,
+			spaceID:       spID,
+			incoming: &Settings{
+				FiscalYearStartMonth: -1,
+			},
+			mask:    []string{"fiscal_year_start_month"},
+			wantErr: true,
+		},
+		{
+			name:          "settings not found for space returns error",
+			setupSettings: false,
+			spaceID:       SpaceID("spc_unknown"),
+			incoming: &Settings{
+				FiscalYearStartMonth: 7,
+			},
+			mask:    []string{"fiscal_year_start_month"},
+			wantErr: true,
+		},
+		{
+			name:          "invalid space ID returns error",
+			setupSettings: true,
+			spaceID:       SpaceID("invalid"),
+			incoming: &Settings{
+				FiscalYearStartMonth: 7,
+			},
+			mask:    []string{"fiscal_year_start_month"},
+			wantErr: true,
+		},
+		{
+			name:          "nil incoming settings returns error",
+			setupSettings: true,
+			spaceID:       spID,
+			incoming:      nil,
+			mask:          []string{"fiscal_year_start_month"},
+			wantErr:       true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			settingsStore := newSettingsClientMock(nil)
+			svc := NewService(Dependencies{
+				Settings:              settingsStore,
+				AccountStore:          newAccountStoreMock(nil),
+				TransferStore:         newTransferStoreMock(nil),
+				TransactionEventStore: newTransactionEventStoreMock(nil),
+			})
+
+			ctx := context.Background()
+			if tt.setupSettings {
+				_, err := svc.Setup(ctx, spID, &Settings{BaseCurrency: Currency("USD"), FiscalYearStartMonth: 1})
+				if err != nil {
+					t.Fatalf("setup failed: %v", err)
+				}
+			}
+
+			updated, err := svc.UpdateSettings(ctx, tt.spaceID, tt.incoming, tt.mask)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("UpdateSettings() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr {
+				if updated.Value.FiscalYearStartMonth != tt.wantMonth {
+					t.Errorf("FiscalYearStartMonth = %d, want %d", updated.Value.FiscalYearStartMonth, tt.wantMonth)
+				}
+				// Verify persistence
+				retrieved, err := svc.GetSettings(ctx, tt.spaceID)
+				if err != nil {
+					t.Fatalf("GetSettings() failed: %v", err)
+				}
+				if retrieved.Value.FiscalYearStartMonth != tt.wantMonth {
+					t.Errorf("persisted FiscalYearStartMonth = %d, want %d", retrieved.Value.FiscalYearStartMonth, tt.wantMonth)
+				}
+			}
+		})
 	}
 }
 
@@ -5288,7 +5401,7 @@ func TestService_GetOrCreatePeriods(t *testing.T) {
 			}
 			rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, baseCurrency)
 			if tt.setupPeriod {
-				start, end := budget.CalculateBounds(now)
+				start, end := budget.CalculateBounds(BudgetBoundsOpts{TargetDate: now})
 				p := &BudgetPeriod{
 					ID:                 "bgp_existing",
 					BudgetID:           bID,

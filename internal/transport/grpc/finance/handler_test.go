@@ -49,3 +49,44 @@ func TestProtoIntervalConversion(t *testing.T) {
 		})
 	}
 }
+
+func TestToProtoSettings(t *testing.T) {
+	t.Run("nil entry returns nil", func(t *testing.T) {
+		if toProtoSettings(nil) != nil {
+			t.Error("expected nil for nil entry")
+		}
+	})
+
+	t.Run("valid settings entry maps fields correctly", func(t *testing.T) {
+		entry := finance.SettingsKey.For("spc_test").Entry(finance.Settings{
+			BaseCurrency:         "USD",
+			FiscalYearStartMonth: 10,
+		})
+
+		proto := toProtoSettings(entry)
+		if proto == nil {
+			t.Fatal("expected non-nil proto settings")
+		}
+		if proto.SpaceId != "spc_test" {
+			t.Errorf("SpaceId = %s, want spc_test", proto.SpaceId)
+		}
+		if proto.BaseCurrency != "USD" {
+			t.Errorf("BaseCurrency = %s, want USD", proto.BaseCurrency)
+		}
+		if proto.FiscalYearStartMonth != 10 {
+			t.Errorf("FiscalYearStartMonth = %d, want 10", proto.FiscalYearStartMonth)
+		}
+	})
+
+	t.Run("defaults to month 1 when FiscalYearStartMonth is 0", func(t *testing.T) {
+		entry := finance.SettingsKey.For("spc_test").Entry(finance.Settings{
+			BaseCurrency:         "EUR",
+			FiscalYearStartMonth: 0,
+		})
+
+		proto := toProtoSettings(entry)
+		if proto.FiscalYearStartMonth != 1 {
+			t.Errorf("FiscalYearStartMonth = %d, want 1 (default)", proto.FiscalYearStartMonth)
+		}
+	})
+}

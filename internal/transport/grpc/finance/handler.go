@@ -41,10 +41,11 @@ func toProtoSettings(entry *settings.Entry[finance.Settings]) *financev1.Setting
 		return nil
 	}
 	return &financev1.Settings{
-		SpaceId:      entry.Target.ScopeID(),
-		BaseCurrency: string(entry.Value.BaseCurrency),
-		CreateTime:   timestamppb.New(entry.CreateTime),
-		UpdateTime:   timestamppb.New(entry.UpdateTime),
+		SpaceId:              entry.Target.ScopeID(),
+		BaseCurrency:         string(entry.Value.BaseCurrency),
+		FiscalYearStartMonth: int32(entry.Value.FiscalYearStart()),
+		CreateTime:           timestamppb.New(entry.CreateTime),
+		UpdateTime:           timestamppb.New(entry.UpdateTime),
 	}
 }
 
@@ -201,7 +202,8 @@ func (h *Handler) Setup(ctx context.Context, req *financev1.SetupRequest) (*fina
 	}
 
 	appReq := &financeapp.SetupRequest{
-		BaseCurrency: baseCurrency,
+		BaseCurrency:         baseCurrency,
+		FiscalYearStartMonth: int(req.GetFiscalYearStartMonth()),
 	}
 
 	settings, err := h.Coordinator.Setup(ctx, appReq)
@@ -214,6 +216,36 @@ func (h *Handler) Setup(ctx context.Context, req *financev1.SetupRequest) (*fina
 
 func (h *Handler) GetSettings(ctx context.Context, req *financev1.GetSettingsRequest) (*financev1.Settings, error) {
 	settings, err := h.Coordinator.GetSettings(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return toProtoSettings(settings), nil
+}
+
+func (h *Handler) UpdateSettings(ctx context.Context, req *financev1.UpdateSettingsRequest) (*financev1.Settings, error) {
+	const op errors.Op = "grpc/finance.UpdateSettings"
+
+	protoSettings := req.GetSettings()
+	if protoSettings == nil {
+		return nil, errors.E(op, errors.Invalid, "settings are required")
+	}
+
+	mask := req.GetUpdateMask().GetPaths()
+	if len(mask) == 0 {
+		return nil, errors.E(op, errors.Invalid, "update_mask is required")
+	}
+
+	incoming := &finance.Settings{
+		FiscalYearStartMonth: int(protoSettings.GetFiscalYearStartMonth()),
+	}
+
+	appReq := &financeapp.UpdateSettingsRequest{
+		Settings:   incoming,
+		UpdateMask: mask,
+	}
+
+	settings, err := h.Coordinator.UpdateSettings(ctx, appReq)
 	if err != nil {
 		return nil, err
 	}

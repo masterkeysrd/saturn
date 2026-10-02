@@ -45,9 +45,5 @@ export const menu: FeatureMenu = {
       title: "Borrowings",
       url: "/finance/borrowings",
     },
-    {
-      title: "Settings",
-      url: "/finance/settings",
-    },
   ],
 }

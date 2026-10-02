@@ -28,6 +28,7 @@ type SpaceService interface {
 type FinanceService interface {
 	Setup(ctx context.Context, spaceID finance.SpaceID, settings *finance.Settings) (*settings.Entry[finance.Settings], error)
 	GetSettings(ctx context.Context, spaceID finance.SpaceID) (*settings.Entry[finance.Settings], error)
+	UpdateSettings(ctx context.Context, spaceID finance.SpaceID, incoming *finance.Settings, mask []string) (*settings.Entry[finance.Settings], error)
 	CreateBudget(ctx context.Context, rCtx finance.Context, budget *finance.Budget) (*finance.Budget, error)
 	UpdateBudget(ctx context.Context, rCtx finance.Context, budget *finance.Budget, mask []string) (*finance.Budget, error)
 	DeleteBudget(ctx context.Context, rCtx finance.Context, id finance.BudgetID, opts finance.DeleteOptions) error
@@ -183,6 +184,8 @@ type Coordinator interface {
 	// @transactional
 	Setup(ctx context.Context, req *SetupRequest) (*settings.Entry[finance.Settings], error)
 	GetSettings(ctx context.Context) (*settings.Entry[finance.Settings], error)
+	// @transactional
+	UpdateSettings(ctx context.Context, req *UpdateSettingsRequest) (*settings.Entry[finance.Settings], error)
 	ListCurrencies(ctx context.Context) ([]finance.CurrencyInfo, error)
 
 	// @transactional
@@ -440,6 +443,18 @@ func (r *RequestContext) BaseCurrency() finance.Currency {
 	return r.baseCurrency
 }
 
+// FiscalYearStartMonth returns the workspace fiscal year start month, resolving it lazily.
+func (r *RequestContext) FiscalYearStartMonth() int {
+	if r == nil {
+		return 1
+	}
+	entry := r.FinanceSettings()
+	if entry != nil {
+		return entry.Value.FiscalYearStart()
+	}
+	return 1
+}
+
 // Now returns the current time in the workspace timezone.
 func (r *RequestContext) Now() time.Time {
 	return time.Now().In(r.Location())
@@ -503,7 +518,8 @@ func toLocation(t time.Time, loc *time.Location) time.Time {
 
 // SetupRequest represents settings setup inputs.
 type SetupRequest struct {
-	BaseCurrency finance.Currency
+	BaseCurrency         finance.Currency
+	FiscalYearStartMonth int
 }
 
 // Setup sets up base currency preferences for a workspace.
@@ -514,7 +530,8 @@ func (c *coordinator) Setup(ctx context.Context, req *SetupRequest) (*settings.E
 	}
 
 	st := &finance.Settings{
-		BaseCurrency: req.BaseCurrency,
+		BaseCurrency:         req.BaseCurrency,
+		FiscalYearStartMonth: req.FiscalYearStartMonth,
 	}
 
 	return c.financeService.Setup(ctx, rCtx.SpaceID(), st)
@@ -528,6 +545,31 @@ func (c *coordinator) GetSettings(ctx context.Context) (*settings.Entry[finance.
 	}
 
 	return c.financeService.GetSettings(ctx, rCtx.SpaceID())
+}
+
+// UpdateSettingsRequest represents settings update inputs.
+type UpdateSettingsRequest struct {
+	Settings   *finance.Settings
+	UpdateMask []string
+}
+
+// UpdateSettings updates workspace finance configurations.
+func (c *coordinator) UpdateSettings(ctx context.Context, req *UpdateSettingsRequest) (*settings.Entry[finance.Settings], error) {
+	const op errors.Op = "application/finance.UpdateSettings"
+	if req == nil || req.Settings == nil {
+		return nil, errors.E(op, errors.Invalid, "settings are required")
+	}
+
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	entry, err := c.financeService.UpdateSettings(ctx, rCtx.SpaceID(), req.Settings, req.UpdateMask)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return entry, nil
 }
 
 // ListCurrencies returns the list of supported currencies.

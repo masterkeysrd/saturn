@@ -540,6 +540,11 @@ export interface Settings {
    */
   baseCurrency: string
   /**
+   * Optional. The starting month of the workspace's fiscal year (1 = January, 12 = December).
+   * If unspecified or set to 0, defaults to 1 (January - Calendar Year).
+   */
+  fiscalYearStartMonth: number
+  /**
    * Output only. Creation time of the settings.
    */
   createTime?: string
@@ -717,6 +722,11 @@ export interface SetupRequest {
    * Conversions and aggregated spent statistics will default to this currency.
    */
   baseCurrency: string
+  /**
+   * Optional. The starting month of the workspace's fiscal year (1 = January, 12 = December).
+   * If unspecified or set to 0, defaults to 1 (January - Calendar Year).
+   */
+  fiscalYearStartMonth?: number
 }
 
 /**
@@ -724,6 +734,27 @@ export interface SetupRequest {
  * [GetSettings][saturn.finance.v1.Finance.GetSettings].
  */
 export type GetSettingsRequest = Record<string, never>
+
+/**
+ * Request message for Finance.UpdateSettings.
+ */
+export interface UpdateSettingsRequest {
+  /**
+   * Required. The settings resource containing updated values.
+   */
+  settings: Settings
+  /**
+   * Required. The list of fields to update.
+   * A mask specifying which fields (e.g. `fiscal_year_start_month`) in the
+   * `settings` field should be updated.
+   * Currently UpdateSettings supports the following fields:
+   *
+   * * `fiscal_year_start_month`
+   *
+   * Setting any other field will return an INVALID_ARGUMENT error.
+   */
+  updateMask: { paths?: string[] }
+}
 
 /**
  * The request for
@@ -3898,6 +3929,31 @@ export function useGetSettingsQuery(
   return useQuery<Settings, Error>({
     queryKey: ["/api/v1/finance/settings", req],
     queryFn: () => getSettings(req),
+    ...options,
+  })
+}
+
+/**
+ * Updates workspace finance settings (e.g. financial year start month).
+ */
+export async function updateSettings(
+  req: UpdateSettingsRequest
+): Promise<Settings> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).settings
+  return request<Settings>({
+    method: "PATCH",
+    url: "/api/v1/finance/settings",
+    params: params,
+    data: req.settings,
+  })
+}
+
+export function useUpdateSettingsMutation(
+  options?: UseMutationOptions<Settings, Error, UpdateSettingsRequest>
+) {
+  return useMutation<Settings, Error, UpdateSettingsRequest>({
+    mutationFn: (req) => updateSettings(req),
     ...options,
   })
 }

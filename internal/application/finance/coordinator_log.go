@@ -81,6 +81,30 @@ func (l *LoggingCoordinator) GetSettings(ctx context.Context) (*settings.Entry[f
 	return res, nil
 }
 
+// UpdateSettings executes next.UpdateSettings and logs execution duration and errors.
+func (l *LoggingCoordinator) UpdateSettings(ctx context.Context, req *UpdateSettingsRequest) (*settings.Entry[finance.Settings], error) {
+	start := time.Now()
+	res, err := l.next.UpdateSettings(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "finance.UpdateSettings failed",
+			log.String("component", "finance"),
+			log.String("operation", "UpdateSettings"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "finance.UpdateSettings completed",
+		log.String("component", "finance"),
+		log.String("operation", "UpdateSettings"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
 // ListCurrencies executes next.ListCurrencies and logs execution duration and errors.
 func (l *LoggingCoordinator) ListCurrencies(ctx context.Context) ([]finance.CurrencyInfo, error) {
 	start := time.Now()

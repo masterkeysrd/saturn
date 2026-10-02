@@ -131,6 +131,102 @@ func TestCoordinator_SettingsAndCurrencies(t *testing.T) {
 		}
 	})
 
+	t.Run("UpdateSettings", func(t *testing.T) {
+		tests := []struct {
+			name          string
+			ctx           context.Context
+			req           *UpdateSettingsRequest
+			mockFn        func(ctx context.Context, spaceID finance.SpaceID, incoming *finance.Settings, mask []string) (*settings.Entry[finance.Settings], error)
+			expectedError bool
+		}{
+			{
+				name: "Success",
+				ctx:  newTestContext("spc_1", "usr_1"),
+				req: &UpdateSettingsRequest{
+					Settings:   &finance.Settings{FiscalYearStartMonth: 10},
+					UpdateMask: []string{"fiscal_year_start_month"},
+				},
+				mockFn: func(ctx context.Context, spaceID finance.SpaceID, incoming *finance.Settings, mask []string) (*settings.Entry[finance.Settings], error) {
+					if spaceID != "spc_1" || incoming.FiscalYearStartMonth != 10 {
+						t.Errorf("unexpected update payload: space=%v settings=%+v", spaceID, incoming)
+					}
+					return &settings.Entry[finance.Settings]{
+						Value: *incoming,
+					}, nil
+				},
+				expectedError: false,
+			},
+			{
+				name:          "Unauthenticated",
+				ctx:           context.Background(),
+				req:           &UpdateSettingsRequest{Settings: &finance.Settings{FiscalYearStartMonth: 10}},
+				expectedError: true,
+			},
+			{
+				name:          "Nil request",
+				ctx:           newTestContext("spc_1", "usr_1"),
+				req:           nil,
+				expectedError: true,
+			},
+			{
+				name:          "Nil settings in request",
+				ctx:           newTestContext("spc_1", "usr_1"),
+				req:           &UpdateSettingsRequest{Settings: nil},
+				expectedError: true,
+			},
+			{
+				name: "Domain error",
+				ctx:  newTestContext("spc_1", "usr_1"),
+				req: &UpdateSettingsRequest{
+					Settings:   &finance.Settings{FiscalYearStartMonth: 10},
+					UpdateMask: []string{"fiscal_year_start_month"},
+				},
+				mockFn: func(ctx context.Context, spaceID finance.SpaceID, incoming *finance.Settings, mask []string) (*settings.Entry[finance.Settings], error) {
+					return nil, errors.New("domain update failure")
+				},
+				expectedError: true,
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				fsMock := &FinanceServiceMock{UpdateSettingsFunc: tc.mockFn}
+				coord := NewCoordinator(Dependencies{FinanceService: fsMock})
+				res, err := coord.UpdateSettings(tc.ctx, tc.req)
+				if tc.expectedError {
+					if err == nil {
+						t.Fatal("expected error, got nil")
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if res == nil || res.Value.FiscalYearStartMonth != 10 {
+					t.Errorf("expected fiscal month 10, got %+v", res)
+				}
+			})
+		}
+	})
+
+	t.Run("RequestContext_FiscalYearStartMonth", func(t *testing.T) {
+		fsMock := &FinanceServiceMock{
+			GetSettingsFunc: func(ctx context.Context, spaceID finance.SpaceID) (*settings.Entry[finance.Settings], error) {
+				return &settings.Entry[finance.Settings]{
+					Value: finance.Settings{BaseCurrency: "USD", FiscalYearStartMonth: 7},
+				}, nil
+			},
+		}
+		coord := NewCoordinator(Dependencies{FinanceService: fsMock}).(*coordinator)
+		rCtx, err := coord.resolveContext(newTestContext("spc_1", "usr_1"))
+		if err != nil {
+			t.Fatalf("unexpected error resolving context: %v", err)
+		}
+		if m := rCtx.FiscalYearStartMonth(); m != 7 {
+			t.Fatalf("expected fiscal month 7, got %d", m)
+		}
+	})
+
 	t.Run("RequestContext_BaseCurrency_NoFallback", func(t *testing.T) {
 		t.Run("returns empty when settings not found (no USD fallback)", func(t *testing.T) {
 			fsMock := &FinanceServiceMock{

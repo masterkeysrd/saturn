@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  Modal,
+  FlatList,
 } from "react-native"
 import { useRouter } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
@@ -26,12 +28,19 @@ import {
   Info,
   CheckCircle2,
   Globe,
+  Calendar,
+  Check,
+  X,
 } from "lucide-react-native"
 import {
   useListActiveSessionsQuery,
   useListMFAFactorsQuery,
 } from "@saturn/api/saturn/identity/v1/identity"
-import { useGetSettingsQuery } from "@saturn/api/saturn/finance/v1/finance"
+import {
+  useGetSettingsQuery,
+  useUpdateSettingsMutation as useUpdateFinanceSettingsMutation,
+} from "@saturn/api/saturn/finance/v1/finance"
+import { FISCAL_YEAR_MONTHS, getFiscalMonthOption } from "@saturn/core"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
@@ -73,6 +82,9 @@ export default function SettingsScreen() {
     { enabled: !!activeSpaceId }
   )
   const baseCurrency = financeSettings?.baseCurrency || "USD"
+  const updateFinanceSettingsMutation = useUpdateFinanceSettingsMutation()
+  const currentFiscalMonth = financeSettings?.fiscalYearStartMonth || 1
+  const fiscalMonthOption = getFiscalMonthOption(currentFiscalMonth)
 
   const [signOutModalVisible, setSignOutModalVisible] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
@@ -80,6 +92,44 @@ export default function SettingsScreen() {
   const [mfaModalVisible, setMfaModalVisible] = useState(false)
   const [enrollingWithMfa, setEnrollingWithMfa] = useState(false)
   const [mfaError, setMfaError] = useState<string | null>(null)
+  const [fiscalYearModalVisible, setFiscalYearModalVisible] = useState(false)
+
+  const handleSelectFiscalYear = async (month: number) => {
+    if (month === currentFiscalMonth) {
+      setFiscalYearModalVisible(false)
+      return
+    }
+    try {
+      haptics.selection()
+      await updateFinanceSettingsMutation.mutateAsync({
+        settings: {
+          ...financeSettings,
+          spaceId: activeSpaceId || "",
+          baseCurrency: baseCurrency,
+          fiscalYearStartMonth: month,
+        },
+        updateMask: {
+          paths: ["fiscal_year_start_month"],
+        },
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/settings"],
+      })
+      setFiscalYearModalVisible(false)
+      toast.show({
+        type: "success",
+        title: "Fiscal Year Updated",
+        message: `Fiscal year start month set to ${getFiscalMonthOption(month).name}.`,
+      })
+    } catch (err: unknown) {
+      toast.show({
+        type: "error",
+        title: "Update Failed",
+        message:
+          err instanceof Error ? err.message : "Failed to update fiscal year",
+      })
+    }
+  }
 
   const handleConfirmSignOut = async () => {
     setSigningOut(true)
@@ -337,7 +387,7 @@ export default function SettingsScreen() {
               </View>
             </TouchableOpacity>
 
-            <View style={styles.menuItem}>
+            <View style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuLeft}>
                 <Coins size={18} color={theme.colors.success} />
                 <Text style={styles.menuLabel}>Base Currency</Text>
@@ -346,6 +396,24 @@ export default function SettingsScreen() {
                 <Badge variant="outline" size="sm" label={baseCurrency} />
               </View>
             </View>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => {
+                haptics.light()
+                setFiscalYearModalVisible(true)
+              }}
+            >
+              <View style={styles.menuLeft}>
+                <Calendar size={18} color={theme.colors.info} />
+                <Text style={styles.menuLabel}>Fiscal Year Start</Text>
+              </View>
+              <View style={styles.menuRight}>
+                <Text style={styles.menuValue}>{fiscalMonthOption.name}</Text>
+                <ChevronRight size={16} color={theme.colors.textMuted} />
+              </View>
+            </TouchableOpacity>
           </Card>
         </View>
 
@@ -499,6 +567,69 @@ export default function SettingsScreen() {
           loading={enrollingWithMfa}
           error={mfaError}
         />
+
+        {/* Fiscal Year Modal */}
+        <Modal
+          visible={fiscalYearModalVisible}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setFiscalYearModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>Fiscal Year Start</Text>
+                <Text style={styles.modalSubtitle}>
+                  {
+                    "Select the starting month of your workspace's annual financial cycle."
+                  }
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setFiscalYearModalVisible(false)}
+                style={styles.closeBtn}
+              >
+                <X size={20} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={FISCAL_YEAR_MONTHS}
+              keyExtractor={(item) => String(item.month)}
+              renderItem={({ item }) => {
+                const isSelected = item.month === currentFiscalMonth
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.modalItem,
+                      isSelected && styles.modalItemActive,
+                    ]}
+                    onPress={() => handleSelectFiscalYear(item.month)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          styles.modalItemText,
+                          isSelected && styles.modalItemTextActive,
+                        ]}
+                      >
+                        {item.name}
+                      </Text>
+                      <Text style={styles.modalItemDescription}>
+                        {item.description}
+                      </Text>
+                    </View>
+                    {isSelected && (
+                      <Check size={18} color={theme.colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                )
+              }}
+              contentContainerStyle={{ paddingBottom: 40 }}
+            />
+          </View>
+        </Modal>
       </ScrollView>
     </View>
   )
@@ -610,5 +741,62 @@ const styles = StyleSheet.create({
   menuValue: {
     fontSize: 14,
     color: theme.colors.textMuted,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    paddingTop: 16,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: theme.colors.textMuted,
+    marginTop: 4,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  modalItemActive: {
+    backgroundColor: theme.colors.primarySubtle,
+  },
+  modalItemText: {
+    fontSize: 15,
+    color: theme.colors.textPrimary,
+  },
+  modalItemTextActive: {
+    color: theme.colors.primary,
+    fontWeight: "600",
+  },
+  modalItemDescription: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginTop: 2,
   },
 })

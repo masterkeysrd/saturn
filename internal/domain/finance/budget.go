@@ -204,17 +204,31 @@ func (b *Budget) Validate() error {
 	return nil
 }
 
+// BudgetBoundsOpts specifies parameters to calculate time boundaries for a budget period.
+type BudgetBoundsOpts struct {
+	TargetDate           time.Time
+	Location             *time.Location
+	FiscalYearStartMonth int
+}
+
 // CalculateBounds computes the start and end time boundaries around a given date in UTC,
-// respecting the location of the provided time or an optional explicit location.
-func (b *Budget) CalculateBounds(t time.Time, loc ...*time.Location) (time.Time, time.Time) {
-	l := t.Location()
-	if len(loc) > 0 && loc[0] != nil {
-		l = loc[0]
+// respecting the location of the provided time or an optional explicit location,
+// as well as the workspace's fiscal year start month for yearly budgets.
+func (b *Budget) CalculateBounds(opts BudgetBoundsOpts) (time.Time, time.Time) {
+	l := opts.Location
+	if l == nil {
+		l = opts.TargetDate.Location()
 	}
 	if l == nil {
 		l = time.UTC
 	}
-	t = t.In(l)
+	t := opts.TargetDate.In(l)
+
+	startMonth := opts.FiscalYearStartMonth
+	if startMonth < 1 || startMonth > 12 {
+		startMonth = 1
+	}
+
 	switch b.Interval {
 	case IntervalOneTime:
 		start := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -232,7 +246,11 @@ func (b *Budget) CalculateBounds(t time.Time, loc ...*time.Location) (time.Time,
 		return localStart.UTC(), localEnd.UTC()
 
 	case IntervalYearly:
-		localStart := time.Date(t.Year(), 1, 1, 0, 0, 0, 0, l)
+		startYear := t.Year()
+		if int(t.Month()) < startMonth {
+			startYear--
+		}
+		localStart := time.Date(startYear, time.Month(startMonth), 1, 0, 0, 0, 0, l)
 		localEnd := localStart.AddDate(1, 0, 0).Add(-time.Second)
 		return localStart.UTC(), localEnd.UTC()
 
@@ -247,20 +265,25 @@ func (b *Budget) CalculateBounds(t time.Time, loc ...*time.Location) (time.Time,
 
 // NewPeriodOpts holds parameters to spawn a BudgetPeriod entity.
 type NewPeriodOpts struct {
-	PeriodID           PeriodID
-	TargetDate         time.Time
-	StartDate          time.Time
-	EndDate            time.Time
-	BaseCurrency       Currency
-	ExchangeRateToBase float64
-	Location           *time.Location
+	PeriodID             PeriodID
+	TargetDate           time.Time
+	StartDate            time.Time
+	EndDate              time.Time
+	BaseCurrency         Currency
+	ExchangeRateToBase   float64
+	Location             *time.Location
+	FiscalYearStartMonth int
 }
 
 // NewPeriod constructs a validated BudgetPeriod instance for the budget at the specified date.
 func (b *Budget) NewPeriod(opts NewPeriodOpts) (*BudgetPeriod, error) {
 	start, end := opts.StartDate, opts.EndDate
 	if start.IsZero() || end.IsZero() {
-		start, end = b.CalculateBounds(opts.TargetDate, opts.Location)
+		start, end = b.CalculateBounds(BudgetBoundsOpts{
+			TargetDate:           opts.TargetDate,
+			Location:             opts.Location,
+			FiscalYearStartMonth: opts.FiscalYearStartMonth,
+		})
 	}
 	pID := opts.PeriodID
 	if pID == "" {

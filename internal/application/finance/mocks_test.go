@@ -105,6 +105,9 @@ type FinanceServiceMock struct {
 	// GetSettingsFunc mocks the GetSettings method.
 	GetSettingsFunc func(ctx context.Context, spaceID finance.SpaceID) (*settings.Entry[finance.Settings], error)
 
+	// UpdateSettingsFunc mocks the UpdateSettings method.
+	UpdateSettingsFunc func(ctx context.Context, spaceID finance.SpaceID, incoming *finance.Settings, mask []string) (*settings.Entry[finance.Settings], error)
+
 	// CreateBudgetFunc mocks the CreateBudget method.
 	CreateBudgetFunc func(ctx context.Context, rCtx finance.Context, budget *finance.Budget) (*finance.Budget, error)
 
@@ -322,6 +325,12 @@ type FinanceServiceMock struct {
 		GetSettings []struct {
 			Ctx     context.Context
 			SpaceID finance.SpaceID
+		}
+		UpdateSettings []struct {
+			Ctx      context.Context
+			SpaceID  finance.SpaceID
+			Incoming *finance.Settings
+			Mask     []string
 		}
 		CreateBudget []struct {
 			Ctx    context.Context
@@ -685,6 +694,7 @@ type FinanceServiceMock struct {
 	}
 	lockSetup                         sync.RWMutex
 	lockGetSettings                   sync.RWMutex
+	lockUpdateSettings                sync.RWMutex
 	lockCreateBudget                  sync.RWMutex
 	lockUpdateBudget                  sync.RWMutex
 	lockDeleteBudget                  sync.RWMutex
@@ -811,6 +821,39 @@ func (mock *FinanceServiceMock) GetSettingsCalls() []struct {
 	mock.lockGetSettings.RLock()
 	defer mock.lockGetSettings.RUnlock()
 	return mock.calls.GetSettings
+}
+
+// UpdateSettings calls UpdateSettingsFunc.
+func (mock *FinanceServiceMock) UpdateSettings(ctx context.Context, spaceID finance.SpaceID, incoming *finance.Settings, mask []string) (*settings.Entry[finance.Settings], error) {
+	if mock.UpdateSettingsFunc == nil {
+		panic("FinanceServiceMock.UpdateSettingsFunc: method is nil but FinanceService.UpdateSettings was just called")
+	}
+	mock.lockUpdateSettings.Lock()
+	mock.calls.UpdateSettings = append(mock.calls.UpdateSettings, struct {
+		Ctx      context.Context
+		SpaceID  finance.SpaceID
+		Incoming *finance.Settings
+		Mask     []string
+	}{
+		Ctx:      ctx,
+		SpaceID:  spaceID,
+		Incoming: incoming,
+		Mask:     mask,
+	})
+	mock.lockUpdateSettings.Unlock()
+	return mock.UpdateSettingsFunc(ctx, spaceID, incoming, mask)
+}
+
+// UpdateSettingsCalls returns all calls made to UpdateSettings.
+func (mock *FinanceServiceMock) UpdateSettingsCalls() []struct {
+	Ctx      context.Context
+	SpaceID  finance.SpaceID
+	Incoming *finance.Settings
+	Mask     []string
+} {
+	mock.lockUpdateSettings.RLock()
+	defer mock.lockUpdateSettings.RUnlock()
+	return mock.calls.UpdateSettings
 }
 
 // CreateBudget calls CreateBudgetFunc.
@@ -3094,6 +3137,9 @@ type CoordinatorMock struct {
 	// GetSettingsFunc mocks the GetSettings method.
 	GetSettingsFunc func(ctx context.Context) (*settings.Entry[finance.Settings], error)
 
+	// UpdateSettingsFunc mocks the UpdateSettings method.
+	UpdateSettingsFunc func(ctx context.Context, req *UpdateSettingsRequest) (*settings.Entry[finance.Settings], error)
+
 	// ListCurrenciesFunc mocks the ListCurrencies method.
 	ListCurrenciesFunc func(ctx context.Context) ([]finance.CurrencyInfo, error)
 
@@ -3285,6 +3331,10 @@ type CoordinatorMock struct {
 		}
 		GetSettings []struct {
 			Ctx context.Context
+		}
+		UpdateSettings []struct {
+			Ctx context.Context
+			Req *UpdateSettingsRequest
 		}
 		ListCurrencies []struct {
 			Ctx context.Context
@@ -3543,6 +3593,7 @@ type CoordinatorMock struct {
 	lockResolveContext                sync.RWMutex
 	lockSetup                         sync.RWMutex
 	lockGetSettings                   sync.RWMutex
+	lockUpdateSettings                sync.RWMutex
 	lockListCurrencies                sync.RWMutex
 	lockImportStatement               sync.RWMutex
 	lockDeleteStatement               sync.RWMutex
@@ -3678,6 +3729,33 @@ func (mock *CoordinatorMock) GetSettingsCalls() []struct {
 	mock.lockGetSettings.RLock()
 	defer mock.lockGetSettings.RUnlock()
 	return mock.calls.GetSettings
+}
+
+// UpdateSettings calls UpdateSettingsFunc.
+func (mock *CoordinatorMock) UpdateSettings(ctx context.Context, req *UpdateSettingsRequest) (*settings.Entry[finance.Settings], error) {
+	if mock.UpdateSettingsFunc == nil {
+		panic("CoordinatorMock.UpdateSettingsFunc: method is nil but Coordinator.UpdateSettings was just called")
+	}
+	mock.lockUpdateSettings.Lock()
+	mock.calls.UpdateSettings = append(mock.calls.UpdateSettings, struct {
+		Ctx context.Context
+		Req *UpdateSettingsRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockUpdateSettings.Unlock()
+	return mock.UpdateSettingsFunc(ctx, req)
+}
+
+// UpdateSettingsCalls returns all calls made to UpdateSettings.
+func (mock *CoordinatorMock) UpdateSettingsCalls() []struct {
+	Ctx context.Context
+	Req *UpdateSettingsRequest
+} {
+	mock.lockUpdateSettings.RLock()
+	defer mock.lockUpdateSettings.RUnlock()
+	return mock.calls.UpdateSettings
 }
 
 // ListCurrencies calls ListCurrenciesFunc.

@@ -16,6 +16,7 @@ import {
   ActivityIcon,
   Sliders,
   Blocks,
+  Landmark,
 } from "lucide-react"
 import { PageLayout } from "@/components/ui/page-layout"
 import { cn } from "@/lib/utils"
@@ -27,6 +28,7 @@ import { SessionsDevicesSettingsView } from "./sessions-devices-settings-view"
 import { ActivityLogSettingsView } from "./activity-log-settings-view"
 import { SpaceSettings } from "./components/space-settings"
 import { SpacePreferences } from "./components/space-preferences"
+import { FinanceSettings } from "./components/finance-settings"
 import { IntegrationSettings } from "./components/integration-settings"
 
 interface NavItem {
@@ -98,6 +100,11 @@ export function SettingsView() {
                   label: "Preferences",
                   icon: Sliders,
                 },
+                {
+                  to: "/settings/finance",
+                  label: "Finance",
+                  icon: Landmark,
+                },
               ]
             : []),
           {
@@ -122,6 +129,8 @@ export function SettingsView() {
       else if (tab === "spaces") navigate("/settings/spaces", { replace: true })
       else if (tab === "preferences")
         navigate("/settings/preferences", { replace: true })
+      else if (tab === "finance")
+        navigate("/settings/finance", { replace: true })
       else if (tab === "integrations")
         navigate("/settings/integrations", { replace: true })
     }
@@ -255,6 +264,7 @@ export function SettingsView() {
             {/* Workspaces, Preferences & Integrations */}
             <Route path="spaces" element={<SpaceSettings />} />
             <Route path="preferences" element={<SpacePreferences />} />
+            <Route path="finance" element={<FinanceSettings />} />
             <Route path="integrations" element={<IntegrationSettings />} />
             <Route
               path="workspace"

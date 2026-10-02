@@ -3176,6 +3176,38 @@
         "tags": [
           "Finance"
         ]
+      },
+      "patch": {
+        "summary": "Updates workspace finance settings (e.g. financial year start month).",
+        "operationId": "Finance_UpdateSettings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/saturnFinanceV1Settings"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "settings",
+            "description": "Required. The settings resource containing updated values.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/saturnFinanceV1Settings"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
       }
     },
     "/v1/finance/statement-lines/{id}": {
@@ -7146,6 +7178,11 @@
           "type": "string",
           "description": "Required. Base currency for conversions and insights (e.g. \"USD\").\nAnalytics calculations and overall spend views default to this currency."
         },
+        "fiscalYearStartMonth": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. The starting month of the workspace's fiscal year (1 = January, 12 = December).\nIf unspecified or set to 0, defaults to 1 (January - Calendar Year)."
+        },
         "createTime": {
           "type": "string",
           "format": "date-time",
@@ -10630,6 +10667,11 @@
         "baseCurrency": {
           "type": "string",
           "description": "Required. Base currency for conversions and insights (e.g. \"USD\").\nConversions and aggregated spent statistics will default to this currency."
+        },
+        "fiscalYearStartMonth": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. The starting month of the workspace's fiscal year (1 = January, 12 = December).\nIf unspecified or set to 0, defaults to 1 (January - Calendar Year)."
         }
       },
       "description": "The request for\n[Setup][saturn.finance.v1.Finance.Setup].",
