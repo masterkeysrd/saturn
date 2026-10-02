@@ -120,7 +120,10 @@ export default function BorrowingScreen() {
 
   const deleteBorrowingMutation = useDeleteBorrowingMutation()
 
-  const borrowings: Borrowing[] = borrowingsData?.borrowings || []
+  const borrowings: Borrowing[] = useMemo(
+    () => borrowingsData?.borrowings || [],
+    [borrowingsData?.borrowings]
+  )
 
   const handleRefresh = async () => {
     haptics.light()

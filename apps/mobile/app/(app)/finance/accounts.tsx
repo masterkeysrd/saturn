@@ -46,7 +46,10 @@ export default function AccountsScreen() {
     { pageSize: 100, pageToken: "" },
     { enabled: !!activeSpaceId }
   )
-  const institutions = instData?.institutions || []
+  const institutions = useMemo(
+    () => instData?.institutions || [],
+    [instData?.institutions]
+  )
   const instMap = useMemo(() => {
     const map = new Map<string, Account_InstitutionInfo>()
     institutions.forEach((inst) => {
@@ -61,7 +64,10 @@ export default function AccountsScreen() {
     baseCurrency,
   })
 
-  const accounts = accountsData?.accounts || []
+  const accounts = useMemo(
+    () => accountsData?.accounts || [],
+    [accountsData?.accounts]
+  )
 
   // Group accounts by classification
   const groupedAccounts = useMemo(() => {

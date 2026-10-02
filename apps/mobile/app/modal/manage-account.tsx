@@ -94,14 +94,20 @@ export default function ManageAccountModal() {
     {},
     { enabled: !!activeSpaceId, staleTime: 1000 * 60 * 30 }
   )
-  const currencies: CurrencyInfo[] = currenciesData?.currencies || []
+  const currencies: CurrencyInfo[] = useMemo(
+    () => currenciesData?.currencies || [],
+    [currenciesData?.currencies]
+  )
 
   // Fetch institutions
   const { data: instData } = useListInstitutionsQuery(
     { pageSize: 100, pageToken: "" },
     { enabled: !!activeSpaceId }
   )
-  const institutions: Account_InstitutionInfo[] = instData?.institutions || []
+  const institutions: Account_InstitutionInfo[] = useMemo(
+    () => instData?.institutions || [],
+    [instData?.institutions]
+  )
   const instMap = useMemo(() => {
     const map = new Map<string, Account_InstitutionInfo>()
     institutions.forEach((i) => {

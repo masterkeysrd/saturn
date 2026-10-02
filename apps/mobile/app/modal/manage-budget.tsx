@@ -47,7 +47,7 @@ import { Card } from "@/components/ui/card"
 import { TextInput } from "@/components/ui/text-input"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
-import { BUDGET_ICONS, getBudgetIcon } from "@/lib/budget-icons"
+import { BUDGET_ICONS, BudgetCategoryIcon } from "@/lib/budget-icons"
 import {
   CurrencyPickerSheet,
   AccountPickerSheet,
@@ -85,7 +85,10 @@ export default function ManageBudgetModal() {
     { activeOnly: true },
     { enabled: !!activeSpaceId }
   )
-  const accounts: Account[] = accountsData?.accounts || []
+  const accounts: Account[] = useMemo(
+    () => accountsData?.accounts || [],
+    [accountsData?.accounts]
+  )
 
   // Fetch institutions
   const { data: instData } = useListInstitutionsQuery(
@@ -138,7 +141,6 @@ export default function ManageBudgetModal() {
   const isDeleting = deleteMutation.isPending
 
   const activeColorMeta = getNativeBudgetColors(color)
-  const ActiveIconComponent = getBudgetIcon(icon, name)
 
   const selectedAccount = useMemo(
     () => accounts.find((a) => a.id === defaultAccountId),
@@ -554,7 +556,12 @@ export default function ManageBudgetModal() {
                   },
                 ]}
               >
-                <ActiveIconComponent size={18} color={activeColorMeta.bar} />
+                <BudgetCategoryIcon
+                  icon={icon}
+                  name={name}
+                  size={18}
+                  color={activeColorMeta.bar}
+                />
                 <Text
                   style={[
                     styles.iconPreviewText,

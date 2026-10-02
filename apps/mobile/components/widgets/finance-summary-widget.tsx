@@ -55,7 +55,10 @@ export function FinanceSummaryWidget() {
       { enabled: !!activeSpaceId }
     )
 
-  const accounts = accountsData?.accounts || []
+  const accounts = useMemo(
+    () => accountsData?.accounts || [],
+    [accountsData?.accounts]
+  )
 
   // Aggregate live Net Worth with accurate multi-currency conversion
   const metrics = useMemo(() => {

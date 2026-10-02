@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   StyleSheet,
   Text,
@@ -69,7 +69,7 @@ export default function LoginScreen() {
     loadRemembered()
   }, [])
 
-  const handleBiometricLogin = async () => {
+  const handleBiometricLogin = useCallback(async () => {
     setBiometricLoading(true)
     setError(null)
     try {
@@ -95,7 +95,7 @@ export default function LoginScreen() {
     } finally {
       setBiometricLoading(false)
     }
-  }
+  }, [loginWithBiometrics, router, toast])
 
   // Offer automatic biometric prompt when enrolled device opens
   useEffect(() => {
@@ -111,7 +111,7 @@ export default function LoginScreen() {
         clearTimeout(timer)
       }
     }
-  }, [isDeviceEnrolled])
+  }, [isDeviceEnrolled, mfaStep, handleBiometricLogin])
 
   const handleLogin = async () => {
     if (!identifier.trim() || !password) {
@@ -469,7 +469,9 @@ export default function LoginScreen() {
               </Card>
 
               <View style={styles.footer}>
-                <Text style={styles.footerText}>Don't have an account? </Text>
+                <Text style={styles.footerText}>
+                  {"Don't have an account? "}
+                </Text>
                 <Link href="/(auth)/register" asChild>
                   <TouchableOpacity>
                     <Text style={styles.linkText}>Create one</Text>

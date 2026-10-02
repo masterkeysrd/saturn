@@ -15,7 +15,7 @@ import {
   type Account,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
-import { getBudgetIcon } from "@/lib/budget-icons"
+import { BudgetCategoryIcon } from "@/lib/budget-icons"
 import { MonoAmount } from "@/components/ui/typography"
 
 export interface TransactionListItemProps {
@@ -62,7 +62,6 @@ export function TransactionListItem({
   const budgetIcon = budget?.icon
   const nativeBudgetColors = getNativeBudgetColors(budgetColor)
   const hasBudget = Boolean(budgetName || budgetIcon)
-  const BudgetIcon = getBudgetIcon(budgetIcon, budgetName)
 
   const tz = useTimezone()
   const itemYear = tz.parts(item.transactionDate)?.year
@@ -187,7 +186,12 @@ export function TransactionListItem({
         ]}
       >
         {isExpense && hasBudget ? (
-          <BudgetIcon size={16} color={nativeBudgetColors.bar} />
+          <BudgetCategoryIcon
+            icon={budgetIcon}
+            name={budgetName}
+            size={16}
+            color={nativeBudgetColors.bar}
+          />
         ) : isExpense ? (
           <ArrowUpRight size={16} color={theme.colors.destructive} />
         ) : isIncome ? (

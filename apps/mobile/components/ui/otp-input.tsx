@@ -8,6 +8,7 @@ import {
   type StyleProp,
   type ViewStyle,
   Animated,
+  useAnimatedValue,
 } from "react-native"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -42,7 +43,7 @@ export const OTPInput = React.forwardRef<RNTextInput, OTPInputProps>(
     const internalRef = useRef<RNTextInput>(null)
     const inputRef = (ref as React.RefObject<RNTextInput>) || internalRef
     const [isFocused, setIsFocused] = useState(false)
-    const blinkAnim = useRef(new Animated.Value(1)).current
+    const blinkAnim = useAnimatedValue(1)
 
     // Delayed focus for Android & Modal transitions
     useEffect(() => {
@@ -52,7 +53,7 @@ export const OTPInput = React.forwardRef<RNTextInput, OTPInputProps>(
         }, 150)
         return () => clearTimeout(timer)
       }
-    }, [autoFocus, disabled])
+    }, [autoFocus, disabled, inputRef])
 
     // Blinking cursor effect for current active slot
     useEffect(() => {

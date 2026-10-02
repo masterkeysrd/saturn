@@ -2,7 +2,6 @@ import React from "react"
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   type StyleProp,
@@ -11,7 +10,6 @@ import {
 import { Delete } from "lucide-react-native"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
-import { formatCents } from "@saturn/core"
 
 export interface AmountInputProps {
   cents: number

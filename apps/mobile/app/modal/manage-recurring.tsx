@@ -102,13 +102,19 @@ export default function ManageRecurringModal() {
       { pageSize: 100, pageToken: "", view: "FULL" },
       { enabled: !!activeSpaceId }
     )
-  const budgets: Budget[] = budgetsData?.budgets || []
+  const budgets: Budget[] = useMemo(
+    () => budgetsData?.budgets || [],
+    [budgetsData?.budgets]
+  )
 
   const { data: accountsData } = useListAccountsQuery(
     { activeOnly: true },
     { enabled: !!activeSpaceId }
   )
-  const accounts: Account[] = accountsData?.accounts || []
+  const accounts: Account[] = useMemo(
+    () => accountsData?.accounts || [],
+    [accountsData?.accounts]
+  )
 
   // 3. Fetch recurring templates if edit mode
   const { data: recurringData, isLoading: isRecurringLoading } =
@@ -182,7 +188,7 @@ export default function ManageRecurringModal() {
         setBudgetId(budgets[0].id || "")
       }
     }
-  }, [existingRecurring, baseCurrency, isEditMode, budgets])
+  }, [existingRecurring, baseCurrency, isEditMode, budgets, budgetId])
 
   // Mutations
   const createMutation = useCreateRecurringTransactionMutation()

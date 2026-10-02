@@ -5,7 +5,6 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  Platform,
 } from "react-native"
 import { useLocalSearchParams, useRouter, Stack } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -20,7 +19,6 @@ import {
   Clock,
   Edit3,
   Trash2,
-  Repeat,
   Coins,
   CheckCircle2,
   Copy,
@@ -39,7 +37,7 @@ import {
 import { useSpace } from "@/lib/space-context"
 import { useTimezone } from "@saturn/hooks"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
-import { getBudgetIcon } from "@/lib/budget-icons"
+import { BudgetCategoryIcon } from "@/lib/budget-icons"
 import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
 import { MonoAmount, Caption } from "@/components/ui/typography"
@@ -95,7 +93,10 @@ export default function TransactionDetailScreen() {
     { activeOnly: true },
     { enabled: !!activeSpaceId }
   )
-  const accounts = accountsData?.accounts || []
+  const accounts = useMemo(
+    () => accountsData?.accounts || [],
+    [accountsData?.accounts]
+  )
   const account = useMemo(
     () => accounts.find((a) => a.id === tx?.accountId),
     [accounts, tx?.accountId]
@@ -105,7 +106,10 @@ export default function TransactionDetailScreen() {
     { pageSize: 100, pageToken: "" },
     { enabled: !!activeSpaceId }
   )
-  const budgets = budgetsData?.budgets || []
+  const budgets = useMemo(
+    () => budgetsData?.budgets || [],
+    [budgetsData?.budgets]
+  )
   const budget = useMemo(
     () => budgets.find((b) => b.id === tx?.budgetId),
     [budgets, tx?.budgetId]
@@ -114,10 +118,6 @@ export default function TransactionDetailScreen() {
   const budgetColor = budget?.color || "indigo"
   const nativeBudgetColors = getNativeBudgetColors(budgetColor)
   const hasBudget = Boolean(budget || tx?.budget)
-
-  const BudgetIcon = useMemo(() => {
-    return getBudgetIcon(budget?.icon, budgetName)
-  }, [budget?.icon, budgetName])
 
   const { data: eventsData } = useListTransactionEventsQuery(
     { txnId: id || "" },
@@ -164,7 +164,7 @@ export default function TransactionDetailScreen() {
       d1.getMonth() === d2.getMonth() &&
       d1.getDate() === d2.getDate()
     )
-  }, [tx?.transactionDate, tx?.effectiveDate])
+  }, [tx])
 
   const isRecurring = Boolean(tx?.metadata?.recurring_transaction_id)
   const isBorrowing = Boolean(tx?.metadata?.borrowing_id)
@@ -325,7 +325,12 @@ export default function TransactionDetailScreen() {
             ]}
           >
             {isExpense && hasBudget ? (
-              <BudgetIcon size={28} color={nativeBudgetColors.bar} />
+              <BudgetCategoryIcon
+                icon={budget?.icon}
+                name={budgetName}
+                size={28}
+                color={nativeBudgetColors.bar}
+              />
             ) : isExpense ? (
               <ArrowUpRight size={28} color={theme.colors.destructive} />
             ) : isIncome ? (
@@ -439,7 +444,12 @@ export default function TransactionDetailScreen() {
                       },
                     ]}
                   >
-                    <BudgetIcon size={13} color={nativeBudgetColors.bar} />
+                    <BudgetCategoryIcon
+                      icon={budget?.icon}
+                      name={budgetName}
+                      size={13}
+                      color={nativeBudgetColors.bar}
+                    />
                     <Text
                       style={[
                         styles.budgetPillText,

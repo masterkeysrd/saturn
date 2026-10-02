@@ -1,4 +1,4 @@
-import type { ComponentType } from "react"
+import React, { type ComponentType } from "react"
 import {
   PiggyBank,
   Utensils,
@@ -173,4 +173,19 @@ export function getBudgetIcon(
   }
 
   return PiggyBank
+}
+
+export function BudgetCategoryIcon({
+  icon,
+  name,
+  size = 16,
+  color,
+}: {
+  icon?: string
+  name?: string
+  size?: number
+  color?: string
+}) {
+  const IconComponent = getBudgetIcon(icon, name)
+  return React.createElement(IconComponent, { size, color })
 }

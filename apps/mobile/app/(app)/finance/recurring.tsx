@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import {
   StyleSheet,
   Text,
@@ -139,16 +139,6 @@ function getDueDateBadge(dueDateStr?: string, timezone: string = "UTC") {
   return null
 }
 
-function formatDate(dateStr?: string): string {
-  if (!dateStr) return ""
-  const date = new Date(dateStr)
-  if (isNaN(date.getTime())) return ""
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  })
-}
-
 type TabType = "upcoming" | "templates"
 type TypeFilter = "ALL" | "EXPENSE" | "INCOME"
 
@@ -228,16 +218,23 @@ export default function RecurringScreen() {
   }, [scheduledData])
 
   // Convert amount to base currency
-  const convertToBase = (amountVal: number, fromCurrency: string) => {
-    if (!baseCurrency || fromCurrency === baseCurrency) {
+  const convertToBase = useCallback(
+    (amountVal: number, fromCurrency: string) => {
+      if (!baseCurrency || fromCurrency === baseCurrency) {
+        return amountVal
+      }
+      const preview = getConversionPreview(amountVal.toString(), fromCurrency)
+      if (
+        preview &&
+        "amount" in preview &&
+        typeof preview.amount === "number"
+      ) {
+        return preview.amount
+      }
       return amountVal
-    }
-    const preview = getConversionPreview(amountVal.toString(), fromCurrency)
-    if (preview && "amount" in preview && typeof preview.amount === "number") {
-      return preview.amount
-    }
-    return amountVal
-  }
+    },
+    [baseCurrency, getConversionPreview]
+  )
 
   // Calculate Monthly Recurring Metrics
   const { monthlyExpenses, monthlyIncomes, next30DaysOutflows } =
@@ -290,7 +287,7 @@ export default function RecurringScreen() {
         monthlyIncomes: incTotal,
         next30DaysOutflows: upcomingOutflows,
       }
-    }, [recurringList, scheduledList, baseCurrency, getConversionPreview])
+    }, [recurringList, scheduledList, baseCurrency, convertToBase])
 
   // Filtered lists
   const filteredScheduled = useMemo(() => {

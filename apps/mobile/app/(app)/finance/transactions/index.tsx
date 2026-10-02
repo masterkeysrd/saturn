@@ -7,10 +7,9 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Platform,
 } from "react-native"
 import { useRouter } from "expo-router"
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
+import { useInfiniteQuery } from "@tanstack/react-query"
 import BottomSheet from "@gorhom/bottom-sheet"
 import {
   Search,
@@ -43,14 +42,11 @@ import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
-import { useToast } from "@/components/ui/toast"
 
 export default function TransactionsScreen() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
-  const toast = useToast()
-  const queryClient = useQueryClient()
 
   // State
   const [search, setSearch] = useState("")
@@ -76,7 +72,10 @@ export default function TransactionsScreen() {
     { activeOnly: true },
     { enabled: !!activeSpaceId }
   )
-  const accounts = accountsData?.accounts || []
+  const accounts = useMemo(
+    () => accountsData?.accounts || [],
+    [accountsData?.accounts]
+  )
   const accountsMap = useMemo(() => {
     const map = new Map<string, Account>()
     accounts.forEach((a) => {
@@ -89,7 +88,10 @@ export default function TransactionsScreen() {
     { pageSize: 100, pageToken: "" },
     { enabled: !!activeSpaceId }
   )
-  const budgets = budgetsData?.budgets || []
+  const budgets = useMemo(
+    () => budgetsData?.budgets || [],
+    [budgetsData?.budgets]
+  )
   const budgetsMap = useMemo(() => {
     const map = new Map<string, Budget>()
     budgets.forEach((b) => {
@@ -156,11 +158,14 @@ export default function TransactionsScreen() {
     }
   }
 
-  const handleOpenDetail = (tx: Transaction) => {
-    if (!tx.id) return
-    haptics.light()
-    router.push(`/(app)/finance/transactions/${tx.id}`)
-  }
+  const handleOpenDetail = useCallback(
+    (tx: Transaction) => {
+      if (!tx.id) return
+      haptics.light()
+      router.push(`/(app)/finance/transactions/${tx.id}`)
+    },
+    [router]
+  )
 
   const clearAllFilters = () => {
     haptics.light()
@@ -195,7 +200,7 @@ export default function TransactionsScreen() {
         </Card>
       )
     },
-    [accountsMap, budgetsMap, baseCurrency]
+    [accountsMap, budgetsMap, baseCurrency, handleOpenDetail]
   )
 
   return (

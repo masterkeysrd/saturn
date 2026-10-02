@@ -4,6 +4,22 @@ import * as LocalAuthentication from "expo-local-authentication"
 import * as ExpoCrypto from "expo-crypto"
 import { p256 } from "@noble/curves/nist.js"
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js"
+import {
+  createAuthChallenge,
+  createDevice,
+  loginUser,
+  type LoginUserResponse,
+} from "@saturn/api/gen/saturn/identity/v1/identity"
+import {
+  getStoredDeviceId,
+  setStoredDeviceId,
+  setStoredDevicePublicKey,
+  getStoredDevicePrivateKey,
+  setStoredDevicePrivateKey,
+  setBiometricEnabled,
+  isBiometricEnabled,
+  clearDeviceEnrollment,
+} from "./storage"
 
 // Ensure crypto.getRandomValues is globally available in React Native JS engine
 const globalObj = globalThis as unknown as {
@@ -22,23 +38,6 @@ if (typeof globalObj.crypto.getRandomValues !== "function") {
     return array
   }) as unknown as typeof globalObj.crypto.getRandomValues
 }
-
-import {
-  createAuthChallenge,
-  createDevice,
-  loginUser,
-  type LoginUserResponse,
-} from "@saturn/api/gen/saturn/identity/v1/identity"
-import {
-  getStoredDeviceId,
-  setStoredDeviceId,
-  setStoredDevicePublicKey,
-  getStoredDevicePrivateKey,
-  setStoredDevicePrivateKey,
-  setBiometricEnabled,
-  isBiometricEnabled,
-  clearDeviceEnrollment,
-} from "./storage"
 
 const b64chars =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"

@@ -1,9 +1,5 @@
 import { Platform } from "react-native"
-import {
-  BUDGET_COLORS,
-  getBudgetColors as getCoreBudgetColors,
-  COLOR_HEX_MAP,
-} from "@saturn/core"
+import { COLOR_HEX_MAP } from "@saturn/core"
 
 /**
  * Visual Theme Tokens matching apps/web/index.css exactly.

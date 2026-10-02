@@ -27,7 +27,6 @@ import {
   useGetSettingsQuery,
   type Account,
   type Budget,
-  type Transaction,
 } from "@saturn/api/saturn/finance/v1/finance"
 import {
   formatAmount,
@@ -131,7 +130,10 @@ export default function BudgetDetailScreen() {
     { activeOnly: true },
     { enabled: !!activeSpaceId }
   )
-  const accounts = accountsData?.accounts || []
+  const accounts = useMemo(
+    () => accountsData?.accounts || [],
+    [accountsData?.accounts]
+  )
   const accountsMap = useMemo(() => {
     const map = new Map<string, Account>()
     accounts.forEach((a) => {
@@ -140,40 +142,39 @@ export default function BudgetDetailScreen() {
     return map
   }, [accounts])
 
-  const transactions = txnsData?.transactions || []
+  const transactions = useMemo(
+    () => txnsData?.transactions || [],
+    [txnsData?.transactions]
+  )
 
   const sections = useMemo(
     () => groupTransactionsByDate(transactions, tz.timezone),
     [transactions, tz.timezone]
   )
 
-  const transactionsSpentInPeriodCents = useMemo(() => {
-    const periodId =
-      currentPeriod && "id" in currentPeriod ? currentPeriod.id : undefined
-    const startDate = currentPeriod?.startDate
-    const endDate = currentPeriod?.endDate
+  const periodId =
+    currentPeriod && "id" in currentPeriod ? currentPeriod.id : undefined
+  const periodStartDate = currentPeriod?.startDate
+  const periodEndDate = currentPeriod?.endDate
+  const budgetInterval = budget?.interval
 
+  const transactionsSpentInPeriodCents = useMemo(() => {
     return transactions
       .filter((t) => {
         if (t.type !== "EXPENSE") return false
-        if (budget?.interval === "ONE_TIME") return true
+        if (budgetInterval === "ONE_TIME") return true
         if (periodId && t.periodId) {
           return t.periodId === periodId
         }
-        if (!startDate || !endDate || !t.transactionDate) return false
+        if (!periodStartDate || !periodEndDate || !t.transactionDate)
+          return false
         const tTime = new Date(t.transactionDate).getTime()
-        const start = new Date(startDate).getTime()
-        const end = new Date(endDate).getTime()
+        const start = new Date(periodStartDate).getTime()
+        const end = new Date(periodEndDate).getTime()
         return tTime >= start && tTime <= end
       })
       .reduce((sum, t) => sum + Math.abs(Number(t.amount || "0")), 0)
-  }, [
-    transactions,
-    budget?.interval,
-    currentPeriod && "id" in currentPeriod ? currentPeriod.id : undefined,
-    currentPeriod?.startDate,
-    currentPeriod?.endDate,
-  ])
+  }, [transactions, budgetInterval, periodId, periodStartDate, periodEndDate])
 
   const handleRefresh = async () => {
     haptics.light()

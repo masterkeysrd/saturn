@@ -9,6 +9,7 @@ import {
   View,
   Text,
   Animated,
+  useAnimatedValue,
   StyleSheet,
   TouchableOpacity,
 } from "react-native"
@@ -42,8 +43,8 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined)
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets()
   const [toast, setToast] = useState<ToastOptions | null>(null)
-  const translateY = useRef(new Animated.Value(-120)).current
-  const opacity = useRef(new Animated.Value(0)).current
+  const translateY = useAnimatedValue(-120)
+  const opacity = useAnimatedValue(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const hide = useCallback(() => {

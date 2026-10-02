@@ -34,7 +34,7 @@ import {
   type Transaction,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
-import { getBudgetIcon } from "@/lib/budget-icons"
+import { BudgetCategoryIcon } from "@/lib/budget-icons"
 import { haptics } from "@/lib/haptics"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -206,10 +206,6 @@ export function ExpenseForm({
   )
   const selectedBudgetColors = getNativeBudgetColors(
     selectedBudget?.color || "indigo"
-  )
-  const SelectedBudgetIcon = useMemo(
-    () => getBudgetIcon(selectedBudget?.icon, selectedBudget?.name),
-    [selectedBudget?.icon, selectedBudget?.name]
   )
 
   const selectedAccount = useMemo(
@@ -496,7 +492,9 @@ export function ExpenseForm({
                     },
                   ]}
                 >
-                  <SelectedBudgetIcon
+                  <BudgetCategoryIcon
+                    icon={selectedBudget?.icon}
+                    name={selectedBudget?.name}
                     size={13}
                     color={selectedBudgetColors.bar}
                   />

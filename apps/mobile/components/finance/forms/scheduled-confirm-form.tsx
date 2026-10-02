@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import {
   Text,
   View,
@@ -27,7 +27,7 @@ import {
   type RecurringTransaction,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
-import { getBudgetIcon } from "@/lib/budget-icons"
+import { BudgetCategoryIcon } from "@/lib/budget-icons"
 import { haptics } from "@/lib/haptics"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -104,6 +104,29 @@ export function ScheduledConfirmForm({
   // Mutation
   const confirmScheduledMutation = useConfirmScheduledTransactionMutation()
 
+  const applyScheduledItem = useCallback(
+    (st: ScheduledTransaction) => {
+      setSelectedScheduled(st)
+      const amountVal = (parseInt(st.amount || "0", 10) / 100).toFixed(2)
+      setAmountText(amountVal)
+      const displayName = getScheduledDisplayName(st, recurringTemplates)
+      setDescription(displayName)
+      if (st.budgetId) {
+        setSelectedBudgetId(st.budgetId)
+      } else if (budgets.length > 0) {
+        setSelectedBudgetId(budgets[0].id || "")
+      }
+      const targetAccId =
+        st.accountId ||
+        initialAccountId ||
+        (accounts.find((a) => a.isDefault) || accounts[0])?.id ||
+        ""
+      setSelectedAccountId(targetAccId)
+      onAccountChange?.(targetAccId)
+    },
+    [accounts, budgets, initialAccountId, onAccountChange, recurringTemplates]
+  )
+
   // Auto-select scheduled item if available
   useEffect(() => {
     if (pendingScheduled.length > 0 && !selectedScheduled) {
@@ -113,27 +136,12 @@ export function ScheduledConfirmForm({
         : pendingScheduled[0]
       applyScheduledItem(target)
     }
-  }, [pendingScheduled, selectedScheduled, initialScheduledId])
-
-  const applyScheduledItem = (st: ScheduledTransaction) => {
-    setSelectedScheduled(st)
-    const amountVal = (parseInt(st.amount || "0", 10) / 100).toFixed(2)
-    setAmountText(amountVal)
-    const displayName = getScheduledDisplayName(st, recurringTemplates)
-    setDescription(displayName)
-    if (st.budgetId) {
-      setSelectedBudgetId(st.budgetId)
-    } else if (budgets.length > 0) {
-      setSelectedBudgetId(budgets[0].id || "")
-    }
-    const targetAccId =
-      st.accountId ||
-      initialAccountId ||
-      (accounts.find((a) => a.isDefault) || accounts[0])?.id ||
-      ""
-    setSelectedAccountId(targetAccId)
-    onAccountChange?.(targetAccId)
-  }
+  }, [
+    pendingScheduled,
+    selectedScheduled,
+    initialScheduledId,
+    applyScheduledItem,
+  ])
 
   const selectedBudget = useMemo(
     () => budgets.find((b) => b.id === selectedBudgetId),
@@ -141,10 +149,6 @@ export function ScheduledConfirmForm({
   )
   const selectedBudgetColors = getNativeBudgetColors(
     selectedBudget?.color || "indigo"
-  )
-  const SelectedBudgetIcon = useMemo(
-    () => getBudgetIcon(selectedBudget?.icon, selectedBudget?.name),
-    [selectedBudget?.icon, selectedBudget?.name]
   )
 
   const selectedAccount = useMemo(
@@ -320,7 +324,9 @@ export function ScheduledConfirmForm({
                         },
                       ]}
                     >
-                      <SelectedBudgetIcon
+                      <BudgetCategoryIcon
+                        icon={selectedBudget?.icon}
+                        name={selectedBudget?.name}
                         size={13}
                         color={selectedBudgetColors.bar}
                       />

@@ -186,3 +186,5 @@ export const InstitutionPickerSheet = forwardRef<
     )
   }
 )
+
+InstitutionPickerSheet.displayName = "InstitutionPickerSheet"

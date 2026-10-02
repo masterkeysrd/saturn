@@ -8,7 +8,6 @@ import {
   type TextInputProps as RNTextInputProps,
   type StyleProp,
   type ViewStyle,
-  type TextStyle,
 } from "react-native"
 import { Eye, EyeOff } from "lucide-react-native"
 import { theme } from "@/lib/theme"

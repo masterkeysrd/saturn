@@ -81,7 +81,10 @@ export default function AccountDetailScreen() {
     { pageSize: 100, pageToken: "", view: "FULL" },
     { enabled: !!activeSpaceId }
   )
-  const budgets = budgetsData?.budgets || []
+  const budgets = useMemo(
+    () => budgetsData?.budgets || [],
+    [budgetsData?.budgets]
+  )
   const budgetsMap = useMemo(() => {
     const map = new Map<string, Budget>()
     budgets.forEach((b) => {
@@ -95,7 +98,10 @@ export default function AccountDetailScreen() {
     { pageSize: 100, pageToken: "" },
     { enabled: !!activeSpaceId }
   )
-  const institutions = instData?.institutions || []
+  const institutions = useMemo(
+    () => instData?.institutions || [],
+    [instData?.institutions]
+  )
   const instMap = useMemo(() => {
     const map = new Map<string, Account_InstitutionInfo>()
     institutions.forEach((i) => {
@@ -110,7 +116,10 @@ export default function AccountDetailScreen() {
     baseCurrency,
   })
 
-  const transactions = txnsData?.transactions || []
+  const transactions = useMemo(
+    () => txnsData?.transactions || [],
+    [txnsData?.transactions]
+  )
 
   const sections = useMemo(
     () => groupTransactionsByDate(transactions, tz.timezone),

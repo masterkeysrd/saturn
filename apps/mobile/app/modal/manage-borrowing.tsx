@@ -25,7 +25,6 @@ import {
   User,
   Phone,
   FileText,
-  HandCoins,
   TrendingUp,
   TrendingDown,
   Landmark,
@@ -99,7 +98,10 @@ export default function ManageBorrowingModal() {
     { activeOnly: true },
     { enabled: !!activeSpaceId }
   )
-  const accounts: Account[] = accountsData?.accounts || []
+  const accounts: Account[] = useMemo(
+    () => accountsData?.accounts || [],
+    [accountsData?.accounts]
+  )
 
   const { data: instData } = useListInstitutionsQuery(
     { pageSize: 100, pageToken: "" },
@@ -117,10 +119,10 @@ export default function ManageBorrowingModal() {
   const [contactInfo, setContactInfo] = useState("")
   const [amount, setAmount] = useState("")
   const [currency, setCurrency] = useState(baseCurrency)
-  const [establishedAt, setEstablishedAt] = useState<Date>(new Date())
+  const [establishedAt, setEstablishedAt] = useState<Date>(() => new Date())
   const [hasDueDate, setHasDueDate] = useState(false)
   const [dueAt, setDueAt] = useState<Date>(
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   )
   const [createAsTransaction, setCreateAsTransaction] = useState(false)
   const [accountId, setAccountId] = useState("")

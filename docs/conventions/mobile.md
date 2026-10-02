@@ -40,6 +40,8 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
    - Use standard typography components: `MonoAmount`, `Caption` from `@/components/ui/typography`.
 4. **Lists & Grouping**:
    - Use `groupTransactionsByDate(transactions, tz.timezone)` for date-grouped section lists.
+5. **Animation Values**:
+   - Always consume `useAnimatedValue(initial)` from `react-native` for `Animated.Value` instances rather than `useRef`.
 
 ---
 

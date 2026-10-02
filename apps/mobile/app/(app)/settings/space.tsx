@@ -10,7 +10,6 @@ import {
   Modal,
   FlatList,
 } from "react-native"
-import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -19,7 +18,6 @@ import {
   UserPlus,
   Trash2,
   Check,
-  Shield,
   Clock,
   Key,
   Globe,
@@ -50,7 +48,6 @@ import { useToast } from "@/components/ui/toast"
 import { haptics } from "@/lib/haptics"
 
 export default function SpaceSettingsScreen() {
-  const router = useRouter()
   const insets = useSafeAreaInsets()
   const toast = useToast()
   const { user } = useAuth()

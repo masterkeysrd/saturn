@@ -137,7 +137,10 @@ export default function FinanceHubScreen() {
     { pageSize: 100, pageToken: "" },
     { enabled: !!activeSpaceId }
   )
-  const institutions = instData?.institutions || []
+  const institutions = useMemo(
+    () => instData?.institutions || [],
+    [instData?.institutions]
+  )
   const instMap = useMemo(() => {
     const map = new Map<string, Account_InstitutionInfo>()
     institutions.forEach((inst) => {
@@ -197,7 +200,10 @@ export default function FinanceHubScreen() {
   const skipScheduledMutation = useSkipScheduledTransactionMutation()
   const toast = useToast()
 
-  const accounts = accountsData?.accounts || []
+  const accounts = useMemo(
+    () => accountsData?.accounts || [],
+    [accountsData?.accounts]
+  )
   const transactions = txData?.transactions || []
 
   // Compute live multi-currency metrics

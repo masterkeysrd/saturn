@@ -6,7 +6,6 @@ import {
   StyleSheet,
   type TouchableOpacityProps,
   type StyleProp,
-  type ViewStyle,
   type TextStyle,
 } from "react-native"
 import { theme } from "@/lib/theme"

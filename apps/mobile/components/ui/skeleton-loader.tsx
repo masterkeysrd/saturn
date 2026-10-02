@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from "react"
+import React, { useEffect } from "react"
 import {
   View,
   Animated,
+  useAnimatedValue,
   StyleSheet,
   type StyleProp,
   type ViewStyle,
@@ -21,7 +22,7 @@ export function Skeleton({
   borderRadius = theme.radius.sm,
   style,
 }: SkeletonProps) {
-  const opacityAnim = useRef(new Animated.Value(0.3)).current
+  const opacityAnim = useAnimatedValue(0.3)
 
   useEffect(() => {
     const pulse = Animated.loop(
