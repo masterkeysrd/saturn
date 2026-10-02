@@ -1,5 +1,8 @@
 import { createElement } from "react"
-import { type Budget } from "@saturn/api/gen/saturn/finance/v1/finance"
+import {
+  type Account,
+  type Budget,
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -15,12 +18,14 @@ import {
   Plus,
   History,
   Lock,
+  CreditCard,
 } from "lucide-react"
 import { getBudgetColors, getBudgetIcon, formatAmount } from "../utils"
 import { BudgetPeriodProgress } from "./budget-period-progress"
 
 interface BudgetCardProps {
   budget: Budget
+  account?: Account
   isWritable: boolean
   onEdit: (budget: Budget) => void
   onDelete: (budget: Budget) => void
@@ -31,6 +36,7 @@ interface BudgetCardProps {
 
 export function BudgetCard({
   budget,
+  account,
   isWritable,
   onEdit,
   onDelete,
@@ -75,12 +81,21 @@ export function BudgetCard({
             <h3 className="max-w-[130px] truncate text-sm leading-tight font-bold text-foreground transition-colors group-hover:text-primary sm:max-w-[150px]">
               {budget.name}
             </h3>
-            <div className="mt-1.5 flex gap-2">
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <span
                 className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${intervalColorClass}`}
               >
                 {intervalLabel}
               </span>
+              {account && (
+                <span
+                  title={`Default Account: ${account.name}`}
+                  className="flex max-w-[130px] items-center gap-1 truncate rounded-full border border-border/50 bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                >
+                  <CreditCard className="h-2.5 w-2.5 shrink-0" />
+                  <span className="truncate">{account.name}</span>
+                </span>
+              )}
               {isClosed ? (
                 <span className="flex items-center gap-1 rounded-full border border-rose-500/20 bg-rose-500/10 px-2 py-0.5 text-[10px] font-bold text-rose-400 uppercase">
                   <Lock className="h-3 w-3" />

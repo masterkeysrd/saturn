@@ -4,6 +4,7 @@ import {
   type Budget,
   useDeleteBudgetMutation,
   useGetSettingsQuery,
+  useListAccountsQuery,
   useListBudgetsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
@@ -48,6 +49,24 @@ export function BudgetsView() {
     { pageSize: 100, pageToken: "", view: "FULL", statuses: statusesParam },
     { enabled: !!settings }
   )
+
+  // 3. Fetch accounts
+  const { data: accountsData } = useListAccountsQuery(
+    {},
+    { enabled: !!spaceId }
+  )
+  const accounts = useMemo(
+    () => accountsData?.accounts || [],
+    [accountsData?.accounts]
+  )
+
+  const accountsById = useMemo(() => {
+    const map = new Map<string, (typeof accounts)[number]>()
+    accounts.forEach((acc) => {
+      if (acc.id) map.set(acc.id, acc)
+    })
+    return map
+  }, [accounts])
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -234,6 +253,11 @@ export function BudgetsView() {
               <BudgetCard
                 key={b.id}
                 budget={b}
+                account={
+                  b.defaultAccountId
+                    ? accountsById.get(b.defaultAccountId)
+                    : undefined
+                }
                 isWritable={isWritable}
                 onEdit={handleEditTrigger}
                 onDelete={handleDelete}
@@ -251,6 +275,7 @@ export function BudgetsView() {
           onOpenChange={setCreateOpen}
           spaceId={spaceId}
           baseCurrency={settings?.baseCurrency || "USD"}
+          accounts={accounts}
           refetchBudgets={refetchBudgets}
         />
 
@@ -260,6 +285,7 @@ export function BudgetsView() {
           onOpenChange={setEditOpen}
           activeBudget={activeBudget}
           spaceId={spaceId}
+          accounts={accounts}
           refetchBudgets={refetchBudgets}
           baseCurrency={settings?.baseCurrency || "USD"}
         />
@@ -271,6 +297,7 @@ export function BudgetsView() {
           spaceId={spaceId}
           baseCurrency={settings?.baseCurrency || "USD"}
           budgets={budgetsData?.budgets || []}
+          accounts={accounts}
           preselectedBudgetId={selectedBudgetId}
           refetchTransactions={() => {}} // No transactions list on this view to refetch
           refetchBudgets={refetchBudgets}

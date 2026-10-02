@@ -11,6 +11,7 @@ import {
   type UpdateBudgetRequest,
   useUpdateBudgetMutation,
   useListCurrenciesQuery,
+  useListAccountsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { usePatch } from "@/hooks/use-patch"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
@@ -66,7 +67,13 @@ export function EditBudgetSheet({
   accounts = [],
   refetchBudgets,
 }: EditBudgetSheetProps) {
-  const activeAccounts = accounts.filter((a) => a.isActive)
+  const { data: accountsData } = useListAccountsQuery(
+    {},
+    { enabled: open && !!spaceId && accounts.length === 0 }
+  )
+  const resolvedAccounts =
+    accounts.length > 0 ? accounts : accountsData?.accounts || []
+  const activeAccounts = resolvedAccounts.filter((a) => a.isActive)
   const updateMutation = useUpdateBudgetMutation()
   const [propagation, setPropagation] = useState<LimitPropagation>(
     "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"

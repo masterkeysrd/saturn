@@ -8,6 +8,7 @@ import {
   type Account,
   useCreateBudgetMutation,
   useListCurrenciesQuery,
+  useListAccountsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import { AccountSelect } from "./account-select"
@@ -46,7 +47,13 @@ export function CreateBudgetSheet({
   accounts = [],
   refetchBudgets,
 }: CreateBudgetSheetProps) {
-  const activeAccounts = accounts.filter((a) => a.isActive)
+  const { data: accountsData } = useListAccountsQuery(
+    {},
+    { enabled: open && !!spaceId && accounts.length === 0 }
+  )
+  const resolvedAccounts =
+    accounts.length > 0 ? accounts : accountsData?.accounts || []
+  const activeAccounts = resolvedAccounts.filter((a) => a.isActive)
   const createMutation = useCreateBudgetMutation()
 
   const { data: currenciesData } = useListCurrenciesQuery(
