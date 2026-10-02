@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Platform,
+  Alert,
 } from "react-native"
 import { useRouter, useLocalSearchParams, Stack } from "expo-router"
 import {
@@ -17,6 +18,9 @@ import {
   AlertCircle,
   ReceiptText,
   Sparkles,
+  Pause,
+  Play,
+  Unlock,
 } from "lucide-react-native"
 import {
   useGetBudgetQuery,
@@ -25,8 +29,10 @@ import {
   useListTransactionsQuery,
   useListAccountsQuery,
   useGetSettingsQuery,
+  useUpdateBudgetMutation,
   type Account,
   type Budget,
+  type Budget_Status,
 } from "@saturn/api/saturn/finance/v1/finance"
 import {
   formatAmount,
@@ -45,6 +51,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { TransactionListItem } from "@/components/finance/transaction-list-item"
 import { DateSectionHeader } from "@/components/finance/date-section-header"
+import { useToast } from "@/components/ui/toast"
 
 function calculateDaysLeft(endDateStr?: string): number {
   const now = new Date()
@@ -191,6 +198,93 @@ export default function BudgetDetailScreen() {
     }
   }
 
+  const toast = useToast()
+  const updateMutation = useUpdateBudgetMutation()
+
+  const handleUpdateStatus = async (
+    newStatus: Budget_Status,
+    actionLabel: string
+  ) => {
+    if (!budget?.id) return
+    haptics.medium()
+    try {
+      await updateMutation.mutateAsync({
+        id: budget.id,
+        req: {
+          id: budget.id,
+          version: budget.version,
+          budget: {
+            ...budget,
+            status: newStatus,
+          },
+          propagation: "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY",
+          updateMask: { paths: ["status"] },
+        },
+      })
+      haptics.success()
+      toast.show({
+        title: `Budget ${actionLabel.charAt(0).toUpperCase() + actionLabel.slice(1)}`,
+        message: `"${budget.name}" has been ${actionLabel}.`,
+        type: "success",
+      })
+      refetchBudgets()
+      refetchSingleBudget()
+    } catch (err) {
+      haptics.error()
+      toast.show({
+        title: "Action Failed",
+        message:
+          err instanceof Error ? err.message : "Failed to update budget status",
+        type: "error",
+      })
+    }
+  }
+
+  const handleStatusOptions = () => {
+    if (!budget) return
+    haptics.light()
+    const currentStatus = budget.status || "ACTIVE"
+    const options: {
+      text: string
+      style?: "default" | "cancel" | "destructive"
+      onPress?: () => void
+    }[] = []
+
+    if (currentStatus !== "ACTIVE") {
+      options.push({
+        text: currentStatus === "PAUSED" ? "Resume Budget" : "Reopen Budget",
+        onPress: () =>
+          handleUpdateStatus(
+            "ACTIVE",
+            currentStatus === "PAUSED" ? "resumed" : "reopened"
+          ),
+      })
+    }
+
+    if (currentStatus !== "PAUSED" && currentStatus !== "CLOSED") {
+      options.push({
+        text: "Pause Budget",
+        onPress: () => handleUpdateStatus("PAUSED", "paused"),
+      })
+    }
+
+    if (currentStatus !== "CLOSED") {
+      options.push({
+        text: "Close Budget",
+        style: "destructive",
+        onPress: () => handleUpdateStatus("CLOSED", "closed"),
+      })
+    }
+
+    options.push({ text: "Cancel", style: "cancel" })
+
+    Alert.alert(
+      "Budget Status",
+      `Current status: ${currentStatus.toLowerCase()}`,
+      options
+    )
+  }
+
   const isInitialLoading =
     (!budget && isBudgetsLoading) || (!budget && isSingleBudgetLoading)
 
@@ -303,6 +397,42 @@ export default function BudgetDetailScreen() {
                     {formatInterval(budget.interval)}
                   </Text>
                 </View>
+                {budget.status === "CLOSED" ? (
+                  <View
+                    style={[
+                      styles.intervalBadge,
+                      {
+                        backgroundColor: "rgba(239, 68, 68, 0.15)",
+                        borderColor: "rgba(239, 68, 68, 0.3)",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.intervalBadgeText,
+                        { color: theme.colors.destructive },
+                      ]}
+                    >
+                      Closed
+                    </Text>
+                  </View>
+                ) : budget.status === "PAUSED" ? (
+                  <View
+                    style={[
+                      styles.intervalBadge,
+                      {
+                        backgroundColor: "rgba(245, 158, 11, 0.15)",
+                        borderColor: "rgba(245, 158, 11, 0.3)",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.intervalBadgeText, { color: "#f59e0b" }]}
+                    >
+                      Paused
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             </View>
           </View>
@@ -427,7 +557,13 @@ export default function BudgetDetailScreen() {
               },
             })
           }}
-          style={styles.actionBtnPrimary}
+          disabled={budget.status === "CLOSED" || budget.status === "PAUSED"}
+          style={[
+            styles.actionBtnPrimary,
+            (budget.status === "CLOSED" || budget.status === "PAUSED") && {
+              opacity: 0.5,
+            },
+          ]}
         >
           <Plus size={16} color={theme.colors.primaryForeground} />
           <Text style={styles.actionBtnPrimaryText}>Add Expense</Text>
@@ -444,7 +580,36 @@ export default function BudgetDetailScreen() {
           style={styles.actionBtnSecondary}
         >
           <Edit3 size={16} color={theme.colors.textPrimary} />
-          <Text style={styles.actionBtnSecondaryText}>Edit Budget</Text>
+          <Text style={styles.actionBtnSecondaryText}>Edit</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleStatusOptions}
+          style={styles.actionBtnSecondary}
+        >
+          {budget.status === "CLOSED" ? (
+            <>
+              <Unlock size={16} color={theme.colors.success} />
+              <Text
+                style={[
+                  styles.actionBtnSecondaryText,
+                  { color: theme.colors.success },
+                ]}
+              >
+                Reopen
+              </Text>
+            </>
+          ) : budget.status === "PAUSED" ? (
+            <>
+              <Play size={16} color={theme.colors.primary} />
+              <Text style={styles.actionBtnSecondaryText}>Resume</Text>
+            </>
+          ) : (
+            <>
+              <Pause size={16} color={theme.colors.textMuted} />
+              <Text style={styles.actionBtnSecondaryText}>Status</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
 

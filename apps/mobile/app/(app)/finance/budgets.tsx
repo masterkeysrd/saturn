@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
   StyleSheet,
   Text,
@@ -13,6 +13,7 @@ import { formatAmount } from "@saturn/core"
 import {
   useListBudgetsQuery,
   type Budget,
+  type Budget_Status,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
@@ -31,13 +32,21 @@ export default function BudgetsScreen() {
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
   const [refreshing, setRefreshing] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<
+    "ACTIVE" | "PAUSED" | "CLOSED" | "ALL"
+  >("ACTIVE")
+
+  const statusesParam = useMemo<Budget_Status[]>(() => {
+    if (statusFilter === "ALL") return ["ACTIVE", "PAUSED", "CLOSED"]
+    return [statusFilter]
+  }, [statusFilter])
 
   const {
     data: budgetsData,
     isLoading,
     refetch,
   } = useListBudgetsQuery(
-    { pageSize: 100, pageToken: "", view: "FULL" },
+    { pageSize: 100, pageToken: "", view: "FULL", statuses: statusesParam },
     { enabled: !!activeSpaceId }
   )
 
@@ -85,8 +94,52 @@ export default function BudgetsScreen() {
           />
         }
       >
+        {/* Status Filter Pills */}
+        <View style={styles.filterRow}>
+          {(
+            [
+              { key: "ACTIVE", label: "Active" },
+              { key: "PAUSED", label: "Paused" },
+              { key: "CLOSED", label: "Closed" },
+              { key: "ALL", label: "All" },
+            ] as const
+          ).map((filter) => {
+            const isSelected = statusFilter === filter.key
+            return (
+              <TouchableOpacity
+                key={filter.key}
+                style={[
+                  styles.filterPill,
+                  isSelected && styles.filterPillActive,
+                ]}
+                onPress={() => {
+                  haptics.selection()
+                  setStatusFilter(filter.key)
+                }}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.filterPillText,
+                    isSelected && styles.filterPillTextActive,
+                  ]}
+                >
+                  {filter.label}
+                </Text>
+              </TouchableOpacity>
+            )
+          })}
+        </View>
+
         <Caption style={styles.sectionHeader}>
-          ACTIVE BUDGETS ({budgets.length})
+          {statusFilter === "ALL"
+            ? "ALL BUDGETS"
+            : statusFilter === "PAUSED"
+              ? "PAUSED BUDGETS"
+              : statusFilter === "CLOSED"
+                ? "CLOSED BUDGETS"
+                : "ACTIVE BUDGETS"}{" "}
+          ({budgets.length})
         </Caption>
 
         {isLoading ? (
@@ -205,6 +258,45 @@ export default function BudgetsScreen() {
                               {formatInterval(b.interval)}
                             </Text>
                           </View>
+                          {b.status === "CLOSED" ? (
+                            <View
+                              style={[
+                                styles.intervalBadge,
+                                {
+                                  backgroundColor: "rgba(239, 68, 68, 0.15)",
+                                  borderColor: "rgba(239, 68, 68, 0.3)",
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.intervalText,
+                                  { color: theme.colors.destructive },
+                                ]}
+                              >
+                                Closed
+                              </Text>
+                            </View>
+                          ) : b.status === "PAUSED" ? (
+                            <View
+                              style={[
+                                styles.intervalBadge,
+                                {
+                                  backgroundColor: "rgba(245, 158, 11, 0.15)",
+                                  borderColor: "rgba(245, 158, 11, 0.3)",
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.intervalText,
+                                  { color: "#f59e0b" },
+                                ]}
+                              >
+                                Paused
+                              </Text>
+                            </View>
+                          ) : null}
                         </View>
                         {dateRangeStr ? (
                           <View style={styles.periodRow}>
@@ -455,5 +547,31 @@ const styles = StyleSheet.create({
   allowanceSubBold: {
     fontWeight: "700",
     color: theme.colors.primary,
+  },
+  filterRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  filterPill: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  filterPillActive: {
+    backgroundColor: theme.colors.primarySubtle,
+    borderColor: theme.colors.primary,
+  },
+  filterPillText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textMuted,
+  },
+  filterPillTextActive: {
+    color: theme.colors.primary,
+    fontWeight: "700",
   },
 })

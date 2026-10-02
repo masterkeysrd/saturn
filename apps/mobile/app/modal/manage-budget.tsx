@@ -26,6 +26,7 @@ import {
   useGetSettingsQuery,
   type Budget,
   type Budget_RecurrenceInterval,
+  type Budget_Status,
   type CurrencyInfo,
   type Account,
   type Account_InstitutionInfo,
@@ -109,6 +110,7 @@ export default function ManageBudgetModal() {
   const [limit, setLimit] = useState("")
   const [currency, setCurrency] = useState(baseCurrency)
   const [interval, setInterval] = useState<Budget_RecurrenceInterval>("MONTHLY")
+  const [status, setStatus] = useState<Budget_Status>("ACTIVE")
   const [color, setColor] = useState("indigo")
   const [icon, setIcon] = useState("piggy-bank")
   const [defaultAccountId, setDefaultAccountId] = useState("")
@@ -124,11 +126,13 @@ export default function ManageBudgetModal() {
       setLimit(formatCents(existingBudget.limitAmount || "0").toString())
       setCurrency(existingBudget.currency || baseCurrency)
       setInterval(existingBudget.interval || "MONTHLY")
+      setStatus(existingBudget.status || "ACTIVE")
       setColor(existingBudget.color || "indigo")
       setIcon(existingBudget.icon || "piggy-bank")
       setDefaultAccountId(existingBudget.defaultAccountId || "")
     } else if (!isEditMode) {
       setCurrency(baseCurrency)
+      setStatus("ACTIVE")
     }
   }, [existingBudget, baseCurrency, isEditMode])
 
@@ -186,15 +190,29 @@ export default function ManageBudgetModal() {
           id: editBudgetId,
           req: {
             id: editBudgetId,
+            version: existingBudget?.version,
             budget: {
+              ...(existingBudget || {}),
               name: name.trim(),
               limitAmount: centsStr,
-              status: existingBudget?.status || "ACTIVE",
+              currency: existingBudget?.currency || baseCurrency,
+              interval: existingBudget?.interval || "MONTHLY",
+              status,
               icon,
               color,
               defaultAccountId: defaultAccountId || undefined,
-            } as unknown as Budget,
+            } as Budget,
             propagation,
+            updateMask: {
+              paths: [
+                "name",
+                "limit_amount",
+                "status",
+                "icon",
+                "color",
+                "default_account_id",
+              ],
+            },
           },
         })
         haptics.success()
@@ -496,6 +514,75 @@ export default function ManageBudgetModal() {
                   {propagation === "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
                     ? "Applies to the current period and all future periods."
                     : "Applies limit modification only to the current active period."}
+                </Text>
+              </>
+            )}
+
+            {/* Lifecycle Status (Edit mode only) */}
+            {isEditMode && (
+              <>
+                <Text style={[styles.fieldSubLabel, { marginTop: 16 }]}>
+                  Budget Status
+                </Text>
+                <View style={styles.intervalRow}>
+                  {(
+                    [
+                      { value: "ACTIVE", label: "Active" },
+                      { value: "PAUSED", label: "Paused" },
+                      { value: "CLOSED", label: "Closed" },
+                    ] as const
+                  ).map((opt) => {
+                    const isSelected = status === opt.value
+                    return (
+                      <TouchableOpacity
+                        key={opt.value}
+                        onPress={() => {
+                          haptics.selection()
+                          setStatus(opt.value as Budget_Status)
+                        }}
+                        style={[
+                          styles.intervalPill,
+                          isSelected && [
+                            styles.intervalPillActive,
+                            {
+                              borderColor:
+                                opt.value === "CLOSED"
+                                  ? theme.colors.destructive
+                                  : opt.value === "PAUSED"
+                                    ? "#f59e0b"
+                                    : activeColorMeta.bar,
+                            },
+                          ],
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.intervalPillText,
+                            isSelected && [
+                              styles.intervalPillTextActive,
+                              {
+                                color:
+                                  opt.value === "CLOSED"
+                                    ? theme.colors.destructive
+                                    : opt.value === "PAUSED"
+                                      ? "#f59e0b"
+                                      : activeColorMeta.text,
+                              },
+                            ],
+                          ]}
+                        >
+                          {opt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+                <Text style={styles.fieldHelperText}>
+                  {status === "ACTIVE"
+                    ? "Budget is active and open for transaction allocations."
+                    : status === "PAUSED"
+                      ? "Budget is temporarily suspended. Transactions are blocked."
+                      : "Budget is closed. Template is archived and no longer tracks expenses."}
                 </Text>
               </>
             )}
