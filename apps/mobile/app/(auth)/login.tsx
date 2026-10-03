@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import {
   StyleSheet,
   Text,
@@ -44,6 +44,8 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [biometricLoading, setBiometricLoading] = useState(false)
+  const hasAutoPromptedRef = useRef(false)
+  const isBiometricInProgressRef = useRef(false)
 
   // MFA Challenge State
   const [mfaStep, setMfaStep] = useState(false)
@@ -70,6 +72,8 @@ export default function LoginScreen() {
   }, [])
 
   const handleBiometricLogin = useCallback(async () => {
+    if (isBiometricInProgressRef.current) return
+    isBiometricInProgressRef.current = true
     setBiometricLoading(true)
     setError(null)
     try {
@@ -93,14 +97,16 @@ export default function LoginScreen() {
         })
       }
     } finally {
+      isBiometricInProgressRef.current = false
       setBiometricLoading(false)
     }
   }, [loginWithBiometrics, router, toast])
 
-  // Offer automatic biometric prompt when enrolled device opens
+  // Offer automatic biometric prompt once when enrolled device opens
   useEffect(() => {
     let mounted = true
-    if (isDeviceEnrolled && !mfaStep) {
+    if (isDeviceEnrolled && !mfaStep && !hasAutoPromptedRef.current) {
+      hasAutoPromptedRef.current = true
       const timer = setTimeout(() => {
         if (mounted) {
           handleBiometricLogin()

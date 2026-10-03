@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useMemo,
+  useCallback,
   type ReactNode,
 } from "react"
 import * as LocalAuthentication from "expo-local-authentication"
@@ -317,56 +318,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [accessToken, apiUser, cachedUser])
 
-  const login = async (req: LoginUserRequest): Promise<LoginUserResponse> => {
-    setError(null)
-    try {
-      const res = await loginUser(req)
-      if (res.accessToken) {
-        await mobileStorage.setSession(res.accessToken)
-        if (res.refreshToken && mobileStorage.setRefreshToken) {
-          await mobileStorage.setRefreshToken(res.refreshToken)
+  const login = useCallback(
+    async (req: LoginUserRequest): Promise<LoginUserResponse> => {
+      setError(null)
+      try {
+        const res = await loginUser(req)
+        if (res.accessToken) {
+          await mobileStorage.setSession(res.accessToken)
+          if (res.refreshToken && mobileStorage.setRefreshToken) {
+            await mobileStorage.setRefreshToken(res.refreshToken)
+          }
+
+          setAccessToken(res.accessToken)
+          setSession({ accessToken: res.accessToken, hasSession: true })
         }
-
-        setAccessToken(res.accessToken)
-        setSession({ accessToken: res.accessToken, hasSession: true })
+        return res
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Failed to authenticate"
+        setError(message)
+        throw err
       }
-      return res
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to authenticate"
-      setError(message)
-      throw err
-    }
-  }
+    },
+    []
+  )
 
-  const loginWithBiometrics = async (): Promise<LoginUserResponse> => {
-    setError(null)
-    try {
-      const res = await apiLoginWithBiometrics()
-      if (res.accessToken) {
-        await mobileStorage.setSession(res.accessToken)
-        if (res.refreshToken && mobileStorage.setRefreshToken) {
-          await mobileStorage.setRefreshToken(res.refreshToken)
+  const loginWithBiometrics =
+    useCallback(async (): Promise<LoginUserResponse> => {
+      setError(null)
+      try {
+        const res = await apiLoginWithBiometrics()
+        if (res.accessToken) {
+          await mobileStorage.setSession(res.accessToken)
+          if (res.refreshToken && mobileStorage.setRefreshToken) {
+            await mobileStorage.setRefreshToken(res.refreshToken)
+          }
+
+          setAccessToken(res.accessToken)
+          setSession({ accessToken: res.accessToken, hasSession: true })
         }
-
-        setAccessToken(res.accessToken)
-        setSession({ accessToken: res.accessToken, hasSession: true })
+        return res
+      } catch (err: unknown) {
+        const ready = await isDeviceBiometricsReady().catch(() => false)
+        if (!ready) {
+          setIsDeviceEnrolled(false)
+          setIsBiometricActive(false)
+        }
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Failed to authenticate with biometrics"
+        // Avoid setting global error when user simply dismissed or cancelled the biometric prompt
+        if (!message.toLowerCase().includes("cancel")) {
+          setError(message)
+        }
+        throw err
       }
-      return res
-    } catch (err: unknown) {
-      const ready = await isDeviceBiometricsReady().catch(() => false)
-      if (!ready) {
-        setIsDeviceEnrolled(false)
-        setIsBiometricActive(false)
-      }
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Failed to authenticate with biometrics"
-      setError(message)
-      throw err
-    }
-  }
+    }, [])
 
   const enrollBiometrics = async (
     deviceName?: string,
