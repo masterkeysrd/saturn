@@ -21,7 +21,7 @@ import {
 } from "lucide-react-native"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { registerSchema, type RegisterFormValues } from "@saturn/schemas"
+import { RegisterSchema, type RegisterFormValues } from "@saturn/schemas"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
 import { Button } from "@/components/ui/button"
@@ -43,7 +43,7 @@ export default function RegisterScreen() {
     handleSubmit,
     formState: { isSubmitting },
   } = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(RegisterSchema),
     defaultValues: {
       name: "",
       username: "",

@@ -15,7 +15,7 @@ import { Globe, X } from "lucide-react-native"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  serverSettingsSchema,
+  ServerSettingsSchema,
   type ServerSettingsFormValues,
 } from "@saturn/schemas"
 import { useAuth } from "@/lib/auth-context"
@@ -46,7 +46,7 @@ export default function ServerSettingsScreen() {
     setError,
     formState: { isSubmitting },
   } = useForm<ServerSettingsFormValues>({
-    resolver: zodResolver(serverSettingsSchema),
+    resolver: zodResolver(ServerSettingsSchema),
     defaultValues: serverValues,
     values: serverValues,
     resetOptions: { keepDirtyValues: true },

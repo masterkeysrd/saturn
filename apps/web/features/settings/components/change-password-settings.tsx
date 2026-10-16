@@ -2,8 +2,8 @@ import { useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  changePasswordSchema,
-  mfaStepUpSchema,
+  ChangePasswordSchema,
+  MfaStepUpSchema,
   type ChangePasswordFormValues,
 } from "@saturn/schemas"
 import {
@@ -67,7 +67,7 @@ export function ChangePasswordSettings() {
     getValues,
     formState: { errors: formErrors },
   } = useForm<ChangePasswordFormValues>({
-    resolver: zodResolver(changePasswordSchema),
+    resolver: zodResolver(ChangePasswordSchema),
     defaultValues: {
       currentPassword: "",
       newPassword: "",
@@ -168,10 +168,10 @@ export function ChangePasswordSettings() {
 
   const handleChallengeConfirm = async () => {
     setChallengeError(null)
-    const validation = mfaStepUpSchema.safeParse({ code: totpCode.trim() })
+    const validation = MfaStepUpSchema.safeParse({ code: totpCode.trim() })
     if (!validation.success) {
       setChallengeError(
-        validation.error.errors[0]?.message ||
+        validation.error.issues[0]?.message ||
           "Please enter a valid 6-digit verification code."
       )
       return

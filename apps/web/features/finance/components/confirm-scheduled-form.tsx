@@ -11,7 +11,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { AccountSelect } from "./account-select"
 import { BudgetSelect } from "./budget-select"
 import {
-  confirmTransactionSchema,
+  ConfirmTransactionSchema,
   type ConfirmTransactionFormValues,
 } from "@saturn/schemas"
 import {
@@ -80,7 +80,7 @@ export function ConfirmScheduledForm({
     control,
     formState: { errors },
   } = useForm<ConfirmTransactionFormValues>({
-    resolver: zodResolver(confirmTransactionSchema),
+    resolver: zodResolver(ConfirmTransactionSchema),
     defaultValues: {
       type: scheduledTransaction.type === "INCOME" ? "INCOME" : "EXPENSE",
       amount: (Number(scheduledTransaction.amount || 0) / 100).toFixed(2),

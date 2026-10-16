@@ -28,7 +28,7 @@ import {
 } from "lucide-react-native"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { borrowingSchema, type BorrowingFormValues } from "@saturn/schemas"
+import { BorrowingSchema, type BorrowingFormValues } from "@saturn/schemas"
 import {
   useCreateBorrowingMutation,
   useUpdateBorrowingMutation,
@@ -160,7 +160,7 @@ export default function ManageBorrowingModal() {
     getValues,
     formState: { isSubmitting },
   } = useForm<BorrowingFormValues>({
-    resolver: zodResolver(borrowingSchema),
+    resolver: zodResolver(BorrowingSchema),
     defaultValues: defaultFormValues,
     values: defaultFormValues,
     resetOptions: { keepDirtyValues: true },

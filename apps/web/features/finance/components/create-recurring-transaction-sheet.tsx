@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import {
-  recurringTransactionSchema,
+  RecurringTransactionSchema,
   type RecurringTransactionFormValues,
 } from "@saturn/schemas"
 import {
@@ -150,7 +150,7 @@ export function CreateRecurringTransactionSheet({
     setValue,
     formState: { errors, dirtyFields },
   } = useForm<RecurringTransactionFormValues>({
-    resolver: zodResolver(recurringTransactionSchema),
+    resolver: zodResolver(RecurringTransactionSchema),
     defaultValues: {
       type: "EXPENSE",
       budgetId: "",

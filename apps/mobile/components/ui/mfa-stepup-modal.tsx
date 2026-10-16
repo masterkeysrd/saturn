@@ -12,7 +12,7 @@ import {
 import { KeyRound } from "lucide-react-native"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { mfaStepUpSchema, type MfaStepUpFormValues } from "@saturn/schemas"
+import { MfaStepUpSchema, type MfaStepUpFormValues } from "@saturn/schemas"
 import { theme } from "@/lib/theme"
 import { Button } from "./button"
 import { OTPInput } from "./otp-input"
@@ -48,7 +48,7 @@ export function MfaStepUpModal({
     reset,
     formState: { errors, isSubmitting },
   } = useForm<MfaStepUpFormValues>({
-    resolver: zodResolver(mfaStepUpSchema),
+    resolver: zodResolver(MfaStepUpSchema),
     defaultValues: {
       code: "",
     },

@@ -45,7 +45,7 @@ import {
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  recurringTransactionSchema,
+  RecurringTransactionSchema,
   type RecurringTransactionFormValues,
 } from "@saturn/schemas"
 import {
@@ -181,7 +181,7 @@ export default function ManageRecurringModal() {
     getValues,
     formState: { errors, isSubmitting },
   } = useForm<RecurringTransactionFormValues>({
-    resolver: zodResolver(recurringTransactionSchema),
+    resolver: zodResolver(RecurringTransactionSchema),
     defaultValues: defaultFormValues,
     values: defaultFormValues,
     resetOptions: { keepDirtyValues: true },

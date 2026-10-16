@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import { ArrowLeft } from "lucide-react"
-import { incomeSchema, type IncomeFormValues } from "@saturn/schemas"
+import { IncomeSchema, type IncomeFormValues } from "@saturn/schemas"
 import {
   type Account,
   type Transaction,
@@ -124,7 +124,7 @@ export function CreateIncomeForm({
     setValue,
     formState: { errors },
   } = useForm<IncomeFormValues>({
-    resolver: zodResolver(incomeSchema),
+    resolver: zodResolver(IncomeSchema),
     defaultValues: {
       accountId: "",
       description: "",

@@ -3,7 +3,7 @@ import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
 import {
-  confirmTransactionSchema,
+  ConfirmTransactionSchema,
   type ConfirmTransactionFormValues,
 } from "@saturn/schemas"
 import {
@@ -228,7 +228,7 @@ export function ConfirmTransactionSheet({
     control,
     formState: { errors },
   } = useForm<ConfirmTransactionFormValues>({
-    resolver: zodResolver(confirmTransactionSchema),
+    resolver: zodResolver(ConfirmTransactionSchema),
     defaultValues: {
       type: "EXPENSE",
       amount: "",

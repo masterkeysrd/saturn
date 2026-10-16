@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { registerSchema, type RegisterFormValues } from "@saturn/schemas"
+import { RegisterSchema, type RegisterFormValues } from "@saturn/schemas"
 import { useAuth } from "./use-auth"
 import { AuthCard } from "./components/auth-card"
 import { FormInput } from "./components/form-input"
@@ -22,7 +22,7 @@ export function RegisterView() {
     handleSubmit,
     formState: { errors },
   } = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(RegisterSchema),
     defaultValues: {
       name: "",
       username: "",

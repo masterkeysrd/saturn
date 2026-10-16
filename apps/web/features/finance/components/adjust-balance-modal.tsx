@@ -6,7 +6,7 @@ import {
   useAdjustAccountBalanceMutation,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import {
-  adjustBalanceSchema,
+  AdjustBalanceSchema,
   type AdjustBalanceFormValues,
 } from "@saturn/schemas"
 import { Button } from "@/components/ui/button"
@@ -59,7 +59,7 @@ export function AdjustBalanceModal({
     reset,
     formState: { errors },
   } = useForm<AdjustBalanceFormValues>({
-    resolver: zodResolver(adjustBalanceSchema),
+    resolver: zodResolver(AdjustBalanceSchema),
     defaultValues: {
       targetBalance: "",
       notes: "",

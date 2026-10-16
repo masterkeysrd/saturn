@@ -1,8 +1,14 @@
 import { z } from "zod"
+import { numericAmountString } from "../common"
 
-export const adjustBalanceSchema = z.object({
-  targetBalance: z.string().min(1, "Target balance is required"),
+export const adjustBalanceShape = {
+  targetBalance: numericAmountString(
+    "Target balance is required",
+    "Target balance must be a valid number"
+  ),
   notes: z.string().optional(),
-})
+}
 
-export type AdjustBalanceFormValues = z.infer<typeof adjustBalanceSchema>
+export const AdjustBalanceSchema = z.compile(z.object(adjustBalanceShape))
+
+export type AdjustBalanceFormValues = z.infer<typeof AdjustBalanceSchema>

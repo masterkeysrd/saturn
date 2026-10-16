@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { inboxReviewSchema, type InboxReviewFormValues } from "@saturn/schemas"
+import { InboxReviewSchema, type InboxReviewFormValues } from "@saturn/schemas"
 import type {
   InboxItem,
   Account,
@@ -283,7 +283,7 @@ export function InboxItemReviewPanel({
     setValue,
     formState: { errors },
   } = useForm<InboxReviewFormValues>({
-    resolver: zodResolver(inboxReviewSchema),
+    resolver: zodResolver(InboxReviewSchema),
     defaultValues: {
       selectedTxId: "",
       overwriteLinkedTx: false,

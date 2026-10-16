@@ -8,7 +8,7 @@ import {
   useRegenerateBackupCodesMutation,
   type MfaFactorDescriptor,
 } from "@saturn/api/gen/saturn/identity/v1/identity"
-import { mfaStepUpSchema } from "@saturn/schemas"
+import { MfaStepUpSchema } from "@saturn/schemas"
 import {
   ShieldCheckIcon,
   ShieldAlertIcon,
@@ -98,12 +98,12 @@ export function TwoFactorSettings() {
 
   const handleConfirmCode = async () => {
     setWizardError(null)
-    const validation = mfaStepUpSchema.safeParse({
+    const validation = MfaStepUpSchema.safeParse({
       code: verificationCode.trim(),
     })
     if (!validation.success) {
       setWizardError(
-        validation.error.errors[0]?.message ||
+        validation.error.issues[0]?.message ||
           "Please enter a valid 6-digit verification code"
       )
       return
@@ -179,12 +179,12 @@ export function TwoFactorSettings() {
 
   const handleRegenerateCodes = async () => {
     setRegenError(null)
-    const validation = mfaStepUpSchema.safeParse({
+    const validation = MfaStepUpSchema.safeParse({
       code: regenVerificationCode.trim(),
     })
     if (!validation.success) {
       setRegenError(
-        validation.error.errors[0]?.message ||
+        validation.error.issues[0]?.message ||
           "Please enter a valid 6-digit verification code"
       )
       return

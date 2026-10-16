@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { createSpaceSchema, type CreateSpaceFormValues } from "@saturn/schemas"
+import { CreateSpaceSchema, type CreateSpaceFormValues } from "@saturn/schemas"
 import { useMySpaces, useActiveSpaceContext } from "@/features/space/use-space"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,7 +43,7 @@ export function SpaceSettings() {
   const [managingSpace, setManagingSpace] = useState<Space | null>(null)
 
   const createForm = useForm<CreateSpaceFormValues>({
-    resolver: zodResolver(createSpaceSchema),
+    resolver: zodResolver(CreateSpaceSchema),
     defaultValues: {
       name: "",
       description: "",

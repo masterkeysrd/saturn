@@ -1,44 +1,25 @@
 import { z } from "zod"
+import { nonEmptyString, positiveAmountString } from "../common"
 
-export const transactionSchema = z.object({
-  budgetId: z.string().min(1, "Budget is required"),
+const baseTransactionShape = {
   accountId: z.string().optional(),
-  description: z.string().trim().min(1, "Description is required"),
-  amount: z
-    .string()
-    .min(1, "Amount is required")
-    .refine(
-      (val) => {
-        const num = parseFloat(val)
-        return !isNaN(num) && num > 0
-      },
-      { message: "Amount must be greater than zero" }
-    ),
-  currency: z.string().min(1, "Currency is required"),
+  description: nonEmptyString("Description is required"),
+  amount: positiveAmountString(),
+  currency: z.string().min(1, { error: "Currency is required" }),
   transactionDate: z.date(),
   hasCustomEffectiveDate: z.boolean(),
   effectiveDate: z.date(),
-})
+}
 
-export type TransactionFormValues = z.infer<typeof transactionSchema>
+export const TransactionSchema = z.compile(
+  z.object({
+    ...baseTransactionShape,
+    budgetId: z.string().min(1, { error: "Budget is required" }),
+  })
+)
 
-export const incomeSchema = z.object({
-  accountId: z.string().optional(),
-  description: z.string().trim().min(1, "Description is required"),
-  amount: z
-    .string()
-    .min(1, "Amount is required")
-    .refine(
-      (val) => {
-        const num = parseFloat(val)
-        return !isNaN(num) && num > 0
-      },
-      { message: "Amount must be greater than zero" }
-    ),
-  currency: z.string().min(1, "Currency is required"),
-  transactionDate: z.date(),
-  hasCustomEffectiveDate: z.boolean(),
-  effectiveDate: z.date(),
-})
+export type TransactionFormValues = z.infer<typeof TransactionSchema>
 
-export type IncomeFormValues = z.infer<typeof incomeSchema>
+export const IncomeSchema = z.compile(z.object(baseTransactionShape))
+
+export type IncomeFormValues = z.infer<typeof IncomeSchema>

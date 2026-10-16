@@ -22,7 +22,7 @@ import {
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  adjustBalanceSchema,
+  AdjustBalanceSchema,
   type AdjustBalanceFormValues,
 } from "@saturn/schemas"
 import {
@@ -68,7 +68,7 @@ export default function AdjustBalanceModal() {
     handleSubmit,
     formState: { isSubmitting },
   } = useForm<AdjustBalanceFormValues>({
-    resolver: zodResolver(adjustBalanceSchema),
+    resolver: zodResolver(AdjustBalanceSchema),
     defaultValues: defaultFormValues,
     values: defaultFormValues,
     resetOptions: { keepDirtyValues: true },

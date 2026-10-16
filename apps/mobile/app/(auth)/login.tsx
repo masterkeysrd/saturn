@@ -24,9 +24,9 @@ import {
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  loginSchema,
-  mfaStepUpSchema,
-  recoveryCodeSchema,
+  LoginSchema,
+  MfaStepUpSchema,
+  RecoveryCodeSchema,
   type LoginFormValues,
 } from "@saturn/schemas"
 import { useAuth } from "@/lib/auth-context"
@@ -60,7 +60,7 @@ export default function LoginScreen() {
 
   // RHF Forms
   const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(LoginSchema),
     defaultValues: {
       identifier: "",
       password: "",
@@ -69,7 +69,7 @@ export default function LoginScreen() {
   })
 
   const mfaSchema = useMemo(() => {
-    return useBackupCode ? recoveryCodeSchema : mfaStepUpSchema
+    return useBackupCode ? RecoveryCodeSchema : MfaStepUpSchema
   }, [useBackupCode])
 
   const mfaForm = useForm<{ code: string }>({

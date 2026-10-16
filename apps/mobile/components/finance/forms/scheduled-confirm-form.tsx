@@ -19,7 +19,7 @@ import {
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  confirmTransactionSchema,
+  ConfirmTransactionSchema,
   type ConfirmTransactionFormValues,
 } from "@saturn/schemas"
 import { toCentsString, formatAmount } from "@saturn/core"
@@ -159,7 +159,7 @@ export function ScheduledConfirmForm({
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<ConfirmTransactionFormValues>({
-    resolver: zodResolver(confirmTransactionSchema),
+    resolver: zodResolver(ConfirmTransactionSchema),
     defaultValues: resolvedFormValues,
     values: resolvedFormValues,
     resetOptions: { keepDirtyValues: true },

@@ -3,7 +3,7 @@ import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
-import { budgetSchema, type BudgetFormValues } from "@saturn/schemas"
+import { BudgetSchema, type BudgetFormValues } from "@saturn/schemas"
 import {
   type Account,
   type Budget,
@@ -159,7 +159,7 @@ export function EditBudgetSheet({
     setValue,
     formState: { errors, dirtyFields },
   } = useForm<BudgetFormValues>({
-    resolver: zodResolver(budgetSchema),
+    resolver: zodResolver(BudgetSchema),
     defaultValues: budgetDefaultValues,
     values: budgetDefaultValues,
     resetOptions: { keepDirtyValues: true },

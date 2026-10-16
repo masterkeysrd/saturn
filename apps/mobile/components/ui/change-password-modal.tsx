@@ -13,7 +13,7 @@ import { KeyRound, ShieldAlert, X } from "lucide-react-native"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  changePasswordSchema,
+  ChangePasswordSchema,
   type ChangePasswordFormValues,
 } from "@saturn/schemas"
 import { theme } from "@/lib/theme"
@@ -48,7 +48,7 @@ export function ChangePasswordModal({
     reset,
     formState: { isSubmitting },
   } = useForm<ChangePasswordFormValues>({
-    resolver: zodResolver(changePasswordSchema),
+    resolver: zodResolver(ChangePasswordSchema),
     defaultValues: {
       currentPassword: "",
       newPassword: "",

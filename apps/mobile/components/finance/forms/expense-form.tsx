@@ -19,7 +19,7 @@ import {
 } from "lucide-react-native"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { transactionSchema, type TransactionFormValues } from "@saturn/schemas"
+import { TransactionSchema, type TransactionFormValues } from "@saturn/schemas"
 import { toCentsString, convertCurrency } from "@saturn/core"
 import {
   useCreateExpenseMutation,
@@ -157,7 +157,7 @@ export function ExpenseForm({
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<TransactionFormValues>({
-    resolver: zodResolver(transactionSchema),
+    resolver: zodResolver(TransactionSchema),
     defaultValues: resolvedFormValues,
     values: resolvedFormValues,
     resetOptions: { keepDirtyValues: true },

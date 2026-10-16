@@ -34,7 +34,7 @@ import {
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { budgetSchema, type BudgetFormValues } from "@saturn/schemas"
+import { BudgetSchema, type BudgetFormValues } from "@saturn/schemas"
 import {
   toCentsString,
   formatCents,
@@ -133,7 +133,7 @@ export default function ManageBudgetModal() {
     getValues,
     formState: { isSubmitting },
   } = useForm<BudgetFormValues>({
-    resolver: zodResolver(budgetSchema),
+    resolver: zodResolver(BudgetSchema),
     defaultValues: defaultFormValues,
     values: defaultFormValues,
     resetOptions: { keepDirtyValues: true },

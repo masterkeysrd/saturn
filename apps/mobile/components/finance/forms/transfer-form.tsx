@@ -12,7 +12,7 @@ import {
 } from "lucide-react-native"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { transferSchema, type TransferFormValues } from "@saturn/schemas"
+import { TransferSchema, type TransferFormValues } from "@saturn/schemas"
 import { toCentsString } from "@saturn/core"
 import {
   useCreateTransferMutation,
@@ -78,7 +78,7 @@ export function TransferForm({
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<TransferFormValues>({
-    resolver: zodResolver(transferSchema),
+    resolver: zodResolver(TransferSchema),
     defaultValues: resolvedDefaultValues,
     values: resolvedDefaultValues,
     resetOptions: { keepDirtyValues: true },

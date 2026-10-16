@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import {
-  exchangeRateSchema,
+  ExchangeRateSchema,
   type ExchangeRateFormValues,
 } from "@saturn/schemas"
 import {
@@ -69,7 +69,7 @@ export function CreateRateSheet({
     setValue,
     formState: { errors },
   } = useForm<ExchangeRateFormValues>({
-    resolver: zodResolver(exchangeRateSchema),
+    resolver: zodResolver(ExchangeRateSchema),
     defaultValues: rateDefaultValues,
     values: rateDefaultValues,
     resetOptions: { keepDirtyValues: true },

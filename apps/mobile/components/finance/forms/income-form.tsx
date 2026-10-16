@@ -11,7 +11,7 @@ import {
 } from "lucide-react-native"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { incomeSchema, type IncomeFormValues } from "@saturn/schemas"
+import { IncomeSchema, type IncomeFormValues } from "@saturn/schemas"
 import { toCentsString, convertCurrency } from "@saturn/core"
 import {
   useCreateIncomeMutation,
@@ -126,7 +126,7 @@ export function IncomeForm({
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<IncomeFormValues>({
-    resolver: zodResolver(incomeSchema),
+    resolver: zodResolver(IncomeSchema),
     defaultValues: resolvedFormValues,
     values: resolvedFormValues,
     resetOptions: { keepDirtyValues: true },

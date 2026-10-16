@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useQueryClient } from "@tanstack/react-query"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
-import { borrowingSchema, type BorrowingFormValues } from "@saturn/schemas"
+import { BorrowingSchema, type BorrowingFormValues } from "@saturn/schemas"
 import {
   type Borrowing,
   useCreateBorrowingMutation,
@@ -107,7 +107,7 @@ export function CreateBorrowingSheet({
     setValue,
     formState: { errors },
   } = useForm<BorrowingFormValues>({
-    resolver: zodResolver(borrowingSchema),
+    resolver: zodResolver(BorrowingSchema),
     defaultValues: {
       direction: "LENT",
       counterparty: "",

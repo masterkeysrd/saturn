@@ -8,7 +8,7 @@ import {
   useListAccountsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import {
-  adjustBorrowingSchema,
+  AdjustBorrowingSchema,
   type AdjustBorrowingFormValues,
 } from "@saturn/schemas"
 import { Button } from "@/components/ui/button"
@@ -73,7 +73,7 @@ export function AdjustBorrowingModal({
     reset,
     formState: { errors },
   } = useForm<AdjustBorrowingFormValues>({
-    resolver: zodResolver(adjustBorrowingSchema),
+    resolver: zodResolver(AdjustBorrowingSchema),
     defaultValues: {
       targetBalance: "",
       adjustmentDate: new Date(),

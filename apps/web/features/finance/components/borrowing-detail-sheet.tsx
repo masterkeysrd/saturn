@@ -28,7 +28,7 @@ import { formatCents, toCentsString } from "../utils"
 import { DatePicker } from "@/components/ui/date-picker"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
 import { AccountSelect } from "./account-select"
-import { repaymentSchema, type RepaymentFormValues } from "@saturn/schemas"
+import { RepaymentSchema, type RepaymentFormValues } from "@saturn/schemas"
 import { AdjustBorrowingModal } from "./adjust-borrowing-modal"
 
 interface BorrowingDetailSheetProps {
@@ -102,7 +102,7 @@ export function BorrowingDetailSheet({
     reset,
     formState: { errors },
   } = useForm<RepaymentFormValues>({
-    resolver: zodResolver(repaymentSchema),
+    resolver: zodResolver(RepaymentSchema),
     defaultValues: {
       amount: "",
       paymentDate: new Date(),

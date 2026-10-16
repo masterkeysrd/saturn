@@ -18,7 +18,7 @@ import {
 } from "lucide-react-native"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { repaymentSchema, type RepaymentFormValues } from "@saturn/schemas"
+import { RepaymentSchema, type RepaymentFormValues } from "@saturn/schemas"
 import { toCentsString, formatAmount } from "@saturn/core"
 import {
   useLogBorrowingTransactionMutation,
@@ -104,7 +104,7 @@ export function BorrowingForm({
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<RepaymentFormValues>({
-    resolver: zodResolver(repaymentSchema),
+    resolver: zodResolver(RepaymentSchema),
     defaultValues: resolvedDefaultValues,
     values: resolvedDefaultValues,
     resetOptions: { keepDirtyValues: true },

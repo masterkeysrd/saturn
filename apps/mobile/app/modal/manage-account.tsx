@@ -39,7 +39,7 @@ import {
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useForm, useWatch, type Control } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { accountSchema, type AccountFormValues } from "@saturn/schemas"
+import { AccountSchema, type AccountFormValues } from "@saturn/schemas"
 import {
   toCentsString,
   formatCents,
@@ -222,7 +222,7 @@ export default function ManageAccountModal() {
     getValues,
     formState: { isSubmitting },
   } = useForm<AccountFormValues>({
-    resolver: zodResolver(accountSchema),
+    resolver: zodResolver(AccountSchema),
     defaultValues: defaultFormValues,
     values: defaultFormValues,
     resetOptions: { keepDirtyValues: true },

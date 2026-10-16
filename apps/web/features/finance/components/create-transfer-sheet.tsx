@@ -2,7 +2,7 @@ import { useMemo, useCallback } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
-import { transferSchema, type TransferFormValues } from "@saturn/schemas"
+import { TransferSchema, type TransferFormValues } from "@saturn/schemas"
 import {
   type Account,
   useCreateTransferMutation,
@@ -62,7 +62,7 @@ export function CreateTransferSheet({
     setValue,
     formState: { errors },
   } = useForm<TransferFormValues>({
-    resolver: zodResolver(transferSchema),
+    resolver: zodResolver(TransferSchema),
     defaultValues: transferDefaultValues,
     values: transferDefaultValues,
     resetOptions: { keepDirtyValues: true },

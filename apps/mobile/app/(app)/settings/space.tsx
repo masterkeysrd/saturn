@@ -28,8 +28,8 @@ import {
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  spaceDetailsSchema,
-  addMemberSchema,
+  SpaceDetailsSchema,
+  AddMemberSchema,
   type SpaceDetailsFormValues,
   type AddMemberFormValues,
 } from "@saturn/schemas"
@@ -81,7 +81,7 @@ export default function SpaceSettingsScreen() {
 
   // Space Form
   const spaceForm = useForm<SpaceDetailsFormValues>({
-    resolver: zodResolver(spaceDetailsSchema),
+    resolver: zodResolver(SpaceDetailsSchema),
     defaultValues: spaceDefaultValues,
     values: spaceDefaultValues,
     resetOptions: { keepDirtyValues: true },
@@ -94,7 +94,7 @@ export default function SpaceSettingsScreen() {
   // Member invitation form
   const [inviteModalVisible, setInviteModalVisible] = useState(false)
   const memberForm = useForm<AddMemberFormValues>({
-    resolver: zodResolver(addMemberSchema),
+    resolver: zodResolver(AddMemberSchema),
     defaultValues: {
       userId: "",
       role: "MEMBER",

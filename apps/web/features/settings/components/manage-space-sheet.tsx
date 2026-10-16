@@ -3,9 +3,9 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  spaceDetailsSchema,
+  SpaceDetailsSchema,
   type SpaceDetailsFormValues,
-  addMemberSchema,
+  AddMemberSchema,
   type AddMemberFormValues,
 } from "@saturn/schemas"
 import { usePatch } from "@/hooks/use-patch"
@@ -68,7 +68,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
   )
 
   const addMemberForm = useForm<AddMemberFormValues>({
-    resolver: zodResolver(addMemberSchema),
+    resolver: zodResolver(AddMemberSchema),
     defaultValues: addMemberDefaultValues,
     values: addMemberDefaultValues,
     resetOptions: { keepDirtyValues: false },
@@ -117,7 +117,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
     handleSubmit,
     formState: { errors: formErrors, dirtyFields },
   } = useForm<SpaceDetailsFormValues>({
-    resolver: zodResolver(spaceDetailsSchema),
+    resolver: zodResolver(SpaceDetailsSchema),
     defaultValues: spaceDefaultValues,
     values: spaceDefaultValues,
     resetOptions: { keepDirtyValues: true },

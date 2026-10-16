@@ -1,35 +1,30 @@
 import { z } from "zod"
+import { positiveAmountString } from "../common"
 
-export const transferSchema = z
-  .object({
-    sourceAccountId: z.string().min(1, "Source account is required"),
-    destinationAccountId: z.string().min(1, "Destination account is required"),
-    sourceAmount: z
-      .string()
-      .min(1, "Source amount is required")
-      .refine(
-        (val) => {
-          const num = parseFloat(val)
-          return !isNaN(num) && num > 0
-        },
-        { message: "Source amount must be greater than zero" }
+export const TransferSchema = z.compile(
+  z
+    .object({
+      sourceAccountId: z
+        .string()
+        .min(1, { error: "Source account is required" }),
+      destinationAccountId: z
+        .string()
+        .min(1, { error: "Destination account is required" }),
+      sourceAmount: positiveAmountString(
+        "Source amount is required",
+        "Source amount must be greater than zero"
       ),
-    destinationAmount: z
-      .string()
-      .min(1, "Destination amount is required")
-      .refine(
-        (val) => {
-          const num = parseFloat(val)
-          return !isNaN(num) && num > 0
-        },
-        { message: "Destination amount must be greater than zero" }
+      destinationAmount: positiveAmountString(
+        "Destination amount is required",
+        "Destination amount must be greater than zero"
       ),
-    transferDate: z.date(),
-    notes: z.string().optional(),
-  })
-  .refine((data) => data.sourceAccountId !== data.destinationAccountId, {
-    message: "Source and destination accounts must be different",
-    path: ["destinationAccountId"],
-  })
+      transferDate: z.date(),
+      notes: z.string().optional(),
+    })
+    .refine((data) => data.sourceAccountId !== data.destinationAccountId, {
+      error: "Source and destination accounts must be different",
+      path: ["destinationAccountId"],
+    })
+)
 
-export type TransferFormValues = z.infer<typeof transferSchema>
+export type TransferFormValues = z.infer<typeof TransferSchema>

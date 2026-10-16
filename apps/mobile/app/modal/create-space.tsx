@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Layers, FileText, Check, X } from "lucide-react-native"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { createSpaceSchema, type CreateSpaceFormValues } from "@saturn/schemas"
+import { CreateSpaceSchema, type CreateSpaceFormValues } from "@saturn/schemas"
 import { useCreateSpaceMutation } from "@saturn/api/saturn/space/v1/space"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
@@ -32,7 +32,7 @@ export default function CreateSpaceModal() {
     setError,
     formState: { isSubmitting },
   } = useForm<CreateSpaceFormValues>({
-    resolver: zodResolver(createSpaceSchema),
+    resolver: zodResolver(CreateSpaceSchema),
     defaultValues: {
       name: "",
       description: "",

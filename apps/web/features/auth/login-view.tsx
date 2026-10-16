@@ -3,8 +3,8 @@ import { Link, useNavigate } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  loginSchema,
-  mfaStepUpSchema,
+  LoginSchema,
+  MfaStepUpSchema,
   type LoginFormValues,
 } from "@saturn/schemas"
 import { useAuth } from "./use-auth"
@@ -29,7 +29,7 @@ export function LoginView() {
     handleSubmit,
     formState: { errors: formErrors },
   } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(LoginSchema),
     defaultValues: {
       identifier: "",
       password: "",
@@ -91,10 +91,10 @@ export function LoginView() {
         return
       }
     } else {
-      const validation = mfaStepUpSchema.safeParse({ code: code.trim() })
+      const validation = MfaStepUpSchema.safeParse({ code: code.trim() })
       if (!validation.success) {
         setMfaError(
-          validation.error.errors[0]?.message ||
+          validation.error.issues[0]?.message ||
             "Please enter a valid 6-digit verification code"
         )
         return

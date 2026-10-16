@@ -16,7 +16,7 @@ import {
   useLogBorrowingTransactionMutation,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import {
-  borrowingTransactionSchema,
+  BorrowingTransactionSchema,
   type BorrowingTransactionFormValues,
 } from "@saturn/schemas"
 import { toCentsString, formatCents } from "../utils"
@@ -62,7 +62,7 @@ export function CreateBorrowingTransactionForm({
     control,
     formState: { errors },
   } = useForm<BorrowingTransactionFormValues>({
-    resolver: zodResolver(borrowingTransactionSchema),
+    resolver: zodResolver(BorrowingTransactionSchema),
     defaultValues: {
       type: "BORROWING_TRANSACTION_TYPE_PAYMENT",
       amount: "",

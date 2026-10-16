@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import { ArrowLeft } from "lucide-react"
-import { transactionSchema, type TransactionFormValues } from "@saturn/schemas"
+import { TransactionSchema, type TransactionFormValues } from "@saturn/schemas"
 import {
   type Account,
   type Budget,
@@ -144,7 +144,7 @@ export function CreateExpenseForm({
     setValue,
     formState: { errors },
   } = useForm<TransactionFormValues>({
-    resolver: zodResolver(transactionSchema),
+    resolver: zodResolver(TransactionSchema),
     defaultValues: {
       budgetId: "",
       accountId: "",
