@@ -1,5 +1,5 @@
 import { forwardRef, useState, useMemo } from "react"
-import { Text, View, ActivityIndicator, Image } from "react-native"
+import { Text, View, ActivityIndicator, Image, Keyboard } from "react-native"
 import BottomSheet, {
   BottomSheetFlatList,
   BottomSheetTextInput,
@@ -36,7 +36,7 @@ export const InstitutionPickerSheet = forwardRef<
       onSelect,
       allowNone = true,
       isLoading = false,
-      snapPoints = ["65%", "90%"],
+      snapPoints = ["65%"],
     },
     ref
   ) => {
@@ -49,12 +49,24 @@ export const InstitutionPickerSheet = forwardRef<
       return institutions.filter((inst) => inst.name.toLowerCase().includes(q))
     }, [institutions, search])
 
+    const handleClose = () => {
+      Keyboard.dismiss()
+      if (ref && "current" in ref && ref.current) {
+        if (
+          "forceClose" in ref.current &&
+          typeof ref.current.forceClose === "function"
+        ) {
+          ref.current.forceClose()
+        } else {
+          ref.current.close()
+        }
+      }
+    }
+
     const handleSelect = (instId: string) => {
       haptics.selection()
       onSelect(instId)
-      if (ref && "current" in ref && ref.current) {
-        ref.current.close()
-      }
+      handleClose()
     }
 
     return (
@@ -62,7 +74,11 @@ export const InstitutionPickerSheet = forwardRef<
         ref={ref}
         snapPoints={snapPoints}
         enablePanDownToClose
-        keyboardBehavior="extend"
+        onChange={(index) => {
+          if (index === -1) {
+            setSearch("")
+          }
+        }}
       >
         <BottomSheetFlatList
           data={filteredInstitutions}
@@ -74,14 +90,7 @@ export const InstitutionPickerSheet = forwardRef<
           ]}
           ListHeaderComponent={
             <View>
-              <BottomSheetHeader
-                title={title}
-                onClose={() => {
-                  if (ref && "current" in ref && ref.current) {
-                    ref.current.close()
-                  }
-                }}
-              />
+              <BottomSheetHeader title={title} onClose={handleClose} />
 
               {/* Search Bar */}
               <View style={sheetStyles.accountSearchContainer}>

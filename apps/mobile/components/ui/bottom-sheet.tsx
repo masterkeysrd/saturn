@@ -1,5 +1,19 @@
-import React, { forwardRef, useCallback, useMemo } from "react"
-import { View, Text, StyleSheet } from "react-native"
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
+import {
+  View,
+  Text,
+  StyleSheet,
+  Platform,
+  Keyboard,
+  type LayoutChangeEvent,
+} from "react-native"
 import BottomSheet, {
   BottomSheetBackdrop,
   TouchableOpacity,
@@ -51,6 +65,9 @@ export const AppBottomSheet = forwardRef<BottomSheet, AppBottomSheetProps>(
       onClose,
       children,
       enablePanDownToClose = true,
+      android_keyboardInputMode = "adjustPan",
+      keyboardBehavior = "interactive",
+      keyboardBlurBehavior = "none",
       ...props
     },
     ref
@@ -59,6 +76,42 @@ export const AppBottomSheet = forwardRef<BottomSheet, AppBottomSheetProps>(
       () => customSnapPoints || ["40%", "75%"],
       [customSnapPoints]
     )
+
+    const isKeyboardVisibleRef = useRef(false)
+    const [isKeyboardVisible, setIsKeyboardVisible] = useState(false)
+    const [baseContainerHeight, setBaseContainerHeight] = useState<
+      number | undefined
+    >(undefined)
+
+    useEffect(() => {
+      if (Platform.OS !== "android") return
+
+      const showSub = Keyboard.addListener("keyboardDidShow", () => {
+        isKeyboardVisibleRef.current = true
+        setIsKeyboardVisible(true)
+      })
+      const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+        isKeyboardVisibleRef.current = false
+        setIsKeyboardVisible(false)
+      })
+
+      return () => {
+        showSub.remove()
+        hideSub.remove()
+      }
+    }, [])
+
+    const handleWrapperLayout = useCallback((event: LayoutChangeEvent) => {
+      if (Platform.OS !== "android" || isKeyboardVisibleRef.current) return
+      const nextHeight = event.nativeEvent.layout.height
+      if (nextHeight > 0) {
+        setBaseContainerHeight((prev) =>
+          prev === undefined || Math.abs(prev - nextHeight) > 1
+            ? nextHeight
+            : prev
+        )
+      }
+    }, [])
 
     const renderBackdrop = useCallback(
       (backdropProps: BottomSheetBackdropProps) => (
@@ -73,21 +126,25 @@ export const AppBottomSheet = forwardRef<BottomSheet, AppBottomSheetProps>(
       []
     )
 
-    return (
+    const sheetElement = (
       <BottomSheet
         ref={ref}
         index={-1}
         enableDynamicSizing={props.enableDynamicSizing ?? false}
         snapPoints={snapPoints}
         enablePanDownToClose={enablePanDownToClose}
+        android_keyboardInputMode={android_keyboardInputMode}
+        keyboardBehavior={keyboardBehavior}
+        keyboardBlurBehavior={keyboardBlurBehavior}
         backdropComponent={renderBackdrop}
         backgroundStyle={styles.background}
         handleIndicatorStyle={styles.handleIndicator}
-        onChange={(index) => {
+        {...props}
+        onChange={(index, position, type) => {
           if (index >= 0) haptics.light()
           if (index === -1) onClose?.()
+          props.onChange?.(index, position, type)
         }}
-        {...props}
       >
         {title ? (
           <View style={styles.headerWrapper}>
@@ -97,6 +154,25 @@ export const AppBottomSheet = forwardRef<BottomSheet, AppBottomSheetProps>(
         {children}
       </BottomSheet>
     )
+
+    if (Platform.OS === "android") {
+      return (
+        <View
+          pointerEvents="box-none"
+          onLayout={handleWrapperLayout}
+          style={[
+            StyleSheet.absoluteFill,
+            isKeyboardVisible && baseContainerHeight
+              ? { height: baseContainerHeight, bottom: undefined }
+              : null,
+          ]}
+        >
+          {sheetElement}
+        </View>
+      )
+    }
+
+    return sheetElement
   }
 )
 

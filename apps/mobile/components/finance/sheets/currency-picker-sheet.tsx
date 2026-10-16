@@ -1,5 +1,5 @@
 import { forwardRef, useState, useMemo } from "react"
-import { Text, View, ActivityIndicator } from "react-native"
+import { Text, View, ActivityIndicator, Keyboard } from "react-native"
 import BottomSheet, {
   BottomSheetFlatList,
   BottomSheetTextInput,
@@ -40,8 +40,16 @@ export const CurrencyPickerSheet = forwardRef<
     const [search, setSearch] = useState("")
 
     const handleClose = () => {
+      Keyboard.dismiss()
       if (ref && "current" in ref && ref.current) {
-        ref.current.close()
+        if (
+          "forceClose" in ref.current &&
+          typeof ref.current.forceClose === "function"
+        ) {
+          ref.current.forceClose()
+        } else {
+          ref.current.close()
+        }
       }
     }
 
@@ -55,7 +63,15 @@ export const CurrencyPickerSheet = forwardRef<
     }, [currencies, search])
 
     return (
-      <AppBottomSheet ref={ref} snapPoints={snapPoints}>
+      <AppBottomSheet
+        ref={ref}
+        snapPoints={snapPoints}
+        onChange={(index) => {
+          if (index === -1) {
+            setSearch("")
+          }
+        }}
+      >
         <BottomSheetFlatList
           data={availableCurrencies}
           keyExtractor={(c) => c.code}

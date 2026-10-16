@@ -1,5 +1,5 @@
 import React, { forwardRef, useState, useMemo } from "react"
-import { Text, View, ActivityIndicator, Image } from "react-native"
+import { Text, View, ActivityIndicator, Image, Keyboard } from "react-native"
 import BottomSheet, {
   BottomSheetFlatList,
   BottomSheetTextInput,
@@ -179,17 +179,36 @@ export const AccountPickerSheet = forwardRef<
       })
     }, [accounts, search, instMap])
 
-    const handleSelect = (id: string) => {
-      haptics.light()
-      onSelect(id)
-      setSearch("")
+    const handleClose = () => {
+      Keyboard.dismiss()
       if (ref && "current" in ref && ref.current) {
-        ref.current.close()
+        if (
+          "forceClose" in ref.current &&
+          typeof ref.current.forceClose === "function"
+        ) {
+          ref.current.forceClose()
+        } else {
+          ref.current.close()
+        }
       }
     }
 
+    const handleSelect = (id: string) => {
+      haptics.light()
+      onSelect(id)
+      handleClose()
+    }
+
     return (
-      <AppBottomSheet ref={ref} snapPoints={snapPoints}>
+      <AppBottomSheet
+        ref={ref}
+        snapPoints={snapPoints}
+        onChange={(index) => {
+          if (index === -1) {
+            setSearch("")
+          }
+        }}
+      >
         <BottomSheetFlatList
           data={filteredAccounts}
           keyExtractor={(acc) => acc.id || ""}
@@ -204,14 +223,7 @@ export const AccountPickerSheet = forwardRef<
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             <View>
-              <BottomSheetHeader
-                title={title}
-                onClose={() => {
-                  if (ref && "current" in ref && ref.current) {
-                    ref.current.close()
-                  }
-                }}
-              />
+              <BottomSheetHeader title={title} onClose={handleClose} />
 
               {/* Search Bar */}
               <View style={sheetStyles.accountSearchContainer}>

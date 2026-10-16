@@ -5,8 +5,6 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
 } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
@@ -160,281 +158,268 @@ export default function AddTransactionModal() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoid}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
-      >
-        <View style={styles.container}>
-          <Stack.Screen
-            options={{
-              title: isEditMode
-                ? activeType === "INCOME"
-                  ? "Edit Income"
-                  : "Edit Expense"
-                : "New Transaction",
-              headerStyle: {
-                backgroundColor: theme.colors.background,
-              },
-              headerTintColor: theme.colors.textPrimary,
-            }}
-          />
+      <View style={styles.container}>
+        <Stack.Screen
+          options={{
+            title: isEditMode
+              ? activeType === "INCOME"
+                ? "Edit Income"
+                : "Edit Expense"
+              : "New Transaction",
+            headerStyle: {
+              backgroundColor: theme.colors.background,
+            },
+            headerTintColor: theme.colors.textPrimary,
+          }}
+        />
 
-          {/* Segmented Flow Switcher (Hidden in edit mode) */}
-          {!isEditMode && (
-            <View style={styles.typeSwitcherWrapper}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.typeSwitcherContent}
+        {/* Segmented Flow Switcher (Hidden in edit mode) */}
+        {!isEditMode && (
+          <View style={styles.typeSwitcherWrapper}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.typeSwitcherContent}
+            >
+              {/* Type 1: Expense */}
+              <TouchableOpacity
+                style={[
+                  styles.typePill,
+                  activeType === "EXPENSE" && styles.typePillExpenseActive,
+                ]}
+                onPress={() => {
+                  haptics.light()
+                  setActiveType("EXPENSE")
+                }}
+                activeOpacity={0.7}
               >
-                {/* Type 1: Expense */}
-                <TouchableOpacity
+                <ArrowDownLeft
+                  size={14}
+                  color={
+                    activeType === "EXPENSE"
+                      ? theme.colors.destructive
+                      : theme.colors.textMuted
+                  }
+                />
+                <Text
                   style={[
-                    styles.typePill,
-                    activeType === "EXPENSE" && styles.typePillExpenseActive,
+                    styles.typePillText,
+                    activeType === "EXPENSE" &&
+                      styles.typePillExpenseTextActive,
                   ]}
-                  onPress={() => {
-                    haptics.light()
-                    setActiveType("EXPENSE")
-                  }}
-                  activeOpacity={0.7}
                 >
-                  <ArrowDownLeft
-                    size={14}
-                    color={
-                      activeType === "EXPENSE"
-                        ? theme.colors.destructive
-                        : theme.colors.textMuted
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.typePillText,
-                      activeType === "EXPENSE" &&
-                        styles.typePillExpenseTextActive,
-                    ]}
-                  >
-                    Expense
-                  </Text>
-                </TouchableOpacity>
+                  Expense
+                </Text>
+              </TouchableOpacity>
 
-                {/* Type 2: Income */}
-                <TouchableOpacity
+              {/* Type 2: Income */}
+              <TouchableOpacity
+                style={[
+                  styles.typePill,
+                  activeType === "INCOME" && styles.typePillIncomeActive,
+                ]}
+                onPress={() => {
+                  haptics.light()
+                  setActiveType("INCOME")
+                }}
+                activeOpacity={0.7}
+              >
+                <ArrowUpRight
+                  size={14}
+                  color={
+                    activeType === "INCOME"
+                      ? theme.colors.success
+                      : theme.colors.textMuted
+                  }
+                />
+                <Text
                   style={[
-                    styles.typePill,
-                    activeType === "INCOME" && styles.typePillIncomeActive,
+                    styles.typePillText,
+                    activeType === "INCOME" && styles.typePillIncomeTextActive,
                   ]}
-                  onPress={() => {
-                    haptics.light()
-                    setActiveType("INCOME")
-                  }}
-                  activeOpacity={0.7}
                 >
-                  <ArrowUpRight
-                    size={14}
-                    color={
-                      activeType === "INCOME"
-                        ? theme.colors.success
-                        : theme.colors.textMuted
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.typePillText,
-                      activeType === "INCOME" &&
-                        styles.typePillIncomeTextActive,
-                    ]}
-                  >
-                    Income
-                  </Text>
-                </TouchableOpacity>
+                  Income
+                </Text>
+              </TouchableOpacity>
 
-                {/* Type 3: Transfer */}
-                <TouchableOpacity
+              {/* Type 3: Transfer */}
+              <TouchableOpacity
+                style={[
+                  styles.typePill,
+                  activeType === "TRANSFER" && styles.typePillTransferActive,
+                ]}
+                onPress={() => {
+                  haptics.light()
+                  setActiveType("TRANSFER")
+                }}
+                activeOpacity={0.7}
+              >
+                <ArrowRightLeft
+                  size={14}
+                  color={
+                    activeType === "TRANSFER"
+                      ? theme.colors.primary
+                      : theme.colors.textMuted
+                  }
+                />
+                <Text
                   style={[
-                    styles.typePill,
-                    activeType === "TRANSFER" && styles.typePillTransferActive,
+                    styles.typePillText,
+                    activeType === "TRANSFER" &&
+                      styles.typePillTransferTextActive,
                   ]}
-                  onPress={() => {
-                    haptics.light()
-                    setActiveType("TRANSFER")
-                  }}
-                  activeOpacity={0.7}
                 >
-                  <ArrowRightLeft
-                    size={14}
-                    color={
-                      activeType === "TRANSFER"
-                        ? theme.colors.primary
-                        : theme.colors.textMuted
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.typePillText,
-                      activeType === "TRANSFER" &&
-                        styles.typePillTransferTextActive,
-                    ]}
-                  >
-                    Transfer
-                  </Text>
-                </TouchableOpacity>
+                  Transfer
+                </Text>
+              </TouchableOpacity>
 
-                {/* Type 4: Scheduled */}
-                <TouchableOpacity
+              {/* Type 4: Scheduled */}
+              <TouchableOpacity
+                style={[
+                  styles.typePill,
+                  activeType === "SCHEDULED" && styles.typePillScheduledActive,
+                ]}
+                onPress={() => {
+                  haptics.light()
+                  setActiveType("SCHEDULED")
+                }}
+                activeOpacity={0.7}
+              >
+                <CalendarClock
+                  size={14}
+                  color={
+                    activeType === "SCHEDULED"
+                      ? "#818cf8"
+                      : theme.colors.textMuted
+                  }
+                />
+                <Text
                   style={[
-                    styles.typePill,
+                    styles.typePillText,
                     activeType === "SCHEDULED" &&
-                      styles.typePillScheduledActive,
+                      styles.typePillScheduledTextActive,
                   ]}
-                  onPress={() => {
-                    haptics.light()
-                    setActiveType("SCHEDULED")
-                  }}
-                  activeOpacity={0.7}
                 >
-                  <CalendarClock
-                    size={14}
-                    color={
-                      activeType === "SCHEDULED"
-                        ? "#818cf8"
-                        : theme.colors.textMuted
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.typePillText,
-                      activeType === "SCHEDULED" &&
-                        styles.typePillScheduledTextActive,
-                    ]}
-                  >
-                    Scheduled
-                    {pendingScheduled.length > 0
-                      ? ` (${pendingScheduled.length})`
-                      : ""}
-                  </Text>
-                </TouchableOpacity>
+                  Scheduled
+                  {pendingScheduled.length > 0
+                    ? ` (${pendingScheduled.length})`
+                    : ""}
+                </Text>
+              </TouchableOpacity>
 
-                {/* Type 5: Loan */}
-                <TouchableOpacity
+              {/* Type 5: Loan */}
+              <TouchableOpacity
+                style={[
+                  styles.typePill,
+                  activeType === "BORROWING" && styles.typePillBorrowingActive,
+                ]}
+                onPress={() => {
+                  haptics.light()
+                  setActiveType("BORROWING")
+                }}
+                activeOpacity={0.7}
+              >
+                <HandCoins
+                  size={14}
+                  color={
+                    activeType === "BORROWING"
+                      ? "#f59e0b"
+                      : theme.colors.textMuted
+                  }
+                />
+                <Text
                   style={[
-                    styles.typePill,
+                    styles.typePillText,
                     activeType === "BORROWING" &&
-                      styles.typePillBorrowingActive,
+                      styles.typePillBorrowingTextActive,
                   ]}
-                  onPress={() => {
-                    haptics.light()
-                    setActiveType("BORROWING")
-                  }}
-                  activeOpacity={0.7}
                 >
-                  <HandCoins
-                    size={14}
-                    color={
-                      activeType === "BORROWING"
-                        ? "#f59e0b"
-                        : theme.colors.textMuted
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.typePillText,
-                      activeType === "BORROWING" &&
-                        styles.typePillBorrowingTextActive,
-                    ]}
-                  >
-                    Loan
-                    {activeBorrowings.length > 0
-                      ? ` (${activeBorrowings.length})`
-                      : ""}
-                  </Text>
-                </TouchableOpacity>
-              </ScrollView>
-            </View>
-          )}
+                  Loan
+                  {activeBorrowings.length > 0
+                    ? ` (${activeBorrowings.length})`
+                    : ""}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        )}
 
-          {/* Active Form Component */}
-          {activeType === "EXPENSE" && (
-            <ExpenseForm
-              existingTx={existingTx}
-              budgets={budgets}
-              accounts={accounts}
-              currencies={currencies}
-              exchangeRates={exchangeRates}
-              baseCurrency={baseCurrency}
-              onSuccess={() => router.back()}
-              budgetsLoading={budgetsLoading}
-              currenciesLoading={currenciesLoading}
-              initialBudgetId={initialBudgetId}
-              initialAccountId={selectedAccountId}
-              onAccountChange={setSelectedAccountId}
-            />
-          )}
+        {/* Active Form Component */}
+        {activeType === "EXPENSE" && (
+          <ExpenseForm
+            existingTx={existingTx}
+            budgets={budgets}
+            accounts={accounts}
+            currencies={currencies}
+            exchangeRates={exchangeRates}
+            baseCurrency={baseCurrency}
+            onSuccess={() => router.back()}
+            budgetsLoading={budgetsLoading}
+            currenciesLoading={currenciesLoading}
+            initialBudgetId={initialBudgetId}
+            initialAccountId={selectedAccountId}
+            onAccountChange={setSelectedAccountId}
+          />
+        )}
 
-          {activeType === "INCOME" && (
-            <IncomeForm
-              existingTx={existingTx}
-              accounts={accounts}
-              currencies={currencies}
-              exchangeRates={exchangeRates}
-              baseCurrency={baseCurrency}
-              onSuccess={() => router.back()}
-              currenciesLoading={currenciesLoading}
-              initialAccountId={selectedAccountId}
-              onAccountChange={setSelectedAccountId}
-            />
-          )}
+        {activeType === "INCOME" && (
+          <IncomeForm
+            existingTx={existingTx}
+            accounts={accounts}
+            currencies={currencies}
+            exchangeRates={exchangeRates}
+            baseCurrency={baseCurrency}
+            onSuccess={() => router.back()}
+            currenciesLoading={currenciesLoading}
+            initialAccountId={selectedAccountId}
+            onAccountChange={setSelectedAccountId}
+          />
+        )}
 
-          {activeType === "TRANSFER" && (
-            <TransferForm
-              accounts={accounts}
-              exchangeRates={exchangeRates}
-              onSuccess={() => router.back()}
-              initialFromAccountId={selectedAccountId}
-              onAccountChange={setSelectedAccountId}
-            />
-          )}
+        {activeType === "TRANSFER" && (
+          <TransferForm
+            accounts={accounts}
+            exchangeRates={exchangeRates}
+            onSuccess={() => router.back()}
+            initialFromAccountId={selectedAccountId}
+            onAccountChange={setSelectedAccountId}
+          />
+        )}
 
-          {activeType === "SCHEDULED" && (
-            <ScheduledConfirmForm
-              pendingScheduled={pendingScheduled}
-              recurringTemplates={recurringTemplates}
-              budgets={budgets}
-              accounts={accounts}
-              baseCurrency={baseCurrency}
-              onSuccess={() => router.back()}
-              scheduledLoading={scheduledLoading}
-              budgetsLoading={budgetsLoading}
-              initialScheduledId={initialScheduledId}
-              initialAccountId={selectedAccountId}
-              onAccountChange={setSelectedAccountId}
-            />
-          )}
+        {activeType === "SCHEDULED" && (
+          <ScheduledConfirmForm
+            pendingScheduled={pendingScheduled}
+            recurringTemplates={recurringTemplates}
+            budgets={budgets}
+            accounts={accounts}
+            baseCurrency={baseCurrency}
+            onSuccess={() => router.back()}
+            scheduledLoading={scheduledLoading}
+            budgetsLoading={budgetsLoading}
+            initialScheduledId={initialScheduledId}
+            initialAccountId={selectedAccountId}
+            onAccountChange={setSelectedAccountId}
+          />
+        )}
 
-          {activeType === "BORROWING" && (
-            <BorrowingForm
-              activeBorrowings={activeBorrowings}
-              accounts={accounts}
-              baseCurrency={baseCurrency}
-              onSuccess={() => router.back()}
-              borrowingsLoading={borrowingsLoading}
-              initialBorrowingId={initialBorrowingId}
-              initialAccountId={selectedAccountId}
-              onAccountChange={setSelectedAccountId}
-            />
-          )}
-        </View>
-      </KeyboardAvoidingView>
+        {activeType === "BORROWING" && (
+          <BorrowingForm
+            activeBorrowings={activeBorrowings}
+            accounts={accounts}
+            baseCurrency={baseCurrency}
+            onSuccess={() => router.back()}
+            borrowingsLoading={borrowingsLoading}
+            initialBorrowingId={initialBorrowingId}
+            initialAccountId={selectedAccountId}
+            onAccountChange={setSelectedAccountId}
+          />
+        )}
+      </View>
     </GestureHandlerRootView>
   )
 }
 
 const styles = StyleSheet.create({
-  keyboardAvoid: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
