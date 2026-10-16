@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import {
   StyleSheet,
   Text,
@@ -15,19 +15,27 @@ import {
   LogIn,
   Lock,
   User,
-  Check,
   Settings,
   ShieldCheck,
   KeyRound,
   ArrowLeft,
   Fingerprint,
 } from "lucide-react-native"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import {
+  loginSchema,
+  mfaStepUpSchema,
+  recoveryCodeSchema,
+  type LoginFormValues,
+} from "@saturn/schemas"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
 import { Button } from "@/components/ui/button"
 import { TextInput } from "@/components/ui/text-input"
 import { Card } from "@/components/ui/card"
 import { OTPInput } from "@/components/ui/otp-input"
+import { FormCheckboxRow } from "@/components/ui/form-primitives"
 import { Header1, Subtitle } from "@/components/ui/typography"
 import { useToast } from "@/components/ui/toast"
 import { getRememberedIdentifier, setRememberedIdentifier } from "@/lib/storage"
@@ -38,9 +46,6 @@ export default function LoginScreen() {
   const { login, isDeviceEnrolled, biometricLabel, loginWithBiometrics } =
     useAuth()
   const toast = useToast()
-  const [identifier, setIdentifier] = useState("")
-  const [password, setPassword] = useState("")
-  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [biometricLoading, setBiometricLoading] = useState(false)
@@ -51,9 +56,28 @@ export default function LoginScreen() {
   const [mfaStep, setMfaStep] = useState(false)
   const [mfaTicket, setMfaTicket] = useState("")
   const [selectedFactorId, setSelectedFactorId] = useState("")
-  const [totpCode, setTotpCode] = useState("")
-  const [backupCode, setBackupCode] = useState("")
   const [useBackupCode, setUseBackupCode] = useState(false)
+
+  // RHF Forms
+  const loginForm = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      identifier: "",
+      password: "",
+      rememberMe: false,
+    },
+  })
+
+  const mfaSchema = useMemo(() => {
+    return useBackupCode ? recoveryCodeSchema : mfaStepUpSchema
+  }, [useBackupCode])
+
+  const mfaForm = useForm<{ code: string }>({
+    resolver: zodResolver(mfaSchema),
+    defaultValues: {
+      code: "",
+    },
+  })
 
   // Load remembered username/email on screen mount
   useEffect(() => {
@@ -61,15 +85,18 @@ export default function LoginScreen() {
       try {
         const saved = await getRememberedIdentifier()
         if (saved) {
-          setIdentifier(saved)
-          setRememberMe(true)
+          loginForm.reset({
+            identifier: saved,
+            password: "",
+            rememberMe: true,
+          })
         }
       } catch {
         // Fallback silently if storage unavailable
       }
     }
     loadRemembered()
-  }, [])
+  }, [loginForm])
 
   const handleBiometricLogin = useCallback(async () => {
     if (isBiometricInProgressRef.current) return
@@ -119,20 +146,15 @@ export default function LoginScreen() {
     }
   }, [isDeviceEnrolled, mfaStep, handleBiometricLogin])
 
-  const handleLogin = async () => {
-    if (!identifier.trim() || !password) {
-      setError("Please enter your username/email and password")
-      return
-    }
-
+  const handleLogin = async (values: LoginFormValues) => {
     setLoading(true)
     setError(null)
 
     try {
       const res = await login({
         userPassword: {
-          identifier: identifier.trim(),
-          password,
+          identifier: values.identifier.trim(),
+          password: values.password,
         },
       })
 
@@ -140,15 +162,14 @@ export default function LoginScreen() {
         setMfaTicket(res.mfa.ticket || "")
         setSelectedFactorId(res.mfa.availableFactors?.[0]?.factorId || "")
         setMfaStep(true)
-        setTotpCode("")
-        setBackupCode("")
+        mfaForm.reset({ code: "" })
         setUseBackupCode(false)
         return
       }
 
       // Persist or clear remembered identifier based on toggle
-      if (rememberMe) {
-        await setRememberedIdentifier(identifier.trim())
+      if (values.rememberMe) {
+        await setRememberedIdentifier(values.identifier.trim())
       } else {
         await setRememberedIdentifier(null)
       }
@@ -172,18 +193,8 @@ export default function LoginScreen() {
     }
   }
 
-  const handleVerifyMfa = async (codeOverride?: string) => {
-    const rawCode = codeOverride ?? (useBackupCode ? backupCode : totpCode)
-    const code = rawCode.trim()
-    if (!code) {
-      setError(
-        useBackupCode
-          ? "Please enter your recovery code"
-          : "Please enter your 6-digit verification code"
-      )
-      return
-    }
-
+  const handleVerifyMfa = async (values: { code: string }) => {
+    const code = values.code.trim()
     setLoading(true)
     setError(null)
 
@@ -197,8 +208,10 @@ export default function LoginScreen() {
         },
       })
 
-      if (rememberMe) {
-        await setRememberedIdentifier(identifier.trim())
+      const isRemember = loginForm.getValues("rememberMe")
+      const ident = loginForm.getValues("identifier")
+      if (isRemember) {
+        await setRememberedIdentifier(ident.trim())
       } else {
         await setRememberedIdentifier(null)
       }
@@ -227,8 +240,7 @@ export default function LoginScreen() {
     setMfaStep(false)
     setMfaTicket("")
     setSelectedFactorId("")
-    setTotpCode("")
-    setBackupCode("")
+    mfaForm.reset({ code: "" })
     setUseBackupCode(false)
     setError(null)
   }
@@ -284,13 +296,10 @@ export default function LoginScreen() {
               <Card style={styles.formCard}>
                 {useBackupCode ? (
                   <TextInput
+                    control={mfaForm.control}
+                    name="code"
                     label="Recovery Code"
                     placeholder="ABCD-EFGH"
-                    value={backupCode}
-                    onChangeText={(val) => {
-                      setBackupCode(val)
-                      if (error) setError(null)
-                    }}
                     autoCapitalize="characters"
                     autoCorrect={false}
                     leftIcon={
@@ -303,17 +312,14 @@ export default function LoginScreen() {
                       6-Digit Verification Code
                     </Text>
                     <OTPInput
-                      value={totpCode}
-                      onChangeText={(val) => {
-                        setTotpCode(val)
-                        if (error) setError(null)
-                      }}
+                      control={mfaForm.control}
+                      name="code"
                       onComplete={(code) => {
-                        handleVerifyMfa(code)
+                        handleVerifyMfa({ code })
                       }}
                       autoFocus
                       disabled={loading}
-                      error={Boolean(error)}
+                      error={Boolean(error || mfaForm.formState.errors.code)}
                     />
                   </View>
                 )}
@@ -324,7 +330,7 @@ export default function LoginScreen() {
                   variant="primary"
                   size="lg"
                   loading={loading}
-                  onPress={() => handleVerifyMfa()}
+                  onPress={mfaForm.handleSubmit(handleVerifyMfa)}
                   leftIcon={
                     <ShieldCheck
                       size={18}
@@ -342,6 +348,7 @@ export default function LoginScreen() {
                   onPress={() => {
                     haptics.selection()
                     setUseBackupCode((prev) => !prev)
+                    mfaForm.reset({ code: "" })
                     setError(null)
                   }}
                 >
@@ -406,13 +413,10 @@ export default function LoginScreen() {
                 )}
 
                 <TextInput
+                  control={loginForm.control}
+                  name="identifier"
                   label="Username or Email"
                   placeholder="user@example.com or username"
-                  value={identifier}
-                  onChangeText={(val) => {
-                    setIdentifier(val)
-                    if (error) setError(null)
-                  }}
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoComplete="username"
@@ -422,13 +426,10 @@ export default function LoginScreen() {
                 />
 
                 <TextInput
+                  control={loginForm.control}
+                  name="password"
                   label="Password"
                   placeholder="••••••••"
-                  value={password}
-                  onChangeText={(val) => {
-                    setPassword(val)
-                    if (error) setError(null)
-                  }}
                   isPassword
                   autoComplete="current-password"
                   textContentType="password"
@@ -436,27 +437,11 @@ export default function LoginScreen() {
                   leftIcon={<Lock size={18} color={theme.colors.textMuted} />}
                 />
 
-                {/* Remember Username / Email Toggle */}
-                <TouchableOpacity
-                  style={styles.rememberRow}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    haptics.selection()
-                    setRememberMe((prev) => !prev)
-                  }}
-                >
-                  <View
-                    style={[
-                      styles.checkbox,
-                      rememberMe && styles.checkboxActive,
-                    ]}
-                  >
-                    {rememberMe && (
-                      <Check size={13} color="#090d16" strokeWidth={3} />
-                    )}
-                  </View>
-                  <Text style={styles.rememberText}>Remember me</Text>
-                </TouchableOpacity>
+                <FormCheckboxRow
+                  control={loginForm.control}
+                  name="rememberMe"
+                  label="Remember me"
+                />
 
                 {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -464,7 +449,7 @@ export default function LoginScreen() {
                   variant="primary"
                   size="lg"
                   loading={loading}
-                  onPress={handleLogin}
+                  onPress={loginForm.handleSubmit(handleLogin)}
                   leftIcon={
                     <LogIn size={18} color={theme.colors.primaryForeground} />
                   }
@@ -550,31 +535,6 @@ const styles = StyleSheet.create({
   formCard: {
     padding: 20,
     gap: 16,
-  },
-  rememberRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 2,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: theme.colors.borderStrong,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  rememberText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: theme.colors.textSecondary,
   },
   errorText: {
     fontSize: 13,

@@ -14,6 +14,7 @@ import {
   Coins,
   Wallet,
   ChevronRight,
+  AlertCircle,
 } from "lucide-react-native"
 import {
   type Account,
@@ -116,205 +117,132 @@ export function AccountIcon({
 
 export interface AccountRowProps {
   account?: Account | null
-  accountId?: string
-  accounts?: Account[]
   institution?: Account_InstitutionInfo
   onPress: () => void
   label?: string
   placeholder?: string
   fallbackIcon?: React.ReactNode
   disabled?: boolean
+  error?: string
   style?: StyleProp<ViewStyle>
 }
 
 export function AccountRow({
   account,
-  accountId,
-  accounts,
   institution,
   onPress,
   label = "Account",
   placeholder = "No Account (Cash)",
   fallbackIcon,
   disabled = false,
+  error,
   style,
 }: AccountRowProps) {
-  const resolvedAccount =
-    account ??
-    (accountId && accounts
-      ? accounts.find((a) => a.id === accountId)
-      : undefined)
-
   return (
-    <TouchableOpacity
-      style={[formStyles.formRow, disabled && styles.disabled, style]}
-      activeOpacity={0.7}
-      onPress={onPress}
-      disabled={disabled}
-    >
-      <View style={formStyles.formRowLabelGroup}>
-        <AccountIcon
-          account={resolvedAccount}
-          institution={institution}
-          size={16}
-          color={theme.colors.textMuted}
-          fallbackIcon={fallbackIcon}
-        />
-        <Text style={formStyles.formRowLabel}>{label}</Text>
-      </View>
-      <View style={formStyles.formRowValueGroup}>
-        <Text
-          style={[
-            formStyles.formRowValueText,
-            !resolvedAccount && formStyles.placeholderText,
-          ]}
-          numberOfLines={1}
-        >
-          {resolvedAccount
-            ? `${resolvedAccount.name} (${resolvedAccount.currency})`
-            : placeholder}
-        </Text>
-        <ChevronRight size={14} color={theme.colors.textMuted} />
-      </View>
-    </TouchableOpacity>
+    <View style={style}>
+      <TouchableOpacity
+        style={[formStyles.formRow, disabled && styles.disabled]}
+        activeOpacity={0.7}
+        onPress={onPress}
+        disabled={disabled}
+      >
+        <View style={formStyles.formRowLabelGroup}>
+          <AccountIcon
+            account={account}
+            institution={institution}
+            size={16}
+            color={theme.colors.textMuted}
+            fallbackIcon={fallbackIcon}
+          />
+          <Text style={formStyles.formRowLabel}>{label}</Text>
+        </View>
+        <View style={formStyles.formRowValueGroup}>
+          <Text
+            style={[
+              formStyles.formRowValueText,
+              !account && formStyles.placeholderText,
+            ]}
+            numberOfLines={1}
+          >
+            {account ? `${account.name} (${account.currency})` : placeholder}
+          </Text>
+          <ChevronRight size={14} color={theme.colors.textMuted} />
+        </View>
+      </TouchableOpacity>
+      {error ? (
+        <View style={styles.errorRow}>
+          <AlertCircle size={12} color={theme.colors.destructive} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+    </View>
   )
 }
 
 export interface AccountCardSelectProps {
   account?: Account | null
-  accountId?: string
-  accounts?: Account[]
   institution?: Account_InstitutionInfo
   onPress: () => void
   placeholder?: string
   subtitle?: string
   disabled?: boolean
+  error?: string
   style?: StyleProp<ViewStyle>
 }
 
 export function AccountCardSelect({
   account,
-  accountId,
-  accounts,
   institution,
   onPress,
   placeholder = "None (Any Account)",
   subtitle,
   disabled = false,
+  error,
   style,
 }: AccountCardSelectProps) {
-  const resolvedAccount =
-    account ??
-    (accountId && accounts
-      ? accounts.find((a) => a.id === accountId)
-      : undefined)
-
   return (
-    <TouchableOpacity
-      style={[styles.cardSelectRow, disabled && styles.disabled, style]}
-      activeOpacity={0.7}
-      onPress={onPress}
-      disabled={disabled}
-    >
-      <View style={styles.cardSelectLeft}>
-        <View style={styles.cardSelectIconWrap}>
-          <AccountIcon
-            account={resolvedAccount}
-            institution={institution}
-            size={20}
-            color={
-              resolvedAccount ? theme.colors.primary : theme.colors.textMuted
-            }
-          />
-        </View>
-        <View style={styles.cardSelectTextCol}>
-          <Text
-            style={[
-              styles.cardSelectTitle,
-              !resolvedAccount && styles.cardSelectPlaceholder,
-            ]}
-            numberOfLines={1}
-          >
-            {resolvedAccount ? resolvedAccount.name : placeholder}
-          </Text>
-          <Text style={styles.cardSelectSubtitle} numberOfLines={1}>
-            {resolvedAccount
-              ? `${resolvedAccount.currency} • ${resolvedAccount.type.replace(/_/g, " ")}`
-              : subtitle || "Default linked payment method"}
-          </Text>
-        </View>
-      </View>
-      <ChevronRight size={16} color={theme.colors.textMuted} />
-    </TouchableOpacity>
-  )
-}
-
-export interface AccountSelectProps {
-  value?: string
-  account?: Account | null
-  accounts?: Account[]
-  institutions?: Account_InstitutionInfo[]
-  onPress: () => void
-  variant?: "row" | "card"
-  label?: string
-  placeholder?: string
-  noAccountLabel?: string
-  noAccountSubtitle?: string
-  fallbackIcon?: React.ReactNode
-  disabled?: boolean
-  style?: StyleProp<ViewStyle>
-}
-
-export function AccountSelect({
-  value,
-  account,
-  accounts,
-  institutions,
-  onPress,
-  variant = "row",
-  label = "Account",
-  placeholder,
-  noAccountLabel,
-  noAccountSubtitle,
-  fallbackIcon,
-  disabled = false,
-  style,
-}: AccountSelectProps) {
-  const resolvedAccount =
-    account ??
-    (value && accounts ? accounts.find((a) => a.id === value) : undefined)
-
-  const inst =
-    resolvedAccount?.institution ||
-    (resolvedAccount?.institutionId && institutions
-      ? institutions.find((i) => i.id === resolvedAccount.institutionId)
-      : undefined)
-
-  if (variant === "card") {
-    return (
-      <AccountCardSelect
-        account={resolvedAccount}
-        institution={inst}
+    <View style={style}>
+      <TouchableOpacity
+        style={[styles.cardSelectRow, disabled && styles.disabled]}
+        activeOpacity={0.7}
         onPress={onPress}
-        placeholder={noAccountLabel || placeholder || "None (Any Account)"}
-        subtitle={noAccountSubtitle}
         disabled={disabled}
-        style={style}
-      />
-    )
-  }
-
-  return (
-    <AccountRow
-      account={resolvedAccount}
-      institution={inst}
-      onPress={onPress}
-      label={label}
-      placeholder={noAccountLabel || placeholder || "No Account (Cash)"}
-      fallbackIcon={fallbackIcon}
-      disabled={disabled}
-      style={style}
-    />
+      >
+        <View style={styles.cardSelectLeft}>
+          <View style={styles.cardSelectIconWrap}>
+            <AccountIcon
+              account={account}
+              institution={institution}
+              size={20}
+              color={account ? theme.colors.primary : theme.colors.textMuted}
+            />
+          </View>
+          <View style={styles.cardSelectTextCol}>
+            <Text
+              style={[
+                styles.cardSelectTitle,
+                !account && styles.cardSelectPlaceholder,
+              ]}
+              numberOfLines={1}
+            >
+              {account ? account.name : placeholder}
+            </Text>
+            <Text style={styles.cardSelectSubtitle} numberOfLines={1}>
+              {account
+                ? `${account.currency} • ${account.type.replace(/_/g, " ")}`
+                : subtitle || "Default linked payment method"}
+            </Text>
+          </View>
+        </View>
+        <ChevronRight size={16} color={theme.colors.textMuted} />
+      </TouchableOpacity>
+      {error ? (
+        <View style={styles.errorRow}>
+          <AlertCircle size={12} color={theme.colors.destructive} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+    </View>
   )
 }
 
@@ -363,5 +291,18 @@ const styles = StyleSheet.create({
   },
   cardSelectPlaceholder: {
     color: theme.colors.textMuted,
+  },
+  errorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    marginTop: -2,
+  },
+  errorText: {
+    fontSize: 12,
+    color: theme.colors.destructive,
+    fontWeight: "500",
   },
 })

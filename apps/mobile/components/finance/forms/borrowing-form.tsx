@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useMemo, useRef, useState } from "react"
 import {
   Text,
   View,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   Keyboard,
   StyleSheet,
 } from "react-native"
@@ -13,11 +12,13 @@ import { useQueryClient } from "@tanstack/react-query"
 import BottomSheet from "@gorhom/bottom-sheet"
 import {
   FileText,
-  Calendar,
   AlertCircle,
   ChevronRight,
   HandCoins,
 } from "lucide-react-native"
+import { useForm, useWatch } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { repaymentSchema, type RepaymentFormValues } from "@saturn/schemas"
 import { toCentsString, formatAmount } from "@saturn/core"
 import {
   useLogBorrowingTransactionMutation,
@@ -30,14 +31,16 @@ import { haptics } from "@/lib/haptics"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useToast } from "@/components/ui/toast"
-import {
-  DatePickerSheet,
-  toLocalISODate,
-  formatDisplayDate,
-} from "@/components/ui/date-picker-sheet"
+import { toLocalISODate } from "@/components/ui/date-picker-sheet"
 import { BorrowingPickerSheet, AccountPickerSheet } from "../sheets"
 import { AccountRow } from "../account-select"
 import { getCurrencySymbol, invalidateFinanceQueries } from "../finance-utils"
+import { HeroAmountInput } from "@/components/ui/amount-input"
+import {
+  FormRowInput,
+  FormDateRow,
+  FormPillGroup,
+} from "@/components/ui/form-primitives"
 import { formStyles } from "./form-styles"
 
 export interface BorrowingFormProps {
@@ -68,138 +71,99 @@ export function BorrowingForm({
   // Sheet Refs
   const borrowingSheetRef = useRef<BottomSheet>(null)
   const accountSheetRef = useRef<BottomSheet>(null)
-  const dateSheetRef = useRef<BottomSheet>(null)
 
-  // Form State
-  const [selectedBorrowing, setSelectedBorrowing] = useState<Borrowing | null>(
-    null
-  )
-  const [borrowingActionType, setBorrowingActionType] = useState<
-    | "BORROWING_TRANSACTION_TYPE_PAYMENT"
-    | "BORROWING_TRANSACTION_TYPE_DISBURSEMENT"
-  >("BORROWING_TRANSACTION_TYPE_PAYMENT")
-  const [amountText, setAmountText] = useState("")
-  const [description, setDescription] = useState("")
-  const [selectedAccountId, setSelectedAccountId] = useState<string>(
-    initialAccountId || ""
-  )
-  const [transactionDate, setTransactionDate] = useState<Date>(new Date())
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
 
-  const [validationError, setValidationError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const resolvedDefaultValues: RepaymentFormValues = useMemo(() => {
+    const targetBorrowing = initialBorrowingId
+      ? activeBorrowings.find((b) => b.id === initialBorrowingId) ||
+        activeBorrowings[0]
+      : activeBorrowings[0]
+
+    const targetAcc =
+      (initialAccountId
+        ? accounts.find((a) => a.id === initialAccountId)
+        : null) ||
+      accounts.find((a) => a.isDefault) ||
+      accounts[0]
+
+    return {
+      borrowingId: targetBorrowing?.id || "",
+      type: "BORROWING_TRANSACTION_TYPE_PAYMENT",
+      amount: "",
+      paymentDate: new Date(),
+      accountId: targetAcc?.id || "",
+      notes: "",
+    }
+  }, [activeBorrowings, initialBorrowingId, accounts, initialAccountId])
+
+  // React Hook Form
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<RepaymentFormValues>({
+    resolver: zodResolver(repaymentSchema),
+    defaultValues: resolvedDefaultValues,
+    values: resolvedDefaultValues,
+    resetOptions: { keepDirtyValues: true },
+  })
+
+  // Watched Values
+  const borrowingId = useWatch({ control, name: "borrowingId" })
+  const borrowingActionType = useWatch({ control, name: "type" })
+  const amount = useWatch({ control, name: "amount" })
+  const selectedAccountId = useWatch({ control, name: "accountId" })
 
   // Mutation
   const logBorrowingMutation = useLogBorrowingTransactionMutation()
 
-  // Auto-select loan agreement
-  useEffect(() => {
-    if (activeBorrowings.length > 0 && !selectedBorrowing) {
-      const target = initialBorrowingId
-        ? activeBorrowings.find((b) => b.id === initialBorrowingId) ||
-          activeBorrowings[0]
-        : activeBorrowings[0]
-      setSelectedBorrowing(target)
-    }
-  }, [activeBorrowings, selectedBorrowing, initialBorrowingId])
-
-  useEffect(() => {
-    if (accounts.length > 0 && !selectedAccountId) {
-      const target =
-        (initialAccountId
-          ? accounts.find((a) => a.id === initialAccountId)
-          : null) ||
-        accounts.find((a) => a.isDefault) ||
-        accounts[0]
-      const accId = target?.id || ""
-      setSelectedAccountId(accId)
-      onAccountChange?.(accId)
-    }
-  }, [accounts, selectedAccountId, initialAccountId, onAccountChange])
+  const selectedBorrowing = useMemo(
+    () => activeBorrowings.find((b) => b.id === borrowingId) || null,
+    [activeBorrowings, borrowingId]
+  )
 
   const selectedAccount = useMemo(
     () => accounts.find((a) => a.id === selectedAccountId),
     [accounts, selectedAccountId]
   )
 
-  const currentCurrency =
-    selectedBorrowing?.currency ||
-    selectedAccount?.currency ||
-    baseCurrency ||
-    "USD"
+  const currentCurrency = selectedBorrowing?.currency || baseCurrency || "USD"
   const currentSymbol = getCurrencySymbol(currentCurrency)
-
-  // Amount input handler
-  const handleAmountChange = (text: string) => {
-    let cleaned = text.replace(/[^0-9.]/g, "")
-    const parts = cleaned.split(".")
-    if (parts.length > 2) {
-      cleaned = parts[0] + "." + parts.slice(1).join("")
-    }
-    if (parts[1] && parts[1].length > 2) {
-      cleaned = parts[0] + "." + parts[1].slice(0, 2)
-    }
-    setAmountText(cleaned)
-    setValidationError(null)
-  }
-
-  const parsedAmount = parseFloat(amountText || "0")
-  const amountDecimal = isNaN(parsedAmount) ? "0.00" : parsedAmount.toFixed(2)
 
   const isLent = selectedBorrowing?.direction === "LENT"
   const isPayment = borrowingActionType === "BORROWING_TRANSACTION_TYPE_PAYMENT"
-  // When someone owes me (LENT): Repayment brings money in (Income), Disbursement lends more out (Expense)
-  // When I owe someone (BORROWED): Repayment pays debt out (Expense), Disbursement borrows more in (Income)
-  const isIncomeAction = isLent ? isPayment : !isPayment
 
-  const paymentLabel = isLent
-    ? "Receive Repayment (Income)"
-    : "Make Repayment (Expense)"
-  const disbursementLabel = isLent
-    ? "Lend More (Expense)"
-    : "Borrow More (Income)"
+  const parsedAmount = parseFloat(amount || "0")
+  const amountDecimal = isNaN(parsedAmount) ? "0.00" : parsedAmount.toFixed(2)
 
-  const submitButtonText = isLent
-    ? isPayment
-      ? `Record Payment Received • +${currentSymbol}${amountDecimal}`
-      : `Lend Additional Funds • -${currentSymbol}${amountDecimal}`
-    : isPayment
-      ? `Record Repayment • -${currentSymbol}${amountDecimal}`
-      : `Record Drawdown • +${currentSymbol}${amountDecimal}`
+  // Submit Handler
+  const onSubmit = async (values: RepaymentFormValues) => {
+    if (!selectedBorrowing?.id) {
+      haptics.error()
+      setSubmissionError("Please select an active agreement.")
+      return
+    }
 
-  // Handle Submit
-  const handleSave = async () => {
-    if (isSubmitting) return
     haptics.light()
-
-    if (!selectedBorrowing) {
-      haptics.error()
-      setValidationError("Please select an active loan agreement.")
-      return
-    }
-
-    if (parsedAmount <= 0) {
-      haptics.error()
-      setValidationError("Please enter an amount greater than 0.")
-      return
-    }
-
-    setValidationError(null)
-    setIsSubmitting(true)
+    setSubmissionError(null)
 
     try {
-      const dateIso = toLocalISODate(transactionDate)
-      const centsStr = toCentsString(amountDecimal)
+      const dateIso = toLocalISODate(values.paymentDate)
+      const centsStr = toCentsString(values.amount)
 
       await logBorrowingMutation.mutateAsync({
-        borrowing_id: selectedBorrowing.id || "",
+        borrowing_id: selectedBorrowing.id,
         req: {
-          borrowingId: selectedBorrowing.id || "",
+          borrowingId: selectedBorrowing.id,
           transaction: {
-            type: borrowingActionType as BorrowingTransactionType,
+            type: (values.type ||
+              "BORROWING_TRANSACTION_TYPE_PAYMENT") as BorrowingTransactionType,
             amount: centsStr,
             transactionDate: dateIso,
-            notes: description.trim() || undefined,
-            accountId: selectedAccountId || undefined,
+            notes: values.notes?.trim() || undefined,
+            accountId: values.accountId || undefined,
           },
         },
       })
@@ -224,11 +188,31 @@ export function BorrowingForm({
         err instanceof Error
           ? err.message
           : "An unexpected error occurred while saving."
-      setValidationError(errMsg)
-    } finally {
-      setIsSubmitting(false)
+      setSubmissionError(errMsg)
     }
   }
+
+  const actionOptions = useMemo(
+    () => [
+      {
+        label: isLent ? "Receive Payment" : "Make Repayment",
+        value: "BORROWING_TRANSACTION_TYPE_PAYMENT",
+        activeColor: "#d97706",
+        activeBg: "rgba(245, 158, 11, 0.15)",
+        activeBorder: "#f59e0b",
+        activeTextColor: "#f59e0b",
+      },
+      {
+        label: isLent ? "Give Additional Loan" : "Take Additional Draw",
+        value: "BORROWING_TRANSACTION_TYPE_DISBURSEMENT",
+        activeColor: "#d97706",
+        activeBg: "rgba(245, 158, 11, 0.15)",
+        activeBorder: "#f59e0b",
+        activeTextColor: "#f59e0b",
+      },
+    ],
+    [isLent]
+  )
 
   return (
     <>
@@ -260,161 +244,94 @@ export function BorrowingForm({
             </Text>
             <Text style={formStyles.specialSelectorValue} numberOfLines={1}>
               {selectedBorrowing
-                ? `${selectedBorrowing.counterparty || "Agreement"} (${formatAmount(selectedBorrowing.totalAmount, selectedBorrowing.currency)})`
-                : "Tap to select loan agreement..."}
+                ? `${selectedBorrowing.counterparty} • ${formatAmount(selectedBorrowing.remainingAmount, selectedBorrowing.currency)} remaining`
+                : "Select agreement..."}
             </Text>
           </View>
           <ChevronRight size={16} color={theme.colors.textMuted} />
         </TouchableOpacity>
 
-        {/* Action Toggle: Repayment vs Drawdown */}
-        <View style={[formStyles.borrowingActionToggle, { marginBottom: 12 }]}>
-          <TouchableOpacity
-            style={[
-              formStyles.borrowingActionBtn,
-              isPayment &&
-                (isLent
-                  ? styles.actionBtnIncomeActive
-                  : formStyles.borrowingActionActive),
-            ]}
-            onPress={() => {
-              haptics.light()
-              setBorrowingActionType("BORROWING_TRANSACTION_TYPE_PAYMENT")
-            }}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                formStyles.borrowingActionText,
-                isPayment &&
-                  (isLent
-                    ? styles.actionTextIncomeActive
-                    : formStyles.borrowingActionTextActive),
-              ]}
-            >
-              {paymentLabel}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              formStyles.borrowingActionBtn,
-              !isPayment &&
-                (!isLent
-                  ? styles.actionBtnIncomeActive
-                  : formStyles.borrowingActionActive),
-            ]}
-            onPress={() => {
-              haptics.light()
-              setBorrowingActionType("BORROWING_TRANSACTION_TYPE_DISBURSEMENT")
-            }}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                formStyles.borrowingActionText,
-                !isPayment &&
-                  (!isLent
-                    ? styles.actionTextIncomeActive
-                    : formStyles.borrowingActionTextActive),
-              ]}
-            >
-              {disbursementLabel}
-            </Text>
-          </TouchableOpacity>
+        {/* Transaction Type Pills */}
+        <View style={{ marginBottom: 12 }}>
+          <FormPillGroup
+            control={control}
+            name="type"
+            options={actionOptions}
+          />
         </View>
 
-        {/* Amount Field */}
-        <View style={formStyles.amountCard}>
-          <Text style={formStyles.fieldSectionLabel}>AMOUNT</Text>
-          <View style={formStyles.amountInputRow}>
-            <Text
-              style={[
-                formStyles.amountCurrencyPrefix,
-                {
-                  color: isIncomeAction ? theme.colors.success : "#d97706",
-                },
-              ]}
-            >
-              {currentSymbol}
-            </Text>
-            <TextInput
-              style={[
-                formStyles.amountInput,
-                {
-                  color: isIncomeAction ? theme.colors.success : "#d97706",
-                },
-              ]}
-              keyboardType="decimal-pad"
-              value={amountText}
-              placeholder="0.00"
-              placeholderTextColor={theme.colors.textMuted}
-              onChangeText={handleAmountChange}
-              selectionColor={isIncomeAction ? theme.colors.success : "#d97706"}
-            />
+        {/* Amount & Currency Field */}
+        <HeroAmountInput
+          control={control}
+          name="amount"
+          currency={currentCurrency}
+          currencySymbol={currentSymbol}
+          currencyDisabled
+          accentColor="#d97706"
+          autoFocus
+        />
+
+        {/* Agreement Status Mini Summary */}
+        {selectedBorrowing && (
+          <View style={styles.agreementInfoCard}>
+            <View style={styles.agreementInfoRow}>
+              <Text style={styles.agreementInfoLabel}>Direction:</Text>
+              <Text style={styles.agreementInfoVal}>
+                {isLent
+                  ? "I lent money (Owed to me)"
+                  : "I borrowed money (I owe)"}
+              </Text>
+            </View>
+            <View style={styles.agreementInfoRow}>
+              <Text style={styles.agreementInfoLabel}>Remaining:</Text>
+              <Text style={styles.agreementInfoVal}>
+                {formatAmount(
+                  selectedBorrowing.remainingAmount,
+                  selectedBorrowing.currency
+                )}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Form Fields Card */}
         <Card style={formStyles.formGroupCard}>
-          {/* Account */}
+          {/* Field: Linked Payment Account */}
           <AccountRow
-            label="Account"
+            label="Linked Account"
             account={selectedAccount}
+            error={errors.accountId?.message}
             onPress={() => {
               Keyboard.dismiss()
               accountSheetRef.current?.expand()
             }}
           />
 
-          {/* Description */}
+          {/* Field: Payment Date */}
           <View style={formStyles.rowDivider} />
-          <View style={formStyles.formRow}>
-            <View style={formStyles.formRowLabelGroup}>
-              <FileText size={16} color={theme.colors.textMuted} />
-              <Text style={formStyles.formRowLabel}>Description</Text>
-            </View>
-            <TextInput
-              style={formStyles.formRowInput}
-              placeholder="Notes / reference"
-              placeholderTextColor={theme.colors.textMuted}
-              value={description}
-              onChangeText={(val) => {
-                setDescription(val)
-                setValidationError(null)
-              }}
-              returnKeyType="done"
-            />
-          </View>
+          <FormDateRow
+            control={control}
+            name="paymentDate"
+            label="Transaction Date"
+          />
 
-          {/* Date */}
+          {/* Field: Memo / Notes */}
           <View style={formStyles.rowDivider} />
-          <TouchableOpacity
-            style={formStyles.formRow}
-            activeOpacity={0.7}
-            onPress={() => {
-              Keyboard.dismiss()
-              dateSheetRef.current?.expand()
-            }}
-          >
-            <View style={formStyles.formRowLabelGroup}>
-              <Calendar size={16} color={theme.colors.textMuted} />
-              <Text style={formStyles.formRowLabel}>Transaction Date</Text>
-            </View>
-            <View style={formStyles.formRowValueGroup}>
-              <Text style={formStyles.formRowValueText}>
-                {formatDisplayDate(transactionDate)}
-              </Text>
-              <ChevronRight size={14} color={theme.colors.textMuted} />
-            </View>
-          </TouchableOpacity>
+          <FormRowInput
+            control={control}
+            name="notes"
+            label="Notes"
+            icon={<FileText size={16} color={theme.colors.textMuted} />}
+            placeholder="e.g. Bank transfer ref, monthly check"
+            returnKeyType="done"
+          />
         </Card>
 
         {/* Error Box */}
-        {validationError && (
+        {submissionError && (
           <View style={formStyles.errorBox}>
             <AlertCircle size={15} color={theme.colors.destructive} />
-            <Text style={formStyles.errorText}>{validationError}</Text>
+            <Text style={formStyles.errorText}>{submissionError}</Text>
           </View>
         )}
       </ScrollView>
@@ -427,17 +344,18 @@ export function BorrowingForm({
         ]}
       >
         <Button
-          style={[
-            formStyles.submitBtn,
-            isIncomeAction
-              ? formStyles.submitBtnIncome
-              : formStyles.submitBtnBorrowing,
-          ]}
+          style={[formStyles.submitBtn, formStyles.submitBtnBorrowing]}
           size="lg"
           loading={isSubmitting}
-          onPress={handleSave}
+          onPress={handleSubmit(onSubmit)}
         >
-          {submitButtonText}
+          {isPayment
+            ? isLent
+              ? `Receive ${currentSymbol}${amountDecimal}`
+              : `Repay ${currentSymbol}${amountDecimal}`
+            : isLent
+              ? `Lend ${currentSymbol}${amountDecimal}`
+              : `Borrow ${currentSymbol}${amountDecimal}`}
         </Button>
       </View>
 
@@ -445,38 +363,50 @@ export function BorrowingForm({
       <BorrowingPickerSheet
         ref={borrowingSheetRef}
         borrowings={activeBorrowings}
-        selectedBorrowingId={selectedBorrowing?.id}
-        onSelect={setSelectedBorrowing}
+        selectedBorrowingId={borrowingId || ""}
+        onSelect={(b) => {
+          if (b.id) {
+            setValue("borrowingId", b.id, { shouldValidate: true })
+          }
+        }}
         isLoading={borrowingsLoading}
       />
 
       <AccountPickerSheet
         ref={accountSheetRef}
         accounts={accounts}
-        selectedAccountId={selectedAccountId}
+        selectedAccountId={selectedAccountId || ""}
         onSelect={(accId) => {
-          setSelectedAccountId(accId)
+          setValue("accountId", accId, { shouldValidate: true })
           onAccountChange?.(accId)
         }}
-      />
-
-      <DatePickerSheet
-        ref={dateSheetRef}
-        title="Select Transaction Date"
-        value={transactionDate}
-        onChange={setTransactionDate}
       />
     </>
   )
 }
 
 const styles = StyleSheet.create({
-  actionBtnIncomeActive: {
-    borderColor: theme.colors.success,
-    backgroundColor: theme.colors.successSubtle,
+  agreementInfoCard: {
+    backgroundColor: "rgba(245, 158, 11, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.2)",
+    borderRadius: theme.radius.lg,
+    padding: 12,
+    marginBottom: 12,
+    gap: 6,
   },
-  actionTextIncomeActive: {
-    color: theme.colors.success,
+  agreementInfoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  agreementInfoLabel: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+  },
+  agreementInfoVal: {
+    fontSize: 12,
     fontWeight: "700",
+    color: theme.colors.textPrimary,
   },
 })

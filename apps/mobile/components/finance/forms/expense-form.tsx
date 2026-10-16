@@ -1,12 +1,10 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react"
+import { useMemo, useRef, useCallback, useState } from "react"
 import {
   Text,
   View,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   Keyboard,
-  Switch,
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useQueryClient } from "@tanstack/react-query"
@@ -14,15 +12,14 @@ import BottomSheet from "@gorhom/bottom-sheet"
 import {
   Tag,
   FileText,
-  Calendar,
-  CalendarClock,
   AlertCircle,
   AlertTriangle,
   ChevronRight,
-  ChevronDown,
   Globe,
 } from "lucide-react-native"
-import { transactionSchema } from "@saturn/schemas"
+import { useForm, useWatch } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { transactionSchema, type TransactionFormValues } from "@saturn/schemas"
 import { toCentsString, convertCurrency } from "@saturn/core"
 import {
   useCreateExpenseMutation,
@@ -39,11 +36,7 @@ import { haptics } from "@/lib/haptics"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useToast } from "@/components/ui/toast"
-import {
-  DatePickerSheet,
-  toLocalISODate,
-  formatDisplayDate,
-} from "@/components/ui/date-picker-sheet"
+import { toLocalISODate } from "@/components/ui/date-picker-sheet"
 import {
   BudgetPickerSheet,
   CurrencyPickerSheet,
@@ -51,6 +44,11 @@ import {
 } from "../sheets"
 import { AccountRow } from "../account-select"
 import { getCurrencySymbol, invalidateFinanceQueries } from "../finance-utils"
+import { HeroAmountInput } from "@/components/ui/amount-input"
+import {
+  FormRowInput,
+  FormEffectiveDateSection,
+} from "@/components/ui/form-primitives"
 import { formStyles } from "./form-styles"
 
 export interface ExpenseFormProps {
@@ -91,113 +89,89 @@ export function ExpenseForm({
   const budgetSheetRef = useRef<BottomSheet>(null)
   const currencySheetRef = useRef<BottomSheet>(null)
   const accountSheetRef = useRef<BottomSheet>(null)
-  const dateSheetRef = useRef<BottomSheet>(null)
 
-  // Form State
-  const [amountText, setAmountText] = useState("")
-  const [description, setDescription] = useState("")
-  const [selectedBudgetId, setSelectedBudgetId] = useState<string>(
-    initialBudgetId || ""
-  )
-  const [selectedAccountId, setSelectedAccountId] = useState<string>(
-    initialAccountId || ""
-  )
   const hasManuallySelectedAccount = useRef<boolean>(Boolean(initialAccountId))
-  const [selectedCurrency, setSelectedCurrency] = useState<string>("")
-  const [transactionDate, setTransactionDate] = useState<Date>(new Date())
-  const [hasCustomEffectiveDate, setHasCustomEffectiveDate] =
-    useState<boolean>(false)
-  const [effectiveDate, setEffectiveDate] = useState<Date>(new Date())
-  const [activeDatePickerTarget, setActiveDatePickerTarget] = useState<
-    "transaction" | "effective"
-  >("transaction")
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
 
-  const [validationError, setValidationError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const resolvedFormValues: TransactionFormValues = useMemo(() => {
+    if (existingTx) {
+      const parsedCents = parseInt(existingTx.amount || "0", 10)
+      const amountVal =
+        !isNaN(parsedCents) && parsedCents > 0
+          ? (parsedCents / 100).toFixed(2)
+          : ""
+      const txD = existingTx.transactionDate
+        ? new Date(existingTx.transactionDate)
+        : new Date()
+      let effD = txD
+      let hasCustom = false
+      if (existingTx.effectiveDate) {
+        const parsedEff = new Date(existingTx.effectiveDate)
+        hasCustom = txD.toDateString() !== parsedEff.toDateString()
+        effD = parsedEff
+      }
+
+      return {
+        budgetId: existingTx.budgetId || "",
+        accountId: existingTx.accountId || "",
+        description: existingTx.description || "",
+        amount: amountVal,
+        currency: existingTx.currency || baseCurrency || "USD",
+        transactionDate: txD,
+        hasCustomEffectiveDate: hasCustom,
+        effectiveDate: effD,
+      }
+    }
+
+    const targetBudgetId =
+      initialBudgetId || (budgets.length > 0 ? budgets[0].id || "" : "")
+    const targetBudget = budgets.find((b) => b.id === targetBudgetId)
+    const defaultAcc = accounts.find((a) => a.isDefault) || accounts[0]
+    const resolvedAccId =
+      initialAccountId || targetBudget?.defaultAccountId || defaultAcc?.id || ""
+    const resolvedCurrency = targetBudget?.currency || baseCurrency || "USD"
+
+    return {
+      budgetId: targetBudgetId,
+      accountId: resolvedAccId,
+      description: "",
+      amount: "",
+      currency: resolvedCurrency,
+      transactionDate: new Date(),
+      hasCustomEffectiveDate: false,
+      effectiveDate: new Date(),
+    }
+  }, [
+    existingTx,
+    initialBudgetId,
+    initialAccountId,
+    budgets,
+    accounts,
+    baseCurrency,
+  ])
+
+  // React Hook Form
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<TransactionFormValues>({
+    resolver: zodResolver(transactionSchema),
+    defaultValues: resolvedFormValues,
+    values: resolvedFormValues,
+    resetOptions: { keepDirtyValues: true },
+  })
+
+  // Watched Values
+  const amount = useWatch({ control, name: "amount" })
+  const selectedBudgetId = useWatch({ control, name: "budgetId" })
+  const selectedAccountId = useWatch({ control, name: "accountId" })
+  const selectedCurrency = useWatch({ control, name: "currency" })
 
   // Mutations
   const createExpenseMutation = useCreateExpenseMutation()
   const updateExpenseMutation = useUpdateExpenseMutation()
-
-  // Auto-set default budget & account on initial load or when budgets/accounts are loaded
-  useEffect(() => {
-    if (isEditMode) return
-
-    // Resolve target budget (either current selection, initialBudgetId, or first budget in list)
-    const targetBudgetId =
-      selectedBudgetId ||
-      initialBudgetId ||
-      (budgets.length > 0 ? budgets[0].id : "")
-    const targetBudget = budgets.find((b) => b.id === targetBudgetId)
-
-    if (targetBudget) {
-      if (!selectedBudgetId && targetBudget.id) {
-        setSelectedBudgetId(targetBudget.id)
-      }
-      if (!selectedCurrency && targetBudget.currency) {
-        setSelectedCurrency(targetBudget.currency)
-      }
-
-      // If user hasn't manually selected an account, auto-select the budget's default account
-      if (!hasManuallySelectedAccount.current) {
-        const defaultAcc = accounts.find((a) => a.isDefault) || accounts[0]
-        const resolvedAccId =
-          targetBudget.defaultAccountId || defaultAcc?.id || ""
-        if (resolvedAccId && resolvedAccId !== selectedAccountId) {
-          setSelectedAccountId(resolvedAccId)
-          onAccountChange?.(resolvedAccId)
-        }
-      }
-    } else if (
-      accounts.length > 0 &&
-      !hasManuallySelectedAccount.current &&
-      !selectedAccountId
-    ) {
-      const defaultAcc = accounts.find((a) => a.isDefault) || accounts[0]
-      if (defaultAcc?.id) {
-        setSelectedAccountId(defaultAcc.id)
-        onAccountChange?.(defaultAcc.id)
-      }
-    }
-  }, [
-    budgets,
-    accounts,
-    selectedBudgetId,
-    initialBudgetId,
-    isEditMode,
-    selectedCurrency,
-    selectedAccountId,
-    onAccountChange,
-  ])
-
-  // Hydrate edit mode
-  useEffect(() => {
-    if (existingTx) {
-      const parsedCents = parseInt(existingTx.amount || "0", 10)
-      if (!isNaN(parsedCents) && parsedCents > 0) {
-        setAmountText((parsedCents / 100).toFixed(2))
-      }
-      setDescription(existingTx.description || "")
-      setSelectedBudgetId(existingTx.budgetId || "")
-      setSelectedAccountId(existingTx.accountId || "")
-      if (existingTx.currency) {
-        setSelectedCurrency(existingTx.currency)
-      }
-      if (existingTx.transactionDate) {
-        const txD = new Date(existingTx.transactionDate)
-        setTransactionDate(txD)
-        if (existingTx.effectiveDate) {
-          const effD = new Date(existingTx.effectiveDate)
-          const isDiff = txD.toDateString() !== effD.toDateString()
-          setHasCustomEffectiveDate(isDiff)
-          setEffectiveDate(effD)
-        } else {
-          setHasCustomEffectiveDate(false)
-          setEffectiveDate(txD)
-        }
-      }
-    }
-  }, [existingTx])
 
   // Selected Budget helpers
   const selectedBudget = useMemo(
@@ -220,35 +194,21 @@ export function ExpenseForm({
   // Budget change handler
   const handleBudgetChange = useCallback(
     (b: Budget) => {
-      setSelectedBudgetId(b.id || "")
+      setValue("budgetId", b.id || "", { shouldValidate: true })
       if (b.currency) {
-        setSelectedCurrency(b.currency)
+        setValue("currency", b.currency, { shouldValidate: true })
       }
       hasManuallySelectedAccount.current = false
       const defaultAcc = accounts.find((a) => a.isDefault) || accounts[0]
       const targetAccId = b.defaultAccountId || defaultAcc?.id || ""
       if (targetAccId) {
-        setSelectedAccountId(targetAccId)
+        setValue("accountId", targetAccId)
       }
     },
-    [accounts]
+    [accounts, setValue]
   )
 
-  // Amount input handler
-  const handleAmountChange = (text: string) => {
-    let cleaned = text.replace(/[^0-9.]/g, "")
-    const parts = cleaned.split(".")
-    if (parts.length > 2) {
-      cleaned = parts[0] + "." + parts.slice(1).join("")
-    }
-    if (parts[1] && parts[1].length > 2) {
-      cleaned = parts[0] + "." + parts[1].slice(0, 2)
-    }
-    setAmountText(cleaned)
-    setValidationError(null)
-  }
-
-  const parsedAmount = parseFloat(amountText || "0")
+  const parsedAmount = parseFloat(amount || "0")
   const amountDecimal = isNaN(parsedAmount) ? "0.00" : parsedAmount.toFixed(2)
 
   // Conversion Preview
@@ -264,59 +224,18 @@ export function ExpenseForm({
     )
   }, [parsedAmount, currentCurrency, baseCurrency, exchangeRates])
 
-  // Open Date Picker
-  const openDatePicker = (target: "transaction" | "effective") => {
-    Keyboard.dismiss()
-    setActiveDatePickerTarget(target)
-    dateSheetRef.current?.expand()
-  }
-
-  // Handle Submit
-  const handleSave = async () => {
-    if (isSubmitting) return
+  // Submit Handler
+  const onSubmit = async (values: TransactionFormValues) => {
     haptics.light()
-
-    if (parsedAmount <= 0) {
-      haptics.error()
-      setValidationError("Please enter an amount greater than 0.")
-      return
-    }
-
-    if (!selectedBudgetId) {
-      haptics.error()
-      setValidationError("Please select a budget for this expense.")
-      return
-    }
-
-    setValidationError(null)
-    setIsSubmitting(true)
+    setSubmissionError(null)
 
     try {
-      const txDateIso = toLocalISODate(transactionDate)
-      const effectiveDateObj = hasCustomEffectiveDate
-        ? effectiveDate
-        : transactionDate
+      const txDateIso = toLocalISODate(values.transactionDate)
+      const effectiveDateObj = values.hasCustomEffectiveDate
+        ? values.effectiveDate
+        : values.transactionDate
       const effDateIso = toLocalISODate(effectiveDateObj)
-      const centsStr = toCentsString(amountDecimal)
-
-      const parsed = transactionSchema.safeParse({
-        budgetId: selectedBudgetId,
-        accountId: selectedAccountId || undefined,
-        description: description.trim(),
-        amount: amountDecimal,
-        currency: currentCurrency,
-        transactionDate: transactionDate,
-        hasCustomEffectiveDate: hasCustomEffectiveDate,
-        effectiveDate: effectiveDateObj,
-      })
-
-      if (!parsed.success) {
-        haptics.error()
-        const errMsg = parsed.error.errors[0]?.message || "Invalid expense"
-        setValidationError(errMsg)
-        setIsSubmitting(false)
-        return
-      }
+      const centsStr = toCentsString(values.amount)
 
       if (isEditMode && existingTx?.id) {
         await updateExpenseMutation.mutateAsync({
@@ -324,26 +243,26 @@ export function ExpenseForm({
           req: {
             id: existingTx.id,
             expense: {
-              budgetId: selectedBudgetId,
+              budgetId: values.budgetId,
               amount: centsStr,
-              currency: currentCurrency,
-              description: description.trim(),
+              currency: values.currency,
+              description: values.description.trim(),
               transactionDate: txDateIso,
               effectiveDate: effDateIso,
-              accountId: selectedAccountId || undefined,
+              accountId: values.accountId || undefined,
             },
           },
         })
       } else {
         await createExpenseMutation.mutateAsync({
           expense: {
-            budgetId: selectedBudgetId,
+            budgetId: values.budgetId,
             amount: centsStr,
-            currency: currentCurrency,
-            description: description.trim(),
+            currency: values.currency,
+            description: values.description.trim(),
             transactionDate: txDateIso,
             effectiveDate: effDateIso,
-            accountId: selectedAccountId || undefined,
+            accountId: values.accountId || undefined,
           },
         })
       }
@@ -351,7 +270,7 @@ export function ExpenseForm({
       toast.show({
         type: "success",
         title: isEditMode ? "Expense Updated" : "Expense Recorded",
-        message: `${currentSymbol}${amountDecimal} ${currentCurrency} under ${selectedBudget?.name || "Budget"}`,
+        message: `${currentSymbol}${amountDecimal} ${values.currency} under ${selectedBudget?.name || "Budget"}`,
       })
 
       await invalidateFinanceQueries(queryClient)
@@ -362,9 +281,7 @@ export function ExpenseForm({
         err instanceof Error
           ? err.message
           : "An unexpected error occurred while saving."
-      setValidationError(errMsg)
-    } finally {
-      setIsSubmitting(false)
+      setSubmissionError(errMsg)
     }
   }
 
@@ -376,46 +293,18 @@ export function ExpenseForm({
         showsVerticalScrollIndicator={false}
       >
         {/* Amount & Currency Field */}
-        <View style={formStyles.amountCard}>
-          <Text style={formStyles.fieldSectionLabel}>AMOUNT</Text>
-          <View style={formStyles.amountInputRow}>
-            <Text
-              style={[
-                formStyles.amountCurrencyPrefix,
-                { color: theme.colors.destructive },
-              ]}
-            >
-              {currentSymbol}
-            </Text>
-            <TextInput
-              style={[
-                formStyles.amountInput,
-                { color: theme.colors.destructive },
-              ]}
-              keyboardType="decimal-pad"
-              value={amountText}
-              placeholder="0.00"
-              placeholderTextColor={theme.colors.textMuted}
-              onChangeText={handleAmountChange}
-              autoFocus={!isEditMode}
-              selectionColor={theme.colors.destructive}
-            />
-
-            <TouchableOpacity
-              style={formStyles.currencySelectButton}
-              activeOpacity={0.7}
-              onPress={() => {
-                Keyboard.dismiss()
-                currencySheetRef.current?.expand()
-              }}
-            >
-              <Text style={formStyles.currencySelectCode} numberOfLines={1}>
-                {currentCurrency.toUpperCase()}
-              </Text>
-              <ChevronDown size={14} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <HeroAmountInput
+          control={control}
+          name="amount"
+          currency={currentCurrency}
+          currencySymbol={currentSymbol}
+          onPressCurrency={() => {
+            Keyboard.dismiss()
+            currencySheetRef.current?.expand()
+          }}
+          autoFocus={!isEditMode}
+          accentColor={theme.colors.destructive}
+        />
 
         {/* Currency Conversion Preview */}
         {conversionPreview && (
@@ -534,12 +423,35 @@ export function ExpenseForm({
               <ChevronRight size={14} color={theme.colors.textMuted} />
             </View>
           </TouchableOpacity>
+          {errors.budgetId ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                paddingHorizontal: 16,
+                paddingBottom: 8,
+              }}
+            >
+              <AlertCircle size={12} color={theme.colors.destructive} />
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: theme.colors.destructive,
+                  fontWeight: "500",
+                }}
+              >
+                {errors.budgetId.message}
+              </Text>
+            </View>
+          ) : null}
 
           {/* Field: Account */}
           <View style={formStyles.rowDivider} />
           <AccountRow
             label="Account"
             account={selectedAccount}
+            error={errors.accountId?.message}
             onPress={() => {
               Keyboard.dismiss()
               accountSheetRef.current?.expand()
@@ -548,115 +460,25 @@ export function ExpenseForm({
 
           {/* Field: Description */}
           <View style={formStyles.rowDivider} />
-          <View style={formStyles.formRow}>
-            <View style={formStyles.formRowLabelGroup}>
-              <FileText size={16} color={theme.colors.textMuted} />
-              <Text style={formStyles.formRowLabel}>Description</Text>
-            </View>
-            <TextInput
-              style={formStyles.formRowInput}
-              placeholder="e.g. Amazon Web Services, Restaurant Dinner"
-              placeholderTextColor={theme.colors.textMuted}
-              value={description}
-              onChangeText={(val) => {
-                setDescription(val)
-                setValidationError(null)
-              }}
-              returnKeyType="done"
-            />
-          </View>
+          <FormRowInput
+            control={control}
+            name="description"
+            label="Description"
+            icon={<FileText size={16} color={theme.colors.textMuted} />}
+            placeholder="e.g. Amazon Web Services, Restaurant Dinner"
+            returnKeyType="done"
+          />
 
-          {/* Field: Transaction Date */}
+          {/* Field: Date Section */}
           <View style={formStyles.rowDivider} />
-          <TouchableOpacity
-            style={formStyles.formRow}
-            activeOpacity={0.7}
-            onPress={() => openDatePicker("transaction")}
-          >
-            <View style={formStyles.formRowLabelGroup}>
-              <Calendar size={16} color={theme.colors.textMuted} />
-              <Text style={formStyles.formRowLabel}>Transaction Date</Text>
-            </View>
-            <View style={formStyles.formRowValueGroup}>
-              <Text style={formStyles.formRowValueText}>
-                {formatDisplayDate(transactionDate)}
-              </Text>
-              <ChevronRight size={14} color={theme.colors.textMuted} />
-            </View>
-          </TouchableOpacity>
-
-          {/* Toggle: Different Effective Date */}
-          <View style={formStyles.rowDivider} />
-          <View style={formStyles.formRow}>
-            <View
-              style={[
-                formStyles.formRowLabelGroup,
-                { flex: 1, paddingRight: 8 },
-              ]}
-            >
-              <CalendarClock size={16} color={theme.colors.textMuted} />
-              <Text style={formStyles.formRowLabel} numberOfLines={2}>
-                Different effective date?
-              </Text>
-            </View>
-            <Switch
-              value={hasCustomEffectiveDate}
-              onValueChange={(val) => {
-                haptics.light()
-                setHasCustomEffectiveDate(val)
-                if (!val) {
-                  setEffectiveDate(transactionDate)
-                }
-              }}
-              trackColor={{
-                false: theme.colors.surfaceElevated,
-                true: theme.colors.primary,
-              }}
-              thumbColor="#ffffff"
-            />
-          </View>
-
-          {/* Field: Custom Effective Date */}
-          {hasCustomEffectiveDate && (
-            <>
-              <View style={formStyles.rowDivider} />
-              <TouchableOpacity
-                style={formStyles.formRow}
-                activeOpacity={0.7}
-                onPress={() => openDatePicker("effective")}
-              >
-                <View style={formStyles.formRowLabelGroup}>
-                  <Calendar size={16} color={theme.colors.primary} />
-                  <Text
-                    style={[
-                      formStyles.formRowLabel,
-                      { color: theme.colors.primary },
-                    ]}
-                  >
-                    Effective Date
-                  </Text>
-                </View>
-                <View style={formStyles.formRowValueGroup}>
-                  <Text
-                    style={[
-                      formStyles.formRowValueText,
-                      { color: theme.colors.primary },
-                    ]}
-                  >
-                    {formatDisplayDate(effectiveDate)}
-                  </Text>
-                  <ChevronRight size={14} color={theme.colors.primary} />
-                </View>
-              </TouchableOpacity>
-            </>
-          )}
+          <FormEffectiveDateSection control={control} />
         </Card>
 
         {/* Error Box */}
-        {validationError && (
+        {submissionError && (
           <View style={formStyles.errorBox}>
             <AlertCircle size={15} color={theme.colors.destructive} />
-            <Text style={formStyles.errorText}>{validationError}</Text>
+            <Text style={formStyles.errorText}>{submissionError}</Text>
           </View>
         )}
       </ScrollView>
@@ -672,7 +494,7 @@ export function ExpenseForm({
           style={[formStyles.submitBtn, formStyles.submitBtnExpense]}
           size="lg"
           loading={isSubmitting}
-          onPress={handleSave}
+          onPress={handleSubmit(onSubmit)}
         >
           {isEditMode
             ? `Update Expense • ${currentSymbol}${amountDecimal}`
@@ -692,10 +514,10 @@ export function ExpenseForm({
       <AccountPickerSheet
         ref={accountSheetRef}
         accounts={accounts}
-        selectedAccountId={selectedAccountId}
+        selectedAccountId={selectedAccountId || ""}
         onSelect={(accId) => {
           hasManuallySelectedAccount.current = true
-          setSelectedAccountId(accId)
+          setValue("accountId", accId, { shouldValidate: true })
           onAccountChange?.(accId)
         }}
       />
@@ -704,32 +526,8 @@ export function ExpenseForm({
         ref={currencySheetRef}
         currencies={currencies}
         selectedCurrency={currentCurrency}
-        onSelect={setSelectedCurrency}
+        onSelect={(cur) => setValue("currency", cur, { shouldValidate: true })}
         isLoading={currenciesLoading}
-      />
-
-      <DatePickerSheet
-        ref={dateSheetRef}
-        title={
-          activeDatePickerTarget === "effective"
-            ? "Select Effective Date"
-            : "Select Transaction Date"
-        }
-        value={
-          activeDatePickerTarget === "effective"
-            ? effectiveDate
-            : transactionDate
-        }
-        onChange={(newDate) => {
-          if (activeDatePickerTarget === "transaction") {
-            setTransactionDate(newDate)
-            if (!hasCustomEffectiveDate) {
-              setEffectiveDate(newDate)
-            }
-          } else {
-            setEffectiveDate(newDate)
-          }
-        }}
       />
     </>
   )

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   Modal,
   View,
@@ -8,13 +8,19 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Switch,
 } from "react-native"
 import { KeyRound, ShieldAlert, X } from "lucide-react-native"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import {
+  changePasswordSchema,
+  type ChangePasswordFormValues,
+} from "@saturn/schemas"
 import { theme } from "@/lib/theme"
 import { Button } from "./button"
 import { TextInput } from "./text-input"
 import { OTPInput } from "./otp-input"
+import { FormSwitchRow } from "./form-primitives"
 import { haptics } from "@/lib/haptics"
 import { useChangePasswordMutation } from "@saturn/api/saturn/identity/v1/identity"
 import { useAuth } from "@/lib/auth-context"
@@ -34,60 +40,45 @@ export function ChangePasswordModal({
   const toast = useToast()
   const { updateSessionTokens } = useAuth()
   const changePasswordMutation = useChangePasswordMutation()
-
-  const [currentPassword, setCurrentPassword] = useState("")
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [totpCode, setTotpCode] = useState("")
-  const [revokeOtherSessions, setRevokeOtherSessions] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (visible) {
-      setCurrentPassword("")
-      setNewPassword("")
-      setConfirmPassword("")
-      setTotpCode("")
-      setRevokeOtherSessions(true)
-      setError(null)
-    }
-  }, [visible])
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+      totpCode: "",
+      revokeOtherSessions: true,
+    },
+  })
 
   const handleClose = () => {
-    if (changePasswordMutation.isPending) return
+    if (changePasswordMutation.isPending || isSubmitting) return
     haptics.light()
+    reset({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+      totpCode: "",
+      revokeOtherSessions: true,
+    })
+    setError(null)
     onClose()
   }
 
-  const handleSubmit = async () => {
+  const onValid = async (values: ChangePasswordFormValues) => {
     setError(null)
 
-    if (!currentPassword) {
-      setError("Please enter your current password.")
-      haptics.error()
-      return
-    }
-    if (!newPassword) {
-      setError("Please enter your new password.")
-      haptics.error()
-      return
-    }
-    if (newPassword.length < 8) {
-      setError("New password must be at least 8 characters.")
-      haptics.error()
-      return
-    }
-    if (newPassword === currentPassword) {
-      setError("New password cannot be the same as your current password.")
-      haptics.error()
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.")
-      haptics.error()
-      return
-    }
-    if (hasActiveMfa && totpCode.trim().length !== 6) {
+    if (
+      hasActiveMfa &&
+      (!values.totpCode || values.totpCode.trim().length !== 6)
+    ) {
       setError("Please enter the 6-digit authenticator code.")
       haptics.error()
       return
@@ -96,10 +87,10 @@ export function ChangePasswordModal({
     try {
       haptics.medium()
       const res = await changePasswordMutation.mutateAsync({
-        currentPassword,
-        newPassword,
-        totpCode: hasActiveMfa ? totpCode.trim() : "",
-        revokeOtherSessions,
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+        totpCode: hasActiveMfa ? values.totpCode?.trim() || "" : "",
+        revokeOtherSessions: values.revokeOtherSessions,
       })
 
       if (res?.accessToken) {
@@ -113,10 +104,18 @@ export function ChangePasswordModal({
       toast.show({
         type: "success",
         title: "Password Changed",
-        message: revokeOtherSessions
+        message: values.revokeOtherSessions
           ? "Your password was updated and other devices logged out."
           : "Your password was updated successfully.",
       })
+      reset({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+        totpCode: "",
+        revokeOtherSessions: true,
+      })
+      setError(null)
       onClose()
     } catch (err: unknown) {
       haptics.error()
@@ -125,6 +124,8 @@ export function ChangePasswordModal({
       setError(msg)
     }
   }
+
+  const isPending = changePasswordMutation.isPending || isSubmitting
 
   return (
     <Modal
@@ -158,7 +159,7 @@ export function ChangePasswordModal({
             <TouchableOpacity
               onPress={handleClose}
               style={styles.closeButton}
-              disabled={changePasswordMutation.isPending}
+              disabled={isPending}
             >
               <X size={20} color={theme.colors.textMuted} />
             </TouchableOpacity>
@@ -177,29 +178,29 @@ export function ChangePasswordModal({
             )}
 
             <TextInput
+              control={control}
+              name="currentPassword"
               label="Current Password"
               placeholder="Enter current password"
               isPassword
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
               containerStyle={styles.inputSpacing}
             />
 
             <TextInput
+              control={control}
+              name="newPassword"
               label="New Password"
               placeholder="Enter new password (min. 8 chars)"
               isPassword
-              value={newPassword}
-              onChangeText={setNewPassword}
               containerStyle={styles.inputSpacing}
             />
 
             <TextInput
+              control={control}
+              name="confirmPassword"
               label="Confirm New Password"
               placeholder="Confirm new password"
               isPassword
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
               containerStyle={styles.inputSpacing}
             />
 
@@ -212,31 +213,21 @@ export function ChangePasswordModal({
                   Enter the 6-digit code from your authenticator app.
                 </Text>
                 <OTPInput
-                  value={totpCode}
-                  onChangeText={setTotpCode}
+                  control={control}
+                  name="totpCode"
                   length={6}
                   containerStyle={styles.otpSpacing}
                 />
               </View>
             )}
 
-            <View style={styles.switchRow}>
-              <View style={styles.switchInfo}>
-                <Text style={styles.switchTitle}>Sign out other devices</Text>
-                <Text style={styles.switchSubtitle}>
-                  Revokes all active sessions on other phones and computers.
-                </Text>
-              </View>
-              <Switch
-                value={revokeOtherSessions}
-                onValueChange={setRevokeOtherSessions}
-                trackColor={{
-                  false: theme.colors.border,
-                  true: theme.colors.primary,
-                }}
-                thumbColor={Platform.OS === "android" ? "#ffffff" : undefined}
-              />
-            </View>
+            <FormSwitchRow
+              control={control}
+              name="revokeOtherSessions"
+              label="Sign out other devices"
+              subtitle="Revokes all active sessions on other phones and computers."
+              containerStyle={{ paddingHorizontal: 0, paddingVertical: 8 }}
+            />
           </ScrollView>
 
           {/* Action Buttons */}
@@ -245,7 +236,7 @@ export function ChangePasswordModal({
               variant="outline"
               size="md"
               onPress={handleClose}
-              disabled={changePasswordMutation.isPending}
+              disabled={isPending}
               style={styles.actionBtn}
             >
               Cancel
@@ -253,8 +244,8 @@ export function ChangePasswordModal({
             <Button
               variant="primary"
               size="md"
-              onPress={handleSubmit}
-              loading={changePasswordMutation.isPending}
+              onPress={handleSubmit(onValid)}
+              loading={isPending}
               style={styles.actionBtn}
             >
               Update Password

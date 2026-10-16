@@ -2,214 +2,204 @@ import React from "react"
 import {
   View,
   Text,
+  TextInput as RNTextInput,
   TouchableOpacity,
+  Keyboard,
   StyleSheet,
+  Platform,
   type StyleProp,
   type ViewStyle,
 } from "react-native"
-import { Delete } from "lucide-react-native"
+import { ChevronDown, AlertCircle } from "lucide-react-native"
+import {
+  Controller,
+  type Control,
+  type FieldValues,
+  type Path,
+} from "react-hook-form"
 import { theme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
 
-export interface AmountInputProps {
-  cents: number
-  onChangeCents: (cents: number) => void
+export function sanitizeAmountString(val: string): string {
+  if (!val) return ""
+  let clean = val.replace(/[^0-9.]/g, "")
+  const parts = clean.split(".")
+  if (parts.length > 2) {
+    clean = parts[0] + "." + parts.slice(1).join("")
+  }
+  const [intPart, decPart] = clean.split(".")
+  if (decPart !== undefined) {
+    clean = `${intPart}.${decPart.slice(0, 2)}`
+  }
+  return clean
+}
+
+export interface HeroAmountInputProps<
+  TFieldValues extends FieldValues = FieldValues,
+> {
+  control: Control<TFieldValues>
+  name: Path<TFieldValues>
+  label?: string
+  currency?: string
   currencySymbol?: string
-  currencyCode?: string
-  type?: "expense" | "income" | "transfer"
+  onPressCurrency?: () => void
+  currencyDisabled?: boolean
+  accentColor?: string
+  placeholder?: string
+  autoFocus?: boolean
   containerStyle?: StyleProp<ViewStyle>
 }
 
-export function AmountInput({
-  cents,
-  onChangeCents,
+export function HeroAmountInput<
+  TFieldValues extends FieldValues = FieldValues,
+>({
+  control,
+  name,
+  label = "AMOUNT",
+  currency,
   currencySymbol = "$",
-  currencyCode = "USD",
-  type = "expense",
+  onPressCurrency,
+  currencyDisabled = false,
+  accentColor = theme.colors.destructive,
+  placeholder = "0.00",
+  autoFocus = false,
   containerStyle,
-}: AmountInputProps) {
-  const handleDigit = (digit: string) => {
-    haptics.light()
-    const centsStr = cents.toString()
-    if (centsStr.length >= 10) return // Limit max digits
-    const nextCents = parseInt(cents === 0 ? digit : centsStr + digit, 10)
-    onChangeCents(nextCents)
-  }
-
-  const handleBackspace = () => {
-    haptics.light()
-    const centsStr = cents.toString()
-    if (centsStr.length <= 1) {
-      onChangeCents(0)
-    } else {
-      onChangeCents(parseInt(centsStr.slice(0, -1), 10))
-    }
-  }
-
-  const handleQuickAdd = (addCents: number) => {
-    haptics.medium()
-    onChangeCents(cents + addCents)
-  }
-
-  const formattedAmount = (cents / 100).toFixed(2)
-
-  const colorByType =
-    type === "income"
-      ? theme.colors.success
-      : type === "expense"
-        ? theme.colors.textPrimary
-        : theme.colors.accent
-
+}: HeroAmountInputProps<TFieldValues>) {
   return (
-    <View style={[styles.container, containerStyle]}>
-      {/* Display */}
-      <View style={styles.displayContainer}>
-        <Text
-          style={[styles.currencySymbol, { color: colorByType }]}
-          numberOfLines={1}
-        >
-          {currencySymbol}
-        </Text>
-        <Text style={[styles.amountDisplay, { color: colorByType }]}>
-          {formattedAmount}
-        </Text>
-        {currencyCode && (
-          <Text style={styles.currencyCode} numberOfLines={1}>
-            {currencyCode}
-          </Text>
-        )}
-      </View>
+    <Controller
+      control={control}
+      name={name}
+      render={({ field, fieldState }) => {
+        const fieldError = fieldState.error?.message
+        const handleChangeText = (text: string) => {
+          field.onChange(sanitizeAmountString(text))
+        }
 
-      {/* Quick Add Chips */}
-      <View style={styles.chipsRow}>
-        {[1000, 2000, 5000, 10000].map((addAmount) => (
-          <TouchableOpacity
-            key={addAmount}
-            activeOpacity={0.7}
-            onPress={() => handleQuickAdd(addAmount)}
-            style={styles.chip}
-          >
-            <Text style={styles.chipText}>
-              +{currencySymbol}
-              {addAmount / 100}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+        return (
+          <View style={[styles.amountCard, containerStyle]}>
+            {label ? (
+              <Text style={styles.fieldSectionLabel}>{label}</Text>
+            ) : null}
+            <View style={styles.amountInputRow}>
+              <Text
+                style={[styles.amountCurrencyPrefix, { color: accentColor }]}
+              >
+                {currencySymbol}
+              </Text>
+              <RNTextInput
+                ref={field.ref}
+                style={[styles.amountInput, { color: accentColor }]}
+                keyboardType="decimal-pad"
+                value={
+                  field.value !== undefined && field.value !== null
+                    ? String(field.value)
+                    : ""
+                }
+                placeholder={placeholder}
+                placeholderTextColor={theme.colors.textMuted}
+                onChangeText={handleChangeText}
+                autoFocus={autoFocus}
+                selectionColor={accentColor}
+              />
 
-      {/* Custom Numeric Keypad */}
-      <View style={styles.keypad}>
-        {[
-          ["1", "2", "3"],
-          ["4", "5", "6"],
-          ["7", "8", "9"],
-          ["00", "0", "DEL"],
-        ].map((row, rowIndex) => (
-          <View key={rowIndex} style={styles.keypadRow}>
-            {row.map((key) => {
-              const isDelete = key === "DEL"
-              return (
+              {currency ? (
                 <TouchableOpacity
-                  key={key}
-                  activeOpacity={0.6}
+                  style={styles.currencySelectButton}
+                  activeOpacity={onPressCurrency && !currencyDisabled ? 0.7 : 1}
                   onPress={() => {
-                    if (isDelete) {
-                      handleBackspace()
-                    } else if (key === "00") {
-                      haptics.light()
-                      if (cents > 0) onChangeCents(cents * 100)
-                    } else {
-                      handleDigit(key)
+                    if (onPressCurrency && !currencyDisabled) {
+                      Keyboard.dismiss()
+                      onPressCurrency()
                     }
                   }}
-                  style={styles.keypadKey}
+                  disabled={!onPressCurrency || currencyDisabled}
                 >
-                  {isDelete ? (
-                    <Delete size={22} color={theme.colors.textMuted} />
-                  ) : (
-                    <Text style={styles.keyText}>{key}</Text>
+                  <Text style={styles.currencySelectCode} numberOfLines={1}>
+                    {currency.toUpperCase()}
+                  </Text>
+                  {onPressCurrency && !currencyDisabled && (
+                    <ChevronDown size={14} color={theme.colors.textMuted} />
                   )}
                 </TouchableOpacity>
-              )
-            })}
+              ) : null}
+            </View>
+            {fieldError ? (
+              <View style={styles.errorRow}>
+                <AlertCircle size={13} color={theme.colors.destructive} />
+                <Text style={styles.errorText}>{fieldError}</Text>
+              </View>
+            ) : null}
           </View>
-        ))}
-      </View>
-    </View>
+        )
+      }}
+    />
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    width: "100%",
-    paddingVertical: 12,
-  },
-  displayContainer: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "center",
-    marginBottom: 16,
-    gap: 4,
-  },
-  currencySymbol: {
-    fontSize: 28,
-    fontWeight: "700",
-    flexShrink: 0,
-  },
-  amountDisplay: {
-    fontSize: 44,
-    fontWeight: "700",
-    letterSpacing: -1,
-  },
-  currencyCode: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
-    marginLeft: 6,
-    flexShrink: 0,
-  },
-  chipsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 20,
-  },
-  chip: {
+  amountCard: {
     backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.radius.xl,
+    padding: 16,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: theme.radius.full,
+    marginBottom: 12,
   },
-  chipText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
+  fieldSectionLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.textMuted,
+    letterSpacing: 0.6,
+    marginBottom: 6,
   },
-  keypad: {
-    width: "100%",
-    maxWidth: 320,
-    gap: 8,
-  },
-  keypadRow: {
+  amountInputRow: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    gap: 8,
   },
-  keypadKey: {
+  amountCurrencyPrefix: {
+    fontSize: 34,
+    fontWeight: "800",
+    marginRight: 4,
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    flexShrink: 0,
+  },
+  amountInput: {
     flex: 1,
-    height: 54,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    fontSize: 34,
+    fontWeight: "800",
+    padding: 0,
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+  },
+  currencySelectButton: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    minWidth: 68,
   },
-  keyText: {
-    fontSize: 20,
-    fontWeight: "600",
+  currencySelectCode: {
+    fontSize: 13,
+    fontWeight: "700",
     color: theme.colors.textPrimary,
+    letterSpacing: 0.5,
+    flexShrink: 0,
+  },
+  errorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+  },
+  errorText: {
+    fontSize: 12,
+    color: theme.colors.destructive,
+    fontWeight: "500",
   },
 })

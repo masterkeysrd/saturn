@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useState, useMemo } from "react"
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,7 @@ import {
   Platform,
   Modal,
   FlatList,
+  TextInput as RNTextInput,
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useQueryClient } from "@tanstack/react-query"
@@ -24,6 +25,14 @@ import {
   Search,
   X,
 } from "lucide-react-native"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import {
+  spaceDetailsSchema,
+  addMemberSchema,
+  type SpaceDetailsFormValues,
+  type AddMemberFormValues,
+} from "@saturn/schemas"
 import {
   useUpdateSpaceMutation,
   useListSpaceMembersQuery,
@@ -32,12 +41,13 @@ import {
   useUpdateSettingsMutation,
   type SpaceMember_Role,
 } from "@saturn/api/saturn/space/v1/space"
-import { COMMON_TIMEZONES } from "@saturn/core"
+import { COMMON_TIMEZONES, SPACE_ROLE_OPTIONS } from "@saturn/core"
 import { useSpace } from "@/lib/space-context"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
 import { TextInput } from "@/components/ui/text-input"
+import { FormPillGroup } from "@/components/ui/form-primitives"
 import { Button } from "@/components/ui/button"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -61,29 +71,38 @@ export default function SpaceSettingsScreen() {
     timezone,
   } = useSpace()
 
-  // Form states
-  const [name, setName] = useState(activeSpace?.name || "")
-  const [description, setDescription] = useState(activeSpace?.description || "")
-  const [hasChanges, setHasChanges] = useState(false)
+  const spaceDefaultValues: SpaceDetailsFormValues = useMemo(
+    () => ({
+      name: activeSpace?.name || "",
+      description: activeSpace?.description || "",
+    }),
+    [activeSpace?.name, activeSpace?.description]
+  )
+
+  // Space Form
+  const spaceForm = useForm<SpaceDetailsFormValues>({
+    resolver: zodResolver(spaceDetailsSchema),
+    defaultValues: spaceDefaultValues,
+    values: spaceDefaultValues,
+    resetOptions: { keepDirtyValues: true },
+  })
 
   // Timezone states
   const [timezoneModalVisible, setTimezoneModalVisible] = useState(false)
   const [timezoneSearch, setTimezoneSearch] = useState("")
 
-  // Member invitation states
+  // Member invitation form
   const [inviteModalVisible, setInviteModalVisible] = useState(false)
-  const [newUserId, setNewUserId] = useState("")
-  const [newRole, setNewRole] = useState<SpaceMember_Role>("MEMBER")
+  const memberForm = useForm<AddMemberFormValues>({
+    resolver: zodResolver(addMemberSchema),
+    defaultValues: {
+      userId: "",
+      role: "MEMBER",
+    },
+  })
 
   // Member removal states
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (activeSpace) {
-      setName(activeSpace.name)
-      setDescription(activeSpace.description || "")
-    }
-  }, [activeSpace])
 
   // Queries & Mutations
   const {
@@ -145,16 +164,7 @@ export default function SpaceSettingsScreen() {
     return COMMON_TIMEZONES.filter((tz) => tz.toLowerCase().includes(q))
   }, [timezoneSearch])
 
-  const handleSaveSpace = async () => {
-    if (!name.trim()) {
-      toast.show({
-        type: "error",
-        title: "Validation Error",
-        message: "Workspace name cannot be empty",
-      })
-      return
-    }
-
+  const handleSaveSpace = async (values: SpaceDetailsFormValues) => {
     try {
       await updateSpaceMutation.mutateAsync({
         space_id: activeSpaceId || "",
@@ -162,14 +172,14 @@ export default function SpaceSettingsScreen() {
           spaceId: activeSpaceId || "",
           space: {
             id: activeSpaceId || "",
-            name: name.trim(),
-            description: description.trim(),
+            name: values.name.trim(),
+            description: values.description?.trim() || "",
           },
           updateMask: { paths: ["name", "description"] },
         },
       })
       refetchSpaces()
-      setHasChanges(false)
+      spaceForm.reset(values)
       toast.show({
         type: "success",
         title: "Workspace Updated",
@@ -185,30 +195,21 @@ export default function SpaceSettingsScreen() {
     }
   }
 
-  const handleAddMember = async () => {
-    if (!newUserId.trim()) {
-      toast.show({
-        type: "error",
-        title: "Validation Error",
-        message: "Please enter a valid user ID or username",
-      })
-      return
-    }
-
+  const handleAddMember = async (values: AddMemberFormValues) => {
     try {
       await createMemberMutation.mutateAsync({
         space_id: activeSpaceId || "",
         req: {
           spaceId: activeSpaceId || "",
           member: {
-            userId: newUserId.trim(),
-            role: newRole,
+            userId: values.userId.trim(),
+            role: values.role as SpaceMember_Role,
           },
         },
       })
       refetchMembers()
       setInviteModalVisible(false)
-      setNewUserId("")
+      memberForm.reset({ userId: "", role: "MEMBER" })
       toast.show({
         type: "success",
         title: "Member Added",
@@ -252,6 +253,7 @@ export default function SpaceSettingsScreen() {
   }
 
   const members = membersData?.members || []
+  const isDirty = spaceForm.formState.isDirty
 
   return (
     <KeyboardAvoidingView
@@ -270,24 +272,18 @@ export default function SpaceSettingsScreen() {
           <Caption style={styles.sectionHeader}>WORKSPACE DETAILS</Caption>
           <Card style={styles.card}>
             <TextInput
+              control={spaceForm.control}
+              name="name"
               label="Workspace Name"
-              value={name}
               editable={canManageMembers}
-              onChangeText={(val) => {
-                setName(val)
-                setHasChanges(true)
-              }}
               leftIcon={<Layers size={18} color={theme.colors.primary} />}
             />
 
             <TextInput
+              control={spaceForm.control}
+              name="description"
               label="Description"
-              value={description}
               editable={canManageMembers}
-              onChangeText={(val) => {
-                setDescription(val)
-                setHasChanges(true)
-              }}
               multiline
               numberOfLines={2}
             />
@@ -306,15 +302,18 @@ export default function SpaceSettingsScreen() {
               />
             </View>
 
-            {hasChanges && canManageMembers && (
+            {isDirty && canManageMembers && (
               <Button
                 variant="primary"
                 size="md"
-                loading={updateSpaceMutation.isPending}
+                loading={
+                  updateSpaceMutation.isPending ||
+                  spaceForm.formState.isSubmitting
+                }
                 leftIcon={
                   <Check size={16} color={theme.colors.primaryForeground} />
                 }
-                onPress={handleSaveSpace}
+                onPress={spaceForm.handleSubmit(handleSaveSpace)}
                 style={{ marginTop: 8 }}
               >
                 Save Changes
@@ -373,6 +372,7 @@ export default function SpaceSettingsScreen() {
                 }
                 onPress={() => {
                   haptics.light()
+                  memberForm.reset({ userId: "", role: "MEMBER" })
                   setInviteModalVisible(true)
                 }}
               >
@@ -460,39 +460,21 @@ export default function SpaceSettingsScreen() {
               </Text>
 
               <TextInput
+                control={memberForm.control}
+                name="userId"
                 label="User ID"
                 placeholder="usr_..."
-                value={newUserId}
-                onChangeText={setNewUserId}
                 autoCapitalize="none"
               />
 
               <View style={styles.rolePickerSection}>
                 <Caption>ASSIGN ROLE</Caption>
-                <View style={styles.roleButtons}>
-                  {(["MEMBER", "ADMIN", "VIEWER"] as SpaceMember_Role[]).map(
-                    (r) => (
-                      <TouchableOpacity
-                        key={r}
-                        activeOpacity={0.7}
-                        style={[
-                          styles.roleBtn,
-                          newRole === r && styles.roleBtnActive,
-                        ]}
-                        onPress={() => setNewRole(r)}
-                      >
-                        <Text
-                          style={[
-                            styles.roleBtnText,
-                            newRole === r && styles.roleBtnTextActive,
-                          ]}
-                        >
-                          {r}
-                        </Text>
-                      </TouchableOpacity>
-                    )
-                  )}
-                </View>
+                <FormPillGroup
+                  control={memberForm.control}
+                  name="role"
+                  options={SPACE_ROLE_OPTIONS}
+                  pillStyle={{ flex: 1 }}
+                />
               </View>
 
               <View style={styles.inviteActions}>
@@ -508,8 +490,11 @@ export default function SpaceSettingsScreen() {
                   variant="primary"
                   size="md"
                   style={{ flex: 1 }}
-                  loading={createMemberMutation.isPending}
-                  onPress={handleAddMember}
+                  loading={
+                    createMemberMutation.isPending ||
+                    memberForm.formState.isSubmitting
+                  }
+                  onPress={memberForm.handleSubmit(handleAddMember)}
                 >
                   Add
                 </Button>
@@ -544,8 +529,9 @@ export default function SpaceSettingsScreen() {
 
             <View style={styles.tzSearchWrapper}>
               <Search size={18} color={theme.colors.textMuted} />
-              <TextInput
+              <RNTextInput
                 placeholder="Search timezones (e.g. New_York, Santo_Domingo)..."
+                placeholderTextColor={theme.colors.textMuted}
                 value={timezoneSearch}
                 onChangeText={setTimezoneSearch}
                 style={styles.tzSearchInput}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react"
+import React, { useRef, useMemo } from "react"
 import {
   StyleSheet,
   Text,
@@ -9,8 +9,6 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
-  Switch,
-  TextInput,
   Keyboard,
 } from "react-native"
 import { useRouter, useLocalSearchParams, Stack } from "expo-router"
@@ -21,7 +19,6 @@ import {
   Calendar,
   CalendarClock,
   Trash2,
-  ChevronDown,
   User,
   Phone,
   FileText,
@@ -29,7 +26,9 @@ import {
   TrendingDown,
   Landmark,
 } from "lucide-react-native"
-import { borrowingSchema } from "@saturn/schemas"
+import { useForm, useWatch } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { borrowingSchema, type BorrowingFormValues } from "@saturn/schemas"
 import {
   useCreateBorrowingMutation,
   useUpdateBorrowingMutation,
@@ -53,10 +52,6 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import {
-  DatePickerSheet,
-  formatDisplayDate,
-} from "@/components/ui/date-picker-sheet"
-import {
   CurrencyPickerSheet,
   AccountPickerSheet,
 } from "@/components/finance/sheets"
@@ -66,6 +61,12 @@ import {
   invalidateFinanceQueries,
 } from "@/components/finance/finance-utils"
 import { formStyles } from "@/components/finance/forms/form-styles"
+import { HeroAmountInput } from "@/components/ui/amount-input"
+import {
+  FormRowInput,
+  FormDateRow,
+  FormSwitchRow,
+} from "@/components/ui/form-primitives"
 
 export default function ManageBorrowingModal() {
   const router = useRouter()
@@ -78,7 +79,6 @@ export default function ManageBorrowingModal() {
   // Sheet references
   const currencySheetRef = useRef<BottomSheet>(null)
   const accountSheetRef = useRef<BottomSheet>(null)
-  const dateSheetRef = useRef<BottomSheet>(null)
 
   // 1. Settings & Base Currency
   const { data: settingsData } = useGetSettingsQuery(
@@ -113,63 +113,86 @@ export default function ManageBorrowingModal() {
   const { data: existingBorrowing, isLoading: isExistingLoading } =
     useGetBorrowingQuery({ id: editBorrowingId || "" }, { enabled: isEditMode })
 
-  // Form State
-  const [direction, setDirection] = useState<Borrowing_Direction>("LENT")
-  const [counterparty, setCounterparty] = useState("")
-  const [contactInfo, setContactInfo] = useState("")
-  const [amount, setAmount] = useState("")
-  const [currency, setCurrency] = useState(baseCurrency)
-  const [establishedAt, setEstablishedAt] = useState<Date>(() => new Date())
-  const [hasDueDate, setHasDueDate] = useState(false)
-  const [dueAt, setDueAt] = useState<Date>(
-    () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-  )
-  const [createAsTransaction, setCreateAsTransaction] = useState(false)
-  const [accountId, setAccountId] = useState("")
-  const [notes, setNotes] = useState("")
-  const [activeDatePickerTarget, setActiveDatePickerTarget] = useState<
-    "established" | "due"
-  >("established")
-  const [errors, setErrors] = useState<Record<string, string>>({})
-
-  // Initialize values when existing borrowing loads
-  useEffect(() => {
+  const defaultFormValues: BorrowingFormValues = useMemo(() => {
     if (existingBorrowing) {
-      setDirection(existingBorrowing.direction || "LENT")
-      setCounterparty(existingBorrowing.counterparty || "")
-      setContactInfo(existingBorrowing.contactInfo || "")
-      setAmount(formatCents(existingBorrowing.totalAmount).toString())
-      setCurrency(existingBorrowing.currency || baseCurrency)
+      const estDate = existingBorrowing.establishedAt
+        ? new Date(existingBorrowing.establishedAt)
+        : new Date()
+      const dDate = existingBorrowing.dueAt
+        ? new Date(existingBorrowing.dueAt)
+        : undefined
 
-      if (existingBorrowing.establishedAt) {
-        const estDate = new Date(existingBorrowing.establishedAt)
-        if (!isNaN(estDate.getTime())) setEstablishedAt(estDate)
+      return {
+        direction: (existingBorrowing.direction ||
+          "LENT") as Borrowing_Direction,
+        counterparty: existingBorrowing.counterparty || "",
+        contactInfo: existingBorrowing.contactInfo || "",
+        amount: formatCents(existingBorrowing.totalAmount).toString(),
+        currency: existingBorrowing.currency || baseCurrency,
+        establishedAt: !isNaN(estDate.getTime()) ? estDate : new Date(),
+        hasDueDate: Boolean(existingBorrowing.dueAt),
+        dueAt: dDate && !isNaN(dDate.getTime()) ? dDate : undefined,
+        createAsTransaction: Boolean(existingBorrowing.accountId),
+        accountId: existingBorrowing.accountId || "",
+        notes: existingBorrowing.notes || "",
       }
-
-      if (existingBorrowing.dueAt) {
-        const dDate = new Date(existingBorrowing.dueAt)
-        if (!isNaN(dDate.getTime())) {
-          setHasDueDate(true)
-          setDueAt(dDate)
-        }
-      } else {
-        setHasDueDate(false)
-      }
-
-      setCreateAsTransaction(Boolean(existingBorrowing.accountId))
-      setAccountId(existingBorrowing.accountId || "")
-      setNotes(existingBorrowing.notes || "")
-    } else if (!isEditMode) {
-      setCurrency(baseCurrency)
     }
-  }, [existingBorrowing, baseCurrency, isEditMode])
+    return {
+      direction: "LENT",
+      counterparty: "",
+      contactInfo: "",
+      amount: "",
+      currency: baseCurrency,
+      establishedAt: new Date(),
+      hasDueDate: false,
+      dueAt: undefined,
+      createAsTransaction: false,
+      accountId: "",
+      notes: "",
+    }
+  }, [existingBorrowing, baseCurrency])
+
+  // RHF Form
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    getValues,
+    formState: { isSubmitting },
+  } = useForm<BorrowingFormValues>({
+    resolver: zodResolver(borrowingSchema),
+    defaultValues: defaultFormValues,
+    values: defaultFormValues,
+    resetOptions: { keepDirtyValues: true },
+  })
+
+  // Watch only discrete selector fields
+  const [
+    direction = "LENT",
+    currency = baseCurrency,
+    hasDueDate = false,
+    createAsTransaction = false,
+    accountId = "",
+    amount = "",
+  ] = useWatch({
+    control,
+    name: [
+      "direction",
+      "currency",
+      "hasDueDate",
+      "createAsTransaction",
+      "accountId",
+      "amount",
+    ] as const,
+  })
 
   // Mutations
   const createMutation = useCreateBorrowingMutation()
   const updateMutation = useUpdateBorrowingMutation()
   const deleteMutation = useDeleteBorrowingMutation()
 
-  const isSaving = createMutation.isPending || updateMutation.isPending
+  const isSaving =
+    createMutation.isPending || updateMutation.isPending || isSubmitting
   const isDeleting = deleteMutation.isPending
 
   const selectedAccount = useMemo(
@@ -179,67 +202,29 @@ export default function ManageBorrowingModal() {
 
   const currentSymbol = getCurrencySymbol(currency)
 
-  // Amount input handler
-  const handleAmountChange = (text: string) => {
-    let cleaned = text.replace(/[^0-9.]/g, "")
-    const parts = cleaned.split(".")
-    if (parts.length > 2) {
-      cleaned = parts[0] + "." + parts.slice(1).join("")
-    }
-    if (parts[1] && parts[1].length > 2) {
-      cleaned = parts[0] + "." + parts[1].slice(0, 2)
-    }
-    setAmount(cleaned)
-    if (errors.amount) {
-      setErrors((prev) => ({ ...prev, amount: "" }))
-    }
-  }
-
-  const handleSave = async () => {
+  const onValid = async (values: BorrowingFormValues) => {
     haptics.light()
-    setErrors({})
 
-    const validation = borrowingSchema.safeParse({
-      direction,
-      counterparty: counterparty.trim(),
-      contactInfo: contactInfo.trim() || undefined,
-      amount: amount.trim(),
-      currency,
-      establishedAt,
-      hasDueDate,
-      dueAt: hasDueDate ? dueAt : undefined,
-      createAsTransaction: !isEditMode && createAsTransaction,
-      notes: notes.trim() || undefined,
-    })
-
-    if (!validation.success) {
-      haptics.warning()
-      const newErrors: Record<string, string> = {}
-      validation.error.issues.forEach((issue) => {
-        const fieldName = issue.path[0]?.toString() || "form"
-        newErrors[fieldName] = issue.message
-      })
-      setErrors(newErrors)
-      return
-    }
-
-    const centsAmount = toCentsString(amount)
+    const centsAmount = toCentsString(values.amount)
 
     try {
       const borrowingPayload = {
-        direction,
-        counterparty: counterparty.trim(),
-        contactInfo: contactInfo.trim(),
+        direction: values.direction,
+        counterparty: values.counterparty.trim(),
+        contactInfo: values.contactInfo?.trim() || "",
         totalAmount: centsAmount,
-        currency,
-        establishedAt: establishedAt.toISOString(),
-        dueAt: hasDueDate && dueAt ? dueAt.toISOString() : undefined,
-        createAsTransaction: !isEditMode && createAsTransaction,
-        accountId:
-          !isEditMode && createAsTransaction && accountId
-            ? accountId
+        currency: values.currency,
+        establishedAt: values.establishedAt.toISOString(),
+        dueAt:
+          values.hasDueDate && values.dueAt
+            ? values.dueAt.toISOString()
             : undefined,
-        notes: notes.trim(),
+        createAsTransaction: !isEditMode && values.createAsTransaction,
+        accountId:
+          !isEditMode && values.createAsTransaction && values.accountId
+            ? values.accountId
+            : undefined,
+        notes: values.notes?.trim() || "",
         status: existingBorrowing?.status || "ACTIVE",
       } as Borrowing
 
@@ -254,7 +239,7 @@ export default function ManageBorrowingModal() {
         haptics.success()
         toast.show({
           title: "Agreement Updated",
-          message: `Debt record with ${counterparty.trim()} was updated.`,
+          message: `Debt record with ${values.counterparty.trim()} was updated.`,
           type: "success",
         })
       } else {
@@ -264,7 +249,7 @@ export default function ManageBorrowingModal() {
         haptics.success()
         toast.show({
           title: "Agreement Recorded",
-          message: `Debt record with ${counterparty.trim()} has been saved.`,
+          message: `Debt record with ${values.counterparty.trim()} has been saved.`,
           type: "success",
         })
       }
@@ -283,6 +268,7 @@ export default function ManageBorrowingModal() {
 
   const handleDelete = () => {
     if (!editBorrowingId) return
+    const counterparty = getValues("counterparty")
     haptics.warning()
 
     Alert.alert(
@@ -371,7 +357,7 @@ export default function ManageBorrowingModal() {
               ]}
               onPress={() => {
                 haptics.selection()
-                setDirection("LENT")
+                setValue("direction", "LENT", { shouldValidate: true })
               }}
               activeOpacity={0.7}
             >
@@ -396,7 +382,7 @@ export default function ManageBorrowingModal() {
               ]}
               onPress={() => {
                 haptics.selection()
-                setDirection("BORROWED")
+                setValue("direction", "BORROWED", { shouldValidate: true })
               }}
               activeOpacity={0.7}
             >
@@ -418,185 +404,81 @@ export default function ManageBorrowingModal() {
           </View>
 
           {/* 2. Amount Card */}
-          <Card style={styles.amountCard}>
-            <Text style={styles.fieldSectionLabel}>PRINCIPAL AMOUNT</Text>
-            <View style={styles.amountInputRow}>
-              <Text
-                style={[
-                  styles.amountCurrencyPrefix,
-                  {
-                    color: isLent
-                      ? theme.colors.success
-                      : theme.colors.destructive,
-                  },
-                ]}
-              >
-                {currentSymbol}
-              </Text>
-              <TextInput
-                style={[
-                  styles.amountInput,
-                  {
-                    color: isLent
-                      ? theme.colors.success
-                      : theme.colors.destructive,
-                  },
-                ]}
-                placeholder="0.00"
-                placeholderTextColor={theme.colors.textMuted}
-                keyboardType="decimal-pad"
-                value={amount}
-                onChangeText={handleAmountChange}
-                selectionColor={
-                  isLent ? theme.colors.success : theme.colors.destructive
-                }
-              />
-              <TouchableOpacity
-                onPress={() => {
-                  haptics.light()
-                  Keyboard.dismiss()
-                  currencySheetRef.current?.expand()
-                }}
-                style={styles.currencySelectButton}
-              >
-                <Text style={styles.currencySelectCode} numberOfLines={1}>
-                  {currency}
-                </Text>
-                <ChevronDown size={14} color={theme.colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-            {errors.amount ? (
-              <Text style={styles.errorText}>{errors.amount}</Text>
-            ) : null}
-          </Card>
+          <HeroAmountInput
+            control={control}
+            name="amount"
+            currency={currency}
+            currencySymbol={currentSymbol}
+            onPressCurrency={() => {
+              Keyboard.dismiss()
+              currencySheetRef.current?.expand()
+            }}
+            accentColor={
+              isLent ? theme.colors.success : theme.colors.destructive
+            }
+            autoFocus
+          />
 
           {/* 3. Agreement Details Card */}
           <Card style={formStyles.formGroupCard}>
             {/* Counterparty Name */}
-            <View style={formStyles.formRow}>
-              <View style={formStyles.formRowLabelGroup}>
-                <User size={16} color={theme.colors.textMuted} />
-                <Text style={formStyles.formRowLabel}>
-                  {isLent ? "Borrower" : "Lender"}
-                </Text>
-              </View>
-              <TextInput
-                style={formStyles.formRowInput}
-                placeholder="Name of contact / institution"
-                placeholderTextColor={theme.colors.textMuted}
-                value={counterparty}
-                onChangeText={(val) => {
-                  setCounterparty(val)
-                  if (errors.counterparty) {
-                    setErrors((prev) => ({ ...prev, counterparty: "" }))
-                  }
-                }}
-                returnKeyType="next"
-              />
-            </View>
-            {errors.counterparty ? (
-              <Text style={[styles.errorText, { paddingHorizontal: 16 }]}>
-                {errors.counterparty}
-              </Text>
-            ) : null}
+            <FormRowInput
+              control={control}
+              name="counterparty"
+              label={isLent ? "Borrower" : "Lender"}
+              icon={<User size={16} color={theme.colors.textMuted} />}
+              placeholder="Name of contact / institution"
+              returnKeyType="next"
+            />
 
             {/* Contact Info (Optional) */}
             <View style={formStyles.rowDivider} />
-            <View style={formStyles.formRow}>
-              <View style={formStyles.formRowLabelGroup}>
-                <Phone size={16} color={theme.colors.textMuted} />
-                <Text style={formStyles.formRowLabel}>Contact</Text>
-              </View>
-              <TextInput
-                style={formStyles.formRowInput}
-                placeholder="Email, phone or handle (optional)"
-                placeholderTextColor={theme.colors.textMuted}
-                value={contactInfo}
-                onChangeText={setContactInfo}
-                returnKeyType="next"
-              />
-            </View>
+            <FormRowInput
+              control={control}
+              name="contactInfo"
+              label="Contact"
+              icon={<Phone size={16} color={theme.colors.textMuted} />}
+              placeholder="Email, phone or handle (optional)"
+              returnKeyType="next"
+            />
 
             {/* Date Established */}
             <View style={formStyles.rowDivider} />
-            <TouchableOpacity
-              style={formStyles.formRow}
-              activeOpacity={0.7}
-              onPress={() => {
-                Keyboard.dismiss()
-                setActiveDatePickerTarget("established")
-                dateSheetRef.current?.expand()
-              }}
-            >
-              <View style={formStyles.formRowLabelGroup}>
-                <Calendar size={16} color={theme.colors.textMuted} />
-                <Text style={formStyles.formRowLabel}>Established Date</Text>
-              </View>
-              <View style={formStyles.formRowValueGroup}>
-                <Text style={formStyles.formRowValueText}>
-                  {formatDisplayDate(establishedAt)}
-                </Text>
-              </View>
-            </TouchableOpacity>
+            <FormDateRow
+              control={control}
+              name="establishedAt"
+              label="Established Date"
+              icon={<Calendar size={16} color={theme.colors.textMuted} />}
+              title="Select Established Date"
+            />
 
             {/* Has Due Date Toggle */}
             <View style={formStyles.rowDivider} />
-            <View style={formStyles.formRow}>
-              <View style={formStyles.formRowLabelGroup}>
-                <CalendarClock size={16} color={theme.colors.textMuted} />
-                <Text style={formStyles.formRowLabel}>Set Due Date</Text>
-              </View>
-              <Switch
-                value={hasDueDate}
-                onValueChange={(val) => {
-                  haptics.selection()
-                  setHasDueDate(val)
-                }}
-                trackColor={{
-                  false: theme.colors.surfaceElevated,
-                  true: theme.colors.primary,
-                }}
-                thumbColor="#ffffff"
-              />
-            </View>
+            <FormSwitchRow
+              control={control}
+              name="hasDueDate"
+              label="Set Due Date"
+              icon={<CalendarClock size={16} color={theme.colors.textMuted} />}
+            />
 
             {/* Due Date Picker (if enabled) */}
             {hasDueDate && (
               <>
                 <View style={formStyles.rowDivider} />
-                <TouchableOpacity
-                  style={formStyles.formRow}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    Keyboard.dismiss()
-                    setActiveDatePickerTarget("due")
-                    dateSheetRef.current?.expand()
-                  }}
-                >
-                  <View style={formStyles.formRowLabelGroup}>
+                <FormDateRow
+                  control={control}
+                  name="dueAt"
+                  label="Target Due Date"
+                  icon={
                     <CalendarClock
                       size={16}
                       color={
                         isLent ? theme.colors.success : theme.colors.destructive
                       }
                     />
-                    <Text style={formStyles.formRowLabel}>Target Due Date</Text>
-                  </View>
-                  <View style={formStyles.formRowValueGroup}>
-                    <Text
-                      style={[
-                        formStyles.formRowValueText,
-                        {
-                          color: isLent
-                            ? theme.colors.success
-                            : theme.colors.destructive,
-                        },
-                      ]}
-                    >
-                      {formatDisplayDate(dueAt)}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+                  }
+                  title="Select Target Due Date"
+                />
               </>
             )}
           </Card>
@@ -604,34 +486,24 @@ export default function ManageBorrowingModal() {
           {/* 4. Ledger Integration (Initial transaction movement, new records only) */}
           {!isEditMode && (
             <Card style={[formStyles.formGroupCard, { marginTop: 12 }]}>
-              <View style={formStyles.formRow}>
-                <View style={[formStyles.formRowLabelGroup, { flex: 1 }]}>
-                  <Landmark size={16} color={theme.colors.textMuted} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={formStyles.formRowLabel}>Post to Account</Text>
-                    <Text style={styles.subtext}>
-                      {isLent
-                        ? "Record disbursement from bank balance"
-                        : "Record loan receipt to bank balance"}
-                    </Text>
-                  </View>
-                </View>
-                <Switch
-                  value={createAsTransaction}
-                  onValueChange={(val) => {
-                    haptics.selection()
-                    setCreateAsTransaction(val)
-                    if (val && !accountId && accounts.length > 0) {
-                      setAccountId(accounts[0].id || "")
-                    }
-                  }}
-                  trackColor={{
-                    false: theme.colors.surfaceElevated,
-                    true: theme.colors.primary,
-                  }}
-                  thumbColor="#ffffff"
-                />
-              </View>
+              <FormSwitchRow
+                control={control}
+                name="createAsTransaction"
+                label="Post to Account"
+                subtitle={
+                  isLent
+                    ? "Record disbursement from bank balance"
+                    : "Record loan receipt to bank balance"
+                }
+                icon={<Landmark size={16} color={theme.colors.textMuted} />}
+                onValueChange={(val) => {
+                  if (val && !accountId && accounts.length > 0) {
+                    setValue("accountId", accounts[0].id || "", {
+                      shouldValidate: true,
+                    })
+                  }
+                }}
+              />
 
               {createAsTransaction && (
                 <>
@@ -652,21 +524,16 @@ export default function ManageBorrowingModal() {
 
           {/* 5. Notes Card */}
           <Card style={[formStyles.formGroupCard, { marginTop: 12 }]}>
-            <View style={formStyles.formRow}>
-              <View style={formStyles.formRowLabelGroup}>
-                <FileText size={16} color={theme.colors.textMuted} />
-                <Text style={formStyles.formRowLabel}>Notes</Text>
-              </View>
-              <TextInput
-                style={[formStyles.formRowInput, styles.notesInput]}
-                placeholder="Collateral, payment schedule, terms..."
-                placeholderTextColor={theme.colors.textMuted}
-                value={notes}
-                onChangeText={setNotes}
-                multiline
-                numberOfLines={3}
-              />
-            </View>
+            <FormRowInput
+              control={control}
+              name="notes"
+              label="Notes"
+              icon={<FileText size={16} color={theme.colors.textMuted} />}
+              placeholder="Collateral, payment schedule, terms..."
+              multiline
+              numberOfLines={3}
+              style={styles.notesInput}
+            />
           </Card>
 
           {/* Delete Action (Edit Mode only) */}
@@ -700,7 +567,7 @@ export default function ManageBorrowingModal() {
             size="lg"
             variant="primary"
             loading={isSaving}
-            onPress={handleSave}
+            onPress={handleSubmit(onValid)}
             style={[
               styles.submitBtn,
               isLent ? styles.submitBtnLent : styles.submitBtnBorrowed,
@@ -720,7 +587,9 @@ export default function ManageBorrowingModal() {
         ref={currencySheetRef}
         currencies={currencies}
         selectedCurrency={currency}
-        onSelect={(code) => setCurrency(code)}
+        onSelect={(code) =>
+          setValue("currency", code, { shouldValidate: true })
+        }
       />
 
       <AccountPickerSheet
@@ -729,27 +598,10 @@ export default function ManageBorrowingModal() {
         institutions={institutions}
         selectedAccountId={accountId}
         onSelect={(id) => {
-          setAccountId(id)
+          setValue("accountId", id, { shouldValidate: true })
           accountSheetRef.current?.close()
         }}
         allowNoAccount={false}
-      />
-
-      <DatePickerSheet
-        ref={dateSheetRef}
-        title={
-          activeDatePickerTarget === "due"
-            ? "Select Target Due Date"
-            : "Select Established Date"
-        }
-        value={activeDatePickerTarget === "due" ? dueAt : establishedAt}
-        onChange={(d) => {
-          if (activeDatePickerTarget === "due") {
-            setDueAt(d)
-          } else {
-            setEstablishedAt(d)
-          }
-        }}
       />
     </>
   )

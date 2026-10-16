@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useMemo } from "react"
 import {
   StyleSheet,
   Text,
@@ -19,6 +19,12 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react-native"
+import { useForm, useWatch } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import {
+  adjustBalanceSchema,
+  type AdjustBalanceFormValues,
+} from "@saturn/schemas"
 import {
   useGetAccountQuery,
   useAdjustAccountBalanceMutation,
@@ -45,17 +51,31 @@ export default function AdjustBalanceModal() {
     { enabled: !!accountId && !!activeSpaceId }
   )
 
-  const [targetBalanceStr, setTargetBalanceStr] = useState("")
-  const [note, setNote] = useState("Manual balance adjustment")
-  const [error, setError] = useState("")
+  const currentBalance = account?.currentBalance
+  const defaultFormValues: AdjustBalanceFormValues = useMemo(
+    () => ({
+      targetBalance:
+        currentBalance !== undefined
+          ? formatCents(currentBalance).toString()
+          : "",
+      notes: "Manual balance adjustment",
+    }),
+    [currentBalance]
+  )
 
-  const currentBalanceCents = Number(account?.currentBalance || "0")
+  const {
+    control,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm<AdjustBalanceFormValues>({
+    resolver: zodResolver(adjustBalanceSchema),
+    defaultValues: defaultFormValues,
+    values: defaultFormValues,
+    resetOptions: { keepDirtyValues: true },
+  })
 
-  useEffect(() => {
-    if (account?.currentBalance !== undefined) {
-      setTargetBalanceStr(formatCents(account.currentBalance).toString())
-    }
-  }, [account?.currentBalance])
+  const currentBalanceCents = Number(account?.currentBalance || 0)
+  const targetBalanceStr = useWatch({ control, name: "targetBalance" }) || ""
 
   const targetBalanceCents = useMemo(() => {
     if (!targetBalanceStr.trim()) return currentBalanceCents
@@ -66,13 +86,19 @@ export default function AdjustBalanceModal() {
   const differenceCents = targetBalanceCents - currentBalanceCents
 
   const adjustMutation = useAdjustAccountBalanceMutation()
-  const isPending = adjustMutation.isPending
+  const isPending = adjustMutation.isPending || isSubmitting
 
-  const handleAdjust = async () => {
+  const onValid = async (values: AdjustBalanceFormValues) => {
     if (!accountId) return
     haptics.light()
 
-    if (differenceCents === 0) {
+    const targetCents = Number(toCentsString(values.targetBalance))
+    if (isNaN(targetCents)) {
+      return
+    }
+
+    const diffCents = targetCents - currentBalanceCents
+    if (diffCents === 0) {
       toast.show({
         title: "No Adjustment Needed",
         message: "Current balance already matches your entered amount.",
@@ -87,16 +113,16 @@ export default function AdjustBalanceModal() {
         account_id: accountId,
         req: {
           accountId,
-          targetBalance: String(targetBalanceCents),
+          targetBalance: String(targetCents),
           adjustmentDate: new Date().toISOString(),
-          note: note.trim() || undefined,
+          note: values.notes?.trim() || undefined,
         },
       })
 
       haptics.success()
       toast.show({
         title: "Balance Adjusted",
-        message: `Balance adjusted to ${formatAmount(String(targetBalanceCents), account?.currency)}.`,
+        message: `Balance adjusted to ${formatAmount(String(targetCents), account?.currency)}.`,
         type: "success",
       })
 
@@ -186,15 +212,11 @@ export default function AdjustBalanceModal() {
             </Text>
 
             <TextInput
-              value={targetBalanceStr}
-              onChangeText={(text) => {
-                setTargetBalanceStr(text.replace(/[^0-9.-]/g, ""))
-                setError("")
-              }}
+              control={control}
+              name="targetBalance"
               placeholder="0.00"
               placeholderTextColor={theme.colors.textMuted}
               keyboardType="decimal-pad"
-              error={error}
               containerStyle={{ marginTop: 8 }}
             />
           </Card>
@@ -246,8 +268,8 @@ export default function AdjustBalanceModal() {
           <Card style={styles.sectionCard}>
             <Text style={styles.sectionHeaderLabel}>ADJUSTMENT MEMO</Text>
             <TextInput
-              value={note}
-              onChangeText={setNote}
+              control={control}
+              name="notes"
               placeholder="Reason for balance adjustment..."
               placeholderTextColor={theme.colors.textMuted}
             />
@@ -256,7 +278,7 @@ export default function AdjustBalanceModal() {
           {/* Action Button */}
           <View style={styles.actionFooter}>
             <Button
-              onPress={handleAdjust}
+              onPress={handleSubmit(onValid)}
               loading={isPending}
               variant="primary"
               size="lg"

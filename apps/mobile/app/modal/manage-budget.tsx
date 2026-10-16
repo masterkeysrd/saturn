@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useRef, useMemo } from "react"
 import {
   StyleSheet,
   Text,
@@ -14,7 +14,7 @@ import {
 import { useRouter, useLocalSearchParams, Stack } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
 import BottomSheet from "@gorhom/bottom-sheet"
-import { X, Check, ChevronDown, Trash2 } from "lucide-react-native"
+import { X, Trash2 } from "lucide-react-native"
 import {
   useCreateBudgetMutation,
   useUpdateBudgetMutation,
@@ -32,12 +32,13 @@ import {
   type Account_InstitutionInfo,
   type LimitPropagation,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { budgetSchema } from "@saturn/schemas"
+import { useForm, useWatch } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { budgetSchema, type BudgetFormValues } from "@saturn/schemas"
 import {
   toCentsString,
   formatCents,
   getCurrencySymbol,
-  AVAILABLE_COLORS,
   BUDGET_INTERVAL_OPTIONS as INTERVAL_OPTIONS,
   PROPAGATION_OPTIONS,
 } from "@saturn/core"
@@ -46,6 +47,8 @@ import { theme, getNativeBudgetColors } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
 import { TextInput } from "@/components/ui/text-input"
+import { HeroAmountInput } from "@/components/ui/amount-input"
+import { FormPillGroup, FormColorPicker } from "@/components/ui/form-primitives"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import { BUDGET_ICONS, BudgetCategoryIcon } from "@/lib/budget-icons"
@@ -105,43 +108,68 @@ export default function ManageBudgetModal() {
       { enabled: isEditMode && !!editBudgetId && !!activeSpaceId }
     )
 
-  // Form State
-  const [name, setName] = useState("")
-  const [limit, setLimit] = useState("")
-  const [currency, setCurrency] = useState(baseCurrency)
-  const [interval, setInterval] = useState<Budget_RecurrenceInterval>("MONTHLY")
-  const [status, setStatus] = useState<Budget_Status>("ACTIVE")
-  const [color, setColor] = useState("indigo")
-  const [icon, setIcon] = useState("piggy-bank")
-  const [defaultAccountId, setDefaultAccountId] = useState("")
+  const defaultFormValues: BudgetFormValues = useMemo(
+    () => ({
+      name: existingBudget?.name || "",
+      limit: existingBudget?.limitAmount
+        ? formatCents(existingBudget.limitAmount).toString()
+        : "",
+      currency: existingBudget?.currency || baseCurrency,
+      interval: (existingBudget?.interval ||
+        "MONTHLY") as Budget_RecurrenceInterval,
+      status: (existingBudget?.status || "ACTIVE") as Budget_Status,
+      color: existingBudget?.color || "indigo",
+      icon: existingBudget?.icon || "piggy-bank",
+      defaultAccountId: existingBudget?.defaultAccountId || "",
+    }),
+    [existingBudget, baseCurrency]
+  )
+
+  // RHF Form
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    getValues,
+    formState: { isSubmitting },
+  } = useForm<BudgetFormValues>({
+    resolver: zodResolver(budgetSchema),
+    defaultValues: defaultFormValues,
+    values: defaultFormValues,
+    resetOptions: { keepDirtyValues: true },
+  })
+
   const [propagation, setPropagation] = useState<LimitPropagation>(
     "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
   )
-  const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Initialize values when existing budget is loaded
-  useEffect(() => {
-    if (existingBudget) {
-      setName(existingBudget.name || "")
-      setLimit(formatCents(existingBudget.limitAmount || "0").toString())
-      setCurrency(existingBudget.currency || baseCurrency)
-      setInterval(existingBudget.interval || "MONTHLY")
-      setStatus(existingBudget.status || "ACTIVE")
-      setColor(existingBudget.color || "indigo")
-      setIcon(existingBudget.icon || "piggy-bank")
-      setDefaultAccountId(existingBudget.defaultAccountId || "")
-    } else if (!isEditMode) {
-      setCurrency(baseCurrency)
-      setStatus("ACTIVE")
-    }
-  }, [existingBudget, baseCurrency, isEditMode])
+  // Watch only discrete selector fields
+  const [
+    color = "indigo",
+    currency = baseCurrency,
+    interval = "MONTHLY" as Budget_RecurrenceInterval,
+    status = "ACTIVE" as Budget_Status,
+    icon = "piggy-bank",
+    defaultAccountId = "",
+  ] = useWatch({
+    control,
+    name: [
+      "color",
+      "currency",
+      "interval",
+      "status",
+      "icon",
+      "defaultAccountId",
+    ] as const,
+  })
 
   // Mutations
   const createMutation = useCreateBudgetMutation()
   const updateMutation = useUpdateBudgetMutation()
   const deleteMutation = useDeleteBudgetMutation()
 
-  const isSaving = createMutation.isPending || updateMutation.isPending
+  const isSaving =
+    createMutation.isPending || updateMutation.isPending || isSubmitting
   const isDeleting = deleteMutation.isPending
 
   const activeColorMeta = getNativeBudgetColors(color)
@@ -151,38 +179,10 @@ export default function ManageBudgetModal() {
     [accounts, defaultAccountId]
   )
 
-  const handleSave = async () => {
+  const onValid = async (values: BudgetFormValues) => {
     haptics.light()
-    setErrors({})
 
-    // Validation via schema
-    const validation = budgetSchema.safeParse({
-      name,
-      limit,
-      currency,
-      interval,
-      color,
-      icon,
-      defaultAccountId: defaultAccountId || undefined,
-    })
-
-    if (!validation.success) {
-      const fieldErrors: Record<string, string> = {}
-      validation.error.issues.forEach((err) => {
-        const path = err.path[0]?.toString()
-        if (path) fieldErrors[path] = err.message
-      })
-      setErrors(fieldErrors)
-      haptics.warning()
-      toast.show({
-        title: "Validation Error",
-        message: validation.error.issues[0]?.message || "Check required fields",
-        type: "error",
-      })
-      return
-    }
-
-    const centsStr = toCentsString(limit)
+    const centsStr = toCentsString(values.limit)
 
     try {
       if (isEditMode && editBudgetId) {
@@ -193,14 +193,14 @@ export default function ManageBudgetModal() {
             version: existingBudget?.version,
             budget: {
               ...(existingBudget || {}),
-              name: name.trim(),
+              name: values.name.trim(),
               limitAmount: centsStr,
               currency: existingBudget?.currency || baseCurrency,
               interval: existingBudget?.interval || "MONTHLY",
-              status,
-              icon,
-              color,
-              defaultAccountId: defaultAccountId || undefined,
+              status: values.status || "ACTIVE",
+              icon: values.icon,
+              color: values.color,
+              defaultAccountId: values.defaultAccountId || undefined,
             } as Budget,
             propagation,
             updateMask: {
@@ -218,26 +218,26 @@ export default function ManageBudgetModal() {
         haptics.success()
         toast.show({
           title: "Budget Updated",
-          message: `"${name.trim()}" has been updated.`,
+          message: `"${values.name.trim()}" has been updated.`,
           type: "success",
         })
       } else {
         await createMutation.mutateAsync({
           budget: {
-            name: name.trim(),
+            name: values.name.trim(),
             limitAmount: centsStr,
-            currency,
-            interval,
+            currency: values.currency,
+            interval: values.interval,
             status: "ACTIVE",
-            icon,
-            color,
-            defaultAccountId: defaultAccountId || undefined,
+            icon: values.icon,
+            color: values.color,
+            defaultAccountId: values.defaultAccountId || undefined,
           },
         })
         haptics.success()
         toast.show({
           title: "Budget Created",
-          message: `"${name.trim()}" is now active.`,
+          message: `"${values.name.trim()}" is now active.`,
           type: "success",
         })
       }
@@ -256,10 +256,11 @@ export default function ManageBudgetModal() {
 
   const handleDelete = () => {
     if (!editBudgetId) return
+    const budgetName = getValues("name")
     haptics.warning()
     Alert.alert(
       "Delete Budget",
-      `Are you sure you want to delete "${name}"? This cannot be undone.`,
+      `Are you sure you want to delete "${budgetName}"? This cannot be undone.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -274,7 +275,7 @@ export default function ManageBudgetModal() {
               haptics.success()
               toast.show({
                 title: "Budget Deleted",
-                message: `"${name}" was deleted.`,
+                message: `"${budgetName}" was deleted.`,
                 type: "info",
               })
               await invalidateFinanceQueries(queryClient)
@@ -320,7 +321,7 @@ export default function ManageBudgetModal() {
           ),
           headerRight: () => (
             <TouchableOpacity
-              onPress={handleSave}
+              onPress={handleSubmit(onValid)}
               disabled={isSaving}
               style={[styles.headerSaveBtn, isSaving && { opacity: 0.6 }]}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -345,66 +346,30 @@ export default function ManageBudgetModal() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Limit Amount Hero Card */}
-          <Card style={styles.amountCard}>
-            <Text style={styles.sectionHeaderLabel}>BUDGET LIMIT AMOUNT</Text>
-            <View style={styles.amountInputRow}>
-              <Text
-                style={[styles.currencySymbol, { color: activeColorMeta.bar }]}
-              >
-                {getCurrencySymbol(currency)}
-              </Text>
-              <TextInput
-                value={limit}
-                onChangeText={(text) => {
-                  setLimit(text.replace(/[^0-9.]/g, ""))
-                  if (errors.limit)
-                    setErrors((prev) => ({ ...prev, limit: "" }))
-                }}
-                placeholder="0.00"
-                placeholderTextColor={theme.colors.textMuted}
-                keyboardType="decimal-pad"
-                containerStyle={styles.amountInputContainer}
-                inputContainerStyle={styles.amountInputWrapper}
-                style={[styles.amountInput, { color: activeColorMeta.text }]}
-              />
-
-              <TouchableOpacity
-                disabled={isEditMode}
-                onPress={() => {
-                  haptics.light()
-                  currencySheetRef.current?.expand()
-                }}
-                style={[
-                  styles.currencySelectButton,
-                  isEditMode && styles.currencySelectButtonDisabled,
-                ]}
-              >
-                <Text style={styles.currencySelectCode} numberOfLines={1}>
-                  {currency}
-                </Text>
-                {!isEditMode && (
-                  <ChevronDown size={14} color={theme.colors.textMuted} />
-                )}
-              </TouchableOpacity>
-            </View>
-            {errors.limit ? (
-              <Text style={styles.errorText}>{errors.limit}</Text>
-            ) : null}
-          </Card>
+          <HeroAmountInput
+            control={control}
+            name="limit"
+            label="BUDGET LIMIT AMOUNT"
+            currency={currency}
+            currencySymbol={getCurrencySymbol(currency)}
+            currencyDisabled={isEditMode}
+            onPressCurrency={() => {
+              haptics.light()
+              currencySheetRef.current?.expand()
+            }}
+            accentColor={activeColorMeta.bar}
+            containerStyle={{ marginBottom: 0 }}
+          />
 
           {/* Budget Name Card */}
           <Card style={styles.sectionCard}>
             <Text style={styles.sectionHeaderLabel}>BUDGET DETAILS</Text>
             <TextInput
+              control={control}
+              name="name"
               label="Budget Name"
-              value={name}
-              onChangeText={(text) => {
-                setName(text)
-                if (errors.name) setErrors((prev) => ({ ...prev, name: "" }))
-              }}
               placeholder="e.g. Dining & Restaurants, Groceries, Rent"
               placeholderTextColor={theme.colors.textMuted}
-              error={errors.name}
               containerStyle={{ marginBottom: 16 }}
             />
 
@@ -435,39 +400,16 @@ export default function ManageBudgetModal() {
                 </View>
               </View>
             ) : (
-              <View style={styles.intervalRow}>
-                {INTERVAL_OPTIONS.map((opt) => {
-                  const isSelected = interval === opt.value
-                  return (
-                    <TouchableOpacity
-                      key={opt.value}
-                      onPress={() => {
-                        haptics.selection()
-                        setInterval(opt.value)
-                      }}
-                      style={[
-                        styles.intervalPill,
-                        isSelected && [
-                          styles.intervalPillActive,
-                          { borderColor: activeColorMeta.bar },
-                        ],
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.intervalPillText,
-                          isSelected && [
-                            styles.intervalPillTextActive,
-                            { color: activeColorMeta.text },
-                          ],
-                        ]}
-                      >
-                        {opt.label}
-                      </Text>
-                    </TouchableOpacity>
-                  )
-                })}
-              </View>
+              <FormPillGroup
+                control={control}
+                name="interval"
+                options={INTERVAL_OPTIONS}
+                activeColor={activeColorMeta.bar}
+                activeBg={activeColorMeta.bg}
+                activeBorder={activeColorMeta.bar}
+                activeTextColor={activeColorMeta.text}
+                pillStyle={{ flex: 1 }}
+              />
             )}
 
             {/* Limit Propagation Rule (Edit mode only) */}
@@ -524,59 +466,34 @@ export default function ManageBudgetModal() {
                 <Text style={[styles.fieldSubLabel, { marginTop: 16 }]}>
                   Budget Status
                 </Text>
-                <View style={styles.intervalRow}>
-                  {(
-                    [
-                      { value: "ACTIVE", label: "Active" },
-                      { value: "PAUSED", label: "Paused" },
-                      { value: "CLOSED", label: "Closed" },
-                    ] as const
-                  ).map((opt) => {
-                    const isSelected = status === opt.value
-                    return (
-                      <TouchableOpacity
-                        key={opt.value}
-                        onPress={() => {
-                          haptics.selection()
-                          setStatus(opt.value as Budget_Status)
-                        }}
-                        style={[
-                          styles.intervalPill,
-                          isSelected && [
-                            styles.intervalPillActive,
-                            {
-                              borderColor:
-                                opt.value === "CLOSED"
-                                  ? theme.colors.destructive
-                                  : opt.value === "PAUSED"
-                                    ? "#f59e0b"
-                                    : activeColorMeta.bar,
-                            },
-                          ],
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.intervalPillText,
-                            isSelected && [
-                              styles.intervalPillTextActive,
-                              {
-                                color:
-                                  opt.value === "CLOSED"
-                                    ? theme.colors.destructive
-                                    : opt.value === "PAUSED"
-                                      ? "#f59e0b"
-                                      : activeColorMeta.text,
-                              },
-                            ],
-                          ]}
-                        >
-                          {opt.label}
-                        </Text>
-                      </TouchableOpacity>
-                    )
-                  })}
-                </View>
+                <FormPillGroup
+                  control={control}
+                  name="status"
+                  options={[
+                    {
+                      value: "ACTIVE" as Budget_Status,
+                      label: "Active",
+                      activeBorder: activeColorMeta.bar,
+                      activeBg: activeColorMeta.bg,
+                      activeTextColor: activeColorMeta.text,
+                    },
+                    {
+                      value: "PAUSED" as Budget_Status,
+                      label: "Paused",
+                      activeBorder: "#f59e0b",
+                      activeBg: "rgba(245, 158, 11, 0.15)",
+                      activeTextColor: "#f59e0b",
+                    },
+                    {
+                      value: "CLOSED" as Budget_Status,
+                      label: "Closed",
+                      activeBorder: theme.colors.destructive,
+                      activeBg: theme.colors.destructiveSubtle,
+                      activeTextColor: theme.colors.destructive,
+                    },
+                  ]}
+                  pillStyle={{ flex: 1 }}
+                />
                 <Text style={styles.fieldHelperText}>
                   {status === "ACTIVE"
                     ? "Budget is active and open for transaction allocations."
@@ -608,28 +525,12 @@ export default function ManageBudgetModal() {
 
             {/* Color Palette */}
             <Text style={styles.fieldSubLabel}>Color Accent</Text>
-            <View style={styles.colorPaletteRow}>
-              {AVAILABLE_COLORS.map((c) => {
-                const meta = getNativeBudgetColors(c)
-                const isSelected = color === c
-                return (
-                  <TouchableOpacity
-                    key={c}
-                    onPress={() => {
-                      haptics.selection()
-                      setColor(c)
-                    }}
-                    style={[
-                      styles.colorCircle,
-                      { backgroundColor: meta.bar },
-                      isSelected && styles.colorCircleSelected,
-                    ]}
-                  >
-                    {isSelected && <Check size={16} color="#ffffff" />}
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
+            <FormColorPicker
+              control={control}
+              name="color"
+              getColorHex={(c) => getNativeBudgetColors(c).bar}
+              containerStyle={{ marginBottom: 18 }}
+            />
 
             {/* Category Icon */}
             <View style={styles.iconHeaderRow}>
@@ -645,7 +546,6 @@ export default function ManageBudgetModal() {
               >
                 <BudgetCategoryIcon
                   icon={icon}
-                  name={name}
                   size={18}
                   color={activeColorMeta.bar}
                 />
@@ -669,7 +569,7 @@ export default function ManageBudgetModal() {
                     key={iconSlug}
                     onPress={() => {
                       haptics.selection()
-                      setIcon(iconSlug)
+                      setValue("icon", iconSlug, { shouldValidate: true })
                     }}
                     style={[
                       styles.iconGridItem,
@@ -699,7 +599,7 @@ export default function ManageBudgetModal() {
           {/* Action Footer */}
           <View style={styles.actionFooter}>
             <Button
-              onPress={handleSave}
+              onPress={handleSubmit(onValid)}
               loading={isSaving}
               variant="primary"
               size="lg"
@@ -736,7 +636,7 @@ export default function ManageBudgetModal() {
         currencies={currencies}
         selectedCurrency={currency}
         onSelect={(cur) => {
-          setCurrency(cur)
+          setValue("currency", cur, { shouldValidate: true })
           currencySheetRef.current?.close()
         }}
       />
@@ -748,7 +648,7 @@ export default function ManageBudgetModal() {
         institutions={institutions}
         selectedAccountId={defaultAccountId}
         onSelect={(accId) => {
-          setDefaultAccountId(accId)
+          setValue("defaultAccountId", accId, { shouldValidate: true })
           accountSheetRef.current?.close()
         }}
       />
@@ -937,23 +837,6 @@ const styles = StyleSheet.create({
   selectorPlaceholder: {
     color: theme.colors.textMuted,
     fontWeight: "400",
-  },
-  colorPaletteRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 18,
-  },
-  colorCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  colorCircleSelected: {
-    borderWidth: 3,
-    borderColor: "#ffffff",
-    transform: [{ scale: 1.08 }],
   },
   iconHeaderRow: {
     flexDirection: "row",

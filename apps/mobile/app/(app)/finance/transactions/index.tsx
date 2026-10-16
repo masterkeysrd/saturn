@@ -37,7 +37,7 @@ import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
 import { TransactionListItem } from "@/components/finance/transaction-list-item"
 import { DateSectionHeader } from "@/components/finance/date-section-header"
-import { TextInput } from "@/components/ui/text-input"
+import { BaseTextInput } from "@/components/ui/text-input"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
@@ -209,7 +209,7 @@ export default function TransactionsScreen() {
       <View style={styles.headerBlock}>
         <View style={styles.searchBarRow}>
           <View style={styles.searchWrapper}>
-            <TextInput
+            <BaseTextInput
               placeholder="Search by merchant or description..."
               value={search}
               onChangeText={setSearch}

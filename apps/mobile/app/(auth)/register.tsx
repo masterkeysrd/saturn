@@ -19,6 +19,9 @@ import {
   AtSign,
   Settings,
 } from "lucide-react-native"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { registerSchema, type RegisterFormValues } from "@saturn/schemas"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
 import { Button } from "@/components/ui/button"
@@ -32,28 +35,33 @@ export default function RegisterScreen() {
   const router = useRouter()
   const { register } = useAuth()
   const toast = useToast()
-  const [name, setName] = useState("")
-  const [username, setUsername] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState<string | null>(null)
+  const [errorState, setErrorState] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const handleRegister = async () => {
-    if (!name.trim() || !email.trim() || !password) {
-      setError("Please fill in all required fields")
-      return
-    }
+  const {
+    control,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: "",
+      username: "",
+      email: "",
+      password: "",
+    },
+  })
 
+  const onValid = async (values: RegisterFormValues) => {
     setLoading(true)
-    setError(null)
+    setErrorState(null)
 
     try {
       await register({
-        name: name.trim(),
-        username: username.trim() || email.split("@")[0],
-        email: email.trim(),
-        password,
+        name: values.name.trim(),
+        username: values.username?.trim() || values.email.split("@")[0],
+        email: values.email.trim(),
+        password: values.password,
         avatarUrl: "",
       })
       toast.show({
@@ -64,7 +72,7 @@ export default function RegisterScreen() {
       router.replace("/(app)/(tabs)")
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to register"
-      setError(msg)
+      setErrorState(msg)
       toast.show({
         type: "error",
         title: "Registration failed",
@@ -116,23 +124,20 @@ export default function RegisterScreen() {
 
           <Card style={styles.formCard}>
             <TextInput
+              control={control}
+              name="name"
               label="Full Name"
               placeholder="Ada Lovelace"
-              value={name}
-              onChangeText={(val) => {
-                setName(val)
-                if (error) setError(null)
-              }}
               autoComplete="name"
               textContentType="name"
               leftIcon={<User size={18} color={theme.colors.textMuted} />}
             />
 
             <TextInput
+              control={control}
+              name="username"
               label="Username (optional)"
               placeholder="adalovelace"
-              value={username}
-              onChangeText={setUsername}
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="username"
@@ -142,13 +147,10 @@ export default function RegisterScreen() {
             />
 
             <TextInput
+              control={control}
+              name="email"
               label="Email Address"
               placeholder="user@example.com"
-              value={email}
-              onChangeText={(val) => {
-                setEmail(val)
-                if (error) setError(null)
-              }}
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="email-address"
@@ -159,13 +161,10 @@ export default function RegisterScreen() {
             />
 
             <TextInput
+              control={control}
+              name="password"
               label="Password"
               placeholder="••••••••"
-              value={password}
-              onChangeText={(val) => {
-                setPassword(val)
-                if (error) setError(null)
-              }}
               isPassword
               autoComplete="new-password"
               textContentType="newPassword"
@@ -173,13 +172,13 @@ export default function RegisterScreen() {
               leftIcon={<Lock size={18} color={theme.colors.textMuted} />}
             />
 
-            {error && <Text style={styles.errorText}>{error}</Text>}
+            {errorState && <Text style={styles.errorText}>{errorState}</Text>}
 
             <Button
               variant="primary"
               size="lg"
-              loading={loading}
-              onPress={handleRegister}
+              loading={loading || isSubmitting}
+              onPress={handleSubmit(onValid)}
               leftIcon={
                 <UserPlus size={18} color={theme.colors.primaryForeground} />
               }

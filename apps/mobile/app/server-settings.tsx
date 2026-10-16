@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
   StyleSheet,
   View,
@@ -12,6 +12,12 @@ import {
 import { useRouter, Stack } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Globe, X } from "lucide-react-native"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import {
+  serverSettingsSchema,
+  type ServerSettingsFormValues,
+} from "@saturn/schemas"
 import { useAuth } from "@/lib/auth-context"
 import { DEFAULT_SERVER_URL } from "@/lib/config"
 import { theme } from "@/lib/theme"
@@ -25,23 +31,32 @@ export default function ServerSettingsScreen() {
   const insets = useSafeAreaInsets()
   const toast = useToast()
   const { serverUrl, updateServerUrl } = useAuth()
-
-  const [inputUrl, setInputUrl] = useState(serverUrl || DEFAULT_SERVER_URL)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  const handleSave = async () => {
-    const trimmed = inputUrl.trim()
-    if (!trimmed) {
-      setError("Please enter a valid server URL")
-      return
-    }
+  const serverValues = useMemo(
+    () => ({
+      serverUrl: serverUrl || DEFAULT_SERVER_URL,
+    }),
+    [serverUrl]
+  )
 
+  const {
+    control,
+    handleSubmit,
+    setError,
+    formState: { isSubmitting },
+  } = useForm<ServerSettingsFormValues>({
+    resolver: zodResolver(serverSettingsSchema),
+    defaultValues: serverValues,
+    values: serverValues,
+    resetOptions: { keepDirtyValues: true },
+  })
+
+  const onValid = async (values: ServerSettingsFormValues) => {
     setSaving(true)
-    setError(null)
     try {
       haptics.light()
-      const appliedUrl = await updateServerUrl(trimmed)
+      const appliedUrl = await updateServerUrl(values.serverUrl.trim())
       haptics.success()
       toast.show({
         type: "success",
@@ -53,7 +68,7 @@ export default function ServerSettingsScreen() {
       haptics.error()
       const msg =
         err instanceof Error ? err.message : "Failed to update server URL"
-      setError(msg)
+      setError("serverUrl", { message: msg })
       toast.show({
         type: "error",
         title: "Update Failed",
@@ -63,6 +78,8 @@ export default function ServerSettingsScreen() {
       setSaving(false)
     }
   }
+
+  const isPending = saving || isSubmitting
 
   return (
     <>
@@ -86,13 +103,13 @@ export default function ServerSettingsScreen() {
           ),
           headerRight: () => (
             <TouchableOpacity
-              onPress={handleSave}
-              disabled={saving}
-              style={[styles.headerSaveBtn, saving && { opacity: 0.6 }]}
+              onPress={handleSubmit(onValid)}
+              disabled={isPending}
+              style={[styles.headerSaveBtn, isPending && { opacity: 0.6 }]}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityLabel="Save Server Settings"
             >
-              {saving ? (
+              {isPending ? (
                 <ActivityIndicator size="small" color={theme.colors.primary} />
               ) : (
                 <Text style={styles.headerSaveBtnText}>Save</Text>
@@ -118,17 +135,13 @@ export default function ServerSettingsScreen() {
             <Text style={styles.sectionHeader}>SELF-HOSTED ENVIRONMENT</Text>
             <Card style={styles.card}>
               <TextInput
+                control={control}
+                name="serverUrl"
                 label="Server URL"
                 placeholder={DEFAULT_SERVER_URL}
-                value={inputUrl}
-                onChangeText={(val) => {
-                  setInputUrl(val)
-                  if (error) setError(null)
-                }}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="url"
-                error={error || undefined}
                 leftIcon={<Globe size={18} color={theme.colors.primary} />}
               />
               <Text style={styles.fieldHint}>

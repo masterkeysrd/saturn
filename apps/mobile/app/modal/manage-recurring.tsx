@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useRef, useMemo } from "react"
 import {
   StyleSheet,
   Text,
@@ -42,7 +42,12 @@ import {
   type Account,
   type CurrencyInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { recurringTransactionSchema } from "@saturn/schemas"
+import { useForm, useWatch } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import {
+  recurringTransactionSchema,
+  type RecurringTransactionFormValues,
+} from "@saturn/schemas"
 import {
   toCentsString,
   formatCents,
@@ -56,11 +61,12 @@ import { Card } from "@/components/ui/card"
 import { TextInput } from "@/components/ui/text-input"
 import { useToast } from "@/components/ui/toast"
 import { getBudgetIcon } from "@/lib/budget-icons"
+import { toLocalISODate } from "@/components/ui/date-picker-sheet"
 import {
-  DatePickerSheet,
-  toLocalISODate,
-  formatDisplayDate,
-} from "@/components/ui/date-picker-sheet"
+  FormDateRow,
+  FormPillGroup,
+  FormSwitchRow,
+} from "@/components/ui/form-primitives"
 import {
   BudgetPickerSheet,
   CurrencyPickerSheet,
@@ -81,7 +87,6 @@ export default function ManageRecurringModal() {
   const currencySheetRef = useRef<BottomSheet>(null)
   const budgetSheetRef = useRef<BottomSheet>(null)
   const accountSheetRef = useRef<BottomSheet>(null)
-  const dateSheetRef = useRef<BottomSheet>(null)
 
   // 1. Settings & Base Currency
   const { data: settingsData } = useGetSettingsQuery(
@@ -131,20 +136,76 @@ export default function ManageRecurringModal() {
     )
   }, [recurringData, editRecurringId])
 
-  // Form State
-  const [type, setType] = useState<"EXPENSE" | "INCOME">("EXPENSE")
-  const [name, setName] = useState("")
-  const [amount, setAmount] = useState("")
-  const [currency, setCurrency] = useState(baseCurrency)
-  const [interval, setInterval] =
-    useState<RecurringTransaction_Interval>("MONTHLY")
-  const [nextDueDate, setNextDueDate] = useState<Date>(new Date())
-  const [budgetId, setBudgetId] = useState("")
-  const [accountId, setAccountId] = useState("")
-  const [isVariable, setIsVariable] = useState(false)
-  const [gracePeriodDays, setGracePeriodDays] = useState(3)
-  const [status, setStatus] = useState<RecurringTransaction_Status>("ACTIVE")
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const defaultFormValues: RecurringTransactionFormValues = useMemo(() => {
+    if (existingRecurring) {
+      const d = existingRecurring.executionState?.nextDueDate
+        ? new Date(existingRecurring.executionState.nextDueDate)
+        : new Date()
+
+      return {
+        type: existingRecurring.type === "INCOME" ? "INCOME" : "EXPENSE",
+        name: existingRecurring.name || "",
+        amount: formatCents(existingRecurring.amount).toString(),
+        currency: existingRecurring.currency || baseCurrency,
+        interval: (existingRecurring.interval ||
+          "MONTHLY") as RecurringTransaction_Interval,
+        budgetId: existingRecurring.budgetId || "",
+        accountId: existingRecurring.accountId || "",
+        isVariable: existingRecurring.isVariable || false,
+        gracePeriodDays: existingRecurring.gracePeriodDays ?? 3,
+        status: (existingRecurring.status ||
+          "ACTIVE") as RecurringTransaction_Status,
+        nextDueDate: !isNaN(d.getTime()) ? d : new Date(),
+      }
+    }
+    return {
+      type: "EXPENSE",
+      name: "",
+      amount: "",
+      currency: baseCurrency,
+      interval: "MONTHLY",
+      nextDueDate: new Date(),
+      budgetId: budgets.length > 0 ? budgets[0].id || "" : "",
+      accountId: "",
+      isVariable: false,
+      gracePeriodDays: 3,
+      status: "ACTIVE",
+    }
+  }, [existingRecurring, budgets, baseCurrency])
+
+  // RHF Form
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    getValues,
+    formState: { errors, isSubmitting },
+  } = useForm<RecurringTransactionFormValues>({
+    resolver: zodResolver(recurringTransactionSchema),
+    defaultValues: defaultFormValues,
+    values: defaultFormValues,
+    resetOptions: { keepDirtyValues: true },
+  })
+
+  // Watch only discrete selector and preview fields
+  const [
+    type = "EXPENSE",
+    currency = baseCurrency,
+    budgetId = "",
+    accountId = "",
+    status = "ACTIVE" as RecurringTransaction_Status,
+    amount = "",
+  ] = useWatch({
+    control,
+    name: [
+      "type",
+      "currency",
+      "budgetId",
+      "accountId",
+      "status",
+      "amount",
+    ] as const,
+  })
 
   // Multi-currency preview
   const { getConversionPreview } = useCurrencyConversionPreview({
@@ -162,40 +223,13 @@ export default function ManageRecurringModal() {
     return null
   }, [amount, currency, baseCurrency, getConversionPreview])
 
-  // Populate form if editing
-  useEffect(() => {
-    if (existingRecurring) {
-      setType(existingRecurring.type === "INCOME" ? "INCOME" : "EXPENSE")
-      setName(existingRecurring.name || "")
-      setAmount(formatCents(existingRecurring.amount).toString())
-      setCurrency(existingRecurring.currency || baseCurrency)
-      setInterval(existingRecurring.interval || "MONTHLY")
-      setBudgetId(existingRecurring.budgetId || "")
-      setAccountId(existingRecurring.accountId || "")
-      setIsVariable(existingRecurring.isVariable || false)
-      setGracePeriodDays(existingRecurring.gracePeriodDays ?? 3)
-      setStatus(existingRecurring.status || "ACTIVE")
-
-      if (existingRecurring.executionState?.nextDueDate) {
-        const d = new Date(existingRecurring.executionState.nextDueDate)
-        if (!isNaN(d.getTime())) {
-          setNextDueDate(d)
-        }
-      }
-    } else if (!isEditMode) {
-      setCurrency(baseCurrency)
-      if (budgets.length > 0 && !budgetId) {
-        setBudgetId(budgets[0].id || "")
-      }
-    }
-  }, [existingRecurring, baseCurrency, isEditMode, budgets, budgetId])
-
   // Mutations
   const createMutation = useCreateRecurringTransactionMutation()
   const updateMutation = useUpdateRecurringTransactionMutation()
   const deleteMutation = useDeleteRecurringTransactionMutation()
 
-  const isSaving = createMutation.isPending || updateMutation.isPending
+  const isSaving =
+    createMutation.isPending || updateMutation.isPending || isSubmitting
   const isDeleting = deleteMutation.isPending
 
   // Selected entities for display
@@ -208,43 +242,12 @@ export default function ManageRecurringModal() {
     [accounts, accountId]
   )
 
-  const handleSave = async () => {
+  const onValid = async (values: RecurringTransactionFormValues) => {
     haptics.light()
-    setErrors({})
-
-    const validation = recurringTransactionSchema.safeParse({
-      type,
-      name: name.trim(),
-      amount: amount.trim(),
-      currency,
-      interval,
-      nextDueDate,
-      budgetId: type === "EXPENSE" ? budgetId || undefined : undefined,
-      accountId: accountId || undefined,
-      isVariable,
-      gracePeriodDays,
-      status,
-    })
-
-    if (!validation.success) {
-      const fieldErrors: Record<string, string> = {}
-      validation.error.issues.forEach((err) => {
-        const path = err.path[0]?.toString()
-        if (path) fieldErrors[path] = err.message
-      })
-      setErrors(fieldErrors)
-      haptics.warning()
-      toast.show({
-        title: "Validation Error",
-        message: validation.error.issues[0]?.message || "Check required fields",
-        type: "error",
-      })
-      return
-    }
 
     try {
-      const centsAmount = toCentsString(amount)
-      const nextDueDateIso = toLocalISODate(nextDueDate)
+      const centsAmount = toCentsString(values.amount)
+      const nextDueDateIso = toLocalISODate(values.nextDueDate)
 
       if (isEditMode && editRecurringId) {
         await updateMutation.mutateAsync({
@@ -254,51 +257,51 @@ export default function ManageRecurringModal() {
             version: existingRecurring?.version,
             recurringTransaction: {
               ...existingRecurring,
-              type,
-              name: name.trim(),
+              type: values.type,
+              name: values.name.trim(),
               amount: centsAmount,
-              currency,
-              interval,
+              currency: values.currency,
+              interval: values.interval,
               executionState: {
                 ...existingRecurring?.executionState,
                 nextDueDate: nextDueDateIso,
               },
-              budgetId: type === "EXPENSE" ? budgetId : undefined,
-              accountId: accountId || undefined,
-              isVariable,
-              gracePeriodDays,
-              status,
+              budgetId: values.type === "EXPENSE" ? values.budgetId : undefined,
+              accountId: values.accountId || undefined,
+              isVariable: values.isVariable,
+              gracePeriodDays: values.gracePeriodDays,
+              status: values.status,
             } as RecurringTransaction,
           },
         })
         haptics.success()
         toast.show({
           title: "Template Updated",
-          message: `"${name.trim()}" was updated.`,
+          message: `"${values.name.trim()}" was updated.`,
           type: "success",
         })
       } else {
         await createMutation.mutateAsync({
           recurringTransaction: {
-            type,
-            name: name.trim(),
+            type: values.type,
+            name: values.name.trim(),
             amount: centsAmount,
-            currency,
-            interval,
+            currency: values.currency,
+            interval: values.interval,
             executionState: {
               nextDueDate: nextDueDateIso,
             },
-            budgetId: type === "EXPENSE" ? budgetId : undefined,
-            accountId: accountId || undefined,
-            isVariable,
-            gracePeriodDays,
+            budgetId: values.type === "EXPENSE" ? values.budgetId : undefined,
+            accountId: values.accountId || undefined,
+            isVariable: values.isVariable,
+            gracePeriodDays: values.gracePeriodDays,
             status: "ACTIVE",
           } as RecurringTransaction,
         })
         haptics.success()
         toast.show({
           title: "Template Created",
-          message: `"${name.trim()}" has been set up.`,
+          message: `"${values.name.trim()}" has been set up.`,
           type: "success",
         })
       }
@@ -317,11 +320,12 @@ export default function ManageRecurringModal() {
 
   const handleDelete = () => {
     if (!existingRecurring || !editRecurringId) return
+    const recurringName = getValues("name")
     haptics.warning()
 
     Alert.alert(
       "Delete Recurring Template",
-      `Are you sure you want to delete "${name}"? Future scheduled instances will no longer be generated.`,
+      `Are you sure you want to delete "${recurringName}"? Future scheduled instances will no longer be generated.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -339,7 +343,7 @@ export default function ManageRecurringModal() {
               haptics.success()
               toast.show({
                 title: "Template Deleted",
-                message: `"${name}" was deleted.`,
+                message: `"${recurringName}" was deleted.`,
                 type: "info",
               })
               await invalidateFinanceQueries(queryClient)
@@ -382,7 +386,7 @@ export default function ManageRecurringModal() {
           ),
           headerRight: () => (
             <TouchableOpacity
-              onPress={handleSave}
+              onPress={handleSubmit(onValid)}
               disabled={isSaving}
               style={[styles.headerSaveBtn, isSaving && { opacity: 0.6 }]}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -415,7 +419,7 @@ export default function ManageRecurringModal() {
               ]}
               onPress={() => {
                 haptics.selection()
-                setType("EXPENSE")
+                setValue("type", "EXPENSE", { shouldValidate: true })
               }}
               activeOpacity={0.8}
             >
@@ -444,7 +448,7 @@ export default function ManageRecurringModal() {
               ]}
               onPress={() => {
                 haptics.selection()
-                setType("INCOME")
+                setValue("type", "INCOME", { shouldValidate: true })
               }}
               activeOpacity={0.8}
             >
@@ -471,23 +475,15 @@ export default function ManageRecurringModal() {
           <Card style={styles.fieldCard}>
             <Text style={styles.fieldLabel}>TEMPLATE NAME *</Text>
             <TextInput
+              control={control}
+              name="name"
               placeholder={
                 type === "EXPENSE"
                   ? "e.g., Netflix, Office Rent, Electricity"
                   : "e.g., Monthly Salary, Client Retainer"
               }
-              value={name}
-              onChangeText={(val) => {
-                setName(val)
-                if (errors.name) {
-                  setErrors((prev) => ({ ...prev, name: "" }))
-                }
-              }}
               style={styles.textInput}
             />
-            {errors.name ? (
-              <Text style={styles.errorText}>{errors.name}</Text>
-            ) : null}
           </Card>
 
           {/* Amount & Currency */}
@@ -496,15 +492,10 @@ export default function ManageRecurringModal() {
             <View style={styles.amountRow}>
               <View style={styles.amountInputWrapper}>
                 <TextInput
+                  control={control}
+                  name="amount"
                   placeholder="0.00"
                   keyboardType="decimal-pad"
-                  value={amount}
-                  onChangeText={(val) => {
-                    setAmount(val)
-                    if (errors.amount) {
-                      setErrors((prev) => ({ ...prev, amount: "" }))
-                    }
-                  }}
                   style={styles.amountInput}
                 />
               </View>
@@ -529,79 +520,33 @@ export default function ManageRecurringModal() {
                 </Text>
               </View>
             ) : null}
-
-            {errors.amount ? (
-              <Text style={styles.errorText}>{errors.amount}</Text>
-            ) : null}
           </Card>
 
           {/* Recurrence Interval */}
           <Card style={styles.fieldCard}>
             <Text style={styles.fieldLabel}>FREQUENCY *</Text>
-            <View style={styles.frequencyRow}>
-              {RECURRING_INTERVAL_OPTIONS.map((opt) => {
-                const isSelected = interval === opt.value
-                return (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[
-                      styles.frequencyChip,
-                      isSelected && styles.frequencyChipActive,
-                    ]}
-                    onPress={() => {
-                      haptics.selection()
-                      setInterval(opt.value as RecurringTransaction_Interval)
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <Clock
-                      size={14}
-                      color={
-                        isSelected
-                          ? theme.colors.primary
-                          : theme.colors.textMuted
-                      }
-                    />
-                    <Text
-                      style={[
-                        styles.frequencyChipText,
-                        isSelected && styles.frequencyChipTextActive,
-                      ]}
-                    >
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
+            <FormPillGroup
+              control={control}
+              name="interval"
+              options={RECURRING_INTERVAL_OPTIONS.map((opt) => ({
+                label: opt.label,
+                value: opt.value as RecurringTransaction_Interval,
+                icon: <Clock size={14} color={theme.colors.primary} />,
+              }))}
+            />
           </Card>
 
           {/* Next Due Date / Start Date */}
           <Card style={styles.fieldCard}>
             <Text style={styles.fieldLabel}>NEXT DUE DATE *</Text>
-            <TouchableOpacity
-              style={styles.pickerSelectorRow}
-              onPress={() => {
-                haptics.light()
-                dateSheetRef.current?.expand()
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={styles.pickerSelectorLeft}>
-                <View style={styles.pickerIconWrapper}>
-                  <Calendar size={18} color={theme.colors.primary} />
-                </View>
-                <View>
-                  <Text style={styles.pickerValueText}>
-                    {formatDisplayDate(nextDueDate)}
-                  </Text>
-                  <Text style={styles.pickerHintText}>
-                    Target execution schedule
-                  </Text>
-                </View>
-              </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
-            </TouchableOpacity>
+            <FormDateRow
+              control={control}
+              name="nextDueDate"
+              label="Target execution schedule"
+              title="Select Due Date"
+              icon={<Calendar size={18} color={theme.colors.primary} />}
+              containerStyle={{ paddingHorizontal: 0, paddingVertical: 6 }}
+            />
           </Card>
 
           {/* Budget Category (Required if EXPENSE) */}
@@ -659,7 +604,7 @@ export default function ManageRecurringModal() {
                 <ChevronRight size={16} color={theme.colors.textMuted} />
               </TouchableOpacity>
               {errors.budgetId ? (
-                <Text style={styles.errorText}>{errors.budgetId}</Text>
+                <Text style={styles.errorText}>{errors.budgetId.message}</Text>
               ) : null}
             </Card>
           ) : null}
@@ -683,26 +628,13 @@ export default function ManageRecurringModal() {
 
           {/* Options: Variable amount & Grace period */}
           <Card style={styles.fieldCard}>
-            <View style={styles.toggleRow}>
-              <View style={styles.toggleInfo}>
-                <Text style={styles.toggleTitle}>Variable Amount</Text>
-                <Text style={styles.toggleDescription}>
-                  Amount fluctuates each billing cycle (e.g. utility bills)
-                </Text>
-              </View>
-              <Switch
-                value={isVariable}
-                onValueChange={(val) => {
-                  haptics.selection()
-                  setIsVariable(val)
-                }}
-                trackColor={{
-                  false: theme.colors.surfaceElevated,
-                  true: theme.colors.primary,
-                }}
-                thumbColor="#ffffff"
-              />
-            </View>
+            <FormSwitchRow
+              control={control}
+              name="isVariable"
+              label="Variable Amount"
+              subtitle="Amount fluctuates each billing cycle (e.g. utility bills)"
+              containerStyle={{ paddingHorizontal: 0, paddingVertical: 4 }}
+            />
 
             <View style={styles.divider} />
 
@@ -713,34 +645,17 @@ export default function ManageRecurringModal() {
                   Days allowed past due date before marking overdue
                 </Text>
               </View>
-              <View style={styles.graceChipsRow}>
-                {[0, 3, 5, 7].map((days) => {
-                  const isSelected = gracePeriodDays === days
-                  return (
-                    <TouchableOpacity
-                      key={days}
-                      style={[
-                        styles.graceChip,
-                        isSelected && styles.graceChipActive,
-                      ]}
-                      onPress={() => {
-                        haptics.selection()
-                        setGracePeriodDays(days)
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.graceChipText,
-                          isSelected && styles.graceChipTextActive,
-                        ]}
-                      >
-                        {days}d
-                      </Text>
-                    </TouchableOpacity>
-                  )
-                })}
-              </View>
+              <FormPillGroup
+                control={control}
+                name="gracePeriodDays"
+                options={[
+                  { label: "0d", value: 0 },
+                  { label: "3d", value: 3 },
+                  { label: "5d", value: 5 },
+                  { label: "7d", value: 7 },
+                ]}
+                pillStyle={{ paddingHorizontal: 10, paddingVertical: 6 }}
+              />
             </View>
           </Card>
 
@@ -758,7 +673,9 @@ export default function ManageRecurringModal() {
                   value={status === "ACTIVE"}
                   onValueChange={(active) => {
                     haptics.selection()
-                    setStatus(active ? "ACTIVE" : "PAUSED")
+                    setValue("status", active ? "ACTIVE" : "PAUSED", {
+                      shouldValidate: true,
+                    })
                   }}
                   trackColor={{
                     false: theme.colors.surfaceElevated,
@@ -800,7 +717,9 @@ export default function ManageRecurringModal() {
         ref={currencySheetRef}
         currencies={currencies}
         selectedCurrency={currency}
-        onSelect={(code) => setCurrency(code)}
+        onSelect={(code) =>
+          setValue("currency", code, { shouldValidate: true })
+        }
       />
 
       <BudgetPickerSheet
@@ -810,22 +729,12 @@ export default function ManageRecurringModal() {
         isLoading={isBudgetsLoading}
         onSelect={(b) => {
           if (b.id) {
-            setBudgetId(b.id)
+            setValue("budgetId", b.id, { shouldValidate: true })
             if (b.currency) {
-              setCurrency(b.currency)
-            }
-            if (errors.budgetId) {
-              setErrors((prev) => ({ ...prev, budgetId: "" }))
+              setValue("currency", b.currency, { shouldValidate: true })
             }
           }
         }}
-      />
-
-      <DatePickerSheet
-        ref={dateSheetRef}
-        title="Select Due Date"
-        value={nextDueDate}
-        onChange={(d) => setNextDueDate(d)}
       />
 
       <AccountPickerSheet
@@ -833,7 +742,7 @@ export default function ManageRecurringModal() {
         accounts={accounts}
         selectedAccountId={accountId}
         onSelect={(id) => {
-          setAccountId(id)
+          setValue("accountId", id, { shouldValidate: true })
           accountSheetRef.current?.close()
         }}
       />

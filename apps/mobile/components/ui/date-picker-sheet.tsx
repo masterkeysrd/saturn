@@ -1,10 +1,10 @@
-import React, { forwardRef, useState, useMemo, useEffect } from "react"
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native"
-import BottomSheet from "@gorhom/bottom-sheet"
+import React, { useState, useMemo, useEffect } from "react"
+import { Modal, StyleSheet, Text, View, TouchableOpacity } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ChevronLeft, ChevronRight } from "lucide-react-native"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
-import { AppBottomSheet } from "./bottom-sheet"
+import { BottomSheetHeader } from "./bottom-sheet"
 
 export function toLocalISODate(d: Date): string {
   const y = d.getFullYear()
@@ -39,227 +39,267 @@ export function formatDisplayDate(date: Date): string {
 }
 
 export interface DatePickerSheetProps {
+  visible: boolean
   title?: string
   value: Date
   onChange: (date: Date) => void
-  onClose?: () => void
-  snapPoints?: (string | number)[]
+  onClose: () => void
 }
 
 const WEEK_DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
 
-export const DatePickerSheet = forwardRef<BottomSheet, DatePickerSheetProps>(
-  (
-    { title = "Select Date", value, onChange, onClose, snapPoints = ["65%"] },
-    ref
-  ) => {
-    const [calendarViewDate, setCalendarViewDate] = useState<Date>(value)
+export function DatePickerSheet({
+  visible,
+  title = "Select Date",
+  value,
+  onChange,
+  onClose,
+}: DatePickerSheetProps) {
+  const insets = useSafeAreaInsets()
+  const [calendarViewDate, setCalendarViewDate] = useState<Date>(value)
 
-    useEffect(() => {
-      setCalendarViewDate(value)
-    }, [value])
+  useEffect(() => {
+    setCalendarViewDate(value)
+  }, [value])
 
-    const handlePrevMonth = () => {
-      haptics.light()
-      setCalendarViewDate(
-        (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
-      )
-    }
-
-    const handleNextMonth = () => {
-      haptics.light()
-      setCalendarViewDate(
-        (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
-      )
-    }
-
-    const handleSelectDay = (day: number) => {
-      haptics.light()
-      const newDate = new Date(
-        calendarViewDate.getFullYear(),
-        calendarViewDate.getMonth(),
-        day,
-        12,
-        0,
-        0
-      )
-      onChange(newDate)
-      if (ref && "current" in ref && ref.current) {
-        ref.current.close()
-      }
-    }
-
-    const handleSelectPreset = (
-      type: "today" | "yesterday" | "2days" | "firstOfMonth"
-    ) => {
-      haptics.light()
-      const d = new Date()
-      d.setHours(12, 0, 0, 0)
-      if (type === "yesterday") {
-        d.setDate(d.getDate() - 1)
-      } else if (type === "2days") {
-        d.setDate(d.getDate() - 2)
-      } else if (type === "firstOfMonth") {
-        d.setDate(1)
-      }
-
-      onChange(d)
-      if (ref && "current" in ref && ref.current) {
-        ref.current.close()
-      }
-    }
-
-    const calendarData = useMemo(() => {
-      const year = calendarViewDate.getFullYear()
-      const month = calendarViewDate.getMonth()
-
-      const firstDayOfWeek = new Date(year, month, 1).getDay()
-      const daysInMonth = new Date(year, month + 1, 0).getDate()
-
-      const monthName = calendarViewDate.toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
-      })
-
-      const days: (number | null)[] = []
-      for (let i = 0; i < firstDayOfWeek; i++) {
-        days.push(null)
-      }
-      for (let d = 1; d <= daysInMonth; d++) {
-        days.push(d)
-      }
-
-      return { monthName, days, year, month }
-    }, [calendarViewDate])
-
-    return (
-      <AppBottomSheet
-        ref={ref}
-        title={title}
-        snapPoints={snapPoints}
-        onClose={onClose}
-      >
-        <View style={styles.calendarContainer}>
-          {/* Quick Presets Row */}
-          <View style={styles.calendarPresetsRow}>
-            <TouchableOpacity
-              style={styles.calendarPresetChip}
-              activeOpacity={0.7}
-              onPress={() => handleSelectPreset("today")}
-            >
-              <Text style={styles.calendarPresetChipText}>Today</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.calendarPresetChip}
-              activeOpacity={0.7}
-              onPress={() => handleSelectPreset("yesterday")}
-            >
-              <Text style={styles.calendarPresetChipText}>Yesterday</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.calendarPresetChip}
-              activeOpacity={0.7}
-              onPress={() => handleSelectPreset("2days")}
-            >
-              <Text style={styles.calendarPresetChipText}>2 Days Ago</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.calendarPresetChip}
-              activeOpacity={0.7}
-              onPress={() => handleSelectPreset("firstOfMonth")}
-            >
-              <Text style={styles.calendarPresetChipText}>1st of Month</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Month & Year Navigation Header */}
-          <View style={styles.calendarMonthHeader}>
-            <TouchableOpacity
-              style={styles.calendarNavBtn}
-              onPress={handlePrevMonth}
-              activeOpacity={0.6}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <ChevronLeft size={20} color={theme.colors.textPrimary} />
-            </TouchableOpacity>
-
-            <Text style={styles.calendarMonthTitle}>
-              {calendarData.monthName}
-            </Text>
-
-            <TouchableOpacity
-              style={styles.calendarNavBtn}
-              onPress={handleNextMonth}
-              activeOpacity={0.6}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <ChevronRight size={20} color={theme.colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Day of Week Headers */}
-          <View style={styles.calendarWeekRow}>
-            {WEEK_DAYS.map((dayName) => (
-              <View key={dayName} style={styles.calendarDayHeaderCell}>
-                <Text style={styles.calendarDayHeaderText}>{dayName}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Calendar Days Grid */}
-          <View style={styles.calendarDaysGrid}>
-            {calendarData.days.map((day, idx) => {
-              if (day === null) {
-                return (
-                  <View key={`empty-${idx}`} style={styles.calendarDayCell} />
-                )
-              }
-
-              const isSelected =
-                value.getFullYear() === calendarData.year &&
-                value.getMonth() === calendarData.month &&
-                value.getDate() === day
-
-              const now = new Date()
-              const isToday =
-                now.getFullYear() === calendarData.year &&
-                now.getMonth() === calendarData.month &&
-                now.getDate() === day
-
-              return (
-                <View key={`day-${day}`} style={styles.calendarDayCell}>
-                  <TouchableOpacity
-                    style={[
-                      styles.calendarDayCircle,
-                      isToday && styles.calendarDayToday,
-                      isSelected && styles.calendarDaySelected,
-                    ]}
-                    activeOpacity={0.7}
-                    onPress={() => handleSelectDay(day)}
-                  >
-                    <Text
-                      style={[
-                        styles.calendarDayText,
-                        isToday && styles.calendarDayTextToday,
-                        isSelected && styles.calendarDayTextSelected,
-                      ]}
-                    >
-                      {day}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )
-            })}
-          </View>
-        </View>
-      </AppBottomSheet>
+  const handlePrevMonth = () => {
+    haptics.light()
+    setCalendarViewDate(
+      (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
     )
   }
-)
 
-DatePickerSheet.displayName = "DatePickerSheet"
+  const handleNextMonth = () => {
+    haptics.light()
+    setCalendarViewDate(
+      (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
+    )
+  }
+
+  const handleSelectDay = (day: number) => {
+    haptics.light()
+    const newDate = new Date(
+      calendarViewDate.getFullYear(),
+      calendarViewDate.getMonth(),
+      day,
+      12,
+      0,
+      0
+    )
+    onChange(newDate)
+    onClose()
+  }
+
+  const handleSelectPreset = (
+    type: "today" | "yesterday" | "2days" | "firstOfMonth"
+  ) => {
+    haptics.light()
+    const d = new Date()
+    d.setHours(12, 0, 0, 0)
+    if (type === "yesterday") {
+      d.setDate(d.getDate() - 1)
+    } else if (type === "2days") {
+      d.setDate(d.getDate() - 2)
+    } else if (type === "firstOfMonth") {
+      d.setDate(1)
+    }
+
+    onChange(d)
+    onClose()
+  }
+
+  const calendarData = useMemo(() => {
+    const year = calendarViewDate.getFullYear()
+    const month = calendarViewDate.getMonth()
+
+    const firstDayOfWeek = new Date(year, month, 1).getDay()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+    const monthName = calendarViewDate.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    })
+
+    const days: (number | null)[] = []
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      days.push(null)
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      days.push(d)
+    }
+
+    return { monthName, days, year, month }
+  }, [calendarViewDate])
+
+  if (!visible) return null
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <View
+          style={[
+            styles.sheetContainer,
+            { paddingBottom: Math.max(insets.bottom, 20) },
+          ]}
+        >
+          <View style={styles.handleIndicator} />
+          <View style={styles.headerWrapper}>
+            <BottomSheetHeader title={title} onClose={onClose} />
+          </View>
+          <View style={styles.calendarContainer}>
+            {/* Quick Presets Row */}
+            <View style={styles.calendarPresetsRow}>
+              <TouchableOpacity
+                style={styles.calendarPresetChip}
+                activeOpacity={0.7}
+                onPress={() => handleSelectPreset("today")}
+              >
+                <Text style={styles.calendarPresetChipText}>Today</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.calendarPresetChip}
+                activeOpacity={0.7}
+                onPress={() => handleSelectPreset("yesterday")}
+              >
+                <Text style={styles.calendarPresetChipText}>Yesterday</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.calendarPresetChip}
+                activeOpacity={0.7}
+                onPress={() => handleSelectPreset("2days")}
+              >
+                <Text style={styles.calendarPresetChipText}>2 Days Ago</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.calendarPresetChip}
+                activeOpacity={0.7}
+                onPress={() => handleSelectPreset("firstOfMonth")}
+              >
+                <Text style={styles.calendarPresetChipText}>1st of Month</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Month & Year Navigation Header */}
+            <View style={styles.calendarMonthHeader}>
+              <TouchableOpacity
+                style={styles.calendarNavBtn}
+                onPress={handlePrevMonth}
+                activeOpacity={0.6}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <ChevronLeft size={20} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+
+              <Text style={styles.calendarMonthTitle}>
+                {calendarData.monthName}
+              </Text>
+
+              <TouchableOpacity
+                style={styles.calendarNavBtn}
+                onPress={handleNextMonth}
+                activeOpacity={0.6}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <ChevronRight size={20} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Day of Week Headers */}
+            <View style={styles.calendarWeekRow}>
+              {WEEK_DAYS.map((dayName) => (
+                <View key={dayName} style={styles.calendarDayHeaderCell}>
+                  <Text style={styles.calendarDayHeaderText}>{dayName}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Calendar Days Grid */}
+            <View style={styles.calendarDaysGrid}>
+              {calendarData.days.map((day, idx) => {
+                if (day === null) {
+                  return (
+                    <View key={`empty-${idx}`} style={styles.calendarDayCell} />
+                  )
+                }
+
+                const isSelected =
+                  value.getFullYear() === calendarData.year &&
+                  value.getMonth() === calendarData.month &&
+                  value.getDate() === day
+
+                const now = new Date()
+                const isToday =
+                  now.getFullYear() === calendarData.year &&
+                  now.getMonth() === calendarData.month &&
+                  now.getDate() === day
+
+                return (
+                  <View key={`day-${day}`} style={styles.calendarDayCell}>
+                    <TouchableOpacity
+                      style={[
+                        styles.calendarDayCircle,
+                        isToday && styles.calendarDayToday,
+                        isSelected && styles.calendarDaySelected,
+                      ]}
+                      activeOpacity={0.7}
+                      onPress={() => handleSelectDay(day)}
+                    >
+                      <Text
+                        style={[
+                          styles.calendarDayText,
+                          isToday && styles.calendarDayTextToday,
+                          isSelected && styles.calendarDayTextSelected,
+                        ]}
+                      >
+                        {day}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )
+              })}
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  )
+}
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    justifyContent: "flex-end",
+  },
+  sheetContainer: {
+    backgroundColor: theme.colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderStrong,
+    borderTopLeftRadius: theme.radius.xl,
+    borderTopRightRadius: theme.radius.xl,
+    paddingTop: 10,
+  },
+  handleIndicator: {
+    backgroundColor: "#475569",
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 8,
+  },
+  headerWrapper: {
+    paddingHorizontal: 16,
+  },
   calendarContainer: {
     paddingHorizontal: 16,
     paddingTop: 8,

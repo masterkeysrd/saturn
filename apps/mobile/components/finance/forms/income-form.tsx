@@ -1,27 +1,17 @@
-import { useState, useEffect, useMemo, useRef } from "react"
-import {
-  Text,
-  View,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Keyboard,
-  Switch,
-} from "react-native"
+import { useMemo, useRef, useState } from "react"
+import { Text, View, ScrollView, Keyboard } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useQueryClient } from "@tanstack/react-query"
 import BottomSheet from "@gorhom/bottom-sheet"
 import {
   FileText,
-  Calendar,
-  CalendarClock,
   AlertCircle,
   AlertTriangle,
-  ChevronRight,
-  ChevronDown,
   Globe,
 } from "lucide-react-native"
-import { incomeSchema } from "@saturn/schemas"
+import { useForm, useWatch } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { incomeSchema, type IncomeFormValues } from "@saturn/schemas"
 import { toCentsString, convertCurrency } from "@saturn/core"
 import {
   useCreateIncomeMutation,
@@ -36,14 +26,15 @@ import { haptics } from "@/lib/haptics"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useToast } from "@/components/ui/toast"
-import {
-  DatePickerSheet,
-  toLocalISODate,
-  formatDisplayDate,
-} from "@/components/ui/date-picker-sheet"
+import { toLocalISODate } from "@/components/ui/date-picker-sheet"
 import { AccountPickerSheet, CurrencyPickerSheet } from "../sheets"
 import { AccountRow } from "../account-select"
 import { getCurrencySymbol, invalidateFinanceQueries } from "../finance-utils"
+import { HeroAmountInput } from "@/components/ui/amount-input"
+import {
+  FormRowInput,
+  FormEffectiveDateSection,
+} from "@/components/ui/form-primitives"
 import { formStyles } from "./form-styles"
 
 export interface IncomeFormProps {
@@ -77,78 +68,78 @@ export function IncomeForm({
   // Sheet Refs
   const currencySheetRef = useRef<BottomSheet>(null)
   const accountSheetRef = useRef<BottomSheet>(null)
-  const dateSheetRef = useRef<BottomSheet>(null)
 
-  // Form State
-  const [amountText, setAmountText] = useState("")
-  const [description, setDescription] = useState("")
-  const [selectedAccountId, setSelectedAccountId] = useState<string>(
-    initialAccountId || ""
-  )
-  const [selectedCurrency, setSelectedCurrency] = useState<string>("")
-  const [transactionDate, setTransactionDate] = useState<Date>(new Date())
-  const [hasCustomEffectiveDate, setHasCustomEffectiveDate] =
-    useState<boolean>(false)
-  const [effectiveDate, setEffectiveDate] = useState<Date>(new Date())
-  const [activeDatePickerTarget, setActiveDatePickerTarget] = useState<
-    "transaction" | "effective"
-  >("transaction")
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
 
-  const [validationError, setValidationError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const resolvedFormValues: IncomeFormValues = useMemo(() => {
+    if (existingTx) {
+      const parsedCents = parseInt(existingTx.amount || "0", 10)
+      const amountVal =
+        !isNaN(parsedCents) && parsedCents > 0
+          ? (parsedCents / 100).toFixed(2)
+          : ""
+      const txD = existingTx.transactionDate
+        ? new Date(existingTx.transactionDate)
+        : new Date()
+      let effD = txD
+      let hasCustom = false
+      if (existingTx.effectiveDate) {
+        const parsedEff = new Date(existingTx.effectiveDate)
+        hasCustom = txD.toDateString() !== parsedEff.toDateString()
+        effD = parsedEff
+      }
+
+      return {
+        accountId: existingTx.accountId || "",
+        description: existingTx.description || "",
+        amount: amountVal,
+        currency: existingTx.currency || baseCurrency || "USD",
+        transactionDate: txD,
+        hasCustomEffectiveDate: hasCustom,
+        effectiveDate: effD,
+      }
+    }
+
+    const targetAcc =
+      (initialAccountId
+        ? accounts.find((a) => a.id === initialAccountId)
+        : null) ||
+      accounts.find((a) => a.isDefault) ||
+      accounts[0]
+    const resolvedAccId = initialAccountId || targetAcc?.id || ""
+
+    return {
+      accountId: resolvedAccId,
+      description: "",
+      amount: "",
+      currency: baseCurrency || "USD",
+      transactionDate: new Date(),
+      hasCustomEffectiveDate: false,
+      effectiveDate: new Date(),
+    }
+  }, [existingTx, initialAccountId, accounts, baseCurrency])
+
+  // React Hook Form
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<IncomeFormValues>({
+    resolver: zodResolver(incomeSchema),
+    defaultValues: resolvedFormValues,
+    values: resolvedFormValues,
+    resetOptions: { keepDirtyValues: true },
+  })
+
+  // Watched Values
+  const amount = useWatch({ control, name: "amount" })
+  const selectedAccountId = useWatch({ control, name: "accountId" })
+  const selectedCurrency = useWatch({ control, name: "currency" })
 
   // Mutations
   const createIncomeMutation = useCreateIncomeMutation()
   const updateIncomeMutation = useUpdateIncomeMutation()
-
-  // Auto-set default account
-  useEffect(() => {
-    if (accounts.length > 0 && !isEditMode && !selectedAccountId) {
-      const targetAcc =
-        (initialAccountId
-          ? accounts.find((a) => a.id === initialAccountId)
-          : null) ||
-        accounts.find((a) => a.isDefault) ||
-        accounts[0]
-      const accId = targetAcc?.id || ""
-      setSelectedAccountId(accId)
-      onAccountChange?.(accId)
-    }
-  }, [
-    accounts,
-    selectedAccountId,
-    isEditMode,
-    initialAccountId,
-    onAccountChange,
-  ])
-
-  // Hydrate edit mode
-  useEffect(() => {
-    if (existingTx) {
-      const parsedCents = parseInt(existingTx.amount || "0", 10)
-      if (!isNaN(parsedCents) && parsedCents > 0) {
-        setAmountText((parsedCents / 100).toFixed(2))
-      }
-      setDescription(existingTx.description || "")
-      setSelectedAccountId(existingTx.accountId || "")
-      if (existingTx.currency) {
-        setSelectedCurrency(existingTx.currency)
-      }
-      if (existingTx.transactionDate) {
-        const txD = new Date(existingTx.transactionDate)
-        setTransactionDate(txD)
-        if (existingTx.effectiveDate) {
-          const effD = new Date(existingTx.effectiveDate)
-          const isDiff = txD.toDateString() !== effD.toDateString()
-          setHasCustomEffectiveDate(isDiff)
-          setEffectiveDate(effD)
-        } else {
-          setHasCustomEffectiveDate(false)
-          setEffectiveDate(txD)
-        }
-      }
-    }
-  }, [existingTx])
 
   const selectedAccount = useMemo(
     () => accounts.find((a) => a.id === selectedAccountId),
@@ -159,21 +150,7 @@ export function IncomeForm({
     selectedCurrency || selectedAccount?.currency || baseCurrency || "USD"
   const currentSymbol = getCurrencySymbol(currentCurrency)
 
-  // Amount input handler
-  const handleAmountChange = (text: string) => {
-    let cleaned = text.replace(/[^0-9.]/g, "")
-    const parts = cleaned.split(".")
-    if (parts.length > 2) {
-      cleaned = parts[0] + "." + parts.slice(1).join("")
-    }
-    if (parts[1] && parts[1].length > 2) {
-      cleaned = parts[0] + "." + parts[1].slice(0, 2)
-    }
-    setAmountText(cleaned)
-    setValidationError(null)
-  }
-
-  const parsedAmount = parseFloat(amountText || "0")
+  const parsedAmount = parseFloat(amount || "0")
   const amountDecimal = isNaN(parsedAmount) ? "0.00" : parsedAmount.toFixed(2)
 
   // Conversion Preview
@@ -189,52 +166,18 @@ export function IncomeForm({
     )
   }, [parsedAmount, currentCurrency, baseCurrency, exchangeRates])
 
-  // Open Date Picker
-  const openDatePicker = (target: "transaction" | "effective") => {
-    Keyboard.dismiss()
-    setActiveDatePickerTarget(target)
-    dateSheetRef.current?.expand()
-  }
-
-  // Handle Submit
-  const handleSave = async () => {
-    if (isSubmitting) return
+  // Submit Handler
+  const onSubmit = async (values: IncomeFormValues) => {
     haptics.light()
-
-    if (parsedAmount <= 0) {
-      haptics.error()
-      setValidationError("Please enter an amount greater than 0.")
-      return
-    }
-
-    setValidationError(null)
-    setIsSubmitting(true)
+    setSubmissionError(null)
 
     try {
-      const txDateIso = toLocalISODate(transactionDate)
-      const effectiveDateObj = hasCustomEffectiveDate
-        ? effectiveDate
-        : transactionDate
+      const txDateIso = toLocalISODate(values.transactionDate)
+      const effectiveDateObj = values.hasCustomEffectiveDate
+        ? values.effectiveDate
+        : values.transactionDate
       const effDateIso = toLocalISODate(effectiveDateObj)
-      const centsStr = toCentsString(amountDecimal)
-
-      const parsed = incomeSchema.safeParse({
-        accountId: selectedAccountId || undefined,
-        description: description.trim(),
-        amount: amountDecimal,
-        currency: currentCurrency,
-        transactionDate: transactionDate,
-        hasCustomEffectiveDate: hasCustomEffectiveDate,
-        effectiveDate: effectiveDateObj,
-      })
-
-      if (!parsed.success) {
-        haptics.error()
-        const errMsg = parsed.error.errors[0]?.message || "Invalid income"
-        setValidationError(errMsg)
-        setIsSubmitting(false)
-        return
-      }
+      const centsStr = toCentsString(values.amount)
 
       if (isEditMode && existingTx?.id) {
         await updateIncomeMutation.mutateAsync({
@@ -243,11 +186,11 @@ export function IncomeForm({
             id: existingTx.id,
             income: {
               amount: centsStr,
-              currency: currentCurrency,
-              description: description.trim(),
+              currency: values.currency,
+              description: values.description.trim(),
               transactionDate: txDateIso,
               effectiveDate: effDateIso,
-              accountId: selectedAccountId || undefined,
+              accountId: values.accountId || undefined,
             },
           },
         })
@@ -255,11 +198,11 @@ export function IncomeForm({
         await createIncomeMutation.mutateAsync({
           income: {
             amount: centsStr,
-            currency: currentCurrency,
-            description: description.trim(),
+            currency: values.currency,
+            description: values.description.trim(),
             transactionDate: txDateIso,
             effectiveDate: effDateIso,
-            accountId: selectedAccountId || undefined,
+            accountId: values.accountId || undefined,
           },
         })
       }
@@ -267,7 +210,7 @@ export function IncomeForm({
       toast.show({
         type: "success",
         title: isEditMode ? "Income Updated" : "Income Recorded",
-        message: `+${currentSymbol}${amountDecimal} ${currentCurrency} credited to ${selectedAccount?.name || "Account"}`,
+        message: `+${currentSymbol}${amountDecimal} ${values.currency} credited to ${selectedAccount?.name || "Account"}`,
       })
 
       await invalidateFinanceQueries(queryClient)
@@ -278,9 +221,7 @@ export function IncomeForm({
         err instanceof Error
           ? err.message
           : "An unexpected error occurred while saving."
-      setValidationError(errMsg)
-    } finally {
-      setIsSubmitting(false)
+      setSubmissionError(errMsg)
     }
   }
 
@@ -292,43 +233,18 @@ export function IncomeForm({
         showsVerticalScrollIndicator={false}
       >
         {/* Amount & Currency Field */}
-        <View style={formStyles.amountCard}>
-          <Text style={formStyles.fieldSectionLabel}>AMOUNT</Text>
-          <View style={formStyles.amountInputRow}>
-            <Text
-              style={[
-                formStyles.amountCurrencyPrefix,
-                { color: theme.colors.success },
-              ]}
-            >
-              {currentSymbol}
-            </Text>
-            <TextInput
-              style={[formStyles.amountInput, { color: theme.colors.success }]}
-              keyboardType="decimal-pad"
-              value={amountText}
-              placeholder="0.00"
-              placeholderTextColor={theme.colors.textMuted}
-              onChangeText={handleAmountChange}
-              autoFocus={!isEditMode}
-              selectionColor={theme.colors.success}
-            />
-
-            <TouchableOpacity
-              style={formStyles.currencySelectButton}
-              activeOpacity={0.7}
-              onPress={() => {
-                Keyboard.dismiss()
-                currencySheetRef.current?.expand()
-              }}
-            >
-              <Text style={formStyles.currencySelectCode} numberOfLines={1}>
-                {currentCurrency.toUpperCase()}
-              </Text>
-              <ChevronDown size={14} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <HeroAmountInput
+          control={control}
+          name="amount"
+          currency={currentCurrency}
+          currencySymbol={currentSymbol}
+          onPressCurrency={() => {
+            Keyboard.dismiss()
+            currencySheetRef.current?.expand()
+          }}
+          autoFocus={!isEditMode}
+          accentColor={theme.colors.success}
+        />
 
         {/* Currency Conversion Preview */}
         {conversionPreview && (
@@ -385,6 +301,7 @@ export function IncomeForm({
           <AccountRow
             label="Account"
             account={selectedAccount}
+            error={errors.accountId?.message}
             onPress={() => {
               Keyboard.dismiss()
               accountSheetRef.current?.expand()
@@ -393,115 +310,25 @@ export function IncomeForm({
 
           {/* Field: Description */}
           <View style={formStyles.rowDivider} />
-          <View style={formStyles.formRow}>
-            <View style={formStyles.formRowLabelGroup}>
-              <FileText size={16} color={theme.colors.textMuted} />
-              <Text style={formStyles.formRowLabel}>Description</Text>
-            </View>
-            <TextInput
-              style={formStyles.formRowInput}
-              placeholder="e.g. Salary, Client Invoice, Dividends"
-              placeholderTextColor={theme.colors.textMuted}
-              value={description}
-              onChangeText={(val) => {
-                setDescription(val)
-                setValidationError(null)
-              }}
-              returnKeyType="done"
-            />
-          </View>
+          <FormRowInput
+            control={control}
+            name="description"
+            label="Description"
+            icon={<FileText size={16} color={theme.colors.textMuted} />}
+            placeholder="e.g. Monthly Salary, Freelance Payment"
+            returnKeyType="done"
+          />
 
-          {/* Field: Transaction Date */}
+          {/* Field: Date Section */}
           <View style={formStyles.rowDivider} />
-          <TouchableOpacity
-            style={formStyles.formRow}
-            activeOpacity={0.7}
-            onPress={() => openDatePicker("transaction")}
-          >
-            <View style={formStyles.formRowLabelGroup}>
-              <Calendar size={16} color={theme.colors.textMuted} />
-              <Text style={formStyles.formRowLabel}>Transaction Date</Text>
-            </View>
-            <View style={formStyles.formRowValueGroup}>
-              <Text style={formStyles.formRowValueText}>
-                {formatDisplayDate(transactionDate)}
-              </Text>
-              <ChevronRight size={14} color={theme.colors.textMuted} />
-            </View>
-          </TouchableOpacity>
-
-          {/* Toggle: Different Effective Date */}
-          <View style={formStyles.rowDivider} />
-          <View style={formStyles.formRow}>
-            <View
-              style={[
-                formStyles.formRowLabelGroup,
-                { flex: 1, paddingRight: 8 },
-              ]}
-            >
-              <CalendarClock size={16} color={theme.colors.textMuted} />
-              <Text style={formStyles.formRowLabel} numberOfLines={2}>
-                Different effective date?
-              </Text>
-            </View>
-            <Switch
-              value={hasCustomEffectiveDate}
-              onValueChange={(val) => {
-                haptics.light()
-                setHasCustomEffectiveDate(val)
-                if (!val) {
-                  setEffectiveDate(transactionDate)
-                }
-              }}
-              trackColor={{
-                false: theme.colors.surfaceElevated,
-                true: theme.colors.primary,
-              }}
-              thumbColor="#ffffff"
-            />
-          </View>
-
-          {/* Field: Custom Effective Date */}
-          {hasCustomEffectiveDate && (
-            <>
-              <View style={formStyles.rowDivider} />
-              <TouchableOpacity
-                style={formStyles.formRow}
-                activeOpacity={0.7}
-                onPress={() => openDatePicker("effective")}
-              >
-                <View style={formStyles.formRowLabelGroup}>
-                  <Calendar size={16} color={theme.colors.primary} />
-                  <Text
-                    style={[
-                      formStyles.formRowLabel,
-                      { color: theme.colors.primary },
-                    ]}
-                  >
-                    Effective Date
-                  </Text>
-                </View>
-                <View style={formStyles.formRowValueGroup}>
-                  <Text
-                    style={[
-                      formStyles.formRowValueText,
-                      { color: theme.colors.primary },
-                    ]}
-                  >
-                    {formatDisplayDate(effectiveDate)}
-                  </Text>
-                  <ChevronRight size={14} color={theme.colors.primary} />
-                </View>
-              </TouchableOpacity>
-            </>
-          )}
+          <FormEffectiveDateSection control={control} />
         </Card>
 
         {/* Error Box */}
-        {validationError && (
+        {submissionError && (
           <View style={formStyles.errorBox}>
             <AlertCircle size={15} color={theme.colors.destructive} />
-            <Text style={formStyles.errorText}>{validationError}</Text>
+            <Text style={formStyles.errorText}>{submissionError}</Text>
           </View>
         )}
       </ScrollView>
@@ -517,11 +344,11 @@ export function IncomeForm({
           style={[formStyles.submitBtn, formStyles.submitBtnIncome]}
           size="lg"
           loading={isSubmitting}
-          onPress={handleSave}
+          onPress={handleSubmit(onSubmit)}
         >
           {isEditMode
-            ? `Update Income • +${currentSymbol}${amountDecimal}`
-            : `Record Income • +${currentSymbol}${amountDecimal}`}
+            ? `Update Income • ${currentSymbol}${amountDecimal}`
+            : `Record Income • ${currentSymbol}${amountDecimal}`}
         </Button>
       </View>
 
@@ -529,9 +356,9 @@ export function IncomeForm({
       <AccountPickerSheet
         ref={accountSheetRef}
         accounts={accounts}
-        selectedAccountId={selectedAccountId}
+        selectedAccountId={selectedAccountId || ""}
         onSelect={(accId) => {
-          setSelectedAccountId(accId)
+          setValue("accountId", accId, { shouldValidate: true })
           onAccountChange?.(accId)
         }}
       />
@@ -540,32 +367,8 @@ export function IncomeForm({
         ref={currencySheetRef}
         currencies={currencies}
         selectedCurrency={currentCurrency}
-        onSelect={setSelectedCurrency}
+        onSelect={(cur) => setValue("currency", cur, { shouldValidate: true })}
         isLoading={currenciesLoading}
-      />
-
-      <DatePickerSheet
-        ref={dateSheetRef}
-        title={
-          activeDatePickerTarget === "effective"
-            ? "Select Effective Date"
-            : "Select Transaction Date"
-        }
-        value={
-          activeDatePickerTarget === "effective"
-            ? effectiveDate
-            : transactionDate
-        }
-        onChange={(newDate) => {
-          if (activeDatePickerTarget === "transaction") {
-            setTransactionDate(newDate)
-            if (!hasCustomEffectiveDate) {
-              setEffectiveDate(newDate)
-            }
-          } else {
-            setEffectiveDate(newDate)
-          }
-        }}
       />
     </>
   )

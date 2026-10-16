@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react"
+import { useState, useMemo, useRef, useCallback } from "react"
 import {
   Text,
   View,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   Keyboard,
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -13,11 +12,16 @@ import BottomSheet from "@gorhom/bottom-sheet"
 import {
   Tag,
   FileText,
-  Calendar,
   AlertCircle,
   ChevronRight,
   CalendarClock,
 } from "lucide-react-native"
+import { useForm, useWatch } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import {
+  confirmTransactionSchema,
+  type ConfirmTransactionFormValues,
+} from "@saturn/schemas"
 import { toCentsString, formatAmount } from "@saturn/core"
 import {
   useConfirmScheduledTransactionMutation,
@@ -32,11 +36,7 @@ import { haptics } from "@/lib/haptics"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useToast } from "@/components/ui/toast"
-import {
-  DatePickerSheet,
-  toLocalISODate,
-  formatDisplayDate,
-} from "@/components/ui/date-picker-sheet"
+import { toLocalISODate } from "@/components/ui/date-picker-sheet"
 import {
   ScheduledPickerSheet,
   BudgetPickerSheet,
@@ -48,6 +48,8 @@ import {
   invalidateFinanceQueries,
   getScheduledDisplayName,
 } from "../finance-utils"
+import { HeroAmountInput } from "@/components/ui/amount-input"
+import { FormRowInput, FormDateRow } from "@/components/ui/form-primitives"
 import { formStyles } from "./form-styles"
 
 export interface ScheduledConfirmFormProps {
@@ -85,21 +87,88 @@ export function ScheduledConfirmForm({
   const scheduledSheetRef = useRef<BottomSheet>(null)
   const budgetSheetRef = useRef<BottomSheet>(null)
   const accountSheetRef = useRef<BottomSheet>(null)
-  const dateSheetRef = useRef<BottomSheet>(null)
 
-  // Form State
   const [selectedScheduled, setSelectedScheduled] =
     useState<ScheduledTransaction | null>(null)
-  const [amountText, setAmountText] = useState("")
-  const [description, setDescription] = useState("")
-  const [selectedBudgetId, setSelectedBudgetId] = useState<string>("")
-  const [selectedAccountId, setSelectedAccountId] = useState<string>(
-    initialAccountId || ""
-  )
-  const [transactionDate, setTransactionDate] = useState<Date>(new Date())
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
 
-  const [validationError, setValidationError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const currentScheduled = useMemo(() => {
+    if (selectedScheduled) return selectedScheduled
+    if (initialScheduledId) {
+      return (
+        pendingScheduled.find((s) => s.id === initialScheduledId) ||
+        pendingScheduled[0] ||
+        null
+      )
+    }
+    return pendingScheduled[0] || null
+  }, [selectedScheduled, initialScheduledId, pendingScheduled])
+
+  const resolvedFormValues: ConfirmTransactionFormValues = useMemo(() => {
+    if (!currentScheduled) {
+      return {
+        type: "EXPENSE",
+        amount: "",
+        accountId: initialAccountId || "",
+        budgetId: "",
+        description: "",
+        transactionDate: new Date(),
+        effectiveDate: new Date(),
+      }
+    }
+
+    const amountVal = (
+      parseInt(currentScheduled.amount || "0", 10) / 100
+    ).toFixed(2)
+    const displayName = getScheduledDisplayName(
+      currentScheduled,
+      recurringTemplates
+    )
+    const resolvedType =
+      currentScheduled.type === "INCOME" ? "INCOME" : "EXPENSE"
+    const resolvedBudgetId =
+      currentScheduled.budgetId ||
+      (budgets.length > 0 ? budgets[0].id || "" : "")
+    const targetAccId =
+      currentScheduled.accountId ||
+      initialAccountId ||
+      (accounts.find((a) => a.isDefault) || accounts[0])?.id ||
+      ""
+
+    return {
+      type: resolvedType,
+      amount: amountVal,
+      description: displayName,
+      budgetId: resolvedType === "EXPENSE" ? resolvedBudgetId : undefined,
+      accountId: targetAccId,
+      transactionDate: new Date(currentScheduled.dueDate || new Date()),
+      effectiveDate: new Date(),
+    }
+  }, [
+    currentScheduled,
+    recurringTemplates,
+    budgets,
+    accounts,
+    initialAccountId,
+  ])
+
+  // React Hook Form
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<ConfirmTransactionFormValues>({
+    resolver: zodResolver(confirmTransactionSchema),
+    defaultValues: resolvedFormValues,
+    values: resolvedFormValues,
+    resetOptions: { keepDirtyValues: true },
+  })
+
+  // Watched Values
+  const amount = useWatch({ control, name: "amount" })
+  const selectedBudgetId = useWatch({ control, name: "budgetId" })
+  const selectedAccountId = useWatch({ control, name: "accountId" })
 
   // Mutation
   const confirmScheduledMutation = useConfirmScheduledTransactionMutation()
@@ -107,41 +176,15 @@ export function ScheduledConfirmForm({
   const applyScheduledItem = useCallback(
     (st: ScheduledTransaction) => {
       setSelectedScheduled(st)
-      const amountVal = (parseInt(st.amount || "0", 10) / 100).toFixed(2)
-      setAmountText(amountVal)
-      const displayName = getScheduledDisplayName(st, recurringTemplates)
-      setDescription(displayName)
-      if (st.budgetId) {
-        setSelectedBudgetId(st.budgetId)
-      } else if (budgets.length > 0) {
-        setSelectedBudgetId(budgets[0].id || "")
-      }
       const targetAccId =
         st.accountId ||
         initialAccountId ||
         (accounts.find((a) => a.isDefault) || accounts[0])?.id ||
         ""
-      setSelectedAccountId(targetAccId)
       onAccountChange?.(targetAccId)
     },
-    [accounts, budgets, initialAccountId, onAccountChange, recurringTemplates]
+    [accounts, initialAccountId, onAccountChange]
   )
-
-  // Auto-select scheduled item if available
-  useEffect(() => {
-    if (pendingScheduled.length > 0 && !selectedScheduled) {
-      const target = initialScheduledId
-        ? pendingScheduled.find((s) => s.id === initialScheduledId) ||
-          pendingScheduled[0]
-        : pendingScheduled[0]
-      applyScheduledItem(target)
-    }
-  }, [
-    pendingScheduled,
-    selectedScheduled,
-    initialScheduledId,
-    applyScheduledItem,
-  ])
 
   const selectedBudget = useMemo(
     () => budgets.find((b) => b.id === selectedBudgetId),
@@ -163,59 +206,36 @@ export function ScheduledConfirmForm({
     "USD"
   const currentSymbol = getCurrencySymbol(currentCurrency)
 
-  // Amount input handler
-  const handleAmountChange = (text: string) => {
-    let cleaned = text.replace(/[^0-9.]/g, "")
-    const parts = cleaned.split(".")
-    if (parts.length > 2) {
-      cleaned = parts[0] + "." + parts.slice(1).join("")
-    }
-    if (parts[1] && parts[1].length > 2) {
-      cleaned = parts[0] + "." + parts[1].slice(0, 2)
-    }
-    setAmountText(cleaned)
-    setValidationError(null)
-  }
-
-  const parsedAmount = parseFloat(amountText || "0")
+  const parsedAmount = parseFloat(amount || "0")
   const amountDecimal = isNaN(parsedAmount) ? "0.00" : parsedAmount.toFixed(2)
 
-  // Handle Submit
-  const handleSave = async () => {
-    if (isSubmitting) return
+  // Submit Handler
+  const onSubmit = async (values: ConfirmTransactionFormValues) => {
+    if (!currentScheduled?.id) {
+      haptics.error()
+      setSubmissionError("Please select a pending scheduled item to confirm.")
+      return
+    }
+
     haptics.light()
-
-    if (!selectedScheduled) {
-      haptics.error()
-      setValidationError("Please select a pending scheduled item to confirm.")
-      return
-    }
-
-    if (parsedAmount <= 0) {
-      haptics.error()
-      setValidationError("Please enter an amount greater than 0.")
-      return
-    }
-
-    setValidationError(null)
-    setIsSubmitting(true)
+    setSubmissionError(null)
 
     try {
-      const dateIso = toLocalISODate(transactionDate)
-      const centsStr = toCentsString(amountDecimal)
+      const dateIso = toLocalISODate(values.transactionDate)
+      const centsStr = toCentsString(values.amount)
 
       await confirmScheduledMutation.mutateAsync({
-        transaction_id: selectedScheduled.id || "",
+        transaction_id: currentScheduled.id,
         req: {
-          transactionId: selectedScheduled.id || "",
+          transactionId: currentScheduled.id,
           transactionDate: dateIso,
           effectiveDate: dateIso,
           actualAmount: centsStr,
-          description: description.trim() || undefined,
-          accountId: selectedAccountId || undefined,
+          description: values.description.trim() || undefined,
+          accountId: values.accountId || undefined,
           budgetId:
-            selectedScheduled.type === "EXPENSE"
-              ? selectedBudgetId || undefined
+            values.type === "EXPENSE"
+              ? values.budgetId || undefined
               : undefined,
         },
       })
@@ -234,9 +254,7 @@ export function ScheduledConfirmForm({
         err instanceof Error
           ? err.message
           : "An unexpected error occurred while saving."
-      setValidationError(errMsg)
-    } finally {
-      setIsSubmitting(false)
+      setSubmissionError(errMsg)
     }
   }
 
@@ -265,41 +283,31 @@ export function ScheduledConfirmForm({
             <CalendarClock size={20} color="#6366f1" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={formStyles.specialSelectorLabel}>Scheduled Bill</Text>
+            <Text style={formStyles.specialSelectorLabel}>Scheduled Item</Text>
             <Text style={formStyles.specialSelectorValue} numberOfLines={1}>
-              {selectedScheduled
-                ? `${getScheduledDisplayName(selectedScheduled, recurringTemplates)} (${formatAmount(selectedScheduled.amount, selectedScheduled.currency)})`
-                : "Tap to select pending bill..."}
+              {currentScheduled
+                ? `${getScheduledDisplayName(currentScheduled, recurringTemplates)} • Due ${formatAmount(currentScheduled.amount, currentCurrency)}`
+                : "Select scheduled item..."}
             </Text>
           </View>
           <ChevronRight size={16} color={theme.colors.textMuted} />
         </TouchableOpacity>
 
-        {/* Amount Field */}
-        <View style={formStyles.amountCard}>
-          <Text style={formStyles.fieldSectionLabel}>ACTUAL AMOUNT</Text>
-          <View style={formStyles.amountInputRow}>
-            <Text
-              style={[formStyles.amountCurrencyPrefix, { color: "#6366f1" }]}
-            >
-              {currentSymbol}
-            </Text>
-            <TextInput
-              style={[formStyles.amountInput, { color: "#6366f1" }]}
-              keyboardType="decimal-pad"
-              value={amountText}
-              placeholder="0.00"
-              placeholderTextColor={theme.colors.textMuted}
-              onChangeText={handleAmountChange}
-              selectionColor="#6366f1"
-            />
-          </View>
-        </View>
+        {/* Amount & Currency Field */}
+        <HeroAmountInput
+          control={control}
+          name="amount"
+          currency={currentCurrency}
+          currencySymbol={currentSymbol}
+          currencyDisabled
+          accentColor="#6366f1"
+          autoFocus
+        />
 
         {/* Form Fields Card */}
         <Card style={formStyles.formGroupCard}>
-          {/* Budget Field (for Expense scheduled items) */}
-          {selectedScheduled?.type !== "INCOME" && (
+          {/* Field: Budget (if Expense) */}
+          {currentScheduled?.type !== "INCOME" && (
             <>
               <TouchableOpacity
                 style={formStyles.formRow}
@@ -342,74 +350,74 @@ export function ScheduledConfirmForm({
                     </View>
                   ) : (
                     <Text style={formStyles.placeholderText}>
-                      Select budget
+                      Select a budget
                     </Text>
                   )}
                   <ChevronRight size={14} color={theme.colors.textMuted} />
                 </View>
               </TouchableOpacity>
+              {errors.budgetId ? (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    paddingHorizontal: 16,
+                    paddingBottom: 8,
+                  }}
+                >
+                  <AlertCircle size={12} color={theme.colors.destructive} />
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: theme.colors.destructive,
+                      fontWeight: "500",
+                    }}
+                  >
+                    {errors.budgetId.message}
+                  </Text>
+                </View>
+              ) : null}
               <View style={formStyles.rowDivider} />
             </>
           )}
 
-          {/* Account Field */}
+          {/* Field: Account */}
           <AccountRow
-            label="Account"
+            label="Paid via Account"
             account={selectedAccount}
+            error={errors.accountId?.message}
             onPress={() => {
               Keyboard.dismiss()
               accountSheetRef.current?.expand()
             }}
           />
 
-          {/* Description */}
+          {/* Field: Description */}
           <View style={formStyles.rowDivider} />
-          <View style={formStyles.formRow}>
-            <View style={formStyles.formRowLabelGroup}>
-              <FileText size={16} color={theme.colors.textMuted} />
-              <Text style={formStyles.formRowLabel}>Description</Text>
-            </View>
-            <TextInput
-              style={formStyles.formRowInput}
-              placeholder="Description"
-              placeholderTextColor={theme.colors.textMuted}
-              value={description}
-              onChangeText={(val) => {
-                setDescription(val)
-                setValidationError(null)
-              }}
-              returnKeyType="done"
-            />
-          </View>
+          <FormRowInput
+            control={control}
+            name="description"
+            label="Description"
+            icon={<FileText size={16} color={theme.colors.textMuted} />}
+            placeholder="e.g. Netflix Monthly, Internet Bill"
+            returnKeyType="done"
+          />
 
-          {/* Date */}
+          {/* Field: Cleared Date */}
           <View style={formStyles.rowDivider} />
-          <TouchableOpacity
-            style={formStyles.formRow}
-            activeOpacity={0.7}
-            onPress={() => {
-              Keyboard.dismiss()
-              dateSheetRef.current?.expand()
-            }}
-          >
-            <View style={formStyles.formRowLabelGroup}>
-              <Calendar size={16} color={theme.colors.textMuted} />
-              <Text style={formStyles.formRowLabel}>Transaction Date</Text>
-            </View>
-            <View style={formStyles.formRowValueGroup}>
-              <Text style={formStyles.formRowValueText}>
-                {formatDisplayDate(transactionDate)}
-              </Text>
-              <ChevronRight size={14} color={theme.colors.textMuted} />
-            </View>
-          </TouchableOpacity>
+          <FormDateRow
+            control={control}
+            name="transactionDate"
+            label="Cleared Date"
+          />
         </Card>
 
         {/* Error Box */}
-        {validationError && (
+        {submissionError && (
           <View style={formStyles.errorBox}>
             <AlertCircle size={15} color={theme.colors.destructive} />
-            <Text style={formStyles.errorText}>{validationError}</Text>
+            <Text style={formStyles.errorText}>{submissionError}</Text>
           </View>
         )}
       </ScrollView>
@@ -425,9 +433,10 @@ export function ScheduledConfirmForm({
           style={[formStyles.submitBtn, formStyles.submitBtnScheduled]}
           size="lg"
           loading={isSubmitting}
-          onPress={handleSave}
+          onPress={handleSubmit(onSubmit)}
         >
-          {`Clear Bill • ${currentSymbol}${amountDecimal}`}
+          Confirm Payment • {currentSymbol}
+          {amountDecimal}
         </Button>
       </View>
 
@@ -436,7 +445,7 @@ export function ScheduledConfirmForm({
         ref={scheduledSheetRef}
         scheduledTransactions={pendingScheduled}
         recurringTemplates={recurringTemplates}
-        selectedScheduledId={selectedScheduled?.id}
+        selectedScheduledId={currentScheduled?.id}
         onSelect={applyScheduledItem}
         isLoading={scheduledLoading}
       />
@@ -444,26 +453,23 @@ export function ScheduledConfirmForm({
       <BudgetPickerSheet
         ref={budgetSheetRef}
         budgets={budgets}
-        selectedBudgetId={selectedBudgetId}
-        onSelect={(b) => setSelectedBudgetId(b.id || "")}
+        selectedBudgetId={selectedBudgetId || ""}
+        onSelect={(b) => {
+          if (b.id) {
+            setValue("budgetId", b.id, { shouldValidate: true })
+          }
+        }}
         isLoading={budgetsLoading}
       />
 
       <AccountPickerSheet
         ref={accountSheetRef}
         accounts={accounts}
-        selectedAccountId={selectedAccountId}
+        selectedAccountId={selectedAccountId || ""}
         onSelect={(accId) => {
-          setSelectedAccountId(accId)
+          setValue("accountId", accId, { shouldValidate: true })
           onAccountChange?.(accId)
         }}
-      />
-
-      <DatePickerSheet
-        ref={dateSheetRef}
-        title="Select Transaction Date"
-        value={transactionDate}
-        onChange={setTransactionDate}
       />
     </>
   )

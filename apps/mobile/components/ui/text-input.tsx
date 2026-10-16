@@ -10,9 +10,15 @@ import {
   type ViewStyle,
 } from "react-native"
 import { Eye, EyeOff } from "lucide-react-native"
+import {
+  Controller,
+  type Control,
+  type FieldValues,
+  type Path,
+} from "react-hook-form"
 import { theme } from "@/lib/theme"
 
-export interface TextInputProps extends RNTextInputProps {
+export interface BaseTextInputProps extends RNTextInputProps {
   label?: string
   error?: string
   helper?: string
@@ -23,76 +29,137 @@ export interface TextInputProps extends RNTextInputProps {
   inputContainerStyle?: StyleProp<ViewStyle>
 }
 
-export function TextInput({
-  label,
-  error,
-  helper,
-  leftIcon,
-  rightIcon,
-  isPassword = false,
-  containerStyle,
-  inputContainerStyle,
-  style,
-  onFocus,
-  onBlur,
-  secureTextEntry,
-  ...props
-}: TextInputProps) {
-  const [isFocused, setIsFocused] = useState(false)
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+export interface TextInputProps<
+  TFieldValues extends FieldValues = FieldValues,
+> extends Omit<BaseTextInputProps, "value"> {
+  control: Control<TFieldValues>
+  name: Path<TFieldValues>
+}
 
-  const showPasswordToggle = isPassword
+export const BaseTextInput = React.forwardRef<RNTextInput, BaseTextInputProps>(
+  function BaseTextInput(
+    {
+      label,
+      error,
+      helper,
+      leftIcon,
+      rightIcon,
+      isPassword = false,
+      containerStyle,
+      inputContainerStyle,
+      style,
+      onFocus,
+      onBlur,
+      secureTextEntry,
+      ...props
+    },
+    ref
+  ) {
+    const [isFocused, setIsFocused] = useState(false)
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false)
 
-  return (
-    <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
-      <View
-        style={[
-          styles.inputWrapper,
-          isFocused && styles.inputWrapperFocused,
-          error ? styles.inputWrapperError : undefined,
-          inputContainerStyle,
-        ]}
-      >
-        {leftIcon && <View style={styles.leftIconContainer}>{leftIcon}</View>}
-        <RNTextInput
-          style={[styles.input, style]}
-          placeholderTextColor={theme.colors.textMuted}
-          secureTextEntry={isPassword ? !isPasswordVisible : secureTextEntry}
-          onFocus={(e) => {
-            setIsFocused(true)
-            onFocus?.(e)
-          }}
-          onBlur={(e) => {
-            setIsFocused(false)
-            onBlur?.(e)
-          }}
-          {...props}
-        />
-        {showPasswordToggle ? (
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-            style={styles.rightIconContainer}
-          >
-            {isPasswordVisible ? (
-              <EyeOff size={18} color={theme.colors.textMuted} />
-            ) : (
-              <Eye size={18} color={theme.colors.textMuted} />
-            )}
-          </TouchableOpacity>
-        ) : rightIcon ? (
-          <View style={styles.rightIconContainer}>{rightIcon}</View>
+    return (
+      <View style={[styles.container, containerStyle]}>
+        {label && <Text style={styles.label}>{label}</Text>}
+        <View
+          style={[
+            styles.inputWrapper,
+            isFocused && styles.inputWrapperFocused,
+            error ? styles.inputWrapperError : undefined,
+            inputContainerStyle,
+          ]}
+        >
+          {leftIcon && <View style={styles.leftIconContainer}>{leftIcon}</View>}
+          <RNTextInput
+            ref={ref}
+            style={[styles.input, style]}
+            placeholderTextColor={theme.colors.textMuted}
+            secureTextEntry={isPassword ? !isPasswordVisible : secureTextEntry}
+            onFocus={(e) => {
+              setIsFocused(true)
+              onFocus?.(e)
+            }}
+            onBlur={(e) => {
+              setIsFocused(false)
+              onBlur?.(e)
+            }}
+            {...props}
+          />
+          {isPassword ? (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+              style={styles.rightIconContainer}
+            >
+              {isPasswordVisible ? (
+                <EyeOff size={18} color={theme.colors.textMuted} />
+              ) : (
+                <Eye size={18} color={theme.colors.textMuted} />
+              )}
+            </TouchableOpacity>
+          ) : rightIcon ? (
+            <View style={styles.rightIconContainer}>{rightIcon}</View>
+          ) : null}
+        </View>
+        {error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : helper ? (
+          <Text style={styles.helperText}>{helper}</Text>
         ) : null}
       </View>
-      {error ? (
-        <Text style={styles.errorText}>{error}</Text>
-      ) : helper ? (
-        <Text style={styles.helperText}>{helper}</Text>
-      ) : null}
-    </View>
+    )
+  }
+)
+
+export const TextInput = React.forwardRef(function TextInput<
+  TFieldValues extends FieldValues = FieldValues,
+>(
+  {
+    control,
+    name,
+    onChangeText,
+    onBlur,
+    error,
+    ...rest
+  }: TextInputProps<TFieldValues>,
+  ref: React.ForwardedRef<RNTextInput>
+) {
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field, fieldState }) => (
+        <BaseTextInput
+          {...rest}
+          ref={(instance) => {
+            field.ref(instance)
+            if (typeof ref === "function") {
+              ref(instance)
+            } else if (ref) {
+              ref.current = instance
+            }
+          }}
+          value={
+            field.value !== undefined && field.value !== null
+              ? String(field.value)
+              : ""
+          }
+          onChangeText={(val) => {
+            field.onChange(val)
+            onChangeText?.(val)
+          }}
+          onBlur={(e) => {
+            field.onBlur()
+            onBlur?.(e)
+          }}
+          error={error ?? fieldState.error?.message}
+        />
+      )}
+    />
   )
-}
+}) as <TFieldValues extends FieldValues = FieldValues>(
+  props: TextInputProps<TFieldValues> & { ref?: React.Ref<RNTextInput> }
+) => React.ReactElement
 
 const styles = StyleSheet.create({
   container: {

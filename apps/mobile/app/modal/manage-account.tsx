@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useRef, useMemo } from "react"
 import {
   StyleSheet,
   Text,
@@ -16,7 +16,6 @@ import { useQueryClient } from "@tanstack/react-query"
 import BottomSheet from "@gorhom/bottom-sheet"
 import {
   X,
-  Check,
   ChevronDown,
   Trash2,
   Landmark,
@@ -38,14 +37,14 @@ import {
   type Account_InstitutionInfo,
   type CurrencyInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { accountSchema } from "@saturn/schemas"
+import { useForm, useWatch, type Control } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { accountSchema, type AccountFormValues } from "@saturn/schemas"
 import {
   toCentsString,
   formatCents,
   getCurrencySymbol,
   getInstitutionLogoUrl,
-  AVAILABLE_COLORS,
-  COLOR_HEX_MAP,
   ACCOUNT_TYPES,
   type AccountTypeIconName,
 } from "@saturn/core"
@@ -56,6 +55,7 @@ import { Card } from "@/components/ui/card"
 import { TextInput } from "@/components/ui/text-input"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
+import { FormColorPicker } from "@/components/ui/form-primitives"
 import {
   CurrencyPickerSheet,
   InstitutionPickerSheet,
@@ -68,6 +68,76 @@ const ACCOUNT_TYPE_ICONS: Record<AccountTypeIconName, any> = {
   "credit-card": CreditCard,
   coins: Coins,
   wallet: Wallet,
+}
+
+interface AccountCardPreviewProps {
+  control: Control<AccountFormValues>
+  editAccountId?: string
+  selectedInstitution?: Account_InstitutionInfo
+  baseCurrency: string
+}
+
+function AccountCardPreview({
+  control,
+  editAccountId,
+  selectedInstitution,
+  baseCurrency,
+}: AccountCardPreviewProps) {
+  const watchedValues = useWatch({ control })
+  const name = watchedValues?.name || ""
+  const type = (watchedValues?.type || "BANK") as Account_Type
+  const currency = watchedValues?.currency || baseCurrency
+  const initialBalance = watchedValues?.initialBalance || "0"
+  const creditLimit = watchedValues?.creditLimit || ""
+  const lastFour = watchedValues?.lastFour || ""
+  const color = watchedValues?.color || "indigo"
+  const isActive = watchedValues?.isActive ?? true
+  const isDefault = watchedValues?.isDefault ?? false
+  const institutionId = watchedValues?.institutionId || ""
+
+  const previewAccount: Account = useMemo(
+    () => ({
+      id: editAccountId || "preview",
+      name: name.trim() || "Account Name",
+      type,
+      currency,
+      currentBalance: toCentsString(initialBalance || "0"),
+      initialBalance: toCentsString(initialBalance || "0"),
+      creditLimit:
+        type === "CREDIT_CARD" && creditLimit
+          ? toCentsString(creditLimit)
+          : "0",
+      lastFour: lastFour.trim() || "",
+      color,
+      isActive,
+      isDefault,
+      institutionId: institutionId || "",
+      notes: "",
+      institution: selectedInstitution,
+    }),
+    [
+      editAccountId,
+      name,
+      type,
+      currency,
+      initialBalance,
+      creditLimit,
+      lastFour,
+      color,
+      isActive,
+      isDefault,
+      institutionId,
+      selectedInstitution,
+    ]
+  )
+
+  return (
+    <CardAccountItem
+      acc={previewAccount}
+      institution={selectedInstitution}
+      baseCurrency={baseCurrency}
+    />
+  )
 }
 
 export default function ManageAccountModal() {
@@ -123,51 +193,58 @@ export default function ManageAccountModal() {
       { enabled: isEditMode && !!editAccountId && !!activeSpaceId }
     )
 
-  // Form State
-  const [name, setName] = useState("")
-  const [type, setType] = useState<Account_Type>("BANK")
-  const [institutionId, setInstitutionId] = useState("")
-  const [currency, setCurrency] = useState(baseCurrency)
-  const [initialBalance, setInitialBalance] = useState("0")
-  const [creditLimit, setCreditLimit] = useState("")
-  const [lastFour, setLastFour] = useState("")
-  const [color, setColor] = useState("indigo")
-  const [isActive, setIsActive] = useState(true)
-  const [isDefault, setIsDefault] = useState(false)
-  const [instLogoError, setInstLogoError] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const defaultFormValues: AccountFormValues = useMemo(
+    () => ({
+      name: existingAccount?.name || "",
+      type: (existingAccount?.type || "BANK") as Account_Type,
+      institutionId: existingAccount?.institutionId || "",
+      currency: existingAccount?.currency || baseCurrency,
+      initialBalance: existingAccount?.initialBalance
+        ? formatCents(existingAccount.initialBalance).toString()
+        : "0",
+      creditLimit: existingAccount?.creditLimit
+        ? formatCents(existingAccount.creditLimit).toString()
+        : "",
+      lastFour: existingAccount?.lastFour || "",
+      color: existingAccount?.color || "indigo",
+      isActive: existingAccount?.isActive ?? true,
+      isDefault: existingAccount?.isDefault ?? false,
+      notes: existingAccount?.notes || "",
+    }),
+    [existingAccount, baseCurrency]
+  )
 
-  // Initialize existing account values
-  useEffect(() => {
-    if (existingAccount) {
-      setName(existingAccount.name || "")
-      setType(existingAccount.type || "BANK")
-      setInstitutionId(existingAccount.institutionId || "")
-      setInstLogoError(false)
-      setCurrency(existingAccount.currency || baseCurrency)
-      setInitialBalance(
-        formatCents(existingAccount.initialBalance || "0").toString()
-      )
-      setCreditLimit(
-        existingAccount.creditLimit
-          ? formatCents(existingAccount.creditLimit).toString()
-          : ""
-      )
-      setLastFour(existingAccount.lastFour || "")
-      setColor(existingAccount.color || "indigo")
-      setIsActive(existingAccount.isActive ?? true)
-      setIsDefault(existingAccount.isDefault ?? false)
-    } else if (!isEditMode) {
-      setCurrency(baseCurrency)
+  // RHF Form
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    getValues,
+    formState: { isSubmitting },
+  } = useForm<AccountFormValues>({
+    resolver: zodResolver(accountSchema),
+    defaultValues: defaultFormValues,
+    values: defaultFormValues,
+    resetOptions: { keepDirtyValues: true },
+  })
+
+  const [instLogoError, setInstLogoError] = useState(false)
+
+  // Watch discrete fields driving selectors and conditional inputs
+  const [type = "BANK", currency = baseCurrency, institutionId = ""] = useWatch(
+    {
+      control,
+      name: ["type", "currency", "institutionId"] as const,
     }
-  }, [existingAccount, baseCurrency, isEditMode])
+  )
 
   // Mutations
   const createMutation = useCreateAccountMutation()
   const updateMutation = useUpdateAccountMutation()
   const deleteMutation = useDeleteAccountMutation()
 
-  const isSaving = createMutation.isPending || updateMutation.isPending
+  const isSaving =
+    createMutation.isPending || updateMutation.isPending || isSubmitting
   const isDeleting = deleteMutation.isPending
 
   const selectedInstitution = institutionId
@@ -195,82 +272,17 @@ export default function ManageAccountModal() {
     ? ACCOUNT_TYPE_ICONS[selectedTypeInfo.iconName] || Landmark
     : Landmark
 
-  // Live Preview Account Object
-  const previewAccount: Account = useMemo(
-    () => ({
-      id: editAccountId || "preview",
-      name: name.trim() || "Account Name",
-      type,
-      currency,
-      currentBalance: toCentsString(initialBalance || "0"),
-      initialBalance: toCentsString(initialBalance || "0"),
-      creditLimit:
-        type === "CREDIT_CARD" && creditLimit
-          ? toCentsString(creditLimit)
-          : "0",
-      lastFour: lastFour.trim() || "",
-      color,
-      isActive,
-      isDefault,
-      institutionId: institutionId || "",
-      notes: "",
-      institution: selectedInstitution,
-    }),
-    [
-      editAccountId,
-      name,
-      type,
-      currency,
-      initialBalance,
-      creditLimit,
-      lastFour,
-      color,
-      isActive,
-      isDefault,
-      institutionId,
-      selectedInstitution,
-    ]
-  )
-
-  const handleSave = async () => {
+  const onValid = async (values: AccountFormValues) => {
     haptics.light()
-    setErrors({})
-
-    const validation = accountSchema.safeParse({
-      name: name.trim(),
-      type,
-      currency,
-      initialBalance,
-      creditLimit: type === "CREDIT_CARD" ? creditLimit : undefined,
-      lastFour: lastFour.trim() || undefined,
-      color,
-      institutionId: institutionId || undefined,
-      isActive,
-      isDefault,
-    })
-
-    if (!validation.success) {
-      const fieldErrors: Record<string, string> = {}
-      validation.error.issues.forEach((err) => {
-        const path = err.path[0]?.toString()
-        if (path) fieldErrors[path] = err.message
-      })
-      setErrors(fieldErrors)
-      haptics.warning()
-      toast.show({
-        title: "Validation Error",
-        message: validation.error.issues[0]?.message || "Check required fields",
-        type: "error",
-      })
-      return
-    }
 
     const initBalanceCents =
       isEditMode && existingAccount
         ? existingAccount.initialBalance || "0"
-        : toCentsString(initialBalance || "0")
+        : toCentsString(values.initialBalance || "0")
     const creditLimitCents =
-      type === "CREDIT_CARD" && creditLimit ? toCentsString(creditLimit) : "0"
+      values.type === "CREDIT_CARD" && values.creditLimit
+        ? toCentsString(values.creditLimit)
+        : "0"
 
     try {
       if (isEditMode && editAccountId) {
@@ -279,13 +291,13 @@ export default function ManageAccountModal() {
           req: {
             id: editAccountId,
             account: {
-              name: name.trim(),
+              name: values.name.trim(),
               creditLimit: creditLimitCents,
-              lastFour: lastFour.trim(),
-              color,
-              isActive,
-              isDefault,
-              institutionId: institutionId,
+              lastFour: values.lastFour?.trim() || "",
+              color: values.color,
+              isActive: values.isActive,
+              isDefault: values.isDefault,
+              institutionId: values.institutionId || "",
               notes: existingAccount?.notes || "",
             } as unknown as Account,
           },
@@ -293,29 +305,29 @@ export default function ManageAccountModal() {
         haptics.success()
         toast.show({
           title: "Account Updated",
-          message: `"${name.trim()}" has been updated.`,
+          message: `"${values.name.trim()}" has been updated.`,
           type: "success",
         })
       } else {
         await createMutation.mutateAsync({
           account: {
-            name: name.trim(),
-            type,
-            currency,
+            name: values.name.trim(),
+            type: values.type,
+            currency: values.currency,
             initialBalance: initBalanceCents,
             creditLimit: creditLimitCents,
-            lastFour: lastFour.trim(),
-            color,
-            isActive,
-            isDefault,
-            institutionId: institutionId,
+            lastFour: values.lastFour?.trim() || "",
+            color: values.color,
+            isActive: values.isActive,
+            isDefault: values.isDefault,
+            institutionId: values.institutionId || "",
             notes: "",
           },
         })
         haptics.success()
         toast.show({
           title: "Account Created",
-          message: `"${name.trim()}" is now active.`,
+          message: `"${values.name.trim()}" is now active.`,
           type: "success",
         })
       }
@@ -334,10 +346,11 @@ export default function ManageAccountModal() {
 
   const handleDelete = () => {
     if (!editAccountId) return
+    const accountName = getValues("name")
     haptics.warning()
     Alert.alert(
       "Delete Account",
-      `Are you sure you want to delete "${name}"? This action cannot be undone.`,
+      `Are you sure you want to delete "${accountName}"? This action cannot be undone.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -352,7 +365,7 @@ export default function ManageAccountModal() {
               haptics.success()
               toast.show({
                 title: "Account Deleted",
-                message: `"${name}" was deleted.`,
+                message: `"${accountName}" was deleted.`,
                 type: "info",
               })
               await invalidateFinanceQueries(queryClient)
@@ -398,7 +411,7 @@ export default function ManageAccountModal() {
           ),
           headerRight: () => (
             <TouchableOpacity
-              onPress={handleSave}
+              onPress={handleSubmit(onValid)}
               disabled={isSaving}
               style={[styles.headerSaveBtn, isSaving && { opacity: 0.6 }]}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -425,9 +438,10 @@ export default function ManageAccountModal() {
           {/* Live Card Preview */}
           <Text style={styles.sectionHeaderLabel}>CARD PREVIEW</Text>
           <View style={styles.previewWrapper}>
-            <CardAccountItem
-              acc={previewAccount}
-              institution={selectedInstitution}
+            <AccountCardPreview
+              control={control}
+              editAccountId={editAccountId}
+              selectedInstitution={selectedInstitution}
               baseCurrency={baseCurrency}
             />
           </View>
@@ -459,7 +473,7 @@ export default function ManageAccountModal() {
                       key={t.value}
                       onPress={() => {
                         haptics.selection()
-                        setType(t.value)
+                        setValue("type", t.value, { shouldValidate: true })
                       }}
                       style={[
                         styles.typeGridItem,
@@ -495,15 +509,11 @@ export default function ManageAccountModal() {
             <Text style={styles.sectionHeaderLabel}>GENERAL DETAILS</Text>
 
             <TextInput
+              control={control}
+              name="name"
               label="Account Name"
-              value={name}
-              onChangeText={(text) => {
-                setName(text)
-                if (errors.name) setErrors((prev) => ({ ...prev, name: "" }))
-              }}
               placeholder="e.g. Chase Total Checking, Apple Card"
               placeholderTextColor={theme.colors.textMuted}
-              error={errors.name}
               containerStyle={{ marginBottom: 16 }}
             />
 
@@ -595,18 +605,13 @@ export default function ManageAccountModal() {
             <Text style={styles.sectionHeaderLabel}>BALANCES & LIMITS</Text>
 
             <TextInput
+              control={control}
+              name="initialBalance"
               label={isEditMode ? "Initial Balance" : "Starting Balance"}
-              value={initialBalance}
               editable={!isEditMode}
-              onChangeText={(text) => {
-                setInitialBalance(text.replace(/[^0-9.-]/g, ""))
-                if (errors.initialBalance)
-                  setErrors((prev) => ({ ...prev, initialBalance: "" }))
-              }}
               placeholder="0.00"
               placeholderTextColor={theme.colors.textMuted}
               keyboardType="decimal-pad"
-              error={errors.initialBalance}
               inputContainerStyle={
                 isEditMode
                   ? {
@@ -623,70 +628,37 @@ export default function ManageAccountModal() {
 
             {type === "CREDIT_CARD" && (
               <TextInput
+                control={control}
+                name="creditLimit"
                 label="Credit Limit"
-                value={creditLimit}
-                onChangeText={(text) => {
-                  setCreditLimit(text.replace(/[^0-9.]/g, ""))
-                  if (errors.creditLimit)
-                    setErrors((prev) => ({ ...prev, creditLimit: "" }))
-                }}
                 placeholder="e.g. 5000.00"
                 placeholderTextColor={theme.colors.textMuted}
                 keyboardType="decimal-pad"
-                error={errors.creditLimit}
                 containerStyle={{ marginBottom: 16 }}
               />
             )}
 
             <TextInput
+              control={control}
+              name="lastFour"
               label="Last 4 Digits (Optional)"
-              value={lastFour}
-              onChangeText={(text) => {
-                setLastFour(text.replace(/[^0-9]/g, "").slice(0, 4))
-                if (errors.lastFour)
-                  setErrors((prev) => ({ ...prev, lastFour: "" }))
-              }}
               placeholder="e.g. 4210"
               placeholderTextColor={theme.colors.textMuted}
               keyboardType="number-pad"
               maxLength={4}
-              error={errors.lastFour}
             />
           </Card>
 
           {/* Card Color Theme */}
           <Card style={styles.sectionCard}>
             <Text style={styles.sectionHeaderLabel}>CARD COLOR ACCENT</Text>
-            <View style={styles.colorPaletteRow}>
-              {AVAILABLE_COLORS.map((c) => {
-                const isSelected = color === c
-                return (
-                  <TouchableOpacity
-                    key={c}
-                    onPress={() => {
-                      haptics.selection()
-                      setColor(c)
-                    }}
-                    style={[
-                      styles.colorCircle,
-                      {
-                        backgroundColor:
-                          COLOR_HEX_MAP[c] || COLOR_HEX_MAP.indigo,
-                      },
-                      isSelected && styles.colorCircleSelected,
-                    ]}
-                  >
-                    {isSelected && <Check size={16} color="#ffffff" />}
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
+            <FormColorPicker control={control} name="color" />
           </Card>
 
           {/* Action Footer */}
           <View style={styles.actionFooter}>
             <Button
-              onPress={handleSave}
+              onPress={handleSubmit(onValid)}
               loading={isSaving}
               variant="primary"
               size="lg"
@@ -723,7 +695,7 @@ export default function ManageAccountModal() {
         currencies={currencies}
         selectedCurrency={currency}
         onSelect={(cur) => {
-          setCurrency(cur)
+          setValue("currency", cur, { shouldValidate: true })
           currencySheetRef.current?.close()
         }}
       />
@@ -734,7 +706,7 @@ export default function ManageAccountModal() {
         institutions={institutions}
         selectedInstitutionId={institutionId}
         onSelect={(instId) => {
-          setInstitutionId(instId)
+          setValue("institutionId", instId, { shouldValidate: true })
           setInstLogoError(false)
           institutionSheetRef.current?.close()
         }}
@@ -883,22 +855,6 @@ const styles = StyleSheet.create({
   selectorPlaceholder: {
     color: theme.colors.textMuted,
     fontWeight: "400",
-  },
-  colorPaletteRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  colorCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  colorCircleSelected: {
-    borderWidth: 3,
-    borderColor: "#ffffff",
-    transform: [{ scale: 1.08 }],
   },
   actionFooter: {
     marginTop: 8,

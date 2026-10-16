@@ -1,4 +1,3 @@
-import { useState } from "react"
 import {
   StyleSheet,
   Text,
@@ -10,6 +9,9 @@ import {
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Layers, FileText, Check, X } from "lucide-react-native"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { createSpaceSchema, type CreateSpaceFormValues } from "@saturn/schemas"
 import { useCreateSpaceMutation } from "@saturn/api/saturn/space/v1/space"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
@@ -23,29 +25,27 @@ export default function CreateSpaceModal() {
   const insets = useSafeAreaInsets()
   const toast = useToast()
   const { switchSpace, refetchSpaces } = useSpace()
-  const [name, setName] = useState("")
-  const [description, setDescription] = useState("")
-  const [error, setError] = useState<string | null>(null)
+
+  const {
+    control,
+    handleSubmit,
+    setError,
+    formState: { isSubmitting },
+  } = useForm<CreateSpaceFormValues>({
+    resolver: zodResolver(createSpaceSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  })
 
   const createSpaceMutation = useCreateSpaceMutation()
 
-  const handleCreate = async () => {
-    if (!name.trim()) {
-      setError("Please enter a workspace name")
-      return
-    }
-
-    if (name.trim().length < 2) {
-      setError("Workspace name must be at least 2 characters")
-      return
-    }
-
-    setError(null)
-
+  const onValid = async (values: CreateSpaceFormValues) => {
     try {
       const newSpace = await createSpaceMutation.mutateAsync({
-        name: name.trim(),
-        description: description.trim(),
+        name: values.name.trim(),
+        description: values.description?.trim() || "",
       })
 
       refetchSpaces()
@@ -57,14 +57,14 @@ export default function CreateSpaceModal() {
       toast.show({
         type: "success",
         title: "Workspace Created",
-        message: `Active space switched to "${name.trim()}"`,
+        message: `Active space switched to "${values.name.trim()}"`,
       })
 
       router.back()
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Failed to create workspace"
-      setError(msg)
+      setError("name", { message: msg })
       toast.show({
         type: "error",
         title: "Creation Failed",
@@ -92,28 +92,23 @@ export default function CreateSpaceModal() {
 
         <Card style={styles.formCard}>
           <TextInput
+            control={control}
+            name="name"
             label="Workspace Name"
             placeholder="e.g. Personal, Consulting, Family"
-            value={name}
-            onChangeText={(val) => {
-              setName(val)
-              if (error) setError(null)
-            }}
             leftIcon={<Layers size={18} color={theme.colors.primary} />}
             autoFocus
           />
 
           <TextInput
+            control={control}
+            name="description"
             label="Description (Optional)"
             placeholder="e.g. Primary personal finance & budgeting"
-            value={description}
-            onChangeText={setDescription}
             leftIcon={<FileText size={18} color={theme.colors.textMuted} />}
             multiline
             numberOfLines={2}
           />
-
-          {error && <Text style={styles.errorText}>{error}</Text>}
         </Card>
 
         <View style={styles.actionsRow}>
@@ -131,11 +126,11 @@ export default function CreateSpaceModal() {
             variant="primary"
             size="lg"
             style={styles.createBtn}
-            loading={createSpaceMutation.isPending}
+            loading={createSpaceMutation.isPending || isSubmitting}
             leftIcon={
               <Check size={18} color={theme.colors.primaryForeground} />
             }
-            onPress={handleCreate}
+            onPress={handleSubmit(onValid)}
           >
             Create
           </Button>
@@ -162,10 +157,6 @@ const styles = StyleSheet.create({
   formCard: {
     padding: 20,
     gap: 16,
-  },
-  errorText: {
-    fontSize: 13,
-    color: theme.colors.destructive,
   },
   actionsRow: {
     flexDirection: "row",

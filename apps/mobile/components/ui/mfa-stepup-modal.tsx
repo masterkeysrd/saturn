@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useRef } from "react"
 import {
   Modal,
   View,
@@ -10,6 +10,9 @@ import {
   type TextInput as RNTextInput,
 } from "react-native"
 import { KeyRound } from "lucide-react-native"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { mfaStepUpSchema, type MfaStepUpFormValues } from "@saturn/schemas"
 import { theme } from "@/lib/theme"
 import { Button } from "./button"
 import { OTPInput } from "./otp-input"
@@ -36,40 +39,39 @@ export function MfaStepUpModal({
   subtitle = "Please enter the 6-digit code from your authenticator app to authorize this device.",
   confirmText = "Verify & Enroll",
 }: MfaStepUpModalProps) {
-  const [code, setCode] = useState("")
   const [localError, setLocalError] = useState<string | null>(null)
   const otpInputRef = useRef<RNTextInput>(null)
 
-  useEffect(() => {
-    if (visible) {
-      setCode("")
-      setLocalError(null)
-    }
-  }, [visible])
-
-  useEffect(() => {
-    setLocalError(error)
-  }, [error])
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<MfaStepUpFormValues>({
+    resolver: zodResolver(mfaStepUpSchema),
+    defaultValues: {
+      code: "",
+    },
+  })
 
   const handleClose = () => {
-    if (loading) return
+    if (loading || isSubmitting) return
     haptics.light()
-    setCode("")
+    reset({ code: "" })
     setLocalError(null)
     onClose()
   }
 
-  const handleSubmit = (overrideCode?: string) => {
-    const codeToSubmit = (overrideCode ?? code).trim()
-    if (codeToSubmit.length !== 6) {
-      setLocalError("Please enter all 6 digits.")
-      return
-    }
+  const onValid = async (values: MfaStepUpFormValues) => {
     setLocalError(null)
-    onConfirm(codeToSubmit)
+    await onConfirm(values.code.trim())
+    reset({ code: "" })
   }
 
   if (!visible) return null
+
+  const isPending = loading || isSubmitting
+  const displayError = error || localError || errors.code?.message
 
   return (
     <Modal
@@ -102,21 +104,20 @@ export function MfaStepUpModal({
           <View style={styles.otpModalWrapper}>
             <OTPInput
               ref={otpInputRef}
-              value={code}
-              onChangeText={(val) => {
-                setCode(val)
-                if (localError) setLocalError(null)
-              }}
-              onComplete={(completedCode) => {
-                handleSubmit(completedCode)
+              control={control}
+              name="code"
+              onComplete={() => {
+                handleSubmit(onValid)()
               }}
               autoFocus
-              disabled={loading}
-              error={Boolean(localError)}
+              disabled={isPending}
+              error={Boolean(displayError)}
             />
           </View>
 
-          {localError && <Text style={styles.modalError}>{localError}</Text>}
+          {displayError && (
+            <Text style={styles.modalError}>{displayError}</Text>
+          )}
 
           <View style={styles.modalButtonRow}>
             <Button
@@ -124,7 +125,7 @@ export function MfaStepUpModal({
               size="md"
               style={styles.modalActionBtn}
               onPress={handleClose}
-              disabled={loading}
+              disabled={isPending}
             >
               Cancel
             </Button>
@@ -132,9 +133,9 @@ export function MfaStepUpModal({
               variant="primary"
               size="md"
               style={styles.modalActionBtn}
-              loading={loading}
-              disabled={code.length !== 6 || loading}
-              onPress={() => handleSubmit()}
+              loading={isPending}
+              disabled={isPending}
+              onPress={handleSubmit(onValid)}
             >
               {confirmText}
             </Button>
