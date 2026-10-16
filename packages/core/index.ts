@@ -1,4 +1,5 @@
 export * from "./finance"
+export * from "./space"
 export * from "./user-agent"
 export * from "./timezone"
 export * from "./fiscal-year"

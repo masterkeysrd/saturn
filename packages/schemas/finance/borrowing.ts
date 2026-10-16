@@ -82,4 +82,3 @@ export const borrowingTransactionSchema = z.object({
 export type BorrowingTransactionFormValues = z.infer<
   typeof borrowingTransactionSchema
 >
-
