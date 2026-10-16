@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useMemo } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
@@ -88,11 +88,59 @@ export function CreateExpenseForm({
     triggerLabel: c.code,
   }))
 
+  const expenseDefaultValues = useMemo<TransactionFormValues>(() => {
+    if (editTransaction) {
+      const txDate = editTransaction.transactionDate
+        ? new Date(editTransaction.transactionDate)
+        : new Date()
+      const effDate = editTransaction.effectiveDate
+        ? new Date(editTransaction.effectiveDate)
+        : txDate
+      const isDiff = txDate.toDateString() !== effDate.toDateString()
+
+      return {
+        budgetId: editTransaction.budgetId || "",
+        amount: formatCents(editTransaction.amount).toString(),
+        currency: editTransaction.currency || baseCurrency || "USD",
+        description: editTransaction.description || "",
+        transactionDate: txDate,
+        effectiveDate: effDate,
+        hasCustomEffectiveDate: isDiff,
+        accountId: editTransaction.accountId || "",
+      }
+    }
+
+    const selectedBudgetId =
+      preselectedBudgetId || (budgets.length > 0 ? budgets[0].id : "")
+    const initialBudget = budgets.find((b) => b.id === selectedBudgetId)
+
+    const defaultCurrency = initialBudget?.currency || baseCurrency || "USD"
+
+    const defaultAcc = activeAccounts.find((a) => a.isDefault)
+    const initialAccId = initialBudget?.defaultAccountId || defaultAcc?.id || ""
+
+    return {
+      budgetId: selectedBudgetId || "",
+      amount: "",
+      currency: defaultCurrency,
+      description: "",
+      transactionDate: new Date(),
+      effectiveDate: new Date(),
+      hasCustomEffectiveDate: false,
+      accountId: initialAccId,
+    }
+  }, [
+    editTransaction,
+    preselectedBudgetId,
+    budgets,
+    activeAccounts,
+    baseCurrency,
+  ])
+
   const {
     register,
     handleSubmit,
     control,
-    reset,
     setValue,
     formState: { errors },
   } = useForm<TransactionFormValues>({
@@ -107,54 +155,9 @@ export function CreateExpenseForm({
       effectiveDate: new Date(),
       hasCustomEffectiveDate: false,
     },
+    values: expenseDefaultValues,
+    resetOptions: { keepDirtyValues: true },
   })
-
-  useEffect(() => {
-    if (open) {
-      if (editTransaction) {
-        const txDate = editTransaction.transactionDate
-          ? new Date(editTransaction.transactionDate)
-          : new Date()
-        const effDate = editTransaction.effectiveDate
-          ? new Date(editTransaction.effectiveDate)
-          : txDate
-        const isDiff = txDate.toDateString() !== effDate.toDateString()
-
-        reset({
-          budgetId: editTransaction.budgetId || "",
-          amount: formatCents(editTransaction.amount).toString(),
-          currency: editTransaction.currency || baseCurrency || "USD",
-          description: editTransaction.description || "",
-          transactionDate: txDate,
-          effectiveDate: effDate,
-          hasCustomEffectiveDate: isDiff,
-          accountId: editTransaction.accountId || "",
-        })
-      } else {
-        const selectedBudgetId =
-          preselectedBudgetId || (budgets.length > 0 ? budgets[0].id : "")
-        const initialBudget = budgets.find((b) => b.id === selectedBudgetId)
-
-        const defaultCurrency = initialBudget?.currency || baseCurrency || "USD"
-
-        const defaultAcc = activeAccounts.find((a) => a.isDefault)
-        const initialAccId =
-          initialBudget?.defaultAccountId || defaultAcc?.id || ""
-
-        reset({
-          budgetId: selectedBudgetId || "",
-          amount: "",
-          currency: defaultCurrency,
-          description: "",
-          transactionDate: new Date(),
-          effectiveDate: new Date(),
-          hasCustomEffectiveDate: false,
-          accountId: initialAccId,
-        })
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editTransaction, preselectedBudgetId, baseCurrency, reset])
 
   const budgetIdValue = useWatch({ control, name: "budgetId" })
   const amountValue = useWatch({ control, name: "amount" })

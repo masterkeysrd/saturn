@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useMemo } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
@@ -82,11 +82,45 @@ export function CreateIncomeForm({
     triggerLabel: c.code,
   }))
 
+  const incomeDefaultValues = useMemo<IncomeFormValues>(() => {
+    if (editTransaction) {
+      const txDate = editTransaction.transactionDate
+        ? new Date(editTransaction.transactionDate)
+        : new Date()
+      const effDate = editTransaction.effectiveDate
+        ? new Date(editTransaction.effectiveDate)
+        : txDate
+      const isDiff = txDate.toDateString() !== effDate.toDateString()
+
+      return {
+        amount: formatCents(editTransaction.amount).toString(),
+        currency: editTransaction.currency || baseCurrency || "USD",
+        description: editTransaction.description || "",
+        transactionDate: txDate,
+        effectiveDate: effDate,
+        hasCustomEffectiveDate: isDiff,
+        accountId: editTransaction.accountId || "",
+      }
+    }
+
+    const defaultAcc = activeAccounts.find((a) => a.isDefault)
+    const initialAccId = defaultAcc?.id || ""
+
+    return {
+      amount: "",
+      currency: baseCurrency || "USD",
+      description: "",
+      transactionDate: new Date(),
+      effectiveDate: new Date(),
+      hasCustomEffectiveDate: false,
+      accountId: initialAccId,
+    }
+  }, [editTransaction, activeAccounts, baseCurrency])
+
   const {
     register,
     handleSubmit,
     control,
-    reset,
     setValue,
     formState: { errors },
   } = useForm<IncomeFormValues>({
@@ -100,45 +134,9 @@ export function CreateIncomeForm({
       effectiveDate: new Date(),
       hasCustomEffectiveDate: false,
     },
+    values: incomeDefaultValues,
+    resetOptions: { keepDirtyValues: true },
   })
-
-  useEffect(() => {
-    if (open) {
-      if (editTransaction) {
-        const txDate = editTransaction.transactionDate
-          ? new Date(editTransaction.transactionDate)
-          : new Date()
-        const effDate = editTransaction.effectiveDate
-          ? new Date(editTransaction.effectiveDate)
-          : txDate
-        const isDiff = txDate.toDateString() !== effDate.toDateString()
-
-        reset({
-          amount: formatCents(editTransaction.amount).toString(),
-          currency: editTransaction.currency || baseCurrency || "USD",
-          description: editTransaction.description || "",
-          transactionDate: txDate,
-          effectiveDate: effDate,
-          hasCustomEffectiveDate: isDiff,
-          accountId: editTransaction.accountId || "",
-        })
-      } else {
-        const defaultAcc = activeAccounts.find((a) => a.isDefault)
-        const initialAccId = defaultAcc?.id || ""
-
-        reset({
-          amount: "",
-          currency: baseCurrency || "USD",
-          description: "",
-          transactionDate: new Date(),
-          effectiveDate: new Date(),
-          hasCustomEffectiveDate: false,
-          accountId: initialAccId,
-        })
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editTransaction, baseCurrency, reset])
 
   const amountValue = useWatch({ control, name: "amount" })
   const currencyValue = useWatch({ control, name: "currency" })

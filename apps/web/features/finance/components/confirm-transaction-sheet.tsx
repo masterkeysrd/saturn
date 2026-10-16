@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
@@ -80,24 +80,6 @@ export function ConfirmTransactionSheet({
   getConversionPreview,
 }: ConfirmTransactionSheetProps) {
   const navigate = useNavigate()
-  const {
-    register,
-    handleSubmit,
-    control,
-    reset,
-    formState: { errors },
-  } = useForm<ConfirmTransactionFormValues>({
-    resolver: zodResolver(confirmTransactionSchema),
-    defaultValues: {
-      type: "EXPENSE",
-      amount: "",
-      accountId: "",
-      budgetId: "",
-      description: "",
-      transactionDate: new Date(),
-      effectiveDate: new Date(),
-    },
-  })
 
   const [confirmedTxn, setConfirmedTxn] = useState<Transaction | null>(null)
   const [selectedTxnId, setSelectedTxnId] = useState<string>("")
@@ -203,33 +185,62 @@ export function ConfirmTransactionSheet({
     }
   }
 
-  useEffect(() => {
-    if (open && transaction) {
-      const matchedTemplate = transaction.sourceId
-        ? recurringTemplates.find((e) => e.id === transaction.sourceId)
-        : null
-      const metaDesc = transaction.metadata?.description || null
-
-      const dueFormatted = new Date(transaction.dueDate)
-        .toISOString()
-        .slice(0, 10)
-      const name =
-        matchedTemplate?.name ||
-        transaction.recurringTransaction?.name ||
-        "Scheduled Transaction"
-      const defaultDesc = metaDesc || `${name} (${dueFormatted})`
-
-      reset({
-        type: transaction.type === "INCOME" ? "INCOME" : "EXPENSE",
-        amount: formatCents(transaction.amount).toString(),
+  const confirmDefaultValues = useMemo<ConfirmTransactionFormValues>(() => {
+    if (!transaction) {
+      return {
+        type: "EXPENSE",
+        amount: "",
+        accountId: "",
+        budgetId: "",
+        description: "",
         transactionDate: new Date(),
-        effectiveDate: new Date(transaction.dueDate),
-        budgetId: transaction.budgetId || "",
-        accountId: transaction.accountId || "",
-        description: defaultDesc,
-      })
+        effectiveDate: new Date(),
+      }
     }
-  }, [open, transaction, recurringTemplates, reset])
+    const matchedTemplate = transaction.sourceId
+      ? recurringTemplates.find((e) => e.id === transaction.sourceId)
+      : null
+    const metaDesc = transaction.metadata?.description || null
+
+    const dueFormatted = new Date(transaction.dueDate)
+      .toISOString()
+      .slice(0, 10)
+    const name =
+      matchedTemplate?.name ||
+      transaction.recurringTransaction?.name ||
+      "Scheduled Transaction"
+    const defaultDesc = metaDesc || `${name} (${dueFormatted})`
+
+    return {
+      type: transaction.type === "INCOME" ? "INCOME" : "EXPENSE",
+      amount: formatCents(transaction.amount).toString(),
+      transactionDate: new Date(),
+      effectiveDate: new Date(transaction.dueDate),
+      budgetId: transaction.budgetId || "",
+      accountId: transaction.accountId || "",
+      description: defaultDesc,
+    }
+  }, [transaction, recurringTemplates])
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm<ConfirmTransactionFormValues>({
+    resolver: zodResolver(confirmTransactionSchema),
+    defaultValues: {
+      type: "EXPENSE",
+      amount: "",
+      accountId: "",
+      budgetId: "",
+      description: "",
+      transactionDate: new Date(),
+      effectiveDate: new Date(),
+    },
+    values: confirmDefaultValues,
+    resetOptions: { keepDirtyValues: true },
+  })
 
   const amountValue = useWatch({ control, name: "amount" })
   const budgetIdValue = useWatch({ control, name: "budgetId" })

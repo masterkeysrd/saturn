@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQueryClient } from "@tanstack/react-query"
@@ -82,6 +82,19 @@ export function BorrowingDetailSheet({
   const logTransactionMutation = useLogBorrowingTransactionMutation()
   const deleteTransactionMutation = useDeleteBorrowingTransactionMutation()
 
+  const defaultAccount =
+    activeAccounts.find((a) => a.isDefault) || activeAccounts[0]
+
+  const repaymentDefaultValues = useMemo<RepaymentFormValues>(
+    () => ({
+      amount: "",
+      paymentDate: new Date(),
+      accountId: defaultAccount?.id || "",
+      notes: "",
+    }),
+    [defaultAccount?.id]
+  )
+
   const {
     register,
     handleSubmit,
@@ -96,21 +109,9 @@ export function BorrowingDetailSheet({
       accountId: "",
       notes: "",
     },
+    values: repaymentDefaultValues,
+    resetOptions: { keepDirtyValues: true },
   })
-
-  const defaultAccount =
-    activeAccounts.find((a) => a.isDefault) || activeAccounts[0]
-
-  useEffect(() => {
-    if (open) {
-      reset({
-        amount: "",
-        paymentDate: new Date(),
-        accountId: defaultAccount?.id || "",
-        notes: "",
-      })
-    }
-  }, [open, borrowing, reset, defaultAccount?.id])
 
   const amountValue = useWatch({ control, name: "amount" })
   const conversion = borrowing

@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useMemo } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { cn } from "@/lib/utils"
@@ -102,6 +102,46 @@ export function CreateRecurringTransactionSheet({
   )
   const accounts = accountsData?.accounts || []
 
+  const recurringDefaultValues = useMemo<RecurringTransactionFormValues>(() => {
+    if (editTransaction) {
+      const nextDueDate = editTransaction.executionState?.nextDueDate
+        ? new Date(editTransaction.executionState.nextDueDate)
+        : new Date()
+
+      return {
+        type: editTransaction.type === "INCOME" ? "INCOME" : "EXPENSE",
+        budgetId: editTransaction.budgetId || "",
+        accountId: editTransaction.accountId || "",
+        name: editTransaction.name || "",
+        amount: formatCents(editTransaction.amount).toString(),
+        currency: editTransaction.currency || baseCurrency || "USD",
+        interval: editTransaction.interval || "MONTHLY",
+        nextDueDate,
+        isVariable: editTransaction.isVariable || false,
+        status: editTransaction.status || "ACTIVE",
+        gracePeriodDays: editTransaction.gracePeriodDays || 0,
+      }
+    }
+
+    const defaultBudgetId = budgets.length > 0 ? budgets[0].id : ""
+    const initialBudget = budgets.find((b) => b.id === defaultBudgetId)
+    const defaultCurrency = initialBudget?.currency || baseCurrency || "USD"
+
+    return {
+      type: "EXPENSE",
+      budgetId: defaultBudgetId || "",
+      accountId: "",
+      name: "",
+      amount: "",
+      currency: defaultCurrency,
+      interval: "MONTHLY",
+      nextDueDate: new Date(),
+      isVariable: false,
+      status: "ACTIVE",
+      gracePeriodDays: 3,
+    }
+  }, [editTransaction, budgets, baseCurrency])
+
   const {
     register,
     handleSubmit,
@@ -124,55 +164,14 @@ export function CreateRecurringTransactionSheet({
       status: "ACTIVE",
       gracePeriodDays: 3,
     },
+    values: recurringDefaultValues,
+    resetOptions: { keepDirtyValues: true },
   })
 
   const typeValue = useWatch({ control, name: "type" })
   const amountValue = useWatch({ control, name: "amount" })
   const currencyValue = useWatch({ control, name: "currency" })
   const isVariableValue = useWatch({ control, name: "isVariable" })
-
-  useEffect(() => {
-    if (open) {
-      if (editTransaction) {
-        const nextDueDate = editTransaction.executionState?.nextDueDate
-          ? new Date(editTransaction.executionState.nextDueDate)
-          : new Date()
-
-        reset({
-          type: editTransaction.type === "INCOME" ? "INCOME" : "EXPENSE",
-          budgetId: editTransaction.budgetId || "",
-          accountId: editTransaction.accountId || "",
-          name: editTransaction.name || "",
-          amount: formatCents(editTransaction.amount).toString(),
-          currency: editTransaction.currency || baseCurrency || "USD",
-          interval: editTransaction.interval || "MONTHLY",
-          nextDueDate,
-          isVariable: editTransaction.isVariable || false,
-          status: editTransaction.status || "ACTIVE",
-          gracePeriodDays: editTransaction.gracePeriodDays || 0,
-        })
-      } else {
-        const defaultBudgetId = budgets.length > 0 ? budgets[0].id : ""
-        const initialBudget = budgets.find((b) => b.id === defaultBudgetId)
-        const defaultCurrency = initialBudget?.currency || baseCurrency || "USD"
-
-        reset({
-          type: "EXPENSE",
-          budgetId: defaultBudgetId || "",
-          accountId: "",
-          name: "",
-          amount: "",
-          currency: defaultCurrency,
-          interval: "MONTHLY",
-          nextDueDate: new Date(),
-          isVariable: false,
-          status: "ACTIVE",
-          gracePeriodDays: 3,
-        })
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editTransaction, baseCurrency, reset])
 
   const handleBudgetChange = (newBudgetId: string) => {
     const b = budgets.find((x) => x.id === newBudgetId)
@@ -237,6 +236,7 @@ export function CreateRecurringTransactionSheet({
     }
 
     refetchTransactions?.()
+    reset()
     onOpenChange(false)
   }
 

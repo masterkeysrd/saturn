@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { inboxReviewSchema, type InboxReviewFormValues } from "@saturn/schemas"
@@ -100,32 +100,6 @@ export function InboxItemReviewPanel({
 
   const [borrowingPopoverOpen, setBorrowingPopoverOpen] = useState(false)
   const [borrowingSearch, setBorrowingSearch] = useState("")
-
-  const {
-    register,
-    handleSubmit,
-    control,
-    reset,
-    setValue,
-    formState: { errors },
-  } = useForm<InboxReviewFormValues>({
-    resolver: zodResolver(inboxReviewSchema),
-    defaultValues: {
-      selectedTxId: "",
-      overwriteLinkedTx: false,
-      docType: "RECEIPT",
-      transactionType: "EXPENSE",
-      description: "",
-      amountStr: "",
-      currency: "USD",
-      accountId: "",
-      destinationAccountId: "",
-      transferLeg: "SOURCE",
-      budgetId: "",
-      scheduledTransactionId: "",
-      borrowingId: "",
-    },
-  })
 
   let meta: {
     duplicate_reason?: string
@@ -253,8 +227,7 @@ export function InboxItemReviewPanel({
     )
   }, [selectedItem.rawPayload])
 
-  // Synchronize form when selectedItem changes
-  useEffect(() => {
+  const inboxReviewDefaultValues = useMemo<InboxReviewFormValues>(() => {
     let itemMeta: {
       transaction_type?: string
       suggested_borrowing_id?: string
@@ -280,7 +253,7 @@ export function InboxItemReviewPanel({
       itemMeta.suggested_borrowing_id ||
       (suggestedBorrowing ? suggestedBorrowing.id || "" : "")
 
-    reset({
+    return {
       selectedTxId: itemMeta.potential_duplicate_id || "",
       overwriteLinkedTx: false,
       docType: DOC_TYPE_ITEMS.some((d) => d.value === docTypeVal)
@@ -300,8 +273,35 @@ export function InboxItemReviewPanel({
       budgetId: selectedItem.budgetId || "",
       scheduledTransactionId: initialScheduledTransactionId,
       borrowingId: initialBorrowingId,
-    })
-  }, [selectedItem, suggestedBill, suggestedBorrowing, reset])
+    }
+  }, [selectedItem, suggestedBill, suggestedBorrowing])
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    formState: { errors },
+  } = useForm<InboxReviewFormValues>({
+    resolver: zodResolver(inboxReviewSchema),
+    defaultValues: {
+      selectedTxId: "",
+      overwriteLinkedTx: false,
+      docType: "RECEIPT",
+      transactionType: "EXPENSE",
+      description: "",
+      amountStr: "",
+      currency: "USD",
+      accountId: "",
+      destinationAccountId: "",
+      transferLeg: "SOURCE",
+      budgetId: "",
+      scheduledTransactionId: "",
+      borrowingId: "",
+    },
+    values: inboxReviewDefaultValues,
+    resetOptions: { keepDirtyValues: true },
+  })
 
   const currentTxnType = useWatch({ control, name: "transactionType" })
 

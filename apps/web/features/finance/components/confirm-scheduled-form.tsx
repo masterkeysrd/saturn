@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useMemo } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { useQueryClient } from "@tanstack/react-query"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -61,11 +61,23 @@ export function ConfirmScheduledForm({
     scheduledTransaction.recurringTransaction?.interval
   const intervalLabel = intervalVal ? formatInterval(intervalVal) : "One-Time"
 
+  const confirmScheduledDefaultValues = useMemo<ConfirmTransactionFormValues>(
+    () => ({
+      type: scheduledTransaction.type === "INCOME" ? "INCOME" : "EXPENSE",
+      amount: (Number(scheduledTransaction.amount || 0) / 100).toFixed(2),
+      accountId: scheduledTransaction.accountId || "",
+      budgetId: scheduledTransaction.budgetId || "",
+      description: displayName,
+      transactionDate: new Date(scheduledTransaction.dueDate || new Date()),
+      effectiveDate: new Date(),
+    }),
+    [scheduledTransaction, displayName]
+  )
+
   const {
     register,
     handleSubmit,
     control,
-    reset,
     formState: { errors },
   } = useForm<ConfirmTransactionFormValues>({
     resolver: zodResolver(confirmTransactionSchema),
@@ -78,20 +90,9 @@ export function ConfirmScheduledForm({
       transactionDate: new Date(scheduledTransaction.dueDate || new Date()),
       effectiveDate: new Date(),
     },
+    values: confirmScheduledDefaultValues,
+    resetOptions: { keepDirtyValues: true },
   })
-
-  // Keep form in sync when transaction prop changes
-  useEffect(() => {
-    reset({
-      type: scheduledTransaction.type === "INCOME" ? "INCOME" : "EXPENSE",
-      amount: (Number(scheduledTransaction.amount || 0) / 100).toFixed(2),
-      accountId: scheduledTransaction.accountId || "",
-      budgetId: scheduledTransaction.budgetId || "",
-      description: displayName,
-      transactionDate: new Date(scheduledTransaction.dueDate || new Date()),
-      effectiveDate: new Date(),
-    })
-  }, [scheduledTransaction, reset, displayName])
 
   const toLocalISODate = (d: Date): string => {
     const y = d.getFullYear()

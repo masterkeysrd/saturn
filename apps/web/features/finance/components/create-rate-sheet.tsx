@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useMemo } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
@@ -51,35 +51,29 @@ export function CreateRateSheet({
 
   const defaultFrom = currencyItems.length > 0 ? currencyItems[0].value : "EUR"
 
-  const {
-    register,
-    handleSubmit,
-    control,
-    setValue,
-    reset,
-    formState: { errors },
-  } = useForm<ExchangeRateFormValues>({
-    resolver: zodResolver(exchangeRateSchema),
-    defaultValues: {
+  const rateDefaultValues: ExchangeRateFormValues = useMemo(
+    () => ({
       fromCurrency: defaultFrom,
       toCurrency: baseCurr,
       rateDirection: "direct",
       rateValue: "",
       rateDate: new Date(),
-    },
-  })
+    }),
+    [defaultFrom, baseCurr]
+  )
 
-  useEffect(() => {
-    if (open) {
-      reset({
-        fromCurrency: defaultFrom,
-        toCurrency: baseCurr,
-        rateDirection: "direct",
-        rateValue: "",
-        rateDate: new Date(),
-      })
-    }
-  }, [open, defaultFrom, baseCurr, reset])
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    formState: { errors },
+  } = useForm<ExchangeRateFormValues>({
+    resolver: zodResolver(exchangeRateSchema),
+    defaultValues: rateDefaultValues,
+    values: rateDefaultValues,
+    resetOptions: { keepDirtyValues: true },
+  })
 
   const rateFrom = useWatch({ control, name: "fromCurrency" })
   const rateTo = useWatch({ control, name: "toCurrency" })

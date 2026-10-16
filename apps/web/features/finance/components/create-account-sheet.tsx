@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useMemo } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
@@ -75,6 +75,45 @@ export function CreateAccountSheet({
     }),
   })
 
+  const accountDefaultValues = useMemo<AccountFormValues>(() => {
+    if (editAccount) {
+      return {
+        name: editAccount.name,
+        lastFour: editAccount.lastFour || "",
+        type: editAccount.type,
+        currency: editAccount.currency,
+        initialBalance:
+          editAccount.type === "CREDIT_CARD" &&
+          Number(editAccount.initialBalance) < 0
+            ? formatCents(
+                Math.abs(Number(editAccount.initialBalance))
+              ).toString()
+            : formatCents(editAccount.initialBalance).toString(),
+        creditLimit: editAccount.creditLimit
+          ? formatCents(editAccount.creditLimit).toString()
+          : "",
+        color: editAccount.color || "indigo",
+        institutionId: editAccount.institutionId || "",
+        isDefault: editAccount.isDefault,
+        isActive: editAccount.isActive,
+        notes: editAccount.notes || "",
+      }
+    }
+    return {
+      name: "",
+      lastFour: "",
+      type: "BANK",
+      currency: baseCurrency || "USD",
+      initialBalance: "0",
+      creditLimit: "",
+      color: "indigo",
+      institutionId: "",
+      isDefault: false,
+      isActive: true,
+      notes: "",
+    }
+  }, [editAccount, baseCurrency])
+
   const {
     register,
     handleSubmit,
@@ -97,49 +136,9 @@ export function CreateAccountSheet({
       isActive: true,
       notes: "",
     },
+    values: accountDefaultValues,
+    resetOptions: { keepDirtyValues: true },
   })
-
-  useEffect(() => {
-    if (open) {
-      if (editAccount) {
-        reset({
-          name: editAccount.name,
-          lastFour: editAccount.lastFour || "",
-          type: editAccount.type,
-          currency: editAccount.currency,
-          initialBalance:
-            editAccount.type === "CREDIT_CARD" &&
-            Number(editAccount.initialBalance) < 0
-              ? formatCents(
-                  Math.abs(Number(editAccount.initialBalance))
-                ).toString()
-              : formatCents(editAccount.initialBalance).toString(),
-          creditLimit: editAccount.creditLimit
-            ? formatCents(editAccount.creditLimit).toString()
-            : "",
-          color: editAccount.color || "indigo",
-          institutionId: editAccount.institutionId || "",
-          isDefault: editAccount.isDefault,
-          isActive: editAccount.isActive,
-          notes: editAccount.notes || "",
-        })
-      } else {
-        reset({
-          name: "",
-          lastFour: "",
-          type: "BANK",
-          currency: baseCurrency || "USD",
-          initialBalance: "0",
-          creditLimit: "",
-          color: "indigo",
-          institutionId: "",
-          isDefault: false,
-          isActive: true,
-          notes: "",
-        })
-      }
-    }
-  }, [open, editAccount, baseCurrency, reset])
 
   const accountType = useWatch({ control, name: "type" })
   const currentColor = useWatch({ control, name: "color" })
@@ -200,6 +199,7 @@ export function CreateAccountSheet({
           },
         })
       }
+      reset()
       onOpenChange(false)
       refetchAccounts()
     } catch (err: unknown) {

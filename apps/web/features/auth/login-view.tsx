@@ -1,5 +1,12 @@
 import { useState, useEffect, type SyntheticEvent } from "react"
 import { Link, useNavigate } from "react-router-dom"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import {
+  loginSchema,
+  mfaStepUpSchema,
+  type LoginFormValues,
+} from "@saturn/schemas"
 import { useAuth } from "./use-auth"
 import { AuthCard } from "./components/auth-card"
 import { FormInput } from "./components/form-input"
@@ -16,11 +23,21 @@ export function LoginView() {
   const { login, error, setError } = useAuth()
   const navigate = useNavigate()
 
-  // Step 1: Identifier & Password
-  const [identifier, setIdentifier] = useState("")
-  const [password, setPassword] = useState("")
+  // Step 1: Identifier & Password Form
+  const {
+    register,
+    handleSubmit,
+    formState: { errors: formErrors },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      identifier: "",
+      password: "",
+      rememberMe: false,
+    },
+  })
 
-  // Step 2: MFA Challenge
+  // Step 2: MFA Challenge State
   const [mfaStep, setMfaStep] = useState(false)
   const [mfaTicket, setMfaTicket] = useState("")
   const [availableFactors, setAvailableFactors] = useState<
@@ -32,32 +49,16 @@ export function LoginView() {
   const [useBackupCode, setUseBackupCode] = useState(false)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({})
+  const [mfaError, setMfaError] = useState<string | null>(null)
 
-  const handlePasswordSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const onPasswordSubmit = async (values: LoginFormValues) => {
     setError(null)
-    setFieldErrors({})
-
-    const errors: { [key: string]: string } = {}
-    if (!identifier.trim()) {
-      errors.identifier = "Username or email is required"
-    }
-    if (!password) {
-      errors.password = "Password is required"
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors)
-      return
-    }
-
     setIsSubmitting(true)
     try {
       const res = await login({
         userPassword: {
-          identifier,
-          password,
+          identifier: values.identifier.trim(),
+          password: values.password,
         },
       })
 
@@ -81,23 +82,23 @@ export function LoginView() {
 
   const submitMfa = async (codeToVerify?: string) => {
     setError(null)
-    setFieldErrors({})
+    setMfaError(null)
 
     const code = codeToVerify ?? (useBackupCode ? backupCode : totpCode)
-    const errors: { [key: string]: string } = {}
     if (useBackupCode) {
       if (!code.trim()) {
-        errors.backupCode = "Backup recovery code is required"
+        setMfaError("Backup recovery code is required")
+        return
       }
     } else {
-      if (!code.trim() || code.trim().length !== 6) {
-        errors.totpCode = "Please enter a valid 6-digit verification code"
+      const validation = mfaStepUpSchema.safeParse({ code: code.trim() })
+      if (!validation.success) {
+        setMfaError(
+          validation.error.errors[0]?.message ||
+            "Please enter a valid 6-digit verification code"
+        )
+        return
       }
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors)
-      return
     }
 
     setIsSubmitting(true)
@@ -130,7 +131,7 @@ export function LoginView() {
     setBackupCode("")
     setUseBackupCode(false)
     setError(null)
-    setFieldErrors({})
+    setMfaError(null)
   }
 
   if (mfaStep) {
@@ -169,13 +170,7 @@ export function LoginView() {
                 value={totpCode}
                 onChange={(val) => {
                   setTotpCode(val)
-                  if (fieldErrors.totpCode) {
-                    setFieldErrors((prev) => {
-                      const next = { ...prev }
-                      delete next.totpCode
-                      return next
-                    })
-                  }
+                  if (mfaError) setMfaError(null)
                 }}
                 onComplete={(val) => {
                   setTotpCode(val)
@@ -183,7 +178,7 @@ export function LoginView() {
                 }}
                 disabled={isSubmitting}
                 autoFocus
-                error={fieldErrors.totpCode}
+                error={mfaError || undefined}
               />
 
               {availableFactors.length > 1 && (
@@ -219,7 +214,7 @@ export function LoginView() {
               placeholder="ABCD-EFGH"
               value={backupCode}
               onChange={(e) => setBackupCode(e.target.value.toUpperCase())}
-              error={fieldErrors.backupCode}
+              error={mfaError}
               disabled={isSubmitting}
               className="text-center font-mono tracking-wider uppercase"
             />
@@ -239,7 +234,7 @@ export function LoginView() {
               onClick={() => {
                 setUseBackupCode(!useBackupCode)
                 setError(null)
-                setFieldErrors({})
+                setMfaError(null)
               }}
               className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-primary hover:underline"
             >
@@ -265,7 +260,10 @@ export function LoginView() {
 
   return (
     <AuthCard title="Welcome back" subtitle="Sign in to your Saturn account">
-      <form onSubmit={handlePasswordSubmit} className="flex flex-col space-y-5">
+      <form
+        onSubmit={handleSubmit(onPasswordSubmit)}
+        className="flex flex-col space-y-5"
+      >
         {error && (
           <div className="animate-in rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive duration-300 fade-in">
             {error}
@@ -276,20 +274,20 @@ export function LoginView() {
           id="identifier"
           type="text"
           label="Username or Email"
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
-          error={fieldErrors.identifier}
+          autoComplete="username"
+          error={formErrors.identifier?.message}
           disabled={isSubmitting}
+          {...register("identifier")}
         />
 
         <FormInput
           id="password"
           type="password"
           label="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          error={fieldErrors.password}
+          autoComplete="current-password"
+          error={formErrors.password?.message}
           disabled={isSubmitting}
+          {...register("password")}
         />
 
         <Button

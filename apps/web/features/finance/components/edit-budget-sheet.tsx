@@ -1,4 +1,4 @@
-import { useState, useEffect, createElement } from "react"
+import { useState, useMemo, createElement } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
@@ -136,41 +136,34 @@ export function EditBudgetSheet({
     baseCurrency,
   })
 
+  const budgetDefaultValues: BudgetFormValues = useMemo(
+    () => ({
+      name: activeBudget?.name || "",
+      limit: activeBudget?.limitAmount
+        ? formatCents(activeBudget.limitAmount).toString()
+        : "",
+      currency: activeBudget?.currency || baseCurrency || "USD",
+      interval: activeBudget?.interval || "MONTHLY",
+      status: activeBudget?.status || "ACTIVE",
+      icon: activeBudget?.icon || "piggy-bank",
+      color: activeBudget?.color || "indigo",
+      defaultAccountId: activeBudget?.defaultAccountId || "",
+    }),
+    [activeBudget, baseCurrency]
+  )
+
   const {
     register,
     handleSubmit,
     control,
     setValue,
-    reset,
     formState: { errors, dirtyFields },
   } = useForm<BudgetFormValues>({
     resolver: zodResolver(budgetSchema),
-    defaultValues: {
-      name: "",
-      limit: "",
-      currency: baseCurrency || "USD",
-      interval: "MONTHLY",
-      status: "ACTIVE",
-      icon: "piggy-bank",
-      color: "indigo",
-      defaultAccountId: "",
-    },
+    defaultValues: budgetDefaultValues,
+    values: budgetDefaultValues,
+    resetOptions: { keepDirtyValues: true },
   })
-
-  useEffect(() => {
-    if (activeBudget) {
-      reset({
-        name: activeBudget.name,
-        limit: formatCents(activeBudget.limitAmount).toString(),
-        currency: activeBudget.currency,
-        interval: activeBudget.interval,
-        status: activeBudget.status || "ACTIVE",
-        icon: activeBudget.icon || "piggy-bank",
-        color: activeBudget.color || "indigo",
-        defaultAccountId: activeBudget.defaultAccountId || "",
-      })
-    }
-  }, [activeBudget, reset])
 
   const limitValue = useWatch({ control, name: "limit" })
   const currencyValue = useWatch({ control, name: "currency" })

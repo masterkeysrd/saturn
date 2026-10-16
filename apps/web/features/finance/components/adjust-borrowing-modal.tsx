@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQueryClient } from "@tanstack/react-query"
-import { z } from "zod"
 import {
   type Borrowing,
   useAdjustBorrowingBalanceMutation,
   useListAccountsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
+import {
+  adjustBorrowingSchema,
+  type AdjustBorrowingFormValues,
+} from "@saturn/schemas"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AmountInput } from "@/components/ui/amount-input"
@@ -25,15 +28,6 @@ import {
 import { Scale, AlertTriangle, Loader2 } from "lucide-react"
 import { formatAmount } from "../utils"
 import { cn } from "@/lib/utils"
-
-const adjustBorrowingSchema = z.object({
-  targetBalance: z.string().min(1, "Target balance is required"),
-  adjustmentDate: z.date(),
-  accountId: z.string().optional(),
-  notes: z.string().optional(),
-})
-
-type AdjustBorrowingFormValues = z.infer<typeof adjustBorrowingSchema>
 
 interface AdjustBorrowingModalProps {
   open: boolean
@@ -61,6 +55,17 @@ export function AdjustBorrowingModal({
   )
   const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || []
 
+  const borrowingDefaultValues = useMemo<AdjustBorrowingFormValues>(() => {
+    return {
+      targetBalance: borrowing
+        ? (Number(borrowing.remainingAmount || 0) / 100).toFixed(2)
+        : "",
+      adjustmentDate: new Date(),
+      accountId: "",
+      notes: "",
+    }
+  }, [borrowing])
+
   const {
     register,
     handleSubmit,
@@ -75,20 +80,9 @@ export function AdjustBorrowingModal({
       accountId: "",
       notes: "",
     },
+    values: borrowingDefaultValues,
+    resetOptions: { keepDirtyValues: true },
   })
-
-  useEffect(() => {
-    if (open && borrowing) {
-      reset({
-        targetBalance: (Number(borrowing.remainingAmount || 0) / 100).toFixed(
-          2
-        ),
-        adjustmentDate: new Date(),
-        accountId: "",
-        notes: "",
-      })
-    }
-  }, [open, borrowing, reset])
 
   const targetBalanceStr = useWatch({ control, name: "targetBalance" }) || ""
 
@@ -105,6 +99,7 @@ export function AdjustBorrowingModal({
       })
       refetchBorrowings()
       if (refetchRepayments) refetchRepayments()
+      reset()
       onOpenChange(false)
     },
     onError: (err: unknown) => {

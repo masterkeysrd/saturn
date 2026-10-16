@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useCallback } from "react"
+import { useMemo, useCallback } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
@@ -42,6 +42,18 @@ export function CreateTransferSheet({
   )
   const createMutation = useCreateTransferMutation()
 
+  const transferDefaultValues = useMemo<TransferFormValues>(
+    () => ({
+      sourceAccountId: "",
+      destinationAccountId: "",
+      sourceAmount: "",
+      destinationAmount: "",
+      transferDate: new Date(),
+      notes: "",
+    }),
+    []
+  )
+
   const {
     register,
     handleSubmit,
@@ -51,28 +63,10 @@ export function CreateTransferSheet({
     formState: { errors },
   } = useForm<TransferFormValues>({
     resolver: zodResolver(transferSchema),
-    defaultValues: {
-      sourceAccountId: "",
-      destinationAccountId: "",
-      sourceAmount: "",
-      destinationAmount: "",
-      transferDate: new Date(),
-      notes: "",
-    },
+    defaultValues: transferDefaultValues,
+    values: transferDefaultValues,
+    resetOptions: { keepDirtyValues: true },
   })
-
-  useEffect(() => {
-    if (open) {
-      reset({
-        sourceAccountId: "",
-        destinationAccountId: "",
-        sourceAmount: "",
-        destinationAmount: "",
-        transferDate: new Date(),
-        notes: "",
-      })
-    }
-  }, [open, reset])
 
   const srcId = useWatch({ control, name: "sourceAccountId" })
   const dstId = useWatch({ control, name: "destinationAccountId" })
@@ -112,12 +106,6 @@ export function CreateTransferSheet({
     [activeAccounts, rates, setValue]
   )
 
-  useEffect(() => {
-    if (srcId && dstId && srcAmount) {
-      updateTargetAmount(srcAmount, srcId, dstId)
-    }
-  }, [srcId, dstId, srcAmount, updateTargetAmount])
-
   const onSubmit = async (data: TransferFormValues) => {
     try {
       await createMutation.mutateAsync({
@@ -140,7 +128,10 @@ export function CreateTransferSheet({
   return (
     <FormDrawer
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={(next) => {
+        if (!next) reset()
+        onOpenChange(next)
+      }}
       title="Perform Fund Transfer"
       icon={<ArrowRightLeft className="h-5 w-5 text-primary" />}
       description="Double-entry ledger entry: deducts from source and credits target."
@@ -152,11 +143,20 @@ export function CreateTransferSheet({
         label="Source Account (Withdraw From)"
         error={errors.sourceAccountId?.message}
       >
-        <AccountSelect
+        <Controller
           control={control}
           name="sourceAccountId"
-          accounts={activeAccounts.filter((a) => a.id !== dstId)}
-          placeholder="Choose source account"
+          render={({ field }) => (
+            <AccountSelect
+              value={field.value}
+              onValueChange={(val) => {
+                field.onChange(val)
+                updateTargetAmount(srcAmount, val, dstId)
+              }}
+              accounts={activeAccounts.filter((a) => a.id !== dstId)}
+              placeholder="Choose source account"
+            />
+          )}
         />
       </FormFieldItem>
 
@@ -164,11 +164,20 @@ export function CreateTransferSheet({
         label="Destination Account (Deposit To)"
         error={errors.destinationAccountId?.message}
       >
-        <AccountSelect
+        <Controller
           control={control}
           name="destinationAccountId"
-          accounts={activeAccounts.filter((a) => a.id !== srcId)}
-          placeholder="Choose target account"
+          render={({ field }) => (
+            <AccountSelect
+              value={field.value}
+              onValueChange={(val) => {
+                field.onChange(val)
+                updateTargetAmount(srcAmount, srcId, val)
+              }}
+              accounts={activeAccounts.filter((a) => a.id !== srcId)}
+              placeholder="Choose target account"
+            />
+          )}
         />
       </FormFieldItem>
 

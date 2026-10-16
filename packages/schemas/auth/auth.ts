@@ -57,3 +57,9 @@ export const mfaStepUpSchema = z.object({
 })
 
 export type MfaStepUpFormValues = z.infer<typeof mfaStepUpSchema>
+
+export const recoveryCodeSchema = z.object({
+  code: z.string().trim().min(1, "Please enter your recovery code"),
+})
+
+export type RecoveryCodeFormValues = z.infer<typeof recoveryCodeSchema>

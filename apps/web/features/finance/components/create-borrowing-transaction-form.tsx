@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useMemo } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { useQueryClient } from "@tanstack/react-query"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -15,30 +15,11 @@ import {
   type BorrowingTransactionType,
   useLogBorrowingTransactionMutation,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
-import { z } from "zod"
+import {
+  borrowingTransactionSchema,
+  type BorrowingTransactionFormValues,
+} from "@saturn/schemas"
 import { toCentsString, formatCents } from "../utils"
-
-const borrowingTransactionSchema = z.object({
-  type: z.enum([
-    "BORROWING_TRANSACTION_TYPE_PAYMENT",
-    "BORROWING_TRANSACTION_TYPE_DISBURSEMENT",
-  ]),
-  amount: z
-    .string()
-    .min(1, "Amount is required")
-    .refine(
-      (val) => {
-        const num = parseFloat(val)
-        return !isNaN(num) && num > 0
-      },
-      { message: "Amount must be greater than zero" }
-    ),
-  accountId: z.string().min(1, "Account is required"),
-  notes: z.string().optional(),
-  transactionDate: z.date(),
-})
-
-type BorrowingTransactionFormValues = z.infer<typeof borrowingTransactionSchema>
 
 interface CreateBorrowingTransactionFormProps {
   open: boolean
@@ -64,11 +45,21 @@ export function CreateBorrowingTransactionForm({
     accounts.find((a) => a.isDefault && a.isActive) ||
     accounts.find((a) => a.isActive)
 
+  const borrowingTxDefaultValues = useMemo<BorrowingTransactionFormValues>(
+    () => ({
+      type: "BORROWING_TRANSACTION_TYPE_PAYMENT",
+      amount: "",
+      accountId: defaultAccount?.id || "",
+      notes: "",
+      transactionDate: new Date(),
+    }),
+    [defaultAccount?.id]
+  )
+
   const {
     register,
     handleSubmit,
     control,
-    reset,
     formState: { errors },
   } = useForm<BorrowingTransactionFormValues>({
     resolver: zodResolver(borrowingTransactionSchema),
@@ -79,20 +70,9 @@ export function CreateBorrowingTransactionForm({
       notes: "",
       transactionDate: new Date(),
     },
+    values: borrowingTxDefaultValues,
+    resetOptions: { keepDirtyValues: true },
   })
-
-  // Keep form default account updated when list loads
-  useEffect(() => {
-    if (open) {
-      reset({
-        type: "BORROWING_TRANSACTION_TYPE_PAYMENT",
-        amount: "",
-        accountId: defaultAccount?.id || "",
-        notes: "",
-        transactionDate: new Date(),
-      })
-    }
-  }, [open, borrowing, defaultAccount?.id, reset])
 
   const onSubmit = async (values: BorrowingTransactionFormValues) => {
     try {

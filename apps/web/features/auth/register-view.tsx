@@ -1,5 +1,8 @@
-import { useState, useEffect, type SyntheticEvent } from "react"
+import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { registerSchema, type RegisterFormValues } from "@saturn/schemas"
 import { useAuth } from "./use-auth"
 import { AuthCard } from "./components/auth-card"
 import { FormInput } from "./components/form-input"
@@ -10,51 +13,34 @@ export function RegisterView() {
     document.title = "Register | Saturn"
   }, [])
 
-  const { register, error, setError } = useAuth()
+  const { register: registerAuth, error, setError } = useAuth()
   const navigate = useNavigate()
-  const [name, setName] = useState("")
-  const [username, setUsername] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({})
 
-  const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: "",
+      username: "",
+      email: "",
+      password: "",
+    },
+  })
+
+  const onRegisterSubmit = async (values: RegisterFormValues) => {
     setError(null)
-    setFieldErrors({})
-
-    const errors: { [key: string]: string } = {}
-    if (!name.trim()) {
-      errors.name = "Full name is required"
-    }
-    if (!username.trim()) {
-      errors.username = "Username is required"
-    }
-    if (!email.trim()) {
-      errors.email = "Email is required"
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      errors.email = "Please enter a valid email address"
-    }
-    if (!password) {
-      errors.password = "Password is required"
-    } else if (password.length < 6) {
-      errors.password = "Password must be at least 6 characters"
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors)
-      return
-    }
-
     setIsSubmitting(true)
     try {
-      await register({
-        name,
-        username,
-        email,
-        password,
-        avatarUrl: "", // optional
+      await registerAuth({
+        name: values.name.trim(),
+        username: values.username?.trim() || values.email.split("@")[0],
+        email: values.email.trim(),
+        password: values.password,
+        avatarUrl: "",
       })
       navigate("/")
     } catch {
@@ -66,7 +52,10 @@ export function RegisterView() {
 
   return (
     <AuthCard title="Get started" subtitle="Create your Saturn account today">
-      <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
+      <form
+        onSubmit={handleSubmit(onRegisterSubmit)}
+        className="flex flex-col space-y-4"
+      >
         {error && (
           <div className="animate-in rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive duration-300 fade-in">
             {error}
@@ -77,51 +66,47 @@ export function RegisterView() {
           id="name"
           type="text"
           label="Full Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          error={fieldErrors.name}
+          error={errors.name?.message}
           disabled={isSubmitting}
+          {...register("name")}
         />
 
         <FormInput
           id="username"
           type="text"
           label="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          error={fieldErrors.username}
+          error={errors.username?.message}
           disabled={isSubmitting}
+          {...register("username")}
         />
 
         <FormInput
           id="email"
           type="email"
           label="Email Address"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          error={fieldErrors.email}
+          error={errors.email?.message}
           disabled={isSubmitting}
+          {...register("email")}
         />
 
         <FormInput
           id="password"
           type="password"
           label="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          error={fieldErrors.password}
+          error={errors.password?.message}
           disabled={isSubmitting}
+          {...register("password")}
         />
 
         <Button
           type="submit"
-          className="mt-2 w-full cursor-pointer rounded-2xl py-6 font-semibold shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99]"
+          className="w-full cursor-pointer rounded-2xl py-6 font-semibold shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99]"
           disabled={isSubmitting}
         >
           {isSubmitting ? "Creating account..." : "Create Account"}
         </Button>
 
-        <p className="mt-2 text-center text-xs text-muted-foreground">
+        <p className="text-center text-xs text-muted-foreground">
           Already have an account?{" "}
           <Link
             to="/login"

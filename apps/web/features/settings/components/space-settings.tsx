@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
+import { createSpaceSchema, type CreateSpaceFormValues } from "@saturn/schemas"
 import { useMySpaces, useActiveSpaceContext } from "@/features/space/use-space"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,21 +26,6 @@ import {
 } from "@saturn/api/gen/saturn/space/v1/space"
 import { toast } from "@/components/ui/toast"
 import { ManageSpaceSheet } from "./manage-space-sheet"
-
-const createSpaceSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Space name is required")
-    .max(100, "Space name cannot exceed 100 characters"),
-  description: z
-    .string()
-    .trim()
-    .max(500, "Description cannot exceed 500 characters")
-    .optional(),
-})
-
-type CreateSpaceFormValues = z.infer<typeof createSpaceSchema>
 
 export function SpaceSettings() {
   const { spaces, isLoading: isSpacesLoading } = useMySpaces()

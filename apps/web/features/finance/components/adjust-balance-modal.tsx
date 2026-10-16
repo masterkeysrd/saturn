@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
 import {
   type Account,
   useAdjustAccountBalanceMutation,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
+import {
+  adjustBalanceSchema,
+  type AdjustBalanceFormValues,
+} from "@saturn/schemas"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AmountInput } from "@/components/ui/amount-input"
@@ -20,13 +23,6 @@ import {
 import { Scale, AlertTriangle, Loader2 } from "lucide-react"
 import { formatAmount } from "../utils"
 import { cn } from "@/lib/utils"
-
-const adjustBalanceSchema = z.object({
-  targetBalance: z.string().min(1, "Target balance is required"),
-  notes: z.string().optional(),
-})
-
-type AdjustBalanceFormValues = z.infer<typeof adjustBalanceSchema>
 
 interface AdjustBalanceModalProps {
   open: boolean
@@ -45,6 +41,17 @@ export function AdjustBalanceModal({
 }: AdjustBalanceModalProps) {
   const [adjustError, setAdjustError] = useState<string | null>(null)
 
+  const currentBalance = account?.currentBalance
+  const adjustBalanceDefaultValues = useMemo<AdjustBalanceFormValues>(() => {
+    return {
+      targetBalance:
+        currentBalance !== undefined
+          ? (Number(currentBalance || 0) / 100).toFixed(2)
+          : "",
+      notes: "",
+    }
+  }, [currentBalance])
+
   const {
     register,
     handleSubmit,
@@ -57,16 +64,9 @@ export function AdjustBalanceModal({
       targetBalance: "",
       notes: "",
     },
+    values: adjustBalanceDefaultValues,
+    resetOptions: { keepDirtyValues: true },
   })
-
-  useEffect(() => {
-    if (open && account) {
-      reset({
-        targetBalance: (Number(account.currentBalance || 0) / 100).toFixed(2),
-        notes: "",
-      })
-    }
-  }, [open, account, reset])
 
   const targetBalanceStr = useWatch({ control, name: "targetBalance" }) || ""
 
@@ -74,6 +74,7 @@ export function AdjustBalanceModal({
     onSuccess: () => {
       refetchAccounts()
       refetchTransfers()
+      reset()
       onOpenChange(false)
     },
     onError: (err: unknown) => {

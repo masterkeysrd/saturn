@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useMemo } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQueryClient } from "@tanstack/react-query"
@@ -63,6 +63,42 @@ export function CreateBorrowingSheet({
     triggerLabel: c.code,
   }))
 
+  const borrowingDefaultValues = useMemo<BorrowingFormValues>(() => {
+    if (editBorrowing) {
+      const estDate = editBorrowing.establishedAt
+        ? new Date(editBorrowing.establishedAt)
+        : new Date()
+      const dueDate = editBorrowing.dueAt
+        ? new Date(editBorrowing.dueAt)
+        : undefined
+
+      return {
+        direction: editBorrowing.direction || "LENT",
+        counterparty: editBorrowing.counterparty || "",
+        contactInfo: editBorrowing.contactInfo || "",
+        amount: formatCents(editBorrowing.totalAmount).toString(),
+        currency: editBorrowing.currency || baseCurrency || "USD",
+        establishedAt: estDate,
+        dueAt: dueDate,
+        hasDueDate: !!dueDate,
+        createAsTransaction: !!editBorrowing.accountId,
+        notes: editBorrowing.notes || "",
+      }
+    }
+    return {
+      direction: "LENT",
+      counterparty: "",
+      contactInfo: "",
+      amount: "",
+      currency: baseCurrency || "USD",
+      establishedAt: new Date(),
+      dueAt: undefined,
+      hasDueDate: false,
+      createAsTransaction: false,
+      notes: "",
+    }
+  }, [editBorrowing, baseCurrency])
+
   const {
     register,
     handleSubmit,
@@ -84,46 +120,9 @@ export function CreateBorrowingSheet({
       createAsTransaction: false,
       notes: "",
     },
+    values: borrowingDefaultValues,
+    resetOptions: { keepDirtyValues: true },
   })
-
-  useEffect(() => {
-    if (open) {
-      if (editBorrowing) {
-        const estDate = editBorrowing.establishedAt
-          ? new Date(editBorrowing.establishedAt)
-          : new Date()
-        const dueDate = editBorrowing.dueAt
-          ? new Date(editBorrowing.dueAt)
-          : undefined
-
-        reset({
-          direction: editBorrowing.direction || "LENT",
-          counterparty: editBorrowing.counterparty || "",
-          contactInfo: editBorrowing.contactInfo || "",
-          amount: formatCents(editBorrowing.totalAmount).toString(),
-          currency: editBorrowing.currency || baseCurrency || "USD",
-          establishedAt: estDate,
-          dueAt: dueDate,
-          hasDueDate: !!dueDate,
-          createAsTransaction: !!editBorrowing.accountId,
-          notes: editBorrowing.notes || "",
-        })
-      } else {
-        reset({
-          direction: "LENT",
-          counterparty: "",
-          contactInfo: "",
-          amount: "",
-          currency: baseCurrency || "USD",
-          establishedAt: new Date(),
-          dueAt: undefined,
-          hasDueDate: false,
-          createAsTransaction: false,
-          notes: "",
-        })
-      }
-    }
-  }, [open, editBorrowing, baseCurrency, reset])
 
   const amountValue = useWatch({ control, name: "amount" })
   const currencyValue = useWatch({ control, name: "currency" })
@@ -174,6 +173,7 @@ export function CreateBorrowingSheet({
         queryKey: ["/api/v1/finance/borrowings"],
       })
       refetchBorrowings?.()
+      reset()
       onOpenChange(false)
     } catch (err) {
       console.error("Failed to save borrowing", err)

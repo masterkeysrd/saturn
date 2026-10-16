@@ -1,4 +1,4 @@
-import { createElement } from "react"
+import { createElement, useMemo } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
@@ -73,6 +73,19 @@ export function CreateBudgetSheet({
     baseCurrency,
   })
 
+  const budgetDefaultValues: BudgetFormValues = useMemo(
+    () => ({
+      name: "",
+      limit: "",
+      currency: baseCurrency || "USD",
+      interval: "MONTHLY",
+      icon: "piggy-bank",
+      color: "indigo",
+      defaultAccountId: "",
+    }),
+    [baseCurrency]
+  )
+
   const {
     register,
     handleSubmit,
@@ -82,15 +95,9 @@ export function CreateBudgetSheet({
     formState: { errors },
   } = useForm<BudgetFormValues>({
     resolver: zodResolver(budgetSchema),
-    defaultValues: {
-      name: "",
-      limit: "",
-      currency: baseCurrency || "USD",
-      interval: "MONTHLY",
-      icon: "piggy-bank",
-      color: "indigo",
-      defaultAccountId: "",
-    },
+    defaultValues: budgetDefaultValues,
+    values: budgetDefaultValues,
+    resetOptions: { keepDirtyValues: true },
   })
 
   const iconValue = useWatch({ control, name: "icon" })
@@ -113,16 +120,8 @@ export function CreateBudgetSheet({
         defaultAccountId: data.defaultAccountId || undefined,
       },
     })
+    reset()
     onOpenChange(false)
-    reset({
-      name: "",
-      limit: "",
-      currency: baseCurrency || "USD",
-      interval: "MONTHLY",
-      icon: "piggy-bank",
-      color: "indigo",
-      defaultAccountId: "",
-    })
     refetchBudgets?.()
   }
 
@@ -131,7 +130,10 @@ export function CreateBudgetSheet({
   return (
     <FormDrawer
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={(next) => {
+        if (!next) reset()
+        onOpenChange(next)
+      }}
       title="Create Budget Template"
       description="Define a recurring budget template. Periods will spawn lazily when transactions occur."
       submitLabel="Create Budget"

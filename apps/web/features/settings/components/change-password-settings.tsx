@@ -1,4 +1,11 @@
-import { useState, type FormEvent } from "react"
+import { useState } from "react"
+import { useForm, useWatch } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import {
+  changePasswordSchema,
+  mfaStepUpSchema,
+  type ChangePasswordFormValues,
+} from "@saturn/schemas"
 import {
   useChangePasswordMutation,
   useListMFAFactorsQuery,
@@ -36,11 +43,6 @@ export function ChangePasswordSettings() {
   const changePasswordMutation = useChangePasswordMutation()
 
   const [isExpanded, setIsExpanded] = useState(false)
-  const [currentPassword, setCurrentPassword] = useState("")
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [revokeOtherSessions, setRevokeOtherSessions] = useState(true)
-
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -56,10 +58,34 @@ export function ChangePasswordSettings() {
   const factors = mfaData?.factors || []
   const hasActiveMFA = factors.length > 0
 
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    setValue,
+    getValues,
+    formState: { errors: formErrors },
+  } = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+      revokeOtherSessions: true,
+    },
+  })
+
+  const revokeOtherSessions =
+    useWatch({ control, name: "revokeOtherSessions" }) ?? true
+
   const handleResetForm = () => {
-    setCurrentPassword("")
-    setNewPassword("")
-    setConfirmPassword("")
+    reset({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+      revokeOtherSessions: true,
+    })
     setTotpCode("")
     setError(null)
     setChallengeError(null)
@@ -78,13 +104,16 @@ export function ChangePasswordSettings() {
     }
   }
 
-  const executeChangePassword = async (codeToSubmit: string) => {
+  const executeChangePassword = async (
+    codeToSubmit: string,
+    values: ChangePasswordFormValues
+  ) => {
     try {
       const res = await changePasswordMutation.mutateAsync({
-        currentPassword,
-        newPassword,
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
         totpCode: codeToSubmit,
-        revokeOtherSessions,
+        revokeOtherSessions: values.revokeOtherSessions,
       })
 
       if (res?.accessToken) {
@@ -99,7 +128,7 @@ export function ChangePasswordSettings() {
       toast.add({
         type: "success",
         title: "Password Changed",
-        description: revokeOtherSessions
+        description: values.revokeOtherSessions
           ? "Your password has been changed. All other sessions have been signed out."
           : "Your password has been changed successfully.",
       })
@@ -121,31 +150,9 @@ export function ChangePasswordSettings() {
     }
   }
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
+  const onValid = async () => {
     setError(null)
     setSuccess(false)
-
-    if (!currentPassword) {
-      setError("Please enter your current password.")
-      return
-    }
-    if (!newPassword) {
-      setError("Please enter your new password.")
-      return
-    }
-    if (newPassword.length < 8) {
-      setError("New password must be at least 8 characters long.")
-      return
-    }
-    if (newPassword === currentPassword) {
-      setError("New password cannot be the same as your current password.")
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setError("New passwords do not match.")
-      return
-    }
 
     // If account has MFA enabled, prompt for step-up verification challenge
     if (hasActiveMFA) {
@@ -156,16 +163,20 @@ export function ChangePasswordSettings() {
     }
 
     // Otherwise, execute directly
-    await executeChangePassword("")
+    await executeChangePassword("", getValues())
   }
 
   const handleChallengeConfirm = async () => {
     setChallengeError(null)
-    if (!totpCode || totpCode.trim().length !== 6) {
-      setChallengeError("Please enter a valid 6-digit verification code.")
+    const validation = mfaStepUpSchema.safeParse({ code: totpCode.trim() })
+    if (!validation.success) {
+      setChallengeError(
+        validation.error.errors[0]?.message ||
+          "Please enter a valid 6-digit verification code."
+      )
       return
     }
-    await executeChangePassword(totpCode.trim())
+    await executeChangePassword(totpCode.trim(), getValues())
   }
 
   return (
@@ -179,66 +190,54 @@ export function ChangePasswordSettings() {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-semibold text-foreground">
-                Account Password
+                Password
               </h3>
-              <span className="inline-flex items-center gap-1 rounded-full border border-green-500/30 bg-green-500/10 px-2 py-0.5 text-[11px] font-medium text-green-500">
-                <ShieldCheckIcon className="h-3 w-3" />
-                Protected
-              </span>
+              {hasActiveMFA && (
+                <span className="flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-500">
+                  <ShieldCheckIcon className="h-3 w-3" />
+                  MFA Protected
+                </span>
+              )}
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Manage your master login credentials and authorized session
-              invalidation.
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Manage your master account password used for sign-in and recovery.
             </p>
           </div>
         </div>
 
         <Button
-          variant={isExpanded ? "ghost" : "outline"}
+          type="button"
+          variant={isExpanded ? "outline" : "default"}
           size="sm"
+          className="cursor-pointer gap-2 self-start rounded-xl sm:self-center"
           onClick={handleToggleExpand}
-          className="cursor-pointer self-start sm:self-center"
         >
           {isExpanded ? (
             <>
-              <ChevronUpIcon className="mr-1.5 h-4 w-4" />
-              Cancel
+              <ChevronUpIcon className="h-4 w-4" />
+              Close
             </>
           ) : (
             <>
-              <LockIcon className="mr-1.5 h-3.5 w-3.5" />
+              <LockIcon className="h-4 w-4" />
               Change Password
             </>
           )}
         </Button>
       </div>
 
-      {/* Success Notification Banner */}
+      {/* Success banner after password update */}
       {success && !isExpanded && (
-        <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-green-500/30 bg-green-500/10 p-3.5 text-sm text-green-600 dark:text-green-400">
+        <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400">
           <CheckCircle2Icon className="h-4 w-4 shrink-0" />
-          <span>Your password was successfully updated and secured.</span>
+          <span>Your password was updated successfully.</span>
         </div>
       )}
 
-      {/* Collapsed Preview Status */}
-      {!isExpanded && !success && (
-        <div className="mt-5 flex items-center justify-between border-t border-border/30 pt-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2.5 font-mono text-sm tracking-widest text-foreground/70">
-            ••••••••••••••••
-          </div>
-          <span className="text-xs text-muted-foreground">
-            {hasActiveMFA
-              ? "Re-authentication & 2FA challenge required to modify"
-              : "Re-authentication required to modify"}
-          </span>
-        </div>
-      )}
-
-      {/* Expanded Password Change Form */}
+      {/* Expandable Form Body */}
       {isExpanded && (
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onValid)}
           className="mt-6 max-w-xl animate-in space-y-5 border-t border-border/40 pt-5 duration-200 fade-in"
         >
           {error && (
@@ -255,12 +254,10 @@ export function ChangePasswordSettings() {
               <Input
                 id="current-password"
                 type={showCurrent ? "text" : "password"}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="Enter current password"
                 autoComplete="current-password"
                 className="pr-10"
-                required
+                {...register("currentPassword")}
               />
               <Button
                 type="button"
@@ -276,6 +273,11 @@ export function ChangePasswordSettings() {
                 )}
               </Button>
             </div>
+            {formErrors.currentPassword && (
+              <p className="text-xs text-destructive">
+                {formErrors.currentPassword.message}
+              </p>
+            )}
           </div>
 
           {/* New Password */}
@@ -285,12 +287,10 @@ export function ChangePasswordSettings() {
               <Input
                 id="new-password"
                 type={showNew ? "text" : "password"}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Enter new password (min. 8 characters)"
                 autoComplete="new-password"
                 className="pr-10"
-                required
+                {...register("newPassword")}
               />
               <Button
                 type="button"
@@ -306,10 +306,16 @@ export function ChangePasswordSettings() {
                 )}
               </Button>
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              Must be at least 8 characters and differ from your current
-              password.
-            </p>
+            {formErrors.newPassword ? (
+              <p className="text-xs text-destructive">
+                {formErrors.newPassword.message}
+              </p>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">
+                Must be at least 8 characters and differ from your current
+                password.
+              </p>
+            )}
           </div>
 
           {/* Confirm New Password */}
@@ -319,12 +325,10 @@ export function ChangePasswordSettings() {
               <Input
                 id="confirm-password"
                 type={showConfirm ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm new password"
                 autoComplete="new-password"
                 className="pr-10"
-                required
+                {...register("confirmPassword")}
               />
               <Button
                 type="button"
@@ -340,6 +344,11 @@ export function ChangePasswordSettings() {
                 )}
               </Button>
             </div>
+            {formErrors.confirmPassword && (
+              <p className="text-xs text-destructive">
+                {formErrors.confirmPassword.message}
+              </p>
+            )}
           </div>
 
           {/* Revoke other sessions checkbox */}
@@ -347,7 +356,9 @@ export function ChangePasswordSettings() {
             <Checkbox
               id="revoke-other-sessions"
               checked={revokeOtherSessions}
-              onCheckedChange={(checked) => setRevokeOtherSessions(!!checked)}
+              onCheckedChange={(checked) =>
+                setValue("revokeOtherSessions", !!checked)
+              }
               className="mt-0.5"
             />
             <div className="space-y-0.5">
@@ -358,36 +369,30 @@ export function ChangePasswordSettings() {
                 Sign out of all other devices
               </Label>
               <p className="text-xs text-muted-foreground">
-                Immediately invalidates any other active web, mobile, or desktop
-                sessions. You will stay signed in on this current browser.
+                Revokes active sessions on other phones and web browsers for
+                maximum security.
               </p>
             </div>
           </div>
 
-          {/* Form Actions */}
+          {/* Submit Actions */}
           <div className="flex items-center gap-3 pt-3">
             <Button
               type="submit"
               disabled={changePasswordMutation.isPending}
-              className="cursor-pointer"
+              className="cursor-pointer gap-2 rounded-xl"
             >
-              {changePasswordMutation.isPending ? (
-                <>
-                  <RefreshCwIcon className="mr-2 h-4 w-4 animate-spin" />
-                  Updating Password...
-                </>
-              ) : hasActiveMFA ? (
-                "Continue to Verification"
-              ) : (
-                "Save New Password"
+              {changePasswordMutation.isPending && (
+                <RefreshCwIcon className="h-4 w-4 animate-spin" />
               )}
+              {hasActiveMFA ? "Continue to Verification" : "Update Password"}
             </Button>
             <Button
               type="button"
-              variant="outline"
-              onClick={handleToggleExpand}
+              variant="ghost"
+              onClick={handleResetForm}
               disabled={changePasswordMutation.isPending}
-              className="cursor-pointer"
+              className="cursor-pointer rounded-xl"
             >
               Cancel
             </Button>
@@ -395,79 +400,74 @@ export function ChangePasswordSettings() {
         </form>
       )}
 
-      {/* Step-Up Security Verification Modal (Option B Challenge Dialog) */}
+      {/* Step-Up MFA Challenge Modal */}
       <Dialog open={challengeModalOpen} onOpenChange={setChallengeModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
-                <ShieldCheckIcon className="h-5 w-5" />
-              </div>
-              <div className="text-left">
-                <DialogTitle>Security Verification Required</DialogTitle>
-                <DialogDescription>
-                  Enter the 6-digit code from your authenticator app to
-                  authorize this password change.
-                </DialogDescription>
-              </div>
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+              <ShieldCheckIcon className="h-6 w-6" />
             </div>
+            <DialogTitle className="text-center">
+              Security Verification Required
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Changing your password requires two-factor authentication. Please
+              enter the 6-digit code from your authenticator app.
+            </DialogDescription>
           </DialogHeader>
 
-          {challengeError && (
-            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
-              {challengeError}
-            </div>
-          )}
+          <div className="space-y-4 py-4">
+            {challengeError && (
+              <div className="flex items-start gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 p-3.5 text-sm text-destructive">
+                <AlertCircleIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{challengeError}</span>
+              </div>
+            )}
 
-          <div className="flex flex-col items-center justify-center space-y-4 py-4">
-            <div className="w-full space-y-2 text-center">
-              <Label
-                htmlFor="step-up-totp"
-                className="text-xs font-medium text-foreground"
-              >
-                Two-Factor Authenticator Code
-              </Label>
+            <div className="flex justify-center">
               <InputOTP
-                id="step-up-totp"
+                id="totpCode"
                 value={totpCode}
                 onChange={(val) => {
                   setTotpCode(val)
-                  if (challengeError) setChallengeError(null)
+                  setChallengeError(null)
                 }}
                 onComplete={(val) => {
                   setTotpCode(val)
-                  executeChangePassword(val)
+                  setChallengeError(null)
                 }}
                 disabled={changePasswordMutation.isPending}
                 autoFocus
+                error={challengeError || undefined}
               />
             </div>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
+              type="button"
               variant="outline"
-              onClick={() => setChallengeModalOpen(false)}
+              onClick={() => {
+                setChallengeModalOpen(false)
+                setChallengeError(null)
+              }}
               disabled={changePasswordMutation.isPending}
-              className="cursor-pointer"
+              className="cursor-pointer rounded-xl"
             >
               Cancel
             </Button>
             <Button
+              type="button"
               onClick={handleChallengeConfirm}
               disabled={
                 changePasswordMutation.isPending || totpCode.trim().length !== 6
               }
-              className="cursor-pointer"
+              className="cursor-pointer gap-2 rounded-xl"
             >
-              {changePasswordMutation.isPending ? (
-                <>
-                  <RefreshCwIcon className="mr-2 h-4 w-4 animate-spin" />
-                  Verifying...
-                </>
-              ) : (
-                "Authorize & Update"
+              {changePasswordMutation.isPending && (
+                <RefreshCwIcon className="h-4 w-4 animate-spin" />
               )}
+              Confirm & Update
             </Button>
           </DialogFooter>
         </DialogContent>

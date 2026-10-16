@@ -1,8 +1,13 @@
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
+import {
+  spaceDetailsSchema,
+  type SpaceDetailsFormValues,
+  addMemberSchema,
+  type AddMemberFormValues,
+} from "@saturn/schemas"
 import { usePatch } from "@/hooks/use-patch"
 import {
   Sheet,
@@ -40,29 +45,8 @@ import {
   type SpaceMember_Role,
   type UpdateSpaceRequest,
 } from "@saturn/api/gen/saturn/space/v1/space"
+import { SPACE_ROLE_LABELS, SPACE_ROLE_OPTIONS } from "@saturn/core"
 import { toast } from "@/components/ui/toast"
-
-const roleLabels: Record<SpaceMember_Role, string> = {
-  ROLE_UNSPECIFIED: "Unspecified",
-  OWNER: "Owner",
-  ADMIN: "Admin",
-  MEMBER: "Member",
-  VIEWER: "Viewer",
-}
-
-const spaceDetailsSchema = z.object({
-  name: z.string().trim().min(1, "Space name is required").max(255),
-  description: z.string().optional(),
-})
-
-type SpaceDetailsFormValues = z.infer<typeof spaceDetailsSchema>
-
-const addMemberSchema = z.object({
-  userId: z.string().trim().min(1, "User ID is required"),
-  role: z.enum(["ADMIN", "MEMBER", "VIEWER"]),
-})
-
-type AddMemberFormValues = z.infer<typeof addMemberSchema>
 
 interface ManageSpaceSheetProps {
   space: Space | null
@@ -75,12 +59,19 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
   const [generalError, setGeneralError] = useState("")
   const [memberError, setMemberError] = useState("")
 
-  const addMemberForm = useForm<AddMemberFormValues>({
-    resolver: zodResolver(addMemberSchema),
-    defaultValues: {
+  const addMemberDefaultValues: AddMemberFormValues = useMemo(
+    () => ({
       userId: "",
       role: "MEMBER",
-    },
+    }),
+    []
+  )
+
+  const addMemberForm = useForm<AddMemberFormValues>({
+    resolver: zodResolver(addMemberSchema),
+    defaultValues: addMemberDefaultValues,
+    values: addMemberDefaultValues,
+    resetOptions: { keepDirtyValues: false },
   })
 
   // Queries & Mutations
@@ -113,28 +104,24 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
     }),
   })
 
+  const spaceDefaultValues: SpaceDetailsFormValues = useMemo(
+    () => ({
+      name: space?.name || "",
+      description: space?.description || "",
+    }),
+    [space?.name, space?.description]
+  )
+
   const {
     register,
     handleSubmit,
-    reset,
     formState: { errors: formErrors, dirtyFields },
   } = useForm<SpaceDetailsFormValues>({
     resolver: zodResolver(spaceDetailsSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-    },
+    defaultValues: spaceDefaultValues,
+    values: spaceDefaultValues,
+    resetOptions: { keepDirtyValues: true },
   })
-
-  useEffect(() => {
-    if (space) {
-      reset({
-        name: space.name,
-        description: space.description || "",
-      })
-      addMemberForm.reset()
-    }
-  }, [space, reset, addMemberForm])
 
   if (!space) return null
 
@@ -412,7 +399,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                             {member.profile?.username
                               ? `@${member.profile.username} • `
                               : ""}
-                            {roleLabels[member.role] || member.role}
+                            {SPACE_ROLE_LABELS[member.role] || member.role}
                           </span>
                         </div>
                       </div>
@@ -440,9 +427,11 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                                <SelectItem value="ADMIN">Admin</SelectItem>
-                                <SelectItem value="MEMBER">Member</SelectItem>
-                                <SelectItem value="VIEWER">Viewer</SelectItem>
+                                {SPACE_ROLE_OPTIONS.map((opt) => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <Button
@@ -492,9 +481,11 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                          <SelectItem value="ADMIN">Admin</SelectItem>
-                          <SelectItem value="MEMBER">Member</SelectItem>
-                          <SelectItem value="VIEWER">Viewer</SelectItem>
+                          {SPACE_ROLE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     )}
