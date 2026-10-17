@@ -29,7 +29,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write \"**/*.ts\""
+    "format": "prettier --write \"**/*.{ts,tsx}\""
   },
   "dependencies": {
     "@saturn/api": "*",

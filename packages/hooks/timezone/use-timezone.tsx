@@ -1,9 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from "react"
+import { createContext, useContext, useMemo, type ReactNode } from "react"
 import {
   type DateInput,
   sanitizeTimezone,
@@ -28,7 +23,10 @@ export interface TimezoneProviderProps {
   children?: ReactNode
 }
 
-export function TimezoneProvider({ timezone, children }: TimezoneProviderProps) {
+export function TimezoneProvider({
+  timezone,
+  children,
+}: TimezoneProviderProps) {
   const value = useMemo(
     () => ({
       timezone: sanitizeTimezone(timezone),
