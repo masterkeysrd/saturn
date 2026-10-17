@@ -16,8 +16,8 @@
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
-    "prettier": "^3.9.6",
-    "turbo": "^2.4.4"
+    "prettier": "^3.9.10",
+    "turbo": "^2.11.8"
   },
   "overrides": {
     "react-native-reanimated": "4.7.1",
