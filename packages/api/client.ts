@@ -111,7 +111,6 @@ export async function request<TResponse, TData = unknown, TParams = unknown>({
         if (value !== undefined && value !== null && value !== "") {
           if (
             typeof value === "object" &&
-            value !== null &&
             "paths" in value &&
             Array.isArray((value as { paths?: unknown }).paths)
           ) {

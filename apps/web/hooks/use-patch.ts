@@ -84,7 +84,7 @@ export function usePatch<
             )
           }
 
-          if (typeof oldData === "object" && oldData !== null) {
+          if (typeof oldData === "object") {
             for (const [key, val] of Object.entries(oldData)) {
               if (Array.isArray(val)) {
                 return {

@@ -52,7 +52,7 @@ export function TrustedDevicesSettings() {
   const formatDate = (ts?: { seconds?: number } | string | null) => {
     if (!ts) return "Never"
     const secs =
-      typeof ts === "object" && ts !== null && "seconds" in ts
+      typeof ts === "object" && "seconds" in ts
         ? Number(ts.seconds)
         : typeof ts === "string"
           ? Math.floor(new Date(ts).getTime() / 1000)
