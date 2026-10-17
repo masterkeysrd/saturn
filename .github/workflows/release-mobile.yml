@@ -1,8 +1,9 @@
 name: Release Mobile Apps
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'mobile/*'
   workflow_dispatch:
     inputs:
       tag_name:
@@ -17,18 +18,12 @@ jobs:
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'release' && (
-        startsWith(github.event.release.tag_name, 'mobile/') ||
-        startsWith(github.event.release.tag_name, 'mobile-')
-      ))
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.release.tag_name || github.event.inputs.tag_name || github.ref }}
+          ref: ${{ github.event.inputs.tag_name || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -92,18 +87,12 @@ jobs:
   build-ios-simulator:
     name: Build iOS Simulator App
     runs-on: macos-26
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'release' && (
-        startsWith(github.event.release.tag_name, 'mobile/') ||
-        startsWith(github.event.release.tag_name, 'mobile-')
-      ))
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.release.tag_name || github.event.inputs.tag_name || github.ref }}
+          ref: ${{ github.event.inputs.tag_name || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -199,7 +188,7 @@ jobs:
       - name: Upload Binaries to Existing Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ github.event.release.tag_name || github.event.inputs.tag_name || github.ref_name }}
+          TAG_NAME: ${{ github.event.inputs.tag_name || github.ref_name }}
         run: |
           if [ -z "$TAG_NAME" ]; then
             echo "Error: Could not determine release tag name."
