@@ -232,7 +232,7 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, headers map[
 	var parsedSender, parsedSubject, fullBody string
 	if cfEvent != nil {
 		if strings.Contains(cfEvent.Raw, "Content-Type:") || strings.HasPrefix(cfEvent.Raw, "From:") || strings.HasPrefix(cfEvent.Raw, "Received:") {
-			pe, parseErr := email.Parse(strings.NewReader(cfEvent.Raw), cfg.PDFPasswords)
+			pe, parseErr := email.Parse(ctx, strings.NewReader(cfEvent.Raw), cfg.PDFPasswords)
 			if parseErr == nil {
 				parsedSender = pe.Sender
 				parsedSubject = pe.Subject
@@ -250,7 +250,7 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, headers map[
 			fullBody = cfEvent.Raw
 		}
 	} else {
-		pe, parseErr := email.Parse(bytes.NewReader(body), cfg.PDFPasswords)
+		pe, parseErr := email.Parse(ctx, bytes.NewReader(body), cfg.PDFPasswords)
 		if parseErr != nil {
 			return fmt.Errorf("parse email: %w", parseErr)
 		}
@@ -433,7 +433,7 @@ func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID str
 	// If the body looks like a raw SMTP email (pasted directly into the sandbox body text area),
 	// run it through our MIME parser to extract headers, body text, and decrypt PDF attachments.
 	if strings.Contains(text, "Content-Type:") || strings.HasPrefix(text, "From:") || strings.HasPrefix(text, "Received:") {
-		parsedEmail, err := email.Parse(strings.NewReader(text), cfg.PDFPasswords)
+		parsedEmail, err := email.Parse(ctx, strings.NewReader(text), cfg.PDFPasswords)
 		if err != nil {
 			return nil, fmt.Errorf("parse raw SMTP email: %w", err)
 		}

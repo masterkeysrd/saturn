@@ -292,7 +292,7 @@ func (p *StatementPipeline) nodePreprocess(ctx context.Context, state *Statement
 	docBytes := state.Request.DocumentBytes
 
 	// Check if PDF is encrypted
-	isEnc, err := pdf.IsEncrypted(docBytes)
+	isEnc, err := pdf.IsEncrypted(ctx, docBytes)
 	if err == nil && isEnc {
 		decrypted := false
 		var passwords []string
@@ -302,7 +302,7 @@ func (p *StatementPipeline) nodePreprocess(ctx context.Context, state *Statement
 		passwords = append(passwords, state.Request.PDFPasswords...)
 
 		for _, pwd := range passwords {
-			if decBytes, decErr := pdf.Decrypt(docBytes, pwd); decErr == nil {
+			if decBytes, decErr := pdf.Decrypt(ctx, docBytes, pwd); decErr == nil {
 				docBytes = decBytes
 				decrypted = true
 				break

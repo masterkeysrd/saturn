@@ -27,7 +27,7 @@ startxref
 func TestPdfEncryptionAndDecryption(t *testing.T) {
 	raw := []byte(minimalPdf)
 
-	isEnc, err := pdf.IsEncrypted(raw)
+	isEnc, err := pdf.IsEncrypted(t.Context(), raw)
 	if err != nil {
 		t.Fatalf("IsEncrypted failed on raw pdf: %v", err)
 	}
@@ -38,13 +38,13 @@ func TestPdfEncryptionAndDecryption(t *testing.T) {
 	// Encrypt using pdfcpu
 	conf := model.NewAESConfiguration("secret123", "owner123", 256)
 	var encBuf bytes.Buffer
-	err = pdfcpuapi.Encrypt(bytes.NewReader(raw), &encBuf, conf)
+	err = pdfcpuapi.Encrypt(t.Context(), bytes.NewReader(raw), &encBuf, conf)
 	if err != nil {
 		t.Fatalf("Encrypt failed: %v", err)
 	}
 
 	encBytes := encBuf.Bytes()
-	isEnc, err = pdf.IsEncrypted(encBytes)
+	isEnc, err = pdf.IsEncrypted(t.Context(), encBytes)
 	if err != nil {
 		t.Fatalf("IsEncrypted on encBytes failed: %v", err)
 	}
@@ -53,18 +53,18 @@ func TestPdfEncryptionAndDecryption(t *testing.T) {
 	}
 
 	// Try decrypt with wrong password
-	_, err = pdf.Decrypt(encBytes, "wrongpassword")
+	_, err = pdf.Decrypt(t.Context(), encBytes, "wrongpassword")
 	if err == nil {
 		t.Errorf("expected error decrypting with wrong password")
 	}
 
 	// Try decrypt with correct password
-	decBytes, err := pdf.Decrypt(encBytes, "secret123")
+	decBytes, err := pdf.Decrypt(t.Context(), encBytes, "secret123")
 	if err != nil {
 		t.Fatalf("expected successful decrypt, got: %v", err)
 	}
 
-	isEncAfter, err := pdf.IsEncrypted(decBytes)
+	isEncAfter, err := pdf.IsEncrypted(t.Context(), decBytes)
 	if err != nil {
 		t.Fatalf("IsEncrypted after decrypt failed: %v", err)
 	}

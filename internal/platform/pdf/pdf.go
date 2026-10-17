@@ -2,6 +2,7 @@ package pdf
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strings"
 
@@ -11,10 +12,10 @@ import (
 )
 
 // IsEncrypted checks if the PDF is password-protected.
-func IsEncrypted(pdfData []byte) (bool, error) {
+func IsEncrypted(ctx context.Context, pdfData []byte) (bool, error) {
 	rs := bytes.NewReader(pdfData)
 	conf := model.NewDefaultConfiguration()
-	ctx, err := pdfcpuapi.ReadContext(rs, conf)
+	pdfCtx, err := pdfcpuapi.ReadContext(ctx, rs, conf)
 	if err != nil {
 		errStr := err.Error()
 		if strings.Contains(errStr, "password") || strings.Contains(errStr, "encrypted") {
@@ -22,11 +23,11 @@ func IsEncrypted(pdfData []byte) (bool, error) {
 		}
 		return false, err
 	}
-	return ctx.Encrypt != nil, nil
+	return pdfCtx.Encrypt != nil, nil
 }
 
 // Decrypt attempts to decrypt password-protected PDF data in-memory.
-func Decrypt(pdfData []byte, password string) ([]byte, error) {
+func Decrypt(ctx context.Context, pdfData []byte, password string) ([]byte, error) {
 	rs := bytes.NewReader(pdfData)
 	var out bytes.Buffer
 
@@ -34,7 +35,7 @@ func Decrypt(pdfData []byte, password string) ([]byte, error) {
 	conf.UserPW = password
 	conf.OwnerPW = password
 
-	err := pdfcpuapi.Decrypt(rs, &out, conf)
+	err := pdfcpuapi.Decrypt(ctx, rs, &out, conf)
 	if err != nil {
 		return nil, fmt.Errorf("decrypt: %w", err)
 	}

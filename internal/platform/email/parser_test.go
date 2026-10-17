@@ -23,7 +23,7 @@ Content-Type: text/html; charset="UTF-8"
 <div>Duplicate html body</div>
 --boundary123--`
 
-	parsed, err := Parse(strings.NewReader(rawSMTP), nil)
+	parsed, err := Parse(t.Context(), strings.NewReader(rawSMTP), nil)
 	if err != nil {
 		t.Fatalf("unexpected error parsing email: %v", err)
 	}
@@ -67,7 +67,7 @@ Content-Transfer-Encoding: base64
 JVBERi0xLjQKJdDF5OQ4CmVuZG9iagoxIDAgb2JqCjw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+CmVuZG9iag==
 --mixed_boundary--`
 
-	parsed, err := Parse(strings.NewReader(rawSMTP), nil)
+	parsed, err := Parse(t.Context(), strings.NewReader(rawSMTP), nil)
 	if err != nil {
 		t.Fatalf("unexpected error parsing attachments: %v", err)
 	}
@@ -116,7 +116,7 @@ Content-Transfer-Encoding: quoted-printable
 </html>
 --boundary_html--`
 
-	parsed, err := Parse(strings.NewReader(rawSMTP), nil)
+	parsed, err := Parse(t.Context(), strings.NewReader(rawSMTP), nil)
 	if err != nil {
 		t.Fatalf("unexpected error parsing HTML email: %v", err)
 	}

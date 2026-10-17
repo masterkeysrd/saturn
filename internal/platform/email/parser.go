@@ -2,6 +2,7 @@ package email
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"io"
 	"mime"
@@ -32,7 +33,7 @@ type ParsedEmail struct {
 }
 
 // Parse parses a raw SMTP RFC 5322 email message, decoding headers, extracting body/attachments, and decrypting PDFs.
-func Parse(r io.Reader, pdfPasswords []string) (*ParsedEmail, error) {
+func Parse(ctx context.Context, r io.Reader, pdfPasswords []string) (*ParsedEmail, error) {
 	msg, err := mail.ReadMessage(r)
 	if err != nil {
 		return nil, err
@@ -92,7 +93,7 @@ func Parse(r io.Reader, pdfPasswords []string) (*ParsedEmail, error) {
 	// Process and extract text from PDF attachments
 	for i, att := range parsed.Attachments {
 		if att.ContentType == "application/pdf" || strings.HasSuffix(strings.ToLower(att.Filename), ".pdf") {
-			isEnc, err := pdf.IsEncrypted(att.Data)
+			isEnc, err := pdf.IsEncrypted(ctx, att.Data)
 			if err != nil || !isEnc {
 				// Try direct text extraction if not encrypted
 				txt, err := pdf.ExtractText(att.Data)
@@ -105,7 +106,7 @@ func Parse(r io.Reader, pdfPasswords []string) (*ParsedEmail, error) {
 			// PDF is encrypted, try to decrypt with candidates in-memory
 			decrypted := false
 			for _, pw := range pdfPasswords {
-				decryptedBytes, err := pdf.Decrypt(att.Data, pw)
+				decryptedBytes, err := pdf.Decrypt(ctx, att.Data, pw)
 				if err == nil {
 					// Update Attachment bytes with decrypted version
 					parsed.Attachments[i].Data = decryptedBytes
