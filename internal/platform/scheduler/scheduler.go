@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json/v2"
@@ -11,9 +12,28 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/robfig/cron/v3"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 //go:generate go run github.com/masterkeysrd/saturn/tools/mockgen .
+
+func marshalPayload(v any) ([]byte, error) {
+	if pm, ok := v.(proto.Message); ok {
+		return protojson.Marshal(pm)
+	}
+	return json.Marshal(v)
+}
+
+func unmarshalPayload(data []byte, dst any) error {
+	if pm, ok := dst.(proto.Message); ok {
+		if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+			return nil
+		}
+		return protojson.Unmarshal(data, pm)
+	}
+	return json.Unmarshal(data, dst)
+}
 
 // Handler defines the callback function signature for a job type.
 type Handler func(ctx context.Context, payload []byte) error
@@ -107,7 +127,7 @@ func (e *Engine) RegisterJSON[T any](jobType string, handler func(ctx context.Co
 	e.Register(jobType, func(ctx context.Context, data []byte) error {
 		var req T
 		if len(data) > 0 {
-			if err := json.Unmarshal(data, &req); err != nil {
+			if err := unmarshalPayload(data, &req); err != nil {
 				return errors.E(op, errors.Invalid, fmt.Errorf("failed to unmarshal %s payload: %w", jobType, err))
 			}
 		}
@@ -119,7 +139,7 @@ func (e *Engine) RegisterJSON[T any](jobType string, handler func(ctx context.Co
 func (e *Engine) Enqueue(ctx context.Context, job Job) error {
 	const op errors.Op = "platform/scheduler.Enqueue"
 
-	payloadBytes, err := json.Marshal(job.Payload)
+	payloadBytes, err := marshalPayload(job.Payload)
 	if err != nil {
 		return errors.E(op, fmt.Errorf("marshal job payload: %w", err))
 	}
@@ -152,7 +172,7 @@ func (e *Engine) RegisterSchedule(ctx context.Context, s Schedule) error {
 		return errors.E(op, errors.Invalid, fmt.Errorf("invalid cron expression %q: %w", s.CronExpression, err))
 	}
 
-	payloadBytes, err := json.Marshal(s.Payload)
+	payloadBytes, err := marshalPayload(s.Payload)
 	if err != nil {
 		return errors.E(op, fmt.Errorf("marshal schedule payload: %w", err))
 	}

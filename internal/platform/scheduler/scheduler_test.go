@@ -7,6 +7,8 @@ import (
 	"math"
 	"testing"
 	"time"
+
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestEngineRegisterAndGetHandler(t *testing.T) {
@@ -99,6 +101,57 @@ func TestEngineRegisterJSON(t *testing.T) {
 				if received.Greeting != tt.wantGreet || received.Count != tt.wantCount {
 					t.Errorf("received payload = %+v, want greet=%q count=%d", received, tt.wantGreet, tt.wantCount)
 				}
+			}
+		})
+	}
+}
+
+func TestEngineRegisterJSON_ProtoMessage(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload []byte
+		wantErr bool
+	}{
+		{
+			name:    "empty json object unmarshals into empty proto.Message",
+			payload: []byte(`{}`),
+			wantErr: false,
+		},
+		{
+			name:    "null json unmarshals into empty proto.Message",
+			payload: []byte(`null`),
+			wantErr: false,
+		},
+		{
+			name:    "invalid json returns error for proto.Message",
+			payload: []byte(`{invalid`),
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			engine := NewEngine(nil)
+			var called bool
+			engine.RegisterJSON("test.proto.job", func(ctx context.Context, payload *emptypb.Empty) error {
+				if payload == nil {
+					t.Fatal("expected non-nil proto payload")
+				}
+				called = true
+				return nil
+			})
+
+			h, exists := engine.getHandler("test.proto.job")
+			if !exists {
+				t.Fatal("expected handler to exist")
+			}
+
+			err := h(context.Background(), tt.payload)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("handler err = %v, wantErr = %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && !called {
+				t.Error("expected handler to be called")
 			}
 		})
 	}
