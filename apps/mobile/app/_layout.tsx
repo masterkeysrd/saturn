@@ -137,6 +137,16 @@ export default function RootLayout() {
                       }}
                     />
                     <Stack.Screen
+                      name="modal/adjust-borrowing"
+                      options={{
+                        presentation: "modal",
+                        headerTitle: "Adjust Debt Balance",
+                        headerStyle: {
+                          backgroundColor: theme.colors.surface,
+                        },
+                      }}
+                    />
+                    <Stack.Screen
                       name="+not-found"
                       options={{
                         title: "Not Found",

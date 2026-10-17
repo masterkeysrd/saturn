@@ -160,6 +160,18 @@ export default function AppLayout() {
           headerBackTitle: "Finance",
         }}
       />
+      <Stack.Screen
+        name="finance/borrowing/[id]"
+        options={{
+          headerShown: true,
+          headerTitle: "Agreement Details",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Debts & Loans",
+        }}
+      />
     </Stack>
   )
 }

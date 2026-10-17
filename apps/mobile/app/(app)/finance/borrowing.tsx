@@ -50,9 +50,19 @@ import { invalidateFinanceQueries } from "@/components/finance/finance-utils"
 type FilterTab = "ALL" | "LENT" | "BORROWED" | "SETTLED"
 
 // Cross-platform menu icons
+const detailsIcon = Icon.select({
+  ios: "doc.text.magnifyingglass",
+  android: require("@expo/material-symbols/visibility.xml"),
+})
+
 const paymentIcon = Icon.select({
   ios: "dollarsign.circle",
   android: require("@expo/material-symbols/payments.xml"),
+})
+
+const adjustIcon = Icon.select({
+  ios: "slider.horizontal.3",
+  android: require("@expo/material-symbols/scale.xml"),
 })
 
 const editIcon = Icon.select({
@@ -509,14 +519,9 @@ export default function BorrowingScreen() {
                       style={styles.cardHeaderLeft}
                       activeOpacity={0.7}
                       onPress={() => {
+                        if (!b.id) return
                         haptics.light()
-                        router.push({
-                          pathname: "/modal/add-transaction",
-                          params: {
-                            type: "BORROWING",
-                            borrowingId: b.id,
-                          },
-                        })
+                        router.push(`/(app)/finance/borrowing/${b.id}`)
                       }}
                     >
                       <View
@@ -599,7 +604,11 @@ export default function BorrowingScreen() {
                       colorScheme="dark"
                       style={styles.menuTriggerWrapper}
                       onPressAction={({ nativeEvent }) => {
-                        if (nativeEvent.event === "pay") {
+                        if (nativeEvent.event === "details") {
+                          if (!b.id) return
+                          haptics.light()
+                          router.push(`/(app)/finance/borrowing/${b.id}`)
+                        } else if (nativeEvent.event === "pay") {
                           haptics.light()
                           router.push({
                             pathname: "/modal/add-transaction",
@@ -607,6 +616,12 @@ export default function BorrowingScreen() {
                               type: "BORROWING",
                               borrowingId: b.id,
                             },
+                          })
+                        } else if (nativeEvent.event === "adjust") {
+                          haptics.light()
+                          router.push({
+                            pathname: "/modal/adjust-borrowing",
+                            params: { borrowingId: b.id },
                           })
                         } else if (nativeEvent.event === "edit") {
                           haptics.light()
@@ -619,6 +634,11 @@ export default function BorrowingScreen() {
                         }
                       }}
                       actions={[
+                        {
+                          id: "details",
+                          title: "View Details",
+                          image: detailsIcon,
+                        },
                         ...(!isPaid
                           ? [
                               {
@@ -630,6 +650,11 @@ export default function BorrowingScreen() {
                               },
                             ]
                           : []),
+                        {
+                          id: "adjust",
+                          title: "Adjust Balance",
+                          image: adjustIcon,
+                        },
                         {
                           id: "edit",
                           title: "Edit Agreement",
@@ -657,14 +682,9 @@ export default function BorrowingScreen() {
                     style={styles.cardFinancialRow}
                     activeOpacity={0.7}
                     onPress={() => {
+                      if (!b.id) return
                       haptics.light()
-                      router.push({
-                        pathname: "/modal/add-transaction",
-                        params: {
-                          type: "BORROWING",
-                          borrowingId: b.id,
-                        },
-                      })
+                      router.push(`/(app)/finance/borrowing/${b.id}`)
                     }}
                   >
                     <View>
@@ -694,7 +714,15 @@ export default function BorrowingScreen() {
                   </TouchableOpacity>
 
                   {/* Payoff Progress Bar */}
-                  <View style={styles.progressContainer}>
+                  <TouchableOpacity
+                    style={styles.progressContainer}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      if (!b.id) return
+                      haptics.light()
+                      router.push(`/(app)/finance/borrowing/${b.id}`)
+                    }}
+                  >
                     <View style={styles.progressHeaderRow}>
                       <Text style={styles.progressLabel}>
                         {isPaid
@@ -720,11 +748,19 @@ export default function BorrowingScreen() {
                         ]}
                       />
                     </View>
-                  </View>
+                  </TouchableOpacity>
 
                   {/* Due Date & Meta Footer */}
                   <View style={styles.cardFooter}>
-                    <View style={styles.footerLeft}>
+                    <TouchableOpacity
+                      style={styles.footerLeft}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        if (!b.id) return
+                        haptics.light()
+                        router.push(`/(app)/finance/borrowing/${b.id}`)
+                      }}
+                    >
                       {b.dueAt ? (
                         <View style={styles.dueDateWrap}>
                           <CalendarClock
@@ -763,7 +799,7 @@ export default function BorrowingScreen() {
                           </Text>
                         </View>
                       )}
-                    </View>
+                    </TouchableOpacity>
 
                     {/* Quick action button */}
                     {!isPaid && (
