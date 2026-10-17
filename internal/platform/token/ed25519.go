@@ -97,15 +97,13 @@ func (s *Ed25519Service) IssueAccessToken(input IssueInput, now time.Time) (stri
 	expiresAt := now.Add(s.config.AccessTTL)
 
 	claims := &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    s.config.Issuer,
-			Subject:   input.Subject,
-			Audience:  []string{s.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(expiresAt),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        jti,
-		},
+		Issuer:      s.config.Issuer,
+		Subject:     input.Subject,
+		Audience:    []string{s.config.Audience},
+		ExpiresAt:   jwt.NewNumericDate(expiresAt),
+		IssuedAt:    jwt.NewNumericDate(now),
+		NotBefore:   jwt.NewNumericDate(now),
+		ID:          jti,
 		AccessLevel: input.AccessLevel,
 		TokenUse:    "access",
 		AuthVersion: input.AuthVersion,
@@ -131,15 +129,13 @@ func (s *Ed25519Service) IssueRefreshToken(input IssueInput, now time.Time, abso
 	}
 
 	claims := &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    s.config.Issuer,
-			Subject:   input.Subject,
-			Audience:  []string{s.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(absoluteExpiry),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        jti,
-		},
+		Issuer:      s.config.Issuer,
+		Subject:     input.Subject,
+		Audience:    []string{s.config.Audience},
+		ExpiresAt:   jwt.NewNumericDate(absoluteExpiry),
+		IssuedAt:    jwt.NewNumericDate(now),
+		NotBefore:   jwt.NewNumericDate(now),
+		ID:          jti,
 		AccessLevel: input.AccessLevel,
 		TokenUse:    "refresh",
 		AuthVersion: input.AuthVersion,
@@ -304,15 +300,13 @@ func (s *Ed25519Service) IssueMFATicket(input IssueInput, now time.Time) (string
 	expiresAt := now.Add(5 * time.Minute)
 
 	claims := &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    s.config.Issuer,
-			Subject:   input.Subject,
-			Audience:  []string{s.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(expiresAt),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        jti,
-		},
+		Issuer:      s.config.Issuer,
+		Subject:     input.Subject,
+		Audience:    []string{s.config.Audience},
+		ExpiresAt:   jwt.NewNumericDate(expiresAt),
+		IssuedAt:    jwt.NewNumericDate(now),
+		NotBefore:   jwt.NewNumericDate(now),
+		ID:          jti,
 		AccessLevel: input.AccessLevel,
 		TokenUse:    "mfa_ticket",
 		AuthVersion: input.AuthVersion,

@@ -58,6 +58,15 @@ Detailed guidelines live in `docs/conventions/`. Read the relevant guide before 
    - Use `npx expo install <package>` for SDK-compatible versions.
    - See [Mobile Conventions](docs/conventions/mobile.md).
 
+9. **Go 1.27 Language Standards & Modern Idioms**:
+   - Saturn runs on **Go 1.27 (`go 1.27.2`)**.
+   - **JSON**: Strictly import `"encoding/json/v2"` and `"encoding/json/jsontext"`. Use streaming `json.MarshalWrite` / `json.UnmarshalRead`, `jsontext.Value` (no `json.RawMessage`), `json:",embed"` for inlined named struct fields, and `json.Deterministic(true)` where key ordering matters. Never import legacy `encoding/json` v1.
+   - **Generic Methods**: Define generic methods on receivers (`func (r *Receiver) Method[T any](...)`) instead of package-level helpers (e.g., `*patch.Schema[E].Field`, `*scheduler.Engine.RegisterJSON`, `*eventbus.Engine.PublishProto` / `SubscribeProto`).
+   - **Embedded Structs & Flat Composite Literals (`embedlit`)**: Embed domain filter/request/summary structs rather than duplicating their fields across layers (e.g., `type ListUsersFilter struct { identity.ListUsersFilter }`). Initialize promoted fields of embedded value structs directly as top-level keys in composite literals (`Outer{PromotedField: val}`) rather than nesting the embedded struct literal (`Outer{Embedded: Embedded{PromotedField: val}}`).
+   - **Modern Idioms**: Use `errors.AsType[T](err)` for typed error inspection, `new(expr)` for value pointer allocations, `strings.CutLast` and iterator sequences (`strings.SplitSeq`, `slices.Backward`), and integer loops (`for i := range n`).
+   - Run `go fix ./...` to verify and apply modern Go idioms before running verification gates.
+   - See [Backend Architecture Conventions](docs/conventions/backend.md).
+
 ---
 
 ## Verification Gates
@@ -66,17 +75,18 @@ Always format, lint, typecheck, and test modified subsystems before declaring an
 
 ### 1. Verification Matrix
 
-| Subsystem Modified | Format | Lint & Typecheck | Tests |
+| Subsystem Modified | Format & Modernize | Lint & Typecheck | Tests |
 | :--- | :--- | :--- | :--- |
 | **Frontend & Mobile** (`apps/*`, `packages/*`) | `make web-format` | `make web-typecheck`<br>`make web-lint` | *(typecheck in all 6 packages)* |
-| **Backend** (`internal/`, `cmd/`) | `gofmt -w <file>` | `make lint-go` | `make test-unit`<br>`make test-integration` |
-| **Database & Storage** (`internal/domain/*/storage`, `migrations/`) | `gofmt -w <file>` | `make lint-go` | `make test-integration` |
+| **Backend** (`internal/`, `cmd/`) | `go fix ./...`<br>`gofmt -w <file>` | `make lint-go` | `make test-unit`<br>`make test-integration` |
+| **Database & Storage** (`internal/domain/*/storage`, `migrations/`) | `go fix ./...`<br>`gofmt -w <file>` | `make lint-go` | `make test-integration` |
 | **Protobuf / API** (`api/**/*.proto`) | `buf format -w` | `make lint-proto`<br>`make web-typecheck` | `make test-unit` |
-| **Full Suite** (Pre-commit / Global) | `make web-format` | `make lint` | `make test` |
+| **Full Suite** (Pre-commit / Global) | `go fix ./...`<br>`make web-format` | `make lint` | `make test` |
 
 ### 2. Commands Quick Reference
 
-- **Formatters**:
+- **Formatters & Modernizers**:
+  - `go fix ./...`: Go 1.27 modernization checks (`go fix ./api/... ./cmd/... ./internal/... ./tools/... ./tests/...`).
   - `make web-format`: Prettier across web, mobile, and shared packages.
   - `gofmt -w <file>`: Standard Go formatting.
 - **Linters & Typecheck**:

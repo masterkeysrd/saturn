@@ -5,7 +5,6 @@ package financev1
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
@@ -16,13 +15,7 @@ type GenerateScheduledTransactionsPayloadHandler func(ctx context.Context, paylo
 
 // RegisterGenerateScheduledTransactionsPayload binds the handler callback to the scheduler engine.
 func RegisterGenerateScheduledTransactionsPayload(engine *scheduler.Engine, handler GenerateScheduledTransactionsPayloadHandler) {
-	engine.Register("finance.GenerateScheduledTransactions", func(ctx context.Context, payloadBytes []byte) error {
-		var payload GenerateScheduledTransactionsPayload
-		if err := json.Unmarshal(payloadBytes, &payload); err != nil {
-			return err
-		}
-		return handler(ctx, &payload)
-	})
+	engine.RegisterJSON("finance.GenerateScheduledTransactions", handler)
 }
 
 // GenerateScheduledTransactionsPayloadJob represents the enqueue request options for 'finance.GenerateScheduledTransactions'.

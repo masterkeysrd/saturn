@@ -5,7 +5,6 @@ package backupv1
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
@@ -16,13 +15,7 @@ type RunDatabaseBackupPayloadHandler func(ctx context.Context, payload *RunDatab
 
 // RegisterRunDatabaseBackupPayload binds the handler callback to the scheduler engine.
 func RegisterRunDatabaseBackupPayload(engine *scheduler.Engine, handler RunDatabaseBackupPayloadHandler) {
-	engine.Register("backup.RunDatabaseBackup", func(ctx context.Context, payloadBytes []byte) error {
-		var payload RunDatabaseBackupPayload
-		if err := json.Unmarshal(payloadBytes, &payload); err != nil {
-			return err
-		}
-		return handler(ctx, &payload)
-	})
+	engine.RegisterJSON("backup.RunDatabaseBackup", handler)
 }
 
 // RunDatabaseBackupPayloadJob represents the enqueue request options for 'backup.RunDatabaseBackup'.

@@ -96,7 +96,7 @@ func (p *Provider) GenerateBackupCodes() (plainCodes []string, hashedCodes []str
 	plainCodes = make([]string, 8)
 	hashedCodes = make([]string, 8)
 
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		raw := make([]byte, 8)
 		if _, err := rand.Read(raw); err != nil {
 			return nil, nil, fmt.Errorf("generate random backup code: %w", err)

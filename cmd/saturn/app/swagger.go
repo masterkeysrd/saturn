@@ -1,7 +1,8 @@
 package app
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"net/http"
 	"strings"
 
@@ -65,21 +66,21 @@ func apiSwaggerJSON(data []byte) ([]byte, error) {
 	}
 
 	// Strip /api prefix from paths
-	var document map[string]json.RawMessage
+	var document map[string]jsontext.Value
 	if err := json.Unmarshal(data, &document); err != nil {
 		return nil, err
 	}
 
-	document["basePath"] = json.RawMessage(`"/api"`)
+	document["basePath"] = jsontext.Value(`"/api"`)
 
-	var paths map[string]json.RawMessage
+	var paths map[string]jsontext.Value
 	if pathsRaw, ok := document["paths"]; ok {
 		if err := json.Unmarshal(pathsRaw, &paths); err != nil {
 			return nil, err
 		}
 	}
 
-	apiPaths := make(map[string]json.RawMessage, len(paths))
+	apiPaths := make(map[string]jsontext.Value, len(paths))
 	for path, operation := range paths {
 		apiPaths[strings.TrimPrefix(path, "/api")] = operation
 	}

@@ -205,7 +205,142 @@ tools/                           # 6. Code Generation & Analysis Toolchain
 
 ---
 
-## 4. Code Generation Toolchain (`tools/`, `internal/codegen/`)
+## 4. Go 1.27 Language Standards & Idioms
+
+All backend Go code in Saturn adheres to **Go 1.27 (`go 1.27.2`)**. Engineers and AI agents must strictly follow modern language idioms and standard library capabilities.
+
+### A. Generic Methods (`func (r *Receiver) Method[T any](...)`)
+Go 1.27 introduces full language support for type parameters on methods. Whenever a generic operation logically belongs to a receiver type, define a **generic method** on the receiver rather than a standalone package-level generic helper function or an untyped `any` callback wrapper.
+
+Saturn adopts canonical generic receiver methods across platform engines:
+1. **Patch Schemas (`internal/platform/patch`)**:
+   Register typed entity fields directly on `*patch.Schema[E]` using the generic `.Field` method (`func (s *Schema[E]) Field[V any](path string, accessor func(*E) *V, validators ...Validator[V]) *Schema[E]`):
+   ```go
+   var AccountPatchSchema = patch.NewSchema[Account]().
+       Field("name", func(a *Account) *string { return &a.Name }, ValidateAccountName).
+       Field("balance_cents", func(a *Account) *int64 { return &a.BalanceCents })
+   ```
+2. **Scheduler Engine (`internal/platform/scheduler`)**:
+   Register strongly-typed JSON job handlers directly on `*scheduler.Engine`:
+   ```go
+   // Generic method e.RegisterJSON[T any](jobType string, handler func(context.Context, *T) error)
+   e.RegisterJSON("finance.statement.reconcile", func(ctx context.Context, payload *ReconcilePayload) error {
+       return coordinator.Reconcile(ctx, payload)
+   })
+   ```
+3. **EventBus Engine (`internal/platform/eventbus`)**:
+   Publish and subscribe to strongly-typed Protobuf messages directly on `*eventbus.Engine`:
+   ```go
+   // Generic methods eb.PublishProto[M proto.Message](ctx, topic, msg) and eb.SubscribeProto[M, PM](topic, subscriberID, handler)
+   err := eb.PublishProto(ctx, "finance.budget.created", budgetProto)
+
+   eb.SubscribeProto("finance.budget.created", "aggregator-cache-sync", func(ctx context.Context, msg *financev1.Budget) error {
+       return cache.Invalidate(ctx, msg.Id)
+   })
+   ```
+
+### B. Modern JSON Serialization (`encoding/json/v2` & `encoding/json/jsontext`)
+Saturn standardizes strictly on Go 1.27's `encoding/json/v2`.
+- **Imports**: Always import `"encoding/json/v2"` (and `"encoding/json/jsontext"` for formatting, streaming, or raw tokens). **Never** import legacy `"encoding/json"` v1.
+- **Byte Slice Operations**: Use `json.Marshal(v)` and `json.Unmarshal(data, &v)`.
+- **Stream I/O (`io.Writer` / `io.Reader`)**: Use `json.MarshalWrite(w, v)` and `json.UnmarshalRead(r, &v)` instead of legacy `json.NewEncoder(w).Encode(v)` and `json.NewDecoder(r).Decode(&v)`.
+- **Raw JSON Values**: Use `jsontext.Value` instead of legacy `json.RawMessage`.
+- **Indented Formatting**: Use `json.Marshal(v, jsontext.WithIndent("  "))` instead of legacy `json.MarshalIndent`.
+- **Inlined Struct Fields (`json:",embed"`)**: When flattening a named struct field into its parent JSON object, use `json:",embed"` (alongside anonymous struct embedding).
+- **Deterministic Map Key Ordering**: Pass `json.Deterministic(true)` to `json.Marshal` when deterministic key sorting is required (e.g. canonical audit signatures or test snapshot comparisons):
+  ```go
+  data, err := json.Marshal(payload, json.Deterministic(true), jsontext.WithIndent("  "))
+  ```
+
+### C. Embedded Structs & Flat Composite Literals (`embedlit`)
+Go 1.27 allows any valid field selector—including promoted fields of embedded value structs—to be used directly as a key in a composite literal (`Outer{PromotedField: val}`).
+1. **Prefer Struct Embedding Over Field Duplication**:
+   When an application or aggregator filter/request/response type extends or forwards a domain struct without changing its field types (e.g. `financeaggregator.ListBudgetsFilter`, `iam.ListUsersFilter`, `iam.DeleteMFAFactorRequest`, `financeapp.AdjustAccountBalanceRequest`), **embed the domain struct by value** instead of duplicating its fields and copying them field-by-field:
+   ```go
+   // Correct: Embed domain struct by value
+   type ListBudgetsFilter struct {
+       finance.ListBudgetsFilter
+       TargetDate time.Time
+       View       ViewType
+   }
+   ```
+2. **Initialize Promoted Fields Directly in Composite Literals**:
+   Always initialize promoted fields of embedded value structs flatly on the outer struct literal. Never write redundant nested struct literals for embedded value structs:
+   ```go
+   // Correct (Go 1.27 flat promoted field keys)
+   filter := financeaggregator.ListBudgetsFilter{
+       PageSize:   20,
+       Statuses:   []finance.BudgetStatus{finance.BudgetStatusActive},
+       TargetDate: now,
+       View:       financeaggregator.ViewFull,
+   }
+
+   // Anti-Pattern: DO NOT nest the embedded struct literal
+   filter := financeaggregator.ListBudgetsFilter{
+       ListBudgetsFilter: finance.ListBudgetsFilter{
+           PageSize: 20,
+           Statuses: []finance.BudgetStatus{finance.BudgetStatusActive},
+       },
+       TargetDate: now,
+       View:       financeaggregator.ViewFull,
+   }
+   ```
+   *(Note: Promoted field keys in composite literals apply to value-embedded structs `T`, not pointer-embedded structs `*T`.)*
+
+### D. Typed Error Inspection (`errors.AsType[E]`)
+Always use `errors.AsType[E](err)` (from `internal/platform/errors` or standard library `errors.AsType`) instead of declaring a mutable target variable with `var target E; errors.As(err, &target)`:
+
+```go
+// Correct (Go 1.27 functional type assertion)
+if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+    if pgErr.Code == "23505" {
+        return errors.Conflict("entity already exists")
+    }
+}
+
+if domErr, ok := errors.AsType[*errors.Error](err); ok {
+    log.Warn("domain operation rejected", "kind", domErr.Kind, "op", domErr.Op)
+}
+
+// Anti-Pattern: DO NOT USE
+var pgErr *pgconn.PgError
+if errors.As(err, &pgErr) { ... }
+```
+
+### E. Value Pointer Construction (`new(expr)`)
+Use Go 1.27's built-in `new(expr)` expression to allocate a pointer initialized to a value in a single concise step:
+- Construct literal pointers directly: `new("active")`, `new(int64(100))`, `new(true)`.
+- Pass dynamic values: `new(v)`, `new(req.GetAmount())`.
+- **Anti-Pattern**: Do not declare intermediate temporary variables (`temp := expr; &temp`) or define custom pointer helper functions (`ptrString(s)`).
+
+### F. Modern Standard Library Idioms
+1. **String Manipulation**:
+   - Use `strings.Cut`, `strings.CutLast` (Go 1.27), `strings.CutPrefix`, and `strings.CutSuffix` instead of manual `strings.Index` / `strings.LastIndex` arithmetic combined with manual slice indexing:
+     ```go
+     // Extract resource name and ID using CutLast
+     prefix, id, found := strings.CutLast(fullPath, "/")
+     ```
+   - Use iterator-based `strings.SplitSeq` and `strings.FieldsSeq` in `for ... range` loops to eliminate intermediate slice allocations:
+     ```go
+     for segment := range strings.SplitSeq(csvLine, ",") {
+         process(segment)
+     }
+     ```
+2. **Slices, Maps & Loops**:
+   - **Slices**: Use `slices.Contains`, `slices.Sort`, `slices.Compact`, and `slices.Backward(slice)` for zero-allocation reverse iteration (`for i, item := range slices.Backward(history)`).
+   - **Maps**: Use `maps.Copy`, `maps.Clone`, and `maps.DeleteFunc`.
+   - **Built-in Min/Max**: Use built-in `min(a, b)` and `max(a, b)` rather than custom conditionals or math conversions.
+   - **Integer Range Loops**: Use `for i := range n` instead of `for i := 0; i < n; i++`.
+
+### G. Code Modernization Check (`go fix`)
+Saturn maintains automated modernization passes (including `embedlit`, `newexpr`, `errorsastype`, `rangeint`, `stringsseq`, and `slicescontains`). Before committing backend changes or submitting PRs, run `go fix` to ensure modern idioms are consistently applied:
+```bash
+go fix ./api/... ./cmd/... ./internal/... ./tools/... ./tests/...
+```
+
+---
+
+## 5. Code Generation Toolchain (`tools/`, `internal/codegen/`)
 
 Saturn leverages custom code generators to automate boilerplate, maintain type-safety, and decorate coordinators consistently:
 
@@ -239,7 +374,7 @@ Invoked via `buf generate` / `make codegen`:
 
 ---
 
-## 5. Testing & Verification
+## 6. Testing & Verification
 
 Saturn strictly segregates fast unit tests from workflow integration suites:
 
@@ -252,6 +387,7 @@ Saturn strictly segregates fast unit tests from workflow integration suites:
 - **Detailed Testing Guide**: See [Testing Conventions & Guide](testing.md) for table-driven patterns, mock assertions, and the fluent test driver.
 
 ```bash
+go fix ./...           # Modernize code with Go 1.27 fix passes
 gofmt -w <file>        # Format modified Go source files
 make lint-go           # Run golangci-lint static analysis
 make test-unit         # Run Go unit tests with race detection (go test -race ./...)

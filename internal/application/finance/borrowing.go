@@ -112,12 +112,7 @@ func (c *coordinator) AdjustBorrowingBalance(ctx context.Context, req *AdjustBor
 }
 
 type LogBorrowingTransactionRequest struct {
-	BorrowingID     finance.BorrowingID
-	Type            finance.BorrowingTransactionType
-	Amount          int64
-	TransactionDate time.Time
-	AccountID       *finance.AccountID
-	Notes           string
+	finance.LogBorrowingTransactionRequest
 }
 
 func (c *coordinator) LogBorrowingTransaction(ctx context.Context, req *LogBorrowingTransactionRequest) (*finance.Transaction, error) {
@@ -126,24 +121,13 @@ func (c *coordinator) LogBorrowingTransaction(ctx context.Context, req *LogBorro
 		return nil, err
 	}
 
-	return c.financeService.LogBorrowingTransaction(ctx, rCtx, finance.LogBorrowingTransactionRequest{
-		BorrowingID:     req.BorrowingID,
-		Type:            req.Type,
-		Amount:          req.Amount,
-		TransactionDate: rCtx.Date(req.TransactionDate),
-		AccountID:       req.AccountID,
-		Notes:           req.Notes,
-	})
+	domReq := req.LogBorrowingTransactionRequest
+	domReq.TransactionDate = rCtx.Date(req.TransactionDate)
+	return c.financeService.LogBorrowingTransaction(ctx, rCtx, domReq)
 }
 
 type UpdateBorrowingTransactionRequest struct {
-	BorrowingID     finance.BorrowingID
-	TransactionID   finance.TransactionID
-	Type            finance.BorrowingTransactionType
-	Amount          int64
-	TransactionDate time.Time
-	AccountID       *finance.AccountID
-	Notes           string
+	finance.UpdateBorrowingTransactionRequest
 }
 
 func (c *coordinator) UpdateBorrowingTransaction(ctx context.Context, req *UpdateBorrowingTransactionRequest) (*finance.Transaction, error) {
@@ -152,20 +136,13 @@ func (c *coordinator) UpdateBorrowingTransaction(ctx context.Context, req *Updat
 		return nil, err
 	}
 
-	return c.financeService.UpdateBorrowingTransaction(ctx, rCtx, finance.UpdateBorrowingTransactionRequest{
-		BorrowingID:     req.BorrowingID,
-		TransactionID:   req.TransactionID,
-		Type:            req.Type,
-		Amount:          req.Amount,
-		TransactionDate: rCtx.Date(req.TransactionDate),
-		AccountID:       req.AccountID,
-		Notes:           req.Notes,
-	})
+	domReq := req.UpdateBorrowingTransactionRequest
+	domReq.TransactionDate = rCtx.Date(req.TransactionDate)
+	return c.financeService.UpdateBorrowingTransaction(ctx, rCtx, domReq)
 }
 
 type DeleteBorrowingTransactionRequest struct {
-	BorrowingID   finance.BorrowingID
-	TransactionID finance.TransactionID
+	finance.DeleteBorrowingTransactionRequest
 }
 
 func (c *coordinator) DeleteBorrowingTransaction(ctx context.Context, req *DeleteBorrowingTransactionRequest) error {
@@ -174,8 +151,5 @@ func (c *coordinator) DeleteBorrowingTransaction(ctx context.Context, req *Delet
 		return err
 	}
 
-	return c.financeService.DeleteBorrowingTransaction(ctx, rCtx, finance.DeleteBorrowingTransactionRequest{
-		BorrowingID:   req.BorrowingID,
-		TransactionID: req.TransactionID,
-	})
+	return c.financeService.DeleteBorrowingTransaction(ctx, rCtx, req.DeleteBorrowingTransactionRequest)
 }

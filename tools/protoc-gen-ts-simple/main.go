@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"google.golang.org/genproto/googleapis/api/annotations"
@@ -425,7 +426,7 @@ func writeComments(g *protogen.GeneratedFile, comments protogen.CommentSet) {
 		return
 	}
 	g.P("/**")
-	for _, line := range strings.Split(leading, "\n") {
+	for line := range strings.SplitSeq(leading, "\n") {
 		g.P(" * ", strings.TrimSpace(strings.TrimPrefix(line, "//")))
 	}
 	g.P(" */")
@@ -439,7 +440,7 @@ func writeFieldComments(g *protogen.GeneratedFile, comments protogen.CommentSet)
 	}
 	g.P("  /**")
 	if leading != "" {
-		for _, line := range strings.Split(leading, "\n") {
+		for line := range strings.SplitSeq(leading, "\n") {
 			g.P("   * ", strings.TrimSpace(strings.TrimPrefix(line, "//")))
 		}
 	}
@@ -541,17 +542,12 @@ func isOutputOnly(field *protogen.Field) bool {
 	if !ok {
 		return false
 	}
-	for _, b := range behaviors {
-		if b == annotations.FieldBehavior_OUTPUT_ONLY {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(behaviors, annotations.FieldBehavior_OUTPUT_ONLY)
 }
 
 func pathParamVar(p string) string {
-	if idx := strings.LastIndex(p, "."); idx != -1 {
-		return p[idx+1:]
+	if _, shortName, ok := strings.CutLast(p, "."); ok {
+		return shortName
 	}
 	return p
 }

@@ -104,8 +104,7 @@ func TestRegistry_Storage(t *testing.T) {
 		if !errors.Is(err, errors.NotExist) {
 			t.Errorf("expected NotExist error, got %v", err)
 		}
-		var platErr *errors.Error
-		if errors.As(err, &platErr) {
+		if platErr, ok := errors.AsType[*errors.Error](err); ok {
 			if platErr.Op != "platform/integration/storage.DeleteToken" {
 				t.Errorf("expected canonical op platform/integration/storage.DeleteToken, got %v", platErr.Op)
 			}

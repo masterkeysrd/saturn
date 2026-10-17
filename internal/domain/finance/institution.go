@@ -89,10 +89,10 @@ func (i *Institution) Validate() error {
 
 // InstitutionPatchSchema defines patchable fields for an Institution entity.
 var InstitutionPatchSchema = patch.NewSchema[Institution]().
-	Register("name", patch.Field(func(i *Institution) *string { return &i.Name })).
-	Register("domain", patch.Field(func(i *Institution) *string { return &i.Domain })).
-	Register("logo_url", patch.Field(func(i *Institution) *string { return &i.LogoURL })).
-	Register("color", patch.Field(func(i *Institution) *string { return &i.Color }))
+	Field("name", func(i *Institution) *string { return &i.Name }).
+	Field("domain", func(i *Institution) *string { return &i.Domain }).
+	Field("logo_url", func(i *Institution) *string { return &i.LogoURL }).
+	Field("color", func(i *Institution) *string { return &i.Color })
 
 // ApplyPatch applies partial updates.
 func (i *Institution) ApplyPatch(incoming *Institution, mask []string) error {

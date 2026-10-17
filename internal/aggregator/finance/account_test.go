@@ -43,10 +43,8 @@ func TestListAccounts(t *testing.T) {
 
 		svc := NewService(mockFS)
 		page, err := svc.ListAccounts(ctx, rCtx, ViewBasic, ListAccountsFilter{
-			ListAccountsFilter: finance.ListAccountsFilter{
-				PageSize: 10,
-				Sort:     sorting.New("id", true),
-			},
+			PageSize: 10,
+			Sort:     sorting.New("id", true),
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -83,7 +81,7 @@ func TestListAccounts(t *testing.T) {
 
 		svc := NewService(mockFS)
 		page, err := svc.ListAccounts(ctx, rCtx, ViewFull, ListAccountsFilter{
-			ListAccountsFilter: finance.ListAccountsFilter{PageSize: 10},
+			PageSize: 10,
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -113,7 +111,7 @@ func TestListAccounts(t *testing.T) {
 
 		svc := NewService(mockFS)
 		_, err := svc.ListAccounts(ctx, rCtx, ViewBasic, ListAccountsFilter{
-			ListAccountsFilter: finance.ListAccountsFilter{PageSize: 10},
+			PageSize: 10,
 		})
 		if err == nil {
 			t.Fatal("expected error, got nil")
@@ -130,7 +128,7 @@ func TestListAccounts(t *testing.T) {
 		svc := NewService(mockFS)
 		noBaseRCtx := finance.NewContext(spaceID, "usr_1", time.UTC, "")
 		_, err := svc.ListAccounts(ctx, noBaseRCtx, ViewFull, ListAccountsFilter{
-			ListAccountsFilter: finance.ListAccountsFilter{PageSize: 10},
+			PageSize: 10,
 		})
 		if err == nil {
 			t.Fatal("expected error, got nil")

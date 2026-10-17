@@ -18,7 +18,7 @@ func TestPatchEngine_Apply(t *testing.T) {
 	errEmptyName := errors.New("name cannot be empty")
 
 	schema := patch.NewSchema[TestEntity]().
-		Register("name", patch.Field(
+		Field("name",
 			func(e *TestEntity) *string { return &e.Name },
 			func(v string) error {
 				if v == "" {
@@ -26,13 +26,13 @@ func TestPatchEngine_Apply(t *testing.T) {
 				}
 				return nil
 			},
-		)).
-		Register("description", patch.Field(
+		).
+		Field("description",
 			func(e *TestEntity) *string { return &e.Description },
-		)).
-		Register("age", patch.Field(
+		).
+		Field("age",
 			func(e *TestEntity) *int { return &e.Age },
-		))
+		)
 
 	t.Run("successfully patches specified fields only", func(t *testing.T) {
 		dst := &TestEntity{ID: "1", Name: "Original Name", Description: "Original Desc", Age: 20}

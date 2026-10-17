@@ -15,27 +15,22 @@ type ListMFAFactorsRequest struct {
 
 // ListMFAFactorsResponse holds the list of registered MFA factors and recovery code status.
 type ListMFAFactorsResponse struct {
-	Factors              []*identity.MFAFactor
-	HasBackupCodes       bool
-	RemainingBackupCodes int
+	identity.MFAFactorsSummary
 }
 
 // DeleteMFAFactorRequest encapsulates parameters to delete an MFA factor.
 type DeleteMFAFactorRequest struct {
-	UserID   identity.UserID
-	FactorID identity.MFAFactorID
+	identity.DeleteMFAFactorRequest
 }
 
 // SetPrimaryMFAFactorRequest encapsulates parameters to set a primary MFA factor.
 type SetPrimaryMFAFactorRequest struct {
-	UserID   identity.UserID
-	FactorID identity.MFAFactorID
+	identity.SetPrimaryMFAFactorRequest
 }
 
 // SetupTOTPRequest encapsulates the parameters required to initialize TOTP enrollment.
 type SetupTOTPRequest struct {
-	UserID identity.UserID
-	Name   string
+	identity.SetupTOTPRequest
 }
 
 // SetupTOTPResponse holds the staged factor ID, secret, and otpauth URI/QR code.
@@ -60,8 +55,7 @@ type ConfirmTOTPResponse struct {
 
 // RegenerateBackupCodesRequest holds the step-up verification code for regenerating recovery codes.
 type RegenerateBackupCodesRequest struct {
-	UserID           identity.UserID
-	VerificationCode string
+	identity.RegenerateBackupCodesRequest
 }
 
 // RegenerateBackupCodesResponse holds the newly generated set of backup recovery codes.
@@ -76,34 +70,23 @@ func (c *coordinator) ListMFAFactors(ctx context.Context, req *ListMFAFactorsReq
 		return nil, err
 	}
 	return &ListMFAFactorsResponse{
-		Factors:              summary.Factors,
-		HasBackupCodes:       summary.HasBackupCodes,
-		RemainingBackupCodes: summary.RemainingBackupCodes,
+		MFAFactorsSummary: *summary,
 	}, nil
 }
 
 // DeleteMFAFactor removes a registered MFA factor for a user.
 func (c *coordinator) DeleteMFAFactor(ctx context.Context, req *DeleteMFAFactorRequest) error {
-	return c.identityService.DeleteMFAFactor(ctx, identity.DeleteMFAFactorRequest{
-		UserID:   req.UserID,
-		FactorID: req.FactorID,
-	})
+	return c.identityService.DeleteMFAFactor(ctx, req.DeleteMFAFactorRequest)
 }
 
 // SetPrimaryMFAFactor marks a factor as the user's default/primary option.
 func (c *coordinator) SetPrimaryMFAFactor(ctx context.Context, req *SetPrimaryMFAFactorRequest) error {
-	return c.identityService.SetPrimaryMFAFactor(ctx, identity.SetPrimaryMFAFactorRequest{
-		UserID:   req.UserID,
-		FactorID: req.FactorID,
-	})
+	return c.identityService.SetPrimaryMFAFactor(ctx, req.SetPrimaryMFAFactorRequest)
 }
 
 // SetupTOTP initiates TOTP enrollment.
 func (c *coordinator) SetupTOTP(ctx context.Context, req *SetupTOTPRequest) (*SetupTOTPResponse, error) {
-	res, err := c.identityService.SetupTOTP(ctx, identity.SetupTOTPRequest{
-		UserID: req.UserID,
-		Name:   req.Name,
-	})
+	res, err := c.identityService.SetupTOTP(ctx, req.SetupTOTPRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -139,10 +122,7 @@ func (c *coordinator) ConfirmTOTP(ctx context.Context, req *ConfirmTOTPRequest) 
 
 // RegenerateBackupCodes generates a fresh set of recovery codes.
 func (c *coordinator) RegenerateBackupCodes(ctx context.Context, req *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error) {
-	codes, err := c.identityService.RegenerateBackupCodes(ctx, identity.RegenerateBackupCodesRequest{
-		UserID:           req.UserID,
-		VerificationCode: req.VerificationCode,
-	})
+	codes, err := c.identityService.RegenerateBackupCodes(ctx, req.RegenerateBackupCodesRequest)
 	if err != nil {
 		return nil, err
 	}

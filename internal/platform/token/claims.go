@@ -54,15 +54,13 @@ func (c *Claims) ValidateBasic() error {
 // This is a safety net to ensure no secrets leak into JWT payloads.
 func SanitizeClaims(c *Claims) *Claims {
 	return &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    c.Issuer,
-			Subject:   c.Subject,
-			Audience:  c.Audience,
-			ExpiresAt: c.ExpiresAt,
-			IssuedAt:  c.IssuedAt,
-			NotBefore: c.NotBefore,
-			ID:        c.ID,
-		},
+		Issuer:      c.Issuer,
+		Subject:     c.Subject,
+		Audience:    c.Audience,
+		ExpiresAt:   c.ExpiresAt,
+		IssuedAt:    c.IssuedAt,
+		NotBefore:   c.NotBefore,
+		ID:          c.ID,
 		AccessLevel: c.AccessLevel,
 		TokenUse:    c.TokenUse,
 		AuthVersion: c.AuthVersion,

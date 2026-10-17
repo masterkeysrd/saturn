@@ -3,6 +3,7 @@ package interceptors
 import (
 	"context"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -160,13 +161,7 @@ func (ai *AuthInterceptor) authenticate(ctx context.Context, accessLevels []stri
 
 	// Check access level restrictions
 	if len(accessLevels) > 0 {
-		allowed := false
-		for _, level := range accessLevels {
-			if principal.AccessLevel == level {
-				allowed = true
-				break
-			}
-		}
+		allowed := slices.Contains(accessLevels, principal.AccessLevel)
 		if !allowed {
 			return ctx, status.Error(codes.PermissionDenied, "insufficient access level")
 		}
@@ -190,11 +185,11 @@ func timeNow() time.Time {
 }
 
 func extractCookieValue(cookieHeader string, name string) string {
-	parts := strings.Split(cookieHeader, ";")
-	for _, part := range parts {
+	parts := strings.SplitSeq(cookieHeader, ";")
+	for part := range parts {
 		part = strings.TrimSpace(part)
-		if strings.HasPrefix(part, name+"=") {
-			return strings.TrimPrefix(part, name+"=")
+		if after, ok := strings.CutPrefix(part, name+"="); ok {
+			return after
 		}
 	}
 	return ""

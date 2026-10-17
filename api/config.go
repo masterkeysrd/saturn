@@ -2,7 +2,8 @@ package api
 
 import (
 	"embed"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"io/fs"
 	"regexp"
@@ -153,18 +154,18 @@ func toFQN(tag, operationID string, tagPrefixMap map[string]string) string {
 		return ""
 	}
 	// Split operationId by underscore: "Identity_LoginUser" → method "LoginUser"
-	underscore := strings.Index(operationID, "_")
-	if underscore < 0 {
+	_, after, ok := strings.Cut(operationID, "_")
+	if !ok {
 		return prefix + "." + tag + "." + operationID
 	}
-	method := operationID[underscore+1:]
+	method := after
 	return prefix + "." + tag + "." + method
 }
 
 // ApplyConfig merges all service configs and applies them to the generated JSON spec.
 // Rules are matched against the fully-qualified operationId (e.g. "saturn.identity.v1.Identity.LoginUser").
 func ApplyConfig(specJSON []byte) ([]byte, error) {
-	var document map[string]json.RawMessage
+	var document map[string]jsontext.Value
 	if err := json.Unmarshal(specJSON, &document); err != nil {
 		return nil, fmt.Errorf("failed to parse spec JSON: %w", err)
 	}
@@ -236,7 +237,7 @@ func ApplyConfig(specJSON []byte) ([]byte, error) {
 	}
 
 	// Apply auth rules to each operation
-	var paths map[string]json.RawMessage
+	var paths map[string]jsontext.Value
 	if pathsRaw, ok := document["paths"]; ok {
 		if err := json.Unmarshal(pathsRaw, &paths); err != nil {
 			return nil, fmt.Errorf("failed to parse paths: %w", err)
@@ -244,13 +245,13 @@ func ApplyConfig(specJSON []byte) ([]byte, error) {
 	}
 
 	for path, opRaw := range paths {
-		var pathOps map[string]json.RawMessage
+		var pathOps map[string]jsontext.Value
 		if err := json.Unmarshal(opRaw, &pathOps); err != nil {
 			continue
 		}
 
 		for method, opRaw := range pathOps {
-			var op map[string]json.RawMessage
+			var op map[string]jsontext.Value
 			if err := json.Unmarshal(opRaw, &op); err != nil {
 				continue
 			}
@@ -294,9 +295,9 @@ func ApplyConfig(specJSON []byte) ([]byte, error) {
 
 			if applySecurity {
 				if spaceScoped {
-					op["security"] = json.RawMessage(`[{"bearerAuth":[],"spaceIdAuth":[]}]`)
+					op["security"] = jsontext.Value(`[{"bearerAuth":[],"spaceIdAuth":[]}]`)
 				} else {
-					op["security"] = json.RawMessage(`[{"bearerAuth":[]}]`)
+					op["security"] = jsontext.Value(`[{"bearerAuth":[]}]`)
 				}
 			} else {
 				delete(op, "security")

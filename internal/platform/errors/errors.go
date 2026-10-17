@@ -262,10 +262,11 @@ func New(text string) error {
 	return E(text)
 }
 
-// As finds the first error in err's tree that matches target, and if one is found, sets
-// target to that error value and returns true.
-func As(err error, target any) bool {
-	return errors.As(err, target)
+// AsType finds the first error in err's tree that matches the error type E,
+// and if one is found, returns that error value and true. Otherwise, it
+// returns the zero value of E and false.
+func AsType[E error](err error) (E, bool) {
+	return errors.AsType[E](err)
 }
 
 // Is reports whether err matches target (either a Kind, a Code, or an error).

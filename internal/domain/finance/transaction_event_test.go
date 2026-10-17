@@ -130,12 +130,12 @@ func TestTransactionEvent_Validate(t *testing.T) {
 func TestTransactionEvent_MetadataJSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		metadata map[string]interface{}
+		metadata map[string]any
 		rawJSON  string
 	}{
 		{
 			name:     "with populated metadata",
-			metadata: map[string]interface{}{"key": "value", "count": float64(42)},
+			metadata: map[string]any{"key": "value", "count": float64(42)},
 			rawJSON:  `{"count":42,"key":"value"}`,
 		},
 		{

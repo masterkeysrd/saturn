@@ -5,7 +5,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"os"
@@ -208,7 +209,7 @@ func (pm *PostgresBackupManager) syncIndex(ctx context.Context, newEntry BackupE
 	index.Backups = activeBackups
 
 	// Serialize index
-	indexData, err := json.MarshalIndent(index, "", "  ")
+	indexData, err := json.Marshal(index, jsontext.WithIndent("  "))
 	if err != nil {
 		return errors.E(op, errors.Internal, err)
 	}

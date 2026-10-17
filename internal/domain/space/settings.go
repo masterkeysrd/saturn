@@ -50,7 +50,7 @@ func (s *Settings) Validate() error {
 
 // SettingsPatchSchema defines all patchable fields for a Settings entity.
 var SettingsPatchSchema = patch.NewSchema[Settings]().
-	Register("timezone", patch.Field(func(s *Settings) *string { return &s.Timezone }))
+	Field("timezone", func(s *Settings) *string { return &s.Timezone })
 
 // ApplyPatch applies partial updates from an incoming settings based on the field mask.
 func (s *Settings) ApplyPatch(incoming *Settings, mask []string) error {

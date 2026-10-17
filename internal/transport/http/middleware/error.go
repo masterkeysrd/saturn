@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"net/http"
 
@@ -165,5 +165,5 @@ func WriteHTTP(w http.ResponseWriter, err error) {
 	statusCode, resp := ToHTTP(err)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(statusCode)
-	_ = json.NewEncoder(w).Encode(resp)
+	_ = json.MarshalWrite(w, resp)
 }

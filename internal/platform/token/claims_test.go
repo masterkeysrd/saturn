@@ -33,12 +33,10 @@ func TestClaims_IsAccess_IsRefresh(t *testing.T) {
 
 func TestClaims_ValidateBasic(t *testing.T) {
 	valid := &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:  "usr_123",
-			Issuer:   "saturn",
-			Audience: []string{"saturn-api"},
-			ID:       "jti_abc",
-		},
+		Subject:  "usr_123",
+		Issuer:   "saturn",
+		Audience: []string{"saturn-api"},
+		ID:       "jti_abc",
 		TokenUse: "access",
 	}
 
@@ -109,15 +107,13 @@ func TestClaims_ValidateBasic(t *testing.T) {
 func TestSanitizeClaims(t *testing.T) {
 	now := time.Now()
 	original := &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "saturn-issuer",
-			Subject:   "usr_test",
-			Audience:  []string{"saturn-audience"},
-			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_test_123",
-		},
+		Issuer:      "saturn-issuer",
+		Subject:     "usr_test",
+		Audience:    []string{"saturn-audience"},
+		ExpiresAt:   jwt.NewNumericDate(now.Add(time.Hour)),
+		IssuedAt:    jwt.NewNumericDate(now),
+		NotBefore:   jwt.NewNumericDate(now),
+		ID:          "jti_test_123",
 		AccessLevel: "admin",
 		TokenUse:    "access",
 		AuthVersion: 2,

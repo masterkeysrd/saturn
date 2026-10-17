@@ -120,8 +120,8 @@ func trimSpace(s string) string {
 
 // SpacePatchSchema defines all patchable fields for a Space entity.
 var SpacePatchSchema = patch.NewSchema[Space]().
-	Register("name", patch.Field(func(s *Space) *string { return &s.Name })).
-	Register("description", patch.Field(func(s *Space) *string { return &s.Description }))
+	Field("name", func(s *Space) *string { return &s.Name }).
+	Field("description", func(s *Space) *string { return &s.Description })
 
 // ApplyPatch applies partial updates from an incoming space based on the field mask.
 func (s *Space) ApplyPatch(incoming *Space, mask []string) error {

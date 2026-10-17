@@ -201,10 +201,8 @@ func TestCoordinator_RefreshSession(t *testing.T) {
 	expiry := now.Add(7 * 24 * time.Hour)
 
 	validClaims := &token.Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   "usr_1",
-			ExpiresAt: jwt.NewNumericDate(expiry),
-		},
+		Subject:     "usr_1",
+		ExpiresAt:   jwt.NewNumericDate(expiry),
 		AccessLevel: "user",
 		AuthVersion: 2,
 	}
@@ -412,7 +410,7 @@ func TestCoordinator_Logout(t *testing.T) {
 			req:  &LogoutRequest{RefreshToken: "valid_refresh_token"},
 			mockValidateRefresh: func(raw string, now time.Time) (*token.Claims, error) {
 				return &token.Claims{
-					RegisteredClaims: jwt.RegisteredClaims{Subject: "usr_1"},
+					Subject: "usr_1",
 				}, nil
 			},
 			mockRevokeByHash: func(ctx context.Context, refreshTokenHash []byte) error {
@@ -436,7 +434,7 @@ func TestCoordinator_Logout(t *testing.T) {
 			req:  &LogoutRequest{RefreshToken: "valid_token"},
 			mockValidateRefresh: func(raw string, now time.Time) (*token.Claims, error) {
 				return &token.Claims{
-					RegisteredClaims: jwt.RegisteredClaims{Subject: "usr_1"},
+					Subject: "usr_1",
 				}, nil
 			},
 			mockRevokeByHash: func(ctx context.Context, refreshTokenHash []byte) error {

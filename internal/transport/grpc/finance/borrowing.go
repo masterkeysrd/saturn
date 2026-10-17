@@ -93,11 +93,9 @@ func (h *Handler) ListBorrowings(ctx context.Context, req *financev1.ListBorrowi
 	}
 
 	filter := financeaggregator.ListBorrowingsFilter{
-		ListBorrowingsFilter: finance.ListBorrowingsFilter{
-			PageSize:      req.GetPageSize(),
-			NextPageToken: req.GetPageToken(),
-			Sort:          sorting.Parse(req.GetOrderBy()),
-		},
+		PageSize:      req.GetPageSize(),
+		NextPageToken: req.GetPageToken(),
+		Sort:          sorting.Parse(req.GetOrderBy()),
 	}
 
 	if req.Status != nil && *req.Status != financev1.Borrowing_STATUS_UNSPECIFIED {

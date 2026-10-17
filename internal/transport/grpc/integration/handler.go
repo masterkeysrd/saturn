@@ -2,7 +2,7 @@ package integration
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 
 	integrationv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/integration/v1"

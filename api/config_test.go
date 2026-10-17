@@ -1,7 +1,7 @@
 package api
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"testing"
 )
 
@@ -130,8 +130,8 @@ func TestApplyConfig(t *testing.T) {
 			Description string `json:"description"`
 		} `json:"tags"`
 		Paths map[string]map[string]struct {
-			Security      []map[string]interface{} `json:"security"`
-			XAccessLevels []string                 `json:"x-access-levels"`
+			Security      []map[string]any `json:"security"`
+			XAccessLevels []string         `json:"x-access-levels"`
 		} `json:"paths"`
 	}
 

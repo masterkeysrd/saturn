@@ -374,15 +374,13 @@ func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsReq
 	}
 
 	page, err := h.Aggregator.ListBudgets(ctx, rCtx, financeaggregator.ListBudgetsFilter{
-		ListBudgetsFilter: finance.ListBudgetsFilter{
-			PageSize:      int32(pageSize),
-			NextPageToken: req.GetPageToken(),
-			Statuses:      domainStatuses,
-			SearchQuery:   searchQuery,
-			Sort:          sortOrder,
-		},
-		TargetDate: targetDate,
-		View:       viewType,
+		PageSize:      int32(pageSize),
+		NextPageToken: req.GetPageToken(),
+		Statuses:      domainStatuses,
+		SearchQuery:   searchQuery,
+		Sort:          sortOrder,
+		TargetDate:    targetDate,
+		View:          viewType,
 	})
 	if err != nil {
 		return nil, err
@@ -521,11 +519,9 @@ func (h *Handler) ListExchangeRates(ctx context.Context, req *financev1.ListExch
 	}
 
 	filter := financeaggregator.ListExchangeRatesFilter{
-		ListExchangeRatesFilter: finance.ListExchangeRatesFilter{
-			PageSize:      req.GetPageSize(),
-			NextPageToken: req.GetPageToken(),
-			Sort:          sorting.Parse(req.GetOrderBy()),
-		},
+		PageSize:      req.GetPageSize(),
+		NextPageToken: req.GetPageToken(),
+		Sort:          sorting.Parse(req.GetOrderBy()),
 	}
 
 	if req.GetFromCurrency() != "" {
@@ -1537,13 +1533,11 @@ func (h *Handler) ListAccounts(ctx context.Context, req *financev1.ListAccountsR
 	}
 
 	filter := financeaggregator.ListAccountsFilter{
-		ListAccountsFilter: finance.ListAccountsFilter{
-			PageSize:      req.GetPageSize(),
-			NextPageToken: req.GetPageToken(),
-			ActiveOnly:    activeOnly,
-			SearchQuery:   searchQuery,
-			Sort:          sorting.Parse(req.GetSort()),
-		},
+		PageSize:      req.GetPageSize(),
+		NextPageToken: req.GetPageToken(),
+		ActiveOnly:    activeOnly,
+		SearchQuery:   searchQuery,
+		Sort:          sorting.Parse(req.GetSort()),
 	}
 
 	page, err := h.Aggregator.ListAccounts(ctx, rCtx, viewType, filter)

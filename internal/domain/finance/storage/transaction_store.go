@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
+	"encoding/json/v2"
 
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"

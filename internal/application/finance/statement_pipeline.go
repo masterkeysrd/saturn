@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 
@@ -75,9 +76,7 @@ func (s *StatementIngestionState) Copy() *StatementIngestionState {
 	var accMapCopy map[string]*finance.Account
 	if s.AccountMappings != nil {
 		accMapCopy = make(map[string]*finance.Account, len(s.AccountMappings))
-		for k, v := range s.AccountMappings {
-			accMapCopy[k] = v
-		}
+		maps.Copy(accMapCopy, s.AccountMappings)
 	}
 
 	var unmappedCopy []string

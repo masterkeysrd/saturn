@@ -2,9 +2,10 @@ package eventbus
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"runtime/debug"
+	"slices"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
@@ -216,8 +217,8 @@ func (e *Engine) executeDelivery(ctx context.Context, record DeliveryRecord) {
 
 	// Build consumer middleware chain
 	chainedHandler := handler
-	for i := len(cms) - 1; i >= 0; i-- {
-		chainedHandler = cms[i](chainedHandler)
+	for _, cm := range slices.Backward(cms) {
+		chainedHandler = cm(chainedHandler)
 	}
 
 	execErr := func() (err error) {

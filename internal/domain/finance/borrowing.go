@@ -162,17 +162,17 @@ func (b *Borrowing) Validate() error {
 
 // BorrowingPatchSchema defines patchable fields for a Borrowing entity.
 var BorrowingPatchSchema = patch.NewSchema[Borrowing]().
-	Register("id", patch.Field(func(b *Borrowing) *BorrowingID { return &b.ID })).
-	Register("direction", patch.Field(func(b *Borrowing) *BorrowingDirection { return &b.Direction })).
-	Register("counterparty", patch.Field(func(b *Borrowing) *string { return &b.Counterparty })).
-	Register("contact_info", patch.Field(func(b *Borrowing) *string { return &b.ContactInfo })).
-	Register("total_amount", patch.Field(func(b *Borrowing) *int64 { return &b.TotalAmount })).
-	Register("currency", patch.Field(func(b *Borrowing) *Currency { return &b.Currency })).
-	Register("status", patch.Field(func(b *Borrowing) *BorrowingStatus { return &b.Status })).
-	Register("established_at", patch.Field(func(b *Borrowing) *time.Time { return &b.EstablishedAt })).
-	Register("due_at", patch.Field(func(b *Borrowing) **time.Time { return &b.DueAt })).
-	Register("notes", patch.Field(func(b *Borrowing) *string { return &b.Notes })).
-	Register("account_id", patch.Field(func(b *Borrowing) **AccountID { return &b.AccountID }))
+	Field("id", func(b *Borrowing) *BorrowingID { return &b.ID }).
+	Field("direction", func(b *Borrowing) *BorrowingDirection { return &b.Direction }).
+	Field("counterparty", func(b *Borrowing) *string { return &b.Counterparty }).
+	Field("contact_info", func(b *Borrowing) *string { return &b.ContactInfo }).
+	Field("total_amount", func(b *Borrowing) *int64 { return &b.TotalAmount }).
+	Field("currency", func(b *Borrowing) *Currency { return &b.Currency }).
+	Field("status", func(b *Borrowing) *BorrowingStatus { return &b.Status }).
+	Field("established_at", func(b *Borrowing) *time.Time { return &b.EstablishedAt }).
+	Field("due_at", func(b *Borrowing) **time.Time { return &b.DueAt }).
+	Field("notes", func(b *Borrowing) *string { return &b.Notes }).
+	Field("account_id", func(b *Borrowing) **AccountID { return &b.AccountID })
 
 // ApplyPatch applies partial updates to a Borrowing entity based on a field mask.
 func (b *Borrowing) ApplyPatch(incoming *Borrowing, mask []string) error {

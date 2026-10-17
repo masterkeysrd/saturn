@@ -3,7 +3,7 @@ package financeapp
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"time"
 

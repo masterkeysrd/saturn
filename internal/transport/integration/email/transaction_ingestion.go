@@ -3,7 +3,7 @@ package email
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"mime"
 	"mime/multipart"
@@ -91,24 +91,18 @@ func (p *TransactionIngestionProvider) Descriptor() integration.Descriptor {
 	}
 }
 
-// extractRecipientAndToken extracts the recipient email, token, and optional Cloudflare worker JSON event.
-func extractRecipientAndToken(body []byte, headers map[string][]string) (recipient string, token string, cfEvent *struct {
+type cfEmailEvent struct {
 	RcptTo   string `json:"rcptTo"`
 	MailFrom string `json:"mailFrom"`
 	Subject  string `json:"subject"`
 	Raw      string `json:"raw"`
-}, err error) {
+}
+
+// extractRecipientAndToken extracts the recipient email, token, and optional Cloudflare worker JSON event.
+func extractRecipientAndToken(body []byte, headers map[string][]string) (recipient string, token string, cfEvent *cfEmailEvent, err error) {
 	var wrapper struct {
-		Event struct {
-			RcptTo   string `json:"rcptTo"`
-			MailFrom string `json:"mailFrom"`
-			Subject  string `json:"subject"`
-			Raw      string `json:"raw"`
-		} `json:"event"`
-		RcptTo   string `json:"rcptTo"`
-		MailFrom string `json:"mailFrom"`
-		Subject  string `json:"subject"`
-		Raw      string `json:"raw"`
+		cfEmailEvent
+		Event cfEmailEvent `json:"event"`
 	}
 
 	if jsonErr := json.Unmarshal(body, &wrapper); jsonErr == nil {
@@ -118,12 +112,7 @@ func extractRecipientAndToken(body []byte, headers map[string][]string) (recipie
 		}
 		if rcpt != "" {
 			recipient = rcpt
-			evt := &struct {
-				RcptTo   string `json:"rcptTo"`
-				MailFrom string `json:"mailFrom"`
-				Subject  string `json:"subject"`
-				Raw      string `json:"raw"`
-			}{
+			evt := &cfEmailEvent{
 				RcptTo:   rcpt,
 				MailFrom: wrapper.Event.MailFrom,
 				Subject:  wrapper.Event.Subject,

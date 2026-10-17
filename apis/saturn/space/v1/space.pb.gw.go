@@ -356,7 +356,7 @@ func local_request_Spaces_DeleteSpaceMember_0(ctx context.Context, marshaler run
 	return msg, metadata, err
 }
 
-var filter_Spaces_UpdateSpaceMember_0 = &utilities.DoubleArray{Encoding: map[string]int{"member": 0, "space_id": 1, "user_id": 2}, Base: []int{1, 2, 3, 1, 0, 0, 0}, Check: []int{0, 1, 1, 2, 4, 2, 3}}
+var filter_Spaces_UpdateSpaceMember_0 = &utilities.DoubleArray{Encoding: map[string]int{"member": 0, "space_id": 1, "user_id": 2}, Base: []int{1, 1, 3, 2, 0, 0, 0}, Check: []int{0, 1, 1, 2, 2, 4, 3}}
 
 func request_Spaces_UpdateSpaceMember_0(ctx context.Context, marshaler runtime.Marshaler, client SpacesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (

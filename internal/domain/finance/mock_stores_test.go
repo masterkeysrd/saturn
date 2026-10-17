@@ -313,13 +313,7 @@ func newTransactionStoreMock(txns map[TransactionID]*Transaction) *TransactionSt
 					continue
 				}
 				if len(filter.Types) > 0 {
-					match := false
-					for _, ft := range filter.Types {
-						if t.Type == ft {
-							match = true
-							break
-						}
-					}
+					match := slices.Contains(filter.Types, t.Type)
 					if !match {
 						continue
 					}
@@ -331,13 +325,7 @@ func newTransactionStoreMock(txns map[TransactionID]*Transaction) *TransactionSt
 					continue
 				}
 				if len(filter.BorrowingRoles) > 0 {
-					matchRole := false
-					for _, r := range filter.BorrowingRoles {
-						if t.Metadata.BorrowingRole == r {
-							matchRole = true
-							break
-						}
-					}
+					matchRole := slices.Contains(filter.BorrowingRoles, t.Metadata.BorrowingRole)
 					if !matchRole {
 						continue
 					}

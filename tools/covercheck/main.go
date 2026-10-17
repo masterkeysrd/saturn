@@ -78,19 +78,19 @@ func isExcluded(relFile, relPkg string, patterns []string) bool {
 		}
 
 		// Directory / prefix glob, e.g. "apis/**" or "apis/*" or "apis/"
-		if strings.HasSuffix(pattern, "/**") {
-			prefix := strings.TrimSuffix(pattern, "/**")
+		if before, ok := strings.CutSuffix(pattern, "/**"); ok {
+			prefix := before
 			if relPkg == prefix || strings.HasPrefix(relPkg, prefix+"/") ||
 				relFile == prefix || strings.HasPrefix(relFile, prefix+"/") {
 				return true
 			}
-		} else if strings.HasSuffix(pattern, "/*") {
-			prefix := strings.TrimSuffix(pattern, "/*")
+		} else if before, ok := strings.CutSuffix(pattern, "/*"); ok {
+			prefix := before
 			if relPkg == prefix || filepath.Dir(relFile) == prefix || filepath.Dir(relPkg) == prefix {
 				return true
 			}
-		} else if strings.HasSuffix(pattern, "/") {
-			prefix := strings.TrimSuffix(pattern, "/")
+		} else if before, ok := strings.CutSuffix(pattern, "/"); ok {
+			prefix := before
 			if relPkg == prefix || strings.HasPrefix(relPkg, prefix+"/") ||
 				relFile == prefix || strings.HasPrefix(relFile, prefix+"/") {
 				return true
@@ -203,11 +203,10 @@ func main() {
 			continue
 		}
 
-		colonIdx := strings.LastIndex(fields[0], ":")
-		if colonIdx == -1 {
+		filePath, _, ok := strings.CutLast(fields[0], ":")
+		if !ok {
 			continue
 		}
-		filePath := fields[0][:colonIdx]
 		pkgPath := filepath.Dir(filePath)
 
 		relFilePath := strings.TrimPrefix(filePath, modulePrefix)

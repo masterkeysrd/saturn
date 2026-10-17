@@ -108,7 +108,7 @@ func (f *File) Content() ([]byte, error) {
 		var thirdPartyImports []string
 
 		for path := range f.imports {
-			firstSegment := strings.Split(path, "/")[0]
+			firstSegment, _, _ := strings.Cut(path, "/")
 			if strings.Contains(firstSegment, ".") {
 				thirdPartyImports = append(thirdPartyImports, path)
 			} else {

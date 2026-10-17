@@ -203,11 +203,11 @@ func extractCookie(ctx context.Context, name string) string {
 	if len(cookies) == 0 {
 		return ""
 	}
-	parts := strings.Split(cookies[0], ";")
-	for _, part := range parts {
+	parts := strings.SplitSeq(cookies[0], ";")
+	for part := range parts {
 		part = strings.TrimSpace(part)
-		if strings.HasPrefix(part, name+"=") {
-			return strings.TrimPrefix(part, name+"=")
+		if after, ok0 := strings.CutPrefix(part, name+"="); ok0 {
+			return after
 		}
 	}
 	return ""

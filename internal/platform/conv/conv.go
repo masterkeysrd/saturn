@@ -11,8 +11,7 @@ func StringPtr[T ~string](p *T) *string {
 	if p == nil || string(*p) == "" {
 		return nil
 	}
-	s := string(*p)
-	return &s
+	return new(string(*p))
 }
 
 // Value returns the value pointed to by p, or the zero value of T if p is nil.
@@ -30,5 +29,5 @@ func Ptr[T comparable](v T) *T {
 	if v == zero {
 		return nil
 	}
-	return &v
+	return new(v)
 }

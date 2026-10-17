@@ -195,7 +195,7 @@ func TestGenerateStandardizedCSV(t *testing.T) {
 			DateStr:     "2026-08-14",
 			Description: "SALARY DEPOSIT",
 			Amount:      250000,
-			Reference:   stringPtr("REF-8899"),
+			Reference:   new("REF-8899"),
 		},
 	}
 
@@ -253,23 +253,23 @@ func TestStatementPipeline_CreditCardDualCurrencyLiability(t *testing.T) {
 					StartingBalance:    1510781, // 15,107.81 on paper
 					EndingBalance:      3366924, // 33,669.24 on paper
 					Lines: []ParsedStatementLine{
-						{DateStr: "2026-07-15", Description: "ONLINE PAYMENT", Amount: 1510781, Reference: stringPtr("0001")},
-						{DateStr: "2026-07-20", Description: "ONLINE RETAILER", Amount: -477947, Reference: stringPtr("9988")},
-						{DateStr: "2026-07-25", Description: "FUEL STATION", Amount: -517090, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-04", Description: "ONLINE PAYMENT", Amount: 2260150, Reference: stringPtr("0001")},
-						{DateStr: "2026-08-07", Description: "MEDICAL CLINIC", Amount: -1200000, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-09", Description: "DEPARTMENT STORE", Amount: -518609, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-04", Description: "PAYMENT SERVICE", Amount: -773900, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-06", Description: "PAYMENT SERVICE", Amount: -440178, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-13", Description: "PAYMENT SERVICE", Amount: -396395, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-15", Description: "ENTERTAINMENT PARK", Amount: -558000, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-15", Description: "ENTERTAINMENT PARK", Amount: -174347, Reference: stringPtr("9988")},
-						{DateStr: "2026-07-30", Description: "PAYMENT SERVICE", Amount: -270113, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-01", Description: "SHIPPING SERVICE", Amount: -120300, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-02", Description: "RESTAURANT DINE", Amount: -67500, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-03", Description: "STREAMING SERVICE", Amount: -33300, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-09", Description: "SUPERMARKET GROCERY", Amount: -71405, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-11", Description: "ONLINE RETAILER", Amount: -7990, Reference: stringPtr("9988")},
+						{DateStr: "2026-07-15", Description: "ONLINE PAYMENT", Amount: 1510781, Reference: new("0001")},
+						{DateStr: "2026-07-20", Description: "ONLINE RETAILER", Amount: -477947, Reference: new("9988")},
+						{DateStr: "2026-07-25", Description: "FUEL STATION", Amount: -517090, Reference: new("9988")},
+						{DateStr: "2026-08-04", Description: "ONLINE PAYMENT", Amount: 2260150, Reference: new("0001")},
+						{DateStr: "2026-08-07", Description: "MEDICAL CLINIC", Amount: -1200000, Reference: new("9988")},
+						{DateStr: "2026-08-09", Description: "DEPARTMENT STORE", Amount: -518609, Reference: new("9988")},
+						{DateStr: "2026-08-04", Description: "PAYMENT SERVICE", Amount: -773900, Reference: new("9988")},
+						{DateStr: "2026-08-06", Description: "PAYMENT SERVICE", Amount: -440178, Reference: new("9988")},
+						{DateStr: "2026-08-13", Description: "PAYMENT SERVICE", Amount: -396395, Reference: new("9988")},
+						{DateStr: "2026-08-15", Description: "ENTERTAINMENT PARK", Amount: -558000, Reference: new("9988")},
+						{DateStr: "2026-08-15", Description: "ENTERTAINMENT PARK", Amount: -174347, Reference: new("9988")},
+						{DateStr: "2026-07-30", Description: "PAYMENT SERVICE", Amount: -270113, Reference: new("9988")},
+						{DateStr: "2026-08-01", Description: "SHIPPING SERVICE", Amount: -120300, Reference: new("9988")},
+						{DateStr: "2026-08-02", Description: "RESTAURANT DINE", Amount: -67500, Reference: new("9988")},
+						{DateStr: "2026-08-03", Description: "STREAMING SERVICE", Amount: -33300, Reference: new("9988")},
+						{DateStr: "2026-08-09", Description: "SUPERMARKET GROCERY", Amount: -71405, Reference: new("9988")},
+						{DateStr: "2026-08-11", Description: "ONLINE RETAILER", Amount: -7990, Reference: new("9988")},
 					},
 				},
 				{
@@ -279,24 +279,24 @@ func TestStatementPipeline_CreditCardDualCurrencyLiability(t *testing.T) {
 					StartingBalance:    58065,  // 580.65 on paper
 					EndingBalance:      194900, // 1,949.00 on paper
 					Lines: []ParsedStatementLine{
-						{DateStr: "2026-07-15", Description: "ONLINE PAYMENT", Amount: 58065, Reference: stringPtr("0002")},
-						{DateStr: "2026-07-31", Description: "ONLINE PAYMENT", Amount: 77904, Reference: stringPtr("0002")},
-						{DateStr: "2026-08-11", Description: "PROMOTION CREDIT", Amount: 556, Reference: stringPtr("0002")},
-						{DateStr: "2026-07-15", Description: "CLOUD AI API", Amount: -5000, Reference: stringPtr("9988")},
-						{DateStr: "2026-07-21", Description: "DNS HOSTING", Amount: -1220, Reference: stringPtr("9988")},
-						{DateStr: "2026-07-23", Description: "MUSIC STREAMING", Amount: -649, Reference: stringPtr("9988")},
-						{DateStr: "2026-07-26", Description: "AIRLINE TICKET", Amount: -69237, Reference: stringPtr("9988")},
-						{DateStr: "2026-07-29", Description: "VIDEO STREAMING", Amount: -1798, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-01", Description: "CLOUD HOSTING", Amount: -195, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-04", Description: "CLOUD HOSTING", Amount: -5000, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-04", Description: "ONLINE MARKETPLACE", Amount: -160499, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-05", Description: "ONLINE MARKETPLACE", Amount: -999, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-07", Description: "STREAMING SERVICE", Amount: -1599, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-04", Description: "ONLINE MARKETPLACE", Amount: -2828, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-08", Description: "CODE HOSTING", Amount: -3900, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-12", Description: "PRIME MEMBERSHIP", Amount: -1516, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-14", Description: "VACATION RENTAL", Amount: -6500, Reference: stringPtr("9988")},
-						{DateStr: "2026-08-14", Description: "HOTEL LODGING", Amount: -12420, Reference: stringPtr("9988")},
+						{DateStr: "2026-07-15", Description: "ONLINE PAYMENT", Amount: 58065, Reference: new("0002")},
+						{DateStr: "2026-07-31", Description: "ONLINE PAYMENT", Amount: 77904, Reference: new("0002")},
+						{DateStr: "2026-08-11", Description: "PROMOTION CREDIT", Amount: 556, Reference: new("0002")},
+						{DateStr: "2026-07-15", Description: "CLOUD AI API", Amount: -5000, Reference: new("9988")},
+						{DateStr: "2026-07-21", Description: "DNS HOSTING", Amount: -1220, Reference: new("9988")},
+						{DateStr: "2026-07-23", Description: "MUSIC STREAMING", Amount: -649, Reference: new("9988")},
+						{DateStr: "2026-07-26", Description: "AIRLINE TICKET", Amount: -69237, Reference: new("9988")},
+						{DateStr: "2026-07-29", Description: "VIDEO STREAMING", Amount: -1798, Reference: new("9988")},
+						{DateStr: "2026-08-01", Description: "CLOUD HOSTING", Amount: -195, Reference: new("9988")},
+						{DateStr: "2026-08-04", Description: "CLOUD HOSTING", Amount: -5000, Reference: new("9988")},
+						{DateStr: "2026-08-04", Description: "ONLINE MARKETPLACE", Amount: -160499, Reference: new("9988")},
+						{DateStr: "2026-08-05", Description: "ONLINE MARKETPLACE", Amount: -999, Reference: new("9988")},
+						{DateStr: "2026-08-07", Description: "STREAMING SERVICE", Amount: -1599, Reference: new("9988")},
+						{DateStr: "2026-08-04", Description: "ONLINE MARKETPLACE", Amount: -2828, Reference: new("9988")},
+						{DateStr: "2026-08-08", Description: "CODE HOSTING", Amount: -3900, Reference: new("9988")},
+						{DateStr: "2026-08-12", Description: "PRIME MEMBERSHIP", Amount: -1516, Reference: new("9988")},
+						{DateStr: "2026-08-14", Description: "VACATION RENTAL", Amount: -6500, Reference: new("9988")},
+						{DateStr: "2026-08-14", Description: "HOTEL LODGING", Amount: -12420, Reference: new("9988")},
 					},
 				},
 				{
@@ -447,10 +447,6 @@ func TestStatementPipeline_CreditCardInvertedPositiveCharges(t *testing.T) {
 	if !strings.Contains(csvContent, "AUTOPAY PAYMENT,100.00") {
 		t.Errorf("expected positive autopay payment in CSV, got:\n%s", csvContent)
 	}
-}
-
-func stringPtr(s string) *string {
-	return &s
 }
 
 func TestStatementPipeline_Nodes(t *testing.T) {
@@ -653,7 +649,7 @@ func TestStatementPipeline_Nodes(t *testing.T) {
 			{
 				name: "Match by explicit TargetAccountID",
 				req: &StatementDocumentRequest{
-					TargetAccountID: stringPtr("acc_eur"),
+					TargetAccountID: new("acc_eur"),
 				},
 				parsedDoc: &ParsedStatementDocument{
 					Sections: []ParsedStatementSection{

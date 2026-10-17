@@ -29,8 +29,7 @@ func TestCoordinator_ExecuteAgent(t *testing.T) {
 		if errors.CodeOf(err) != InvalidAgentPurpose {
 			t.Errorf("expected InvalidAgentPurpose code, got %v", errors.CodeOf(err))
 		}
-		var platErr *errors.Error
-		if errors.As(err, &platErr) && platErr.Op != "application/agent.ExecuteAgent" {
+		if platErr, ok := errors.AsType[*errors.Error](err); ok && platErr.Op != "application/agent.ExecuteAgent" {
 			t.Errorf("expected canonical op application/agent.ExecuteAgent, got %v", platErr.Op)
 		}
 	})

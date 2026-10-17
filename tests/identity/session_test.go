@@ -355,4 +355,3 @@ func TestActiveSessionIsCurrent(t *testing.T) {
 		t.Errorf("rotated client 1 session matches client 2 session ID %s", client2SessionID)
 	}
 }
-

@@ -75,7 +75,7 @@ func (s *Settings) Validate() error {
 
 // SettingsPatchSchema defines all patchable fields for a Settings entity.
 var SettingsPatchSchema = patch.NewSchema[Settings]().
-	Register("fiscal_year_start_month", patch.Field(func(s *Settings) *int { return &s.FiscalYearStartMonth }))
+	Field("fiscal_year_start_month", func(s *Settings) *int { return &s.FiscalYearStartMonth })
 
 // ApplyPatch applies partial updates from an incoming settings based on the field mask.
 func (s *Settings) ApplyPatch(incoming *Settings, mask []string) error {

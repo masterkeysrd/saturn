@@ -40,6 +40,70 @@ func TestEngineRegisterAndGetHandler(t *testing.T) {
 	}
 }
 
+type testJobPayload struct {
+	Greeting string `json:"greeting"`
+	Count    int    `json:"count"`
+}
+
+func TestEngineRegisterJSON(t *testing.T) {
+	tests := []struct {
+		name      string
+		payload   []byte
+		wantErr   bool
+		wantCount int
+		wantGreet string
+	}{
+		{
+			name:      "successful json unmarshal and execution",
+			payload:   []byte(`{"greeting":"hello","count":42}`),
+			wantErr:   false,
+			wantCount: 42,
+			wantGreet: "hello",
+		},
+		{
+			name:      "empty payload provides zero-value struct",
+			payload:   nil,
+			wantErr:   false,
+			wantCount: 0,
+			wantGreet: "",
+		},
+		{
+			name:    "invalid json returns error",
+			payload: []byte(`{invalid-json`),
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			engine := NewEngine(nil)
+			var received *testJobPayload
+			engine.RegisterJSON("test.json.job", func(ctx context.Context, payload *testJobPayload) error {
+				received = payload
+				return nil
+			})
+
+			h, exists := engine.getHandler("test.json.job")
+			if !exists {
+				t.Fatal("expected handler to exist")
+			}
+
+			err := h(context.Background(), tt.payload)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("handler err = %v, wantErr = %v", err, tt.wantErr)
+			}
+			if !tt.wantErr {
+				if received == nil {
+					t.Fatal("expected non-nil received payload")
+				}
+				if received.Greeting != tt.wantGreet || received.Count != tt.wantCount {
+					t.Errorf("received payload = %+v, want greet=%q count=%d", received, tt.wantGreet, tt.wantCount)
+				}
+			}
+		})
+	}
+}
+
 func TestEngineCronParsing(t *testing.T) {
 	engine := NewEngine(nil)
 

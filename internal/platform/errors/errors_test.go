@@ -392,15 +392,15 @@ func TestMatch_EdgeCases(t *testing.T) {
 	}
 }
 
-func TestNew_And_As(t *testing.T) {
+func TestNew_And_Is(t *testing.T) {
 	err := platErr.New("custom simple error")
 	if err == nil || err.Error() != "custom simple error" {
 		t.Errorf("unexpected New error: %v", err)
 	}
 
-	var target *platErr.Error
-	if !platErr.As(err, &target) {
-		t.Fatal("expected As to find *platErr.Error")
+	target, ok := platErr.AsType[*platErr.Error](err)
+	if !ok {
+		t.Fatal("expected AsType to find *platErr.Error")
 	}
 	if target.Error() != "custom simple error" {
 		t.Errorf("unexpected target error: %v", target)
@@ -427,5 +427,55 @@ func TestNew_And_As(t *testing.T) {
 	}
 	if platErr.Is(codeErr, platErr.Code("OTHER")) {
 		t.Error("expected Is(err, different Code) to be false")
+	}
+}
+
+type customErr struct {
+	msg string
+}
+
+func (c *customErr) Error() string { return c.msg }
+
+func TestAsType(t *testing.T) {
+	tests := []struct {
+		name      string
+		err       error
+		wantFound bool
+		wantMsg   string
+	}{
+		{
+			name:      "finds error in single error",
+			err:       &customErr{msg: "direct"},
+			wantFound: true,
+			wantMsg:   "direct",
+		},
+		{
+			name:      "finds nested error in platErr chain",
+			err:       platErr.E(platErr.Invalid, &customErr{msg: "nested"}),
+			wantFound: true,
+			wantMsg:   "nested",
+		},
+		{
+			name:      "returns false when type does not match",
+			err:       errors.New("plain standard error"),
+			wantFound: false,
+		},
+		{
+			name:      "returns false on nil error",
+			err:       nil,
+			wantFound: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, found := platErr.AsType[*customErr](tt.err)
+			if found != tt.wantFound {
+				t.Fatalf("AsType found = %v, want %v", found, tt.wantFound)
+			}
+			if found && got.Error() != tt.wantMsg {
+				t.Errorf("AsType got msg = %q, want %q", got.Error(), tt.wantMsg)
+			}
+		})
 	}
 }

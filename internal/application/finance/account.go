@@ -37,10 +37,7 @@ type UpdateAccountRequest struct {
 }
 
 type AdjustAccountBalanceRequest struct {
-	AccountID      finance.AccountID
-	TargetBalance  int64
-	AdjustmentDate string
-	Note           string
+	finance.AdjustAccountBalanceRequest
 }
 
 func (c *coordinator) CreateAccount(ctx context.Context, req *CreateAccountRequest) (*finance.Account, error) {
@@ -115,10 +112,5 @@ func (c *coordinator) AdjustAccountBalance(ctx context.Context, req *AdjustAccou
 		return nil, err
 	}
 
-	return c.financeService.AdjustAccountBalance(ctx, rCtx, finance.AdjustAccountBalanceRequest{
-		AccountID:      req.AccountID,
-		TargetBalance:  req.TargetBalance,
-		AdjustmentDate: req.AdjustmentDate,
-		Note:           req.Note,
-	})
+	return c.financeService.AdjustAccountBalance(ctx, rCtx, req.AdjustAccountBalanceRequest)
 }

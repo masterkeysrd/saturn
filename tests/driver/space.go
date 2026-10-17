@@ -189,4 +189,3 @@ func (s *SpaceDriver) UpdateSettings(tb testing.TB, spaceID, timezone string, ma
 		Version:    version,
 	})
 }
-

@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os/signal"
+	"slices"
 	"sync"
 	"syscall"
 	"time"
@@ -79,7 +80,7 @@ func (m *Manager) Execute() error {
 	var firstErr error
 
 	// Execute in LIFO (stack) order: reverse iteration
-	for i := len(cbSlice) - 1; i >= 0; i-- {
+	for i, c := range slices.Backward(cbSlice) {
 		log.Info(ctx, "executing shutdown callback", log.Int("index", i))
 
 		// Recover from panics to ensure all callbacks are attempted
@@ -91,7 +92,7 @@ func (m *Manager) Execute() error {
 					err = fmt.Errorf("callback %d panicked: %v", i, r)
 				}
 			}()
-			err = cbSlice[i](ctx)
+			err = c(ctx)
 		}()
 
 		if err != nil {

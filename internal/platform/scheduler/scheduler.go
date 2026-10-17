@@ -3,7 +3,7 @@ package scheduler
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"sync"
 	"time"
@@ -22,7 +22,7 @@ type Handler func(ctx context.Context, payload []byte) error
 type Job struct {
 	JobType     string
 	RunAt       time.Time
-	Payload     interface{}
+	Payload     any
 	MaxAttempts int // Optional: defaults to 5 if not set
 }
 
@@ -99,6 +99,20 @@ func (e *Engine) Register(jobType string, handler Handler) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.handlers[jobType] = handler
+}
+
+// RegisterJSON registers a typed JSON job handler for a specific job type.
+func (e *Engine) RegisterJSON[T any](jobType string, handler func(ctx context.Context, payload *T) error) {
+	const op errors.Op = "platform/scheduler.RegisterJSON"
+	e.Register(jobType, func(ctx context.Context, data []byte) error {
+		var req T
+		if len(data) > 0 {
+			if err := json.Unmarshal(data, &req); err != nil {
+				return errors.E(op, errors.Invalid, fmt.Errorf("failed to unmarshal %s payload: %w", jobType, err))
+			}
+		}
+		return handler(ctx, &req)
+	})
 }
 
 // Enqueue inserts a one-off deferred job instance in the queue.

@@ -2,10 +2,13 @@ package eventbus
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
+
+	"google.golang.org/protobuf/proto"
 
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
@@ -142,11 +145,38 @@ func (e *Engine) Publish(ctx context.Context, topic string, payload []byte) erro
 		return e.rawPublish(ctx, m)
 	}
 
-	for i := len(pms) - 1; i >= 0; i-- {
-		publish = pms[i](publish)
+	for _, pm := range slices.Backward(pms) {
+		publish = pm(publish)
 	}
 
 	return publish(ctx, msg)
+}
+
+// PublishProto marshals a protobuf message and publishes it to the given topic.
+func (e *Engine) PublishProto[M proto.Message](ctx context.Context, topic string, msg M) error {
+	const op errors.Op = "platform/eventbus.PublishProto"
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		return errors.E(op, errors.Internal, fmt.Errorf("failed to marshal %s proto: %w", topic, err))
+	}
+	return e.Publish(ctx, topic, data)
+}
+
+// SubscribeProto registers a typed protobuf handler for a specific topic.
+func (e *Engine) SubscribeProto[M any, PM interface {
+	*M
+	proto.Message
+}](topic, subscriberID string, handler func(ctx context.Context, payload PM) error) {
+	const op errors.Op = "platform/eventbus.SubscribeProto"
+	e.Subscribe(topic, subscriberID, func(ctx context.Context, msg Message) error {
+		var payload M
+		if len(msg.Payload) > 0 {
+			if err := proto.Unmarshal(msg.Payload, PM(&payload)); err != nil {
+				return errors.E(op, errors.Invalid, fmt.Errorf("failed to unmarshal %s proto: %w", topic, err))
+			}
+		}
+		return handler(ctx, PM(&payload))
+	})
 }
 
 func (e *Engine) rawPublish(ctx context.Context, msg *Message) error {

@@ -92,13 +92,7 @@ func (m *mockBudgetStore) ListBySpace(ctx context.Context, fCtx finance.Context,
 	var list []*finance.Budget
 	for _, b := range m.budgets[fCtx.SpaceID()] {
 		if len(filter.Statuses) > 0 {
-			matched := false
-			for _, st := range filter.Statuses {
-				if b.Status == st {
-					matched = true
-					break
-				}
-			}
+			matched := slices.Contains(filter.Statuses, b.Status)
 			if !matched {
 				continue
 			}
@@ -338,12 +332,10 @@ func TestListAggregatedBudgets(t *testing.T) {
 
 	t.Run("Basic View - Active Only", func(t *testing.T) {
 		filter := ListBudgetsFilter{
-			ListBudgetsFilter: finance.ListBudgetsFilter{
-				Statuses: []finance.BudgetStatus{finance.BudgetStatusActive},
-				Sort:     sorting.New("name", true), // A-Z
-				PageSize: 10,
-			},
-			View: ViewBasic,
+			Statuses: []finance.BudgetStatus{finance.BudgetStatusActive},
+			Sort:     sorting.New("name", true), // A-Z
+			PageSize: 10,
+			View:     ViewBasic,
 		}
 
 		page, err := aggService.ListBudgets(ctx, rCtx, filter)
@@ -364,12 +356,10 @@ func TestListAggregatedBudgets(t *testing.T) {
 
 	t.Run("Full View - Hydrates Period Spent", func(t *testing.T) {
 		filter := ListBudgetsFilter{
-			ListBudgetsFilter: finance.ListBudgetsFilter{
-				Statuses: []finance.BudgetStatus{finance.BudgetStatusActive},
-				Sort:     sorting.New("limit_amount", false), // Limit desc (Travel first, then Food)
-				PageSize: 10,
-			},
-			View: ViewFull,
+			Statuses: []finance.BudgetStatus{finance.BudgetStatusActive},
+			Sort:     sorting.New("limit_amount", false), // Limit desc (Travel first, then Food)
+			PageSize: 10,
+			View:     ViewFull,
 		}
 
 		page, err := aggService.ListBudgets(ctx, rCtx, filter)
@@ -396,12 +386,10 @@ func TestListAggregatedBudgets(t *testing.T) {
 
 	t.Run("Paging - Keeps Order", func(t *testing.T) {
 		filter := ListBudgetsFilter{
-			ListBudgetsFilter: finance.ListBudgetsFilter{
-				Statuses: []finance.BudgetStatus{finance.BudgetStatusActive},
-				Sort:     sorting.New("name", true), // Food, Travel
-				PageSize: 1,
-			},
-			View: ViewBasic,
+			Statuses: []finance.BudgetStatus{finance.BudgetStatusActive},
+			Sort:     sorting.New("name", true), // Food, Travel
+			PageSize: 1,
+			View:     ViewBasic,
 		}
 
 		page1, err := aggService.ListBudgets(ctx, rCtx, filter)

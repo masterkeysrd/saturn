@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -19,7 +18,6 @@ import (
 // Declare packages used in generated code (avoids unused imports if none generated)
 var (
 	_ = context.Background
-	_ = json.Marshal
 	_ = time.Now
 )
 
@@ -98,7 +96,6 @@ func generateFile(gen *protogen.Plugin, f *protogen.File, types *protoregistry.T
 
 	g.P("import (")
 	g.P(`	"context"`)
-	g.P(`	"encoding/json"`)
 	g.P(`	"time"`)
 	g.P()
 	g.P(`	"github.com/masterkeysrd/saturn/internal/platform/scheduler"`)
@@ -116,13 +113,7 @@ func generateFile(gen *protogen.Plugin, f *protogen.File, types *protoregistry.T
 		// 2. Register helper
 		g.P("// Register", typeName, " binds the handler callback to the scheduler engine.")
 		g.P("func Register", typeName, "(engine *scheduler.Engine, handler ", typeName, "Handler) {")
-		g.P("	engine.Register(", fmt.Sprintf("%q", job.JobType), ", func(ctx context.Context, payloadBytes []byte) error {")
-		g.P("		var payload ", typeName)
-		g.P("		if err := json.Unmarshal(payloadBytes, &payload); err != nil {")
-		g.P("			return err")
-		g.P("		}")
-		g.P("		return handler(ctx, &payload)")
-		g.P("	})")
+		g.P("	engine.RegisterJSON(", fmt.Sprintf("%q", job.JobType), ", handler)")
 		g.P("}")
 		g.P()
 

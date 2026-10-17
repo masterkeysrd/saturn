@@ -19,8 +19,8 @@ func main() {
 
 	targetDir := *dirFlag
 	isRecursive := *allFlag || targetDir == "./..." || strings.HasSuffix(targetDir, "/...")
-	if strings.HasSuffix(targetDir, "/...") {
-		targetDir = strings.TrimSuffix(targetDir, "/...")
+	if before, ok := strings.CutSuffix(targetDir, "/..."); ok {
+		targetDir = before
 		if targetDir == "" {
 			targetDir = "."
 		}

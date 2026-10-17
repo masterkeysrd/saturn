@@ -16,8 +16,8 @@ func init() {
 // TranslateError translates pq.Error instances into Saturn platform errors.
 // Returns nil if the error is not recognized as a Postgres driver error.
 func TranslateError(err error) error {
-	var pqErr *pq.Error
-	if !errors.As(err, &pqErr) {
+	pqErr, ok := errors.AsType[*pq.Error](err)
+	if !ok {
 		return nil
 	}
 

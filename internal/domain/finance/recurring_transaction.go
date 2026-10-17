@@ -60,17 +60,17 @@ type RecurringTransaction struct {
 
 // RecurringTransactionPatchSchema defines patchable fields for a RecurringTransaction entity.
 var RecurringTransactionPatchSchema = patch.NewSchema[RecurringTransaction]().
-	Register("name", patch.Field(func(re *RecurringTransaction) *string { return &re.Name })).
-	Register("amount", patch.Field(func(re *RecurringTransaction) *int64 { return &re.Amount })).
-	Register("currency", patch.Field(func(re *RecurringTransaction) *Currency { return &re.Currency })).
-	Register("interval", patch.Field(func(re *RecurringTransaction) *RecurrenceInterval { return &re.Interval })).
-	Register("next_due_date", patch.Field(func(re *RecurringTransaction) *time.Time { return &re.NextDueDate })).
-	Register("is_variable", patch.Field(func(re *RecurringTransaction) *bool { return &re.IsVariable })).
-	Register("status", patch.Field(func(re *RecurringTransaction) *RecurringTransactionStatus { return &re.Status })).
-	Register("grace_period_days", patch.Field(func(re *RecurringTransaction) *int32 { return &re.GracePeriodDays })).
-	Register("budget_id", patch.Field(func(re *RecurringTransaction) **BudgetID { return &re.BudgetID })).
-	Register("type", patch.Field(func(re *RecurringTransaction) *TransactionType { return &re.Type })).
-	Register("account_id", patch.Field(func(re *RecurringTransaction) **AccountID { return &re.AccountID }))
+	Field("name", func(re *RecurringTransaction) *string { return &re.Name }).
+	Field("amount", func(re *RecurringTransaction) *int64 { return &re.Amount }).
+	Field("currency", func(re *RecurringTransaction) *Currency { return &re.Currency }).
+	Field("interval", func(re *RecurringTransaction) *RecurrenceInterval { return &re.Interval }).
+	Field("next_due_date", func(re *RecurringTransaction) *time.Time { return &re.NextDueDate }).
+	Field("is_variable", func(re *RecurringTransaction) *bool { return &re.IsVariable }).
+	Field("status", func(re *RecurringTransaction) *RecurringTransactionStatus { return &re.Status }).
+	Field("grace_period_days", func(re *RecurringTransaction) *int32 { return &re.GracePeriodDays }).
+	Field("budget_id", func(re *RecurringTransaction) **BudgetID { return &re.BudgetID }).
+	Field("type", func(re *RecurringTransaction) *TransactionType { return &re.Type }).
+	Field("account_id", func(re *RecurringTransaction) **AccountID { return &re.AccountID })
 
 // ApplyPatch selectively mutates patchable fields on the existing recurring transaction.
 func (re *RecurringTransaction) ApplyPatch(update *RecurringTransaction, mask []string) error {

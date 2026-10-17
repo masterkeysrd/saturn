@@ -347,14 +347,14 @@ func (b *Budget) Close() {
 
 // BudgetPatchSchema defines all patchable fields for a Budget entity.
 var BudgetPatchSchema = patch.NewSchema[Budget]().
-	Register("name", patch.Field(func(b *Budget) *string { return &b.Name })).
-	Register("limit_amount", patch.Field(func(b *Budget) *int64 { return &b.LimitAmount })).
-	Register("currency", patch.Field(func(b *Budget) *Currency { return &b.Currency })).
-	Register("interval", patch.Field(func(b *Budget) *RecurrenceInterval { return &b.Interval })).
-	Register("status", patch.Field(func(b *Budget) *BudgetStatus { return &b.Status })).
-	Register("icon", patch.Field(func(b *Budget) *string { return &b.Icon })).
-	Register("color", patch.Field(func(b *Budget) *string { return &b.Color })).
-	Register("default_account_id", patch.Field(func(b *Budget) **AccountID { return &b.DefaultAccountID }))
+	Field("name", func(b *Budget) *string { return &b.Name }).
+	Field("limit_amount", func(b *Budget) *int64 { return &b.LimitAmount }).
+	Field("currency", func(b *Budget) *Currency { return &b.Currency }).
+	Field("interval", func(b *Budget) *RecurrenceInterval { return &b.Interval }).
+	Field("status", func(b *Budget) *BudgetStatus { return &b.Status }).
+	Field("icon", func(b *Budget) *string { return &b.Icon }).
+	Field("color", func(b *Budget) *string { return &b.Color }).
+	Field("default_account_id", func(b *Budget) **AccountID { return &b.DefaultAccountID })
 
 // ApplyPatch applies partial updates from an incoming budget based on the field mask.
 func (b *Budget) ApplyPatch(incoming *Budget, mask []string) error {

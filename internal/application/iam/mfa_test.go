@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
@@ -333,9 +332,7 @@ func TestCoordinator_Login_MFA(t *testing.T) {
 		tokSvc := &TokenServiceMock{
 			ValidateMFATicketFunc: func(raw string, now time.Time) (*token.Claims, error) {
 				return &token.Claims{
-					RegisteredClaims: jwt.RegisteredClaims{
-						Subject: "usr_1",
-					},
+					Subject:     "usr_1",
 					AuthVersion: 1,
 					TokenUse:    "mfa_ticket",
 				}, nil
@@ -406,7 +403,7 @@ func TestCoordinator_Login_MFA(t *testing.T) {
 				name: "User not found",
 				setup: func(idSvc *IdentityServiceMock, tokSvc *TokenServiceMock) {
 					tokSvc.ValidateMFATicketFunc = func(raw string, now time.Time) (*token.Claims, error) {
-						return &token.Claims{RegisteredClaims: jwt.RegisteredClaims{Subject: "usr_1"}}, nil
+						return &token.Claims{Subject: "usr_1"}, nil
 					}
 					idSvc.GetUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
 						return nil, errors.New("user not found")
@@ -418,7 +415,7 @@ func TestCoordinator_Login_MFA(t *testing.T) {
 				name: "User not active",
 				setup: func(idSvc *IdentityServiceMock, tokSvc *TokenServiceMock) {
 					tokSvc.ValidateMFATicketFunc = func(raw string, now time.Time) (*token.Claims, error) {
-						return &token.Claims{RegisteredClaims: jwt.RegisteredClaims{Subject: "usr_1"}, AuthVersion: 1}, nil
+						return &token.Claims{Subject: "usr_1", AuthVersion: 1}, nil
 					}
 					idSvc.GetUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
 						return &identity.User{ID: id, Status: identity.UserStatusInactive, AuthVersion: 1}, nil
@@ -430,7 +427,7 @@ func TestCoordinator_Login_MFA(t *testing.T) {
 				name: "AuthVersion changed",
 				setup: func(idSvc *IdentityServiceMock, tokSvc *TokenServiceMock) {
 					tokSvc.ValidateMFATicketFunc = func(raw string, now time.Time) (*token.Claims, error) {
-						return &token.Claims{RegisteredClaims: jwt.RegisteredClaims{Subject: "usr_1"}, AuthVersion: 1}, nil
+						return &token.Claims{Subject: "usr_1", AuthVersion: 1}, nil
 					}
 					idSvc.GetUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
 						return &identity.User{ID: id, Status: identity.UserStatusActive, AuthVersion: 2}, nil
@@ -442,7 +439,7 @@ func TestCoordinator_Login_MFA(t *testing.T) {
 				name: "VerifyMFAAssertion error",
 				setup: func(idSvc *IdentityServiceMock, tokSvc *TokenServiceMock) {
 					tokSvc.ValidateMFATicketFunc = func(raw string, now time.Time) (*token.Claims, error) {
-						return &token.Claims{RegisteredClaims: jwt.RegisteredClaims{Subject: "usr_1"}, AuthVersion: 1}, nil
+						return &token.Claims{Subject: "usr_1", AuthVersion: 1}, nil
 					}
 					idSvc.GetUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
 						return &identity.User{ID: id, Status: identity.UserStatusActive, AuthVersion: 1}, nil

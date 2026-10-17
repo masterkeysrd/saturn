@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -18,7 +17,6 @@ import (
 
 var (
 	_ = context.Background
-	_ = json.Marshal
 	_ = time.Now
 )
 
@@ -96,7 +94,6 @@ func generateFile(gen *protogen.Plugin, f *protogen.File, types *protoregistry.T
 	g.P("import (")
 	g.P(`	"context"`)
 	g.P()
-	g.P(`	"google.golang.org/protobuf/proto"`)
 	g.P(`	"github.com/masterkeysrd/saturn/internal/platform/eventbus"`)
 	g.P(")")
 	g.P()
@@ -117,24 +114,14 @@ func generateFile(gen *protogen.Plugin, f *protogen.File, types *protoregistry.T
 		// Subscribe helper
 		g.P("// Subscribe", typeName, " binds a handler callback to the eventbus for '", msg.Topic, "'.")
 		g.P("func Subscribe", typeName, "(engine *eventbus.Engine, subscriberID string, handler ", typeName, "Handler) {")
-		g.P("	engine.Subscribe(", fmt.Sprintf("%q", msg.Topic), ", subscriberID, func(ctx context.Context, msg eventbus.Message) error {")
-		g.P("		var payload ", typeName)
-		g.P("		if err := proto.Unmarshal(msg.Payload, &payload); err != nil {")
-		g.P("			return err")
-		g.P("		}")
-		g.P("		return handler(ctx, &payload)")
-		g.P("	})")
+		g.P("	engine.SubscribeProto(Topic", typeName, ", subscriberID, handler)")
 		g.P("}")
 		g.P()
 
 		// Publish helper
 		g.P("// Publish", typeName, " serializes and broadcasts the ", typeName, " message to the eventbus.")
 		g.P("func Publish", typeName, "(ctx context.Context, engine *eventbus.Engine, msg *", typeName, ") error {")
-		g.P("	payloadBytes, err := proto.Marshal(msg)")
-		g.P("	if err != nil {")
-		g.P("		return err")
-		g.P("	}")
-		g.P("	return engine.Publish(ctx, ", fmt.Sprintf("%q", msg.Topic), ", payloadBytes)")
+		g.P("	return engine.PublishProto(ctx, Topic", typeName, ", msg)")
 		g.P("}")
 		g.P()
 	}

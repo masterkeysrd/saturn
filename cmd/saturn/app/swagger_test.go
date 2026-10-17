@@ -1,7 +1,8 @@
 package app
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -42,9 +43,9 @@ func TestAPISwaggerJSONAddsBasePathAndNormalizesPaths(t *testing.T) {
 	}
 
 	var document struct {
-		BasePath string                     `json:"basePath"`
-		Info     json.RawMessage            `json:"info"`
-		Paths    map[string]json.RawMessage `json:"paths"`
+		BasePath string                    `json:"basePath"`
+		Info     jsontext.Value            `json:"info"`
+		Paths    map[string]jsontext.Value `json:"paths"`
 	}
 	if err := json.Unmarshal(result, &document); err != nil {
 		t.Fatalf("unmarshal result: %v", err)

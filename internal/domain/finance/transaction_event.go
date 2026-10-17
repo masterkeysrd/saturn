@@ -1,7 +1,7 @@
 package finance
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"time"
@@ -55,7 +55,7 @@ type TransactionEvent struct {
 	ID            TransactionEventID
 	TransactionID TransactionID
 	EventType     string
-	Metadata      map[string]interface{}
+	Metadata      map[string]any
 	CreateTime    time.Time
 }
 
@@ -95,13 +95,13 @@ func (e *TransactionEvent) MetadataJSON() ([]byte, error) {
 	if e.Metadata == nil {
 		return []byte("{}"), nil
 	}
-	return json.Marshal(e.Metadata)
+	return json.Marshal(e.Metadata, json.Deterministic(true))
 }
 
 // ParseMetadataJSON sets the metadata map from a JSON byte slice.
 func (e *TransactionEvent) ParseMetadataJSON(data []byte) error {
 	if len(data) == 0 {
-		e.Metadata = make(map[string]interface{})
+		e.Metadata = make(map[string]any)
 		return nil
 	}
 	return json.Unmarshal(data, &e.Metadata)

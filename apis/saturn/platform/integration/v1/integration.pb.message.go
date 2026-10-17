@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
-	"google.golang.org/protobuf/proto"
 )
 
 // TopicWebhookReceivedEvent is the eventbus topic for WebhookReceivedEvent.
@@ -18,20 +17,10 @@ type WebhookReceivedEventHandler func(ctx context.Context, payload *WebhookRecei
 
 // SubscribeWebhookReceivedEvent binds a handler callback to the eventbus for 'webhook.received'.
 func SubscribeWebhookReceivedEvent(engine *eventbus.Engine, subscriberID string, handler WebhookReceivedEventHandler) {
-	engine.Subscribe("webhook.received", subscriberID, func(ctx context.Context, msg eventbus.Message) error {
-		var payload WebhookReceivedEvent
-		if err := proto.Unmarshal(msg.Payload, &payload); err != nil {
-			return err
-		}
-		return handler(ctx, &payload)
-	})
+	engine.SubscribeProto(TopicWebhookReceivedEvent, subscriberID, handler)
 }
 
 // PublishWebhookReceivedEvent serializes and broadcasts the WebhookReceivedEvent message to the eventbus.
 func PublishWebhookReceivedEvent(ctx context.Context, engine *eventbus.Engine, msg *WebhookReceivedEvent) error {
-	payloadBytes, err := proto.Marshal(msg)
-	if err != nil {
-		return err
-	}
-	return engine.Publish(ctx, "webhook.received", payloadBytes)
+	return engine.PublishProto(ctx, TopicWebhookReceivedEvent, msg)
 }

@@ -212,15 +212,13 @@ func TestValidateAccessToken_Errors(t *testing.T) {
 
 	// Negative AuthVersion
 	negToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   "usr_neg",
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(svc.config.AccessTTL)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_neg",
-		},
+		Issuer:      svc.config.Issuer,
+		Subject:     "usr_neg",
+		Audience:    []string{svc.config.Audience},
+		ExpiresAt:   jwt.NewNumericDate(now.Add(svc.config.AccessTTL)),
+		IssuedAt:    jwt.NewNumericDate(now),
+		NotBefore:   jwt.NewNumericDate(now),
+		ID:          "jti_neg",
 		TokenUse:    "access",
 		AuthVersion: -1,
 	})
@@ -235,16 +233,14 @@ func TestValidateAccessToken_Errors(t *testing.T) {
 
 	// Missing kid
 	noKidToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   "usr_nokid",
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(svc.config.AccessTTL)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_nokid",
-		},
-		TokenUse: "access",
+		Issuer:    svc.config.Issuer,
+		Subject:   "usr_nokid",
+		Audience:  []string{svc.config.Audience},
+		ExpiresAt: jwt.NewNumericDate(now.Add(svc.config.AccessTTL)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now),
+		ID:        "jti_nokid",
+		TokenUse:  "access",
 	})
 	noKidRaw, err := noKidToken.SignedString(svc.activePriv)
 	if err != nil {
@@ -256,16 +252,14 @@ func TestValidateAccessToken_Errors(t *testing.T) {
 
 	// Unknown kid
 	unknownKidToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   "usr_unk",
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(svc.config.AccessTTL)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_unk",
-		},
-		TokenUse: "access",
+		Issuer:    svc.config.Issuer,
+		Subject:   "usr_unk",
+		Audience:  []string{svc.config.Audience},
+		ExpiresAt: jwt.NewNumericDate(now.Add(svc.config.AccessTTL)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now),
+		ID:        "jti_unk",
+		TokenUse:  "access",
 	})
 	unknownKidToken.Header["kid"] = "unknown-key-999"
 	unkRaw, err := unknownKidToken.SignedString(svc.activePriv)
@@ -278,16 +272,14 @@ func TestValidateAccessToken_Errors(t *testing.T) {
 
 	// Wrong signing method (HMAC)
 	hsToken := jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   "usr_hs",
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(svc.config.AccessTTL)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_hs",
-		},
-		TokenUse: "access",
+		Issuer:    svc.config.Issuer,
+		Subject:   "usr_hs",
+		Audience:  []string{svc.config.Audience},
+		ExpiresAt: jwt.NewNumericDate(now.Add(svc.config.AccessTTL)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now),
+		ID:        "jti_hs",
+		TokenUse:  "access",
 	})
 	hsToken.Header["kid"] = svc.activeKeyID
 	hsRaw, err := hsToken.SignedString([]byte("secret"))
@@ -300,15 +292,13 @@ func TestValidateAccessToken_Errors(t *testing.T) {
 
 	// Missing basic claims (missing subject)
 	missingSubToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(svc.config.AccessTTL)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_nosub",
-		},
-		TokenUse: "access",
+		Issuer:    svc.config.Issuer,
+		Audience:  []string{svc.config.Audience},
+		ExpiresAt: jwt.NewNumericDate(now.Add(svc.config.AccessTTL)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now),
+		ID:        "jti_nosub",
+		TokenUse:  "access",
 	})
 	missingSubToken.Header["kid"] = svc.activeKeyID
 	missingSubRaw, err := missingSubToken.SignedString(svc.activePriv)
@@ -321,15 +311,13 @@ func TestValidateAccessToken_Errors(t *testing.T) {
 
 	// Missing JTI ID
 	missingIDToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   "usr_noid",
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(svc.config.AccessTTL)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-		},
-		TokenUse: "access",
+		Issuer:    svc.config.Issuer,
+		Subject:   "usr_noid",
+		Audience:  []string{svc.config.Audience},
+		ExpiresAt: jwt.NewNumericDate(now.Add(svc.config.AccessTTL)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now),
+		TokenUse:  "access",
 	})
 	missingIDToken.Header["kid"] = svc.activeKeyID
 	missingIDRaw, err := missingIDToken.SignedString(svc.activePriv)
@@ -342,16 +330,14 @@ func TestValidateAccessToken_Errors(t *testing.T) {
 
 	// Token with future NotBefore rejected by parser as invalid token
 	futureNbfToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   "usr_nbf",
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(svc.config.AccessTTL)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now.Add(2 * time.Minute)), // beyond 30s clock skew
-			ID:        "jti_nbf",
-		},
-		TokenUse: "access",
+		Issuer:    svc.config.Issuer,
+		Subject:   "usr_nbf",
+		Audience:  []string{svc.config.Audience},
+		ExpiresAt: jwt.NewNumericDate(now.Add(svc.config.AccessTTL)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now.Add(2 * time.Minute)), // beyond 30s clock skew
+		ID:        "jti_nbf",
+		TokenUse:  "access",
 	})
 	futureNbfToken.Header["kid"] = svc.activeKeyID
 	futureNbfRaw, err := futureNbfToken.SignedString(svc.activePriv)
@@ -447,15 +433,13 @@ func TestValidateRefreshToken_Errors(t *testing.T) {
 
 	// Negative AuthVersion
 	negToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   "usr_neg",
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_neg",
-		},
+		Issuer:      svc.config.Issuer,
+		Subject:     "usr_neg",
+		Audience:    []string{svc.config.Audience},
+		ExpiresAt:   jwt.NewNumericDate(now.Add(time.Hour)),
+		IssuedAt:    jwt.NewNumericDate(now),
+		NotBefore:   jwt.NewNumericDate(now),
+		ID:          "jti_neg",
 		TokenUse:    "refresh",
 		AuthVersion: -1,
 	})
@@ -470,16 +454,14 @@ func TestValidateRefreshToken_Errors(t *testing.T) {
 
 	// Missing kid
 	noKidToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   "usr_nokid",
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_nokid",
-		},
-		TokenUse: "refresh",
+		Issuer:    svc.config.Issuer,
+		Subject:   "usr_nokid",
+		Audience:  []string{svc.config.Audience},
+		ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now),
+		ID:        "jti_nokid",
+		TokenUse:  "refresh",
 	})
 	noKidRaw, err := noKidToken.SignedString(svc.activePriv)
 	if err != nil {
@@ -491,16 +473,14 @@ func TestValidateRefreshToken_Errors(t *testing.T) {
 
 	// Unknown kid
 	unkKidToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   "usr_unk",
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_unk",
-		},
-		TokenUse: "refresh",
+		Issuer:    svc.config.Issuer,
+		Subject:   "usr_unk",
+		Audience:  []string{svc.config.Audience},
+		ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now),
+		ID:        "jti_unk",
+		TokenUse:  "refresh",
 	})
 	unkKidToken.Header["kid"] = "unknown-id"
 	unkRaw, err := unkKidToken.SignedString(svc.activePriv)
@@ -513,16 +493,14 @@ func TestValidateRefreshToken_Errors(t *testing.T) {
 
 	// Wrong signing method (HMAC)
 	hsToken := jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   "usr_hs",
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_hs",
-		},
-		TokenUse: "refresh",
+		Issuer:    svc.config.Issuer,
+		Subject:   "usr_hs",
+		Audience:  []string{svc.config.Audience},
+		ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now),
+		ID:        "jti_hs",
+		TokenUse:  "refresh",
 	})
 	hsToken.Header["kid"] = svc.activeKeyID
 	hsRaw, err := hsToken.SignedString([]byte("secret"))
@@ -535,15 +513,13 @@ func TestValidateRefreshToken_Errors(t *testing.T) {
 
 	// Missing basic claims (missing issuer)
 	missingIssToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   "usr_noiss",
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_noiss",
-		},
-		TokenUse: "refresh",
+		Subject:   "usr_noiss",
+		Audience:  []string{svc.config.Audience},
+		ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now),
+		ID:        "jti_noiss",
+		TokenUse:  "refresh",
 	})
 	missingIssToken.Header["kid"] = svc.activeKeyID
 	missingIssRaw, err := missingIssToken.SignedString(svc.activePriv)
@@ -556,15 +532,13 @@ func TestValidateRefreshToken_Errors(t *testing.T) {
 
 	// Missing JTI ID
 	missingIDToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   "usr_noid",
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-		},
-		TokenUse: "refresh",
+		Issuer:    svc.config.Issuer,
+		Subject:   "usr_noid",
+		Audience:  []string{svc.config.Audience},
+		ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now),
+		TokenUse:  "refresh",
 	})
 	missingIDToken.Header["kid"] = svc.activeKeyID
 	missingIDRaw, err := missingIDToken.SignedString(svc.activePriv)
@@ -577,16 +551,14 @@ func TestValidateRefreshToken_Errors(t *testing.T) {
 
 	// Future NotBefore rejected by parser
 	futureNbfToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   "usr_nbf",
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now.Add(2 * time.Minute)),
-			ID:        "jti_nbf",
-		},
-		TokenUse: "refresh",
+		Issuer:    svc.config.Issuer,
+		Subject:   "usr_nbf",
+		Audience:  []string{svc.config.Audience},
+		ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
+		IssuedAt:  jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now.Add(2 * time.Minute)),
+		ID:        "jti_nbf",
+		TokenUse:  "refresh",
 	})
 	futureNbfToken.Header["kid"] = svc.activeKeyID
 	futureNbfRaw, err := futureNbfToken.SignedString(svc.activePriv)
@@ -878,15 +850,13 @@ func TestEd25519Service_ValidateMFATicket(t *testing.T) {
 
 	// Create ticket without kid
 	noKidToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   input.Subject,
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(5 * time.Minute)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_test",
-		},
+		Issuer:      svc.config.Issuer,
+		Subject:     input.Subject,
+		Audience:    []string{svc.config.Audience},
+		ExpiresAt:   jwt.NewNumericDate(now.Add(5 * time.Minute)),
+		IssuedAt:    jwt.NewNumericDate(now),
+		NotBefore:   jwt.NewNumericDate(now),
+		ID:          "jti_test",
 		TokenUse:    "mfa_ticket",
 		AuthVersion: 1,
 	})
@@ -894,15 +864,13 @@ func TestEd25519Service_ValidateMFATicket(t *testing.T) {
 
 	// Create ticket with unknown kid
 	unknownKidToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   input.Subject,
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(5 * time.Minute)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_test",
-		},
+		Issuer:      svc.config.Issuer,
+		Subject:     input.Subject,
+		Audience:    []string{svc.config.Audience},
+		ExpiresAt:   jwt.NewNumericDate(now.Add(5 * time.Minute)),
+		IssuedAt:    jwt.NewNumericDate(now),
+		NotBefore:   jwt.NewNumericDate(now),
+		ID:          "jti_test",
 		TokenUse:    "mfa_ticket",
 		AuthVersion: 1,
 	})
@@ -912,15 +880,13 @@ func TestEd25519Service_ValidateMFATicket(t *testing.T) {
 	// Create ticket signed with wrong key
 	_, otherPriv, _ := ed25519.GenerateKey(rand.Reader)
 	wrongKeyToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   input.Subject,
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(5 * time.Minute)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_test",
-		},
+		Issuer:      svc.config.Issuer,
+		Subject:     input.Subject,
+		Audience:    []string{svc.config.Audience},
+		ExpiresAt:   jwt.NewNumericDate(now.Add(5 * time.Minute)),
+		IssuedAt:    jwt.NewNumericDate(now),
+		NotBefore:   jwt.NewNumericDate(now),
+		ID:          "jti_test",
 		TokenUse:    "mfa_ticket",
 		AuthVersion: 1,
 	})
@@ -929,14 +895,12 @@ func TestEd25519Service_ValidateMFATicket(t *testing.T) {
 
 	// Create ticket without JTI
 	noJTIToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   input.Subject,
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(5 * time.Minute)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-		},
+		Issuer:      svc.config.Issuer,
+		Subject:     input.Subject,
+		Audience:    []string{svc.config.Audience},
+		ExpiresAt:   jwt.NewNumericDate(now.Add(5 * time.Minute)),
+		IssuedAt:    jwt.NewNumericDate(now),
+		NotBefore:   jwt.NewNumericDate(now),
 		TokenUse:    "mfa_ticket",
 		AuthVersion: 1,
 	})
@@ -945,15 +909,13 @@ func TestEd25519Service_ValidateMFATicket(t *testing.T) {
 
 	// Create ticket with missing subject (ValidateBasic failure)
 	noSubToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   "",
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(5 * time.Minute)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_test",
-		},
+		Issuer:      svc.config.Issuer,
+		Subject:     "",
+		Audience:    []string{svc.config.Audience},
+		ExpiresAt:   jwt.NewNumericDate(now.Add(5 * time.Minute)),
+		IssuedAt:    jwt.NewNumericDate(now),
+		NotBefore:   jwt.NewNumericDate(now),
+		ID:          "jti_test",
 		TokenUse:    "mfa_ticket",
 		AuthVersion: 1,
 	})
@@ -962,15 +924,13 @@ func TestEd25519Service_ValidateMFATicket(t *testing.T) {
 
 	// Create ticket with wrong HMAC signing method
 	hsToken := jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    svc.config.Issuer,
-			Subject:   input.Subject,
-			Audience:  []string{svc.config.Audience},
-			ExpiresAt: jwt.NewNumericDate(now.Add(5 * time.Minute)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ID:        "jti_test",
-		},
+		Issuer:      svc.config.Issuer,
+		Subject:     input.Subject,
+		Audience:    []string{svc.config.Audience},
+		ExpiresAt:   jwt.NewNumericDate(now.Add(5 * time.Minute)),
+		IssuedAt:    jwt.NewNumericDate(now),
+		NotBefore:   jwt.NewNumericDate(now),
+		ID:          "jti_test",
 		TokenUse:    "mfa_ticket",
 		AuthVersion: 1,
 	})

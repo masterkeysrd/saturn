@@ -98,14 +98,14 @@ func (a *Account) Init() error {
 
 // AccountPatchSchema defines patchable fields for an Account entity.
 var AccountPatchSchema = patch.NewSchema[Account]().
-	Register("name", patch.Field(func(a *Account) *string { return &a.Name })).
-	Register("credit_limit", patch.Field(func(a *Account) *int64 { return &a.CreditLimit })).
-	Register("is_default", patch.Field(func(a *Account) *bool { return &a.IsDefault })).
-	Register("is_active", patch.Field(func(a *Account) *bool { return &a.IsActive })).
-	Register("color", patch.Field(func(a *Account) *string { return &a.Color })).
-	Register("notes", patch.Field(func(a *Account) *string { return &a.Notes })).
-	Register("last_four", patch.Field(func(a *Account) *string { return &a.LastFour })).
-	Register("institution_id", patch.Field(func(a *Account) **InstitutionID { return &a.InstitutionID }))
+	Field("name", func(a *Account) *string { return &a.Name }).
+	Field("credit_limit", func(a *Account) *int64 { return &a.CreditLimit }).
+	Field("is_default", func(a *Account) *bool { return &a.IsDefault }).
+	Field("is_active", func(a *Account) *bool { return &a.IsActive }).
+	Field("color", func(a *Account) *string { return &a.Color }).
+	Field("notes", func(a *Account) *string { return &a.Notes }).
+	Field("last_four", func(a *Account) *string { return &a.LastFour }).
+	Field("institution_id", func(a *Account) **InstitutionID { return &a.InstitutionID })
 
 // ApplyPatch applies partial updates to an Account entity based on a field mask.
 func (a *Account) ApplyPatch(incoming *Account, mask []string) error {

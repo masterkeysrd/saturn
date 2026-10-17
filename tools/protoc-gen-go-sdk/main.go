@@ -127,12 +127,13 @@ func generateSDKMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 			if len(parts) > 0 {
 				pathVarNames[parts[0]] = true
 			}
-			getterExpr := "req"
+			var getterExpr strings.Builder
+			getterExpr.WriteString("req")
 			for _, part := range parts {
-				getterExpr += ".Get" + snakeToCamel(part) + "()"
+				getterExpr.WriteString(".Get" + snakeToCamel(part) + "()")
 			}
 			fmtPathPattern = strings.Replace(fmtPathPattern, rawVar, "%s", 1)
-			fmtArgs = append(fmtArgs, getterExpr)
+			fmtArgs = append(fmtArgs, getterExpr.String())
 		}
 		g.P("	path := fmt.Sprintf(", quote(fmtPathPattern), ", ", strings.Join(fmtArgs, ", "), ")")
 	} else {

@@ -2,7 +2,7 @@ package paging
 
 import (
 	"encoding/base64"
-	"encoding/json"
+	"encoding/json/v2"
 )
 
 // Cursor represents the point in the dataset where the next page starts.

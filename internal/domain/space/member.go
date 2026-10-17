@@ -43,7 +43,7 @@ func (m *Member) CanManageSettings() bool {
 
 // MemberPatchSchema defines all patchable fields for a Member entity.
 var MemberPatchSchema = patch.NewSchema[Member]().
-	Register("role", patch.Field(func(m *Member) *SpaceRole { return &m.Role }))
+	Field("role", func(m *Member) *SpaceRole { return &m.Role })
 
 // ApplyPatch applies partial updates from an incoming member based on the field mask.
 func (m *Member) ApplyPatch(incoming *Member, mask []string) error {

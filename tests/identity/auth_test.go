@@ -413,4 +413,3 @@ func TestAccountLockoutAndAdminUnlock(t *testing.T) {
 		t.Errorf("me id = %s, want %s", me.GetId(), user.GetId())
 	}
 }
-

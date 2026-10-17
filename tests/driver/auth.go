@@ -508,4 +508,3 @@ func (a *AuthDriver) DeleteAccount(tb testing.TB, currentPassword, totpCode stri
 		TotpCode:        totpCode,
 	})
 }
-

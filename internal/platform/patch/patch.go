@@ -27,9 +27,26 @@ func NewSchema[E any]() *Schema[E] {
 	}
 }
 
-// Register registers a field copier for a given field path/name.
-func (s *Schema[E]) Register(field string, copier FieldCopier[E]) *Schema[E] {
-	s.copiers[field] = copier
+// Field registers a typed field updater for the given path on the schema.
+func (s *Schema[E]) Field[V any](field string, fieldAccess func(*E) *V, validate ...func(V) error) *Schema[E] {
+	s.copiers[field] = func(dst, src *E) error {
+		srcPtr := fieldAccess(src)
+		dstPtr := fieldAccess(dst)
+
+		if srcPtr == nil || dstPtr == nil {
+			return ErrNilEntity
+		}
+
+		srcVal := *srcPtr
+		for _, vFn := range validate {
+			if err := vFn(srcVal); err != nil {
+				return err
+			}
+		}
+
+		*dstPtr = srcVal
+		return nil
+	}
 	return s
 }
 
@@ -58,30 +75,4 @@ func (s *Schema[E]) Apply(dst, src *E, mask []string) error {
 		}
 	}
 	return nil
-}
-
-// Field creates a FieldCopier using a pointer-to-field accessor func(*E) *V.
-// Go automatically infers E and V without requiring explicit type parameters.
-func Field[E any, V any](
-	fieldAccess func(*E) *V,
-	validate ...func(V) error,
-) FieldCopier[E] {
-	return func(dst, src *E) error {
-		srcPtr := fieldAccess(src)
-		dstPtr := fieldAccess(dst)
-
-		if srcPtr == nil || dstPtr == nil {
-			return ErrNilEntity
-		}
-
-		srcVal := *srcPtr
-		for _, vFn := range validate {
-			if err := vFn(srcVal); err != nil {
-				return err
-			}
-		}
-
-		*dstPtr = srcVal
-		return nil
-	}
 }

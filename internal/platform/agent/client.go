@@ -2,11 +2,12 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
 	anthroption "github.com/anthropics/anthropic-sdk-go/option"
@@ -164,10 +165,10 @@ func (c *Client) Execute(ctx context.Context, req ExecutionRequest) (ExecutionRe
 		return ExecutionResponse{}, fmt.Errorf("model invoke: %w", err)
 	}
 
-	var outputText string
+	var outputText strings.Builder
 	for _, block := range assistantMsg.Content {
 		if textBlock, ok := block.(*message.TextBlock); ok {
-			outputText += textBlock.Text
+			outputText.WriteString(textBlock.Text)
 		}
 	}
 
@@ -177,7 +178,7 @@ func (c *Client) Execute(ctx context.Context, req ExecutionRequest) (ExecutionRe
 	}
 
 	return ExecutionResponse{
-		Text:       outputText,
+		Text:       outputText.String(),
 		TokensUsed: tokensUsed,
 	}, nil
 }

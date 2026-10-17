@@ -55,18 +55,23 @@ Every use case / coordinator method must test at least:
 ```go
 func TestCoordinator_CreateBudget(t *testing.T) {
 	tests := []struct {
-		name          string
-		ctx           context.Context
-		req           *CreateBudgetRequest
-		mockFn        func(ctx context.Context, rCtx finance.Context, budget *finance.Budget) (*finance.Budget, error)
-		expectedID    finance.BudgetID
-		expectedError bool
+		name              string
+		ctx               context.Context
+		req               *CreateBudgetRequest
+		mockFn            func(ctx context.Context, rCtx finance.Context, budget *finance.Budget) (*finance.Budget, error)
+		expectedID        finance.BudgetID
+		expectedErrorKind errors.Kind
+		expectedError     bool
 	}{
 		{
 			name: "Success",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req: &CreateBudgetRequest{
-				Budget: &finance.Budget{Name: "Dining", LimitAmount: 50000},
+				Budget: &finance.Budget{
+					Name:        "Dining",
+					LimitAmount: 50000,
+					Notes:       new("Monthly dining budget"), // Built-in new(expr) pointer construction
+				},
 			},
 			mockFn: func(ctx context.Context, rCtx finance.Context, budget *finance.Budget) (*finance.Budget, error) {
 				if rCtx.SpaceID() != "spc_1" || budget.Name != "Dining" {
@@ -78,25 +83,28 @@ func TestCoordinator_CreateBudget(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "Unauthenticated",
-			ctx:           context.Background(),
-			req:           &CreateBudgetRequest{Budget: &finance.Budget{Name: "Dining"}},
-			expectedError: true,
+			name:              "Unauthenticated",
+			ctx:               context.Background(),
+			req:               &CreateBudgetRequest{Budget: &finance.Budget{Name: "Dining"}},
+			expectedErrorKind: errors.KindPermissionDenied,
+			expectedError:     true,
 		},
 		{
-			name:          "Nil request",
-			ctx:           newTestContext("spc_1", "usr_1"),
-			req:           nil,
-			expectedError: true,
+			name:              "Nil request",
+			ctx:               newTestContext("spc_1", "usr_1"),
+			req:               nil,
+			expectedErrorKind: errors.KindInvalidArgument,
+			expectedError:     true,
 		},
 		{
 			name: "Domain error propagation",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &CreateBudgetRequest{Budget: &finance.Budget{Name: "Dining"}},
 			mockFn: func(ctx context.Context, rCtx finance.Context, budget *finance.Budget) (*finance.Budget, error) {
-				return nil, errors.New("budget name exists")
+				return nil, errors.Conflict("budget name exists")
 			},
-			expectedError: true,
+			expectedErrorKind: errors.KindConflict,
+			expectedError:     true,
 		},
 	}
 
@@ -110,6 +118,16 @@ func TestCoordinator_CreateBudget(t *testing.T) {
 				if err == nil {
 					t.Fatal("expected error, got nil")
 				}
+				// Go 1.27 typed error inspection via errors.AsType[E](err)
+				if tc.expectedErrorKind != "" {
+					if domErr, ok := errors.AsType[*errors.Error](err); ok {
+						if domErr.Kind != tc.expectedErrorKind {
+							t.Fatalf("expected error kind %v, got %v", tc.expectedErrorKind, domErr.Kind)
+						}
+					} else {
+						t.Fatalf("expected *errors.Error, got %T: %v", err, err)
+					}
+				}
 				return
 			}
 			if err != nil {
@@ -122,6 +140,68 @@ func TestCoordinator_CreateBudget(t *testing.T) {
 	}
 }
 ```
+
+### Go 1.27 Test Idioms
+
+1. **Typed Error Inspection (`errors.AsType[E]`)**:
+   Always inspect structured errors using `errors.AsType[E](err)` (or `errors.AsType[*errors.Error](err)`) rather than declaring a mutable target variable with `var domErr *errors.Error; errors.As(err, &domErr)`.
+   ```go
+   // Recommended (Go 1.27 functional typed assertion):
+   if domErr, ok := errors.AsType[*errors.Error](err); ok {
+       if domErr.Kind != tc.expectedKind {
+           t.Errorf("expected error kind %v, got %v", tc.expectedKind, domErr.Kind)
+       }
+   }
+
+   // Anti-pattern: DO NOT USE
+   var domErr *errors.Error
+   if errors.As(err, &domErr) { ... }
+   ```
+
+2. **Pointer Construction (`new(expr)`)**:
+   Use `new(expr)` to initialize pointers inline for optional or nullable fields in test cases and request fixtures:
+   ```go
+   req := &UpdateBudgetRequest{
+       ID:          "bgt_1",
+       Name:        new("Groceries"),
+       LimitAmount: new(int64(45000)),
+       Notes:       new("Weekly grocery trips"),
+   }
+   ```
+   Never declare temporary variables (`v := "Groceries"; &v`) or use custom pointer helper functions.
+
+3. **Range-over-Integer Loops (`for i := range n`)**:
+   Use Go 1.27 integer ranges in test data generators, batch mocks, and benchmark loops:
+   ```go
+   // Generate 5 test transactions
+   txns := make([]*finance.Transaction, 5)
+   for i := range 5 {
+       txns[i] = &finance.Transaction{
+           ID:     finance.TransactionID(fmt.Sprintf("txn_%d", i)),
+           Amount: int64((i + 1) * 1000),
+       }
+   }
+   ```
+
+4. **Flat Embedded Struct Literals (`embedlit`)**:
+   When constructing test fixtures for structs that embed value structs (such as `token.Claims`, `financeaggregator.ListBudgetsFilter`, or `iam.ListUsersFilter`), specify promoted fields directly on the outer composite literal rather than nesting the embedded struct literal:
+   ```go
+   // Recommended (Go 1.27 promoted field keys):
+   claims := &token.Claims{
+       Subject:     "usr_1",
+       Issuer:      "saturn",
+       AccessLevel: "admin",
+   }
+
+   // Anti-pattern: DO NOT nest the embedded value struct literal
+   claims := &token.Claims{
+       RegisteredClaims: jwt.RegisteredClaims{
+           Subject: "usr_1",
+           Issuer:  "saturn",
+       },
+       AccessLevel: "admin",
+   }
+   ```
 
 ---
 

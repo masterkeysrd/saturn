@@ -372,10 +372,10 @@ func (s *Statement) decodeCSVLines() ([]*StatementLine, error) {
 
 // StatementPatchSchema defines patchable fields for a Statement entity.
 var StatementPatchSchema = patch.NewSchema[Statement]().
-	Register("statement_starting_balance", patch.Field(func(s *Statement) *int64 { return &s.StatementStartingBalance })).
-	Register("statement_ending_balance", patch.Field(func(s *Statement) *int64 { return &s.StatementEndingBalance })).
-	Register("statement_date", patch.Field(func(s *Statement) *time.Time { return &s.StatementDate })).
-	Register("version", patch.Field(func(s *Statement) *int64 { return &s.Version }))
+	Field("statement_starting_balance", func(s *Statement) *int64 { return &s.StatementStartingBalance }).
+	Field("statement_ending_balance", func(s *Statement) *int64 { return &s.StatementEndingBalance }).
+	Field("statement_date", func(s *Statement) *time.Time { return &s.StatementDate }).
+	Field("version", func(s *Statement) *int64 { return &s.Version })
 
 // ApplyPatch applies partial updates from an incoming statement based on the field mask.
 func (s *Statement) ApplyPatch(incoming *Statement, mask []string) error {
@@ -470,12 +470,12 @@ func (sl *StatementLine) InvertSign() {
 
 // StatementLinePatchSchema defines patchable fields for a StatementLine entity.
 var StatementLinePatchSchema = patch.NewSchema[StatementLine]().
-	Register("status", patch.Field(func(l *StatementLine) *StatementLineStatus { return &l.Status })).
-	Register("action", patch.Field(func(l *StatementLine) *StatementLineAction { return &l.Action })).
-	Register("matched_transaction_id", patch.Field(func(l *StatementLine) **TransactionID { return &l.MatchedTransactionID })).
-	Register("description", patch.Field(func(l *StatementLine) *string { return &l.Description })).
-	Register("amount", patch.Field(func(l *StatementLine) *int64 { return &l.Amount })).
-	Register("version", patch.Field(func(l *StatementLine) *int64 { return &l.Version }))
+	Field("status", func(l *StatementLine) *StatementLineStatus { return &l.Status }).
+	Field("action", func(l *StatementLine) *StatementLineAction { return &l.Action }).
+	Field("matched_transaction_id", func(l *StatementLine) **TransactionID { return &l.MatchedTransactionID }).
+	Field("description", func(l *StatementLine) *string { return &l.Description }).
+	Field("amount", func(l *StatementLine) *int64 { return &l.Amount }).
+	Field("version", func(l *StatementLine) *int64 { return &l.Version })
 
 // ApplyPatch applies partial updates from an incoming statement line based on the field mask.
 func (sl *StatementLine) ApplyPatch(incoming *StatementLine, mask []string) error {
