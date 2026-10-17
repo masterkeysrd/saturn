@@ -697,12 +697,9 @@ export default function BorrowingDetailScreen() {
                 },
               ]}
             >
-              <TouchableOpacity
-                style={styles.headerDotsBtn}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
+              <View style={styles.headerDotsBtn}>
                 <MoreVertical size={20} color={theme.colors.textPrimary} />
-              </TouchableOpacity>
+              </View>
             </MenuView>
           ),
         }}

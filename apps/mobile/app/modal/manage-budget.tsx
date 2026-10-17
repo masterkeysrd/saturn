@@ -14,7 +14,7 @@ import {
 import { useRouter, useLocalSearchParams, Stack } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
 import BottomSheet from "@gorhom/bottom-sheet"
-import { X, Trash2 } from "lucide-react-native"
+import { X, Trash2, AlertTriangle } from "lucide-react-native"
 import {
   useCreateBudgetMutation,
   useUpdateBudgetMutation,
@@ -38,10 +38,12 @@ import { BudgetSchema, type BudgetFormValues } from "@saturn/schemas"
 import {
   toCentsString,
   formatCents,
+  formatAmount,
   getCurrencySymbol,
   BUDGET_INTERVAL_OPTIONS as INTERVAL_OPTIONS,
   PROPAGATION_OPTIONS,
 } from "@saturn/core"
+import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -143,8 +145,9 @@ export default function ManageBudgetModal() {
     "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
   )
 
-  // Watch only discrete selector fields
+  // Watch form fields in a single tuple
   const [
+    limit = "",
     color = "indigo",
     currency = baseCurrency,
     interval = "MONTHLY" as Budget_RecurrenceInterval,
@@ -154,6 +157,7 @@ export default function ManageBudgetModal() {
   ] = useWatch({
     control,
     name: [
+      "limit",
       "color",
       "currency",
       "interval",
@@ -162,6 +166,13 @@ export default function ManageBudgetModal() {
       "defaultAccountId",
     ] as const,
   })
+
+  const { getConversionPreview } = useCurrencyConversionPreview({
+    spaceId: activeSpaceId || undefined,
+    enabled: !!activeSpaceId,
+    baseCurrency,
+  })
+  const conversion = getConversionPreview(limit, currency)
 
   // Mutations
   const createMutation = useCreateBudgetMutation()
@@ -270,7 +281,10 @@ export default function ManageBudgetModal() {
             try {
               await deleteMutation.mutateAsync({
                 id: editBudgetId,
-                req: { id: editBudgetId },
+                req: {
+                  id: editBudgetId,
+                  version: existingBudget?.version,
+                },
               })
               haptics.success()
               toast.show({
@@ -360,6 +374,34 @@ export default function ManageBudgetModal() {
             accentColor={activeColorMeta.bar}
             containerStyle={{ marginBottom: 0 }}
           />
+
+          {/* Live Currency Conversion Preview */}
+          {currency !== baseCurrency && conversion ? (
+            <View style={styles.conversionPreviewWrap}>
+              {"amount" in conversion ? (
+                <View style={styles.conversionPreviewRow}>
+                  <Text style={styles.conversionPreviewText}>
+                    ≈{" "}
+                    {formatAmount(
+                      Math.round(conversion.amount * 100),
+                      baseCurrency
+                    )}{" "}
+                    <Text style={styles.conversionPreviewRate}>
+                      (1 {currency} = {conversion.rate.toFixed(4)}{" "}
+                      {baseCurrency})
+                    </Text>
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.conversionWarningRow}>
+                  <AlertTriangle size={14} color="#f59e0b" />
+                  <Text style={styles.conversionWarningText}>
+                    {conversion.error}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ) : null}
 
           {/* Budget Name Card */}
           <Card style={styles.sectionCard}>
@@ -647,6 +689,7 @@ export default function ManageBudgetModal() {
         accounts={accounts}
         institutions={institutions}
         selectedAccountId={defaultAccountId}
+        allowNoAccount={true}
         onSelect={(accId) => {
           setValue("defaultAccountId", accId, { shouldValidate: true })
           accountSheetRef.current?.close()
@@ -895,5 +938,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: theme.colors.destructive,
+  },
+  conversionPreviewWrap: {
+    marginTop: -8,
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  conversionPreviewRow: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  conversionPreviewText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+  },
+  conversionPreviewRate: {
+    fontSize: 12,
+    fontWeight: "400",
+    color: theme.colors.textMuted,
+  },
+  conversionWarningRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: theme.radius.md,
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.3)",
+  },
+  conversionWarningText: {
+    fontSize: 12,
+    color: "#f59e0b",
+    flex: 1,
   },
 })

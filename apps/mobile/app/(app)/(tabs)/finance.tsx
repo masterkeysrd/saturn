@@ -1139,13 +1139,11 @@ export default function FinanceHubScreen() {
                       activeOpacity={0.7}
                       onPress={() => {
                         haptics.light()
-                        router.push({
-                          pathname: "/modal/add-transaction",
-                          params: {
-                            type: "BORROWING",
-                            borrowingId: b.id,
-                          },
-                        })
+                        if (b.id) {
+                          router.push(`/(app)/finance/borrowing/${b.id}`)
+                        } else {
+                          navigateTo("/(app)/finance/borrowing")
+                        }
                       }}
                     >
                       <View style={styles.txLeft}>
@@ -1231,7 +1229,11 @@ export default function FinanceHubScreen() {
                             },
                           })
                         } else if (nativeEvent.event === "details") {
-                          navigateTo("/(app)/finance/borrowing")
+                          if (b.id) {
+                            router.push(`/(app)/finance/borrowing/${b.id}`)
+                          } else {
+                            navigateTo("/(app)/finance/borrowing")
+                          }
                         }
                       }}
                       actions={[
