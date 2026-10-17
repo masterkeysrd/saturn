@@ -15,7 +15,10 @@ export type ButtonVariant =
   "primary" | "secondary" | "destructive" | "ghost" | "outline"
 export type ButtonSize = "sm" | "md" | "lg"
 
-export interface ButtonProps extends TouchableOpacityProps {
+export interface ButtonProps extends Omit<TouchableOpacityProps, "onPress"> {
+  onPress?:
+    | TouchableOpacityProps["onPress"]
+    | ((e?: React.BaseSyntheticEvent) => unknown)
   variant?: ButtonVariant
   size?: ButtonSize
   loading?: boolean
@@ -43,12 +46,12 @@ export function Button({
   onPress,
   ...props
 }: ButtonProps) {
-  const handlePress = (e: any) => {
+  const handlePress: NonNullable<TouchableOpacityProps["onPress"]> = (e) => {
     if (disabled || loading) return
     if (haptic === "light") haptics.light()
     else if (haptic === "medium") haptics.medium()
     else if (haptic === "heavy") haptics.heavy()
-    onPress?.(e)
+    ;(onPress as ((event?: typeof e) => unknown) | undefined)?.(e)
   }
 
   const containerStyles = [
@@ -73,6 +76,19 @@ export function Button({
       ? theme.colors.primaryForeground
       : theme.colors.textPrimary
 
+  const isTextChild =
+    typeof children === "string" ||
+    typeof children === "number" ||
+    (Array.isArray(children) &&
+      children.every(
+        (child) =>
+          typeof child === "string" ||
+          typeof child === "number" ||
+          child === null ||
+          child === undefined ||
+          typeof child === "boolean"
+      ))
+
   return (
     <TouchableOpacity
       activeOpacity={0.7}
@@ -86,11 +102,7 @@ export function Button({
       ) : (
         <>
           {leftIcon && <>{leftIcon}</>}
-          {typeof children === "string" ? (
-            <Text style={textStyles}>{children}</Text>
-          ) : (
-            children
-          )}
+          {isTextChild ? <Text style={textStyles}>{children}</Text> : children}
           {rightIcon && <>{rightIcon}</>}
         </>
       )}

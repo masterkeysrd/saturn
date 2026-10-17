@@ -6,6 +6,10 @@ import { AppHeader } from "@/components/app-header"
 import { OfflineIndicator } from "@/components/offline-indicator"
 import { theme } from "@/lib/theme"
 
+export const unstable_settings = {
+  anchor: "index",
+}
+
 export default function TabsLayout() {
   const insets = useSafeAreaInsets()
   const tabBarHeight = 56 + (insets.bottom > 0 ? insets.bottom : 8)
@@ -37,7 +41,10 @@ export default function TabsLayout() {
           options={{
             title: "Overview",
             tabBarIcon: ({ color, size }) => (
-              <Home size={size ?? 22} color={color} />
+              <Home
+                size={size ?? 22}
+                color={typeof color === "string" ? color : undefined}
+              />
             ),
           }}
         />
@@ -46,7 +53,10 @@ export default function TabsLayout() {
           options={{
             title: "Finance",
             tabBarIcon: ({ color, size }) => (
-              <Wallet size={size ?? 22} color={color} />
+              <Wallet
+                size={size ?? 22}
+                color={typeof color === "string" ? color : undefined}
+              />
             ),
           }}
         />
@@ -55,7 +65,10 @@ export default function TabsLayout() {
           options={{
             title: "Menu",
             tabBarIcon: ({ color, size }) => (
-              <Menu size={size ?? 22} color={color} />
+              <Menu
+                size={size ?? 22}
+                color={typeof color === "string" ? color : undefined}
+              />
             ),
           }}
         />

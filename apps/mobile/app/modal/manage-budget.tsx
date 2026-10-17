@@ -335,7 +335,7 @@ export default function ManageBudgetModal() {
           ),
           headerRight: () => (
             <TouchableOpacity
-              onPress={handleSubmit(onValid)}
+              onPress={() => handleSubmit(onValid)()}
               disabled={isSaving}
               style={[styles.headerSaveBtn, isSaving && { opacity: 0.6 }]}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}

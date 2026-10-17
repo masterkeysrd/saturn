@@ -36,7 +36,9 @@ export interface TextInputProps<
   name: Path<TFieldValues>
 }
 
-export const BaseTextInput = React.forwardRef<RNTextInput, BaseTextInputProps>(
+export type TextInputRef = React.ComponentRef<typeof RNTextInput>
+
+export const BaseTextInput = React.forwardRef<TextInputRef, BaseTextInputProps>(
   function BaseTextInput(
     {
       label,
@@ -122,7 +124,7 @@ export const TextInput = React.forwardRef(function TextInput<
     error,
     ...rest
   }: TextInputProps<TFieldValues>,
-  ref: React.ForwardedRef<RNTextInput>
+  ref: React.ForwardedRef<TextInputRef>
 ) {
   return (
     <Controller
@@ -158,7 +160,7 @@ export const TextInput = React.forwardRef(function TextInput<
     />
   )
 }) as <TFieldValues extends FieldValues = FieldValues>(
-  props: TextInputProps<TFieldValues> & { ref?: React.Ref<RNTextInput> }
+  props: TextInputProps<TFieldValues> & { ref?: React.Ref<TextInputRef> }
 ) => React.ReactElement
 
 const styles = StyleSheet.create({

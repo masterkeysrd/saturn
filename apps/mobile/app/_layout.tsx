@@ -1,4 +1,8 @@
 import { GestureHandlerRootView } from "react-native-gesture-handler"
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from "react-native-reanimated"
 import { Stack } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { SafeAreaProvider } from "react-native-safe-area-context"
@@ -9,6 +13,13 @@ import { SpaceProvider } from "@/lib/space-context"
 import { ToastProvider } from "@/components/ui/toast"
 import { queryClient, persistOptions } from "@/lib/query-persister"
 import { theme } from "@/lib/theme"
+
+// Suppress Reanimated 4.7+ warnings triggered by @gorhom/bottom-sheet passing
+// explicit dependency arrays to worklet hooks on native.
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.error,
+  strict: false,
+})
 
 export default function RootLayout() {
   return (

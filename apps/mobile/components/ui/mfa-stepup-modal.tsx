@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  type TextInput as RNTextInput,
 } from "react-native"
 import { KeyRound } from "lucide-react-native"
 import { useForm } from "react-hook-form"
@@ -15,7 +14,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { MfaStepUpSchema, type MfaStepUpFormValues } from "@saturn/schemas"
 import { theme } from "@/lib/theme"
 import { Button } from "./button"
-import { OTPInput } from "./otp-input"
+import { OTPInput, type OTPTextInputRef } from "./otp-input"
 import { haptics } from "@/lib/haptics"
 
 export interface MfaStepUpModalProps {
@@ -40,7 +39,7 @@ export function MfaStepUpModal({
   confirmText = "Verify & Enroll",
 }: MfaStepUpModalProps) {
   const [localError, setLocalError] = useState<string | null>(null)
-  const otpInputRef = useRef<RNTextInput>(null)
+  const otpInputRef = useRef<OTPTextInputRef>(null)
 
   const {
     control,

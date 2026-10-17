@@ -38,11 +38,9 @@ export function Badge({
   textStyle,
   ...props
 }: BadgeProps) {
-  const customStyles: StyleProp<ViewStyle> = {}
-  if (bg) customStyles.backgroundColor = bg
-  if (border) {
-    customStyles.borderColor = border
-    customStyles.borderWidth = 1
+  const customStyles: ViewStyle = {
+    ...(bg ? { backgroundColor: bg } : undefined),
+    ...(border ? { borderColor: border, borderWidth: 1 } : undefined),
   }
 
   return (

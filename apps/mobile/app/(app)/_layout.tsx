@@ -3,6 +3,10 @@ import { Redirect, Stack } from "expo-router"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
 
+export const unstable_settings = {
+  anchor: "(tabs)",
+}
+
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth()
 
@@ -22,6 +26,13 @@ export default function AppLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
+        headerStyle: {
+          backgroundColor: theme.colors.background,
+        },
+        headerTintColor: theme.colors.textPrimary,
+        headerTitleStyle: {
+          fontWeight: "600",
+        },
         contentStyle: {
           backgroundColor: theme.colors.background,
         },

@@ -103,7 +103,7 @@ export default function ServerSettingsScreen() {
           ),
           headerRight: () => (
             <TouchableOpacity
-              onPress={handleSubmit(onValid)}
+              onPress={() => handleSubmit(onValid)()}
               disabled={isPending}
               style={[styles.headerSaveBtn, isPending && { opacity: 0.6 }]}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}

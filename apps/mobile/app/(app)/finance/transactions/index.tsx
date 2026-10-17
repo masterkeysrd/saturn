@@ -373,7 +373,7 @@ export default function TransactionsScreen() {
                   Loading more transactions...
                 </Text>
               </View>
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             <EmptyState

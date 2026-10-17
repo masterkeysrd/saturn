@@ -435,8 +435,7 @@ export function ScheduledConfirmForm({
           loading={isSubmitting}
           onPress={handleSubmit(onSubmit)}
         >
-          Confirm Payment • {currentSymbol}
-          {amountDecimal}
+          {`Confirm Payment • ${currentSymbol}${amountDecimal}`}
         </Button>
       </View>
 

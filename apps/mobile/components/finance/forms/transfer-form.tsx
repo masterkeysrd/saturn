@@ -297,8 +297,7 @@ export function TransferForm({
             handleSubmit(onSubmit)()
           }}
         >
-          Transfer • {currentSymbol}
-          {amountDecimal}
+          {`Transfer • ${currentSymbol}${amountDecimal}`}
         </Button>
       </View>
 
