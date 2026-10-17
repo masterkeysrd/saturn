@@ -52,8 +52,6 @@ jobs:
 
       - name: Setup Gradle Build Cache
         uses: gradle/actions/setup-gradle@v6
-        with:
-          build-root-directory: apps/mobile/android
 
       - name: Build Android Release APK
         run: |
