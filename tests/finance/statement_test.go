@@ -868,3 +868,123 @@ func TestStatementReconciliation_UndoLineAction(t *testing.T) {
 			}
 		})
 }
+
+// TestStatementReconciliation_UpdateLineAmount verifies that when an imported statement line
+// has an incorrect amount (e.g. from parser extraction error), attempting to complete the statement
+// fails with a balance discrepancy error. Updating the line amount via UpdateStatementLine with
+// mask ["amount"] corrects the balance discrepancy and allows reconciliation to complete successfully.
+func TestStatementReconciliation_UpdateLineAmount(t *testing.T) {
+	d := driver.New(t, testEnv)
+
+	d.Auth().
+		CreateApprovedUser(t).
+		Login(t)
+
+	d.Space().
+		Ensure(t, "Personal Space")
+
+	d.Finance().
+		InitSettings(t, "USD").
+		CreateAccount(t, driver.AccountOptions{
+			Name:           "Checking",
+			Type:           financev1.Account_BANK,
+			Currency:       "USD",
+			InitialBalance: 100000, // $1,000.00
+		}).
+		CreateBudget(t, driver.BudgetOptions{
+			Name:        "Dining",
+			LimitAmount: 50000,
+			Currency:    "USD",
+			Interval:    financev1.Budget_MONTHLY,
+		})
+
+	diningBudgetID := d.State().Budgets["Dining"]
+
+	// The statement has Starting: 1000.00, Ending: 950.00 (expected flow -50.00).
+	// However, the raw CSV line extraction has an error: -45.00 instead of -50.00.
+	rawCSV := `Date,Description,Amount
+2026-08-15,Restaurant Dinner,-45.00`
+
+	var lineID string
+	d.Finance().
+		ImportStatement(t, driver.ImportStatementOptions{
+			Account:         "Checking",
+			StatementDate:   "2026-08-15",
+			StartingBalance: 100000,
+			EndingBalance:   95000, // diff = -5000
+			Filename:        "amount_fix_stmt.csv",
+			RawContent:      rawCSV,
+			Name:            "amount_fix_stmt",
+		}).
+		ListStatementLines(t, "amount_fix_stmt", func(tb testing.TB, lines []*financev1.StatementLine) {
+			if len(lines) != 1 {
+				tb.Fatalf("expected 1 line, got %d", len(lines))
+			}
+			lineID = lines[0].GetId()
+			if lines[0].GetAmount() != -4500 {
+				tb.Errorf("initial line amount = %d, want -4500", lines[0].GetAmount())
+			}
+		})
+
+	// 1. Resolve line as CREATE_EXPENSE with Dining budget
+	d.Finance().
+		UpdateStatementLine(t, driver.StatementLineUpdateOptions{
+			LineID: lineID,
+			Action: &financev1.StatementLine{
+				Action: &financev1.StatementLine_CreateExpense{
+					CreateExpense: &financev1.StatementLine_CreateExpenseAction{
+						BudgetId: diningBudgetID,
+					},
+				},
+			},
+			UpdateMask: []string{"action"},
+		})
+
+	// 2. Attempt to complete statement -> fails due to balance discrepancy (-45.00 vs expected -50.00)
+	d.Finance().
+		CompleteStatement(t, "amount_fix_stmt", "statement finalization failed", nil)
+
+	// 3. Update the statement line amount to -5000 (-$50.00) with mask ["amount"]
+	targetAmount := int64(-5000)
+	d.Finance().
+		UpdateStatementLine(t, driver.StatementLineUpdateOptions{
+			LineID:     lineID,
+			Amount:     &targetAmount,
+			UpdateMask: []string{"amount"},
+		}).
+		ListStatementLines(t, "amount_fix_stmt", func(tb testing.TB, lines []*financev1.StatementLine) {
+			if len(lines) != 1 {
+				tb.Fatalf("expected 1 line, got %d", len(lines))
+			}
+			if lines[0].GetAmount() != -5000 {
+				tb.Errorf("updated line amount = %d, want -5000", lines[0].GetAmount())
+			}
+		})
+
+	// 4. Now complete statement -> succeeds!
+	d.Finance().
+		CompleteStatement(t, "amount_fix_stmt", "", func(tb testing.TB, stmt *financev1.Statement) {
+			if stmt.GetStatus() != financev1.Statement_COMPLETED {
+				tb.Errorf("statement status = %s, want COMPLETED", stmt.GetStatus())
+			}
+		})
+
+	// 5. Assert Checking account balance updated to 95000
+	d.Finance().
+		AssertAccountBalance(t, "Checking", 95000)
+
+	// 6. Assert created transaction has amount 5000
+	d.Finance().
+		AssertTransactions(t, func(txns []*financev1.Transaction) {
+			if len(txns) != 1 {
+				t.Fatalf("expected 1 transaction, got %d", len(txns))
+			}
+			tx := txns[0]
+			if tx.GetType() != financev1.Transaction_EXPENSE {
+				t.Errorf("transaction type = %s, want EXPENSE", tx.GetType())
+			}
+			if tx.GetAmount() != 5000 {
+				t.Errorf("transaction amount = %d, want 5000", tx.GetAmount())
+			}
+		})
+}

@@ -2304,6 +2304,7 @@ type StatementUpdateOptions struct {
 // StatementLineUpdateOptions encapsulates parameters for updating a statement line draft.
 type StatementLineUpdateOptions struct {
 	LineID     string
+	Amount     *int64
 	Status     financev1.StatementLine_Status
 	Action     *financev1.StatementLine
 	UpdateMask []string
@@ -2535,10 +2536,18 @@ func (f *FinanceDriver) UpdateStatementLine(tb testing.TB, opts StatementLineUpd
 	lineProto := &financev1.StatementLine{
 		Status: opts.Status,
 	}
+	if opts.Amount != nil {
+		lineProto.Amount = *opts.Amount
+	}
 	if opts.Action != nil {
 		lineProto.Action = opts.Action.Action
-		lineProto.Status = opts.Action.Status
+		if opts.Action.Status != 0 {
+			lineProto.Status = opts.Action.Status
+		}
 		lineProto.MatchedTransactionId = opts.Action.MatchedTransactionId
+		if opts.Action.Amount != 0 && opts.Amount == nil {
+			lineProto.Amount = opts.Action.Amount
+		}
 	}
 
 	var mask *fieldmaskpb.FieldMask

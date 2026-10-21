@@ -851,6 +851,7 @@ func TestStatementLine_ApplyPatch_Table(t *testing.T) {
 		wantStatus     StatementLineStatus
 		wantActionType StatementLineActionType
 		wantTxnID      *TransactionID
+		wantAmount     int64
 	}{
 		{
 			name: "patch action match sets matched status",
@@ -950,6 +951,28 @@ func TestStatementLine_ApplyPatch_Table(t *testing.T) {
 			wantActionType: StatementLineActionTypePending,
 			wantTxnID:      nil,
 		},
+		{
+			name: "patch amount updates line amount",
+			initialLine: func() *StatementLine {
+				return &StatementLine{
+					ID:          slID,
+					StatementID: stID,
+					RowIndex:    0,
+					DateStr:     "2026-08-01",
+					Description: "Store",
+					Amount:      1000,
+					Status:      StatementLineStatusUnmatched,
+				}
+			},
+			incoming: StatementLine{
+				Amount: 7500,
+			},
+			mask:           []string{"amount"},
+			wantStatus:     StatementLineStatusUnmatched,
+			wantActionType: StatementLineActionType(""),
+			wantTxnID:      nil,
+			wantAmount:     7500,
+		},
 	}
 
 	for _, tt := range tests {
@@ -985,6 +1008,9 @@ func TestStatementLine_ApplyPatch_Table(t *testing.T) {
 				if line.MatchedTransactionID == nil || *line.MatchedTransactionID != *tt.wantTxnID {
 					t.Errorf("MatchedTransactionID = %v, want %v", line.MatchedTransactionID, tt.wantTxnID)
 				}
+			}
+			if tt.wantAmount != 0 && line.Amount != tt.wantAmount {
+				t.Errorf("Amount = %d, want %d", line.Amount, tt.wantAmount)
 			}
 		})
 	}

@@ -41,7 +41,7 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react"
-import { formatAmount } from "../utils"
+import { formatAmount, formatCents, toCents } from "../utils"
 import { cn } from "@/lib/utils"
 import { AccountSelect } from "./account-select"
 import { BudgetSelect } from "./budget-select"
@@ -98,6 +98,10 @@ export function ReconciliationRow({
   // Inline description editing state
   const [isEditingDesc, setIsEditingDesc] = useState(false)
   const [editedDesc, setEditedDesc] = useState(line.description)
+
+  // Inline amount editing state
+  const [isEditingAmount, setIsEditingAmount] = useState(false)
+  const [editedAmount, setEditedAmount] = useState("")
 
   // Local drawer / sub-action mode
   const [customMode, setCustomMode] = useState<
@@ -163,7 +167,7 @@ export function ReconciliationRow({
     if (!q) return eligibleScheduledTxns
     return eligibleScheduledTxns.filter((s) => {
       const name = getScheduledName(s).toLowerCase()
-      const amt = (Number(s.amount || 0) / 100).toFixed(2)
+      const amt = formatCents(s.amount).toFixed(2)
       const date = s.dueDate ? new Date(s.dueDate).toLocaleDateString() : ""
       return name.includes(q) || amt.includes(q) || date.includes(q)
     })
@@ -182,8 +186,8 @@ export function ReconciliationRow({
     if (!q) return borrowings
     return borrowings.filter((b) => {
       const counterparty = (b.counterparty || "").toLowerCase()
-      const amt = (Number(b.totalAmount || 0) / 100).toFixed(2)
-      const rem = (Number(b.remainingAmount || 0) / 100).toFixed(2)
+      const amt = formatCents(b.totalAmount).toFixed(2)
+      const rem = formatCents(b.remainingAmount).toFixed(2)
       return counterparty.includes(q) || amt.includes(q) || rem.includes(q)
     })
   }, [borrowings, borrowingSearch])
@@ -219,7 +223,7 @@ export function ReconciliationRow({
     if (!q) return accountTransactions
     return accountTransactions.filter((t) => {
       const desc = (t.description || "").toLowerCase()
-      const amt = (Number(t.amount || 0) / 100).toFixed(2)
+      const amt = formatCents(t.amount).toFixed(2)
       const date = t.transactionDate
         ? new Date(t.transactionDate).toLocaleDateString()
         : ""
@@ -406,6 +410,14 @@ export function ReconciliationRow({
     }
   }
 
+  const handleSaveAmount = () => {
+    setIsEditingAmount(false)
+    const newCents = toCents(editedAmount, isExpense ? -1 : 1)
+    if (newCents !== 0 && newCents !== lineAmount) {
+      onUpdateDetails(line, { amount: newCents })
+    }
+  }
+
   return (
     <div
       className={cn(
@@ -502,8 +514,8 @@ export function ReconciliationRow({
           )}
         </div>
 
-        {/* Amount with Invert Sign (+/-) Toggle */}
-        <div className="flex items-baseline justify-between pt-1">
+        {/* Amount with Invert Sign (+/-) Toggle & Inline Amount Editing */}
+        <div className="flex items-center justify-between pt-1">
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
               Statement Amount
@@ -522,15 +534,91 @@ export function ReconciliationRow({
               </Button>
             )}
           </div>
-          <span
-            className={cn(
-              "font-mono text-base font-black tracking-tight",
-              isExpense ? "text-rose-500" : "text-emerald-500"
-            )}
-          >
-            {isExpense ? "-" : "+"}
-            {formatAmount(Math.abs(lineAmount), targetAccount?.currency)}
-          </span>
+          {isEditingAmount ? (
+            <div className="flex items-center gap-1.5">
+              <div className="relative flex items-center">
+                <span className="pointer-events-none absolute left-2 font-mono text-xs font-bold text-muted-foreground select-none">
+                  {editedAmount.startsWith("-") || editedAmount.startsWith("+")
+                    ? ""
+                    : isExpense
+                      ? "-"
+                      : "+"}
+                </span>
+                <Input
+                  value={editedAmount}
+                  onChange={(e) => setEditedAmount(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveAmount()
+                    if (e.key === "Escape") {
+                      setIsEditingAmount(false)
+                    }
+                  }}
+                  autoFocus
+                  placeholder="0.00"
+                  className={cn(
+                    "h-7 w-28 rounded-lg border-primary bg-background font-mono text-xs font-bold",
+                    editedAmount.startsWith("-") || editedAmount.startsWith("+")
+                      ? "px-2"
+                      : "pr-2 pl-5"
+                  )}
+                />
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                disabled={isPending}
+                className="h-7 w-7 shrink-0 text-emerald-500 hover:bg-emerald-500/10"
+                onClick={handleSaveAmount}
+                title="Save amount"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ) : (
+            <div className="group/amount flex items-center gap-1.5">
+              <span
+                className={cn(
+                  "font-mono text-base font-black tracking-tight",
+                  !isResolved &&
+                    !isReadOnly &&
+                    "cursor-pointer hover:underline",
+                  isExpense ? "text-rose-500" : "text-emerald-500"
+                )}
+                onClick={() => {
+                  if (!isResolved && !isReadOnly) {
+                    setEditedAmount(
+                      formatCents(Math.abs(lineAmount)).toFixed(2)
+                    )
+                    setIsEditingAmount(true)
+                  }
+                }}
+                title={
+                  !isResolved && !isReadOnly
+                    ? "Click to edit amount"
+                    : undefined
+                }
+              >
+                {isExpense ? "-" : "+"}
+                {formatAmount(Math.abs(lineAmount), targetAccount?.currency)}
+              </span>
+              {!isResolved && !isReadOnly && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground opacity-0 transition-opacity group-hover/amount:opacity-100 hover:text-foreground"
+                  onClick={() => {
+                    setEditedAmount(
+                      formatCents(Math.abs(lineAmount)).toFixed(2)
+                    )
+                    setIsEditingAmount(true)
+                  }}
+                  title="Edit amount"
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

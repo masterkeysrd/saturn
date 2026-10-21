@@ -24,9 +24,25 @@ export function formatAmount(
   return currency ? `${formatted} ${currency}` : formatted
 }
 
+export function toCents(
+  amountInput: string | number | undefined | null,
+  defaultSign?: 1 | -1
+): number {
+  if (amountInput === undefined || amountInput === null) return 0
+  if (typeof amountInput === "number") {
+    return isNaN(amountInput) ? 0 : Math.round(amountInput * 100)
+  }
+  const clean = amountInput.replace(/[$€£,\s]/g, "").trim()
+  const raw = parseFloat(clean)
+  if (isNaN(raw)) return 0
+  const absCents = Math.round(Math.abs(raw) * 100)
+  if (clean.startsWith("-")) return -absCents
+  if (clean.startsWith("+")) return absCents
+  return defaultSign === -1 ? -absCents : absCents
+}
+
 export function toCentsString(amountStr: string | number): string {
-  const val = typeof amountStr === "number" ? amountStr : parseFloat(amountStr)
-  return isNaN(val) ? "0" : Math.round(val * 100).toString()
+  return toCents(amountStr).toString()
 }
 
 export function formatInterval(interval: string | undefined | null): string {

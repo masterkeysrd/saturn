@@ -55,7 +55,7 @@ import {
   ArrowUpDown,
   SkipForward,
 } from "lucide-react"
-import { formatAmount, toCentsString } from "./utils"
+import { formatAmount, formatCents, toCentsString } from "./utils"
 import { ReconciliationRow } from "./components/reconciliation-row"
 
 export function ReconciliationWorkspaceView() {
@@ -187,10 +187,10 @@ export function ReconciliationWorkspaceView() {
   const openEditBalances = () => {
     if (!activeStmt) return
     setEditStartingAmount(
-      (Number(activeStmt.statementStartingBalance || 0) / 100).toFixed(2)
+      formatCents(activeStmt.statementStartingBalance).toFixed(2)
     )
     setEditEndingAmount(
-      (Number(activeStmt.statementEndingBalance || 0) / 100).toFixed(2)
+      formatCents(activeStmt.statementEndingBalance).toFixed(2)
     )
     setIsEditingBalances(true)
   }
