@@ -233,7 +233,7 @@ func TestStatementLine_NewTransfer(t *testing.T) {
 				if trf.SourceAccountID != srcAccID || trf.DestinationAccountID != destAccID {
 					t.Errorf("transfer accounts mismatch: src %s, dest %s", trf.SourceAccountID, trf.DestinationAccountID)
 				}
-				if trf.SourceAmount != 5000 || trf.DestinationAmount != 5000 {
+				if trf.SourceAmount != 5000 || trf.DestinationAmount != 0 {
 					t.Errorf("transfer amount mismatch: src %d, dest %d", trf.SourceAmount, trf.DestinationAmount)
 				}
 				if trfOpts.OutflowMetadata == nil || !trfOpts.OutflowMetadata.Reconciled {
@@ -258,6 +258,9 @@ func TestStatementLine_NewTransfer(t *testing.T) {
 			checkTrf: func(t *testing.T, trf *Transfer, trfOpts CreateTransferOpts) {
 				if trf.SourceAccountID != srcAccID || trf.DestinationAccountID != destAccID {
 					t.Errorf("transfer accounts mismatch: src %s, dest %s", trf.SourceAccountID, trf.DestinationAccountID)
+				}
+				if trf.SourceAmount != 0 || trf.DestinationAmount != 5000 {
+					t.Errorf("transfer amount mismatch: src %d, dest %d", trf.SourceAmount, trf.DestinationAmount)
 				}
 				if trfOpts.InflowMetadata == nil || !trfOpts.InflowMetadata.Reconciled {
 					t.Error("expected InflowMetadata.Reconciled to be true")

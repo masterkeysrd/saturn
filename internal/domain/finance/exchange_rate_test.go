@@ -221,6 +221,10 @@ func TestConvertAmount(t *testing.T) {
 		{"identity rate 1.0", 1000, 1.0, 1000},
 		{"zero amount", 0, 1.5, 0},
 		{"positive rate multiplication", 1000, 1.5, 1500},
+		{"inverse rate without truncation loss (USD to DOP inverse)", 600000, 1.0 / 60.0, 10000},
+		{"inverse rate 1/3 rounding", 30000, 1.0 / 3.0, 10000},
+		{"inverse rate 1/7 rounding", 70000, 1.0 / 7.0, 10000},
+		{"inverse rate higher multiple", 1200000, 1.0 / 60.0, 20000},
 	}
 
 	for _, tt := range tests {

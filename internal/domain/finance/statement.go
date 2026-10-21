@@ -609,23 +609,28 @@ func (sl *StatementLine) NewTransfer(opts StatementLineTransferOpts) (*Transfer,
 
 	var srcAccID, destAccID AccountID
 	var transferOpts CreateTransferOpts
+	var srcAmount, destAmount int64
 	if sl.Amount < 0 {
 		// Outflow from statement account to counterpart account
 		srcAccID = opts.StatementAccountID
 		destAccID = opts.CounterpartAccountID
 		transferOpts.OutflowMetadata = reconMeta
+		srcAmount = absAmount
+		destAmount = 0
 	} else {
 		// Inflow into statement account from counterpart account
 		srcAccID = opts.CounterpartAccountID
 		destAccID = opts.StatementAccountID
 		transferOpts.InflowMetadata = reconMeta
+		srcAmount = 0
+		destAmount = absAmount
 	}
 
 	transfer := &Transfer{
 		SourceAccountID:      srcAccID,
 		DestinationAccountID: destAccID,
-		SourceAmount:         absAmount,
-		DestinationAmount:    absAmount,
+		SourceAmount:         srcAmount,
+		DestinationAmount:    destAmount,
 		TransferDate:         tDate,
 		Notes:                sl.Description,
 	}

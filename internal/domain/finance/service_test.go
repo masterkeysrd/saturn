@@ -1613,6 +1613,7 @@ func TestService_CreateTransfer(t *testing.T) {
 	srcUSD, _ := NewAccountID()
 	dstUSD, _ := NewAccountID()
 	dstEUR, _ := NewAccountID()
+	dstDOP, _ := NewAccountID()
 	otherSpaceAcc, _ := NewAccountID()
 
 	tests := []struct {
@@ -1643,6 +1644,40 @@ func TestService_CreateTransfer(t *testing.T) {
 			expectedDstBalance: 40000,
 		},
 		{
+			name: "Success - Single Currency Source Only (USD to USD)",
+			transfer: &Transfer{
+				SourceAccountID:      srcUSD,
+				DestinationAccountID: dstUSD,
+				SourceAmount:         40000,
+				DestinationAmount:    0,
+				TransferDate:         time.Now().UTC(),
+			},
+			setupAccounts: func(as *AccountStoreMock) {
+				_ = as.Create(ctx, rCtx, &Account{ID: srcUSD, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: dstUSD, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
+			},
+			wantErr:            false,
+			expectedSrcBalance: 60000,
+			expectedDstBalance: 40000,
+		},
+		{
+			name: "Success - Single Currency Destination Only (USD to USD)",
+			transfer: &Transfer{
+				SourceAccountID:      srcUSD,
+				DestinationAccountID: dstUSD,
+				SourceAmount:         0,
+				DestinationAmount:    40000,
+				TransferDate:         time.Now().UTC(),
+			},
+			setupAccounts: func(as *AccountStoreMock) {
+				_ = as.Create(ctx, rCtx, &Account{ID: srcUSD, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: dstUSD, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
+			},
+			wantErr:            false,
+			expectedSrcBalance: 60000,
+			expectedDstBalance: 40000,
+		},
+		{
 			name: "Success - Multi Currency (EUR to USD)",
 			transfer: &Transfer{
 				SourceAccountID:      srcUSD,
@@ -1659,6 +1694,42 @@ func TestService_CreateTransfer(t *testing.T) {
 			wantErr:            false,
 			expectedSrcBalance: 50000,
 			expectedDstBalance: 54000,
+		},
+		{
+			name: "Success - Cross Currency Source Only with Direct Rate (USD to DOP)",
+			transfer: &Transfer{
+				SourceAccountID:      srcUSD,
+				DestinationAccountID: dstDOP,
+				SourceAmount:         10000,
+				DestinationAmount:    0,
+				TransferDate:         time.Now().UTC(),
+				Notes:                "USD to DOP source only",
+			},
+			setupAccounts: func(as *AccountStoreMock) {
+				_ = as.Create(ctx, rCtx, &Account{ID: srcUSD, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: dstDOP, Name: "Savings DOP", Currency: "DOP", CurrentBalance: 0, IsActive: true})
+			},
+			wantErr:            false,
+			expectedSrcBalance: 90000,
+			expectedDstBalance: 600000,
+		},
+		{
+			name: "Success - Cross Currency Destination Only with Inverse Rate (USD to DOP)",
+			transfer: &Transfer{
+				SourceAccountID:      srcUSD,
+				DestinationAccountID: dstDOP,
+				SourceAmount:         0,
+				DestinationAmount:    600000,
+				TransferDate:         time.Now().UTC(),
+				Notes:                "USD to DOP destination only via inverse rate",
+			},
+			setupAccounts: func(as *AccountStoreMock) {
+				_ = as.Create(ctx, rCtx, &Account{ID: srcUSD, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: dstDOP, Name: "Savings DOP", Currency: "DOP", CurrentBalance: 0, IsActive: true})
+			},
+			wantErr:            false,
+			expectedSrcBalance: 90000,
+			expectedDstBalance: 600000,
 		},
 		{
 			name: "Err - Same Source and Destination Account",
@@ -1696,8 +1767,24 @@ func TestService_CreateTransfer(t *testing.T) {
 			transfer: &Transfer{
 				SourceAccountID:      srcUSD,
 				DestinationAccountID: dstUSD,
-				SourceAmount:         0,
+				SourceAmount:         -100,
 				DestinationAmount:    10000,
+				TransferDate:         time.Now().UTC(),
+			},
+			setupAccounts: func(as *AccountStoreMock) {
+				_ = as.Create(ctx, rCtx, &Account{ID: srcUSD, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, rCtx, &Account{ID: dstUSD, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
+			},
+			wantErr:     true,
+			errContains: "source amount must be greater than zero",
+		},
+		{
+			name: "Err - Both Amounts Zero",
+			transfer: &Transfer{
+				SourceAccountID:      srcUSD,
+				DestinationAccountID: dstUSD,
+				SourceAmount:         0,
+				DestinationAmount:    0,
 				TransferDate:         time.Now().UTC(),
 			},
 			setupAccounts: func(as *AccountStoreMock) {
@@ -1736,6 +1823,12 @@ func TestService_CreateTransfer(t *testing.T) {
 				FromCurrency: "EUR",
 				ToCurrency:   "USD",
 				Rate:         1.08,
+				RateDate:     time.Now().UTC(),
+			})
+			_ = rateStore.Create(ctx, rCtx, &ExchangeRate{
+				FromCurrency: "USD",
+				ToCurrency:   "DOP",
+				Rate:         60.0,
 				RateDate:     time.Now().UTC(),
 			})
 
@@ -2213,6 +2306,175 @@ func TestService_ApproveInboxItem(t *testing.T) {
 			}
 			if finalItem.Status != InboxItemResolved {
 				t.Errorf("InboxItem Status = %s, want %s", finalItem.Status, InboxItemResolved)
+			}
+		})
+	}
+}
+
+func TestService_ApproveInboxItem_CrossCurrency(t *testing.T) {
+	ctx := context.Background()
+	spIDStr, _ := id.Generate("spc_")
+	spID := SpaceID(spIDStr)
+	rCtx := NewRequestContext(spID, "usr_1", time.UTC, "USD")
+
+	tests := []struct {
+		name                 string
+		transferLeg          string
+		itemAmount           int64
+		itemCurrency         Currency
+		expectedSourceAmount int64
+		expectedDestAmount   int64
+		expectedSrcBalance   int64
+		expectedDstBalance   int64
+		checkResolvedAccount func(t *testing.T, item *InboxItem, srcAccID, destAccID AccountID)
+	}{
+		{
+			name:                 "Cross-currency transfer with SOURCE leg (USD to DOP)",
+			transferLeg:          "SOURCE",
+			itemAmount:           10000, // $100 USD
+			itemCurrency:         "USD",
+			expectedSourceAmount: 10000,
+			expectedDestAmount:   600000, // 6,000 DOP (100 * 60)
+			expectedSrcBalance:   90000,  // 100000 - 10000
+			expectedDstBalance:   600000, // 0 + 600000
+			checkResolvedAccount: func(t *testing.T, item *InboxItem, srcAccID, destAccID AccountID) {
+				if item.AccountID == nil || *item.AccountID != string(srcAccID) {
+					t.Errorf("item AccountID = %v, want %s", item.AccountID, srcAccID)
+				}
+			},
+		},
+		{
+			name:                 "Cross-currency transfer with DESTINATION leg (USD to DOP via inverse rate)",
+			transferLeg:          "DESTINATION",
+			itemAmount:           600000, // 6,000 DOP
+			itemCurrency:         "DOP",
+			expectedSourceAmount: 10000, // $100 USD (600000 * 1/60)
+			expectedDestAmount:   600000,
+			expectedSrcBalance:   90000,  // 100000 - 10000
+			expectedDstBalance:   600000, // 0 + 600000
+			checkResolvedAccount: func(t *testing.T, item *InboxItem, srcAccID, destAccID AccountID) {
+				if item.AccountID == nil || *item.AccountID != string(destAccID) {
+					t.Errorf("item AccountID = %v, want %s", item.AccountID, destAccID)
+				}
+			},
+		},
+		{
+			name:                 "Cross-currency transfer with DOP currency but default SOURCE leg still converts DOP to USD",
+			transferLeg:          "SOURCE",
+			itemAmount:           600000, // 6,000 DOP
+			itemCurrency:         "DOP",
+			expectedSourceAmount: 10000, // $100 USD (600000 * 1/60)
+			expectedDestAmount:   600000,
+			expectedSrcBalance:   90000,  // 100000 - 10000
+			expectedDstBalance:   600000, // 0 + 600000
+			checkResolvedAccount: func(t *testing.T, item *InboxItem, srcAccID, destAccID AccountID) {
+				if item.AccountID == nil || *item.AccountID != string(srcAccID) {
+					t.Errorf("item AccountID = %v, want %s", item.AccountID, srcAccID)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			settingsStore := newSettingsStoreMock(nil)
+			_ = settingsStore.Create(ctx, rCtx, &Settings{BaseCurrency: Currency("USD")})
+
+			rateStore := newExchangeRateStoreMock(nil)
+			// Only USD -> DOP is registered; DESTINATION leg requires inverse lookup DOP -> USD
+			_ = rateStore.Create(ctx, rCtx, &ExchangeRate{
+				FromCurrency: "USD",
+				ToCurrency:   "DOP",
+				Rate:         60.0,
+				RateDate:     time.Now().UTC(),
+			})
+
+			accountStore := newAccountStoreMock(nil)
+			srcAccID, _ := NewAccountID()
+			srcAcc := &Account{
+				ID:             srcAccID,
+				Name:           "USD Checking",
+				Currency:       Currency("USD"),
+				CurrentBalance: 100000,
+				IsActive:       true,
+			}
+			_ = accountStore.Create(ctx, rCtx, srcAcc)
+
+			dstAccID, _ := NewAccountID()
+			dstAcc := &Account{
+				ID:             dstAccID,
+				Name:           "DOP Savings",
+				Currency:       Currency("DOP"),
+				CurrentBalance: 0,
+				IsActive:       true,
+			}
+			_ = accountStore.Create(ctx, rCtx, dstAcc)
+
+			txnStore := newTransactionStoreMock(nil)
+			eventStore := newTransactionEventStoreMock(nil)
+			transferData := make(map[TransferID]*Transfer)
+			transferStore := newTransferStoreMock(transferData)
+			inboxStore := newInboxItemStoreMock(nil)
+
+			svc := NewService(Dependencies{
+				Settings:              settingsStore,
+				ExchangeRateStore:     rateStore,
+				AccountStore:          accountStore,
+				TransactionStore:      txnStore,
+				TransactionEventStore: eventStore,
+				TransferStore:         transferStore,
+				InboxItemStore:        inboxStore,
+			})
+
+			srcAccStr := string(srcAccID)
+			staged, err := svc.StageInboxItem(ctx, rCtx, &StageInboxItem{
+				DocType:    InboxItemDocBankNotification,
+				Vendor:     "Bank Transfer",
+				Amount:     tt.itemAmount,
+				Currency:   string(tt.itemCurrency),
+				AccountID:  &srcAccStr,
+				RawPayload: "{}",
+				Metadata: map[string]any{
+					"transaction_type":       "TRANSFER",
+					"destination_account_id": string(dstAccID),
+					"transfer_leg":           tt.transferLeg,
+				},
+			})
+			if err != nil {
+				t.Fatalf("StageInboxItem failed: %v", err)
+			}
+
+			resolved, err := svc.ApproveInboxItem(ctx, rCtx, staged.ID)
+			if err != nil {
+				t.Fatalf("ApproveInboxItem failed: %v", err)
+			}
+			if resolved.Status != InboxItemResolved {
+				t.Errorf("status = %s, want %s", resolved.Status, InboxItemResolved)
+			}
+			if resolved.TransactionID == nil {
+				t.Fatal("expected linked TransactionID on approved inbox item")
+			}
+			tt.checkResolvedAccount(t, resolved, srcAccID, dstAccID)
+
+			// Verify transfer amounts
+			if len(transferData) != 1 {
+				t.Fatalf("transfer count = %d, want 1", len(transferData))
+			}
+			for _, tr := range transferData {
+				if tr.SourceAmount != tt.expectedSourceAmount || tr.DestinationAmount != tt.expectedDestAmount {
+					t.Errorf("transfer amount mismatch: src %d (want %d), dest %d (want %d)",
+						tr.SourceAmount, tt.expectedSourceAmount, tr.DestinationAmount, tt.expectedDestAmount)
+				}
+			}
+
+			// Verify account balances
+			updatedSrc, _ := accountStore.GetByID(ctx, rCtx, srcAccID)
+			if updatedSrc.CurrentBalance != tt.expectedSrcBalance {
+				t.Errorf("source account balance = %d, want %d", updatedSrc.CurrentBalance, tt.expectedSrcBalance)
+			}
+			updatedDst, _ := accountStore.GetByID(ctx, rCtx, dstAccID)
+			if updatedDst.CurrentBalance != tt.expectedDstBalance {
+				t.Errorf("destination account balance = %d, want %d", updatedDst.CurrentBalance, tt.expectedDstBalance)
 			}
 		})
 	}
@@ -3374,6 +3636,176 @@ func TestService_CompleteStatement(t *testing.T) {
 			},
 		},
 		{
+			name:            "CreateTransfer_CrossCurrency_Inflow_DOPStatement_FromUSDAccount",
+			startingBalance: 0,
+			endingBalance:   600000,
+			setupStores: func(rCtx Context, spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) {
+				acc, _ := deps.AccountStore.GetByID(context.Background(), rCtx, accountID)
+				acc.Currency = "DOP"
+				acc.CurrentBalance = 0
+				_ = deps.AccountStore.Update(context.Background(), rCtx, acc)
+
+				counterAcc, _ := deps.AccountStore.GetByID(context.Background(), rCtx, counterpartID)
+				counterAcc.Currency = "USD"
+				counterAcc.CurrentBalance = 50000
+				_ = deps.AccountStore.Update(context.Background(), rCtx, counterAcc)
+
+				_ = deps.ExchangeRateStore.Create(context.Background(), rCtx, &ExchangeRate{
+					FromCurrency: "USD",
+					ToCurrency:   "DOP",
+					Rate:         60.0,
+					RateDate:     time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC),
+				})
+			},
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
+				return []*StatementLine{
+					{
+						ID:          StatementLineID("stln_" + ksuid.New().String()),
+						StatementID: stmtID,
+						RowIndex:    1,
+						DateStr:     "2026-08-14",
+						Description: "Transfer in from USD Checking",
+						Amount:      600000,
+						Status:      StatementLineStatusImported,
+						Action: StatementLineAction{
+							Type:                 StatementLineActionTypeCreateTransfer,
+							CounterpartAccountID: &counterpartID,
+						},
+					},
+				}
+			},
+			verifyResults: func(t *testing.T, rCtx Context, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
+				line := lines[0]
+				if line.MatchedTransactionID == nil {
+					t.Fatal("expected matched transaction ID to be populated")
+				}
+				inflowTxn, err := deps.TransactionStore.GetByID(context.Background(), rCtx, *line.MatchedTransactionID)
+				if err != nil {
+					t.Fatalf("expected inflow transaction: %v", err)
+				}
+				if inflowTxn.Type != TransactionTypeTransferIn {
+					t.Errorf("expected inflow leg, got %s", inflowTxn.Type)
+				}
+				if inflowTxn.Amount != 600000 || inflowTxn.Currency != "DOP" {
+					t.Errorf("expected DOP inflow 600000 cents, got %d %s", inflowTxn.Amount, inflowTxn.Currency)
+				}
+				if !inflowTxn.Metadata.Reconciled || inflowTxn.Metadata.ReconciliationStatementID != string(stmt.ID) {
+					t.Errorf("expected inflow leg reconciled, got %+v", inflowTxn.Metadata)
+				}
+
+				var outflowTxn *Transaction
+				for _, tx := range txns {
+					if tx.Type == TransactionTypeTransferOut {
+						outflowTxn = tx
+						break
+					}
+				}
+				if outflowTxn == nil {
+					t.Fatal("expected counterpart outflow transaction to exist")
+				}
+				if outflowTxn.Amount != 10000 || outflowTxn.Currency != "USD" {
+					t.Errorf("expected USD outflow 10000 cents ($100), got %d %s", outflowTxn.Amount, outflowTxn.Currency)
+				}
+				if outflowTxn.Metadata.Reconciled {
+					t.Error("expected source counterpart outflow leg not to be reconciled")
+				}
+
+				stmtAcc, _ := deps.AccountStore.GetByID(context.Background(), rCtx, stmt.AccountID)
+				if stmtAcc.CurrentBalance != 600000 {
+					t.Errorf("DOP account balance = %d, want 600000", stmtAcc.CurrentBalance)
+				}
+				counterAcc, _ := deps.AccountStore.GetByID(context.Background(), rCtx, *lines[0].Action.CounterpartAccountID)
+				if counterAcc.CurrentBalance != 40000 {
+					t.Errorf("USD account balance = %d, want 40000", counterAcc.CurrentBalance)
+				}
+			},
+		},
+		{
+			name:            "CreateTransfer_CrossCurrency_Outflow_DOPStatement_ToUSDAccount",
+			startingBalance: 1000000,
+			endingBalance:   400000,
+			setupStores: func(rCtx Context, spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) {
+				acc, _ := deps.AccountStore.GetByID(context.Background(), rCtx, accountID)
+				acc.Currency = "DOP"
+				acc.CurrentBalance = 1000000
+				_ = deps.AccountStore.Update(context.Background(), rCtx, acc)
+
+				counterAcc, _ := deps.AccountStore.GetByID(context.Background(), rCtx, counterpartID)
+				counterAcc.Currency = "USD"
+				counterAcc.CurrentBalance = 0
+				_ = deps.AccountStore.Update(context.Background(), rCtx, counterAcc)
+
+				_ = deps.ExchangeRateStore.Create(context.Background(), rCtx, &ExchangeRate{
+					FromCurrency: "USD",
+					ToCurrency:   "DOP",
+					Rate:         60.0,
+					RateDate:     time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC),
+				})
+			},
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
+				return []*StatementLine{
+					{
+						ID:          StatementLineID("stln_" + ksuid.New().String()),
+						StatementID: stmtID,
+						RowIndex:    1,
+						DateStr:     "2026-08-14",
+						Description: "Transfer out to USD Savings",
+						Amount:      -600000,
+						Status:      StatementLineStatusImported,
+						Action: StatementLineAction{
+							Type:                 StatementLineActionTypeCreateTransfer,
+							CounterpartAccountID: &counterpartID,
+						},
+					},
+				}
+			},
+			verifyResults: func(t *testing.T, rCtx Context, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
+				line := lines[0]
+				if line.MatchedTransactionID == nil {
+					t.Fatal("expected matched transaction ID to be populated")
+				}
+				outflowTxn, err := deps.TransactionStore.GetByID(context.Background(), rCtx, *line.MatchedTransactionID)
+				if err != nil {
+					t.Fatalf("expected outflow transaction: %v", err)
+				}
+				if outflowTxn.Type != TransactionTypeTransferOut {
+					t.Errorf("expected outflow leg, got %s", outflowTxn.Type)
+				}
+				if outflowTxn.Amount != 600000 || outflowTxn.Currency != "DOP" {
+					t.Errorf("expected DOP outflow 600000 cents, got %d %s", outflowTxn.Amount, outflowTxn.Currency)
+				}
+				if !outflowTxn.Metadata.Reconciled || outflowTxn.Metadata.ReconciliationStatementID != string(stmt.ID) {
+					t.Errorf("expected outflow leg reconciled, got %+v", outflowTxn.Metadata)
+				}
+
+				var inflowTxn *Transaction
+				for _, tx := range txns {
+					if tx.Type == TransactionTypeTransferIn {
+						inflowTxn = tx
+						break
+					}
+				}
+				if inflowTxn == nil {
+					t.Fatal("expected counterpart inflow transaction to exist")
+				}
+				if inflowTxn.Amount != 10000 || inflowTxn.Currency != "USD" {
+					t.Errorf("expected USD inflow 10000 cents ($100), got %d %s", inflowTxn.Amount, inflowTxn.Currency)
+				}
+				if inflowTxn.Metadata.Reconciled {
+					t.Error("expected destination counterpart inflow leg not to be reconciled")
+				}
+
+				stmtAcc, _ := deps.AccountStore.GetByID(context.Background(), rCtx, stmt.AccountID)
+				if stmtAcc.CurrentBalance != 400000 {
+					t.Errorf("DOP account balance = %d, want 400000", stmtAcc.CurrentBalance)
+				}
+				counterAcc, _ := deps.AccountStore.GetByID(context.Background(), rCtx, *lines[0].Action.CounterpartAccountID)
+				if counterAcc.CurrentBalance != 10000 {
+					t.Errorf("USD account balance = %d, want 10000", counterAcc.CurrentBalance)
+				}
+			},
+		},
+		{
 			name:            "ConfirmScheduled_Payment",
 			startingBalance: 100000,
 			endingBalance:   85000,
@@ -3625,6 +4057,7 @@ func TestService_CompleteStatement(t *testing.T) {
 				TransferStore:             newTransferStoreMock(transferData),
 				ScheduledTransactionStore: newScheduledTransactionStoreMock(schedData),
 				BorrowingStore:            newBorrowingStoreMock(borData),
+				ExchangeRateStore:         newExchangeRateStoreMock(nil),
 			}
 
 			rCtx := NewRequestContext(spaceID, "usr_1", time.UTC, "USD")

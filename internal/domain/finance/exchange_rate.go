@@ -3,6 +3,7 @@ package finance
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 )
@@ -101,5 +102,5 @@ func ConvertAmount(amount int64, rate float64) int64 {
 	if rate == 1.0 || amount == 0 {
 		return amount
 	}
-	return int64(float64(amount) * rate)
+	return int64(math.Round(float64(amount) * rate))
 }

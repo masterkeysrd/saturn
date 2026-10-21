@@ -195,11 +195,21 @@ func (i *InboxItem) NewTransfer(spaceID SpaceID, destAccountID AccountID) (*Tran
 	if tDate.IsZero() {
 		tDate = time.Now().UTC()
 	}
+
+	var srcAmount, destAmount int64
+	if i.MetadataString("transfer_leg") == "DESTINATION" {
+		srcAmount = 0
+		destAmount = i.Amount
+	} else {
+		srcAmount = i.Amount
+		destAmount = 0
+	}
+
 	return &Transfer{
 		SourceAccountID:      srcAccID,
 		DestinationAccountID: destAccountID,
-		SourceAmount:         i.Amount,
-		DestinationAmount:    i.Amount,
+		SourceAmount:         srcAmount,
+		DestinationAmount:    destAmount,
 		TransferDate:         tDate,
 		Notes:                i.VendorName,
 	}, nil

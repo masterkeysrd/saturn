@@ -109,6 +109,7 @@ func (t *Transfer) Validate() error {
 type CreateTransferOpts struct {
 	OutflowMetadata *TransactionMetadata
 	InflowMetadata  *TransactionMetadata
+	InputCurrency   Currency
 }
 
 // TransferLegOpts contains parameters for generating source and destination transactions for a transfer.

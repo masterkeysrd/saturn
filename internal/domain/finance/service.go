@@ -472,6 +472,17 @@ func (s *Service) resolveExchangeRate(ctx context.Context, rCtx Context, from, t
 	})
 	if err != nil {
 		if errors.Is(err, errors.NotExist) {
+			invRecord, invErr := s.getExchangeRate(ctx, rCtx, ExchangeRateKey{
+				FromCurrency: to,
+				ToCurrency:   from,
+				RateDate:     rCtx.Date(date),
+			})
+			if invErr == nil && invRecord.Rate > 0 {
+				return 1.0 / invRecord.Rate, nil
+			}
+			if invErr != nil && !errors.Is(invErr, errors.NotExist) {
+				return 0.0, errors.E(op, invErr)
+			}
 			if allowNotFoundFallback {
 				return 0.0, nil
 			}
@@ -1920,8 +1931,14 @@ func (s *Service) createTransfer(ctx context.Context, rCtx Context, t *Transfer,
 		return nil, nil, nil, err
 	}
 
-	if err := t.Validate(); err != nil {
-		return nil, nil, nil, err
+	if err := t.SourceAccountID.Validate(); err != nil {
+		return nil, nil, nil, fmt.Errorf("validate source account ID: %w", err)
+	}
+	if err := t.DestinationAccountID.Validate(); err != nil {
+		return nil, nil, nil, fmt.Errorf("validate destination account ID: %w", err)
+	}
+	if t.SourceAccountID == t.DestinationAccountID {
+		return nil, nil, nil, errors.New("source and destination accounts must be different")
 	}
 
 	// Fetch both accounts to verify existence and check currencies
@@ -1932,6 +1949,47 @@ func (s *Service) createTransfer(ctx context.Context, rCtx Context, t *Transfer,
 	destAcc, err := s.deps.AccountStore.GetByID(ctx, rCtx, t.DestinationAccountID)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("destination account: %w", err)
+	}
+
+	// If an explicit input currency is provided for a single-leg cross-currency transfer,
+	// ensure the input amount is assigned to the account leg matching that currency.
+	if srcAcc.Currency != destAcc.Currency && opts.InputCurrency != "" && (t.SourceAmount > 0) != (t.DestinationAmount > 0) {
+		inputAmount := max(t.SourceAmount, t.DestinationAmount)
+		switch opts.InputCurrency {
+		case destAcc.Currency:
+			t.SourceAmount = 0
+			t.DestinationAmount = inputAmount
+		case srcAcc.Currency:
+			t.SourceAmount = inputAmount
+			t.DestinationAmount = 0
+		}
+	}
+
+	// Resolve missing leg amounts centrally
+	if t.SourceAmount > 0 && t.DestinationAmount == 0 {
+		if srcAcc.Currency == destAcc.Currency {
+			t.DestinationAmount = t.SourceAmount
+		} else {
+			rate, err := s.resolveExchangeRate(ctx, rCtx, srcAcc.Currency, destAcc.Currency, t.TransferDate, false)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			t.DestinationAmount = ConvertAmount(t.SourceAmount, rate)
+		}
+	} else if t.DestinationAmount > 0 && t.SourceAmount == 0 {
+		if srcAcc.Currency == destAcc.Currency {
+			t.SourceAmount = t.DestinationAmount
+		} else {
+			rate, err := s.resolveExchangeRate(ctx, rCtx, destAcc.Currency, srcAcc.Currency, t.TransferDate, false)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			t.SourceAmount = ConvertAmount(t.DestinationAmount, rate)
+		}
+	}
+
+	if err := t.Validate(); err != nil {
+		return nil, nil, nil, err
 	}
 
 	if err := srcAcc.ValidateTransferTo(destAcc, t.SourceAmount); err != nil {
@@ -2378,7 +2436,9 @@ func (s *Service) approveStandalonePromotion(ctx context.Context, rCtx Context, 
 			return nil, err
 		}
 
-		_, outflowTxn, inflowTxn, err := s.createTransfer(ctx, rCtx, transfer, CreateTransferOpts{})
+		_, outflowTxn, inflowTxn, err := s.createTransfer(ctx, rCtx, transfer, CreateTransferOpts{
+			InputCurrency: Currency(item.Currency),
+		})
 		if err != nil {
 			return nil, fmt.Errorf("create transfer: %w", err)
 		}

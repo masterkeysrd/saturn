@@ -199,27 +199,58 @@ func TestInboxItem_NewTransfer(t *testing.T) {
 	srcAccID := "acc_" + ksuid.New().String()
 	destAccID := AccountID("acc_" + ksuid.New().String())
 
-	item := &InboxItem{
-		ID:         "ibx_" + ksuid.New().String(),
-		Amount:     12000,
-		Currency:   "USD",
-		VendorName: "Transfer to Savings",
-		AccountID:  &srcAccID,
+	tests := []struct {
+		name           string
+		item           *InboxItem
+		wantSrcAmount  int64
+		wantDestAmount int64
+	}{
+		{
+			name: "default source leg populates source amount only",
+			item: &InboxItem{
+				ID:         "ibx_" + ksuid.New().String(),
+				Amount:     12000,
+				Currency:   "USD",
+				VendorName: "Transfer to Savings",
+				AccountID:  &srcAccID,
+			},
+			wantSrcAmount:  12000,
+			wantDestAmount: 0,
+		},
+		{
+			name: "explicit destination leg populates destination amount only",
+			item: &InboxItem{
+				ID:         "ibx_" + ksuid.New().String(),
+				Amount:     12000,
+				Currency:   "USD",
+				VendorName: "Transfer to Savings",
+				AccountID:  &srcAccID,
+				Metadata: map[string]any{
+					"transfer_leg": "DESTINATION",
+				},
+			},
+			wantSrcAmount:  0,
+			wantDestAmount: 12000,
+		},
 	}
 
-	transfer, err := item.NewTransfer(spaceID, destAccID)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if transfer.SourceAccountID != AccountID(srcAccID) {
-		t.Errorf("expected source account %s, got %s", srcAccID, transfer.SourceAccountID)
-	}
-	if transfer.DestinationAccountID != destAccID {
-		t.Errorf("expected dest account %s, got %s", destAccID, transfer.DestinationAccountID)
-	}
-	if transfer.SourceAmount != 12000 || transfer.DestinationAmount != 12000 {
-		t.Errorf("expected 12000, got %d", transfer.SourceAmount)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transfer, err := tt.item.NewTransfer(spaceID, destAccID)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if transfer.SourceAccountID != AccountID(srcAccID) {
+				t.Errorf("expected source account %s, got %s", srcAccID, transfer.SourceAccountID)
+			}
+			if transfer.DestinationAccountID != destAccID {
+				t.Errorf("expected dest account %s, got %s", destAccID, transfer.DestinationAccountID)
+			}
+			if transfer.SourceAmount != tt.wantSrcAmount || transfer.DestinationAmount != tt.wantDestAmount {
+				t.Errorf("amount mismatch: src got %d want %d, dest got %d want %d",
+					transfer.SourceAmount, tt.wantSrcAmount, transfer.DestinationAmount, tt.wantDestAmount)
+			}
+		})
 	}
 }
 

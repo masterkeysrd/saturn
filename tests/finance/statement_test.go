@@ -604,3 +604,121 @@ func TestStatementReconciliation_MatchAction_OverwriteTransaction(t *testing.T) 
 	d.Finance().
 		AssertAccountBalance(t, "Reconcile Checking", 98500)
 }
+
+// TestStatementReconciliation_CrossCurrencyTransfer verifies that reconciling a statement
+// with a cross-currency transfer correctly resolves inverse exchange rates, debits the counterpart
+// in its own currency (converted), and records the appropriate ledger legs.
+func TestStatementReconciliation_CrossCurrencyTransfer(t *testing.T) {
+	d := driver.New(t, testEnv)
+
+	d.Auth().
+		CreateApprovedUser(t).
+		Login(t)
+
+	d.Space().
+		Ensure(t, "Personal Space")
+
+	// 1. Setup workspace with base currency USD, accounts in USD and DOP, and USD -> DOP exchange rate
+	d.Finance().
+		InitSettings(t, "USD").
+		CreateExchangeRate(t, "USD", "DOP", 60.0).
+		CreateAccount(t, driver.AccountOptions{
+			Name:           "USD Checking",
+			Type:           financev1.Account_BANK,
+			Currency:       "USD",
+			InitialBalance: 50000, // $500.00
+		}).
+		CreateAccount(t, driver.AccountOptions{
+			Name:           "DOP Savings",
+			Type:           financev1.Account_BANK,
+			Currency:       "DOP",
+			InitialBalance: 0,
+		})
+
+	usdAccountID := d.State().Accounts["USD Checking"].ID
+
+	// 2. Import DOP statement containing an inflow of 6,000.00 DOP (+600000 cents)
+	rawCSV := `Date,Description,Amount
+2026-08-15,Transfer in from USD Checking,6000.00`
+
+	var lineID string
+	d.Finance().
+		ImportStatement(t, driver.ImportStatementOptions{
+			Account:         "DOP Savings",
+			StatementDate:   "2026-08-15",
+			StartingBalance: 0,
+			EndingBalance:   600000, // 6,000.00 DOP
+			Filename:        "dop_savings_statement.csv",
+			RawContent:      rawCSV,
+			Name:            "dop_stmt",
+		}).
+		ListStatementLines(t, "dop_stmt", func(tb testing.TB, lines []*financev1.StatementLine) {
+			if len(lines) != 1 {
+				tb.Fatalf("expected 1 line, got %d", len(lines))
+			}
+			lineID = lines[0].GetId()
+		})
+
+	// 3. Set line action to CREATE_TRANSFER with counterpart account USD Checking
+	d.Finance().
+		UpdateStatementLine(t, driver.StatementLineUpdateOptions{
+			LineID: lineID,
+			Action: &financev1.StatementLine{
+				Action: &financev1.StatementLine_CreateTransfer{
+					CreateTransfer: &financev1.StatementLine_CreateTransferAction{
+						CounterpartAccountId: usdAccountID,
+					},
+				},
+			},
+			UpdateMask: []string{"action"},
+		}).
+		CompleteStatement(t, "dop_stmt", "", func(tb testing.TB, stmt *financev1.Statement) {
+			if stmt.GetStatus() != financev1.Statement_COMPLETED {
+				tb.Errorf("statement status = %s, want COMPLETED", stmt.GetStatus())
+			}
+		})
+
+	// 4. Assert both accounts' final balances:
+	// - DOP Savings increased by 600,000 cents (6,000.00 DOP) from 0 to 600,000 cents
+	// - USD Checking decreased by 10,000 cents ($100.00) from 50,000 to 40,000 cents
+	d.Finance().
+		AssertAccountBalance(t, "DOP Savings", 600000).
+		AssertAccountBalance(t, "USD Checking", 40000)
+
+	// 5. Assert generated TRANSFER_OUT (USD) and TRANSFER_IN (DOP) transactions
+	d.Finance().
+		AssertTransactions(t, func(txns []*financev1.Transaction) {
+			var transferOut, transferIn *financev1.Transaction
+			for _, tx := range txns {
+				if tx.GetType() == financev1.Transaction_TRANSFER_OUT {
+					transferOut = tx
+				} else if tx.GetType() == financev1.Transaction_TRANSFER_IN {
+					transferIn = tx
+				}
+			}
+
+			if transferOut == nil {
+				t.Fatal("expected TRANSFER_OUT transaction to be created")
+			}
+			if transferIn == nil {
+				t.Fatal("expected TRANSFER_IN transaction to be created")
+			}
+
+			if transferOut.GetCurrency() != "USD" || transferOut.GetAmount() != 10000 {
+				t.Errorf("TRANSFER_OUT mismatch: currency=%s (want USD), amount=%d (want 10000)",
+					transferOut.GetCurrency(), transferOut.GetAmount())
+			}
+			if transferIn.GetCurrency() != "DOP" || transferIn.GetAmount() != 600000 {
+				t.Errorf("TRANSFER_IN mismatch: currency=%s (want DOP), amount=%d (want 600000)",
+					transferIn.GetCurrency(), transferIn.GetAmount())
+			}
+
+			// Verify reconciliation metadata
+			if transferIn.GetMetadata()["reconciled"] != "true" {
+				t.Errorf("expected transferIn reconciled = true, got %v", transferIn.GetMetadata()["reconciled"])
+			}
+			if transferOut.GetMetadata()["reconciled"] == "true" {
+				t.Error("expected transferOut reconciled to not be true")
+			}
+		})
+}
