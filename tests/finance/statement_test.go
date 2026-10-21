@@ -722,3 +722,149 @@ func TestStatementReconciliation_CrossCurrencyTransfer(t *testing.T) {
 			}
 		})
 }
+
+// TestStatementReconciliation_UndoLineAction verifies that resolving a line (e.g. as a transfer),
+// then undoing it via UpdateStatementLine with mask ["status", "action", "matched_transaction_id"],
+// resets the line to UNMATCHED, clears the action and matched transaction ID, allowing a new action
+// to be applied and completed.
+func TestStatementReconciliation_UndoLineAction(t *testing.T) {
+	d := driver.New(t, testEnv)
+
+	d.Auth().
+		CreateApprovedUser(t).
+		Login(t)
+
+	d.Space().
+		Ensure(t, "Personal Space")
+
+	d.Finance().
+		InitSettings(t, "USD").
+		CreateAccount(t, driver.AccountOptions{
+			Name:           "Checking",
+			Type:           financev1.Account_BANK,
+			Currency:       "USD",
+			InitialBalance: 100000, // $1,000.00
+		}).
+		CreateAccount(t, driver.AccountOptions{
+			Name:           "Savings",
+			Type:           financev1.Account_BANK,
+			Currency:       "USD",
+			InitialBalance: 0,
+		}).
+		CreateBudget(t, driver.BudgetOptions{
+			Name:        "Dining",
+			LimitAmount: 50000,
+			Currency:    "USD",
+			Interval:    financev1.Budget_MONTHLY,
+		})
+
+	savingsAccountID := d.State().Accounts["Savings"].ID
+	diningBudgetID := d.State().Budgets["Dining"]
+
+	rawCSV := `Date,Description,Amount
+2026-08-15,Restaurant Dinner,-50.00`
+
+	var lineID string
+	d.Finance().
+		ImportStatement(t, driver.ImportStatementOptions{
+			Account:         "Checking",
+			StatementDate:   "2026-08-15",
+			StartingBalance: 100000,
+			EndingBalance:   95000, // -50.00
+			Filename:        "undo_stmt.csv",
+			RawContent:      rawCSV,
+			Name:            "undo_stmt",
+		}).
+		ListStatementLines(t, "undo_stmt", func(tb testing.TB, lines []*financev1.StatementLine) {
+			if len(lines) != 1 {
+				tb.Fatalf("expected 1 line, got %d", len(lines))
+			}
+			lineID = lines[0].GetId()
+		})
+
+	// 1. First resolve the line as CREATE_TRANSFER to Savings
+	d.Finance().
+		UpdateStatementLine(t, driver.StatementLineUpdateOptions{
+			LineID: lineID,
+			Action: &financev1.StatementLine{
+				Action: &financev1.StatementLine_CreateTransfer{
+					CreateTransfer: &financev1.StatementLine_CreateTransferAction{
+						CounterpartAccountId: savingsAccountID,
+					},
+				},
+			},
+			UpdateMask: []string{"action"},
+		}).
+		ListStatementLines(t, "undo_stmt", func(tb testing.TB, lines []*financev1.StatementLine) {
+			if len(lines) != 1 {
+				tb.Fatalf("expected 1 line, got %d", len(lines))
+			}
+			if lines[0].GetCreateTransfer() == nil {
+				tb.Error("expected create_transfer action to be set")
+			}
+		})
+
+	// 2. Undo the action by sending UNMATCHED with mask ["status", "action", "matched_transaction_id"]
+	d.Finance().
+		UpdateStatementLine(t, driver.StatementLineUpdateOptions{
+			LineID: lineID,
+			Action: &financev1.StatementLine{
+				Status: financev1.StatementLine_UNMATCHED,
+			},
+			UpdateMask: []string{"status", "action", "matched_transaction_id"},
+		}).
+		ListStatementLines(t, "undo_stmt", func(tb testing.TB, lines []*financev1.StatementLine) {
+			if len(lines) != 1 {
+				tb.Fatalf("expected 1 line, got %d", len(lines))
+			}
+			l := lines[0]
+			if l.GetStatus() != financev1.StatementLine_UNMATCHED {
+				tb.Errorf("status = %s, want UNMATCHED", l.GetStatus())
+			}
+			if l.GetCreateTransfer() != nil {
+				tb.Errorf("expected create_transfer action to be cleared, got %+v", l.GetCreateTransfer())
+			}
+			if l.GetMatchedTransactionId() != "" {
+				tb.Errorf("expected matched_transaction_id to be empty, got %s", l.GetMatchedTransactionId())
+			}
+		})
+
+	// 3. Now apply a completely different action: CREATE_EXPENSE with Dining budget
+	d.Finance().
+		UpdateStatementLine(t, driver.StatementLineUpdateOptions{
+			LineID: lineID,
+			Action: &financev1.StatementLine{
+				Action: &financev1.StatementLine_CreateExpense{
+					CreateExpense: &financev1.StatementLine_CreateExpenseAction{
+						BudgetId: diningBudgetID,
+					},
+				},
+			},
+			UpdateMask: []string{"action"},
+		}).
+		CompleteStatement(t, "undo_stmt", "", func(tb testing.TB, stmt *financev1.Statement) {
+			if stmt.GetStatus() != financev1.Statement_COMPLETED {
+				tb.Errorf("statement status = %s, want COMPLETED", stmt.GetStatus())
+			}
+		})
+
+	// 4. Assert Checking balance decreased by $50.00, Savings balance remained 0 (no transfer made!)
+	d.Finance().
+		AssertAccountBalance(t, "Checking", 95000).
+		AssertAccountBalance(t, "Savings", 0)
+
+	// 5. Assert an EXPENSE transaction was created (not transfer)
+	d.Finance().
+		AssertTransactions(t, func(txns []*financev1.Transaction) {
+			if len(txns) != 1 {
+				t.Fatalf("expected 1 transaction, got %d", len(txns))
+			}
+			tx := txns[0]
+			if tx.GetType() != financev1.Transaction_EXPENSE {
+				t.Errorf("transaction type = %s, want EXPENSE", tx.GetType())
+			}
+			if tx.GetAmount() != 5000 {
+				t.Errorf("transaction amount = %d, want 5000", tx.GetAmount())
+			}
+		})
+}

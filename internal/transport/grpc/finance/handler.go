@@ -2327,7 +2327,7 @@ func (h *Handler) UpdateStatementLine(ctx context.Context, req *financev1.Update
 	if req.UpdateMask != nil {
 		hasAction := false
 		for _, p := range req.UpdateMask.Paths {
-			if strings.HasPrefix(p, "match") {
+			if p == "match" || strings.HasPrefix(p, "match.") {
 				if !hasAction {
 					maskPaths = append(maskPaths, "action", "matched_transaction_id")
 					hasAction = true

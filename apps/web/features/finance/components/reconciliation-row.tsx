@@ -572,7 +572,10 @@ export function ReconciliationRow({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onUndo(line)}
+                onClick={() => {
+                  setCustomMode(null)
+                  onUndo(line)
+                }}
                 disabled={isPending}
                 className="h-8 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground"
               >
@@ -620,11 +623,12 @@ export function ReconciliationRow({
                 <Button
                   size="sm"
                   disabled={!counterpartId || isPending}
-                  onClick={() =>
+                  onClick={() => {
+                    setCustomMode(null)
                     onSaveChoice(line, "transfer", {
                       counterpartAccountId: counterpartId,
                     })
-                  }
+                  }}
                   className="h-8 w-full rounded-lg bg-primary text-xs font-bold"
                 >
                   Confirm Transfer
@@ -780,11 +784,12 @@ export function ReconciliationRow({
                 <Button
                   size="sm"
                   disabled={!scheduledId || isPending}
-                  onClick={() =>
+                  onClick={() => {
+                    setCustomMode(null)
                     onSaveChoice(line, "scheduled", {
                       scheduledTransactionId: scheduledId,
                     })
-                  }
+                  }}
                   className="h-8 w-full rounded-lg bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700"
                 >
                   Confirm Scheduled Link
@@ -944,11 +949,12 @@ export function ReconciliationRow({
                 <Button
                   size="sm"
                   disabled={!borrowingId || isPending}
-                  onClick={() =>
+                  onClick={() => {
+                    setCustomMode(null)
                     onSaveChoice(line, "repayment", {
                       borrowingId: borrowingId,
                     })
-                  }
+                  }}
                   className="h-8 w-full rounded-lg bg-pink-600 text-xs font-bold text-white hover:bg-pink-700"
                 >
                   Link Borrowing
@@ -1071,14 +1077,15 @@ export function ReconciliationRow({
                 <Button
                   size="sm"
                   disabled={!selectedMatchId || isPending}
-                  onClick={() =>
+                  onClick={() => {
+                    setCustomMode(null)
                     onSaveChoice(line, "match", {
                       transactionId: selectedMatchId,
                       overwriteTransaction: isAmountMismatch
                         ? overwriteTransaction
                         : false,
                     })
-                  }
+                  }}
                   className="h-8 w-full rounded-lg bg-blue-600 text-xs font-bold text-white hover:bg-blue-700"
                 >
                   Confirm Selected Match
@@ -1293,14 +1300,15 @@ export function ReconciliationRow({
                 <Button
                   size="sm"
                   disabled={!selectedMatchId || isPending}
-                  onClick={() =>
+                  onClick={() => {
+                    setCustomMode(null)
                     onSaveChoice(line, "match", {
                       transactionId: selectedMatchId,
                       overwriteTransaction: isAmountMismatch
                         ? overwriteTransaction
                         : false,
                     })
-                  }
+                  }}
                   className="h-8 w-full rounded-lg bg-blue-600 text-xs font-bold text-white shadow-sm hover:bg-blue-700"
                 >
                   <Check className="mr-1.5 h-3.5 w-3.5" />

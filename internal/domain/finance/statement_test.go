@@ -841,13 +841,16 @@ func TestStatementLine_ApplyPatch_Table(t *testing.T) {
 	stID, _ := NewStatementID()
 	slID, _ := NewStatementLineID()
 	txnID, _ := NewTransactionID()
+	counterpartAccID, _ := NewAccountID()
 
 	tests := []struct {
-		name       string
-		incoming   StatementLine
-		mask       []string
-		wantStatus StatementLineStatus
-		wantTxnID  *TransactionID
+		name           string
+		initialLine    func() *StatementLine
+		incoming       StatementLine
+		mask           []string
+		wantStatus     StatementLineStatus
+		wantActionType StatementLineActionType
+		wantTxnID      *TransactionID
 	}{
 		{
 			name: "patch action match sets matched status",
@@ -857,9 +860,10 @@ func TestStatementLine_ApplyPatch_Table(t *testing.T) {
 					TransactionID: &txnID,
 				},
 			},
-			mask:       []string{"action"},
-			wantStatus: StatementLineStatusMatched,
-			wantTxnID:  &txnID,
+			mask:           []string{"action"},
+			wantStatus:     StatementLineStatusMatched,
+			wantActionType: StatementLineActionTypeMatch,
+			wantTxnID:      &txnID,
 		},
 		{
 			name: "patch action skip sets skipped status",
@@ -868,22 +872,101 @@ func TestStatementLine_ApplyPatch_Table(t *testing.T) {
 					Type: StatementLineActionTypeSkip,
 				},
 			},
-			mask:       []string{"action"},
-			wantStatus: StatementLineStatusSkipped,
-			wantTxnID:  nil,
+			mask:           []string{"action"},
+			wantStatus:     StatementLineStatusSkipped,
+			wantActionType: StatementLineActionTypeSkip,
+			wantTxnID:      nil,
+		},
+		{
+			name: "undo match line with mask [status, action, matched_transaction_id] resets to unmatched and clears action",
+			initialLine: func() *StatementLine {
+				return &StatementLine{
+					ID:                   slID,
+					StatementID:          stID,
+					RowIndex:             0,
+					DateStr:              "2026-08-01",
+					Description:          "Store",
+					Amount:               1000,
+					Status:               StatementLineStatusMatched,
+					Action:               StatementLineAction{Type: StatementLineActionTypeMatch, TransactionID: &txnID},
+					MatchedTransactionID: &txnID,
+				}
+			},
+			incoming: StatementLine{
+				Status: StatementLineStatusUnmatched,
+				Action: StatementLineAction{Type: StatementLineActionTypePending},
+			},
+			mask:           []string{"status", "action", "matched_transaction_id"},
+			wantStatus:     StatementLineStatusUnmatched,
+			wantActionType: StatementLineActionTypePending,
+			wantTxnID:      nil,
+		},
+		{
+			name: "undo skip line with mask [status, action, matched_transaction_id] resets to unmatched and clears action",
+			initialLine: func() *StatementLine {
+				return &StatementLine{
+					ID:          slID,
+					StatementID: stID,
+					RowIndex:    0,
+					DateStr:     "2026-08-01",
+					Description: "Store",
+					Amount:      1000,
+					Status:      StatementLineStatusSkipped,
+					Action:      StatementLineAction{Type: StatementLineActionTypeSkip},
+				}
+			},
+			incoming: StatementLine{
+				Status: StatementLineStatusUnmatched,
+				Action: StatementLineAction{Type: StatementLineActionTypePending},
+			},
+			mask:           []string{"status", "action", "matched_transaction_id"},
+			wantStatus:     StatementLineStatusUnmatched,
+			wantActionType: StatementLineActionTypePending,
+			wantTxnID:      nil,
+		},
+		{
+			name: "undo create transfer with mask [status, action, matched_transaction_id] resets to unmatched and clears action",
+			initialLine: func() *StatementLine {
+				return &StatementLine{
+					ID:          slID,
+					StatementID: stID,
+					RowIndex:    0,
+					DateStr:     "2026-08-01",
+					Description: "Store",
+					Amount:      -5000,
+					Status:      StatementLineStatusMatched,
+					Action: StatementLineAction{
+						Type:                 StatementLineActionTypeCreateTransfer,
+						CounterpartAccountID: &counterpartAccID,
+					},
+				}
+			},
+			incoming: StatementLine{
+				Status: StatementLineStatusUnmatched,
+				Action: StatementLineAction{Type: StatementLineActionTypePending},
+			},
+			mask:           []string{"status", "action", "matched_transaction_id"},
+			wantStatus:     StatementLineStatusUnmatched,
+			wantActionType: StatementLineActionTypePending,
+			wantTxnID:      nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			line := &StatementLine{
-				ID:          slID,
-				StatementID: stID,
-				RowIndex:    0,
-				DateStr:     "2026-08-01",
-				Description: "Store",
-				Amount:      1000,
-				Status:      StatementLineStatusUnmatched,
+			var line *StatementLine
+			if tt.initialLine != nil {
+				line = tt.initialLine()
+			} else {
+				line = &StatementLine{
+					ID:          slID,
+					StatementID: stID,
+					RowIndex:    0,
+					DateStr:     "2026-08-01",
+					Description: "Store",
+					Amount:      1000,
+					Status:      StatementLineStatusUnmatched,
+				}
 			}
 			err := line.ApplyPatch(&tt.incoming, tt.mask)
 			if err != nil {
@@ -891,6 +974,9 @@ func TestStatementLine_ApplyPatch_Table(t *testing.T) {
 			}
 			if line.Status != tt.wantStatus {
 				t.Errorf("Status = %s, want %s", line.Status, tt.wantStatus)
+			}
+			if line.Action.Type != tt.wantActionType {
+				t.Errorf("Action.Type = %s, want %s", line.Action.Type, tt.wantActionType)
 			}
 			if tt.wantTxnID == nil && line.MatchedTransactionID != nil {
 				t.Errorf("expected MatchedTransactionID to be nil, got %v", line.MatchedTransactionID)

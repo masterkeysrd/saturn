@@ -421,7 +421,7 @@ export function ReconciliationWorkspaceView() {
             statementId: targetLine.statementId,
             status: "UNMATCHED",
           } as StatementLine,
-          updateMask: { paths: ["status"] },
+          updateMask: { paths: ["status", "action", "matched_transaction_id"] },
         },
       })
       await queryClient.invalidateQueries({
