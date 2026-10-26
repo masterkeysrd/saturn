@@ -17,7 +17,7 @@ require (
 	github.com/lib/pq v1.12.3
 	github.com/masterkeysrd/loom v0.0.6
 	github.com/ollama/ollama v0.40.6
-	github.com/openai/openai-go/v3 v3.79.0
+	github.com/openai/openai-go/v3 v3.86.0
 	github.com/pdfcpu/pdfcpu v0.16.2
 	github.com/pressly/goose/v3 v3.29.0
 	github.com/robfig/cron/v3 v3.0.1
