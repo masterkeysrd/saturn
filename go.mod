@@ -13,10 +13,10 @@ require (
 	github.com/google/jsonschema-go v0.4.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.32.0
 	github.com/jmoiron/sqlx v1.4.0
-	github.com/ledongthuc/pdf v0.0.0-20260907135840-6c8c28e0e8a0
+	github.com/ledongthuc/pdf v0.0.0-20261020125853-5e46805f718e
 	github.com/lib/pq v1.12.3
 	github.com/masterkeysrd/loom v0.0.6
-	github.com/ollama/ollama v0.40.6
+	github.com/ollama/ollama v0.40.9
 	github.com/openai/openai-go/v3 v3.79.0
 	github.com/pdfcpu/pdfcpu v0.16.2
 	github.com/pressly/goose/v3 v3.29.0
@@ -95,7 +95,7 @@ require (
 	github.com/hhrutter/tiff v1.0.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/jsonschema v0.14.0 // indirect
-	github.com/klauspost/compress v1.20.1 // indirect
+	github.com/klauspost/compress v1.20.3 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260802145828-341c2f0c90b5 // indirect
 	github.com/magiconair/properties v1.18.11 // indirect
 	github.com/mailru/easyjson v0.9.2 // indirect
