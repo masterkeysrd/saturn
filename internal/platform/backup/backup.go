@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,7 +19,11 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
+const defaultBackupTimeout = 15 * time.Minute
+
 // Storage defines the interface for uploading, downloading, and deleting files.
+//
+// @Mock
 type Storage interface {
 	Upload(ctx context.Context, key string, reader io.Reader) error
 	Download(ctx context.Context, key string, writer io.Writer) error
@@ -43,6 +48,8 @@ type MetadataIndex struct {
 }
 
 // BackupManager defines the contract for taking a database backup.
+//
+// @Mock
 type BackupManager interface {
 	RunBackup(ctx context.Context, triggeredBy string) (*BackupEntry, error)
 	ListBackups(ctx context.Context) (*MetadataIndex, error)
@@ -57,12 +64,16 @@ type PostgresConfig struct {
 	Database string
 }
 
+type dumpRunnerFunc func(ctx context.Context, cfg PostgresConfig, stdout, stderr io.Writer) error
+
 // PostgresBackupManager implements BackupManager using pg_dump.
 type PostgresBackupManager struct {
 	storage     Storage
 	config      PostgresConfig
 	localIndex  string // Path to local backups.json
 	remoteIndex string // Name of index file in storage (e.g. backups.json)
+	timeout     time.Duration
+	dumpFunc    dumpRunnerFunc
 	mu          sync.Mutex
 }
 
@@ -73,10 +84,29 @@ func NewPostgresBackupManager(storage Storage, config PostgresConfig, localIndex
 		config:      config,
 		localIndex:  localIndexDir + "/backups.json",
 		remoteIndex: "backups.json",
+		timeout:     defaultBackupTimeout,
+		dumpFunc:    defaultPgDump,
 	}
 }
 
-// RunBackup streams pg_dump output to storage, compresses it, and updates metadata index.
+func defaultPgDump(ctx context.Context, cfg PostgresConfig, stdout, stderr io.Writer) error {
+	cmd := exec.CommandContext(ctx, "pg_dump",
+		"-h", cfg.Host,
+		"-p", cfg.Port,
+		"-U", cfg.User,
+		"-d", cfg.Database,
+	)
+	cmd.Env = append(os.Environ(),
+		"PGPASSWORD="+cfg.Password,
+		"PGAPPNAME=saturn-backup",
+	)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	cmd.WaitDelay = 5 * time.Second
+	return cmd.Run()
+}
+
+// RunBackup streams pg_dump output to storage and updates the metadata index.
 func (pm *PostgresBackupManager) RunBackup(ctx context.Context, triggeredBy string) (*BackupEntry, error) {
 	const op errors.Op = "platform/backup.RunBackup"
 
@@ -89,6 +119,18 @@ func (pm *PostgresBackupManager) RunBackup(ctx context.Context, triggeredBy stri
 		log.String("host", pm.config.Host),
 	)
 
+	timeout := pm.timeout
+	if timeout <= 0 {
+		timeout = defaultBackupTimeout
+	}
+	backupCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	dumpFn := pm.dumpFunc
+	if dumpFn == nil {
+		dumpFn = defaultPgDump
+	}
+
 	timestamp := time.Now().UTC().Format("20060102_150405")
 	filename := fmt.Sprintf("saturn_backup_%s.sql", timestamp)
 
@@ -100,35 +142,47 @@ func (pm *PostgresBackupManager) RunBackup(ctx context.Context, triggeredBy stri
 	sizeTracker := &countingWriter{w: hash}
 	tee := io.TeeReader(pr, sizeTracker)
 
-	var cmdErr error
+	doneCh := make(chan error, 1)
 	go func() {
-		defer func() { _ = pw.Close() }()
-
-		// Execute pg_dump command
-		cmd := exec.CommandContext(ctx, "pg_dump",
-			"-h", pm.config.Host,
-			"-p", pm.config.Port,
-			"-U", pm.config.User,
-			"-d", pm.config.Database,
-		)
-		cmd.Env = append(os.Environ(), "PGPASSWORD="+pm.config.Password)
-		cmd.Stdout = pw // write stdout directly to pipe writer
-
 		var errBuf bytes.Buffer
-		cmd.Stderr = &errBuf
-
-		if err := cmd.Run(); err != nil {
-			cmdErr = fmt.Errorf("pg_dump error: %v, stderr: %s", err, errBuf.String())
-			log.Error(ctx, "database backup pg_dump failed",
+		var runErr error
+		if err := dumpFn(backupCtx, pm.config, pw, &errBuf); err != nil {
+			runErr = fmt.Errorf("pg_dump error: %w, stderr: %s", err, strings.TrimSpace(errBuf.String()))
+			log.Error(backupCtx, "database backup pg_dump failed",
 				log.String("database", pm.config.Database),
-				log.Err(cmdErr),
+				log.Err(runErr),
 			)
 		}
+		// Propagate any pg_dump failure to the pipe reader so storage.Upload
+		// aborts rather than persisting a truncated backup as successful.
+		_ = pw.CloseWithError(runErr)
+		doneCh <- runErr
 	}()
 
 	// Stream upload to storage
-	uploadErr := pm.storage.Upload(ctx, filename, tee)
+	uploadErr := pm.storage.Upload(backupCtx, filename, tee)
+	if uploadErr != nil {
+		// Unblock any pending pipe writes and terminate pg_dump immediately.
+		_ = pr.CloseWithError(uploadErr)
+		cancel()
+	} else {
+		_ = pr.Close()
+	}
 
+	// Always wait for the pg_dump goroutine/process to exit before returning
+	// or releasing pm.mu so child processes and DB connections cannot leak.
+	cmdErr := <-doneCh
+
+	if uploadErr != nil && cmdErr != nil {
+		if errors.Is(uploadErr, cmdErr) {
+			return nil, errors.E(op, errors.Internal, cmdErr)
+		}
+		log.Error(ctx, "database backup upload failed",
+			log.String("filename", filename),
+			log.Err(uploadErr),
+		)
+		return nil, errors.E(op, errors.Internal, fmt.Errorf("storage upload failed: %w", uploadErr))
+	}
 	if cmdErr != nil {
 		return nil, errors.E(op, errors.Internal, cmdErr)
 	}

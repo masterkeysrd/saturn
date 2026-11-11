@@ -99,7 +99,7 @@ type DBConfig struct {
 
 // DSN returns the PostgreSQL data source name for connecting to the database.
 func (c DBConfig) DSN() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", c.User, c.Password, c.Host, c.Port, c.Name)
+	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable&application_name=saturn", c.User, c.Password, c.Host, c.Port, c.Name)
 }
 
 // GRPCConfig holds gRPC server settings.

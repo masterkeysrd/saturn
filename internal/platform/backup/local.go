@@ -24,27 +24,46 @@ func NewLocalStorage(dir string) (*LocalStorage, error) {
 	return &LocalStorage{dir: dir}, nil
 }
 
-// Upload writes a stream to a file.
+// Upload writes a stream atomically to a file via a temporary file in the target directory.
 func (l *LocalStorage) Upload(ctx context.Context, key string, reader io.Reader) error {
 	const op errors.Op = "platform/backup.LocalStorage.Upload"
 
 	path := filepath.Join(l.dir, key)
+	dir := filepath.Dir(path)
 
 	// Create directory structure if needed
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return errors.E(op, err)
 	}
 
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	tmpFile, err := os.CreateTemp(dir, ".upload-*")
 	if err != nil {
 		return errors.E(op, err)
 	}
-	defer func() { _ = f.Close() }()
+	tmpPath := tmpFile.Name()
+	cleanup := true
+	defer func() {
+		if cleanup {
+			_ = os.Remove(tmpPath)
+		}
+	}()
 
-	_, err = io.Copy(f, reader)
-	if err != nil {
+	if _, err := io.Copy(tmpFile, reader); err != nil {
+		_ = tmpFile.Close()
 		return errors.E(op, err)
 	}
+	if err := tmpFile.Chmod(0644); err != nil {
+		_ = tmpFile.Close()
+		return errors.E(op, err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		return errors.E(op, err)
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		return errors.E(op, err)
+	}
+
+	cleanup = false
 	return nil
 }
 
