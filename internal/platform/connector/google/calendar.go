@@ -120,23 +120,23 @@ type googleEventsResponse struct {
 }
 
 type googleEventItem struct {
-	ID                 string                    `json:"id"`
-	ICalUID            string                    `json:"iCalUID,omitempty"`
-	Status             string                    `json:"status,omitempty"`
-	Summary            string                    `json:"summary,omitempty"`
-	Description        string                    `json:"description,omitempty"`
-	Location           string                    `json:"location,omitempty"`
-	Start              *googleEventDateTime      `json:"start,omitempty"`
-	End                *googleEventDateTime      `json:"end,omitempty"`
-	Recurrence         []string                  `json:"recurrence,omitempty"`
-	RecurringEventID   string                    `json:"recurringEventId,omitempty"`
-	OriginalStartTime  *googleEventDateTime      `json:"originalStartTime,omitempty"`
-	Organizer          *googleOrganizer          `json:"organizer,omitempty"`
-	Attendees          []googleAttendee          `json:"attendees,omitempty"`
-	Reminders          *googleReminders          `json:"reminders,omitempty"`
-	ConferenceData     *googleConferenceData     `json:"conferenceData,omitempty"`
-	ETag               string                    `json:"etag,omitempty"`
-	Updated            string                    `json:"updated,omitempty"`
+	ID                string                `json:"id"`
+	ICalUID           string                `json:"iCalUID,omitempty"`
+	Status            string                `json:"status,omitempty"`
+	Summary           string                `json:"summary,omitempty"`
+	Description       string                `json:"description,omitempty"`
+	Location          string                `json:"location,omitempty"`
+	Start             *googleEventDateTime  `json:"start,omitempty"`
+	End               *googleEventDateTime  `json:"end,omitempty"`
+	Recurrence        []string              `json:"recurrence,omitempty"`
+	RecurringEventID  string                `json:"recurringEventId,omitempty"`
+	OriginalStartTime *googleEventDateTime  `json:"originalStartTime,omitempty"`
+	Organizer         *googleOrganizer      `json:"organizer,omitempty"`
+	Attendees         []googleAttendee      `json:"attendees,omitempty"`
+	Reminders         *googleReminders      `json:"reminders,omitempty"`
+	ConferenceData    *googleConferenceData `json:"conferenceData,omitempty"`
+	ETag              string                `json:"etag,omitempty"`
+	Updated           string                `json:"updated,omitempty"`
 }
 
 type googleEventDateTime struct {
