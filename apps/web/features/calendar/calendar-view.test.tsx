@@ -321,10 +321,12 @@ describe("CalendarView Component", () => {
 
     // Toggle Work Calendar
     fireEvent.click(checkbox!)
-    expect(mutateUpdateCalendar).toHaveBeenCalledWith({
-      id: "cal_work",
-      calendar: { isEnabled: false },
-    })
+    expect(mutateUpdateCalendar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "cal_work",
+        calendar: { isEnabled: false },
+      })
+    )
 
     // Find Connected Account Personal calendar toggle
     const personalToggle = screen.getByTestId("calendar-toggle-cal_personal")
@@ -333,10 +335,12 @@ describe("CalendarView Component", () => {
 
     // Toggle Personal Calendar
     fireEvent.click(personalCheckbox!)
-    expect(mutateUpdateCalendar).toHaveBeenCalledWith({
-      id: "cal_personal",
-      calendar: { isEnabled: true },
-    })
+    expect(mutateUpdateCalendar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "cal_personal",
+        calendar: { isEnabled: true },
+      })
+    )
   })
 
   it("opens create event dialog, creates timed event, and submits", async () => {

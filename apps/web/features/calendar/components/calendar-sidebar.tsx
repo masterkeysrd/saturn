@@ -73,6 +73,7 @@ export function CalendarSidebar({
     updateCalendarMutation.mutate({
       id,
       calendar: { isEnabled: !currentlyEnabled },
+      updateMask: { paths: ["isEnabled"] },
     })
   }
 

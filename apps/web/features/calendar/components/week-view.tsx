@@ -173,13 +173,13 @@ export function WeekView({
 
       {/* Scrollable Timed Grid (00:00 - 24:00) */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
-        <div className="relative grid min-h-[1152px] grid-cols-[72px_1fr]">
+        <div className="relative grid min-h-[1536px] grid-cols-[72px_1fr]">
           {/* Time gutter */}
           <div className="relative border-r border-border/30 select-none">
             {hourSlots.map((slot) => (
               <div
                 key={slot.timeString}
-                className="relative h-12 border-b border-transparent"
+                className="relative h-16 border-b border-transparent"
               >
                 {slot.hour !== 0 && (
                   <span className="absolute -top-2.5 right-3 text-right text-[11px] font-medium whitespace-nowrap text-muted-foreground tabular-nums select-none">
@@ -216,7 +216,7 @@ export function WeekView({
                       onClick={() =>
                         onSelectSlot(day.dateString, slot.timeString)
                       }
-                      className="h-12 cursor-pointer border-b border-border/25 transition hover:bg-muted/20"
+                      className="h-16 cursor-pointer border-b border-border/25 transition hover:bg-muted/20"
                     />
                   ))}
 
@@ -235,51 +235,85 @@ export function WeekView({
                   {/* Timed Event Blocks */}
                   {dayLayout.map((item) => {
                     const occ = item.event
+                    const isVeryShort = item.heightPct <= 1.5
+                    const isShort = item.heightPct < 3.2
+                    const startTimeStr = tz.formatTime(occ.startTime, {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })
+                    const endTimeStr = tz.formatTime(occ.endTime, {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })
 
                     return (
                       <div
                         key={`${day.dateString}-${item.id}`}
                         data-testid={`timed-event-${item.id}`}
+                        title={`${occ.title}\n${startTimeStr} – ${endTimeStr}${occ.location ? `\n${occ.location}` : ""}`}
                         onClick={(e) => {
                           e.stopPropagation()
                           onSelectOccurrence(occ)
                         }}
                         style={{
                           top: `${item.topPct}%`,
-                          height: `${item.heightPct}%`,
-                          left: `${item.leftPct}%`,
-                          width: `${item.widthPct}%`,
+                          height: `calc(${item.heightPct}% - 2px)`,
+                          left:
+                            item.widthPct < 100
+                              ? `calc(${item.leftPct}% + 1px)`
+                              : "1px",
+                          width:
+                            item.widthPct < 100
+                              ? `calc(${item.widthPct}% - 2px)`
+                              : "calc(100% - 2px)",
                           zIndex: item.zIndex,
                           backgroundColor: `${occ.color || "#3b82f6"}22`,
                           borderLeft: `3px solid ${occ.color || "#3b82f6"}`,
                         }}
-                        className="absolute cursor-pointer overflow-hidden rounded-r-md border border-l-0 border-border/30 p-1.5 text-xs shadow-2xs transition hover:shadow-xs hover:brightness-95"
-                      >
-                        <div className="truncate leading-tight font-semibold text-foreground">
-                          {occ.title}
-                        </div>
-                        <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
-                          {tz.formatTime(occ.startTime, {
-                            hour: "numeric",
-                            minute: "2-digit",
-                          })}{" "}
-                          -{" "}
-                          {tz.formatTime(occ.endTime, {
-                            hour: "numeric",
-                            minute: "2-digit",
-                          })}
-                        </div>
-                        {occ.location && (
-                          <div className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-muted-foreground">
-                            <MapPin className="h-2.5 w-2.5 shrink-0" />
-                            <span className="truncate">{occ.location}</span>
-                          </div>
+                        className={cn(
+                          "absolute cursor-pointer overflow-hidden rounded-r-md border border-l-0 border-border/30 text-xs shadow-2xs transition-colors hover:z-20 hover:brightness-95",
+                          isVeryShort
+                            ? "px-0.5 py-0"
+                            : isShort
+                              ? "px-0.5 py-0.5"
+                              : "p-1.5"
                         )}
-                        {occ.meetUrl && (
-                          <div className="mt-1 flex items-center gap-1 text-[10px] font-medium text-primary">
-                            <Video className="h-2.5 w-2.5 shrink-0" />
-                            <span>Join</span>
+                      >
+                        {isVeryShort ? (
+                          <div className="flex items-center gap-1 truncate text-[10px] leading-tight font-semibold text-foreground">
+                            <span className="truncate">{occ.title}</span>
+                            <span className="shrink-0 text-[9px] font-normal text-muted-foreground opacity-80">
+                              {startTimeStr}
+                            </span>
                           </div>
+                        ) : isShort ? (
+                          <div className="flex items-center gap-1.5 truncate text-[11px] leading-tight font-semibold text-foreground">
+                            <span className="truncate">{occ.title}</span>
+                            <span className="shrink-0 text-[10px] font-normal text-muted-foreground">
+                              {startTimeStr}
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="truncate leading-tight font-semibold text-foreground">
+                              {occ.title}
+                            </div>
+                            <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
+                              {startTimeStr} – {endTimeStr}
+                            </div>
+                            {item.heightPct >= 4.5 && occ.location && (
+                              <div className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-muted-foreground">
+                                <MapPin className="h-2.5 w-2.5 shrink-0" />
+                                <span className="truncate">{occ.location}</span>
+                              </div>
+                            )}
+                            {item.heightPct >= 5.5 && occ.meetUrl && (
+                              <div className="mt-1 flex items-center gap-1 text-[10px] font-medium text-primary">
+                                <Video className="h-2.5 w-2.5 shrink-0" />
+                                <span>Join</span>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     )
