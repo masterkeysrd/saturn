@@ -15,7 +15,7 @@ import (
 func (c *coordinator) SyncConnectedAccountCalendars(ctx context.Context, req *SyncConnectedAccountCalendarsRequest) error {
 	const op errors.Op = "application/calendar.SyncConnectedAccountCalendars"
 
-	if req.ConnectedAccountID == "" {
+	if req == nil || req.ConnectedAccountID == "" {
 		return errors.E(op, errors.Invalid, "connected_account_id is required")
 	}
 
