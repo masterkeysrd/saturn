@@ -1,0 +1,24 @@
+# Mail service API configuration.
+#
+# All mail endpoints require JWT Bearer authentication.
+# Space-scoped endpoints require the Space-Id header.
+
+name: saturn.mail.v1
+title: "Saturn Mail API"
+apis:
+  - saturn.mail.v1.MailService
+
+documentation:
+  summary: "Provides email synchronization, mailbox management, thread view hydration, hybrid search, drafts, and write-through operations. Space-scoped endpoints require the 'space-id' header containing the workspace ID."
+
+authentication:
+  rules:
+    # All mail endpoints require authentication
+    - selector: "saturn.mail.v1.MailService.*"
+      auth_required: true
+
+space:
+  rules:
+    # Mail endpoints require workspace scope validation from metadata space-id header
+    - selector: "saturn.mail.v1.MailService.*"
+      scoped: true

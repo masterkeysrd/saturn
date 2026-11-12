@@ -1,0 +1,519 @@
+syntax = "proto3";
+
+package saturn.mail.v1;
+
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/mail/v1;mailv1";
+
+// MailService provides email synchronization, mailbox management, thread view hydration,
+// hybrid search, drafts, and write-through operations across connected accounts.
+service MailService {
+  // Lists all mailboxes and folders accessible within the space.
+  rpc ListMailboxes(ListMailboxesRequest) returns (ListMailboxesResponse) {
+    option (google.api.http) = {get: "/v1/mail/mailboxes"};
+  }
+
+  // Creates a new custom mailbox in the workspace.
+  rpc CreateMailbox(CreateMailboxRequest) returns (Mailbox) {
+    option (google.api.http) = {
+      post: "/v1/mail/mailboxes"
+      body: "mailbox"
+    };
+    option (google.api.method_signature) = "mailbox";
+  }
+
+  // Updates attributes of an existing mailbox using a field mask.
+  rpc UpdateMailbox(UpdateMailboxRequest) returns (Mailbox) {
+    option (google.api.http) = {
+      patch: "/v1/mail/mailboxes/{id}"
+      body: "mailbox"
+    };
+    option (google.api.method_signature) = "id,mailbox,update_mask";
+  }
+
+  // Deletes a custom mailbox. System mailboxes cannot be deleted.
+  rpc DeleteMailbox(DeleteMailboxRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/mail/mailboxes/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Lists email threads matching search query or mailbox/system bucket filters.
+  rpc ListThreads(ListThreadsRequest) returns (ListThreadsResponse) {
+    option (google.api.http) = {get: "/v1/mail/threads"};
+  }
+
+  // Retrieves details of a specific thread by ID, hydrating all messages and bodies.
+  rpc GetThread(GetThreadRequest) returns (Thread) {
+    option (google.api.http) = {get: "/v1/mail/threads/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Applies label and status modifications to a single email thread.
+  rpc ModifyThread(ModifyThreadRequest) returns (Thread) {
+    option (google.api.http) = {
+      post: "/v1/mail/threads/{id}:modify"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
+  // Applies label and status modifications to multiple email threads in batch.
+  rpc BatchModifyThreads(BatchModifyThreadsRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/mail/threads:batchModify"
+      body: "*"
+    };
+  }
+
+  // Lists email drafts matching optional filters.
+  rpc ListDrafts(ListDraftsRequest) returns (ListDraftsResponse) {
+    option (google.api.http) = {get: "/v1/mail/drafts"};
+  }
+
+  // Retrieves details of a specific draft by ID.
+  rpc GetDraft(GetDraftRequest) returns (Draft) {
+    option (google.api.http) = {get: "/v1/mail/drafts/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Creates a new email draft in the workspace.
+  rpc CreateDraft(CreateDraftRequest) returns (Draft) {
+    option (google.api.http) = {
+      post: "/v1/mail/drafts"
+      body: "draft"
+    };
+    option (google.api.method_signature) = "draft";
+  }
+
+  // Updates an existing draft composition using a field mask.
+  rpc UpdateDraft(UpdateDraftRequest) returns (Draft) {
+    option (google.api.http) = {
+      patch: "/v1/mail/drafts/{id}"
+      body: "draft"
+    };
+    option (google.api.method_signature) = "id,draft,update_mask";
+  }
+
+  // Deletes an email draft from the workspace and provider.
+  rpc DeleteDraft(DeleteDraftRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/mail/drafts/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Sends an existing draft via the upstream email provider.
+  rpc SendDraft(SendDraftRequest) returns (Message) {
+    option (google.api.http) = {
+      post: "/v1/mail/drafts/{id}:send"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+}
+
+// System mailbox roles mapping to provider-agnostic system buckets.
+enum MailboxRole {
+  // Default unspecified mailbox role.
+  MAILBOX_ROLE_UNSPECIFIED = 0;
+  // Inbox mailbox bucket.
+  MAILBOX_ROLE_INBOX = 1;
+  // Starred / flagged mailbox bucket.
+  MAILBOX_ROLE_STARRED = 2;
+  // Sent messages mailbox bucket.
+  MAILBOX_ROLE_SENT = 3;
+  // Draft messages mailbox bucket.
+  MAILBOX_ROLE_DRAFTS = 4;
+  // Archived messages mailbox bucket.
+  MAILBOX_ROLE_ARCHIVE = 5;
+  // Trash / deleted messages mailbox bucket.
+  MAILBOX_ROLE_TRASH = 6;
+  // Spam / junk mailbox bucket.
+  MAILBOX_ROLE_SPAM = 7;
+  // User-created custom mailbox or label.
+  MAILBOX_ROLE_CUSTOM = 8;
+}
+
+// Composition mode for drafts.
+enum DraftMode {
+  // Default unspecified draft mode.
+  DRAFT_MODE_UNSPECIFIED = 0;
+  // New standalone email draft.
+  DRAFT_MODE_NEW = 1;
+  // Reply to original sender only.
+  DRAFT_MODE_REPLY = 2;
+  // Reply to all original recipients.
+  DRAFT_MODE_REPLY_ALL = 3;
+  // Forward existing message.
+  DRAFT_MODE_FORWARD = 4;
+}
+
+// Participant represents an email sender, recipient, or correspondent.
+message Participant {
+  // Display name of the participant.
+  string name = 1;
+  // Email address of the participant.
+  string email = 2;
+}
+
+// Attachment models metadata and signed download URL for an attachment without carrying raw bytes.
+message Attachment {
+  // Unique attachment identifier.
+  string id = 1;
+  // File name of the attachment.
+  string filename = 2;
+  // MIME content type of the attachment.
+  string content_type = 3;
+  // Size of the attachment in bytes.
+  int64 size = 4;
+  // Optional Content-ID for inline email attachments.
+  string content_id = 5;
+  // Whether the attachment is referenced inline within the HTML body.
+  bool is_inline = 6;
+  // Ephemeral signed URL to stream download the attachment via HTTP.
+  string download_url = 7;
+}
+
+// Mailbox models a canonical or synced email folder/label.
+message Mailbox {
+  // Unique mailbox identifier (mbx_...).
+  string id = 1;
+  // Space / tenant workspace identifier.
+  string space_id = 2;
+  // Associated connected account identifier.
+  string connected_account_id = 3;
+  // Upstream provider mailbox or label identifier.
+  string provider_mailbox_id = 4;
+  // Display name of the mailbox.
+  string name = 5;
+  // Canonical system role or custom.
+  MailboxRole system_role = 6;
+  // Optional display color in hex format.
+  string color = 7;
+  // Number of unread threads/messages in this mailbox.
+  int32 unread_count = 8;
+  // Total count of threads/messages in this mailbox.
+  int32 total_count = 9;
+  // Timestamp when the mailbox was first registered.
+  google.protobuf.Timestamp create_time = 10;
+  // Timestamp when the mailbox was last updated.
+  google.protobuf.Timestamp update_time = 11;
+}
+
+// Message models an individual email message within a thread.
+message Message {
+  // Unique message identifier (msg_...).
+  string id = 1;
+  // Space / tenant workspace identifier.
+  string space_id = 2;
+  // Associated connected account identifier.
+  string connected_account_id = 3;
+  // Parent thread identifier.
+  string thread_id = 4;
+  // Upstream provider message identifier.
+  string provider_message_id = 5;
+  // Canonical RFC 5322 Message-ID header value.
+  string rfc_message_id = 6;
+  // Canonical In-Reply-To header value.
+  string in_reply_to = 7;
+  // Canonical References header value.
+  string references = 8;
+  // Subject line of the message.
+  string subject = 9;
+  // Text snippet summarizing the message content.
+  string snippet = 10;
+  // Sender information.
+  Participant from = 11;
+  // Primary recipients.
+  repeated Participant to = 12;
+  // Carbon copy recipients.
+  repeated Participant cc = 13;
+  // Blind carbon copy recipients.
+  repeated Participant bcc = 14;
+  // Reply-To recipients.
+  repeated Participant reply_to = 15;
+  // Timestamp when the message was sent by the sender.
+  google.protobuf.Timestamp sent_at = 16;
+  // Timestamp when the message was received by the mail server.
+  google.protobuf.Timestamp received_at = 17;
+  // Whether the message is unread.
+  bool is_unread = 18;
+  // Whether the message is starred / flagged.
+  bool is_starred = 19;
+  // Whether the message is a draft.
+  bool is_draft = 20;
+  // Attachments associated with the message.
+  repeated Attachment attachments = 21;
+  // Whether the message body contains remote external images.
+  bool has_remote_images = 22;
+  // Whether the sanitized message body is cached locally.
+  bool body_cached = 23;
+  // Sanitized HTML body content (populated on GetThread).
+  string body_html = 24;
+  // Plain text body content (populated on GetThread).
+  string body_plain = 25;
+  // Timestamp when the message record was created.
+  google.protobuf.Timestamp create_time = 26;
+  // Timestamp when the message record was last updated.
+  google.protobuf.Timestamp update_time = 27;
+}
+
+// Thread models an aggregated email conversation consisting of one or more messages.
+message Thread {
+  // Unique thread identifier (mth_...).
+  string id = 1;
+  // Space / tenant workspace identifier.
+  string space_id = 2;
+  // Associated connected account identifier.
+  string connected_account_id = 3;
+  // Upstream provider thread identifier.
+  string provider_thread_id = 4;
+  // Subject line of the thread conversation.
+  string subject = 5;
+  // Short text snippet summarizing recent activity.
+  string snippet = 6;
+  // Distinct participants involved across messages in the thread.
+  repeated Participant participants = 7;
+  // Number of messages in the thread.
+  int32 message_count = 8;
+  // Whether any message in the thread contains attachments.
+  bool has_attachments = 9;
+  // Whether any message in the thread is unread.
+  bool is_unread = 10;
+  // Whether any message in the thread is starred / flagged.
+  bool is_starred = 11;
+  // Whether the thread resides in the Inbox bucket.
+  bool in_inbox = 12;
+  // Whether the thread resides in the Sent bucket.
+  bool in_sent = 13;
+  // Whether the thread contains drafts.
+  bool in_drafts = 14;
+  // Whether the thread resides in the Trash bucket.
+  bool in_trash = 15;
+  // Whether the thread resides in the Spam bucket.
+  bool in_spam = 16;
+  // Mailbox IDs containing this thread.
+  repeated string mailbox_ids = 17;
+  // Timestamp of the latest message in the thread.
+  google.protobuf.Timestamp last_message_at = 18;
+  // Timestamp when the thread record was created.
+  google.protobuf.Timestamp create_time = 19;
+  // Timestamp when the thread record was last updated.
+  google.protobuf.Timestamp update_time = 20;
+  // Chronological messages in the thread (populated on GetThread).
+  repeated Message messages = 21;
+}
+
+// Draft models an editable email composition.
+message Draft {
+  // Unique draft identifier (mdf_...).
+  string id = 1;
+  // Space / tenant workspace identifier.
+  string space_id = 2;
+  // Associated connected account identifier.
+  string connected_account_id = 3;
+  // Upstream provider draft identifier.
+  string provider_draft_id = 4;
+  // Upstream provider message identifier.
+  string provider_message_id = 5;
+  // Associated thread identifier if this draft belongs to a conversation.
+  string thread_id = 6;
+  // Message identifier being replied to, if applicable.
+  string reply_to_message_id = 7;
+  // Composition mode (new, reply, reply_all, forward).
+  DraftMode mode = 8;
+  // Sender email address.
+  string from = 9;
+  // Primary recipients.
+  repeated Participant to = 10;
+  // Carbon copy recipients.
+  repeated Participant cc = 11;
+  // Blind carbon copy recipients.
+  repeated Participant bcc = 12;
+  // Subject line of the draft.
+  string subject = 13;
+  // HTML body content.
+  string body_html = 14;
+  // Plain text body content.
+  string body_text = 15;
+  // Draft attachment metadata.
+  repeated Attachment attachments = 16;
+  // Optimistic concurrency control version counter.
+  int64 version = 17;
+  // Timestamp when the draft was created.
+  google.protobuf.Timestamp create_time = 18;
+  // Timestamp when the draft was last updated.
+  google.protobuf.Timestamp update_time = 19;
+}
+
+// Request to list mailboxes.
+message ListMailboxesRequest {
+  // Optional filter by connected account.
+  string connected_account_id = 1;
+  // Optional filter by system mailbox role.
+  MailboxRole system_role = 2;
+}
+
+// Response containing list of mailboxes.
+message ListMailboxesResponse {
+  // List of matching mailboxes.
+  repeated Mailbox mailboxes = 1;
+}
+
+// Request to create a custom mailbox.
+message CreateMailboxRequest {
+  // Mailbox entity to create.
+  Mailbox mailbox = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to update an existing mailbox.
+message UpdateMailboxRequest {
+  // Mailbox identifier.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  // Updated mailbox fields.
+  Mailbox mailbox = 2 [(google.api.field_behavior) = REQUIRED];
+  // Field mask specifying updated attributes.
+  google.protobuf.FieldMask update_mask = 3;
+}
+
+// Request to delete a custom mailbox.
+message DeleteMailboxRequest {
+  // Mailbox identifier to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to list email threads.
+message ListThreadsRequest {
+  // Optional filter by connected account.
+  string connected_account_id = 1;
+  // Optional filter by mailbox ID.
+  string mailbox_id = 2;
+  // Optional filter by canonical system bucket.
+  MailboxRole system_bucket = 3;
+  // Optional filter for unread status.
+  optional bool is_unread = 4;
+  // Optional filter for starred status.
+  optional bool is_starred = 5;
+  // Optional search query for hybrid search (local FTS + upstream provider).
+  string query = 6;
+  // Maximum number of threads to return per page.
+  int32 page_size = 7;
+  // Pagination token from previous list response.
+  string page_token = 8;
+}
+
+// Response containing list of threads.
+message ListThreadsResponse {
+  // List of matching threads.
+  repeated Thread threads = 1;
+  // Pagination token for fetching next page.
+  string next_page_token = 2;
+  // Estimated total number of matching threads.
+  int32 total_size = 3;
+}
+
+// Request to retrieve a thread and its messages.
+message GetThreadRequest {
+  // Thread identifier to retrieve.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to modify labels or flags of a thread.
+message ModifyThreadRequest {
+  // Thread identifier to modify.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  // Mailbox IDs to add the thread to.
+  repeated string add_mailbox_ids = 2;
+  // Mailbox IDs to remove the thread from.
+  repeated string remove_mailbox_ids = 3;
+  // Starred status mutation.
+  optional bool is_starred = 4;
+  // Unread status mutation.
+  optional bool is_unread = 5;
+  // Inbox presence mutation.
+  optional bool in_inbox = 6;
+  // Trash presence mutation.
+  optional bool in_trash = 7;
+  // Spam presence mutation.
+  optional bool in_spam = 8;
+}
+
+// Request to modify labels or flags of multiple threads in batch.
+message BatchModifyThreadsRequest {
+  // Thread identifiers to modify.
+  repeated string ids = 1 [(google.api.field_behavior) = REQUIRED];
+  // Mailbox IDs to add the threads to.
+  repeated string add_mailbox_ids = 2;
+  // Mailbox IDs to remove the threads from.
+  repeated string remove_mailbox_ids = 3;
+  // Starred status mutation.
+  optional bool is_starred = 4;
+  // Unread status mutation.
+  optional bool is_unread = 5;
+  // Inbox presence mutation.
+  optional bool in_inbox = 6;
+  // Trash presence mutation.
+  optional bool in_trash = 7;
+  // Spam presence mutation.
+  optional bool in_spam = 8;
+}
+
+// Request to list drafts.
+message ListDraftsRequest {
+  // Optional filter by connected account.
+  string connected_account_id = 1;
+  // Optional filter by thread ID.
+  string thread_id = 2;
+  // Maximum number of drafts to return per page.
+  int32 page_size = 3;
+  // Pagination token from previous list response.
+  string page_token = 4;
+}
+
+// Response containing list of drafts.
+message ListDraftsResponse {
+  // List of matching drafts.
+  repeated Draft drafts = 1;
+  // Pagination token for fetching next page.
+  string next_page_token = 2;
+  // Total number of matching drafts.
+  int32 total_size = 3;
+}
+
+// Request to retrieve a draft by ID.
+message GetDraftRequest {
+  // Draft identifier to retrieve.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to create a new draft.
+message CreateDraftRequest {
+  // Draft composition to create.
+  Draft draft = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to update an existing draft.
+message UpdateDraftRequest {
+  // Draft identifier to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  // Updated draft attributes.
+  Draft draft = 2 [(google.api.field_behavior) = REQUIRED];
+  // Field mask specifying which draft fields are being updated.
+  google.protobuf.FieldMask update_mask = 3;
+}
+
+// Request to delete a draft.
+message DeleteDraftRequest {
+  // Draft identifier to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to send an existing draft.
+message SendDraftRequest {
+  // Draft identifier to send.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}

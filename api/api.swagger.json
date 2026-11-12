@@ -22,6 +22,10 @@
       "description": "Identity provides user authentication and session management."
     },
     {
+      "name": "MailService",
+      "description": "MailService provides email synchronization, mailbox management, thread view hydration,\nhybrid search, drafts, and write-through operations across connected accounts."
+    },
+    {
       "name": "AgentService",
       "description": "AgentService manages LLM connection providers, AI agent instances, and logs."
     },
@@ -5226,6 +5230,586 @@
         ]
       }
     },
+    "/v1/mail/drafts": {
+      "get": {
+        "summary": "Lists email drafts matching optional filters.",
+        "operationId": "MailService_ListDrafts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListDraftsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connectedAccountId",
+            "description": "Optional filter by connected account.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "threadId",
+            "description": "Optional filter by thread ID.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "description": "Maximum number of drafts to return per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "description": "Pagination token from previous list response.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      },
+      "post": {
+        "summary": "Creates a new email draft in the workspace.",
+        "operationId": "MailService_CreateDraft",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Draft"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "draft",
+            "description": "Draft composition to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Draft"
+            }
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      }
+    },
+    "/v1/mail/drafts/{id}": {
+      "get": {
+        "summary": "Retrieves details of a specific draft by ID.",
+        "operationId": "MailService_GetDraft",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Draft"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Draft identifier to retrieve.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      },
+      "delete": {
+        "summary": "Deletes an email draft from the workspace and provider.",
+        "operationId": "MailService_DeleteDraft",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Draft identifier to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      },
+      "patch": {
+        "summary": "Updates an existing draft composition using a field mask.",
+        "operationId": "MailService_UpdateDraft",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Draft"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Draft identifier to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "draft",
+            "description": "Updated draft attributes.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Draft"
+            }
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      }
+    },
+    "/v1/mail/drafts/{id}:send": {
+      "post": {
+        "summary": "Sends an existing draft via the upstream email provider.",
+        "operationId": "MailService_SendDraft",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Message"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Draft identifier to send.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MailServiceSendDraftBody"
+            }
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      }
+    },
+    "/v1/mail/mailboxes": {
+      "get": {
+        "summary": "Lists all mailboxes and folders accessible within the space.",
+        "operationId": "MailService_ListMailboxes",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListMailboxesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connectedAccountId",
+            "description": "Optional filter by connected account.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "systemRole",
+            "description": "Optional filter by system mailbox role.\n\n - MAILBOX_ROLE_INBOX: Inbox mailbox bucket.\n - MAILBOX_ROLE_STARRED: Starred / flagged mailbox bucket.\n - MAILBOX_ROLE_SENT: Sent messages mailbox bucket.\n - MAILBOX_ROLE_DRAFTS: Draft messages mailbox bucket.\n - MAILBOX_ROLE_ARCHIVE: Archived messages mailbox bucket.\n - MAILBOX_ROLE_TRASH: Trash / deleted messages mailbox bucket.\n - MAILBOX_ROLE_SPAM: Spam / junk mailbox bucket.\n - MAILBOX_ROLE_CUSTOM: User-created custom mailbox or label.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "MAILBOX_ROLE_INBOX",
+              "MAILBOX_ROLE_STARRED",
+              "MAILBOX_ROLE_SENT",
+              "MAILBOX_ROLE_DRAFTS",
+              "MAILBOX_ROLE_ARCHIVE",
+              "MAILBOX_ROLE_TRASH",
+              "MAILBOX_ROLE_SPAM",
+              "MAILBOX_ROLE_CUSTOM"
+            ]
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      },
+      "post": {
+        "summary": "Creates a new custom mailbox in the workspace.",
+        "operationId": "MailService_CreateMailbox",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Mailbox"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mailbox",
+            "description": "Mailbox entity to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Mailbox"
+            }
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      }
+    },
+    "/v1/mail/mailboxes/{id}": {
+      "delete": {
+        "summary": "Deletes a custom mailbox. System mailboxes cannot be deleted.",
+        "operationId": "MailService_DeleteMailbox",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Mailbox identifier to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      },
+      "patch": {
+        "summary": "Updates attributes of an existing mailbox using a field mask.",
+        "operationId": "MailService_UpdateMailbox",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Mailbox"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Mailbox identifier.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "mailbox",
+            "description": "Updated mailbox fields.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Mailbox"
+            }
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      }
+    },
+    "/v1/mail/threads": {
+      "get": {
+        "summary": "Lists email threads matching search query or mailbox/system bucket filters.",
+        "operationId": "MailService_ListThreads",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListThreadsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connectedAccountId",
+            "description": "Optional filter by connected account.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "mailboxId",
+            "description": "Optional filter by mailbox ID.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "systemBucket",
+            "description": "Optional filter by canonical system bucket.\n\n - MAILBOX_ROLE_INBOX: Inbox mailbox bucket.\n - MAILBOX_ROLE_STARRED: Starred / flagged mailbox bucket.\n - MAILBOX_ROLE_SENT: Sent messages mailbox bucket.\n - MAILBOX_ROLE_DRAFTS: Draft messages mailbox bucket.\n - MAILBOX_ROLE_ARCHIVE: Archived messages mailbox bucket.\n - MAILBOX_ROLE_TRASH: Trash / deleted messages mailbox bucket.\n - MAILBOX_ROLE_SPAM: Spam / junk mailbox bucket.\n - MAILBOX_ROLE_CUSTOM: User-created custom mailbox or label.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "MAILBOX_ROLE_INBOX",
+              "MAILBOX_ROLE_STARRED",
+              "MAILBOX_ROLE_SENT",
+              "MAILBOX_ROLE_DRAFTS",
+              "MAILBOX_ROLE_ARCHIVE",
+              "MAILBOX_ROLE_TRASH",
+              "MAILBOX_ROLE_SPAM",
+              "MAILBOX_ROLE_CUSTOM"
+            ]
+          },
+          {
+            "name": "isUnread",
+            "description": "Optional filter for unread status.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "isStarred",
+            "description": "Optional filter for starred status.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "query",
+            "description": "Optional search query for hybrid search (local FTS + upstream provider).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "description": "Maximum number of threads to return per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "description": "Pagination token from previous list response.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      }
+    },
+    "/v1/mail/threads/{id}": {
+      "get": {
+        "summary": "Retrieves details of a specific thread by ID, hydrating all messages and bodies.",
+        "operationId": "MailService_GetThread",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Thread"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Thread identifier to retrieve.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      }
+    },
+    "/v1/mail/threads/{id}:modify": {
+      "post": {
+        "summary": "Applies label and status modifications to a single email thread.",
+        "operationId": "MailService_ModifyThread",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Thread"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Thread identifier to modify.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MailServiceModifyThreadBody"
+            }
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      }
+    },
+    "/v1/mail/threads:batchModify": {
+      "post": {
+        "summary": "Applies label and status modifications to multiple email threads in batch.",
+        "operationId": "MailService_BatchModifyThreads",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Request to modify labels or flags of multiple threads in batch.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BatchModifyThreadsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MailService"
+        ]
+      }
+    },
     "/v1/platform/agent/agents": {
       "get": {
         "summary": "Lists all active AI Agent instances in the workspace.",
@@ -7402,6 +7986,50 @@
       },
       "description": "MfaChallenge contains challenge details when Step 2 verification is required."
     },
+    "MailServiceModifyThreadBody": {
+      "type": "object",
+      "properties": {
+        "addMailboxIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Mailbox IDs to add the thread to."
+        },
+        "removeMailboxIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Mailbox IDs to remove the thread from."
+        },
+        "isStarred": {
+          "type": "boolean",
+          "description": "Starred status mutation."
+        },
+        "isUnread": {
+          "type": "boolean",
+          "description": "Unread status mutation."
+        },
+        "inInbox": {
+          "type": "boolean",
+          "description": "Inbox presence mutation."
+        },
+        "inTrash": {
+          "type": "boolean",
+          "description": "Trash presence mutation."
+        },
+        "inSpam": {
+          "type": "boolean",
+          "description": "Spam presence mutation."
+        }
+      },
+      "description": "Request to modify labels or flags of a thread."
+    },
+    "MailServiceSendDraftBody": {
+      "type": "object",
+      "description": "Request to send an existing draft."
+    },
     "MessageAdminRetryDeliveryBody": {
       "type": "object",
       "description": "Request message for MessageAdmin.RetryDelivery."
@@ -8565,6 +9193,41 @@
       },
       "description": "The response for\n[AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument]."
     },
+    "v1Attachment": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique attachment identifier."
+        },
+        "filename": {
+          "type": "string",
+          "description": "File name of the attachment."
+        },
+        "contentType": {
+          "type": "string",
+          "description": "MIME content type of the attachment."
+        },
+        "size": {
+          "type": "string",
+          "format": "int64",
+          "description": "Size of the attachment in bytes."
+        },
+        "contentId": {
+          "type": "string",
+          "description": "Optional Content-ID for inline email attachments."
+        },
+        "isInline": {
+          "type": "boolean",
+          "description": "Whether the attachment is referenced inline within the HTML body."
+        },
+        "downloadUrl": {
+          "type": "string",
+          "description": "Ephemeral signed URL to stream download the attachment via HTTP."
+        }
+      },
+      "description": "Attachment models metadata and signed download URL for an attachment without carrying raw bytes."
+    },
     "v1Attendee": {
       "type": "object",
       "properties": {
@@ -8643,6 +9306,56 @@
         }
       },
       "description": "BackupEntry represents a database backup snapshot record."
+    },
+    "v1BatchModifyThreadsRequest": {
+      "type": "object",
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Thread identifiers to modify."
+        },
+        "addMailboxIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Mailbox IDs to add the threads to."
+        },
+        "removeMailboxIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Mailbox IDs to remove the threads from."
+        },
+        "isStarred": {
+          "type": "boolean",
+          "description": "Starred status mutation."
+        },
+        "isUnread": {
+          "type": "boolean",
+          "description": "Unread status mutation."
+        },
+        "inInbox": {
+          "type": "boolean",
+          "description": "Inbox presence mutation."
+        },
+        "inTrash": {
+          "type": "boolean",
+          "description": "Trash presence mutation."
+        },
+        "inSpam": {
+          "type": "boolean",
+          "description": "Spam presence mutation."
+        }
+      },
+      "description": "Request to modify labels or flags of multiple threads in batch.",
+      "required": [
+        "ids"
+      ]
     },
     "v1Borrowing": {
       "type": "object",
@@ -9718,6 +10431,117 @@
         "contentType",
         "content"
       ]
+    },
+    "v1Draft": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique draft identifier (mdf_...)."
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Space / tenant workspace identifier."
+        },
+        "connectedAccountId": {
+          "type": "string",
+          "description": "Associated connected account identifier."
+        },
+        "providerDraftId": {
+          "type": "string",
+          "description": "Upstream provider draft identifier."
+        },
+        "providerMessageId": {
+          "type": "string",
+          "description": "Upstream provider message identifier."
+        },
+        "threadId": {
+          "type": "string",
+          "description": "Associated thread identifier if this draft belongs to a conversation."
+        },
+        "replyToMessageId": {
+          "type": "string",
+          "description": "Message identifier being replied to, if applicable."
+        },
+        "mode": {
+          "$ref": "#/definitions/v1DraftMode",
+          "description": "Composition mode (new, reply, reply_all, forward)."
+        },
+        "from": {
+          "type": "string",
+          "description": "Sender email address."
+        },
+        "to": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Participant"
+          },
+          "description": "Primary recipients."
+        },
+        "cc": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Participant"
+          },
+          "description": "Carbon copy recipients."
+        },
+        "bcc": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Participant"
+          },
+          "description": "Blind carbon copy recipients."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject line of the draft."
+        },
+        "bodyHtml": {
+          "type": "string",
+          "description": "HTML body content."
+        },
+        "bodyText": {
+          "type": "string",
+          "description": "Plain text body content."
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Attachment"
+          },
+          "description": "Draft attachment metadata."
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Optimistic concurrency control version counter."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the draft was created."
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the draft was last updated."
+        }
+      },
+      "description": "Draft models an editable email composition."
+    },
+    "v1DraftMode": {
+      "type": "string",
+      "enum": [
+        "DRAFT_MODE_NEW",
+        "DRAFT_MODE_REPLY",
+        "DRAFT_MODE_REPLY_ALL",
+        "DRAFT_MODE_FORWARD"
+      ],
+      "description": "Composition mode for drafts.\n\n - DRAFT_MODE_NEW: New standalone email draft.\n - DRAFT_MODE_REPLY: Reply to original sender only.\n - DRAFT_MODE_REPLY_ALL: Reply to all original recipients.\n - DRAFT_MODE_FORWARD: Forward existing message."
     },
     "v1EnsureDefaultCalendarRequest": {
       "type": "object",
@@ -11067,6 +11891,29 @@
       },
       "description": "Response message for Identity.ListDevices."
     },
+    "v1ListDraftsResponse": {
+      "type": "object",
+      "properties": {
+        "drafts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Draft"
+          },
+          "description": "List of matching drafts."
+        },
+        "nextPageToken": {
+          "type": "string",
+          "description": "Pagination token for fetching next page."
+        },
+        "totalSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of matching drafts."
+        }
+      },
+      "description": "Response containing list of drafts."
+    },
     "v1ListEventsResponse": {
       "type": "object",
       "properties": {
@@ -11205,6 +12052,20 @@
         }
       },
       "description": "Response message for Identity.ListMFAFactors."
+    },
+    "v1ListMailboxesResponse": {
+      "type": "object",
+      "properties": {
+        "mailboxes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Mailbox"
+          },
+          "description": "List of matching mailboxes."
+        }
+      },
+      "description": "Response containing list of mailboxes."
     },
     "v1ListMySecurityEventsResponse": {
       "type": "object",
@@ -11369,6 +12230,29 @@
       },
       "description": "The response for\n[ListStatements][saturn.finance.v1.Finance.ListStatements]."
     },
+    "v1ListThreadsResponse": {
+      "type": "object",
+      "properties": {
+        "threads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Thread"
+          },
+          "description": "List of matching threads."
+        },
+        "nextPageToken": {
+          "type": "string",
+          "description": "Pagination token for fetching next page."
+        },
+        "totalSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Estimated total number of matching threads."
+        }
+      },
+      "description": "Response containing list of threads."
+    },
     "v1ListTransactionEventsResponse": {
       "type": "object",
       "properties": {
@@ -11512,6 +12396,212 @@
       "type": "object",
       "description": "Response message for Identity.Logout."
     },
+    "v1Mailbox": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique mailbox identifier (mbx_...)."
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Space / tenant workspace identifier."
+        },
+        "connectedAccountId": {
+          "type": "string",
+          "description": "Associated connected account identifier."
+        },
+        "providerMailboxId": {
+          "type": "string",
+          "description": "Upstream provider mailbox or label identifier."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the mailbox."
+        },
+        "systemRole": {
+          "$ref": "#/definitions/v1MailboxRole",
+          "description": "Canonical system role or custom."
+        },
+        "color": {
+          "type": "string",
+          "description": "Optional display color in hex format."
+        },
+        "unreadCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of unread threads/messages in this mailbox."
+        },
+        "totalCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total count of threads/messages in this mailbox."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the mailbox was first registered."
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the mailbox was last updated."
+        }
+      },
+      "description": "Mailbox models a canonical or synced email folder/label."
+    },
+    "v1MailboxRole": {
+      "type": "string",
+      "enum": [
+        "MAILBOX_ROLE_INBOX",
+        "MAILBOX_ROLE_STARRED",
+        "MAILBOX_ROLE_SENT",
+        "MAILBOX_ROLE_DRAFTS",
+        "MAILBOX_ROLE_ARCHIVE",
+        "MAILBOX_ROLE_TRASH",
+        "MAILBOX_ROLE_SPAM",
+        "MAILBOX_ROLE_CUSTOM"
+      ],
+      "description": "System mailbox roles mapping to provider-agnostic system buckets.\n\n - MAILBOX_ROLE_INBOX: Inbox mailbox bucket.\n - MAILBOX_ROLE_STARRED: Starred / flagged mailbox bucket.\n - MAILBOX_ROLE_SENT: Sent messages mailbox bucket.\n - MAILBOX_ROLE_DRAFTS: Draft messages mailbox bucket.\n - MAILBOX_ROLE_ARCHIVE: Archived messages mailbox bucket.\n - MAILBOX_ROLE_TRASH: Trash / deleted messages mailbox bucket.\n - MAILBOX_ROLE_SPAM: Spam / junk mailbox bucket.\n - MAILBOX_ROLE_CUSTOM: User-created custom mailbox or label."
+    },
+    "v1Message": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique message identifier (msg_...)."
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Space / tenant workspace identifier."
+        },
+        "connectedAccountId": {
+          "type": "string",
+          "description": "Associated connected account identifier."
+        },
+        "threadId": {
+          "type": "string",
+          "description": "Parent thread identifier."
+        },
+        "providerMessageId": {
+          "type": "string",
+          "description": "Upstream provider message identifier."
+        },
+        "rfcMessageId": {
+          "type": "string",
+          "description": "Canonical RFC 5322 Message-ID header value."
+        },
+        "inReplyTo": {
+          "type": "string",
+          "description": "Canonical In-Reply-To header value."
+        },
+        "references": {
+          "type": "string",
+          "description": "Canonical References header value."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject line of the message."
+        },
+        "snippet": {
+          "type": "string",
+          "description": "Text snippet summarizing the message content."
+        },
+        "from": {
+          "$ref": "#/definitions/v1Participant",
+          "description": "Sender information."
+        },
+        "to": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Participant"
+          },
+          "description": "Primary recipients."
+        },
+        "cc": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Participant"
+          },
+          "description": "Carbon copy recipients."
+        },
+        "bcc": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Participant"
+          },
+          "description": "Blind carbon copy recipients."
+        },
+        "replyTo": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Participant"
+          },
+          "description": "Reply-To recipients."
+        },
+        "sentAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the message was sent by the sender."
+        },
+        "receivedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the message was received by the mail server."
+        },
+        "isUnread": {
+          "type": "boolean",
+          "description": "Whether the message is unread."
+        },
+        "isStarred": {
+          "type": "boolean",
+          "description": "Whether the message is starred / flagged."
+        },
+        "isDraft": {
+          "type": "boolean",
+          "description": "Whether the message is a draft."
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Attachment"
+          },
+          "description": "Attachments associated with the message."
+        },
+        "hasRemoteImages": {
+          "type": "boolean",
+          "description": "Whether the message body contains remote external images."
+        },
+        "bodyCached": {
+          "type": "boolean",
+          "description": "Whether the sanitized message body is cached locally."
+        },
+        "bodyHtml": {
+          "type": "string",
+          "description": "Sanitized HTML body content (populated on GetThread)."
+        },
+        "bodyPlain": {
+          "type": "string",
+          "description": "Plain text body content (populated on GetThread)."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the message record was created."
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the message record was last updated."
+        }
+      },
+      "description": "Message models an individual email message within a thread."
+    },
     "v1MfaFactorDescriptor": {
       "type": "object",
       "properties": {
@@ -11560,6 +12650,20 @@
         }
       },
       "description": "Organizer represents the scheduling host of an event."
+    },
+    "v1Participant": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name of the participant."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the participant."
+        }
+      },
+      "description": "Participant represents an email sender, recipient, or correspondent."
     },
     "v1ProviderBlueprintDescriptor": {
       "type": "object",
@@ -12639,6 +13743,111 @@
         }
       },
       "description": "Response message for ConnectorService.SyncConnectedAccount."
+    },
+    "v1Thread": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique thread identifier (mth_...)."
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Space / tenant workspace identifier."
+        },
+        "connectedAccountId": {
+          "type": "string",
+          "description": "Associated connected account identifier."
+        },
+        "providerThreadId": {
+          "type": "string",
+          "description": "Upstream provider thread identifier."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject line of the thread conversation."
+        },
+        "snippet": {
+          "type": "string",
+          "description": "Short text snippet summarizing recent activity."
+        },
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Participant"
+          },
+          "description": "Distinct participants involved across messages in the thread."
+        },
+        "messageCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of messages in the thread."
+        },
+        "hasAttachments": {
+          "type": "boolean",
+          "description": "Whether any message in the thread contains attachments."
+        },
+        "isUnread": {
+          "type": "boolean",
+          "description": "Whether any message in the thread is unread."
+        },
+        "isStarred": {
+          "type": "boolean",
+          "description": "Whether any message in the thread is starred / flagged."
+        },
+        "inInbox": {
+          "type": "boolean",
+          "description": "Whether the thread resides in the Inbox bucket."
+        },
+        "inSent": {
+          "type": "boolean",
+          "description": "Whether the thread resides in the Sent bucket."
+        },
+        "inDrafts": {
+          "type": "boolean",
+          "description": "Whether the thread contains drafts."
+        },
+        "inTrash": {
+          "type": "boolean",
+          "description": "Whether the thread resides in the Trash bucket."
+        },
+        "inSpam": {
+          "type": "boolean",
+          "description": "Whether the thread resides in the Spam bucket."
+        },
+        "mailboxIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Mailbox IDs containing this thread."
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of the latest message in the thread."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the thread record was created."
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the thread record was last updated."
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Message"
+          },
+          "description": "Chronological messages in the thread (populated on GetThread)."
+        }
+      },
+      "description": "Thread models an aggregated email conversation consisting of one or more messages."
     },
     "v1TopicMetrics": {
       "type": "object",
