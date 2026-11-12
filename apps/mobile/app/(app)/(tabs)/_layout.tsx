@@ -1,7 +1,12 @@
 import { Tabs } from "expo-router"
 import { View, StyleSheet } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Home, Wallet, Menu } from "lucide-react-native"
+import {
+  Home,
+  Calendar as CalendarIcon,
+  Wallet,
+  Menu,
+} from "lucide-react-native"
 import { AppHeader } from "@/components/app-header"
 import { OfflineIndicator } from "@/components/offline-indicator"
 import { theme } from "@/lib/theme"
@@ -42,6 +47,18 @@ export default function TabsLayout() {
             title: "Overview",
             tabBarIcon: ({ color, size }) => (
               <Home
+                size={size ?? 22}
+                color={typeof color === "string" ? color : undefined}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="calendar"
+          options={{
+            title: "Calendar",
+            tabBarIcon: ({ color, size }) => (
+              <CalendarIcon
                 size={size ?? 22}
                 color={typeof color === "string" ? color : undefined}
               />

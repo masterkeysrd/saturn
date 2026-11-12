@@ -12,6 +12,7 @@ import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { FinanceSummaryWidget } from "@/components/widgets/finance-summary-widget"
+import { CalendarSummaryWidget } from "@/components/widgets/calendar-summary-widget"
 
 export default function OverviewScreen() {
   const queryClient = useQueryClient()
@@ -82,7 +83,8 @@ export default function OverviewScreen() {
           </Text>
         </View>
 
-        {/* Existing Feature Widgets */}
+        {/* Feature Widgets */}
+        <CalendarSummaryWidget />
         <FinanceSummaryWidget />
       </ScrollView>
     </View>

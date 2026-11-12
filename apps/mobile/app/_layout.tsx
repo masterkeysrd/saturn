@@ -158,6 +158,16 @@ export default function RootLayout() {
                       }}
                     />
                     <Stack.Screen
+                      name="modal/manage-event"
+                      options={{
+                        presentation: "modal",
+                        headerTitle: "Manage Event",
+                        headerStyle: {
+                          backgroundColor: theme.colors.surface,
+                        },
+                      }}
+                    />
+                    <Stack.Screen
                       name="+not-found"
                       options={{
                         title: "Not Found",
