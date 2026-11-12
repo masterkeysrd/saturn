@@ -125,6 +125,40 @@ function ProviderIcon({
   return <GoogleIcon className={className} />
 }
 
+function AccountAvatar({
+  avatarUrl,
+  name,
+  color,
+}: {
+  avatarUrl?: string
+  name?: string
+  color: string
+}) {
+  const [hasError, setHasError] = useState(false)
+  const initial = (name || "A").slice(0, 1).toUpperCase()
+
+  if (avatarUrl && !hasError) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name || "Avatar"}
+        referrerPolicy="no-referrer"
+        onError={() => setHasError(true)}
+        className="h-10 w-10 rounded-full border border-border object-cover"
+      />
+    )
+  }
+
+  return (
+    <div
+      className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white select-none"
+      style={{ backgroundColor: color }}
+    >
+      {initial}
+    </div>
+  )
+}
+
 export function ConnectedAccountsView() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -564,24 +598,11 @@ export function ConnectedAccountsView() {
                     <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex min-w-0 flex-1 items-center gap-3">
                         <div className="relative shrink-0">
-                          {account.avatarUrl ? (
-                            <img
-                              src={account.avatarUrl}
-                              alt={
-                                account.displayName || account.email || "Avatar"
-                              }
-                              className="h-10 w-10 rounded-full border border-border object-cover"
-                            />
-                          ) : (
-                            <div
-                              className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white select-none"
-                              style={{ backgroundColor: accountAccentColor }}
-                            >
-                              {(account.displayName || account.email || "A")
-                                .slice(0, 1)
-                                .toUpperCase()}
-                            </div>
-                          )}
+                          <AccountAvatar
+                            avatarUrl={account.avatarUrl}
+                            name={account.displayName || account.email}
+                            color={accountAccentColor}
+                          />
                           <div className="absolute -right-1 -bottom-1 flex h-4 w-4 items-center justify-center rounded-full border border-border/60 bg-background p-0.5 shadow-2xs">
                             <ProviderIcon
                               provider={account.provider}
@@ -712,11 +733,11 @@ export function ConnectedAccountsView() {
                     )}
 
                     {/* Capability Switches */}
-                    <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-                      <div className="mb-2.5 text-xs font-medium text-muted-foreground">
+                    <div className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-3">
+                      <div className="text-xs font-medium text-muted-foreground">
                         Active Platform Capabilities
                       </div>
-                      <div className="grid gap-2.5 sm:grid-cols-3">
+                      <div className="divide-y divide-border/40 overflow-hidden rounded-lg border border-border/50 bg-card">
                         {CONNECTOR_CAPABILITIES.map((cap) => {
                           const Icon = CAPABILITY_ICONS[cap]
                           const isEnabled =
@@ -728,25 +749,27 @@ export function ConnectedAccountsView() {
                           return (
                             <div
                               key={cap}
-                              className="flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-card p-2.5 shadow-2xs"
+                              className="flex items-center justify-between gap-3 p-3 transition-colors hover:bg-muted/25"
                             >
-                              <div className="flex min-w-0 items-center gap-2.5">
-                                <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              <div className="flex min-w-0 items-center gap-3">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/40 bg-muted/50 text-muted-foreground">
+                                  <Icon className="h-4 w-4" />
+                                </div>
                                 <div className="min-w-0">
                                   <label
                                     htmlFor={switchId}
-                                    className="block cursor-pointer truncate text-xs font-medium text-foreground"
+                                    className="block cursor-pointer text-xs font-semibold text-foreground hover:underline"
                                   >
                                     {CONNECTOR_CAPABILITY_LABELS[cap]}
                                   </label>
-                                  <span className="block truncate text-[10px] text-muted-foreground">
+                                  <span className="block text-[11px] text-muted-foreground">
                                     {CONNECTOR_CAPABILITY_DESCRIPTIONS[cap]}
                                   </span>
                                 </div>
                               </div>
-                              <div className="flex shrink-0 items-center">
+                              <div className="flex shrink-0 items-center pl-2">
                                 {isUpdating ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                                 ) : (
                                   <Switch
                                     id={switchId}
@@ -776,13 +799,13 @@ export function ConnectedAccountsView() {
                             <div className="text-xs font-medium text-muted-foreground">
                               Synchronized Calendars
                             </div>
-                            <div className="grid gap-2 sm:grid-cols-2">
+                            <div className="divide-y divide-border/40 overflow-hidden rounded-lg border border-border/50 bg-card">
                               {accountCalendars.map((cal) => (
                                 <div
                                   key={cal.id}
-                                  className="flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-card p-2 shadow-2xs"
+                                  className="flex items-center justify-between gap-3 p-2.5 transition-colors hover:bg-muted/25"
                                 >
-                                  <div className="flex min-w-0 items-center gap-2">
+                                  <div className="flex min-w-0 items-center gap-2.5">
                                     <span
                                       className="h-2.5 w-2.5 shrink-0 rounded-full"
                                       style={{
@@ -801,6 +824,7 @@ export function ConnectedAccountsView() {
                                       updateCalendarMutation.mutate({
                                         id: cal.id,
                                         calendar: { isEnabled: !cal.isEnabled },
+                                        updateMask: { paths: ["isEnabled"] },
                                       })
                                     }
                                   />

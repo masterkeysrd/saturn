@@ -383,6 +383,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                             <img
                               src={member.profile.avatarUrl}
                               alt=""
+                              referrerPolicy="no-referrer"
                               className="h-full w-full object-cover"
                             />
                           ) : (

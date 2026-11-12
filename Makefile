@@ -171,6 +171,11 @@ web-typecheck:
 web-format:
 	npx turbo run format
 
+## Run frontend and shared package tests
+.PHONY: web-test
+web-test:
+	npx vitest run
+
 ## Rebuild protoc plugins and regenerate API bindings
 .PHONY: codegen
 codegen:

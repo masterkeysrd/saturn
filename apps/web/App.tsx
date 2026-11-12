@@ -177,6 +177,18 @@ export function App() {
             }
           />
 
+          {/* Mail top-level space redirect */}
+          <Route
+            path="/mail"
+            element={
+              spaceId ? (
+                <Navigate to={`/space/${spaceId}/mail`} replace />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
           {/* Dynamically registered feature routes */}
           {mappedFeatureRoutes.map((route, i) => (
             <Route

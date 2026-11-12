@@ -253,6 +253,7 @@ export function AccountSettingsView() {
             <img
               src={user.avatarUrl}
               alt={user.name || "Avatar"}
+              referrerPolicy="no-referrer"
               className="h-16 w-16 rounded-2xl object-cover shadow-lg shadow-primary/20"
             />
           ) : (
