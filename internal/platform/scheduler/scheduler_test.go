@@ -63,6 +63,20 @@ func TestEngineRegisterJSON(t *testing.T) {
 			wantGreet: "hello",
 		},
 		{
+			name:      "double-encoded json string payload unmarshals successfully",
+			payload:   []byte(`"{\"greeting\":\"hello\",\"count\":42}"`),
+			wantErr:   false,
+			wantCount: 42,
+			wantGreet: "hello",
+		},
+		{
+			name:      "base64-encoded json string payload unmarshals successfully",
+			payload:   []byte(`"eyJncmVldGluZyI6ImhlbGxvIiwiY291bnQiOjQyfQ=="`),
+			wantErr:   false,
+			wantCount: 42,
+			wantGreet: "hello",
+		},
+		{
 			name:      "empty payload provides zero-value struct",
 			payload:   nil,
 			wantErr:   false,

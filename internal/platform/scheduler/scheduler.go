@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/base64"
+	"encoding/json/jsontext"
 	"encoding/json/v2"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,20 +22,68 @@ import (
 //go:generate go run github.com/masterkeysrd/saturn/tools/mockgen .
 
 func marshalPayload(v any) ([]byte, error) {
-	if pm, ok := v.(proto.Message); ok {
-		return protojson.Marshal(pm)
+	if v == nil {
+		return []byte("{}"), nil
+	}
+	switch val := v.(type) {
+	case []byte:
+		if len(bytes.TrimSpace(val)) == 0 {
+			return []byte("{}"), nil
+		}
+		return val, nil
+	case jsontext.Value:
+		if len(bytes.TrimSpace([]byte(val))) == 0 {
+			return []byte("{}"), nil
+		}
+		return []byte(val), nil
+	case string:
+		trimmed := strings.TrimSpace(val)
+		if (strings.HasPrefix(trimmed, "{") && strings.HasSuffix(trimmed, "}")) ||
+			(strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]")) {
+			return []byte(val), nil
+		}
+	case proto.Message:
+		return protojson.Marshal(val)
 	}
 	return json.Marshal(v)
 }
 
 func unmarshalPayload(data []byte, dst any) error {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		return nil
+	}
+
 	if pm, ok := dst.(proto.Message); ok {
-		if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
-			return nil
-		}
 		return protojson.Unmarshal(data, pm)
 	}
-	return json.Unmarshal(data, dst)
+
+	err := json.Unmarshal(data, dst)
+	if err == nil {
+		return nil
+	}
+
+	// Recovery for double-encoded JSON strings or base64 data currently queued in the database:
+	var strVal string
+	if unmarshalErr := json.Unmarshal(data, &strVal); unmarshalErr == nil {
+		strBytes := []byte(strVal)
+		trimmedStr := bytes.TrimSpace(strBytes)
+		if len(trimmedStr) > 0 && (trimmedStr[0] == '{' || trimmedStr[0] == '[') {
+			if retryErr := json.Unmarshal(trimmedStr, dst); retryErr == nil {
+				return nil
+			}
+		}
+		if b64, b64Err := base64.StdEncoding.DecodeString(strVal); b64Err == nil {
+			trimmedB64 := bytes.TrimSpace(b64)
+			if len(trimmedB64) > 0 && (trimmedB64[0] == '{' || trimmedB64[0] == '[') {
+				if retryErr := json.Unmarshal(trimmedB64, dst); retryErr == nil {
+					return nil
+				}
+			}
+		}
+	}
+
+	return err
 }
 
 // Handler defines the callback function signature for a job type.
@@ -176,6 +227,14 @@ func (e *Engine) RegisterSchedule(ctx context.Context, s Schedule) error {
 	if err != nil {
 		return errors.E(op, fmt.Errorf("marshal schedule payload: %w", err))
 	}
+	if len(payloadBytes) == 0 {
+		payloadBytes = []byte("{}")
+	}
+
+	scheduleID := s.ID
+	if scheduleID == "" {
+		scheduleID = s.JobType
+	}
 
 	// Calculate the first execution time
 	nextRunAt := schedule.Next(time.Now().UTC())
@@ -190,7 +249,7 @@ func (e *Engine) RegisterSchedule(ctx context.Context, s Schedule) error {
 			status = 'active',
 			update_time = NOW()`
 
-	_, err = e.db.Exec(ctx, query, s.ID, s.JobType, payloadBytes, s.CronExpression, nextRunAt)
+	_, err = e.db.Exec(ctx, query, scheduleID, s.JobType, payloadBytes, s.CronExpression, nextRunAt)
 	if err != nil {
 		return errors.E(op, err)
 	}

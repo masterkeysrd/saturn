@@ -16,9 +16,6 @@ type SyncCalendarJobPayload struct {
 // RegisterCalendarJobs binds calendar background jobs to the scheduler engine.
 func RegisterCalendarJobs(engine *scheduler.Engine, coord appcalendar.Coordinator) {
 	engine.RegisterJSON("connector.sync_calendar", func(ctx context.Context, payload *SyncCalendarJobPayload) error {
-		if payload == nil {
-			return nil
-		}
 		return coord.SyncConnectedAccountCalendars(ctx, &appcalendar.SyncConnectedAccountCalendarsRequest{
 			SpaceID:            payload.SpaceID,
 			ConnectedAccountID: payload.AccountID,
