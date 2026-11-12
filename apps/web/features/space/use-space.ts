@@ -80,7 +80,15 @@ export function ActiveSpaceProvider({ children }: { children: ReactNode }) {
     { enabled: !!activeSpaceState.spaceId }
   )
 
-  const timezone = settings?.timezone || "UTC"
+  const browserTz = useMemo(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+    } catch {
+      return "UTC"
+    }
+  }, [])
+
+  const timezone = settings?.timezone || browserTz
 
   return createElement(
     ActiveSpaceContext.Provider,

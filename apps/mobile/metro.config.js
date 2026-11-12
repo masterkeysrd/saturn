@@ -15,4 +15,11 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, "node_modules"),
 ]
 
+// 3. Exclude test files and test utilities from Metro bundling
+config.resolver.blockList = [
+  /__tests__\/.*/,
+  /.*\.test\.[jt]sx?$/,
+  /.*\.spec\.[jt]sx?$/,
+]
+
 module.exports = config

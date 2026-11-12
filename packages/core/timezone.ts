@@ -4,6 +4,10 @@ export function parseDate(date: DateInput): Date | null {
   if (date === null || date === undefined || date === "") {
     return null
   }
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [y, m, d] = date.split("-").map(Number)
+    return new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+  }
   const d = date instanceof Date ? date : new Date(date)
   if (isNaN(d.getTime())) {
     return null
@@ -106,13 +110,15 @@ export function formatDateWithTimezone(
   if (!d) return ""
 
   const tz = sanitizeTimezone(timeZone)
+  const defaultOptions: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }
   try {
     return new Intl.DateTimeFormat(locale || "en-US", {
       timeZone: tz,
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      ...options,
+      ...(options || defaultOptions),
     }).format(d)
   } catch {
     return ""
@@ -120,14 +126,27 @@ export function formatDateWithTimezone(
 }
 
 export function getStartOfDay(date: DateInput, timeZone: string): Date {
-  const d = parseDate(date) ?? new Date()
   const tz = sanitizeTimezone(timeZone)
-  const parts = getTimezoneParts(d, tz)
-  if (!parts) return new Date(0)
 
-  const utcGuess = new Date(
-    Date.UTC(parts.year, parts.month - 1, parts.day, 0, 0, 0, 0)
-  )
+  let year: number
+  let month: number
+  let day: number
+
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [y, m, d] = date.split("-").map(Number)
+    year = y
+    month = m
+    day = d
+  } else {
+    const d = parseDate(date) ?? new Date()
+    const parts = getTimezoneParts(d, tz)
+    if (!parts) return new Date(0)
+    year = parts.year
+    month = parts.month
+    day = parts.day
+  }
+
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0))
   const invParts = getTimezoneParts(utcGuess, tz)
   if (!invParts) return utcGuess
 
@@ -146,15 +165,30 @@ export function getStartOfDay(date: DateInput, timeZone: string): Date {
 }
 
 export function getEndOfDay(date: DateInput, timeZone: string): Date {
-  const d = parseDate(date) ?? new Date()
   const tz = sanitizeTimezone(timeZone)
-  const parts = getTimezoneParts(d, tz)
-  if (!parts) return new Date(d.getTime() + 86399999)
 
-  const nextDayUtc = new Date(
-    Date.UTC(parts.year, parts.month - 1, parts.day + 1, 12, 0, 0, 0)
+  let year: number
+  let month: number
+  let day: number
+
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [y, m, d] = date.split("-").map(Number)
+    year = y
+    month = m
+    day = d
+  } else {
+    const d = parseDate(date) ?? new Date()
+    const parts = getTimezoneParts(d, tz)
+    if (!parts) return new Date(d.getTime() + 86399999)
+    year = parts.year
+    month = parts.month
+    day = parts.day
+  }
+
+  const nextDayNoonUtc = new Date(
+    Date.UTC(year, month - 1, day + 1, 12, 0, 0, 0)
   )
-  const nextStart = getStartOfDay(nextDayUtc, tz)
+  const nextStart = getStartOfDay(nextDayNoonUtc, tz)
   return new Date(nextStart.getTime() - 1)
 }
 

@@ -1,0 +1,24 @@
+# Platform Connector service API configuration.
+#
+# All platform connector endpoints require JWT Bearer authentication.
+# Space-scoped endpoints require the Space-Id header.
+
+name: saturn.platform.connector.v1
+title: "Saturn Platform Connector API"
+apis:
+  - saturn.platform.connector.v1.ConnectorService
+
+documentation:
+  summary: "Provides platform connected accounts management and OAuth workflows. Space-scoped endpoints require the 'space-id' header containing the workspace ID."
+
+authentication:
+  rules:
+    # All connector endpoints require authentication
+    - selector: "saturn.platform.connector.v1.ConnectorService.*"
+      auth_required: true
+
+space:
+  rules:
+    # Connector endpoints require workspace scope validation from metadata space-id header
+    - selector: "saturn.platform.connector.v1.ConnectorService.*"
+      scoped: true

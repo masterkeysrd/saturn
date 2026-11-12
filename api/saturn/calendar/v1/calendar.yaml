@@ -1,0 +1,24 @@
+# Calendar service API configuration.
+#
+# All calendar endpoints require JWT Bearer authentication.
+# Space-scoped endpoints require the Space-Id header.
+
+name: saturn.calendar.v1
+title: "Saturn Calendar API"
+apis:
+  - saturn.calendar.v1.CalendarService
+
+documentation:
+  summary: "Provides calendar and event management, occurrence expansion, and external sync. Space-scoped endpoints require the 'space-id' header containing the workspace ID."
+
+authentication:
+  rules:
+    # All calendar endpoints require authentication
+    - selector: "saturn.calendar.v1.CalendarService.*"
+      auth_required: true
+
+space:
+  rules:
+    # Calendar endpoints require workspace scope validation from metadata space-id header
+    - selector: "saturn.calendar.v1.CalendarService.*"
+      scoped: true

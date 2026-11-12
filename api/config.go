@@ -16,9 +16,11 @@ import (
 //go:embed saturn/identity/v1/*.yaml
 //go:embed saturn/identity/admin/v1/*.yaml
 //go:embed saturn/space/v1/*.yaml
+//go:embed saturn/calendar/v1/*.yaml
 //go:embed saturn/finance/v1/*.yaml
 //go:embed saturn/platform/agent/v1/*.yaml
 //go:embed saturn/platform/backup/v1/*.yaml
+//go:embed saturn/platform/connector/v1/*.yaml
 //go:embed saturn/platform/integration/v1/*.yaml
 //go:embed saturn/platform/message/v1/*.yaml
 //go:embed saturn/platform/scheduler/v1/*.yaml

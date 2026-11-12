@@ -13,11 +13,15 @@
     "dev:mobile": "npm run start --workspace=saturn-mobile",
     "lint": "turbo run lint",
     "format": "turbo run format",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "test:web": "vitest run"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.3",
+    "jsdom": "^31.0.0",
     "prettier": "^3.9.6",
-    "turbo": "^2.4.4"
+    "turbo": "^2.4.4",
+    "vitest": "^5.1.0"
   },
   "overrides": {
     "react": "19.3.0",

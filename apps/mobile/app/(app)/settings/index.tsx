@@ -31,6 +31,7 @@ import {
   Calendar,
   Check,
   X,
+  Link2,
 } from "lucide-react-native"
 import {
   useListActiveSessionsQuery,
@@ -383,6 +384,23 @@ export default function SettingsScreen() {
                   size="sm"
                   label={activeSpaceRole.toUpperCase()}
                 />
+                <ChevronRight size={16} color={theme.colors.textMuted} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+              onPress={() => {
+                haptics.light()
+                router.push("/(app)/settings/connected-accounts")
+              }}
+            >
+              <View style={styles.menuLeft}>
+                <Link2 size={18} color={theme.colors.primary} />
+                <Text style={styles.menuLabel}>Connected Accounts</Text>
+              </View>
+              <View style={styles.menuRight}>
                 <ChevronRight size={16} color={theme.colors.textMuted} />
               </View>
             </TouchableOpacity>

@@ -31,3 +31,14 @@ func Down(db *sql.DB) error {
 
 	return goose.Down(db, ".")
 }
+
+// DownTo rolls back migrations to a specific version against the given database.
+func DownTo(db *sql.DB, version int64) error {
+	goose.SetBaseFS(embedMigrations)
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		return err
+	}
+
+	return goose.DownTo(db, ".", version)
+}

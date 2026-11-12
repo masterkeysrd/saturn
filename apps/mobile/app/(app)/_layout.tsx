@@ -76,6 +76,18 @@ export default function AppLayout() {
         }}
       />
       <Stack.Screen
+        name="settings/connected-accounts"
+        options={{
+          headerShown: true,
+          headerTitle: "Connected Accounts",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Settings",
+        }}
+      />
+      <Stack.Screen
         name="finance/transactions/index"
         options={{
           headerShown: true,

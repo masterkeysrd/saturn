@@ -31,17 +31,24 @@ import (
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
 	agentv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1"
 	backupv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/backup/v1"
+	calendarv1 "github.com/masterkeysrd/saturn/apis/saturn/calendar/v1"
+	connectorv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/connector/v1"
 	integrationv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/integration/v1"
 	messagev1 "github.com/masterkeysrd/saturn/apis/saturn/platform/message/v1"
 	schedulerv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/scheduler/v1"
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
+	calendaraggregator "github.com/masterkeysrd/saturn/internal/aggregator/calendar"
 	financeaggregator "github.com/masterkeysrd/saturn/internal/aggregator/finance"
 	spaceaggregator "github.com/masterkeysrd/saturn/internal/aggregator/space"
 	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
+	calendarapp "github.com/masterkeysrd/saturn/internal/application/calendar"
+	connectorapp "github.com/masterkeysrd/saturn/internal/application/connector"
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
 	integrationapp "github.com/masterkeysrd/saturn/internal/application/integration"
 	spaceapp "github.com/masterkeysrd/saturn/internal/application/space"
+	domaincalendar "github.com/masterkeysrd/saturn/internal/domain/calendar"
+	calendarstorage "github.com/masterkeysrd/saturn/internal/domain/calendar/storage"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	financestorage "github.com/masterkeysrd/saturn/internal/domain/finance/storage"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
@@ -49,6 +56,8 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	spacestorage "github.com/masterkeysrd/saturn/internal/domain/space/storage"
 	"github.com/masterkeysrd/saturn/internal/platform/agent"
+	"github.com/masterkeysrd/saturn/internal/platform/connector"
+	googleconnector "github.com/masterkeysrd/saturn/internal/platform/connector/google"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/integration"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
@@ -62,6 +71,8 @@ import (
 	eventmiddleware "github.com/masterkeysrd/saturn/internal/transport/event/middleware"
 	agentgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/agent"
 	backupgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/backup"
+	calendargrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/calendar"
+	connectorgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/connector"
 	financegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/finance"
 	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/identity"
 	integrationgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/integration"
@@ -69,6 +80,7 @@ import (
 	messagegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/message"
 	schedulergrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/scheduler"
 	spacegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/space"
+	connectorhttp "github.com/masterkeysrd/saturn/internal/transport/http/connector"
 	"github.com/masterkeysrd/saturn/internal/transport/http/gateway"
 	"github.com/masterkeysrd/saturn/internal/transport/http/middleware"
 	"github.com/masterkeysrd/saturn/internal/transport/http/webhook"
@@ -78,12 +90,15 @@ import (
 
 // GRPCServer manages the standalone gRPC server listening on a Unix socket.
 type GRPCServer struct {
-	listener            net.Listener
-	grpc                *grpc.Server
-	TokenService        token.Service
-	IntegrationRegistry *integration.Registry
-	EventBus            *eventbus.Engine
-	Scheduler           *scheduler.Engine
+	listener             net.Listener
+	grpc                 *grpc.Server
+	TokenService         token.Service
+	IntegrationRegistry  *integration.Registry
+	EventBus             *eventbus.Engine
+	Scheduler            *scheduler.Engine
+	ConnectorCoordinator connectorapp.Coordinator
+	ConnectorOAuthMgr    *connector.OAuthManager
+	CalendarCoordinator  calendarapp.Coordinator
 }
 
 // NewGRPCServer creates a new GRPCServer instance.
@@ -426,6 +441,95 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 
 	s.IntegrationRegistry = integrationRegistry
 
+	// Wire Connected Accounts service
+	connectorStore := connector.NewStore(dbClient)
+	connectorCipher, err := crypto.NewCipher(cfg.Security.EncryptionKey)
+	if err != nil {
+		return fmt.Errorf("init connector cipher failed: %w", err)
+	}
+
+	providerRegistry := connector.NewProviderRegistry()
+	googleProvider := googleconnector.NewProvider(googleconnector.Config{
+		ClientID:     cfg.Connector.Google.ClientID,
+		ClientSecret: cfg.Connector.Google.ClientSecret,
+		RedirectURI:  cfg.Connector.Google.ResolvedRedirectURI(&cfg.Connector),
+		AuthURL:      cfg.Connector.Google.AuthURL,
+		TokenURL:     cfg.Connector.Google.TokenURL,
+		RevokeURL:    cfg.Connector.Google.RevokeURL,
+		UserinfoURL:  cfg.Connector.Google.UserinfoURL,
+		PeopleURL:    cfg.Connector.Google.PeopleURL,
+		OtherURL:     cfg.Connector.Google.OtherURL,
+		CalendarURL:  cfg.Connector.Google.CalendarURL,
+	})
+	providerRegistry.Register(googleProvider)
+
+	oauthManager := connector.NewOAuthManager(connectorStore, connectorCipher)
+	tokenManager := connector.NewTokenManager(connectorStore, connectorCipher, providerRegistry, connector.DefaultCleanerRegistry)
+
+	connectorCoordinator := connectorapp.NewLoggingCoordinator(
+		connectorapp.NewTransactionalCoordinator(
+			connectorapp.NewCoordinator(connectorapp.Dependencies{
+				Store:        connectorStore,
+				OAuthManager: oauthManager,
+				TokenManager: tokenManager,
+				Providers:    providerRegistry,
+				Cleaners:     connector.DefaultCleanerRegistry,
+				Scheduler:    schedulerEngine,
+			}),
+			dbClient,
+		),
+		appLogger,
+	)
+
+	connectorHandler := connectorgrpc.NewHandler(connectorCoordinator)
+	connectorv1.RegisterConnectorServiceServer(s.grpc, connectorHandler)
+
+	// Bind connector execution callback to scheduler
+	transportscheduler.RegisterConnectorJobs(schedulerEngine, connectorCoordinator)
+
+	// Wire Calendar service
+	calendarStore := calendarstorage.NewCalendarStore(dbClient)
+	eventStore := calendarstorage.NewEventStore(dbClient)
+	calendarDomainService := domaincalendar.NewService(domaincalendar.Dependencies{
+		CalendarStore: calendarStore,
+		EventStore:    eventStore,
+	})
+	externalCalendarProviders := map[string]domaincalendar.ExternalCalendarProvider{
+		"google": googleProvider,
+	}
+	calendarCoordinator := calendarapp.NewLoggingCoordinator(
+		calendarapp.NewTransactionalCoordinator(
+			calendarapp.NewCoordinator(calendarapp.Dependencies{
+				CalendarStore:     calendarStore,
+				EventStore:        eventStore,
+				DomainService:     calendarDomainService,
+				TokenManager:      tokenManager,
+				AccountStore:      connectorStore,
+				ExternalProviders: externalCalendarProviders,
+			}),
+			dbClient,
+		),
+		appLogger,
+	)
+	calendarAggregator := calendaraggregator.NewService(
+		calendarStore,
+		eventStore,
+		connectorStore,
+	)
+	calendarHandler := calendargrpc.NewHandler(calendarCoordinator, calendarAggregator)
+	calendarv1.RegisterCalendarServiceServer(s.grpc, calendarHandler)
+
+	transportscheduler.RegisterCalendarJobs(schedulerEngine, calendarCoordinator)
+
+	_ = schedulerEngine.RegisterSchedule(ctx, scheduler.Schedule{
+		JobType:        "connector.sync_calendar",
+		CronExpression: "*/3 * * * *",
+	})
+
+	s.ConnectorCoordinator = connectorCoordinator
+	s.ConnectorOAuthMgr = oauthManager
+	s.CalendarCoordinator = calendarCoordinator
+
 	return nil
 }
 
@@ -454,28 +558,42 @@ func (s *GRPCServer) Shutdown(ctx context.Context) error {
 // GRPCGatewayServer manages the gRPC-Gateway HTTP server that proxies
 // REST calls into the gRPC backend over a Unix socket.
 type GRPCGatewayServer struct {
-	addr                string
-	mux                 *runtime.ServeMux
-	grpcConn            *grpc.ClientConn
-	server              *http.Server
-	swaggerEnabled      bool
-	swaggerPath         string
-	tokenService        token.Service
-	integrationRegistry *integration.Registry
-	eventBus            *eventbus.Engine
-	config              *Config
+	addr                 string
+	mux                  *runtime.ServeMux
+	grpcConn             *grpc.ClientConn
+	server               *http.Server
+	swaggerEnabled       bool
+	swaggerPath          string
+	tokenService         token.Service
+	integrationRegistry  *integration.Registry
+	eventBus             *eventbus.Engine
+	connectorCoordinator connectorapp.Coordinator
+	connectorOAuthMgr    *connector.OAuthManager
+	scheduler            *scheduler.Engine
+	config               *Config
 }
 
 // NewGRPCGatewayServer creates a new GRPCGatewayServer instance.
-func NewGRPCGatewayServer(cfg *Config, tokenService token.Service, integrationRegistry *integration.Registry, eventBus *eventbus.Engine) *GRPCGatewayServer {
+func NewGRPCGatewayServer(
+	cfg *Config,
+	tokenService token.Service,
+	integrationRegistry *integration.Registry,
+	eventBus *eventbus.Engine,
+	connectorCoordinator connectorapp.Coordinator,
+	connectorOAuthMgr *connector.OAuthManager,
+	schedulerEngine *scheduler.Engine,
+) *GRPCGatewayServer {
 	return &GRPCGatewayServer{
-		addr:                cfg.Gateway.Addr,
-		swaggerEnabled:      cfg.Swagger.Enabled,
-		swaggerPath:         cfg.Swagger.Path,
-		tokenService:        tokenService,
-		integrationRegistry: integrationRegistry,
-		eventBus:            eventBus,
-		config:              cfg,
+		addr:                 cfg.Gateway.Addr,
+		swaggerEnabled:       cfg.Swagger.Enabled,
+		swaggerPath:          cfg.Swagger.Path,
+		tokenService:         tokenService,
+		integrationRegistry:  integrationRegistry,
+		eventBus:             eventBus,
+		connectorCoordinator: connectorCoordinator,
+		connectorOAuthMgr:    connectorOAuthMgr,
+		scheduler:            schedulerEngine,
+		config:               cfg,
 	}
 }
 
@@ -531,12 +649,34 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("register platform agent gateway handler: %w", err)
 	}
 
+	if err := connectorv1.RegisterConnectorServiceHandler(ctx, s.mux, s.grpcConn); err != nil {
+		return fmt.Errorf("register platform connector gateway handler: %w", err)
+	}
+
+	if err := calendarv1.RegisterCalendarServiceHandler(ctx, s.mux, s.grpcConn); err != nil {
+		return fmt.Errorf("register calendar gateway handler: %w", err)
+	}
+
 	handler := http.NewServeMux()
 	handler.Handle("/api/v1/", apiV1Handler(s.mux))
 
 	// Register unified webhooks handler
 	webhookDispatcher := webhook.NewDispatcher(s.integrationRegistry, s.eventBus)
 	handler.Handle("/api/v1/webhooks/", webhookDispatcher)
+
+	// Register public OAuth callback handlers
+	if s.connectorCoordinator != nil && s.connectorOAuthMgr != nil {
+		oauthCallbackHandler := connectorhttp.NewOAuthCallbackHandler(s.connectorCoordinator, s.connectorOAuthMgr)
+		handler.Handle("/v1/platform/connectors/oauth/{provider}/callback", oauthCallbackHandler)
+		handler.Handle("/api/v1/platform/connectors/oauth/{provider}/callback", oauthCallbackHandler)
+	}
+
+	// Register Google push notification webhook handler
+	if s.scheduler != nil {
+		googleWebhookHandler := connectorhttp.NewGoogleWebhookHandler(s.scheduler)
+		handler.Handle("/v1/platform/connectors/webhooks/google", googleWebhookHandler)
+		handler.Handle("/api/v1/platform/connectors/webhooks/google", googleWebhookHandler)
+	}
 	if s.swaggerEnabled {
 		swaggerPath := strings.TrimRight(s.swaggerPath, "/") + "/"
 		swaggerJSONPath := swaggerPath + "api.swagger.json"
@@ -630,7 +770,15 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 		return fmt.Errorf("grpc: %w", err)
 	}
 
-	gwSrv := NewGRPCGatewayServer(cfg, grpcSrv.TokenService, grpcSrv.IntegrationRegistry, grpcSrv.EventBus)
+	gwSrv := NewGRPCGatewayServer(
+		cfg,
+		grpcSrv.TokenService,
+		grpcSrv.IntegrationRegistry,
+		grpcSrv.EventBus,
+		grpcSrv.ConnectorCoordinator,
+		grpcSrv.ConnectorOAuthMgr,
+		grpcSrv.Scheduler,
+	)
 
 	// Register shutdown callbacks (LIFO order: gateway first, then gRPC).
 	mgr.Register(grpcSrv.Shutdown)

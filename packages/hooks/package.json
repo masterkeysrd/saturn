@@ -25,6 +25,16 @@
       "types": "./timezone/index.ts",
       "import": "./timezone/index.ts",
       "default": "./timezone/index.ts"
+    },
+    "./connector": {
+      "types": "./connector/index.ts",
+      "import": "./connector/index.ts",
+      "default": "./connector/index.ts"
+    },
+    "./calendar": {
+      "types": "./calendar/index.ts",
+      "import": "./calendar/index.ts",
+      "default": "./calendar/index.ts"
     }
   },
   "scripts": {

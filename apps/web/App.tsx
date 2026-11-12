@@ -165,6 +165,18 @@ export function App() {
             </SidebarProvider>
           }
         >
+          {/* Calendar top-level space redirect */}
+          <Route
+            path="/calendar"
+            element={
+              spaceId ? (
+                <Navigate to={`/space/${spaceId}/calendar`} replace />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
           {/* Dynamically registered feature routes */}
           {mappedFeatureRoutes.map((route, i) => (
             <Route

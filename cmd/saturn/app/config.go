@@ -47,16 +47,62 @@ var logLevels = map[string]log.Level{
 
 // Config holds all application configuration, organized by subsystem.
 type Config struct {
-	DB       DBConfig
-	GRPC     GRPCConfig
-	Gateway  GatewayConfig
-	Shutdown ShutdownConfig
-	Log      LogConfig
-	Swagger  SwaggerConfig
-	Auth     AuthConfig
-	Backup   BackupConfig
-	Webhook  WebhookConfig
-	Security SecurityConfig
+	DB        DBConfig
+	GRPC      GRPCConfig
+	Gateway   GatewayConfig
+	Shutdown  ShutdownConfig
+	Log       LogConfig
+	Swagger   SwaggerConfig
+	Auth      AuthConfig
+	Backup    BackupConfig
+	Webhook   WebhookConfig
+	Security  SecurityConfig
+	Connector ConnectorConfig
+}
+
+// ConnectorConfig holds instance-level OAuth connector configurations.
+type ConnectorConfig struct {
+	PublicCallbackBaseURL string                   `mapstructure:"public_callback_base_url"`
+	Google                GoogleConnectorConfig    `mapstructure:"google"`
+	Microsoft             MicrosoftConnectorConfig `mapstructure:"microsoft"`
+}
+
+// CallbackURL returns the OAuth redirect callback URI for the given provider.
+func (c *ConnectorConfig) CallbackURL(provider string) string {
+	base := strings.TrimRight(c.PublicCallbackBaseURL, "/")
+	if base == "" {
+		base = "http://localhost:8080/v1/platform/connectors/oauth"
+	}
+	return fmt.Sprintf("%s/%s/callback", base, provider)
+}
+
+// GoogleConnectorConfig holds Google OAuth2 credentials and optional endpoint URL overrides.
+type GoogleConnectorConfig struct {
+	ClientID     string `mapstructure:"client_id"`
+	ClientSecret string `mapstructure:"client_secret"`
+	RedirectURI  string `mapstructure:"redirect_uri"`
+	AuthURL      string `mapstructure:"auth_url"`
+	TokenURL     string `mapstructure:"token_url"`
+	RevokeURL    string `mapstructure:"revoke_url"`
+	UserinfoURL  string `mapstructure:"userinfo_url"`
+	PeopleURL    string `mapstructure:"people_url"`
+	OtherURL     string `mapstructure:"other_url"`
+	CalendarURL  string `mapstructure:"calendar_url"`
+}
+
+// ResolvedRedirectURI returns the configured RedirectURI or constructs it from the base callback URL.
+func (g *GoogleConnectorConfig) ResolvedRedirectURI(base *ConnectorConfig) string {
+	if g.RedirectURI != "" {
+		return g.RedirectURI
+	}
+	return base.CallbackURL("google")
+}
+
+// MicrosoftConnectorConfig holds Microsoft OAuth2 credentials.
+type MicrosoftConnectorConfig struct {
+	ClientID     string `mapstructure:"client_id"`
+	ClientSecret string `mapstructure:"client_secret"`
+	TenantID     string `mapstructure:"tenant_id"`
 }
 
 // SecurityConfig holds encryption and security settings.
@@ -184,6 +230,13 @@ func NewViper() *viper.Viper {
 
 	v.SetDefault("webhook.secret", "dev_webhook_secret")
 	v.SetDefault("security.encryption_key", "")
+
+	v.SetDefault("connector.public_callback_base_url", "http://localhost:8080/v1/platform/connectors/oauth")
+	v.SetDefault("connector.google.client_id", "")
+	v.SetDefault("connector.google.client_secret", "")
+	v.SetDefault("connector.microsoft.client_id", "")
+	v.SetDefault("connector.microsoft.client_secret", "")
+	v.SetDefault("connector.microsoft.tenant_id", "common")
 
 	return v
 }

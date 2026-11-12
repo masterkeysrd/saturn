@@ -18,6 +18,7 @@ import {
   Users,
   Settings,
   ChevronRight,
+  Link2,
 } from "lucide-react-native"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
@@ -161,7 +162,7 @@ export default function MenuScreen() {
           <Text style={styles.sectionHeader}>WORKSPACE</Text>
           <Card style={styles.menuGroup}>
             <TouchableOpacity
-              style={styles.menuItem}
+              style={[styles.menuItem, styles.menuItemBorder]}
               activeOpacity={0.7}
               onPress={() => navigateTo("/(app)/settings/space")}
             >
@@ -179,6 +180,18 @@ export default function MenuScreen() {
                 />
                 <ChevronRight size={16} color={theme.colors.textMuted} />
               </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/settings/connected-accounts")}
+            >
+              <View style={styles.menuLeft}>
+                <Link2 size={18} color={theme.colors.primary} />
+                <Text style={styles.menuLabel}>Connected Accounts</Text>
+              </View>
+              <ChevronRight size={16} color={theme.colors.textMuted} />
             </TouchableOpacity>
           </Card>
         </View>

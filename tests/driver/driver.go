@@ -103,8 +103,18 @@ func (d *Driver) HTTPClient() *http.Client {
 	return d.httpClient
 }
 
+// MockGoogle returns the mock Google server instance.
+func (d *Driver) MockGoogle() *MockGoogleServer {
+	return d.env.MockGoogle
+}
+
 const truncateSQL = `
 TRUNCATE TABLE 
+    calendar.events,
+    calendar.calendars,
+    platform.account_contacts_cache,
+    platform.oauth_states,
+    platform.connected_accounts,
     platform.message_deliveries,
     platform.messages,
     platform.agent_runs,

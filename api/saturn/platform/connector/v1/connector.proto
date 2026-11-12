@@ -1,0 +1,283 @@
+syntax = "proto3";
+
+package saturn.platform.connector.v1;
+
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "saturn/platform/scheduler/v1/options.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/platform/connector/v1;connectorv1";
+
+// ConnectorService manages external connected account integrations (e.g., Google, Microsoft 365),
+// OAuth2 PKCE initiation, capability management, contact suggestions, and synchronization.
+service ConnectorService {
+  // Lists all available OAuth connector providers and their supported capabilities.
+  rpc ListProviders(ListProvidersRequest) returns (ListProvidersResponse) {
+    option (google.api.http) = {get: "/v1/platform/connectors/providers"};
+  }
+
+  // Initiates an OAuth2 PKCE authorization flow for connecting or upgrading an external account.
+  rpc InitiateOAuth(InitiateOAuthRequest) returns (InitiateOAuthResponse) {
+    option (google.api.http) = {
+      post: "/v1/platform/connectors:initiate-oauth"
+      body: "*"
+    };
+    option (google.api.method_signature) = "provider,return_url";
+  }
+
+  // Lists all connected accounts for the current workspace.
+  rpc ListConnectedAccounts(ListConnectedAccountsRequest) returns (ListConnectedAccountsResponse) {
+    option (google.api.http) = {get: "/v1/platform/connectors/accounts"};
+  }
+
+  // Retrieves details of a specific connected account.
+  rpc GetConnectedAccount(GetConnectedAccountRequest) returns (ConnectedAccount) {
+    option (google.api.http) = {get: "/v1/platform/connectors/accounts/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Updates mutable attributes of an existing connected account using a field mask.
+  rpc UpdateConnectedAccount(UpdateConnectedAccountRequest) returns (ConnectedAccount) {
+    option (google.api.http) = {
+      patch: "/v1/platform/connectors/accounts/{id}"
+      body: "account"
+    };
+    option (google.api.method_signature) = "id,account,update_mask";
+  }
+
+  // Deletes and revokes a connected account from the workspace.
+  rpc DeleteConnectedAccount(DeleteConnectedAccountRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/platform/connectors/accounts/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Triggers an immediate rate-limited synchronization of a connected account.
+  rpc SyncConnectedAccount(SyncConnectedAccountRequest) returns (SyncConnectedAccountResponse) {
+    option (google.api.http) = {
+      post: "/v1/platform/connectors/accounts/{id}:sync"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
+  // Suggests contacts by autocomplete search across all connected accounts in the workspace.
+  rpc SuggestContacts(SuggestContactsRequest) returns (SuggestContactsResponse) {
+    option (google.api.http) = {get: "/v1/platform/connectors/contacts:suggest"};
+  }
+}
+
+// Request message for ConnectorService.ListProviders.
+message ListProvidersRequest {}
+
+// ProviderDescriptor describes an available OAuth provider adapter and its capabilities.
+message ProviderDescriptor {
+  // Output only. The unique provider identifier (e.g., google, microsoft).
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The human-readable display name (e.g., Google, Microsoft 365).
+  string display_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. List of capabilities supported by this provider (e.g., calendar, mail, contacts).
+  repeated string supported_capabilities = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Optional URL for the provider brand icon.
+  string icon_url = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Response message for ConnectorService.ListProviders.
+message ListProvidersResponse {
+  // Output only. The list of supported OAuth connector providers.
+  repeated ProviderDescriptor providers = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for ConnectorService.InitiateOAuth.
+message InitiateOAuthRequest {
+  // Required. The provider identifier (e.g., google, microsoft).
+  string provider = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The return URL for application redirection upon completing authorization.
+  string return_url = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. List of platform capabilities requested for this connection (e.g., calendar, mail, contacts).
+  repeated string capabilities = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. The existing connected account ID when reconnecting or incrementally upgrading capabilities.
+  optional string connected_account_id = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for ConnectorService.InitiateOAuth.
+message InitiateOAuthResponse {
+  // Output only. The authorization URL to redirect the user to.
+  string auth_url = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The state token generated for this authorization session.
+  string state = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for ConnectorService.ListConnectedAccounts.
+message ListConnectedAccountsRequest {
+  // Optional. Filter connected accounts by external provider (e.g., google, microsoft).
+  optional string provider = 1 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for ConnectorService.ListConnectedAccounts.
+message ListConnectedAccountsResponse {
+  // Output only. The list of connected accounts for the space.
+  repeated ConnectedAccount accounts = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for ConnectorService.GetConnectedAccount.
+message GetConnectedAccountRequest {
+  // Required. The unique identifier of the connected account.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for ConnectorService.UpdateConnectedAccount.
+message UpdateConnectedAccountRequest {
+  // Required. The unique identifier of the connected account to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The connected account resource containing updated values.
+  ConnectedAccount account = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. The list of fields to update. Supported fields:
+  // * `display_name`
+  // * `color`
+  // * `enabled_capabilities`
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for ConnectorService.DeleteConnectedAccount.
+message DeleteConnectedAccountRequest {
+  // Required. The unique identifier of the connected account to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for ConnectorService.SyncConnectedAccount.
+message SyncConnectedAccountRequest {
+  // Required. The unique identifier of the connected account to synchronize.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Response message for ConnectorService.SyncConnectedAccount.
+message SyncConnectedAccountResponse {
+  // Output only. The synchronized connected account resource.
+  ConnectedAccount account = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for ConnectorService.SuggestContacts.
+message SuggestContactsRequest {
+  // Optional. Autocomplete prefix query for email or display name matching.
+  string query = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Maximum number of suggestions to return (defaults to 20, max 100).
+  int32 limit = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for ConnectorService.SuggestContacts.
+message SuggestContactsResponse {
+  // Output only. The list of matching contact suggestions.
+  repeated AccountContact contacts = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// ConnectedAccount represents a space-owned external identity and capability connection.
+message ConnectedAccount {
+  // Output only. The unique identifier of the connected account (cac_<ksuid>).
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The workspace/space identifier that owns this connected account.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The user who connected this external account.
+  string created_by_user_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The external provider identifier (e.g., google, microsoft).
+  string provider = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The provider-assigned account or subject identifier.
+  string provider_account_id = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The primary email address of the connected account.
+  string email = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. The user-friendly display name of the connected account.
+  optional string display_name = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. The avatar URL for the account profile.
+  optional string avatar_url = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Hex color or token used to tag events and resources associated with this account.
+  optional string color = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Timestamp when current access token expires.
+  google.protobuf.Timestamp token_expiry = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. List of OAuth scopes granted by the user.
+  repeated string granted_scopes = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. List of active capabilities enabled for this account (e.g., calendar, mail, contacts).
+  repeated string enabled_capabilities = 12 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Operational health status of the connection (healthy, reauth_required, rate_limited, revoked, error).
+  string status = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Optional reason or details when the account is in an error or degraded status.
+  optional string status_reason = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Active rate-limit backoff expiration timestamp.
+  google.protobuf.Timestamp backoff_until = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp of the most recent successful sync operation.
+  google.protobuf.Timestamp last_sync_time = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Optimistic concurrency control version number.
+  int64 version = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the connection was initially created.
+  google.protobuf.Timestamp create_time = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the connection was last updated.
+  google.protobuf.Timestamp update_time = 19 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// AccountContact represents an address book contact cached from an external account.
+message AccountContact {
+  // Output only. The unique identifier of the contact record (cnt_<ksuid>).
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The workspace identifier.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The associated connected account ID.
+  string connected_account_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The external contact identifier from the provider.
+  string provider_contact_id = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Contact email address.
+  optional string email = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Contact display name.
+  optional string display_name = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Contact avatar or picture URL.
+  optional string avatar_url = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Timestamp when the contact record was last updated.
+  google.protobuf.Timestamp update_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// SyncContactsPayload is the job payload for syncing contacts from an external account.
+message SyncContactsPayload {
+  option (saturn.platform.scheduler.v1.job_type) = "connector.sync_contacts";
+
+  // The workspace identifier.
+  string space_id = 1;
+
+  // The connected account identifier.
+  string account_id = 2;
+}

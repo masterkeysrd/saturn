@@ -1,10 +1,14 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "saturn/platform/scheduler/v1/options.proto",
+    "title": "saturn/calendar/v1/calendar.proto",
     "version": "version not set"
   },
   "tags": [
+    {
+      "name": "CalendarService",
+      "description": "CalendarService manages workspace native and external synchronized calendars,\nevents, occurrence recurrence expansion, attendee responses, and write-through operations."
+    },
     {
       "name": "Finance",
       "description": "Finance service provides APIs for budgeting, accounts management, transaction\nrecording, daily exchange rate configurations, and analytics insights."
@@ -24,6 +28,10 @@
     {
       "name": "BackupAdmin",
       "description": "BackupAdmin service handles manual backup runs and log monitoring."
+    },
+    {
+      "name": "ConnectorService",
+      "description": "ConnectorService manages external connected account integrations (e.g., Google, Microsoft 365),\nOAuth2 PKCE initiation, capability management, contact suggestions, and synchronization."
     },
     {
       "name": "IntegrationService",
@@ -855,6 +863,484 @@
         },
         "tags": [
           "SchedulerAdmin"
+        ]
+      }
+    },
+    "/v1/calendar/events": {
+      "get": {
+        "summary": "Lists event occurrences expanded across time range and selected calendars.",
+        "operationId": "CalendarService_ListEvents",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListEventsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "calendarIds",
+            "description": "Calendar IDs to include. If omitted, all enabled calendars in the workspace are included.",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "timeMin",
+            "description": "Start boundary of the viewport (inclusive).",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "timeMax",
+            "description": "End boundary of the viewport (exclusive).",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "query",
+            "description": "Optional text search filter across title, description, and location.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CalendarService"
+        ]
+      },
+      "post": {
+        "summary": "Creates a new event in a specified calendar.",
+        "operationId": "CalendarService_CreateEvent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Event"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "event",
+            "description": "Required. Event entity to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Event"
+            }
+          }
+        ],
+        "tags": [
+          "CalendarService"
+        ]
+      }
+    },
+    "/v1/calendar/events/{id}": {
+      "get": {
+        "summary": "Retrieves a single event master or exception by ID.",
+        "operationId": "CalendarService_GetEvent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Event"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the event.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CalendarService"
+        ]
+      },
+      "delete": {
+        "summary": "Deletes an event, supporting recurrence scopes for recurring occurrences.",
+        "operationId": "CalendarService_DeleteEvent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the event to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "recurrenceScope",
+            "description": "Deletion scope for recurring events. Defaults to ALL_EVENTS if omitted.\n\n - RECURRENCE_SCOPE_THIS_EVENT: Modifies only the single occurrence instance.\n - RECURRENCE_SCOPE_THIS_AND_FOLLOWING: Splits the series and modifies this occurrence and all subsequent occurrences.\n - RECURRENCE_SCOPE_ALL_EVENTS: Modifies the master recurrence series, applying to all occurrences.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "RECURRENCE_SCOPE_THIS_EVENT",
+              "RECURRENCE_SCOPE_THIS_AND_FOLLOWING",
+              "RECURRENCE_SCOPE_ALL_EVENTS"
+            ]
+          },
+          {
+            "name": "targetStartTime",
+            "description": "Target occurrence start time when deleting a specific occurrence in a series.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "targetStartDate",
+            "description": "Target occurrence start date in YYYY-MM-DD when deleting an all-day occurrence in a series.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CalendarService"
+        ]
+      },
+      "patch": {
+        "summary": "Updates an event, supporting recurrence scopes for recurring occurrences.",
+        "operationId": "CalendarService_UpdateEvent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Event"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the event to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "event",
+            "description": "Required. Event entity containing updated fields.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Event"
+            }
+          },
+          {
+            "name": "recurrenceScope",
+            "description": "Modification scope for recurring events. Defaults to ALL_EVENTS if omitted.\n\n - RECURRENCE_SCOPE_THIS_EVENT: Modifies only the single occurrence instance.\n - RECURRENCE_SCOPE_THIS_AND_FOLLOWING: Splits the series and modifies this occurrence and all subsequent occurrences.\n - RECURRENCE_SCOPE_ALL_EVENTS: Modifies the master recurrence series, applying to all occurrences.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "RECURRENCE_SCOPE_THIS_EVENT",
+              "RECURRENCE_SCOPE_THIS_AND_FOLLOWING",
+              "RECURRENCE_SCOPE_ALL_EVENTS"
+            ]
+          },
+          {
+            "name": "targetStartTime",
+            "description": "Target occurrence start time when modifying a specific occurrence in a series.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "targetStartDate",
+            "description": "Target occurrence start date in YYYY-MM-DD when modifying an all-day occurrence in a series.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CalendarService"
+        ]
+      }
+    },
+    "/v1/calendar/events/{id}:respond": {
+      "post": {
+        "summary": "Updates the current user's RSVP status for an event.",
+        "operationId": "CalendarService_RespondToEvent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Event"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the event to respond to.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CalendarServiceRespondToEventBody"
+            }
+          }
+        ],
+        "tags": [
+          "CalendarService"
+        ]
+      }
+    },
+    "/v1/calendars": {
+      "get": {
+        "summary": "Lists all available calendars for the workspace (both native and external).",
+        "operationId": "CalendarService_ListCalendars",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCalendarsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "CalendarService"
+        ]
+      },
+      "post": {
+        "summary": "Creates a new native calendar in the current workspace.",
+        "operationId": "CalendarService_CreateCalendar",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Calendar"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "calendar",
+            "description": "Required. Calendar entity to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Calendar"
+            }
+          }
+        ],
+        "tags": [
+          "CalendarService"
+        ]
+      }
+    },
+    "/v1/calendars/{id}": {
+      "get": {
+        "summary": "Retrieves details of a specific calendar by ID.",
+        "operationId": "CalendarService_GetCalendar",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Calendar"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the calendar.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CalendarService"
+        ]
+      },
+      "delete": {
+        "summary": "Deletes a calendar. Default native calendars cannot be deleted.",
+        "operationId": "CalendarService_DeleteCalendar",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the calendar to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CalendarService"
+        ]
+      },
+      "patch": {
+        "summary": "Updates attributes of an existing calendar using a field mask.",
+        "operationId": "CalendarService_UpdateCalendar",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Calendar"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the calendar to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "calendar",
+            "description": "Required. Calendar entity containing updated fields.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Calendar"
+            }
+          }
+        ],
+        "tags": [
+          "CalendarService"
+        ]
+      }
+    },
+    "/v1/calendars:ensure-default": {
+      "post": {
+        "summary": "Ensures that the workspace has its default native calendar provisioned.",
+        "operationId": "CalendarService_EnsureDefaultCalendar",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Calendar"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Request to ensure default native calendar provisioning.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1EnsureDefaultCalendarRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CalendarService"
         ]
       }
     },
@@ -4974,7 +5460,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ListProvidersResponse"
+              "$ref": "#/definitions/platformAgentV1ListProvidersResponse"
             }
           },
           "default": {
@@ -5176,6 +5662,277 @@
         ],
         "tags": [
           "AgentService"
+        ]
+      }
+    },
+    "/v1/platform/connectors/accounts": {
+      "get": {
+        "summary": "Lists all connected accounts for the current workspace.",
+        "operationId": "ConnectorService_ListConnectedAccounts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListConnectedAccountsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "provider",
+            "description": "Optional. Filter connected accounts by external provider (e.g., google, microsoft).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ConnectorService"
+        ]
+      }
+    },
+    "/v1/platform/connectors/accounts/{id}": {
+      "get": {
+        "summary": "Retrieves details of a specific connected account.",
+        "operationId": "ConnectorService_GetConnectedAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectedAccount"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. The unique identifier of the connected account.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ConnectorService"
+        ]
+      },
+      "delete": {
+        "summary": "Deletes and revokes a connected account from the workspace.",
+        "operationId": "ConnectorService_DeleteConnectedAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. The unique identifier of the connected account to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ConnectorService"
+        ]
+      },
+      "patch": {
+        "summary": "Updates mutable attributes of an existing connected account using a field mask.",
+        "operationId": "ConnectorService_UpdateConnectedAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectedAccount"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. The unique identifier of the connected account to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "account",
+            "description": "Required. The connected account resource containing updated values.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ConnectedAccount"
+            }
+          }
+        ],
+        "tags": [
+          "ConnectorService"
+        ]
+      }
+    },
+    "/v1/platform/connectors/accounts/{id}:sync": {
+      "post": {
+        "summary": "Triggers an immediate rate-limited synchronization of a connected account.",
+        "operationId": "ConnectorService_SyncConnectedAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SyncConnectedAccountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. The unique identifier of the connected account to synchronize.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ConnectorServiceSyncConnectedAccountBody"
+            }
+          }
+        ],
+        "tags": [
+          "ConnectorService"
+        ]
+      }
+    },
+    "/v1/platform/connectors/contacts:suggest": {
+      "get": {
+        "summary": "Suggests contacts by autocomplete search across all connected accounts in the workspace.",
+        "operationId": "ConnectorService_SuggestContacts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SuggestContactsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "query",
+            "description": "Optional. Autocomplete prefix query for email or display name matching.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "description": "Optional. Maximum number of suggestions to return (defaults to 20, max 100).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ConnectorService"
+        ]
+      }
+    },
+    "/v1/platform/connectors/providers": {
+      "get": {
+        "summary": "Lists all available OAuth connector providers and their supported capabilities.",
+        "operationId": "ConnectorService_ListProviders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/platformConnectorV1ListProvidersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "ConnectorService"
+        ]
+      }
+    },
+    "/v1/platform/connectors:initiate-oauth": {
+      "post": {
+        "summary": "Initiates an OAuth2 PKCE authorization flow for connecting or upgrading an external account.",
+        "operationId": "ConnectorService_InitiateOAuth",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1InitiateOAuthResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Request message for ConnectorService.InitiateOAuth.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1InitiateOAuthRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ConnectorService"
         ]
       }
     },
@@ -6185,6 +6942,19 @@
       ],
       "description": "RecurrenceInterval defines the frequency of budgeting or transaction execution rules.\n\n - WEEKLY: Budget resets or templates trigger every calendar week.\n - MONTHLY: Budget resets or templates trigger every calendar month.\n - YEARLY: Budget resets or templates trigger every calendar year.\n - ONE_TIME: Non-recurring single-period allocation"
     },
+    "CalendarServiceRespondToEventBody": {
+      "type": "object",
+      "properties": {
+        "response": {
+          "$ref": "#/definitions/v1AttendeeResponseStatus",
+          "description": "Required. Attendee response RSVP selection."
+        }
+      },
+      "description": "Request to respond to an event RSVP.",
+      "required": [
+        "response"
+      ]
+    },
     "ConfigCsvConfig": {
       "type": "object",
       "properties": {
@@ -6232,6 +7002,10 @@
         }
       },
       "description": "CSV file parsing configuration."
+    },
+    "ConnectorServiceSyncConnectedAccountBody": {
+      "type": "object",
+      "description": "Request message for ConnectorService.SyncConnectedAccount."
     },
     "FinanceAdjustAccountBalanceBody": {
       "type": "object",
@@ -7153,6 +7927,36 @@
         "accessLevel"
       ]
     },
+    "platformAgentV1ListProvidersResponse": {
+      "type": "object",
+      "properties": {
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1LLMProvider"
+          },
+          "description": "Output only. The list of configured LLM providers.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for listing LLM providers."
+    },
+    "platformConnectorV1ListProvidersResponse": {
+      "type": "object",
+      "properties": {
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ProviderDescriptor"
+          },
+          "description": "Output only. The list of supported OAuth connector providers.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for ConnectorService.ListProviders."
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -7359,6 +8163,16 @@
       ],
       "description": "AccessLevel defines the administrative authorization level of a user.\n\n - ACCESS_LEVEL_USER: Standard user access level with basic permissions.\n - ACCESS_LEVEL_ADMIN: Administrator access level with elevated management permissions."
     },
+    "v1AccessRole": {
+      "type": "string",
+      "enum": [
+        "ACCESS_ROLE_OWNER",
+        "ACCESS_ROLE_WRITER",
+        "ACCESS_ROLE_READER",
+        "ACCESS_ROLE_FREE_BUSY_READER"
+      ],
+      "description": "AccessRole defines the caller or account's permission level for a calendar.\n\n - ACCESS_ROLE_OWNER: Full administrative ownership over the calendar.\n - ACCESS_ROLE_WRITER: Read and write privileges over calendar events.\n - ACCESS_ROLE_READER: Read-only visibility over event details.\n - ACCESS_ROLE_FREE_BUSY_READER: Limited visibility displaying only free/busy availability."
+    },
     "v1Account": {
       "type": "object",
       "properties": {
@@ -7455,6 +8269,50 @@
         "currency",
         "initialBalance"
       ]
+    },
+    "v1AccountContact": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. The unique identifier of the contact record (cnt_\u003cksuid\u003e).",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. The workspace identifier.",
+          "readOnly": true
+        },
+        "connectedAccountId": {
+          "type": "string",
+          "description": "Output only. The associated connected account ID.",
+          "readOnly": true
+        },
+        "providerContactId": {
+          "type": "string",
+          "description": "Output only. The external contact identifier from the provider.",
+          "readOnly": true
+        },
+        "email": {
+          "type": "string",
+          "description": "Optional. Contact email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Optional. Contact display name."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "Optional. Contact avatar or picture URL."
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the contact record was last updated.",
+          "readOnly": true
+        }
+      },
+      "description": "AccountContact represents an address book contact cached from an external account."
     },
     "v1AccountType": {
       "type": "string",
@@ -7706,6 +8564,42 @@
         }
       },
       "description": "The response for\n[AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument]."
+    },
+    "v1Attendee": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email address of the attendee."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the attendee."
+        },
+        "responseStatus": {
+          "$ref": "#/definitions/v1AttendeeResponseStatus",
+          "description": "Current RSVP response status."
+        },
+        "isOptional": {
+          "type": "boolean",
+          "description": "True if attendance is optional."
+        },
+        "isOrganizer": {
+          "type": "boolean",
+          "description": "True if the attendee is also the event organizer."
+        }
+      },
+      "description": "Attendee represents a participant invited to an event."
+    },
+    "v1AttendeeResponseStatus": {
+      "type": "string",
+      "enum": [
+        "ATTENDEE_RESPONSE_STATUS_NEEDS_ACTION",
+        "ATTENDEE_RESPONSE_STATUS_ACCEPTED",
+        "ATTENDEE_RESPONSE_STATUS_DECLINED",
+        "ATTENDEE_RESPONSE_STATUS_TENTATIVE"
+      ],
+      "description": "AttendeeResponseStatus indicates an attendee's participation RSVP state.\n\n - ATTENDEE_RESPONSE_STATUS_NEEDS_ACTION: Invitation pending action by attendee.\n - ATTENDEE_RESPONSE_STATUS_ACCEPTED: Attendee accepted the invitation.\n - ATTENDEE_RESPONSE_STATUS_DECLINED: Attendee declined the invitation.\n - ATTENDEE_RESPONSE_STATUS_TENTATIVE: Attendee tentatively accepted."
     },
     "v1BackupEntry": {
       "type": "object",
@@ -8075,6 +8969,110 @@
       ],
       "description": "Scoped resource view options.\n\n - BASIC: Returns basic configuration details without period calculations.\n - FULL: Hydrates complete structure including active period spent statistics."
     },
+    "v1Calendar": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier with prefix `cal_`."
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Space / Workspace ID this calendar belongs to.",
+          "readOnly": true
+        },
+        "connectedAccountId": {
+          "type": "string",
+          "description": "Connected account ID if source is external.",
+          "readOnly": true
+        },
+        "source": {
+          "$ref": "#/definitions/v1CalendarSource",
+          "description": "Origin source of the calendar.",
+          "readOnly": true
+        },
+        "providerCalendarId": {
+          "type": "string",
+          "description": "Provider's external calendar ID.",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the calendar."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional descriptive text."
+        },
+        "color": {
+          "type": "string",
+          "description": "Hex color code tag for events in this calendar."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA primary timezone identifier."
+        },
+        "accessRole": {
+          "$ref": "#/definitions/v1AccessRole",
+          "description": "Access role of the caller for this calendar.",
+          "readOnly": true
+        },
+        "isPrimary": {
+          "type": "boolean",
+          "description": "True if this is the primary calendar for the connected account.",
+          "readOnly": true
+        },
+        "isEnabled": {
+          "type": "boolean",
+          "description": "Toggle controlling whether events from this calendar are displayed."
+        },
+        "isDefaultNative": {
+          "type": "boolean",
+          "description": "True if this is the default native calendar for the workspace.",
+          "readOnly": true
+        },
+        "lastSyncTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last synchronization timestamp for external calendars.",
+          "readOnly": true
+        },
+        "syncStatus": {
+          "type": "string",
+          "description": "Synchronization health status.",
+          "readOnly": true
+        },
+        "syncError": {
+          "type": "string",
+          "description": "Detailed error message if synchronization failed.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last modification timestamp.",
+          "readOnly": true
+        }
+      },
+      "description": "Calendar resource entity.",
+      "required": [
+        "name"
+      ]
+    },
+    "v1CalendarSource": {
+      "type": "string",
+      "enum": [
+        "CALENDAR_SOURCE_NATIVE",
+        "CALENDAR_SOURCE_EXTERNAL"
+      ],
+      "description": "CalendarSource denotes whether a calendar is native to Saturn or mirrored from an external provider.\n\n - CALENDAR_SOURCE_NATIVE: Native calendar managed entirely inside Saturn.\n - CALENDAR_SOURCE_EXTERNAL: External calendar mirrored from a connected account (e.g., Google Calendar)."
+    },
     "v1CatalogDescriptor": {
       "type": "object",
       "properties": {
@@ -8274,6 +9272,115 @@
         }
       },
       "description": "Response message for Identity.ConfirmTOTP."
+    },
+    "v1ConnectedAccount": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. The unique identifier of the connected account (cac_\u003cksuid\u003e).",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. The workspace/space identifier that owns this connected account.",
+          "readOnly": true
+        },
+        "createdByUserId": {
+          "type": "string",
+          "description": "Output only. The user who connected this external account.",
+          "readOnly": true
+        },
+        "provider": {
+          "type": "string",
+          "description": "Output only. The external provider identifier (e.g., google, microsoft).",
+          "readOnly": true
+        },
+        "providerAccountId": {
+          "type": "string",
+          "description": "Output only. The provider-assigned account or subject identifier.",
+          "readOnly": true
+        },
+        "email": {
+          "type": "string",
+          "description": "Output only. The primary email address of the connected account.",
+          "readOnly": true
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Optional. The user-friendly display name of the connected account."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "Optional. The avatar URL for the account profile."
+        },
+        "color": {
+          "type": "string",
+          "description": "Optional. Hex color or token used to tag events and resources associated with this account."
+        },
+        "tokenExpiry": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when current access token expires.",
+          "readOnly": true
+        },
+        "grantedScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Output only. List of OAuth scopes granted by the user.",
+          "readOnly": true
+        },
+        "enabledCapabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. List of active capabilities enabled for this account (e.g., calendar, mail, contacts)."
+        },
+        "status": {
+          "type": "string",
+          "description": "Output only. Operational health status of the connection (healthy, reauth_required, rate_limited, revoked, error).",
+          "readOnly": true
+        },
+        "statusReason": {
+          "type": "string",
+          "description": "Output only. Optional reason or details when the account is in an error or degraded status.",
+          "readOnly": true
+        },
+        "backoffUntil": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Active rate-limit backoff expiration timestamp.",
+          "readOnly": true
+        },
+        "lastSyncTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp of the most recent successful sync operation.",
+          "readOnly": true
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. Optimistic concurrency control version number.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the connection was initially created.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the connection was last updated.",
+          "readOnly": true
+        }
+      },
+      "description": "ConnectedAccount represents a space-owned external identity and capability connection."
     },
     "v1CreateAgentRequest": {
       "type": "object",
@@ -8611,6 +9718,276 @@
         "contentType",
         "content"
       ]
+    },
+    "v1EnsureDefaultCalendarRequest": {
+      "type": "object",
+      "description": "Request to ensure default native calendar provisioning."
+    },
+    "v1Event": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier with prefix `cev_`."
+        },
+        "calendarId": {
+          "type": "string",
+          "description": "Calendar ID this event belongs to."
+        },
+        "source": {
+          "$ref": "#/definitions/v1CalendarSource",
+          "description": "Origin source of the event.",
+          "readOnly": true
+        },
+        "providerEventId": {
+          "type": "string",
+          "description": "Provider's external event ID.",
+          "readOnly": true
+        },
+        "etag": {
+          "type": "string",
+          "description": "Entity tag / version cursor.",
+          "readOnly": true
+        },
+        "title": {
+          "type": "string",
+          "description": "Event title / summary."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed event description / notes."
+        },
+        "location": {
+          "type": "string",
+          "description": "Physical or virtual location."
+        },
+        "isAllDay": {
+          "type": "boolean",
+          "description": "True if this event spans full day(s)."
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "UTC start timestamp for timed events."
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "UTC end timestamp for timed events."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone identifier for timed events."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Inclusive start date in YYYY-MM-DD format for all-day events."
+        },
+        "endDate": {
+          "type": "string",
+          "description": "Exclusive end date in YYYY-MM-DD format for all-day events."
+        },
+        "rrule": {
+          "type": "string",
+          "description": "RFC 5545 recurrence rule specification string."
+        },
+        "exdates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of suppressed exception dates for timed recurring series."
+        },
+        "exdatesAllDay": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of suppressed exception dates for all-day recurring series."
+        },
+        "recurringMasterId": {
+          "type": "string",
+          "description": "ID of the recurring master event if this is an exception instance.",
+          "readOnly": true
+        },
+        "originalStartTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Original scheduled start timestamp for recurring exception instances.",
+          "readOnly": true
+        },
+        "originalStartDate": {
+          "type": "string",
+          "description": "Original scheduled start date in YYYY-MM-DD for all-day recurring exception instances.",
+          "readOnly": true
+        },
+        "status": {
+          "$ref": "#/definitions/v1EventStatus",
+          "description": "Status of the event."
+        },
+        "organizer": {
+          "$ref": "#/definitions/v1Organizer",
+          "description": "Event organizer details."
+        },
+        "attendees": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Attendee"
+          },
+          "description": "List of participants and their response status."
+        },
+        "reminders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Reminder"
+          },
+          "description": "Notification reminders."
+        },
+        "meetUrl": {
+          "type": "string",
+          "description": "Video conference URL (e.g. Google Meet link)."
+        },
+        "sourceMailMessageId": {
+          "type": "string",
+          "description": "Linked source mail message ID if created from an incoming email."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last modification timestamp.",
+          "readOnly": true
+        }
+      },
+      "description": "Event resource entity.",
+      "required": [
+        "calendarId",
+        "title"
+      ]
+    },
+    "v1EventOccurrence": {
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "description": "Underlying Event entity ID."
+        },
+        "calendarId": {
+          "type": "string",
+          "description": "Calendar ID containing this occurrence."
+        },
+        "masterId": {
+          "type": "string",
+          "description": "Recurring master event ID if this occurrence originates from an RRULE series."
+        },
+        "instanceId": {
+          "type": "string",
+          "description": "Composite occurrence instance identifier (e.g. `cev_..._20261020T140000Z`)."
+        },
+        "title": {
+          "type": "string",
+          "description": "Event title."
+        },
+        "description": {
+          "type": "string",
+          "description": "Event description."
+        },
+        "location": {
+          "type": "string",
+          "description": "Physical or virtual location."
+        },
+        "isAllDay": {
+          "type": "boolean",
+          "description": "True if this is an all-day occurrence."
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "UTC start timestamp for timed occurrences."
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "UTC end timestamp for timed occurrences."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Inclusive start date in YYYY-MM-DD for all-day occurrences."
+        },
+        "endDate": {
+          "type": "string",
+          "description": "Exclusive end date in YYYY-MM-DD for all-day occurrences."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "Timezone identifier."
+        },
+        "status": {
+          "$ref": "#/definitions/v1EventStatus",
+          "description": "Event status."
+        },
+        "isException": {
+          "type": "boolean",
+          "description": "True if this occurrence is a modified exception instance."
+        },
+        "meetUrl": {
+          "type": "string",
+          "description": "Video conference link."
+        },
+        "color": {
+          "type": "string",
+          "description": "Resolved accent color from the parent calendar."
+        },
+        "calendarName": {
+          "type": "string",
+          "description": "Display name of the parent calendar."
+        },
+        "organizer": {
+          "$ref": "#/definitions/v1Organizer",
+          "description": "Organizer details."
+        },
+        "attendees": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Attendee"
+          },
+          "description": "Attendees list."
+        },
+        "reminders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Reminder"
+          },
+          "description": "Reminder thresholds."
+        },
+        "isVirtual": {
+          "type": "boolean",
+          "description": "True if this occurrence originates from an external timeline overlay (e.g. scheduled finance bills)."
+        },
+        "sourceType": {
+          "type": "string",
+          "description": "Source classification category for virtual timeline overlays."
+        }
+      },
+      "description": "EventOccurrence represents a concrete, rendered calendar occurrence expanded from a master series or standalone event."
+    },
+    "v1EventStatus": {
+      "type": "string",
+      "enum": [
+        "EVENT_STATUS_CONFIRMED",
+        "EVENT_STATUS_TENTATIVE",
+        "EVENT_STATUS_CANCELLED"
+      ],
+      "description": "EventStatus indicates the lifecycle confirmation state of an event.\n\n - EVENT_STATUS_CONFIRMED: Confirmed scheduled event.\n - EVENT_STATUS_TENTATIVE: Tentatively scheduled event.\n - EVENT_STATUS_CANCELLED: Cancelled or deleted event."
     },
     "v1ExchangeRate": {
       "type": "object",
@@ -9136,6 +10513,51 @@
       },
       "description": "The response for\n[IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument]."
     },
+    "v1InitiateOAuthRequest": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "Required. The provider identifier (e.g., google, microsoft)."
+        },
+        "returnUrl": {
+          "type": "string",
+          "description": "Required. The return URL for application redirection upon completing authorization."
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. List of platform capabilities requested for this connection (e.g., calendar, mail, contacts)."
+        },
+        "connectedAccountId": {
+          "type": "string",
+          "description": "Optional. The existing connected account ID when reconnecting or incrementally upgrading capabilities."
+        }
+      },
+      "description": "Request message for ConnectorService.InitiateOAuth.",
+      "required": [
+        "provider",
+        "returnUrl"
+      ]
+    },
+    "v1InitiateOAuthResponse": {
+      "type": "object",
+      "properties": {
+        "authUrl": {
+          "type": "string",
+          "description": "Output only. The authorization URL to redirect the user to.",
+          "readOnly": true
+        },
+        "state": {
+          "type": "string",
+          "description": "Output only. The state token generated for this authorization session.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for ConnectorService.InitiateOAuth."
+    },
     "v1InsightGranularity": {
       "type": "string",
       "enum": [
@@ -9552,6 +10974,20 @@
       },
       "description": "The response for\n[ListBudgets][saturn.finance.v1.Finance.ListBudgets]."
     },
+    "v1ListCalendarsResponse": {
+      "type": "object",
+      "properties": {
+        "calendars": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Calendar"
+          },
+          "description": "List of calendars belonging to the workspace."
+        }
+      },
+      "description": "Response returning calendars in the active workspace."
+    },
     "v1ListCatalogResponse": {
       "type": "object",
       "properties": {
@@ -9566,6 +11002,21 @@
         }
       },
       "description": "Response message for IntegrationService.ListCatalog."
+    },
+    "v1ListConnectedAccountsResponse": {
+      "type": "object",
+      "properties": {
+        "accounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ConnectedAccount"
+          },
+          "description": "Output only. The list of connected accounts for the space.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for ConnectorService.ListConnectedAccounts."
     },
     "v1ListCurrenciesResponse": {
       "type": "object",
@@ -9615,6 +11066,20 @@
         }
       },
       "description": "Response message for Identity.ListDevices."
+    },
+    "v1ListEventsResponse": {
+      "type": "object",
+      "properties": {
+        "occurrences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EventOccurrence"
+          },
+          "description": "Expanded occurrences occurring within the requested time interval."
+        }
+      },
+      "description": "Response containing expanded event occurrences within the requested viewport."
     },
     "v1ListExchangeRatesResponse": {
       "type": "object",
@@ -9760,21 +11225,6 @@
         }
       },
       "description": "Response message for Identity.ListMySecurityEvents."
-    },
-    "v1ListProvidersResponse": {
-      "type": "object",
-      "properties": {
-        "providers": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1LLMProvider"
-          },
-          "description": "Output only. The list of configured LLM providers.",
-          "readOnly": true
-        }
-      },
-      "description": "Response message for listing LLM providers."
     },
     "v1ListRecurringTransactionsResponse": {
       "type": "object",
@@ -10093,6 +11543,24 @@
       },
       "description": "MfaFactorDescriptor describes an enrolled multi-factor authentication (MFA) factor."
     },
+    "v1Organizer": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email address of the organizer."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the organizer."
+        },
+        "isSelf": {
+          "type": "boolean",
+          "description": "True if the current user is the organizer."
+        }
+      },
+      "description": "Organizer represents the scheduling host of an event."
+    },
     "v1ProviderBlueprintDescriptor": {
       "type": "object",
       "properties": {
@@ -10133,6 +11601,44 @@
         }
       },
       "description": "Specification blueprint describing a supported LLM provider type."
+    },
+    "v1ProviderDescriptor": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. The unique provider identifier (e.g., google, microsoft).",
+          "readOnly": true
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Output only. The human-readable display name (e.g., Google, Microsoft 365).",
+          "readOnly": true
+        },
+        "supportedCapabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Output only. List of capabilities supported by this provider (e.g., calendar, mail, contacts).",
+          "readOnly": true
+        },
+        "iconUrl": {
+          "type": "string",
+          "description": "Output only. Optional URL for the provider brand icon.",
+          "readOnly": true
+        }
+      },
+      "description": "ProviderDescriptor describes an available OAuth provider adapter and its capabilities."
+    },
+    "v1RecurrenceScope": {
+      "type": "string",
+      "enum": [
+        "RECURRENCE_SCOPE_THIS_EVENT",
+        "RECURRENCE_SCOPE_THIS_AND_FOLLOWING",
+        "RECURRENCE_SCOPE_ALL_EVENTS"
+      ],
+      "description": "RecurrenceScope defines the modification scope when editing or deleting recurring occurrences.\n\n - RECURRENCE_SCOPE_THIS_EVENT: Modifies only the single occurrence instance.\n - RECURRENCE_SCOPE_THIS_AND_FOLLOWING: Splits the series and modifies this occurrence and all subsequent occurrences.\n - RECURRENCE_SCOPE_ALL_EVENTS: Modifies the master recurrence series, applying to all occurrences."
     },
     "v1RecurringTransaction": {
       "type": "object",
@@ -10374,6 +11880,21 @@
         "name",
         "password"
       ]
+    },
+    "v1Reminder": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string",
+          "description": "Notification delivery method (e.g. \"popup\" or \"email\")."
+        },
+        "minutes": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Lead time in minutes prior to event start."
+        }
+      },
+      "description": "Reminder defines a notification threshold before an event begins."
     },
     "v1ResetPasswordResponse": {
       "type": "object",
@@ -11092,6 +12613,32 @@
         "COMPLETED"
       ],
       "description": "Status defines the lifecycle phase of the statement.\n\n - IN_PROGRESS: In progress draft statement undergoing reconciliation.\n - COMPLETED: Completed statement with all lines successfully matched or imported."
+    },
+    "v1SuggestContactsResponse": {
+      "type": "object",
+      "properties": {
+        "contacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AccountContact"
+          },
+          "description": "Output only. The list of matching contact suggestions.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for ConnectorService.SuggestContacts."
+    },
+    "v1SyncConnectedAccountResponse": {
+      "type": "object",
+      "properties": {
+        "account": {
+          "$ref": "#/definitions/v1ConnectedAccount",
+          "description": "Output only. The synchronized connected account resource.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for ConnectorService.SyncConnectedAccount."
     },
     "v1TopicMetrics": {
       "type": "object",

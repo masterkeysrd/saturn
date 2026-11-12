@@ -17,6 +17,7 @@ import {
   Sliders,
   Blocks,
   Landmark,
+  Link2,
 } from "lucide-react"
 import { PageLayout } from "@/components/ui/page-layout"
 import { cn } from "@/lib/utils"
@@ -30,6 +31,7 @@ import { SpaceSettings } from "./components/space-settings"
 import { SpacePreferences } from "./components/space-preferences"
 import { FinanceSettings } from "./components/finance-settings"
 import { IntegrationSettings } from "./components/integration-settings"
+import { ConnectedAccountsView } from "./connected-accounts-view"
 
 interface NavItem {
   to: string
@@ -112,6 +114,11 @@ export function SettingsView() {
             label: "Integrations",
             icon: Blocks,
           },
+          {
+            to: "/settings/connected-accounts",
+            label: "Connected Accounts",
+            icon: Link2,
+          },
         ],
       },
     ],
@@ -133,6 +140,8 @@ export function SettingsView() {
         navigate("/settings/finance", { replace: true })
       else if (tab === "integrations")
         navigate("/settings/integrations", { replace: true })
+      else if (tab === "connected-accounts")
+        navigate("/settings/connected-accounts", { replace: true })
     }
   }, [searchParams, navigate])
 
@@ -266,6 +275,10 @@ export function SettingsView() {
             <Route path="preferences" element={<SpacePreferences />} />
             <Route path="finance" element={<FinanceSettings />} />
             <Route path="integrations" element={<IntegrationSettings />} />
+            <Route
+              path="connected-accounts"
+              element={<ConnectedAccountsView />}
+            />
             <Route
               path="workspace"
               element={<Navigate to="/settings/preferences" replace />}

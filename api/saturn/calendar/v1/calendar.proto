@@ -1,0 +1,453 @@
+syntax = "proto3";
+
+package saturn.calendar.v1;
+
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/calendar/v1;calendarv1";
+
+// CalendarService manages workspace native and external synchronized calendars,
+// events, occurrence recurrence expansion, attendee responses, and write-through operations.
+service CalendarService {
+  // Lists all available calendars for the workspace (both native and external).
+  rpc ListCalendars(ListCalendarsRequest) returns (ListCalendarsResponse) {
+    option (google.api.http) = {get: "/v1/calendars"};
+  }
+
+  // Retrieves details of a specific calendar by ID.
+  rpc GetCalendar(GetCalendarRequest) returns (Calendar) {
+    option (google.api.http) = {get: "/v1/calendars/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Creates a new native calendar in the current workspace.
+  rpc CreateCalendar(CreateCalendarRequest) returns (Calendar) {
+    option (google.api.http) = {
+      post: "/v1/calendars"
+      body: "calendar"
+    };
+    option (google.api.method_signature) = "calendar";
+  }
+
+  // Updates attributes of an existing calendar using a field mask.
+  rpc UpdateCalendar(UpdateCalendarRequest) returns (Calendar) {
+    option (google.api.http) = {
+      patch: "/v1/calendars/{id}"
+      body: "calendar"
+    };
+    option (google.api.method_signature) = "id,calendar,update_mask";
+  }
+
+  // Deletes a calendar. Default native calendars cannot be deleted.
+  rpc DeleteCalendar(DeleteCalendarRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/calendars/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Ensures that the workspace has its default native calendar provisioned.
+  rpc EnsureDefaultCalendar(EnsureDefaultCalendarRequest) returns (Calendar) {
+    option (google.api.http) = {
+      post: "/v1/calendars:ensure-default"
+      body: "*"
+    };
+  }
+
+  // Lists event occurrences expanded across time range and selected calendars.
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse) {
+    option (google.api.http) = {get: "/v1/calendar/events"};
+  }
+
+  // Retrieves a single event master or exception by ID.
+  rpc GetEvent(GetEventRequest) returns (Event) {
+    option (google.api.http) = {get: "/v1/calendar/events/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Creates a new event in a specified calendar.
+  rpc CreateEvent(CreateEventRequest) returns (Event) {
+    option (google.api.http) = {
+      post: "/v1/calendar/events"
+      body: "event"
+    };
+    option (google.api.method_signature) = "event";
+  }
+
+  // Updates an event, supporting recurrence scopes for recurring occurrences.
+  rpc UpdateEvent(UpdateEventRequest) returns (Event) {
+    option (google.api.http) = {
+      patch: "/v1/calendar/events/{id}"
+      body: "event"
+    };
+    option (google.api.method_signature) = "id,event,update_mask";
+  }
+
+  // Deletes an event, supporting recurrence scopes for recurring occurrences.
+  rpc DeleteEvent(DeleteEventRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/calendar/events/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Updates the current user's RSVP status for an event.
+  rpc RespondToEvent(RespondToEventRequest) returns (Event) {
+    option (google.api.http) = {
+      post: "/v1/calendar/events/{id}:respond"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id,response";
+  }
+}
+
+// CalendarSource denotes whether a calendar is native to Saturn or mirrored from an external provider.
+enum CalendarSource {
+  // Source unspecified.
+  CALENDAR_SOURCE_UNSPECIFIED = 0;
+  // Native calendar managed entirely inside Saturn.
+  CALENDAR_SOURCE_NATIVE = 1;
+  // External calendar mirrored from a connected account (e.g., Google Calendar).
+  CALENDAR_SOURCE_EXTERNAL = 2;
+}
+
+// AccessRole defines the caller or account's permission level for a calendar.
+enum AccessRole {
+  // Role unspecified.
+  ACCESS_ROLE_UNSPECIFIED = 0;
+  // Full administrative ownership over the calendar.
+  ACCESS_ROLE_OWNER = 1;
+  // Read and write privileges over calendar events.
+  ACCESS_ROLE_WRITER = 2;
+  // Read-only visibility over event details.
+  ACCESS_ROLE_READER = 3;
+  // Limited visibility displaying only free/busy availability.
+  ACCESS_ROLE_FREE_BUSY_READER = 4;
+}
+
+// EventStatus indicates the lifecycle confirmation state of an event.
+enum EventStatus {
+  // Status unspecified.
+  EVENT_STATUS_UNSPECIFIED = 0;
+  // Confirmed scheduled event.
+  EVENT_STATUS_CONFIRMED = 1;
+  // Tentatively scheduled event.
+  EVENT_STATUS_TENTATIVE = 2;
+  // Cancelled or deleted event.
+  EVENT_STATUS_CANCELLED = 3;
+}
+
+// AttendeeResponseStatus indicates an attendee's participation RSVP state.
+enum AttendeeResponseStatus {
+  // Response status unspecified.
+  ATTENDEE_RESPONSE_STATUS_UNSPECIFIED = 0;
+  // Invitation pending action by attendee.
+  ATTENDEE_RESPONSE_STATUS_NEEDS_ACTION = 1;
+  // Attendee accepted the invitation.
+  ATTENDEE_RESPONSE_STATUS_ACCEPTED = 2;
+  // Attendee declined the invitation.
+  ATTENDEE_RESPONSE_STATUS_DECLINED = 3;
+  // Attendee tentatively accepted.
+  ATTENDEE_RESPONSE_STATUS_TENTATIVE = 4;
+}
+
+// RecurrenceScope defines the modification scope when editing or deleting recurring occurrences.
+enum RecurrenceScope {
+  // Scope unspecified.
+  RECURRENCE_SCOPE_UNSPECIFIED = 0;
+  // Modifies only the single occurrence instance.
+  RECURRENCE_SCOPE_THIS_EVENT = 1;
+  // Splits the series and modifies this occurrence and all subsequent occurrences.
+  RECURRENCE_SCOPE_THIS_AND_FOLLOWING = 2;
+  // Modifies the master recurrence series, applying to all occurrences.
+  RECURRENCE_SCOPE_ALL_EVENTS = 3;
+}
+
+// Organizer represents the scheduling host of an event.
+message Organizer {
+  // Email address of the organizer.
+  string email = 1;
+  // Display name of the organizer.
+  string display_name = 2;
+  // True if the current user is the organizer.
+  bool is_self = 3;
+}
+
+// Attendee represents a participant invited to an event.
+message Attendee {
+  // Email address of the attendee.
+  string email = 1;
+  // Display name of the attendee.
+  string display_name = 2;
+  // Current RSVP response status.
+  AttendeeResponseStatus response_status = 3;
+  // True if attendance is optional.
+  bool is_optional = 4;
+  // True if the attendee is also the event organizer.
+  bool is_organizer = 5;
+}
+
+// Reminder defines a notification threshold before an event begins.
+message Reminder {
+  // Notification delivery method (e.g. "popup" or "email").
+  string method = 1;
+  // Lead time in minutes prior to event start.
+  int32 minutes = 2;
+}
+
+// Calendar resource entity.
+message Calendar {
+  // Unique identifier with prefix `cal_`.
+  string id = 1 [(google.api.field_behavior) = IDENTIFIER];
+  // Space / Workspace ID this calendar belongs to.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Connected account ID if source is external.
+  string connected_account_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Origin source of the calendar.
+  CalendarSource source = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Provider's external calendar ID.
+  string provider_calendar_id = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Display name of the calendar.
+  string name = 6 [(google.api.field_behavior) = REQUIRED];
+  // Optional descriptive text.
+  string description = 7;
+  // Hex color code tag for events in this calendar.
+  string color = 8;
+  // IANA primary timezone identifier.
+  string timezone = 9;
+  // Access role of the caller for this calendar.
+  AccessRole access_role = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // True if this is the primary calendar for the connected account.
+  bool is_primary = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Toggle controlling whether events from this calendar are displayed.
+  bool is_enabled = 12;
+  // True if this is the default native calendar for the workspace.
+  bool is_default_native = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Last synchronization timestamp for external calendars.
+  google.protobuf.Timestamp last_sync_time = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Synchronization health status.
+  string sync_status = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Detailed error message if synchronization failed.
+  string sync_error = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Creation timestamp.
+  google.protobuf.Timestamp create_time = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Last modification timestamp.
+  google.protobuf.Timestamp update_time = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Event resource entity.
+message Event {
+  // Unique identifier with prefix `cev_`.
+  string id = 1 [(google.api.field_behavior) = IDENTIFIER];
+  // Calendar ID this event belongs to.
+  string calendar_id = 2 [(google.api.field_behavior) = REQUIRED];
+  // Origin source of the event.
+  CalendarSource source = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Provider's external event ID.
+  string provider_event_id = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Entity tag / version cursor.
+  string etag = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Event title / summary.
+  string title = 6 [(google.api.field_behavior) = REQUIRED];
+  // Detailed event description / notes.
+  string description = 7;
+  // Physical or virtual location.
+  string location = 8;
+  // True if this event spans full day(s).
+  bool is_all_day = 9;
+  // UTC start timestamp for timed events.
+  google.protobuf.Timestamp start_time = 10;
+  // UTC end timestamp for timed events.
+  google.protobuf.Timestamp end_time = 11;
+  // IANA timezone identifier for timed events.
+  string timezone = 12;
+  // Inclusive start date in YYYY-MM-DD format for all-day events.
+  string start_date = 13;
+  // Exclusive end date in YYYY-MM-DD format for all-day events.
+  string end_date = 14;
+  // RFC 5545 recurrence rule specification string.
+  string rrule = 15;
+  // List of suppressed exception dates for timed recurring series.
+  repeated string exdates = 16;
+  // List of suppressed exception dates for all-day recurring series.
+  repeated string exdates_all_day = 17;
+  // ID of the recurring master event if this is an exception instance.
+  string recurring_master_id = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Original scheduled start timestamp for recurring exception instances.
+  google.protobuf.Timestamp original_start_time = 19 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Original scheduled start date in YYYY-MM-DD for all-day recurring exception instances.
+  string original_start_date = 20 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Status of the event.
+  EventStatus status = 21;
+  // Event organizer details.
+  Organizer organizer = 22;
+  // List of participants and their response status.
+  repeated Attendee attendees = 23;
+  // Notification reminders.
+  repeated Reminder reminders = 24;
+  // Video conference URL (e.g. Google Meet link).
+  string meet_url = 25;
+  // Linked source mail message ID if created from an incoming email.
+  string source_mail_message_id = 26;
+  // Creation timestamp.
+  google.protobuf.Timestamp create_time = 27 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Last modification timestamp.
+  google.protobuf.Timestamp update_time = 28 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// EventOccurrence represents a concrete, rendered calendar occurrence expanded from a master series or standalone event.
+message EventOccurrence {
+  // Underlying Event entity ID.
+  string event_id = 1;
+  // Calendar ID containing this occurrence.
+  string calendar_id = 2;
+  // Recurring master event ID if this occurrence originates from an RRULE series.
+  string master_id = 3;
+  // Composite occurrence instance identifier (e.g. `cev_..._20261020T140000Z`).
+  string instance_id = 4;
+  // Event title.
+  string title = 5;
+  // Event description.
+  string description = 6;
+  // Physical or virtual location.
+  string location = 7;
+  // True if this is an all-day occurrence.
+  bool is_all_day = 8;
+  // UTC start timestamp for timed occurrences.
+  google.protobuf.Timestamp start_time = 9;
+  // UTC end timestamp for timed occurrences.
+  google.protobuf.Timestamp end_time = 10;
+  // Inclusive start date in YYYY-MM-DD for all-day occurrences.
+  string start_date = 11;
+  // Exclusive end date in YYYY-MM-DD for all-day occurrences.
+  string end_date = 12;
+  // Timezone identifier.
+  string timezone = 13;
+  // Event status.
+  EventStatus status = 14;
+  // True if this occurrence is a modified exception instance.
+  bool is_exception = 15;
+  // Video conference link.
+  string meet_url = 16;
+  // Resolved accent color from the parent calendar.
+  string color = 17;
+  // Display name of the parent calendar.
+  string calendar_name = 18;
+  // Organizer details.
+  Organizer organizer = 19;
+  // Attendees list.
+  repeated Attendee attendees = 20;
+  // Reminder thresholds.
+  repeated Reminder reminders = 21;
+  // True if this occurrence originates from an external timeline overlay (e.g. scheduled finance bills).
+  bool is_virtual = 22;
+  // Source classification category for virtual timeline overlays.
+  string source_type = 23;
+}
+
+// Request to list calendars in the active workspace.
+message ListCalendarsRequest {}
+
+// Response returning calendars in the active workspace.
+message ListCalendarsResponse {
+  // List of calendars belonging to the workspace.
+  repeated Calendar calendars = 1;
+}
+
+// Request to retrieve a single calendar.
+message GetCalendarRequest {
+  // Required. Unique identifier of the calendar.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to create a new native calendar.
+message CreateCalendarRequest {
+  // Required. Calendar entity to create.
+  Calendar calendar = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to update an existing calendar.
+message UpdateCalendarRequest {
+  // Required. Unique identifier of the calendar to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  // Required. Calendar entity containing updated fields.
+  Calendar calendar = 2 [(google.api.field_behavior) = REQUIRED];
+  // Required. Field mask indicating which fields to update.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to delete a calendar.
+message DeleteCalendarRequest {
+  // Required. Unique identifier of the calendar to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to ensure default native calendar provisioning.
+message EnsureDefaultCalendarRequest {}
+
+// Request to list event occurrences across a time viewport.
+message ListEventsRequest {
+  // Calendar IDs to include. If omitted, all enabled calendars in the workspace are included.
+  repeated string calendar_ids = 1;
+  // Start boundary of the viewport (inclusive).
+  google.protobuf.Timestamp time_min = 2;
+  // End boundary of the viewport (exclusive).
+  google.protobuf.Timestamp time_max = 3;
+  // Optional text search filter across title, description, and location.
+  string query = 4;
+}
+
+// Response containing expanded event occurrences within the requested viewport.
+message ListEventsResponse {
+  // Expanded occurrences occurring within the requested time interval.
+  repeated EventOccurrence occurrences = 1;
+}
+
+// Request to retrieve an event by ID.
+message GetEventRequest {
+  // Required. Unique identifier of the event.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to create an event.
+message CreateEventRequest {
+  // Required. Event entity to create.
+  Event event = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to update an event.
+message UpdateEventRequest {
+  // Required. Unique identifier of the event to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  // Required. Event entity containing updated fields.
+  Event event = 2 [(google.api.field_behavior) = REQUIRED];
+  // Required. Field mask indicating which fields to update.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = REQUIRED];
+  // Modification scope for recurring events. Defaults to ALL_EVENTS if omitted.
+  RecurrenceScope recurrence_scope = 4;
+  // Target occurrence start time when modifying a specific occurrence in a series.
+  google.protobuf.Timestamp target_start_time = 5;
+  // Target occurrence start date in YYYY-MM-DD when modifying an all-day occurrence in a series.
+  string target_start_date = 6;
+}
+
+// Request to delete an event.
+message DeleteEventRequest {
+  // Required. Unique identifier of the event to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  // Deletion scope for recurring events. Defaults to ALL_EVENTS if omitted.
+  RecurrenceScope recurrence_scope = 2;
+  // Target occurrence start time when deleting a specific occurrence in a series.
+  google.protobuf.Timestamp target_start_time = 3;
+  // Target occurrence start date in YYYY-MM-DD when deleting an all-day occurrence in a series.
+  string target_start_date = 4;
+}
+
+// Request to respond to an event RSVP.
+message RespondToEventRequest {
+  // Required. Unique identifier of the event to respond to.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  // Required. Attendee response RSVP selection.
+  AttendeeResponseStatus response = 2 [(google.api.field_behavior) = REQUIRED];
+}

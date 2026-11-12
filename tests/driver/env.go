@@ -24,6 +24,7 @@ import (
 	"github.com/masterkeysrd/saturn/apis/saturn"
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
 	"github.com/masterkeysrd/saturn/cmd/saturn/app"
+	calendarapp "github.com/masterkeysrd/saturn/internal/application/calendar"
 	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
@@ -38,6 +39,8 @@ type TestEnv struct {
 	DB            *sqlx.DB
 	ServerURL     string
 	BackupDir     string
+	SocketPath    string
+	MockGoogle    *MockGoogleServer
 	grpcSrv       *app.GRPCServer
 	gwSrv         *app.GRPCGatewayServer
 	container     testcontainers.Container
@@ -163,6 +166,8 @@ func StartTestEnv() (*TestEnv, error) {
 		}
 	}
 
+	mockGoogle := StartMockGoogleServer(nil)
+
 	cfg := &app.Config{
 		DB: app.DBConfig{
 			Host:     dbHost,
@@ -191,6 +196,20 @@ func StartTestEnv() (*TestEnv, error) {
 		Backup: app.BackupConfig{
 			LocalDir: backupDir,
 		},
+		Connector: app.ConnectorConfig{
+			PublicCallbackBaseURL: fmt.Sprintf("http://127.0.0.1:%d/v1/platform/connectors/oauth", port),
+			Google: app.GoogleConnectorConfig{
+				ClientID:     "saturn-test-client-id",
+				ClientSecret: "saturn-test-client-secret",
+				AuthURL:      mockGoogle.URL + "/auth",
+				TokenURL:     mockGoogle.TokenURL(),
+				RevokeURL:    mockGoogle.RevokeURL(),
+				UserinfoURL:  mockGoogle.UserinfoURL(),
+				PeopleURL:    mockGoogle.PeopleURL(),
+				OtherURL:     mockGoogle.OtherURL(),
+				CalendarURL:  mockGoogle.CalendarURL(),
+			},
+		},
 	}
 
 	grpcSrv := app.NewGRPCServer(cfg)
@@ -206,7 +225,15 @@ func StartTestEnv() (*TestEnv, error) {
 		_ = grpcSrv.ServeListener()
 	}()
 
-	gwSrv := app.NewGRPCGatewayServer(cfg, grpcSrv.TokenService, grpcSrv.IntegrationRegistry, grpcSrv.EventBus)
+	gwSrv := app.NewGRPCGatewayServer(
+		cfg,
+		grpcSrv.TokenService,
+		grpcSrv.IntegrationRegistry,
+		grpcSrv.EventBus,
+		grpcSrv.ConnectorCoordinator,
+		grpcSrv.ConnectorOAuthMgr,
+		grpcSrv.Scheduler,
+	)
 	if err := gwSrv.Start(ctx, cfg); err != nil {
 		if cleanupPGDump != nil {
 			cleanupPGDump()
@@ -228,6 +255,8 @@ func StartTestEnv() (*TestEnv, error) {
 		DB:            sqlxDB,
 		ServerURL:     serverURL,
 		BackupDir:     backupDir,
+		SocketPath:    sockPath,
+		MockGoogle:    mockGoogle,
 		grpcSrv:       grpcSrv,
 		gwSrv:         gwSrv,
 		container:     container,
@@ -240,6 +269,9 @@ func (e *TestEnv) Stop() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	if e.MockGoogle != nil {
+		e.MockGoogle.Close()
+	}
 	if e.gwSrv != nil {
 		_ = e.gwSrv.Shutdown(ctx)
 	}
@@ -420,6 +452,14 @@ func (e *TestEnv) EventBus() *eventbus.Engine {
 func (e *TestEnv) Scheduler() *scheduler.Engine {
 	if e.grpcSrv != nil {
 		return e.grpcSrv.Scheduler
+	}
+	return nil
+}
+
+// CalendarCoordinator returns the running Calendar Coordinator from the gRPC server.
+func (e *TestEnv) CalendarCoordinator() calendarapp.Coordinator {
+	if e.grpcSrv != nil {
+		return e.grpcSrv.CalendarCoordinator
 	}
 	return nil
 }
