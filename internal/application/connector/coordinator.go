@@ -6,7 +6,6 @@ package connector
 
 import (
 	"context"
-	"encoding/json/v2"
 	"fmt"
 	"slices"
 	"time"
@@ -305,28 +304,7 @@ func (c *coordinator) CompleteOAuth(ctx context.Context, req *CompleteOAuthReque
 	}
 
 	// Enqueue initial sync jobs
-	if c.scheduler != nil && account.HasCapability(connector.CapabilityContacts) {
-		_ = connectorv1.EnqueueSyncContactsPayload(ctx, c.scheduler, connectorv1.SyncContactsPayloadJob{
-			Payload: &connectorv1.SyncContactsPayload{
-				SpaceId:   account.SpaceID,
-				AccountId: account.ID,
-			},
-			RunAt:       time.Now(),
-			MaxAttempts: 3,
-		})
-	}
-	if c.scheduler != nil && account.HasCapability(connector.CapabilityCalendar) {
-		payload, _ := json.Marshal(map[string]string{
-			"space_id":   account.SpaceID,
-			"account_id": account.ID,
-		})
-		_ = c.scheduler.Enqueue(ctx, scheduler.Job{
-			JobType:     "connector.sync_calendar",
-			RunAt:       time.Now(),
-			Payload:     payload,
-			MaxAttempts: 3,
-		})
-	}
+	c.enqueueAccountSync(ctx, account, caps)
 
 	return &CompleteOAuthResult{
 		Account:   account,
@@ -442,19 +420,7 @@ func (c *coordinator) UpdateConnectedAccount(ctx context.Context, req *UpdateCon
 		}
 
 		account.EnabledCapabilities = newCaps
-
-		if c.scheduler != nil && slices.Contains(newlyEnabled, connector.CapabilityCalendar) {
-			payload, _ := json.Marshal(map[string]string{
-				"space_id":   account.SpaceID,
-				"account_id": account.ID,
-			})
-			_ = c.scheduler.Enqueue(ctx, scheduler.Job{
-				JobType:     "connector.sync_calendar",
-				RunAt:       time.Now(),
-				Payload:     payload,
-				MaxAttempts: 3,
-			})
-		}
+		c.enqueueAccountSync(ctx, account, newlyEnabled)
 	}
 
 	if err := c.store.UpdateAccount(ctx, account); err != nil {
@@ -502,29 +468,11 @@ func (c *coordinator) SyncConnectedAccount(ctx context.Context, req *SyncConnect
 		)
 	}
 
-	// Enqueue sync contacts job if capability is enabled
-	if c.scheduler != nil && account.HasCapability(connector.CapabilityContacts) {
-		_ = connectorv1.EnqueueSyncContactsPayload(ctx, c.scheduler, connectorv1.SyncContactsPayloadJob{
-			Payload: &connectorv1.SyncContactsPayload{
-				SpaceId:   account.SpaceID,
-				AccountId: account.ID,
-			},
-			RunAt:       now,
-			MaxAttempts: 3,
-		})
-	}
-	if c.scheduler != nil && account.HasCapability(connector.CapabilityCalendar) {
-		payload, _ := json.Marshal(map[string]string{
-			"space_id":   account.SpaceID,
-			"account_id": account.ID,
-		})
-		_ = c.scheduler.Enqueue(ctx, scheduler.Job{
-			JobType:     "connector.sync_calendar",
-			RunAt:       now,
-			Payload:     payload,
-			MaxAttempts: 3,
-		})
-	}
+	c.enqueueAccountSync(ctx, account, []connector.Capability{
+		connector.CapabilityContacts,
+		connector.CapabilityCalendar,
+		connector.CapabilityMail,
+	})
 
 	account.LastSyncTime = &now
 	if err := c.store.UpdateAccount(ctx, account); err != nil {
@@ -605,4 +553,41 @@ func (c *coordinator) SyncContacts(ctx context.Context, req *SyncContactsRequest
 	}
 
 	return nil
+}
+
+func (c *coordinator) enqueueAccountSync(ctx context.Context, account *connector.ConnectedAccount, caps []connector.Capability) {
+	now := time.Now().UTC()
+	for _, cap := range caps {
+		if !account.HasCapability(cap) {
+			continue
+		}
+		switch cap {
+		case connector.CapabilityContacts:
+			_ = connectorv1.EnqueueSyncContactsPayload(ctx, c.scheduler, connectorv1.SyncContactsPayloadJob{
+				Payload: &connectorv1.SyncContactsPayload{
+					SpaceId:   account.SpaceID,
+					AccountId: account.ID,
+				},
+				RunAt: now,
+			})
+		case connector.CapabilityCalendar:
+			_ = c.scheduler.Enqueue(ctx, scheduler.Job{
+				JobType: "connector.sync_calendar",
+				RunAt:   now,
+				Payload: map[string]string{
+					"space_id":   account.SpaceID,
+					"account_id": account.ID,
+				},
+			})
+		case connector.CapabilityMail:
+			_ = c.scheduler.Enqueue(ctx, scheduler.Job{
+				JobType: "connector.sync_mail",
+				RunAt:   now,
+				Payload: map[string]string{
+					"space_id":   account.SpaceID,
+					"account_id": account.ID,
+				},
+			})
+		}
+	}
 }

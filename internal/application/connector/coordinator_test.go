@@ -23,6 +23,7 @@ type mockStore struct {
 	getAccountByIDFunc                func(ctx context.Context, accountID string) (*connector.ConnectedAccount, error)
 	getAccountByProviderFunc          func(ctx context.Context, spaceID, provider, providerAccountID string) (*connector.ConnectedAccount, error)
 	listAccountsFunc                  func(ctx context.Context, spaceID string) ([]*connector.ConnectedAccount, error)
+	listActiveAccountsFunc            func(ctx context.Context) ([]*connector.ConnectedAccount, error)
 	updateAccountFunc                 func(ctx context.Context, account *connector.ConnectedAccount) error
 	updateAccountTokensFunc           func(ctx context.Context, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error
 	updateAccountStatusFunc           func(ctx context.Context, spaceID, accountID string, status connector.AccountStatus, reason *string, backoffUntil *time.Time) error
@@ -62,6 +63,12 @@ func (m *mockStore) GetAccountByProvider(ctx context.Context, spaceID, provider,
 func (m *mockStore) ListAccounts(ctx context.Context, spaceID string) ([]*connector.ConnectedAccount, error) {
 	if m.listAccountsFunc != nil {
 		return m.listAccountsFunc(ctx, spaceID)
+	}
+	return nil, nil
+}
+func (m *mockStore) ListActiveAccounts(ctx context.Context) ([]*connector.ConnectedAccount, error) {
+	if m.listActiveAccountsFunc != nil {
+		return m.listActiveAccountsFunc(ctx)
 	}
 	return nil, nil
 }

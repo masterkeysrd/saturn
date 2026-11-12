@@ -73,6 +73,9 @@ func (m *mockOAuthStore) GetAccountByProvider(ctx context.Context, spaceID, prov
 func (m *mockOAuthStore) ListAccounts(ctx context.Context, spaceID string) ([]*connector.ConnectedAccount, error) {
 	return nil, nil
 }
+func (m *mockOAuthStore) ListActiveAccounts(ctx context.Context) ([]*connector.ConnectedAccount, error) {
+	return nil, nil
+}
 func (m *mockOAuthStore) UpdateAccount(ctx context.Context, account *connector.ConnectedAccount) error {
 	return nil
 }

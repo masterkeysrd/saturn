@@ -25,6 +25,8 @@ services:
     restart: unless-stopped
     ports:
        - "8080:8080"
+    env_file:
+      - ../../.env
     environment:
       SATURN_DB_HOST: db
       SATURN_DB_PORT: "5432"

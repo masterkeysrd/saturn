@@ -27,6 +27,7 @@ const (
 	defaultPeopleURL   = "https://people.googleapis.com/v1/people/me/connections"
 	defaultOtherURL    = "https://people.googleapis.com/v1/otherContacts"
 	defaultCalendarURL = "https://www.googleapis.com/calendar/v3"
+	defaultGmailURL    = "https://gmail.googleapis.com/gmail/v1"
 
 	scopeOpenID  = "openid"
 	scopeEmail   = "https://www.googleapis.com/auth/userinfo.email"
@@ -53,6 +54,7 @@ type Config struct {
 	PeopleURL   string
 	OtherURL    string
 	CalendarURL string
+	GmailURL    string
 }
 
 // Provider implements connector.OAuthProvider for Google.
@@ -87,6 +89,9 @@ func NewProvider(cfg Config) *Provider {
 	}
 	if cfg.CalendarURL == "" {
 		cfg.CalendarURL = defaultCalendarURL
+	}
+	if cfg.GmailURL == "" {
+		cfg.GmailURL = defaultGmailURL
 	}
 	return &Provider{
 		cfg:        cfg,

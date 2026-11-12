@@ -314,6 +314,9 @@ type StoreMock struct {
 	// ListAccountsFunc mocks the ListAccounts method.
 	ListAccountsFunc func(ctx context.Context, spaceID string) ([]*ConnectedAccount, error)
 
+	// ListActiveAccountsFunc mocks the ListActiveAccounts method.
+	ListActiveAccountsFunc func(ctx context.Context) ([]*ConnectedAccount, error)
+
 	// UpdateAccountFunc mocks the UpdateAccount method.
 	UpdateAccountFunc func(ctx context.Context, account *ConnectedAccount) error
 
@@ -368,6 +371,9 @@ type StoreMock struct {
 		ListAccounts []struct {
 			Ctx     context.Context
 			SpaceID string
+		}
+		ListActiveAccounts []struct {
+			Ctx context.Context
 		}
 		UpdateAccount []struct {
 			Ctx     context.Context
@@ -428,6 +434,7 @@ type StoreMock struct {
 	lockGetAccountByID                sync.RWMutex
 	lockGetAccountByProvider          sync.RWMutex
 	lockListAccounts                  sync.RWMutex
+	lockListActiveAccounts            sync.RWMutex
 	lockUpdateAccount                 sync.RWMutex
 	lockUpdateAccountTokens           sync.RWMutex
 	lockUpdateAccountStatus           sync.RWMutex
@@ -582,6 +589,30 @@ func (mock *StoreMock) ListAccountsCalls() []struct {
 	mock.lockListAccounts.RLock()
 	defer mock.lockListAccounts.RUnlock()
 	return mock.calls.ListAccounts
+}
+
+// ListActiveAccounts calls ListActiveAccountsFunc.
+func (mock *StoreMock) ListActiveAccounts(ctx context.Context) ([]*ConnectedAccount, error) {
+	if mock.ListActiveAccountsFunc == nil {
+		panic("StoreMock.ListActiveAccountsFunc: method is nil but Store.ListActiveAccounts was just called")
+	}
+	mock.lockListActiveAccounts.Lock()
+	mock.calls.ListActiveAccounts = append(mock.calls.ListActiveAccounts, struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	})
+	mock.lockListActiveAccounts.Unlock()
+	return mock.ListActiveAccountsFunc(ctx)
+}
+
+// ListActiveAccountsCalls returns all calls made to ListActiveAccounts.
+func (mock *StoreMock) ListActiveAccountsCalls() []struct {
+	Ctx context.Context
+} {
+	mock.lockListActiveAccounts.RLock()
+	defer mock.lockListActiveAccounts.RUnlock()
+	return mock.calls.ListActiveAccounts
 }
 
 // UpdateAccount calls UpdateAccountFunc.

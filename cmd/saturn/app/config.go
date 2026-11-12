@@ -88,6 +88,7 @@ type GoogleConnectorConfig struct {
 	PeopleURL    string `mapstructure:"people_url"`
 	OtherURL     string `mapstructure:"other_url"`
 	CalendarURL  string `mapstructure:"calendar_url"`
+	GmailURL     string `mapstructure:"gmail_url"`
 }
 
 // ResolvedRedirectURI returns the configured RedirectURI or constructs it from the base callback URL.

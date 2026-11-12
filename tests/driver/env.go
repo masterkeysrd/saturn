@@ -25,6 +25,7 @@ import (
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
 	"github.com/masterkeysrd/saturn/cmd/saturn/app"
 	calendarapp "github.com/masterkeysrd/saturn/internal/application/calendar"
+	mailapp "github.com/masterkeysrd/saturn/internal/application/mail"
 	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
@@ -208,6 +209,7 @@ func StartTestEnv() (*TestEnv, error) {
 				PeopleURL:    mockGoogle.PeopleURL(),
 				OtherURL:     mockGoogle.OtherURL(),
 				CalendarURL:  mockGoogle.CalendarURL(),
+				GmailURL:     mockGoogle.GmailURL(),
 			},
 		},
 	}
@@ -233,6 +235,7 @@ func StartTestEnv() (*TestEnv, error) {
 		grpcSrv.ConnectorCoordinator,
 		grpcSrv.ConnectorOAuthMgr,
 		grpcSrv.Scheduler,
+		grpcSrv.AttachmentHandler,
 	)
 	if err := gwSrv.Start(ctx, cfg); err != nil {
 		if cleanupPGDump != nil {
@@ -460,6 +463,14 @@ func (e *TestEnv) Scheduler() *scheduler.Engine {
 func (e *TestEnv) CalendarCoordinator() calendarapp.Coordinator {
 	if e.grpcSrv != nil {
 		return e.grpcSrv.CalendarCoordinator
+	}
+	return nil
+}
+
+// MailCoordinator returns the running Mail Coordinator from the gRPC server.
+func (e *TestEnv) MailCoordinator() mailapp.Coordinator {
+	if e.grpcSrv != nil {
+		return e.grpcSrv.MailCoordinator
 	}
 	return nil
 }

@@ -19,6 +19,7 @@ type Store interface {
 	GetAccountByID(ctx context.Context, accountID string) (*ConnectedAccount, error)
 	GetAccountByProvider(ctx context.Context, spaceID, provider, providerAccountID string) (*ConnectedAccount, error)
 	ListAccounts(ctx context.Context, spaceID string) ([]*ConnectedAccount, error)
+	ListActiveAccounts(ctx context.Context) ([]*ConnectedAccount, error)
 	UpdateAccount(ctx context.Context, account *ConnectedAccount) error
 	UpdateAccountTokens(ctx context.Context, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error
 	UpdateAccountStatus(ctx context.Context, spaceID, accountID string, status AccountStatus, reason *string, backoffUntil *time.Time) error
@@ -194,6 +195,27 @@ func (s *SQLStore) ListAccounts(ctx context.Context, spaceID string) ([]*Connect
 
 	var accounts []*ConnectedAccount
 	if err := s.db.Select(ctx, &accounts, query, spaceID); err != nil {
+		return nil, errors.E(op, err)
+	}
+	return accounts, nil
+}
+
+// ListActiveAccounts returns all active connected accounts across spaces that are not in backoff.
+func (s *SQLStore) ListActiveAccounts(ctx context.Context) ([]*ConnectedAccount, error) {
+	const op errors.Op = "platform/connector/storage.ListActiveAccounts"
+
+	query := `SELECT
+		id, space_id, created_by_user_id, provider, provider_account_id,
+		email, display_name, avatar_url, color,
+		access_token_enc, refresh_token_enc, token_expiry,
+		granted_scopes, enabled_capabilities, status, status_reason,
+		backoff_until, last_sync_time, version, create_time, update_time
+	FROM platform.connected_accounts
+	WHERE status = 'healthy' AND (backoff_until IS NULL OR backoff_until <= NOW())
+	ORDER BY create_time DESC`
+
+	var accounts []*ConnectedAccount
+	if err := s.db.Select(ctx, &accounts, query); err != nil {
 		return nil, errors.E(op, err)
 	}
 	return accounts, nil
