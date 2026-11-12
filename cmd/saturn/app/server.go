@@ -26,12 +26,13 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	calendarv1 "github.com/masterkeysrd/saturn/apis/saturn/calendar/v1"
 	financev1 "github.com/masterkeysrd/saturn/apis/saturn/finance/v1"
 	admingrpc "github.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1"
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
+	mailv1 "github.com/masterkeysrd/saturn/apis/saturn/mail/v1"
 	agentv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1"
 	backupv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/backup/v1"
-	calendarv1 "github.com/masterkeysrd/saturn/apis/saturn/calendar/v1"
 	connectorv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/connector/v1"
 	integrationv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/integration/v1"
 	messagev1 "github.com/masterkeysrd/saturn/apis/saturn/platform/message/v1"
@@ -39,6 +40,7 @@ import (
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
 	calendaraggregator "github.com/masterkeysrd/saturn/internal/aggregator/calendar"
 	financeaggregator "github.com/masterkeysrd/saturn/internal/aggregator/finance"
+	mailaggregator "github.com/masterkeysrd/saturn/internal/aggregator/mail"
 	spaceaggregator "github.com/masterkeysrd/saturn/internal/aggregator/space"
 	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	calendarapp "github.com/masterkeysrd/saturn/internal/application/calendar"
@@ -46,6 +48,7 @@ import (
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
 	integrationapp "github.com/masterkeysrd/saturn/internal/application/integration"
+	mailapp "github.com/masterkeysrd/saturn/internal/application/mail"
 	spaceapp "github.com/masterkeysrd/saturn/internal/application/space"
 	domaincalendar "github.com/masterkeysrd/saturn/internal/domain/calendar"
 	calendarstorage "github.com/masterkeysrd/saturn/internal/domain/calendar/storage"
@@ -53,6 +56,8 @@ import (
 	financestorage "github.com/masterkeysrd/saturn/internal/domain/finance/storage"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	identitystorage "github.com/masterkeysrd/saturn/internal/domain/identity/storage"
+	domainmail "github.com/masterkeysrd/saturn/internal/domain/mail"
+	mailstorage "github.com/masterkeysrd/saturn/internal/domain/mail/storage"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	spacestorage "github.com/masterkeysrd/saturn/internal/domain/space/storage"
 	"github.com/masterkeysrd/saturn/internal/platform/agent"
@@ -77,11 +82,13 @@ import (
 	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/identity"
 	integrationgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/integration"
 	"github.com/masterkeysrd/saturn/internal/transport/grpc/interceptors"
+	mailgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/mail"
 	messagegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/message"
 	schedulergrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/scheduler"
 	spacegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/space"
 	connectorhttp "github.com/masterkeysrd/saturn/internal/transport/http/connector"
 	"github.com/masterkeysrd/saturn/internal/transport/http/gateway"
+	mailhttp "github.com/masterkeysrd/saturn/internal/transport/http/mail"
 	"github.com/masterkeysrd/saturn/internal/transport/http/middleware"
 	"github.com/masterkeysrd/saturn/internal/transport/http/webhook"
 	"github.com/masterkeysrd/saturn/internal/transport/integration/email"
@@ -99,6 +106,8 @@ type GRPCServer struct {
 	ConnectorCoordinator connectorapp.Coordinator
 	ConnectorOAuthMgr    *connector.OAuthManager
 	CalendarCoordinator  calendarapp.Coordinator
+	MailCoordinator      mailapp.Coordinator
+	AttachmentHandler    *mailhttp.AttachmentHandler
 }
 
 // NewGRPCServer creates a new GRPCServer instance.
@@ -460,6 +469,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		PeopleURL:    cfg.Connector.Google.PeopleURL,
 		OtherURL:     cfg.Connector.Google.OtherURL,
 		CalendarURL:  cfg.Connector.Google.CalendarURL,
+		GmailURL:     cfg.Connector.Google.GmailURL,
 	})
 	providerRegistry.Register(googleProvider)
 
@@ -485,7 +495,10 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	connectorv1.RegisterConnectorServiceServer(s.grpc, connectorHandler)
 
 	// Bind connector execution callback to scheduler
-	transportscheduler.RegisterConnectorJobs(schedulerEngine, connectorCoordinator)
+	transportscheduler.RegisterConnectorJobs(schedulerEngine, connectorCoordinator, connectorStore)
+	if err := transportscheduler.RegisterConnectorSchedules(ctx, schedulerEngine); err != nil {
+		log.Warn(ctx, "failed to register connector periodic sync schedule", log.Err(err))
+	}
 
 	// Wire Calendar service
 	calendarStore := calendarstorage.NewCalendarStore(dbClient)
@@ -521,14 +534,83 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 
 	transportscheduler.RegisterCalendarJobs(schedulerEngine, calendarCoordinator)
 
-	_ = schedulerEngine.RegisterSchedule(ctx, scheduler.Schedule{
-		JobType:        "connector.sync_calendar",
-		CronExpression: "*/3 * * * *",
-	})
-
 	s.ConnectorCoordinator = connectorCoordinator
 	s.ConnectorOAuthMgr = oauthManager
 	s.CalendarCoordinator = calendarCoordinator
+
+	// Wire Mail service
+	mailMailboxStore := mailstorage.NewMailboxStore(dbClient)
+	mailThreadStore := mailstorage.NewThreadStore(dbClient)
+	mailMessageStore := mailstorage.NewMessageStore(dbClient)
+	mailDraftStore := mailstorage.NewDraftStore(dbClient)
+	mailSyncStateStore := mailstorage.NewSyncStateStore(dbClient)
+
+	mailDomainService := domainmail.NewService(domainmail.Dependencies{
+		MailboxStore:   mailMailboxStore,
+		ThreadStore:    mailThreadStore,
+		MessageStore:   mailMessageStore,
+		DraftStore:     mailDraftStore,
+		SyncStateStore: mailSyncStateStore,
+	})
+
+	externalMailProviders := map[string]domainmail.ExternalMailProvider{
+		"google": googleProvider,
+	}
+
+	hmacSecret := []byte(cfg.Security.EncryptionKey)
+	if len(hmacSecret) == 0 {
+		hmacSecret = []byte("saturn-attachment-hmac-secret-default")
+	}
+
+	mailCoordinator := mailapp.NewLoggingCoordinator(
+		mailapp.NewTransactionalCoordinator(
+			mailapp.NewCoordinator(mailapp.Dependencies{
+				DomainService:     mailDomainService,
+				MailboxStore:      mailMailboxStore,
+				ThreadStore:       mailThreadStore,
+				MessageStore:      mailMessageStore,
+				DraftStore:        mailDraftStore,
+				SyncStateStore:    mailSyncStateStore,
+				AccountStore:      connectorStore,
+				TokenManager:      tokenManager,
+				ExternalProviders: externalMailProviders,
+				HMACSecret:        hmacSecret,
+			}),
+			dbClient,
+		),
+		appLogger,
+	)
+
+	mailAggregator := mailaggregator.NewService(
+		mailMailboxStore,
+		mailThreadStore,
+		mailMessageStore,
+		mailDraftStore,
+		connectorStore,
+		tokenManager,
+		externalMailProviders,
+		hmacSecret,
+	)
+
+	mailHandler := mailgrpc.NewHandler(mailCoordinator, mailAggregator)
+	mailv1.RegisterMailServiceServer(s.grpc, mailHandler)
+
+	attachmentHandler := mailhttp.NewAttachmentHandler(
+		mailMessageStore,
+		connectorStore,
+		tokenManager,
+		externalMailProviders,
+		mailCoordinator,
+		hmacSecret,
+	)
+
+	transportscheduler.RegisterMailJobs(schedulerEngine, mailCoordinator)
+	if err := transportscheduler.RegisterMailSchedules(ctx, schedulerEngine); err != nil {
+		return fmt.Errorf("register mail schedules: %w", err)
+	}
+
+	s.MailCoordinator = mailCoordinator
+	s.AttachmentHandler = attachmentHandler
 
 	return nil
 }
@@ -571,6 +653,7 @@ type GRPCGatewayServer struct {
 	connectorOAuthMgr    *connector.OAuthManager
 	scheduler            *scheduler.Engine
 	config               *Config
+	attachmentHandler    *mailhttp.AttachmentHandler
 }
 
 // NewGRPCGatewayServer creates a new GRPCGatewayServer instance.
@@ -582,6 +665,7 @@ func NewGRPCGatewayServer(
 	connectorCoordinator connectorapp.Coordinator,
 	connectorOAuthMgr *connector.OAuthManager,
 	schedulerEngine *scheduler.Engine,
+	attachmentHandler *mailhttp.AttachmentHandler,
 ) *GRPCGatewayServer {
 	return &GRPCGatewayServer{
 		addr:                 cfg.Gateway.Addr,
@@ -594,6 +678,7 @@ func NewGRPCGatewayServer(
 		connectorOAuthMgr:    connectorOAuthMgr,
 		scheduler:            schedulerEngine,
 		config:               cfg,
+		attachmentHandler:    attachmentHandler,
 	}
 }
 
@@ -657,6 +742,10 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("register calendar gateway handler: %w", err)
 	}
 
+	if err := mailv1.RegisterMailServiceHandler(ctx, s.mux, s.grpcConn); err != nil {
+		return fmt.Errorf("register mail gateway handler: %w", err)
+	}
+
 	handler := http.NewServeMux()
 	handler.Handle("/api/v1/", apiV1Handler(s.mux))
 
@@ -676,6 +765,18 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		googleWebhookHandler := connectorhttp.NewGoogleWebhookHandler(s.scheduler)
 		handler.Handle("/v1/platform/connectors/webhooks/google", googleWebhookHandler)
 		handler.Handle("/api/v1/platform/connectors/webhooks/google", googleWebhookHandler)
+
+		gmailWebhookHandler := mailhttp.NewGmailWebhookHandler(s.scheduler)
+		handler.Handle("/v1/platform/connectors/webhooks/gmail", gmailWebhookHandler)
+		handler.Handle("/api/v1/platform/connectors/webhooks/gmail", gmailWebhookHandler)
+	}
+
+	// Register Mail streaming attachment handlers
+	if s.attachmentHandler != nil {
+		handler.HandleFunc("GET /v1/mail/attachments/{token}", s.attachmentHandler.ServeDownload)
+		handler.HandleFunc("GET /api/v1/mail/attachments/{token}", s.attachmentHandler.ServeDownload)
+		handler.HandleFunc("POST /v1/mail/drafts/{draft_id}/attachments", s.attachmentHandler.ServeUpload)
+		handler.HandleFunc("POST /api/v1/mail/drafts/{draft_id}/attachments", s.attachmentHandler.ServeUpload)
 	}
 	if s.swaggerEnabled {
 		swaggerPath := strings.TrimRight(s.swaggerPath, "/") + "/"
@@ -778,6 +879,7 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 		grpcSrv.ConnectorCoordinator,
 		grpcSrv.ConnectorOAuthMgr,
 		grpcSrv.Scheduler,
+		grpcSrv.AttachmentHandler,
 	)
 
 	// Register shutdown callbacks (LIFO order: gateway first, then gRPC).

@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"runtime/debug"
 	"time"
 
@@ -114,9 +115,9 @@ func (e *Engine) spawnRecurrentJobs(ctx context.Context) error {
 				return errors.E(op, err)
 			}
 
-			// Spawn the job instance linked to the schedule
-			insertQuery := `INSERT INTO platform.job (id, schedule_id, job_type, payload, run_at, status) 
-				VALUES ($1, $2, $3, $4, $5, 'pending')`
+			// Spawn the job instance linked to the schedule with max_attempts = 1 to prevent stampedes
+			insertQuery := `INSERT INTO platform.job (id, schedule_id, job_type, payload, run_at, max_attempts, status) 
+				VALUES ($1, $2, $3, $4, $5, 1, 'pending')`
 			_, err = e.db.Exec(txCtx, insertQuery, jobID, s.ID, s.JobType, s.Payload, s.NextRunAt)
 			if err != nil {
 				return errors.E(op, err)
@@ -233,24 +234,39 @@ func (e *Engine) executeJobInstance(ctx context.Context, j jobInstance) {
 	if err != nil {
 		nextAttempt := j.Attempts + 1
 		status := "pending"
-		if nextAttempt >= j.MaxAttempts {
+
+		// Terminal error classification: non-retryable errors fail immediately
+		// rather than creating redundant retry stampedes.
+		isTerminal := errors.Is(err, errors.Invalid) ||
+			errors.Is(err, errors.Permission) ||
+			errors.Is(err, errors.NotExist)
+
+		if isTerminal || nextAttempt >= j.MaxAttempts {
 			status = "failed"
 		}
-		// Exponential backoff: 5m, 10m, 15m...
-		backoffMinutes := nextAttempt * 5
-		runAt := time.Now().Add(time.Duration(backoffMinutes) * time.Minute).UTC()
+
+		// Backoff with randomized jitter (±25%) to prevent thundering herd stampedes
+		baseMinutes := float64(nextAttempt * 5)
+		jitterFactor := 0.75 + rand.Float64()*0.5
+		jitterDuration := time.Duration(baseMinutes * jitterFactor * float64(time.Minute))
+		runAt := time.Now().Add(jitterDuration).UTC()
 
 		if status == "failed" {
-			log.Error(ctx, "scheduler job failed permanently (max attempts reached)",
+			reason := "max attempts reached"
+			if isTerminal {
+				reason = "non-retryable terminal error"
+			}
+			log.Error(ctx, "scheduler job failed permanently ("+reason+")",
 				log.String("job_id", j.ID),
 				log.String("job_type", j.JobType),
 				log.Int("attempts", nextAttempt),
 				log.Int("max_attempts", j.MaxAttempts),
+				log.Bool("terminal", isTerminal),
 				log.Duration("duration", time.Since(start)),
 				log.Err(err),
 			)
 		} else {
-			log.Warn(ctx, "scheduler job failed; scheduled retry",
+			log.Warn(ctx, "scheduler job failed; scheduled retry with jitter",
 				log.String("job_id", j.ID),
 				log.String("job_type", j.JobType),
 				log.Int("attempt", nextAttempt),

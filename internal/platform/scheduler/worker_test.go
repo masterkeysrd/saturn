@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	platformerrors "github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/requestid"
 )
 
@@ -154,6 +155,39 @@ func TestEngineExecuteJobInstance_FailureMaxAttempts(t *testing.T) {
 	}
 	if capturedAttempts != 3 {
 		t.Errorf("expected attempts=3, got %d", capturedAttempts)
+	}
+}
+
+func TestEngineExecuteJobInstance_TerminalErrorFailsFast(t *testing.T) {
+	var capturedStatus string
+	var capturedAttempts int
+
+	dbMock := &DatabaseMock{
+		ExecFunc: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
+			capturedStatus = args[0].(string)
+			capturedAttempts = args[1].(int)
+			return nil, nil
+		},
+	}
+	engine := NewEngine(dbMock)
+	engine.Register("invalid.job", func(ctx context.Context, payload []byte) error {
+		return platformerrors.E(platformerrors.Invalid, "connected_account_id is required")
+	})
+
+	job := jobInstance{
+		ID:          "job_invalid",
+		JobType:     "invalid.job",
+		Attempts:    0,
+		MaxAttempts: 5,
+	}
+
+	engine.executeJobInstance(context.Background(), job)
+
+	if capturedStatus != "failed" {
+		t.Errorf("expected status 'failed' immediately for terminal error, got %q", capturedStatus)
+	}
+	if capturedAttempts != 1 {
+		t.Errorf("expected attempts=1, got %d", capturedAttempts)
 	}
 }
 
