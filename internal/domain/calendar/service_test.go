@@ -260,3 +260,55 @@ func TestServiceUpdateRecurringEventScopes(t *testing.T) {
 func containsUntil(rrule string) bool {
 	return len(rrule) > 0 && (rrule != "" && (rrule[:5] == "UNTIL" || rrule[len(rrule)-5:] == "UNTIL" || len(rrule) > 10))
 }
+
+func TestServiceUpdateCalendarPermissions(t *testing.T) {
+	ctx := context.Background()
+
+	calID, _ := GenerateCalendarID()
+	calStore := &CalendarStoreMock{
+		GetByIDFunc: func(ctx context.Context, spaceID, id string) (*Calendar, error) {
+			accountID := "acc_1"
+			return &Calendar{
+				ID:                 calID,
+				SpaceID:            spaceID,
+				Source:             SourceExternal,
+				ConnectedAccountID: &accountID,
+				AccessRole:         AccessRoleReader,
+				Name:               "Subscribed Calendar",
+				IsEnabled:          true,
+				Color:              nil,
+				Timezone:           "UTC",
+			}, nil
+		},
+		UpdateFunc: func(ctx context.Context, cal *Calendar) error {
+			return nil
+		},
+	}
+
+	svc := NewService(Dependencies{
+		CalendarStore: calStore,
+	})
+
+	t.Run("reader can toggle is_enabled visibility preference", func(t *testing.T) {
+		incoming := &Calendar{
+			IsEnabled: false,
+		}
+		updated, err := svc.UpdateCalendar(ctx, "spc_1", calID, incoming, []string{"is_enabled"})
+		if err != nil {
+			t.Fatalf("expected reader to be able to toggle is_enabled, got error: %v", err)
+		}
+		if updated.IsEnabled != false {
+			t.Errorf("expected is_enabled to be false, got %v", updated.IsEnabled)
+		}
+	})
+
+	t.Run("reader cannot update administrative calendar name", func(t *testing.T) {
+		incoming := &Calendar{
+			Name: "Hacked Name",
+		}
+		_, err := svc.UpdateCalendar(ctx, "spc_1", calID, incoming, []string{"name"})
+		if err == nil {
+			t.Fatal("expected reader to be blocked from changing name, but got nil error")
+		}
+	})
+}

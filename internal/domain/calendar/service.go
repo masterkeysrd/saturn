@@ -83,13 +83,23 @@ func (s *Service) GetDefaultNativeCalendar(ctx context.Context, spaceID string) 
 }
 
 // UpdateCalendar applies partial updates to a calendar if the caller has management permissions.
+// Visibility (is_enabled) and color preference updates are permitted for any reader or writer.
 func (s *Service) UpdateCalendar(ctx context.Context, spaceID, id string, incoming *Calendar, mask []string) (*Calendar, error) {
 	cal, err := s.GetCalendar(ctx, spaceID, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if !cal.CanManage() {
+	isPrefOnly := len(mask) > 0
+	for _, m := range mask {
+		norm := strings.ToLower(strings.ReplaceAll(m, "_", ""))
+		if norm != "isenabled" && norm != "color" {
+			isPrefOnly = false
+			break
+		}
+	}
+
+	if !isPrefOnly && !cal.CanManage() {
 		return nil, errors.E(errors.Permission, ErrReadOnlyCalendar, "only calendar owners can update calendar settings")
 	}
 
