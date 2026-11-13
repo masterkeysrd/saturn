@@ -187,10 +187,10 @@ func TestAggregator_GetThread_Hydration(t *testing.T) {
 	require.Len(t, hydratedMsg.Attachments, 1)
 	attProj := hydratedMsg.Attachments[0]
 	assert.Equal(t, "report.pdf", attProj.Meta.Filename)
-	assert.True(t, strings.HasPrefix(attProj.DownloadURL, "/v1/mail/attachments/"))
+	assert.True(t, strings.HasPrefix(attProj.DownloadURL, "/api/v1/mail/attachments/") || strings.HasPrefix(attProj.DownloadURL, "/v1/mail/attachments/"))
 
 	// Verify the minted HMAC download URL
-	tokenStr := strings.TrimPrefix(attProj.DownloadURL, "/v1/mail/attachments/")
+	tokenStr := strings.TrimPrefix(strings.TrimPrefix(attProj.DownloadURL, "/api"), "/v1/mail/attachments/")
 	claims, err := appmail.VerifyAttachmentToken(tokenStr, secret)
 	require.NoError(t, err)
 	assert.Equal(t, spaceID, claims.SpaceID)

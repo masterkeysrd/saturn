@@ -238,11 +238,36 @@ func (s *Service) GetThread(ctx context.Context, spaceID, id string) (*ThreadPro
 		return nil, errors.E(op, err)
 	}
 
+	// On-demand message hydration if thread was synced without messages or discovered via search
+	if len(messages) == 0 && thread.ProviderThreadID != nil && *thread.ProviderThreadID != "" && s.accountReader != nil {
+		acc, err := s.accountReader.GetAccount(ctx, spaceID, thread.ConnectedAccountID)
+		if err == nil && acc != nil {
+			if prov, ok := s.externalProviders[acc.Provider]; ok {
+				if token, err := s.tokenManager.TokenSource(ctx, spaceID, thread.ConnectedAccountID); err == nil {
+					remoteThread, remoteMsgs, err := prov.FetchThread(ctx, token, *thread.ProviderThreadID)
+					if err == nil && remoteThread != nil && len(remoteMsgs) > 0 {
+						for _, rMsg := range remoteMsgs {
+							rMsg.SpaceID = spaceID
+							rMsg.ConnectedAccountID = thread.ConnectedAccountID
+							rMsg.ThreadID = thread.ID
+							_ = s.messageReader.Upsert(ctx, rMsg)
+						}
+						messages = remoteMsgs
+					}
+				}
+			}
+		}
+	}
+
 	var messageProjections []*MessageProjection
 	for _, msg := range messages {
 		proj, err := s.hydrateMessage(ctx, spaceID, msg)
 		if err != nil {
-			return nil, errors.E(op, err)
+			// If body hydration fails for a single message, gracefully fall back to snippet
+			proj = &MessageProjection{
+				Message:   msg,
+				BodyPlain: msg.Snippet,
+			}
 		}
 		messageProjections = append(messageProjections, proj)
 	}
@@ -264,29 +289,26 @@ func (s *Service) hydrateMessage(ctx context.Context, spaceID string, msg *domai
 		bodyPlain = body.PlainText
 	} else if msg.ConnectedAccountID != "" && msg.ProviderMessageID != nil && *msg.ProviderMessageID != "" && s.accountReader != nil {
 		acc, err := s.accountReader.GetAccount(ctx, spaceID, msg.ConnectedAccountID)
-		if err != nil {
-			return nil, errors.E(op, err)
+		if err == nil && acc != nil {
+			if prov, ok := s.externalProviders[acc.Provider]; ok {
+				if token, err := s.tokenManager.TokenSource(ctx, spaceID, msg.ConnectedAccountID); err == nil {
+					if fetchedBody, err := prov.FetchMessageBody(ctx, token, *msg.ProviderMessageID); err == nil && fetchedBody != nil {
+						bodyHTML = fetchedBody.SanitizedHTML
+						bodyPlain = fetchedBody.PlainText
+						fetchedBody.MessageID = msg.ID
+						fetchedBody.SpaceID = spaceID
+						_ = s.messageReader.SaveBody(ctx, fetchedBody)
+						msg.BodyCached = true
+						msg.HasRemoteImages = fetchedBody.HasRemoteImages
+					}
+				}
+			}
 		}
-		prov, ok := s.externalProviders[acc.Provider]
-		if !ok {
-			return nil, errors.E(op, errors.NotExist, fmt.Sprintf("unsupported mail provider: %s", acc.Provider))
-		}
-		token, err := s.tokenManager.TokenSource(ctx, spaceID, msg.ConnectedAccountID)
-		if err != nil {
-			return nil, errors.E(op, err)
-		}
-		fetchedBody, err := prov.FetchMessageBody(ctx, token, *msg.ProviderMessageID)
-		if err != nil {
-			return nil, errors.E(op, err)
-		}
-		if fetchedBody != nil {
-			bodyHTML = fetchedBody.SanitizedHTML
-			bodyPlain = fetchedBody.PlainText
-			fetchedBody.MessageID = msg.ID
-			fetchedBody.SpaceID = spaceID
-			_ = s.messageReader.SaveBody(ctx, fetchedBody)
-			msg.BodyCached = true
-		}
+	}
+
+	// Fallback to snippet if body content is empty
+	if bodyHTML == "" && bodyPlain == "" && msg.Snippet != "" {
+		bodyPlain = msg.Snippet
 	}
 
 	// Mint 5-minute ephemeral signed download links for every attachment
@@ -312,8 +334,23 @@ func (s *Service) hydrateMessage(ctx context.Context, spaceID string, msg *domai
 
 		attachmentProjections = append(attachmentProjections, &AttachmentProjection{
 			Meta:        att,
-			DownloadURL: fmt.Sprintf("/v1/mail/attachments/%s", token),
+			DownloadURL: fmt.Sprintf("/api/v1/mail/attachments/%s", token),
 		})
+	}
+
+	// Map CID inline attachments in bodyHTML to their minted download URLs
+	for _, ap := range attachmentProjections {
+		if ap.Meta.ContentID != "" {
+			cidClean := strings.Trim(ap.Meta.ContentID, "<>")
+			bodyHTML = strings.ReplaceAll(bodyHTML, "cid:"+cidClean, ap.DownloadURL)
+			bodyHTML = strings.ReplaceAll(bodyHTML, "CID:"+cidClean, ap.DownloadURL)
+			bodyHTML = strings.ReplaceAll(bodyHTML, "cid:<"+cidClean+">", ap.DownloadURL)
+			bodyHTML = strings.ReplaceAll(bodyHTML, "CID:<"+cidClean+">", ap.DownloadURL)
+		}
+		if ap.Meta.Filename != "" && ap.Meta.IsInline {
+			bodyHTML = strings.ReplaceAll(bodyHTML, "cid:"+ap.Meta.Filename, ap.DownloadURL)
+			bodyHTML = strings.ReplaceAll(bodyHTML, "CID:"+ap.Meta.Filename, ap.DownloadURL)
+		}
 	}
 
 	return &MessageProjection{

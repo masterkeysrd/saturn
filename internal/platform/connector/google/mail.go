@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json/v2"
 	"fmt"
+	"html"
 	"io"
 	"mime"
 	"net/http"
@@ -326,79 +327,98 @@ func (p *Provider) bootstrapSyncThreads(ctx context.Context, accessToken string,
 func (p *Provider) incrementalSyncThreads(ctx context.Context, accessToken string, req *domainmail.SyncThreadsRequest) (*domainmail.SyncThreadsResult, error) {
 	const op platformerrors.Op = "platform/connector/google.incrementalSyncThreads"
 
-	endpoint := fmt.Sprintf("%s/users/me/history?startHistoryId=%s&maxResults=100", p.cfg.GmailURL, url.QueryEscape(req.SyncCursor))
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, platformerrors.E(op, err)
-	}
-	httpReq.Header.Set("Authorization", "Bearer "+accessToken)
+	affectedThreadIDs := make(map[string]struct{})
+	newCursor := req.SyncCursor
+	pageToken := ""
 
-	resp, err := p.httpClient.Do(httpReq)
-	if err != nil {
-		return nil, platformerrors.E(op, err)
-	}
-	defer resp.Body.Close()
+	// Page through all history records (up to 10 pages / 1,000 events) to capture all incremental updates
+	for range 10 {
+		endpoint := fmt.Sprintf("%s/users/me/history?startHistoryId=%s&maxResults=100", p.cfg.GmailURL, url.QueryEscape(req.SyncCursor))
+		if pageToken != "" {
+			endpoint += "&pageToken=" + url.QueryEscape(pageToken)
+		}
 
-	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, platformerrors.E(op, connector.ErrInvalidGrant)
-	}
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return nil, platformerrors.E(op, connector.ErrRateLimited)
-	}
-	// Expired cursor (404) triggers rolling window re-bootstrap
-	if resp.StatusCode == http.StatusNotFound {
-		return &domainmail.SyncThreadsResult{
-			ExpiredCursor: true,
-		}, nil
-	}
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		bodyStr := string(body)
-		if strings.Contains(bodyStr, "historyId") && strings.Contains(bodyStr, "not found") {
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		if err != nil {
+			return nil, platformerrors.E(op, err)
+		}
+		httpReq.Header.Set("Authorization", "Bearer "+accessToken)
+
+		resp, err := p.httpClient.Do(httpReq)
+		if err != nil {
+			return nil, platformerrors.E(op, err)
+		}
+
+		if resp.StatusCode == http.StatusUnauthorized {
+			resp.Body.Close()
+			return nil, platformerrors.E(op, connector.ErrInvalidGrant)
+		}
+		if resp.StatusCode == http.StatusTooManyRequests {
+			resp.Body.Close()
+			return nil, platformerrors.E(op, connector.ErrRateLimited)
+		}
+		// Expired cursor (404) triggers rolling window re-bootstrap
+		if resp.StatusCode == http.StatusNotFound {
+			resp.Body.Close()
 			return &domainmail.SyncThreadsResult{
 				ExpiredCursor: true,
 			}, nil
 		}
-		return nil, platformerrors.E(op, fmt.Sprintf("list history failed with status %d: %s", resp.StatusCode, bodyStr))
-	}
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			bodyStr := string(body)
+			if strings.Contains(bodyStr, "historyId") && strings.Contains(bodyStr, "not found") {
+				return &domainmail.SyncThreadsResult{
+					ExpiredCursor: true,
+				}, nil
+			}
+			return nil, platformerrors.E(op, fmt.Sprintf("list history failed with status %d: %s", resp.StatusCode, bodyStr))
+		}
 
-	var histResp gmailHistoryListResponse
-	if err := json.UnmarshalRead(resp.Body, &histResp); err != nil {
-		return nil, platformerrors.E(op, err)
-	}
+		var histResp gmailHistoryListResponse
+		if err := json.UnmarshalRead(resp.Body, &histResp); err != nil {
+			resp.Body.Close()
+			return nil, platformerrors.E(op, err)
+		}
+		resp.Body.Close()
 
-	newCursor := histResp.HistoryID
-	if newCursor == "" {
-		newCursor = req.SyncCursor
-	}
+		if histResp.HistoryID != "" {
+			newCursor = histResp.HistoryID
+		}
 
-	affectedThreadIDs := make(map[string]struct{})
-	for _, item := range histResp.History {
-		for _, m := range item.Messages {
-			if m.ThreadID != "" {
-				affectedThreadIDs[m.ThreadID] = struct{}{}
+		for _, item := range histResp.History {
+			for _, m := range item.Messages {
+				if m.ThreadID != "" {
+					affectedThreadIDs[m.ThreadID] = struct{}{}
+				}
+			}
+			for _, mi := range item.MessagesAdded {
+				if mi.Message.ThreadID != "" {
+					affectedThreadIDs[mi.Message.ThreadID] = struct{}{}
+				}
+			}
+			for _, mi := range item.MessagesDeleted {
+				if mi.Message.ThreadID != "" {
+					affectedThreadIDs[mi.Message.ThreadID] = struct{}{}
+				}
+			}
+			for _, li := range item.LabelsAdded {
+				if li.Message.ThreadID != "" {
+					affectedThreadIDs[li.Message.ThreadID] = struct{}{}
+				}
+			}
+			for _, li := range item.LabelsRemoved {
+				if li.Message.ThreadID != "" {
+					affectedThreadIDs[li.Message.ThreadID] = struct{}{}
+				}
 			}
 		}
-		for _, mi := range item.MessagesAdded {
-			if mi.Message.ThreadID != "" {
-				affectedThreadIDs[mi.Message.ThreadID] = struct{}{}
-			}
+
+		if histResp.NextPageToken == "" {
+			break
 		}
-		for _, mi := range item.MessagesDeleted {
-			if mi.Message.ThreadID != "" {
-				affectedThreadIDs[mi.Message.ThreadID] = struct{}{}
-			}
-		}
-		for _, li := range item.LabelsAdded {
-			if li.Message.ThreadID != "" {
-				affectedThreadIDs[li.Message.ThreadID] = struct{}{}
-			}
-		}
-		for _, li := range item.LabelsRemoved {
-			if li.Message.ThreadID != "" {
-				affectedThreadIDs[li.Message.ThreadID] = struct{}{}
-			}
-		}
+		pageToken = histResp.NextPageToken
 	}
 
 	result := &domainmail.SyncThreadsResult{
@@ -579,6 +599,24 @@ func (p *Provider) mapGmailMessage(gm gmailMessage, threadID string, now time.Ti
 	var sender domainmail.Participant
 	if len(fromAddrs) > 0 {
 		sender = fromAddrs[0]
+		sender.AvatarURL, sender.IsVerified = domainmail.ResolveParticipantAvatar(sender.Email, headers)
+	}
+
+	toParticipants := parseAddressList(headers["to"])
+	for i := range toParticipants {
+		toParticipants[i].AvatarURL, toParticipants[i].IsVerified = domainmail.ResolveParticipantAvatar(toParticipants[i].Email, nil)
+	}
+	ccParticipants := parseAddressList(headers["cc"])
+	for i := range ccParticipants {
+		ccParticipants[i].AvatarURL, ccParticipants[i].IsVerified = domainmail.ResolveParticipantAvatar(ccParticipants[i].Email, nil)
+	}
+	bccParticipants := parseAddressList(headers["bcc"])
+	for i := range bccParticipants {
+		bccParticipants[i].AvatarURL, bccParticipants[i].IsVerified = domainmail.ResolveParticipantAvatar(bccParticipants[i].Email, nil)
+	}
+	replyToParticipants := parseAddressList(headers["reply-to"])
+	for i := range replyToParticipants {
+		replyToParticipants[i].AvatarURL, replyToParticipants[i].IsVerified = domainmail.ResolveParticipantAvatar(replyToParticipants[i].Email, nil)
 	}
 
 	subject := decodeHeader(headers["subject"])
@@ -631,10 +669,10 @@ func (p *Provider) mapGmailMessage(gm gmailMessage, threadID string, now time.Ti
 		Subject:           subject,
 		Snippet:           gm.Snippet,
 		From:              sender,
-		To:                parseAddressList(headers["to"]),
-		Cc:                parseAddressList(headers["cc"]),
-		Bcc:               parseAddressList(headers["bcc"]),
-		ReplyTo:           parseAddressList(headers["reply-to"]),
+		To:                toParticipants,
+		Cc:                ccParticipants,
+		Bcc:               bccParticipants,
+		ReplyTo:           replyToParticipants,
 		SentAt:            sentAt,
 		ReceivedAt:        receivedAt,
 		IsUnread:          isUnread,
@@ -748,16 +786,28 @@ func (p *Provider) FetchMessageBody(ctx context.Context, accessToken, providerMe
 	if strings.TrimSpace(rawHTML) != "" {
 		sanitized, err := domainmail.SanitizeHTML(rawHTML)
 		if err != nil {
-			return nil, platformerrors.E(op, err)
-		}
-		result.SanitizedHTML = sanitized.SanitizedHTML
-		result.PlainText = sanitized.PlainText
-		if result.PlainText == "" {
-			result.PlainText = rawPlain
+			// If HTML sanitizer encounters exotic/malformed HTML, gracefully fall back to plain text or escaped HTML
+			if strings.TrimSpace(rawPlain) != "" {
+				result.PlainText = rawPlain
+				result.SanitizedHTML = "<pre style=\"white-space: pre-wrap;\">" + html.EscapeString(rawPlain) + "</pre>"
+			} else {
+				result.PlainText = rawHTML
+				result.SanitizedHTML = "<pre style=\"white-space: pre-wrap;\">" + html.EscapeString(rawHTML) + "</pre>"
+			}
+		} else {
+			result.SanitizedHTML = sanitized.SanitizedHTML
+			result.PlainText = sanitized.PlainText
+			result.HasRemoteImages = sanitized.HasRemoteImages
+			if result.PlainText == "" {
+				result.PlainText = rawPlain
+			}
 		}
 	} else if strings.TrimSpace(rawPlain) != "" {
 		result.PlainText = rawPlain
-		result.SanitizedHTML = "<pre>" + strings.ReplaceAll(strings.ReplaceAll(rawPlain, "&", "&amp;"), "<", "&lt;") + "</pre>"
+		result.SanitizedHTML = "<pre style=\"white-space: pre-wrap;\">" + html.EscapeString(rawPlain) + "</pre>"
+	} else if strings.TrimSpace(msg.Snippet) != "" {
+		result.PlainText = msg.Snippet
+		result.SanitizedHTML = "<p>" + html.EscapeString(msg.Snippet) + "</p>"
 	}
 
 	return result, nil

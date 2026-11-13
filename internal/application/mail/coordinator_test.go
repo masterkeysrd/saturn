@@ -307,13 +307,18 @@ func (m *mockSyncStateStore) Delete(ctx context.Context, spaceID, connectedAccou
 	return nil
 }
 
-type mockExternalMailProvider struct{}
+type mockExternalMailProvider struct {
+	syncThreadsFunc func(ctx context.Context, accessToken string, req *domainmail.SyncThreadsRequest) (*domainmail.SyncThreadsResult, error)
+}
 
 func (m *mockExternalMailProvider) Provider() string { return "google" }
 func (m *mockExternalMailProvider) ListMailboxes(ctx context.Context, accessToken string) ([]*domainmail.Mailbox, error) {
 	return []*domainmail.Mailbox{}, nil
 }
 func (m *mockExternalMailProvider) SyncThreads(ctx context.Context, accessToken string, req *domainmail.SyncThreadsRequest) (*domainmail.SyncThreadsResult, error) {
+	if m.syncThreadsFunc != nil {
+		return m.syncThreadsFunc(ctx, accessToken, req)
+	}
 	return &domainmail.SyncThreadsResult{}, nil
 }
 func (m *mockExternalMailProvider) FetchThread(ctx context.Context, accessToken, providerThreadID string) (*domainmail.Thread, []*domainmail.Message, error) {

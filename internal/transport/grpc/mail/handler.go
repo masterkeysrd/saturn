@@ -461,8 +461,10 @@ func mapDomainParticipantsToProto(parts []domainmail.Participant) []*mailv1.Part
 	protoParts := make([]*mailv1.Participant, len(parts))
 	for i, p := range parts {
 		protoParts[i] = &mailv1.Participant{
-			Name:  p.Name,
-			Email: p.Email,
+			Name:       p.Name,
+			Email:      p.Email,
+			AvatarUrl:  p.AvatarURL,
+			IsVerified: p.IsVerified,
 		}
 	}
 	return protoParts
@@ -472,8 +474,10 @@ func mapProtoParticipantsToDomain(parts []*mailv1.Participant) []domainmail.Part
 	domainParts := make([]domainmail.Participant, len(parts))
 	for i, p := range parts {
 		domainParts[i] = domainmail.Participant{
-			Name:  p.GetName(),
-			Email: p.GetEmail(),
+			Name:       p.GetName(),
+			Email:      p.GetEmail(),
+			AvatarURL:  p.GetAvatarUrl(),
+			IsVerified: p.GetIsVerified(),
 		}
 	}
 	return domainParts
@@ -596,21 +600,26 @@ func mapDomainMessageToProto(m *domainmail.Message) *mailv1.Message {
 		References:         refs,
 		Subject:            m.Subject,
 		Snippet:            m.Snippet,
-		From:               &mailv1.Participant{Name: m.From.Name, Email: m.From.Email},
-		To:                 mapDomainParticipantsToProto(m.To),
-		Cc:                 mapDomainParticipantsToProto(m.Cc),
-		Bcc:                mapDomainParticipantsToProto(m.Bcc),
-		ReplyTo:            mapDomainParticipantsToProto(m.ReplyTo),
-		SentAt:             sentAtPb,
-		ReceivedAt:         timestamppb.New(m.ReceivedAt),
-		IsUnread:           m.IsUnread,
-		IsStarred:          m.IsStarred,
-		IsDraft:            m.IsDraft,
-		Attachments:        mapDomainAttachmentsToProto(m.Attachments),
-		HasRemoteImages:    m.HasRemoteImages,
-		BodyCached:         m.BodyCached,
-		CreateTime:         timestamppb.New(m.CreateTime),
-		UpdateTime:         timestamppb.New(m.UpdateTime),
+		From: &mailv1.Participant{
+			Name:       m.From.Name,
+			Email:      m.From.Email,
+			AvatarUrl:  m.From.AvatarURL,
+			IsVerified: m.From.IsVerified,
+		},
+		To:              mapDomainParticipantsToProto(m.To),
+		Cc:              mapDomainParticipantsToProto(m.Cc),
+		Bcc:             mapDomainParticipantsToProto(m.Bcc),
+		ReplyTo:         mapDomainParticipantsToProto(m.ReplyTo),
+		SentAt:          sentAtPb,
+		ReceivedAt:      timestamppb.New(m.ReceivedAt),
+		IsUnread:        m.IsUnread,
+		IsStarred:       m.IsStarred,
+		IsDraft:         m.IsDraft,
+		Attachments:     mapDomainAttachmentsToProto(m.Attachments),
+		HasRemoteImages: m.HasRemoteImages,
+		BodyCached:      m.BodyCached,
+		CreateTime:      timestamppb.New(m.CreateTime),
+		UpdateTime:      timestamppb.New(m.UpdateTime),
 	}
 }
 

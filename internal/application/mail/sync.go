@@ -111,8 +111,10 @@ func (c *coordinator) SyncConnectedAccountMail(ctx context.Context, req *SyncCon
 		}
 	}
 
-	// 6. Persist synced data
+	// 6. Persist synced data with ID reconciliation to prevent foreign key violations
+	threadIDMap := make(map[string]string)
 	for _, thread := range result.Threads {
+		origID := thread.ID
 		thread.SpaceID = spaceID
 		thread.ConnectedAccountID = req.ConnectedAccountID
 		if thread.ProviderThreadID != nil && *thread.ProviderThreadID != "" {
@@ -121,28 +123,40 @@ func (c *coordinator) SyncConnectedAccountMail(ctx context.Context, req *SyncCon
 				thread.ID = existing.ID
 			}
 		}
+		threadIDMap[origID] = thread.ID
 		if err := c.threadStore.Upsert(ctx, thread); err != nil {
-			continue
+			return errors.E(op, err)
 		}
 	}
 
+	messageIDMap := make(map[string]string)
 	for _, msg := range result.Messages {
+		origMsgID := msg.ID
 		msg.SpaceID = spaceID
 		msg.ConnectedAccountID = req.ConnectedAccountID
+		if actualThreadID, ok := threadIDMap[msg.ThreadID]; ok {
+			msg.ThreadID = actualThreadID
+		}
 		if msg.ProviderMessageID != nil && *msg.ProviderMessageID != "" {
 			existing, err := c.messageStore.GetByProviderID(ctx, spaceID, req.ConnectedAccountID, *msg.ProviderMessageID)
 			if err == nil && existing != nil {
 				msg.ID = existing.ID
 			}
 		}
+		messageIDMap[origMsgID] = msg.ID
 		if err := c.messageStore.Upsert(ctx, msg); err != nil {
-			continue
+			return errors.E(op, err)
 		}
 	}
 
 	for _, body := range result.Bodies {
 		body.SpaceID = spaceID
-		_ = c.messageStore.SaveBody(ctx, body)
+		if actualMsgID, ok := messageIDMap[body.MessageID]; ok {
+			body.MessageID = actualMsgID
+		}
+		if err := c.messageStore.SaveBody(ctx, body); err != nil {
+			return errors.E(op, err)
+		}
 	}
 
 	// 7. Update and save sync state
