@@ -135,6 +135,11 @@ type gmailDraft struct {
 	Message *gmailMessage `json:"message,omitempty"`
 }
 
+type gmailDraftListResponse struct {
+	Drafts        []gmailDraft `json:"drafts"`
+	NextPageToken string       `json:"nextPageToken"`
+}
+
 type gmailDraftCreateRequest struct {
 	Message gmailDraftMessage `json:"message"`
 }
@@ -1104,35 +1109,115 @@ func (p *Provider) UpdateDraft(ctx context.Context, accessToken string, draft *d
 	return draft, nil
 }
 
-// DeleteDraft removes a draft from the provider.
+// DeleteDraft removes a draft from the provider. If providerDraftID is a Gmail message ID
+// (404 on /drafts/{id}), it resolves the matching Gmail draft ID and deletes it.
 func (p *Provider) DeleteDraft(ctx context.Context, accessToken, providerDraftID string) error {
 	const op platformerrors.Op = "platform/connector/google.DeleteDraft"
 
-	endpoint := fmt.Sprintf("%s/users/me/drafts/%s", p.cfg.GmailURL, url.PathEscape(providerDraftID))
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, nil)
+	statusCode, body, err := p.deleteDraftByID(ctx, accessToken, providerDraftID)
 	if err != nil {
 		return platformerrors.E(op, err)
+	}
+	if statusCode == http.StatusNotFound {
+		resolvedID, resolveErr := p.findGmailDraftIDByMessageID(ctx, accessToken, providerDraftID)
+		if resolveErr != nil {
+			return platformerrors.E(op, resolveErr)
+		}
+		if resolvedID == "" {
+			// Draft already deleted on provider
+			return nil
+		}
+		statusCode, body, err = p.deleteDraftByID(ctx, accessToken, resolvedID)
+		if err != nil {
+			return platformerrors.E(op, err)
+		}
+		if statusCode == http.StatusNotFound {
+			return nil
+		}
+	}
+
+	if statusCode == http.StatusUnauthorized {
+		return platformerrors.E(op, connector.ErrInvalidGrant)
+	}
+	if statusCode == http.StatusTooManyRequests {
+		return platformerrors.E(op, connector.ErrRateLimited)
+	}
+	if statusCode != http.StatusOK && statusCode != http.StatusNoContent {
+		return platformerrors.E(op, fmt.Sprintf("delete draft failed with status %d: %s", statusCode, body))
+	}
+
+	return nil
+}
+
+func (p *Provider) deleteDraftByID(ctx context.Context, accessToken, draftID string) (int, string, error) {
+	endpoint := fmt.Sprintf("%s/users/me/drafts/%s", p.cfg.GmailURL, url.PathEscape(draftID))
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, nil)
+	if err != nil {
+		return 0, "", err
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
-		return platformerrors.E(op, err)
+		return 0, "", err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusUnauthorized {
-		return platformerrors.E(op, connector.ErrInvalidGrant)
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusNoContent {
+		return resp.StatusCode, "", nil
 	}
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return platformerrors.E(op, connector.ErrRateLimited)
-	}
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		body, _ := io.ReadAll(resp.Body)
-		return platformerrors.E(op, fmt.Sprintf("delete draft failed with status %d: %s", resp.StatusCode, string(body)))
-	}
+	body, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, string(body), nil
+}
 
-	return nil
+func (p *Provider) findGmailDraftIDByMessageID(ctx context.Context, accessToken, providerMessageID string) (string, error) {
+	pageToken := ""
+	for range 5 {
+		endpoint := fmt.Sprintf("%s/users/me/drafts?maxResults=100", p.cfg.GmailURL)
+		if pageToken != "" {
+			endpoint += "&pageToken=" + url.QueryEscape(pageToken)
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		if err != nil {
+			return "", err
+		}
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+
+		resp, err := p.httpClient.Do(req)
+		if err != nil {
+			return "", err
+		}
+
+		var listResp gmailDraftListResponse
+		decodeErr := json.UnmarshalRead(resp.Body, &listResp)
+		statusCode := resp.StatusCode
+		resp.Body.Close()
+
+		if statusCode == http.StatusUnauthorized {
+			return "", connector.ErrInvalidGrant
+		}
+		if statusCode == http.StatusTooManyRequests {
+			return "", connector.ErrRateLimited
+		}
+		if statusCode != http.StatusOK {
+			return "", fmt.Errorf("list drafts failed with status %d", statusCode)
+		}
+		if decodeErr != nil {
+			return "", decodeErr
+		}
+
+		for _, d := range listResp.Drafts {
+			if d.Message != nil && d.Message.ID == providerMessageID {
+				return d.ID, nil
+			}
+		}
+
+		if listResp.NextPageToken == "" {
+			break
+		}
+		pageToken = listResp.NextPageToken
+	}
+	return "", nil
 }
 
 // SendDraft sends an existing draft via the provider.

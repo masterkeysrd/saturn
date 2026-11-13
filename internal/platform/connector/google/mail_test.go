@@ -365,3 +365,37 @@ func TestProvider_AttachmentStreamAndUpload(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "25 MB")
 }
+
+func TestProvider_DeleteDraft_ResolvesMessageID(t *testing.T) {
+	deletedResolvedDraft := false
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/users/me/drafts", func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		resp := gmailDraftListResponse{
+			Drafts: []gmailDraft{
+				{
+					ID:      "r_resolved_draft_99",
+					Message: &gmailMessage{ID: "gmail_msg_42"},
+				},
+			},
+		}
+		_ = json.MarshalWrite(w, resp)
+	})
+	mux.HandleFunc("/users/me/drafts/gmail_msg_42", func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	})
+	mux.HandleFunc("/users/me/drafts/r_resolved_draft_99", func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodDelete, r.Method)
+		deletedResolvedDraft = true
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	provider := NewProvider(Config{GmailURL: server.URL})
+	err := provider.DeleteDraft(context.Background(), "test-token", "gmail_msg_42")
+	require.NoError(t, err)
+	assert.True(t, deletedResolvedDraft)
+}
