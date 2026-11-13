@@ -225,8 +225,13 @@ export function useModifyThread(
           return t
         })
 
-        // If viewing inbox and thread is archived or trashed, filter it out immediately
-        if (isInboxView && (isArchiving || req.inTrash || req.inSpam)) {
+        const isTrashView = filter.systemBucket === "MAILBOX_ROLE_TRASH"
+
+        // If thread is trashed, immediately remove it from all non-trash views
+        if (req.inTrash && !isTrashView) {
+          updatedThreads = updatedThreads.filter((t) => t.id !== id)
+        } else if (isInboxView && (isArchiving || req.inSpam)) {
+          // If viewing inbox and thread is archived or spammed, filter it out immediately
           updatedThreads = updatedThreads.filter((t) => t.id !== id)
         }
 
@@ -341,7 +346,11 @@ export function useBatchModifyThreads(
           return t
         })
 
-        if (isInboxView && (isArchiving || req.inTrash || req.inSpam)) {
+        const isTrashView = filter.systemBucket === "MAILBOX_ROLE_TRASH"
+
+        if (req.inTrash && !isTrashView) {
+          updatedThreads = updatedThreads.filter((t) => !threadIdsSet.has(t.id))
+        } else if (isInboxView && (isArchiving || req.inSpam)) {
           updatedThreads = updatedThreads.filter((t) => !threadIdsSet.has(t.id))
         }
 
