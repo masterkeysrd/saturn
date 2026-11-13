@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   Home,
   Calendar as CalendarIcon,
+  Mail,
   Wallet,
   Menu,
 } from "lucide-react-native"
@@ -59,6 +60,18 @@ export default function TabsLayout() {
             title: "Calendar",
             tabBarIcon: ({ color, size }) => (
               <CalendarIcon
+                size={size ?? 22}
+                color={typeof color === "string" ? color : undefined}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="mail"
+          options={{
+            title: "Mail",
+            tabBarIcon: ({ color, size }) => (
+              <Mail
                 size={size ?? 22}
                 color={typeof color === "string" ? color : undefined}
               />

@@ -41,32 +41,39 @@ export const asyncStoragePersister = createAsyncStoragePersister({
   throttleTime: 1000,
 })
 
+export function shouldDehydrateQuery(query: {
+  state: { status: string }
+  queryKey: unknown
+  meta?: Record<string, unknown>
+}): boolean {
+  // Only persist successful queries to avoid saving error state to disk
+  if (query.state.status !== "success") return false
+
+  // Android SQLite CursorWindow Guard: Never persist queries with meta.persist === false
+  // Hydrated email HTML and raw message bodies exceed Android's 2MB limit and crash
+  if (query.meta?.persist === false) return false
+
+  // Prevent caching auth tokens or sensitive credentials
+  const queryKey = query.queryKey
+  if (Array.isArray(queryKey)) {
+    const firstKey = String(queryKey[0] ?? "")
+    if (
+      firstKey.includes("auth") ||
+      firstKey.includes("token") ||
+      firstKey.includes("password")
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
 // 4. Persistence options for PersistQueryClientProvider
 export const persistOptions = {
   persister: asyncStoragePersister,
   maxAge: 1000 * 60 * 60 * 24, // 24 hours
   buster: "saturn-mobile-v1",
   dehydrateOptions: {
-    shouldDehydrateQuery: (query: {
-      state: { status: string }
-      queryKey: unknown
-    }) => {
-      // Only persist successful queries to avoid saving error state to disk
-      if (query.state.status !== "success") return false
-
-      // Prevent caching auth tokens or sensitive credentials
-      const queryKey = query.queryKey
-      if (Array.isArray(queryKey)) {
-        const firstKey = String(queryKey[0] ?? "")
-        if (
-          firstKey.includes("auth") ||
-          firstKey.includes("token") ||
-          firstKey.includes("password")
-        ) {
-          return false
-        }
-      }
-      return true
-    },
+    shouldDehydrateQuery,
   },
 }

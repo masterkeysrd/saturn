@@ -168,6 +168,16 @@ export default function RootLayout() {
                       }}
                     />
                     <Stack.Screen
+                      name="modal/compose-mail"
+                      options={{
+                        presentation: "modal",
+                        headerTitle: "New Message",
+                        headerStyle: {
+                          backgroundColor: theme.colors.surface,
+                        },
+                      }}
+                    />
+                    <Stack.Screen
                       name="+not-found"
                       options={{
                         title: "Not Found",

@@ -195,6 +195,18 @@ export default function AppLayout() {
           headerBackTitle: "Debts & Loans",
         }}
       />
+      <Stack.Screen
+        name="mail/[threadId]"
+        options={{
+          headerShown: true,
+          headerTitle: "Conversation",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Mail",
+        }}
+      />
     </Stack>
   )
 }

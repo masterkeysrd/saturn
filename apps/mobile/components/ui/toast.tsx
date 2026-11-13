@@ -31,6 +31,10 @@ export interface ToastOptions {
   message?: string
   type?: ToastType
   duration?: number
+  action?: {
+    label: string
+    onPress: () => void
+  }
 }
 
 interface ToastContextType {
@@ -131,6 +135,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 <Text style={styles.message}>{toast.message}</Text>
               ) : null}
             </View>
+            {toast.action && (
+              <TouchableOpacity
+                testID="mobile-toast-action-btn"
+                activeOpacity={0.7}
+                onPress={() => {
+                  hide()
+                  toast.action?.onPress()
+                }}
+                style={styles.actionBtn}
+              >
+                <Text style={styles.actionBtnText}>{toast.action.label}</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={hide}
@@ -190,5 +207,19 @@ const styles = StyleSheet.create({
   closeBtn: {
     padding: 4,
     marginLeft: 8,
+  },
+  actionBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: theme.colors.surfaceHighlight,
+    borderRadius: theme.radius.sm,
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.borderStrong,
+  },
+  actionBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.primary,
   },
 })
