@@ -2,6 +2,7 @@ package mail
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	domainmail "github.com/masterkeysrd/saturn/internal/domain/mail"
@@ -124,6 +125,9 @@ func (c *coordinator) DeleteDraft(ctx context.Context, req *DeleteDraftRequest) 
 
 	existing, err := c.domainService.GetDraft(ctx, spaceID, req.ID)
 	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return c.deleteSyncedDraftMessage(ctx, op, spaceID, req.ID, err)
+		}
 		return errors.E(op, err)
 	}
 
@@ -143,6 +147,51 @@ func (c *coordinator) DeleteDraft(ctx context.Context, req *DeleteDraftRequest) 
 	if err := c.domainService.DeleteDraft(ctx, spaceID, req.ID); err != nil {
 		return errors.E(op, err)
 	}
+	return nil
+}
+
+func (c *coordinator) deleteSyncedDraftMessage(ctx context.Context, op errors.Op, spaceID, msgID string, origErr error) error {
+	msg, err := c.messageStore.GetByID(ctx, spaceID, msgID)
+	if err != nil || msg == nil || !msg.IsDraft {
+		return errors.E(op, origErr)
+	}
+
+	if msg.ConnectedAccountID != "" && msg.ProviderMessageID != nil && *msg.ProviderMessageID != "" && c.tokenManager != nil {
+		acc, accErr := c.accountStore.GetAccount(ctx, spaceID, msg.ConnectedAccountID)
+		if accErr == nil && acc != nil {
+			if prov, ok := c.externalProviders[acc.Provider]; ok {
+				token, tokErr := c.tokenManager.TokenSource(ctx, spaceID, msg.ConnectedAccountID)
+				if tokErr == nil && token != "" {
+					_ = prov.DeleteDraft(ctx, token, *msg.ProviderMessageID)
+				}
+			}
+		}
+	}
+
+	if err := c.messageStore.Delete(ctx, spaceID, msg.ID); err != nil {
+		return errors.E(op, err)
+	}
+
+	if msg.ThreadID != "" {
+		remaining, remErr := c.messageStore.ListByThreadID(ctx, spaceID, msg.ThreadID)
+		if remErr == nil {
+			if len(remaining) == 0 {
+				_ = c.threadStore.Delete(ctx, spaceID, msg.ThreadID)
+			} else if th, thErr := c.threadStore.GetByID(ctx, spaceID, msg.ThreadID); thErr == nil && th != nil {
+				th.InDrafts = slices.ContainsFunc(remaining, func(m *domainmail.Message) bool {
+					return m != nil && m.IsDraft
+				})
+				if !th.InDrafts {
+					th.MailboxIDs = slices.DeleteFunc(th.MailboxIDs, func(id string) bool {
+						return id == "DRAFT"
+					})
+				}
+				th.AggregateFromMessages(remaining)
+				_ = c.threadStore.Update(ctx, th)
+			}
+		}
+	}
+
 	return nil
 }
 

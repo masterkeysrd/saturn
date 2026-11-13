@@ -377,13 +377,13 @@ func buildThreadFilter(filter *mail.ListThreadsFilter, startIdx int) (string, []
 		if filter.SystemBucket != nil && *filter.SystemBucket != "" {
 			switch *filter.SystemBucket {
 			case mail.SystemBucketInbox:
-				where = append(where, "in_inbox = true")
+				where = append(where, "in_inbox = true AND in_trash = false AND in_spam = false")
 			case mail.SystemBucketStarred:
-				where = append(where, "is_starred = true")
+				where = append(where, "is_starred = true AND in_trash = false AND in_spam = false")
 			case mail.SystemBucketSent:
-				where = append(where, "in_sent = true")
+				where = append(where, "in_sent = true AND in_trash = false")
 			case mail.SystemBucketDrafts:
-				where = append(where, "in_drafts = true")
+				where = append(where, "in_drafts = true AND in_trash = false")
 			case mail.SystemBucketTrash:
 				where = append(where, "in_trash = true")
 			case mail.SystemBucketSpam:

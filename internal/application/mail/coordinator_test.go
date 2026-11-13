@@ -614,3 +614,123 @@ func TestCoordinator_PruneWindowAndBodies(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, b)
 }
+
+func TestCoordinator_DeleteDraft_SyncedMessages(t *testing.T) {
+	tests := []struct {
+		name               string
+		seedMessages       []*domainmail.Message
+		deleteID           string
+		wantErr            bool
+		wantThreadDeleted  bool
+		wantThreadInDrafts bool
+		wantMsgCount       int
+	}{
+		{
+			name: "deletes standalone synced draft message and removes empty thread",
+			seedMessages: []*domainmail.Message{
+				{
+					ID:                 "msg_draft_solo",
+					SpaceID:            "spc_1",
+					ConnectedAccountID: "acc_1",
+					ThreadID:           "mth_solo",
+					ProviderMessageID:  new("gmail_msg_1"),
+					IsDraft:            true,
+					Subject:            "Solo Draft",
+				},
+			},
+			deleteID:          "msg_draft_solo",
+			wantErr:           false,
+			wantThreadDeleted: true,
+		},
+		{
+			name: "deletes reply draft in multi-message thread and clears InDrafts",
+			seedMessages: []*domainmail.Message{
+				{
+					ID:                 "msg_orig",
+					SpaceID:            "spc_1",
+					ConnectedAccountID: "acc_1",
+					ThreadID:           "mth_multi",
+					IsDraft:            false,
+					Subject:            "Original",
+					Snippet:            "Hi",
+				},
+				{
+					ID:                 "msg_draft_reply",
+					SpaceID:            "spc_1",
+					ConnectedAccountID: "acc_1",
+					ThreadID:           "mth_multi",
+					ProviderMessageID:  new("gmail_msg_2"),
+					IsDraft:            true,
+					Subject:            "Re: Original",
+				},
+			},
+			deleteID:           "msg_draft_reply",
+			wantErr:            false,
+			wantThreadDeleted:  false,
+			wantThreadInDrafts: false,
+			wantMsgCount:       1,
+		},
+		{
+			name: "rejects deleting non-draft message via DeleteDraft",
+			seedMessages: []*domainmail.Message{
+				{
+					ID:                 "msg_sent",
+					SpaceID:            "spc_1",
+					ConnectedAccountID: "acc_1",
+					ThreadID:           "mth_sent",
+					IsDraft:            false,
+				},
+			},
+			deleteID: "msg_sent",
+			wantErr:  true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			coord, _, thStore, msgStore, _, _ := newTestCoordinator(t)
+			ctx := contextWithAuth("spc_1", string(space.RoleMember))
+
+			for _, m := range tc.seedMessages {
+				require.NoError(t, msgStore.Create(ctx, m))
+				existingTh, _ := thStore.GetByID(ctx, "spc_1", m.ThreadID)
+				if existingTh == nil {
+					require.NoError(t, thStore.Create(ctx, &domainmail.Thread{
+						ID:                 m.ThreadID,
+						SpaceID:            "spc_1",
+						ConnectedAccountID: "acc_1",
+						InDrafts:           m.IsDraft,
+						MailboxIDs:         []string{"INBOX", "DRAFT"},
+						MessageCount:       len(tc.seedMessages),
+					}))
+				} else if m.IsDraft {
+					existingTh.InDrafts = true
+					require.NoError(t, thStore.Update(ctx, existingTh))
+				}
+			}
+
+			err := coord.DeleteDraft(ctx, &appmail.DeleteDraftRequest{ID: tc.deleteID})
+			if tc.wantErr {
+				require.Error(t, err)
+				kept, _ := msgStore.GetByID(ctx, "spc_1", tc.deleteID)
+				assert.NotNil(t, kept)
+				return
+			}
+
+			require.NoError(t, err)
+			deletedMsg, _ := msgStore.GetByID(ctx, "spc_1", tc.deleteID)
+			assert.Nil(t, deletedMsg)
+
+			threadID := tc.seedMessages[0].ThreadID
+			th, _ := thStore.GetByID(ctx, "spc_1", threadID)
+			if tc.wantThreadDeleted {
+				assert.Nil(t, th)
+			} else {
+				require.NotNil(t, th)
+				assert.Equal(t, tc.wantThreadInDrafts, th.InDrafts)
+				assert.Equal(t, tc.wantMsgCount, th.MessageCount)
+				assert.NotContains(t, th.MailboxIDs, "DRAFT")
+			}
+		})
+	}
+}

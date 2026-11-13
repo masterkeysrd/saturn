@@ -337,7 +337,9 @@ func (c *coordinator) ModifyThread(ctx context.Context, req *ModifyThreadRequest
 	if req.InTrash != nil {
 		thread.InTrash = *req.InTrash
 		if *req.InTrash {
+			thread.InInbox = false
 			addLabels = append(addLabels, "TRASH")
+			removeLabels = append(removeLabels, "INBOX")
 		} else {
 			removeLabels = append(removeLabels, "TRASH")
 		}
@@ -345,7 +347,9 @@ func (c *coordinator) ModifyThread(ctx context.Context, req *ModifyThreadRequest
 	if req.InSpam != nil {
 		thread.InSpam = *req.InSpam
 		if *req.InSpam {
+			thread.InInbox = false
 			addLabels = append(addLabels, "SPAM")
+			removeLabels = append(removeLabels, "SPAM", "INBOX")
 		} else {
 			removeLabels = append(removeLabels, "SPAM")
 		}
