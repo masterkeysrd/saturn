@@ -171,12 +171,13 @@ func (m *Message) Validate() error {
 
 // MessageBody models the lazy-fetched and sanitized email body cached with a TTL.
 type MessageBody struct {
-	MessageID     string    `json:"message_id"`
-	SpaceID       string    `json:"space_id"`
-	SanitizedHTML string    `json:"sanitized_html"`
-	PlainText     string    `json:"plain_text"`
-	FetchedAt     time.Time `json:"fetched_at"`
-	ExpiresAt     time.Time `json:"expires_at"`
+	MessageID       string    `json:"message_id"`
+	SpaceID         string    `json:"space_id"`
+	SanitizedHTML   string    `json:"sanitized_html"`
+	PlainText       string    `json:"plain_text"`
+	HasRemoteImages bool      `json:"has_remote_images"`
+	FetchedAt       time.Time `json:"fetched_at"`
+	ExpiresAt       time.Time `json:"expires_at"`
 }
 
 // Validate checks business invariants for MessageBody.

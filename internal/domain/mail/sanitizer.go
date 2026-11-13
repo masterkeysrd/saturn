@@ -99,10 +99,37 @@ func SanitizeHTML(rawHTML string, opts ...SanitizeOption) (*SanitizeResult, erro
 	sanitizeNode(doc, options, res)
 
 	var buf bytes.Buffer
+
+	// Extract and render all sanitized <style> nodes (from <head> or document root)
+	var styles []*html.Node
+	var findStyles func(*html.Node)
+	findStyles = func(node *html.Node) {
+		if node == nil {
+			return
+		}
+		if node.Type == html.ElementNode && (node.DataAtom == atom.Style || strings.EqualFold(node.Data, "style")) {
+			styles = append(styles, node)
+			return
+		}
+		for c := node.FirstChild; c != nil; c = c.NextSibling {
+			findStyles(c)
+		}
+	}
+	findStyles(doc)
+
+	for _, st := range styles {
+		if err := html.Render(&buf, st); err != nil {
+			return nil, errors.E(errors.Internal, "render sanitized style: %w", err)
+		}
+	}
+
 	// Find the body or render from root
 	bodyNode := findBody(doc)
 	if bodyNode != nil {
 		for child := bodyNode.FirstChild; child != nil; child = child.NextSibling {
+			if child.Type == html.ElementNode && (child.DataAtom == atom.Style || strings.EqualFold(child.Data, "style")) {
+				continue
+			}
 			if err := html.Render(&buf, child); err != nil {
 				return nil, errors.E(errors.Internal, "render sanitized html: %w", err)
 			}
@@ -145,7 +172,11 @@ func sanitizeNode(n *html.Node, opts *SanitizeOptions, res *SanitizeResult) {
 		nextChild = c.NextSibling
 		if c.Type == html.ElementNode {
 			// Strip dangerous tags and their contents
-			if tagsToRemoveWithSubtree[c.DataAtom] {
+			isScript := c.DataAtom == atom.Script || strings.EqualFold(c.Data, "script")
+			isIframe := c.DataAtom == atom.Iframe || strings.EqualFold(c.Data, "iframe")
+			isObject := c.DataAtom == atom.Object || strings.EqualFold(c.Data, "object")
+			isEmbed := c.DataAtom == atom.Embed || strings.EqualFold(c.Data, "embed")
+			if tagsToRemoveWithSubtree[c.DataAtom] || isScript || isIframe || isObject || isEmbed {
 				n.RemoveChild(c)
 				continue
 			}

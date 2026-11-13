@@ -27,8 +27,10 @@ func ValidateThreadID(idStr string) error {
 
 // Participant represents an email sender, recipient, or participant.
 type Participant struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	Name       string `json:"name"`
+	Email      string `json:"email"`
+	AvatarURL  string `json:"avatar_url,omitempty"`
+	IsVerified bool   `json:"is_verified,omitempty"`
 }
 
 // String returns a formatted representation of the participant.
@@ -150,12 +152,20 @@ func (t *Thread) AggregateFromMessages(msgs []*Message) {
 			if participants[idx].Name == "" && name != "" {
 				participants[idx].Name = name
 			}
+			if participants[idx].AvatarURL == "" && p.AvatarURL != "" {
+				participants[idx].AvatarURL = p.AvatarURL
+			}
+			if !participants[idx].IsVerified && p.IsVerified {
+				participants[idx].IsVerified = true
+			}
 			return
 		}
 		participantMap[email] = len(participants)
 		participants = append(participants, Participant{
-			Name:  name,
-			Email: email,
+			Name:       name,
+			Email:      email,
+			AvatarURL:  p.AvatarURL,
+			IsVerified: p.IsVerified,
 		})
 	}
 

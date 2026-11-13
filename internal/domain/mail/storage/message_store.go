@@ -487,8 +487,8 @@ func (s *MessageStore) SaveBody(ctx context.Context, body *mail.MessageBody) err
 		return errors.E(op, err)
 	}
 
-	// Update body_cached flag on message
-	_, _ = s.db.Exec(ctx, `UPDATE mail.messages SET body_cached = true WHERE space_id = $1 AND id = $2`, body.SpaceID, body.MessageID)
+	// Update body_cached flag and has_remote_images on message
+	_, _ = s.db.Exec(ctx, `UPDATE mail.messages SET body_cached = true, has_remote_images = $3 WHERE space_id = $1 AND id = $2`, body.SpaceID, body.MessageID, body.HasRemoteImages)
 
 	return nil
 }
