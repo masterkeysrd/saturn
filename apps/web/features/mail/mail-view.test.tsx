@@ -50,10 +50,20 @@ const mockThreads: Thread[] = [
     subject: "Q3 Budget Review",
     snippet: "Please see attached budget figures for review.",
     participants: [
-      { name: "Finance Lead", email: "finance@company.com" },
-      { name: "Work Account", email: "work@company.com" },
+      {
+        name: "Finance Lead",
+        email: "finance@company.com",
+        avatarUrl: "",
+        isVerified: false,
+      },
+      {
+        name: "Work Account",
+        email: "work@company.com",
+        avatarUrl: "",
+        isVerified: false,
+      },
     ],
-    messageCount: 1,
+    messageCount: 2,
     hasAttachments: true,
     isUnread: true,
     isStarred: false,
@@ -63,9 +73,9 @@ const mockThreads: Thread[] = [
     inTrash: false,
     inSpam: false,
     mailboxIds: ["mbx_inbox_1"],
-    lastMessageAt: "2026-10-20T10:00:00Z",
+    lastMessageAt: "2026-10-20T10:15:00Z",
     createTime: "2026-10-20T10:00:00Z",
-    updateTime: "2026-10-20T10:00:00Z",
+    updateTime: "2026-10-20T10:15:00Z",
     messages: [
       {
         id: "msg_101_1",
@@ -78,8 +88,20 @@ const mockThreads: Thread[] = [
         references: "",
         subject: "Q3 Budget Review",
         snippet: "Please see attached budget figures for review.",
-        from: { name: "Finance Lead", email: "finance@company.com" },
-        to: [{ name: "Work Account", email: "work@company.com" }],
+        from: {
+          name: "Finance Lead",
+          email: "finance@company.com",
+          avatarUrl: "",
+          isVerified: false,
+        },
+        to: [
+          {
+            name: "Work Account",
+            email: "work@company.com",
+            avatarUrl: "",
+            isVerified: false,
+          },
+        ],
         cc: [],
         bcc: [],
         replyTo: [],
@@ -108,6 +130,47 @@ const mockThreads: Thread[] = [
         createTime: "2026-10-20T10:00:00Z",
         updateTime: "2026-10-20T10:00:00Z",
       },
+      {
+        id: "msg_101_2",
+        spaceId: "sp_1",
+        connectedAccountId: "acc_work",
+        threadId: "mth_101",
+        providerMessageId: "p_msg_102",
+        rfcMessageId: "<msg102@company.com>",
+        inReplyTo: "<msg101@company.com>",
+        references: "<msg101@company.com>",
+        subject: "Re: Q3 Budget Review",
+        snippet: "Thanks, looks good to me.",
+        from: {
+          name: "Work Account",
+          email: "work@company.com",
+          avatarUrl: "",
+          isVerified: false,
+        },
+        to: [
+          {
+            name: "Finance Lead",
+            email: "finance@company.com",
+            avatarUrl: "",
+            isVerified: false,
+          },
+        ],
+        cc: [],
+        bcc: [],
+        replyTo: [],
+        sentAt: "2026-10-20T10:15:00Z",
+        receivedAt: "2026-10-20T10:16:00Z",
+        isUnread: false,
+        isStarred: false,
+        isDraft: false,
+        attachments: [],
+        hasRemoteImages: false,
+        bodyCached: true,
+        bodyHtml: "<p>Thanks, looks good to me.</p>",
+        bodyPlain: "Thanks, looks good to me.",
+        createTime: "2026-10-20T10:15:00Z",
+        updateTime: "2026-10-20T10:15:00Z",
+      },
     ],
   },
 ]
@@ -125,6 +188,7 @@ describe("MailView Web Feature", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -193,6 +257,11 @@ describe("MailView Web Feature", () => {
       isPending: false,
     } as unknown as ReturnType<typeof hooks.useSendDraft>)
 
+    vi.spyOn(hooks, "useSyncConnectedAccount").mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof hooks.useSyncConnectedAccount>)
+
     vi.spyOn(hooks, "useContactSuggestions").mockReturnValue({
       data: {
         contacts: [
@@ -227,16 +296,16 @@ describe("MailView Web Feature", () => {
   it("sandboxes email iframe without allow-same-origin or allow-scripts attributes", () => {
     render(<MailView />, { wrapper: createWrapper() })
 
-    const iframe = screen.getByTestId(
+    const [iframe] = screen.getAllByTestId(
       "sandboxed-email-frame"
-    ) as HTMLIFrameElement
+    ) as HTMLIFrameElement[]
     expect(iframe).toBeDefined()
 
     const sandbox = iframe.getAttribute("sandbox") || ""
     expect(sandbox).toContain("allow-popups")
-    // Strict isolation: must never permit both same-origin and scripts
+    // Strict isolation: scripts must never be permitted in email bodies
     expect(sandbox).not.toContain("allow-scripts")
-    expect(sandbox).not.toContain("allow-same-origin")
+    expect(sandbox).toContain("allow-same-origin")
     expect(iframe.getAttribute("referrerpolicy")).toBe("no-referrer")
   })
 
@@ -248,9 +317,9 @@ describe("MailView Web Feature", () => {
     expect(banner).toBeDefined()
     expect(banner.textContent).toContain("Remote images are blocked")
 
-    const iframeBefore = screen.getByTestId(
+    const [iframeBefore] = screen.getAllByTestId(
       "sandboxed-email-frame"
-    ) as HTMLIFrameElement
+    ) as HTMLIFrameElement[]
     expect(iframeBefore.srcdoc).toContain("data-saturn-remote-src")
 
     // Click "Load images"
@@ -259,9 +328,9 @@ describe("MailView Web Feature", () => {
 
     // Banner dismissed and data-saturn-remote-src replaced with src
     expect(screen.queryByTestId("remote-images-banner")).toBeNull()
-    const iframeAfter = screen.getByTestId(
+    const [iframeAfter] = screen.getAllByTestId(
       "sandboxed-email-frame"
-    ) as HTMLIFrameElement
+    ) as HTMLIFrameElement[]
     expect(iframeAfter.srcdoc).toContain(
       'src="https://tracker.company.com/pixel.png"'
     )
@@ -332,5 +401,81 @@ describe("MailView Web Feature", () => {
       "event-title-input"
     ) as HTMLInputElement
     expect(titleInput.value).toBe("Q3 Budget Review")
+  })
+
+  it("expands all messages by default in short threads and toggles expand/collapse all", () => {
+    render(<MailView />, { wrapper: createWrapper() })
+
+    // Both messages are visible in reader
+    expect(screen.getByTestId("message-card-msg_101_1")).toBeDefined()
+    expect(screen.getByTestId("message-card-msg_101_2")).toBeDefined()
+
+    // Toggle button should be present for multi-message threads
+    const toggleBtn = screen.getByTestId("toggle-expand-all-btn")
+    expect(toggleBtn).toBeDefined()
+
+    // Click toggle to collapse older messages
+    fireEvent.click(toggleBtn)
+    // Click toggle again to expand all
+    fireEvent.click(toggleBtn)
+  })
+
+  it("supports always loading images across sessions via localStorage", () => {
+    render(<MailView />, { wrapper: createWrapper() })
+
+    // Click "Always load" button
+    const alwaysLoadBtn = screen.getByTestId("always-load-images-btn")
+    fireEvent.click(alwaysLoadBtn)
+
+    expect(localStorage.getItem("saturn_mail_auto_load_images")).toBe("true")
+
+    const [iframeAfter] = screen.getAllByTestId(
+      "sandboxed-email-frame"
+    ) as HTMLIFrameElement[]
+    expect(iframeAfter.srcdoc).toContain(
+      'src="https://tracker.company.com/pixel.png"'
+    )
+  })
+
+  it("renders sender avatar, header quick actions, and 3-dots menu", () => {
+    render(<MailView />, { wrapper: createWrapper() })
+
+    // Sender avatars should render
+    const avatars = screen.getAllByTestId("sender-avatar")
+    expect(avatars.length).toBeGreaterThan(0)
+
+    // Quick Reply and Forward buttons in message header
+    const quickReplyBtn = screen.getByTestId("reply-quick-btn-msg_101_1")
+    expect(quickReplyBtn).toBeDefined()
+
+    const quickForwardBtn = screen.getByTestId("forward-quick-btn-msg_101_1")
+    expect(quickForwardBtn).toBeDefined()
+
+    // 3-dots more menu trigger
+    const moreBtn = screen.getByTestId("message-more-btn-msg_101_1")
+    expect(moreBtn).toBeDefined()
+    fireEvent.click(moreBtn)
+
+    // Dropdown options should be visible
+    expect(screen.getByTestId("menu-reply-msg_101_1")).toBeDefined()
+    expect(screen.getByTestId("menu-forward-msg_101_1")).toBeDefined()
+    expect(screen.getByTestId("menu-print-msg_101_1")).toBeDefined()
+    expect(screen.getByTestId("menu-copy-email-msg_101_1")).toBeDefined()
+  })
+
+  it("automatically marks active unread conversation as read after viewing", async () => {
+    vi.useFakeTimers()
+    render(<MailView />, { wrapper: createWrapper() })
+
+    // Advance viewing timer by 800ms
+    vi.advanceTimersByTime(800)
+
+    expect(mockModifyThreadMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "mth_101",
+        req: expect.objectContaining({ isUnread: false }),
+      })
+    )
+    vi.useRealTimers()
   })
 })

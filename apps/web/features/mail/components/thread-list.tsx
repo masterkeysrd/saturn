@@ -236,6 +236,7 @@ export function ThreadList({
           className="flex h-10 shrink-0 items-center justify-between border-b border-border/40 bg-primary/5 px-3 text-xs"
         >
           <div className="flex items-center gap-2">
+            <div className="w-2 shrink-0" />
             <button
               type="button"
               onClick={handleToggleSelectAll}
@@ -300,6 +301,7 @@ export function ThreadList({
       ) : (
         <div className="flex h-9 shrink-0 items-center justify-between border-b border-border/30 px-3 text-[11px] text-muted-foreground">
           <div className="flex items-center gap-2">
+            <div className="w-2 shrink-0" />
             <button
               type="button"
               onClick={handleToggleSelectAll}
@@ -355,7 +357,7 @@ export function ThreadList({
                 data-testid={`thread-row-${thread.id}`}
                 onClick={() => onSelectThread(thread)}
                 className={cn(
-                  "group relative flex cursor-pointer flex-col gap-1 p-3 transition",
+                  "group relative flex cursor-pointer gap-2 p-3 transition",
                   isSelected
                     ? "bg-accent/60"
                     : thread.isUnread
@@ -363,95 +365,106 @@ export function ThreadList({
                       : "hover:bg-muted/30"
                 )}
               >
-                {/* Top Row: Select, Star, Senders, Date, Account dot */}
-                <div className="flex items-center justify-between gap-1.5 text-xs">
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={(e) => handleToggleSelectOne(thread.id, e)}
-                      className="text-muted-foreground hover:text-foreground"
-                      aria-label="Select conversation"
-                    >
-                      {isChecked ? (
-                        <CheckSquare className="h-3.5 w-3.5 text-primary" />
-                      ) : (
-                        <Square className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      data-testid={`star-btn-${thread.id}`}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onToggleStar(thread)
-                      }}
-                      className="text-muted-foreground hover:text-amber-500"
-                      aria-label={thread.isStarred ? "Unstar" : "Star"}
-                    >
-                      <Star
-                        className={cn(
-                          "h-3.5 w-3.5 transition",
-                          thread.isStarred
-                            ? "fill-amber-400 text-amber-500"
-                            : "opacity-40 group-hover:opacity-100"
+                {/* Column 1: Unread Dot Gutter */}
+                <div className="flex w-2 shrink-0 items-start justify-center pt-1">
+                  <span
+                    className={cn(
+                      "h-2 w-2 rounded-full transition-colors",
+                      thread.isUnread ? "bg-primary" : "bg-transparent"
+                    )}
+                    aria-label={thread.isUnread ? "Unread" : undefined}
+                  />
+                </div>
+
+                {/* Column 2: Indented Content Block (Top Row, Subject, Snippet) */}
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  {/* Top Row: Select, Star, Senders, Date, Account dot */}
+                  <div className="flex items-center justify-between gap-1.5 text-xs">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleSelectOne(thread.id, e)}
+                        className="shrink-0 text-muted-foreground hover:text-foreground"
+                        aria-label="Select conversation"
+                      >
+                        {isChecked ? (
+                          <CheckSquare className="h-3.5 w-3.5 text-primary" />
+                        ) : (
+                          <Square className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
                         )}
-                      />
-                    </button>
-                    <span
-                      className={cn(
-                        "truncate font-medium",
-                        thread.isUnread
-                          ? "font-bold text-foreground"
-                          : "text-foreground/90"
-                      )}
-                    >
-                      {participantNames}
-                    </span>
-                    {thread.messageCount > 1 && (
-                      <span className="text-[10px] text-muted-foreground">
-                        ({thread.messageCount})
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
-                    {thread.hasAttachments && (
-                      <Paperclip className="h-3 w-3 shrink-0 text-muted-foreground/70" />
-                    )}
-                    {account && (
+                      </button>
+                      <button
+                        type="button"
+                        data-testid={`star-btn-${thread.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onToggleStar(thread)
+                        }}
+                        className="shrink-0 text-muted-foreground hover:text-amber-500"
+                        aria-label={thread.isStarred ? "Unstar" : "Star"}
+                      >
+                        <Star
+                          className={cn(
+                            "h-3.5 w-3.5 transition",
+                            thread.isStarred
+                              ? "fill-amber-400 text-amber-500"
+                              : "opacity-40 group-hover:opacity-100"
+                          )}
+                        />
+                      </button>
                       <span
-                        className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: account.color || "#3b82f6" }}
-                        title={account.displayName || account.email}
-                      />
+                        className={cn(
+                          "min-w-0 truncate font-medium",
+                          thread.isUnread
+                            ? "font-bold text-foreground"
+                            : "text-foreground/90"
+                        )}
+                      >
+                        {participantNames}
+                      </span>
+                      {thread.messageCount > 1 && (
+                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                          ({thread.messageCount})
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+                      {thread.hasAttachments && (
+                        <Paperclip className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+                      )}
+                      {account && (
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{
+                            backgroundColor: account.color || "#3b82f6",
+                          }}
+                          title={account.displayName || account.email}
+                        />
+                      )}
+                      <span className="whitespace-nowrap tabular-nums">
+                        {dateStr}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Subject Line */}
+                  <div
+                    className={cn(
+                      "truncate text-xs",
+                      thread.isUnread
+                        ? "font-semibold text-foreground"
+                        : "text-foreground/80"
                     )}
-                    <span className="whitespace-nowrap tabular-nums">
-                      {dateStr}
-                    </span>
+                  >
+                    {thread.subject || "(no subject)"}
+                  </div>
+
+                  {/* Snippet Preview */}
+                  <div className="line-clamp-1 text-[11px] text-muted-foreground">
+                    {thread.snippet || ""}
                   </div>
                 </div>
-
-                {/* Subject Line */}
-                <div
-                  className={cn(
-                    "truncate text-xs",
-                    thread.isUnread
-                      ? "font-semibold text-foreground"
-                      : "text-foreground/80"
-                  )}
-                >
-                  {thread.subject || "(no subject)"}
-                </div>
-
-                {/* Snippet Preview */}
-                <div className="line-clamp-1 text-[11px] text-muted-foreground">
-                  {thread.snippet || ""}
-                </div>
-
-                {/* Unread indicator bar */}
-                {thread.isUnread && (
-                  <div className="absolute top-3 left-0 h-4 w-1 rounded-r-full bg-primary" />
-                )}
               </div>
             )
           })

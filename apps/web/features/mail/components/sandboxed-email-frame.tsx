@@ -1,28 +1,60 @@
-import { useState, useMemo, useRef, useEffect } from "react"
+import { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { ShieldAlert, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import type { Attachment } from "@saturn/api/saturn/mail/v1/mail"
 
 export interface SandboxedEmailFrameProps {
   html: string
   plainText?: string
   hasRemoteImages?: boolean
+  attachments?: Attachment[]
   className?: string
 }
 
 /**
- * SandboxedEmailFrame securely isolates email HTML inside an iframe without script or same-origin execution.
+ * SandboxedEmailFrame securely isolates email HTML inside an iframe without script execution.
  * It enforces strict sandbox attributes, prevents remote tracker leaks by default,
- * and eliminates dangerouslySetInnerHTML in the host DOM.
+ * dynamically resizes to content height to eliminate inner scrollbars,
+ * and renders rich HTML natively on a clean document canvas without destructive CSS overrides.
  */
 export function SandboxedEmailFrame({
   html,
   plainText,
   hasRemoteImages = false,
+  attachments = [],
   className = "",
 }: SandboxedEmailFrameProps) {
+  const [autoLoadImages, setAutoLoadImages] = useState<boolean>(() => {
+    if (typeof localStorage === "undefined") return false
+    return localStorage.getItem("saturn_mail_auto_load_images") === "true"
+  })
   const [loadImages, setLoadImages] = useState(false)
-  const [iframeHeight, setIframeHeight] = useState(150)
+  const [iframeHeight, setIframeHeight] = useState(60)
   const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  const shouldLoadImages = loadImages || autoLoadImages
+
+  // Listen to cross-component auto-load images preference changes
+  useEffect(() => {
+    const handleSync = () => {
+      setAutoLoadImages(
+        localStorage.getItem("saturn_mail_auto_load_images") === "true"
+      )
+    }
+    window.addEventListener("storage", handleSync)
+    window.addEventListener("saturn-mail-auto-load-changed", handleSync)
+    return () => {
+      window.removeEventListener("storage", handleSync)
+      window.removeEventListener("saturn-mail-auto-load-changed", handleSync)
+    }
+  }, [])
+
+  // Detect whether HTML actually contains remote images (external tracking pixels or remote URLs)
+  const containsRemoteImages = useMemo(() => {
+    return Boolean(
+      hasRemoteImages || (html && html.includes("data-saturn-remote-src"))
+    )
+  }, [hasRemoteImages, html])
 
   // Replace data-saturn-remote-src with src when user explicitly opts in to loading remote images
   const processedHtml = useMemo(() => {
@@ -35,12 +67,37 @@ export function SandboxedEmailFrame({
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;")
         .replace(/\n/g, "<br>")
-      source = `<div>${escaped}</div>`
+      source = `<div style="white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: inherit;">${escaped}</div>`
     }
     if (!source) return "<div></div>"
 
-    if (loadImages) {
-      // Swap data-saturn-remote-src to src
+    // Strip any <script> tags or inline event handlers to guarantee clean sandbox execution
+    source = source.replace(/<script\b[\s\S]*?<\/script>/gi, "")
+    source = source.replace(/<script\b[^>]*>/gi, "")
+    source = source.replace(
+      /\s+on[a-z]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi,
+      ""
+    )
+
+    // 1. Resolve and rewrite cid: inline attachments to authenticated download URLs
+    if (attachments && attachments.length > 0) {
+      for (const att of attachments) {
+        if (att.contentId && att.downloadUrl) {
+          const cleanCid = att.contentId.replace(/^<|>$/g, "").trim()
+          source = source.replaceAll(`cid:${cleanCid}`, att.downloadUrl)
+          source = source.replaceAll(`CID:${cleanCid}`, att.downloadUrl)
+          source = source.replaceAll(`cid:<${cleanCid}>`, att.downloadUrl)
+          source = source.replaceAll(`CID:<${cleanCid}>`, att.downloadUrl)
+        }
+        if (att.filename && att.isInline && att.downloadUrl) {
+          source = source.replaceAll(`cid:${att.filename}`, att.downloadUrl)
+          source = source.replaceAll(`CID:${att.filename}`, att.downloadUrl)
+        }
+      }
+    }
+
+    // 2. Swap remote tracker images when opted-in or auto-load enabled
+    if (shouldLoadImages) {
       source = source.replace(
         /data-saturn-remote-src=(["'])(.*?)\1/gi,
         'src="$2"'
@@ -48,9 +105,10 @@ export function SandboxedEmailFrame({
     }
 
     return source
-  }, [html, plainText, loadImages])
+  }, [html, plainText, attachments, shouldLoadImages])
 
-  // Construct complete srcDoc document with base styling
+  // Construct complete srcDoc document
+  // Option 1: Clean, un-mutated white canvas styling matching Gmail & macOS Mail.
   const srcDoc = useMemo(() => {
     return `<!DOCTYPE html>
 <html>
@@ -60,22 +118,18 @@ export function SandboxedEmailFrame({
   <base target="_blank">
   <style>
     :root {
-      color-scheme: light dark;
+      color-scheme: light;
     }
     html, body {
       margin: 0;
-      padding: 12px;
+      padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       font-size: 14px;
       line-height: 1.6;
+      background-color: #ffffff;
+      color: #18181b;
+      overflow: hidden !important;
       word-break: break-word;
-      overflow-wrap: break-word;
-      background-color: transparent;
-      color: inherit;
-    }
-    a {
-      color: #2563eb;
-      text-decoration: underline;
     }
     img {
       max-width: 100% !important;
@@ -84,15 +138,9 @@ export function SandboxedEmailFrame({
     table {
       max-width: 100% !important;
     }
-    blockquote {
-      margin: 0 0 0 0.8ex;
-      border-left: 2px solid #94a3b8;
-      padding-left: 1ex;
-      color: #64748b;
-    }
-    pre, code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 12px;
+    a {
+      color: #2563eb;
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -102,79 +150,168 @@ export function SandboxedEmailFrame({
 </html>`
   }, [processedHtml])
 
-  // Dynamically update iframe height to fit contents
+  // Height measurement function
+  const updateHeight = useCallback(() => {
+    const iframe = iframeRef.current
+    if (!iframe) return
+
+    try {
+      const doc = iframe.contentDocument
+      if (!doc) return
+      const body = doc.body
+      const htmlEl = doc.documentElement
+      if (!body || !htmlEl) return
+
+      const measured = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        htmlEl.scrollHeight,
+        htmlEl.offsetHeight
+      )
+      if (measured > 0) {
+        setIframeHeight(measured + 8)
+      }
+    } catch {
+      // Fallback
+    }
+  }, [])
+
+  // Dynamically update iframe height to eliminate inner scrollbars
   useEffect(() => {
     const iframe = iframeRef.current
     if (!iframe) return
 
+    let resizeObserver: ResizeObserver | null = null
+
     const handleLoad = () => {
+      updateHeight()
+
       try {
-        const body = iframe.contentDocument?.body
-        const htmlEl = iframe.contentDocument?.documentElement
-        if (body && htmlEl) {
-          const height = Math.max(
-            body.scrollHeight,
-            body.offsetHeight,
-            htmlEl.clientHeight,
-            htmlEl.scrollHeight,
-            htmlEl.offsetHeight
-          )
-          if (height > 0) {
-            setIframeHeight(height + 24)
+        const doc = iframe.contentDocument
+        if (doc?.body) {
+          if (typeof window !== "undefined" && window.ResizeObserver) {
+            resizeObserver = new ResizeObserver(() => {
+              updateHeight()
+            })
+            resizeObserver.observe(doc.body)
+          }
+
+          // Attach listeners to images for height recalculation when images finish downloading
+          const images = doc.images || []
+          for (let i = 0; i < images.length; i++) {
+            images[i].addEventListener("load", updateHeight)
           }
         }
       } catch {
-        // Cross-origin access prevented (expected for sandboxed iframes in some browsers)
+        // Fallback
       }
     }
 
     iframe.addEventListener("load", handleLoad)
+
+    if (iframe.contentDocument?.readyState === "complete") {
+      handleLoad()
+    }
+
     return () => {
       iframe.removeEventListener("load", handleLoad)
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
     }
-  }, [srcDoc])
+  }, [srcDoc, updateHeight])
 
   return (
-    <div className={`flex flex-col overflow-hidden ${className}`}>
-      {/* Remote Images Blocker Warning Banner */}
-      {hasRemoteImages && !loadImages && (
+    <div className={`flex flex-col ${className}`}>
+      {/* Top Banner: Remote Images Blocker */}
+      {containsRemoteImages && !shouldLoadImages ? (
         <div
           data-testid="remote-images-banner"
-          className="mb-2 flex items-center justify-between rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-600 dark:text-amber-400"
+          className="mb-3 flex items-center justify-between rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-600 dark:text-amber-400"
         >
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="h-4 w-4 shrink-0 text-amber-500" />
-            <span>Remote images are blocked to protect your privacy.</span>
+          <div className="flex items-center gap-1.5 truncate">
+            <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+            <span className="truncate">
+              Remote images are blocked to protect your privacy.
+            </span>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            data-testid="load-remote-images-btn"
-            onClick={() => setLoadImages(true)}
-            className="h-7 gap-1 px-2.5 text-xs font-medium"
-          >
-            <ImageIcon className="h-3.5 w-3.5" />
-            <span>Load images</span>
-          </Button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              data-testid="load-remote-images-btn"
+              onClick={() => setLoadImages(true)}
+              className="h-6 gap-1 px-2 text-[11px] font-medium"
+            >
+              <ImageIcon className="h-3 w-3" />
+              <span>Load images</span>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              data-testid="always-load-images-btn"
+              onClick={() => {
+                setAutoLoadImages(true)
+                setLoadImages(true)
+                try {
+                  localStorage.setItem("saturn_mail_auto_load_images", "true")
+                  window.dispatchEvent(
+                    new Event("saturn-mail-auto-load-changed")
+                  )
+                } catch {
+                  // ignore
+                }
+              }}
+              className="h-6 px-1.5 text-[11px] text-amber-700 hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100"
+              title="Automatically load remote images for all messages"
+            >
+              <span>Always load</span>
+            </Button>
+          </div>
         </div>
-      )}
+      ) : autoLoadImages && containsRemoteImages ? (
+        <div className="mb-2 flex items-center gap-2 text-[11px] text-muted-foreground/80">
+          <span>Images auto-loaded</span>
+          <button
+            type="button"
+            onClick={() => {
+              setAutoLoadImages(false)
+              setLoadImages(false)
+              try {
+                localStorage.removeItem("saturn_mail_auto_load_images")
+                window.dispatchEvent(new Event("saturn-mail-auto-load-changed"))
+              } catch {
+                // ignore
+              }
+            }}
+            className="text-primary hover:underline"
+          >
+            (block by default)
+          </button>
+        </div>
+      ) : null}
 
-      {/* Sandboxed iframe */}
-      <iframe
-        ref={iframeRef}
-        data-testid="sandboxed-email-frame"
-        title="Email content"
-        sandbox="allow-popups allow-popups-to-escape-sandbox"
-        referrerPolicy="no-referrer"
-        srcDoc={srcDoc}
-        style={{
-          height: `${iframeHeight}px`,
-          width: "100%",
-          border: "none",
-        }}
-        className="w-full transition-all"
-      />
+      {/* Email Canvas Container */}
+      <div className="w-full bg-white text-zinc-900">
+        <iframe
+          ref={iframeRef}
+          data-testid="sandboxed-email-frame"
+          title="Email content"
+          sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+          referrerPolicy="no-referrer"
+          scrolling="no"
+          srcDoc={srcDoc}
+          style={{
+            height: `${iframeHeight}px`,
+            width: "100%",
+            border: "none",
+            overflow: "hidden",
+          }}
+          className="w-full"
+        />
+      </div>
     </div>
   )
 }

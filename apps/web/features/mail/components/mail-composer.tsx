@@ -211,14 +211,20 @@ export function MailComposer({
           to: toRecipients.map((r) => ({
             email: r.email,
             name: r.displayName || "",
+            avatarUrl: "",
+            isVerified: false,
           })),
           cc: ccRecipients.map((r) => ({
             email: r.email,
             name: r.displayName || "",
+            avatarUrl: "",
+            isVerified: false,
           })),
           bcc: bccRecipients.map((r) => ({
             email: r.email,
             name: r.displayName || "",
+            avatarUrl: "",
+            isVerified: false,
           })),
           attachments,
         })

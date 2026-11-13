@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import {
   useMailThreads,
   useModifyThread,
@@ -6,6 +6,7 @@ import {
   useSaveDraft,
   useSendDraft,
   useConnectedAccounts,
+  useSyncConnectedAccount,
 } from "@saturn/hooks"
 import type {
   Thread,
@@ -101,6 +102,25 @@ export function MailView() {
     },
   })
 
+  // Auto-mark conversation as read when viewed (Gmail / Apple Mail standard)
+  const markedAsReadRef = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!activeThread?.id || !activeThread.isUnread) return
+    if (markedAsReadRef.current.has(activeThread.id)) return
+
+    const threadToMark = activeThread.id
+    const timer = setTimeout(() => {
+      markedAsReadRef.current.add(threadToMark)
+      modifyThreadMutation.mutate({
+        id: threadToMark,
+        req: { id: threadToMark, isUnread: false },
+      })
+    }, 750)
+
+    return () => clearTimeout(timer)
+  }, [activeThread?.id, activeThread?.isUnread, modifyThreadMutation])
+
   const batchModifyMutation = useBatchModifyThreads({
     onError: (err) => {
       toast.add({
@@ -113,6 +133,20 @@ export function MailView() {
 
   const saveDraftMutation = useSaveDraft()
   const sendDraftMutation = useSendDraft()
+
+  const syncAccountMutation = useSyncConnectedAccount({
+    onSuccess: () => {
+      refetchThreads()
+    },
+  })
+
+  const handleRefresh = () => {
+    refetchThreads()
+    const targetAccountId = selectedAccountId || accounts[0]?.id
+    if (targetAccountId) {
+      syncAccountMutation.mutate({ id: targetAccountId })
+    }
+  }
 
   // Actions
   const handleArchiveThread = (thread: Thread) => {
@@ -139,6 +173,10 @@ export function MailView() {
   }
 
   const handleToggleRead = (thread: Thread) => {
+    if (thread.isUnread) {
+      // User is explicitly marking as unread: remove from auto-marked set
+      markedAsReadRef.current.delete(thread.id)
+    }
     modifyThreadMutation.mutate({
       id: thread.id,
       req: { id: thread.id, isUnread: !thread.isUnread },
@@ -199,9 +237,24 @@ export function MailView() {
       connectedAccountId: data.connectedAccountId,
       threadId: data.threadId,
       replyToMessageId: data.replyToMessageId,
-      to: data.to.map((t) => ({ email: t.email, name: t.displayName || "" })),
-      cc: data.cc.map((t) => ({ email: t.email, name: t.displayName || "" })),
-      bcc: data.bcc.map((t) => ({ email: t.email, name: t.displayName || "" })),
+      to: data.to.map((t) => ({
+        email: t.email,
+        name: t.displayName || "",
+        avatarUrl: "",
+        isVerified: false,
+      })),
+      cc: data.cc.map((t) => ({
+        email: t.email,
+        name: t.displayName || "",
+        avatarUrl: "",
+        isVerified: false,
+      })),
+      bcc: data.bcc.map((t) => ({
+        email: t.email,
+        name: t.displayName || "",
+        avatarUrl: "",
+        isVerified: false,
+      })),
       subject: data.subject,
       bodyHtml: data.bodyHtml,
       bodyText: data.bodyText,
@@ -263,12 +316,13 @@ export function MailView() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onOpenCompose={() => setComposeOpen(true)}
-        onRefresh={() => refetchThreads()}
-        isLoading={threadsLoading}
+        onRefresh={handleRefresh}
+        isLoading={threadsLoading || syncAccountMutation.isPending}
       />
 
       {/* Pane 3: Thread Reader */}
       <ThreadReader
+        key={activeThread?.id}
         threadId={activeThread?.id}
         initialThread={activeThread}
         onArchive={handleArchiveThread}
