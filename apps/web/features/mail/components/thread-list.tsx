@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import {
   Search,
   Star,
@@ -10,6 +10,7 @@ import {
   CheckSquare,
   Square,
   RefreshCw,
+  Loader2,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -36,6 +37,10 @@ export interface ThreadListProps {
   onOpenCompose?: () => void
   onRefresh?: () => void
   isLoading?: boolean
+  hasNextPage?: boolean
+  isFetchingNextPage?: boolean
+  totalCount?: number
+  onLoadMore?: () => void
 }
 
 export function ThreadList({
@@ -53,6 +58,10 @@ export function ThreadList({
   onOpenCompose,
   onRefresh,
   isLoading = false,
+  hasNextPage = false,
+  isFetchingNextPage = false,
+  totalCount,
+  onLoadMore,
 }: ThreadListProps) {
   const tz = useTimezone()
   const { data: accountsData } = useConnectedAccounts()
@@ -78,6 +87,40 @@ export function ThreadList({
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const loadMoreSentinelRef = useRef<HTMLDivElement>(null)
+  const onLoadMoreRef = useRef(onLoadMore)
+
+  useEffect(() => {
+    onLoadMoreRef.current = onLoadMore
+  }, [onLoadMore])
+
+  const canLoadMore = Boolean(hasNextPage && !isFetchingNextPage && onLoadMore)
+
+  useEffect(() => {
+    if (!canLoadMore) return
+    if (typeof IntersectionObserver === "undefined") return
+
+    const root = scrollContainerRef.current
+    const target = loadMoreSentinelRef.current
+    if (!root || !target) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          onLoadMoreRef.current?.()
+        }
+      },
+      {
+        root,
+        rootMargin: "200px",
+      }
+    )
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [canLoadMore, threads.length])
 
   // Clear selected ids when threads change substantially
   const allIds = useMemo(() => threads.map((t) => t.id), [threads])
@@ -201,7 +244,7 @@ export function ThreadList({
   return (
     <div
       data-testid="thread-list-pane"
-      className="flex h-full w-80 shrink-0 flex-col border-r border-border/40 bg-background select-none lg:w-96"
+      className="flex h-full min-h-0 w-80 shrink-0 flex-col overflow-hidden border-r border-border/40 bg-background select-none lg:w-96"
     >
       {/* Search Header */}
       <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border/40 bg-card/40 px-3 backdrop-blur">
@@ -315,13 +358,28 @@ export function ThreadList({
             >
               <Square className="h-3.5 w-3.5" />
             </button>
-            <span>{threads.length} conversations</span>
+            <span>
+              {totalCount && totalCount > threads.length
+                ? `${threads.length} of ${totalCount} conversations`
+                : `${threads.length} conversations`}
+            </span>
           </div>
         </div>
       )}
 
       {/* Thread Items List */}
-      <div className="flex flex-1 flex-col divide-y divide-border/20 overflow-y-auto">
+      <div
+        ref={scrollContainerRef}
+        data-testid="thread-list-scroll-container"
+        onScroll={(e) => {
+          if (!hasNextPage || isFetchingNextPage || !onLoadMore) return
+          const el = e.currentTarget
+          if (el.scrollTop + el.clientHeight >= el.scrollHeight - 200) {
+            onLoadMore()
+          }
+        }}
+        className="flex min-h-0 flex-1 flex-col divide-y divide-border/20 overflow-y-auto"
+      >
         {threads.length === 0 ? (
           <div
             data-testid="empty-threads-state"
@@ -366,7 +424,7 @@ export function ThreadList({
                 data-testid={`thread-row-${thread.id}`}
                 onClick={() => onSelectThread(thread)}
                 className={cn(
-                  "group relative flex cursor-pointer gap-2 p-3 transition",
+                  "group relative flex shrink-0 cursor-pointer gap-2 p-3 transition",
                   isSelected
                     ? "bg-accent/60"
                     : thread.isUnread
@@ -477,6 +535,32 @@ export function ThreadList({
               </div>
             )
           })
+        )}
+        {hasNextPage && (
+          <div
+            ref={loadMoreSentinelRef}
+            data-testid="load-more-sentinel"
+            className="flex shrink-0 items-center justify-center p-3"
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              data-testid="load-more-threads-btn"
+              onClick={onLoadMore}
+              disabled={isFetchingNextPage}
+              className="h-8 w-full gap-1.5 text-xs"
+            >
+              {isFetchingNextPage ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Loading more...</span>
+                </>
+              ) : (
+                <span>Load more conversations</span>
+              )}
+            </Button>
+          </div>
         )}
       </div>
     </div>

@@ -291,6 +291,30 @@ func (l *LoggingCoordinator) SyncConnectedAccountMail(ctx context.Context, req *
 	return nil
 }
 
+// SyncOlderThreads executes next.SyncOlderThreads and logs execution duration and errors.
+func (l *LoggingCoordinator) SyncOlderThreads(ctx context.Context, req *SyncOlderThreadsRequest) (*SyncOlderThreadsResult, error) {
+	start := time.Now()
+	res, err := l.next.SyncOlderThreads(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "mail.SyncOlderThreads failed",
+			log.String("component", "mail"),
+			log.String("operation", "SyncOlderThreads"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "mail.SyncOlderThreads completed",
+		log.String("component", "mail"),
+		log.String("operation", "SyncOlderThreads"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
 // PruneWindowAndBodies executes next.PruneWindowAndBodies and logs execution duration and errors.
 func (l *LoggingCoordinator) PruneWindowAndBodies(ctx context.Context, req *PruneWindowAndBodiesRequest) error {
 	start := time.Now()

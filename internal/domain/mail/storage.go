@@ -77,6 +77,9 @@ type ThreadStore interface {
 	// PruneThreadsOlderThanWindow removes non-starred cached threads older than the given timestamp.
 	PruneThreadsOlderThanWindow(ctx context.Context, olderThan time.Time) (int64, error)
 
+	// ListProviderThreadIDs returns all non-empty upstream provider thread IDs cached for a connected account.
+	ListProviderThreadIDs(ctx context.Context, spaceID, connectedAccountID string) ([]string, error)
+
 	// DeleteByConnectedAccount removes all threads associated with a connected account.
 	DeleteByConnectedAccount(ctx context.Context, spaceID, connectedAccountID string) error
 }
@@ -189,11 +192,29 @@ type SyncThreadsRequest struct {
 
 // SyncThreadsResult encapsulates the output of a thread synchronization pass.
 type SyncThreadsResult struct {
-	Threads       []*Thread
-	Messages      []*Message
-	Bodies        []*MessageBody
-	NewSyncCursor string
-	ExpiredCursor bool
+	Threads          []*Thread
+	Messages         []*Message
+	Bodies           []*MessageBody
+	NewSyncCursor    string
+	OldestSyncedTime *time.Time
+	ExpiredCursor    bool
+}
+
+// FetchOlderThreadsRequest encapsulates inputs for backfilling older threads from an upstream provider.
+type FetchOlderThreadsRequest struct {
+	Before             *time.Time
+	SystemBucket       SystemBucket
+	ProviderMailboxID  string
+	Limit              int
+	ExcludeProviderIDs map[string]struct{}
+}
+
+// FetchOlderThreadsResult encapsulates the output of an on-demand older-thread backfill pass.
+type FetchOlderThreadsResult struct {
+	Threads          []*Thread
+	Messages         []*Message
+	HasMore          bool
+	OldestSyncedTime *time.Time
 }
 
 // ExternalMailProvider defines the port interface for external email providers (e.g. Google, Microsoft).
@@ -208,6 +229,9 @@ type ExternalMailProvider interface {
 
 	// SyncThreads bootstraps or incrementally synchronizes threads.
 	SyncThreads(ctx context.Context, accessToken string, req *SyncThreadsRequest) (*SyncThreadsResult, error)
+
+	// FetchOlderThreads fetches a page of threads older than the given cutoff from the upstream provider.
+	FetchOlderThreads(ctx context.Context, accessToken string, req *FetchOlderThreadsRequest) (*FetchOlderThreadsResult, error)
 
 	// FetchThread fetches the full thread and its messages metadata.
 	FetchThread(ctx context.Context, accessToken, providerThreadID string) (*Thread, []*Message, error)

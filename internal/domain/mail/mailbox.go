@@ -111,6 +111,7 @@ type SyncState struct {
 	SyncCursor         *string    `json:"sync_cursor,omitempty"`
 	WindowDays         int        `json:"window_days"`
 	OldestSyncedTime   *time.Time `json:"oldest_synced_time,omitempty"`
+	ExhaustedBuckets   []string   `json:"exhausted_buckets,omitempty"`
 	LastSyncedAt       *time.Time `json:"last_synced_at,omitempty"`
 	WatchExpiration    *time.Time `json:"watch_expiration,omitempty"`
 }

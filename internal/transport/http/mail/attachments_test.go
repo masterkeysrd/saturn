@@ -51,6 +51,9 @@ func (m *mockExtStreamProvider) ListMailboxes(ctx context.Context, accessToken s
 func (m *mockExtStreamProvider) SyncThreads(ctx context.Context, accessToken string, req *domainmail.SyncThreadsRequest) (*domainmail.SyncThreadsResult, error) {
 	return nil, nil
 }
+func (m *mockExtStreamProvider) FetchOlderThreads(ctx context.Context, accessToken string, req *domainmail.FetchOlderThreadsRequest) (*domainmail.FetchOlderThreadsResult, error) {
+	return nil, nil
+}
 func (m *mockExtStreamProvider) FetchThread(ctx context.Context, accessToken, providerThreadID string) (*domainmail.Thread, []*domainmail.Message, error) {
 	return nil, nil, nil
 }

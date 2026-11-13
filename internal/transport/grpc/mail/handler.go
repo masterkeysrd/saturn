@@ -2,6 +2,7 @@ package mail
 
 import (
 	"context"
+	"strconv"
 
 	mailv1 "github.com/masterkeysrd/saturn/apis/saturn/mail/v1"
 	mailaggregator "github.com/masterkeysrd/saturn/internal/aggregator/mail"
@@ -124,10 +125,22 @@ func (h *Handler) ListThreads(ctx context.Context, req *mailv1.ListThreadsReques
 		return nil, err
 	}
 
+	limit := int(req.GetPageSize())
+	if limit <= 0 {
+		limit = 50
+	}
+
+	offset := 0
+	if token := req.GetPageToken(); token != "" {
+		if parsed, parseErr := strconv.Atoi(token); parseErr == nil && parsed > 0 {
+			offset = parsed
+		}
+	}
+
 	filter := &domainmail.ListThreadsFilter{
 		Query:  req.GetQuery(),
-		Limit:  int(req.GetPageSize()),
-		Offset: 0,
+		Limit:  limit,
+		Offset: offset,
 	}
 
 	if req.GetConnectedAccountId() != "" {
@@ -154,14 +167,44 @@ func (h *Handler) ListThreads(ctx context.Context, req *mailv1.ListThreadsReques
 		return nil, err
 	}
 
+	// Transparently backfill older threads from upstream providers when pagination reaches the end of cached rows
+	var (
+		backfillHasMore bool
+		backfillSynced  int
+	)
+	if req.GetQuery() == "" && req.IsUnread == nil && req.IsStarred == nil && offset+len(threads) >= total && h.coordinator != nil {
+		syncReq := &appmail.SyncOlderThreadsRequest{
+			ConnectedAccountID: req.GetConnectedAccountId(),
+			MailboxID:          req.GetMailboxId(),
+			SystemBucket:       filter.SystemBucket,
+			PageSize:           limit,
+		}
+		if syncRes, syncErr := h.coordinator.SyncOlderThreads(ctx, syncReq); syncErr == nil && syncRes != nil {
+			backfillHasMore = syncRes.HasMore
+			backfillSynced = syncRes.SyncedCount
+			if syncRes.SyncedCount > 0 {
+				if refreshed, refreshedTotal, aggErr := h.aggregator.ListThreads(ctx, spaceID, filter); aggErr == nil {
+					threads = refreshed
+					total = refreshedTotal
+				}
+			}
+		}
+	}
+
 	protoThreads := make([]*mailv1.Thread, len(threads))
 	for i, t := range threads {
 		protoThreads[i] = mapDomainThreadToProto(t)
 	}
 
+	nextPageToken := ""
+	if len(threads) > 0 && (offset+len(threads) < total || (backfillHasMore && backfillSynced > 0)) {
+		nextPageToken = strconv.Itoa(offset + len(threads))
+	}
+
 	return &mailv1.ListThreadsResponse{
-		Threads:   protoThreads,
-		TotalSize: int32(total),
+		Threads:       protoThreads,
+		NextPageToken: nextPageToken,
+		TotalSize:     int32(total),
 	}, nil
 }
 

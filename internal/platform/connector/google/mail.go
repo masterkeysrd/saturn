@@ -262,34 +262,52 @@ func (p *Provider) bootstrapSyncThreads(ctx context.Context, accessToken string,
 	}
 	query := fmt.Sprintf("newer_than:%dd", windowDays)
 
-	// 3. Query threads list
-	endpoint := fmt.Sprintf("%s/users/me/threads?q=%s&maxResults=100", p.cfg.GmailURL, url.QueryEscape(query))
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, platformerrors.E(op, err)
-	}
-	httpReq.Header.Set("Authorization", "Bearer "+accessToken)
+	// 3. Query threads list across up to 5 pages (500 threads) within rolling window
+	var threadHeaders []gmailThreadHeader
+	pageToken := ""
+	for range 5 {
+		endpoint := fmt.Sprintf("%s/users/me/threads?q=%s&maxResults=100", p.cfg.GmailURL, url.QueryEscape(query))
+		if pageToken != "" {
+			endpoint += "&pageToken=" + url.QueryEscape(pageToken)
+		}
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		if err != nil {
+			return nil, platformerrors.E(op, err)
+		}
+		httpReq.Header.Set("Authorization", "Bearer "+accessToken)
 
-	resp, err := p.httpClient.Do(httpReq)
-	if err != nil {
-		return nil, platformerrors.E(op, err)
-	}
-	defer resp.Body.Close()
+		resp, err := p.httpClient.Do(httpReq)
+		if err != nil {
+			return nil, platformerrors.E(op, err)
+		}
 
-	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, platformerrors.E(op, connector.ErrInvalidGrant)
-	}
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return nil, platformerrors.E(op, connector.ErrRateLimited)
-	}
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, platformerrors.E(op, fmt.Sprintf("list threads failed with status %d: %s", resp.StatusCode, string(body)))
-	}
+		var listResp gmailThreadsListResponse
+		decodeErr := json.UnmarshalRead(resp.Body, &listResp)
+		statusCode := resp.StatusCode
+		var errBody []byte
+		if statusCode != http.StatusOK {
+			errBody, _ = io.ReadAll(resp.Body)
+		}
+		resp.Body.Close()
 
-	var listResp gmailThreadsListResponse
-	if err := json.UnmarshalRead(resp.Body, &listResp); err != nil {
-		return nil, platformerrors.E(op, err)
+		if statusCode == http.StatusUnauthorized {
+			return nil, platformerrors.E(op, connector.ErrInvalidGrant)
+		}
+		if statusCode == http.StatusTooManyRequests {
+			return nil, platformerrors.E(op, connector.ErrRateLimited)
+		}
+		if statusCode != http.StatusOK {
+			return nil, platformerrors.E(op, fmt.Sprintf("list threads failed with status %d: %s", statusCode, string(errBody)))
+		}
+		if decodeErr != nil {
+			return nil, platformerrors.E(op, decodeErr)
+		}
+
+		threadHeaders = append(threadHeaders, listResp.Threads...)
+		if listResp.NextPageToken == "" {
+			break
+		}
+		pageToken = listResp.NextPageToken
 	}
 
 	prewarmCount := req.PrewarmBodiesCount
@@ -302,13 +320,18 @@ func (p *Provider) bootstrapSyncThreads(ctx context.Context, accessToken string,
 	}
 
 	prewarmedSoFar := 0
-	for _, th := range listResp.Threads {
+	var oldestSyncedTime *time.Time
+	for _, th := range threadHeaders {
 		thread, msgs, err := p.FetchThread(ctx, accessToken, th.ID)
 		if err != nil {
 			continue // skip transient individual thread failures
 		}
 		result.Threads = append(result.Threads, thread)
 		result.Messages = append(result.Messages, msgs...)
+		if !thread.LastMessageAt.IsZero() && (oldestSyncedTime == nil || thread.LastMessageAt.Before(*oldestSyncedTime)) {
+			t := thread.LastMessageAt
+			oldestSyncedTime = &t
+		}
 
 		// Pre-warm bodies for newest inbox threads
 		if prewarmedSoFar < prewarmCount && thread.InInbox {
@@ -325,6 +348,151 @@ func (p *Provider) bootstrapSyncThreads(ctx context.Context, accessToken string,
 			prewarmedSoFar++
 		}
 	}
+	result.OldestSyncedTime = oldestSyncedTime
+
+	return result, nil
+}
+
+// FetchOlderThreads fetches a page of threads older than the specified cutoff from Gmail.
+func (p *Provider) FetchOlderThreads(ctx context.Context, accessToken string, req *domainmail.FetchOlderThreadsRequest) (*domainmail.FetchOlderThreadsResult, error) {
+	const op platformerrors.Op = "platform/connector/google.FetchOlderThreads"
+
+	if req == nil {
+		req = &domainmail.FetchOlderThreadsRequest{}
+	}
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+
+	var qParts []string
+	if req.Before != nil && !req.Before.IsZero() {
+		qParts = append(qParts, fmt.Sprintf("before:%d", req.Before.Unix()+1))
+	}
+
+	var labelID string
+	includeSpamTrash := false
+	if req.ProviderMailboxID != "" {
+		labelID = req.ProviderMailboxID
+	} else {
+		switch req.SystemBucket {
+		case domainmail.SystemBucketInbox:
+			labelID = "INBOX"
+		case domainmail.SystemBucketStarred:
+			labelID = "STARRED"
+		case domainmail.SystemBucketSent:
+			labelID = "SENT"
+		case domainmail.SystemBucketDrafts:
+			labelID = "DRAFT"
+		case domainmail.SystemBucketTrash:
+			labelID = "TRASH"
+			includeSpamTrash = true
+		case domainmail.SystemBucketSpam:
+			labelID = "SPAM"
+			includeSpamTrash = true
+		case domainmail.SystemBucketArchive:
+			qParts = append(qParts, "-in:inbox -in:trash -in:spam")
+		}
+	}
+
+	queryStr := strings.Join(qParts, " ")
+	listMaxResults := min(max(limit*2, 50), 100)
+
+	var headersToFetch []gmailThreadHeader
+	hasMore := false
+	pageToken := ""
+
+	for range 5 {
+		params := url.Values{}
+		params.Set("maxResults", strconv.Itoa(listMaxResults))
+		if queryStr != "" {
+			params.Set("q", queryStr)
+		}
+		if labelID != "" {
+			params.Set("labelIds", labelID)
+		}
+		if includeSpamTrash {
+			params.Set("includeSpamTrash", "true")
+		}
+		if pageToken != "" {
+			params.Set("pageToken", pageToken)
+		}
+
+		endpoint := fmt.Sprintf("%s/users/me/threads?%s", p.cfg.GmailURL, params.Encode())
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		if err != nil {
+			return nil, platformerrors.E(op, err)
+		}
+		httpReq.Header.Set("Authorization", "Bearer "+accessToken)
+
+		resp, err := p.httpClient.Do(httpReq)
+		if err != nil {
+			return nil, platformerrors.E(op, err)
+		}
+
+		var listResp gmailThreadsListResponse
+		decodeErr := json.UnmarshalRead(resp.Body, &listResp)
+		statusCode := resp.StatusCode
+		var errBody []byte
+		if statusCode != http.StatusOK {
+			errBody, _ = io.ReadAll(resp.Body)
+		}
+		resp.Body.Close()
+
+		if statusCode == http.StatusUnauthorized {
+			return nil, platformerrors.E(op, connector.ErrInvalidGrant)
+		}
+		if statusCode == http.StatusTooManyRequests {
+			return nil, platformerrors.E(op, connector.ErrRateLimited)
+		}
+		if statusCode != http.StatusOK {
+			return nil, platformerrors.E(op, fmt.Sprintf("list older threads failed with status %d: %s", statusCode, string(errBody)))
+		}
+		if decodeErr != nil {
+			return nil, platformerrors.E(op, decodeErr)
+		}
+
+		reachedLimit := false
+		for i, th := range listResp.Threads {
+			if _, exists := req.ExcludeProviderIDs[th.ID]; exists {
+				continue
+			}
+			headersToFetch = append(headersToFetch, th)
+			if len(headersToFetch) >= limit {
+				hasMore = i+1 < len(listResp.Threads) || listResp.NextPageToken != ""
+				reachedLimit = true
+				break
+			}
+		}
+		if reachedLimit {
+			break
+		}
+		if listResp.NextPageToken == "" {
+			hasMore = false
+			break
+		}
+		hasMore = true
+		pageToken = listResp.NextPageToken
+	}
+
+	result := &domainmail.FetchOlderThreadsResult{
+		HasMore: hasMore,
+	}
+	var oldestTime *time.Time
+
+	for _, th := range headersToFetch {
+		thread, msgs, err := p.FetchThread(ctx, accessToken, th.ID)
+		if err != nil {
+			continue
+		}
+		result.Threads = append(result.Threads, thread)
+		result.Messages = append(result.Messages, msgs...)
+		if !thread.LastMessageAt.IsZero() && (oldestTime == nil || thread.LastMessageAt.Before(*oldestTime)) {
+			t := thread.LastMessageAt
+			oldestTime = &t
+		}
+	}
+	result.OldestSyncedTime = oldestTime
 
 	return result, nil
 }

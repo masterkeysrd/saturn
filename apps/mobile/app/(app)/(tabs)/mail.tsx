@@ -13,7 +13,7 @@ import {
 import { useRouter } from "expo-router"
 import { Search, X, Edit, Inbox, AlertCircle } from "lucide-react-native"
 import {
-  useMailThreads,
+  useInfiniteMailThreads,
   useMailboxes,
   useModifyThread,
   useConnectedAccounts,
@@ -87,9 +87,12 @@ export default function MobileMailScreen() {
     data: threadsData,
     isLoading,
     isRefetching,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
     refetch,
     error,
-  } = useMailThreads(threadsFilter)
+  } = useInfiniteMailThreads(threadsFilter)
 
   const syncMutation = useSyncConnectedAccount()
   const modifyMutation = useModifyThread()
@@ -97,7 +100,19 @@ export default function MobileMailScreen() {
 
   const [isManualRefreshing, setIsManualRefreshing] = useState(false)
 
-  const threads = useMemo(() => threadsData?.threads || [], [threadsData])
+  const threads = useMemo(() => {
+    const seen = new Set<string>()
+    const list: Thread[] = []
+    for (const page of threadsData?.pages || []) {
+      for (const t of page.threads || []) {
+        if (!seen.has(t.id)) {
+          seen.add(t.id)
+          list.push(t)
+        }
+      }
+    }
+    return list
+  }, [threadsData])
 
   const handleRefresh = useCallback(async () => {
     setIsManualRefreshing(true)
@@ -287,6 +302,26 @@ export default function MobileMailScreen() {
           )}
           bounces={true}
           overScrollMode="never"
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) {
+              fetchNextPage()
+            }
+          }}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+              </View>
+            ) : hasNextPage ? (
+              <Pressable
+                style={styles.loadMoreBtn}
+                onPress={() => fetchNextPage()}
+              >
+                <Text style={styles.loadMoreText}>Load more conversations</Text>
+              </Pressable>
+            ) : undefined
+          }
           refreshControl={
             <RefreshControl
               refreshing={isManualRefreshing}
@@ -379,6 +414,26 @@ const styles = StyleSheet.create({
   listContent: {
     flexGrow: 1,
     paddingBottom: 80,
+  },
+  footerLoader: {
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadMoreBtn: {
+    marginHorizontal: 16,
+    marginVertical: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadMoreText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.primary,
   },
   fab: {
     position: "absolute",

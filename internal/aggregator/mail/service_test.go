@@ -2,6 +2,7 @@ package mailaggregator_test
 
 import (
 	"context"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -53,6 +54,19 @@ func (m *mockThreadReader) ListBySpace(ctx context.Context, spaceID string, filt
 			continue
 		}
 		list = append(list, th)
+	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].LastMessageAt.After(list[j].LastMessageAt)
+	})
+	if filter != nil {
+		if filter.Offset >= len(list) {
+			return nil, nil
+		}
+		end := len(list)
+		if filter.Limit > 0 && filter.Offset+filter.Limit < end {
+			end = filter.Offset + filter.Limit
+		}
+		return list[filter.Offset:end], nil
 	}
 	return list, nil
 }
@@ -249,4 +263,80 @@ func TestAggregator_ListThreads_LocalAndHybrid(t *testing.T) {
 	assert.Equal(t, 1, total)
 	require.Len(t, threads, 1)
 	assert.Equal(t, "Quarterly Budget", threads[0].Subject)
+}
+
+func TestAggregator_ListThreads_HybridSearchPagination(t *testing.T) {
+	thReader := &mockThreadReader{threads: make(map[string]*domainmail.Thread)}
+	msgReader := &mockMessageReader{
+		messages: make(map[string]*domainmail.Message),
+		bodies:   make(map[string]*domainmail.MessageBody),
+	}
+	mbxReader := &mockMailboxReader{mailboxes: make(map[string]*domainmail.Mailbox)}
+	dftReader := &mockDraftReader{drafts: make(map[string]*domainmail.Draft)}
+
+	service := mailaggregator.NewService(
+		mbxReader,
+		thReader,
+		msgReader,
+		dftReader,
+		nil,
+		nil,
+		nil,
+		[]byte("secret-key-32-bytes-long-for-testing"),
+	)
+
+	ctx := context.Background()
+	spaceID := "spc_1"
+	now := time.Now().UTC()
+
+	for i := range 3 {
+		id := "mth_" + string(rune('1'+i))
+		thReader.threads[id] = &domainmail.Thread{
+			ID:            id,
+			SpaceID:       spaceID,
+			Subject:       "Invoice " + id,
+			LastMessageAt: now.Add(-time.Duration(i) * time.Minute),
+		}
+	}
+
+	tests := []struct {
+		name      string
+		offset    int
+		limit     int
+		wantIDs   []string
+		wantTotal int
+	}{
+		{
+			name:      "first page returns top 2 matches",
+			offset:    0,
+			limit:     2,
+			wantIDs:   []string{"mth_1", "mth_2"},
+			wantTotal: 3,
+		},
+		{
+			name:      "second page returns remaining match without double offset",
+			offset:    2,
+			limit:     2,
+			wantIDs:   []string{"mth_3"},
+			wantTotal: 3,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			threads, total, err := service.ListThreads(ctx, spaceID, &domainmail.ListThreadsFilter{
+				Query:  "Invoice",
+				Offset: tc.offset,
+				Limit:  tc.limit,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantTotal, total)
+
+			gotIDs := make([]string, len(threads))
+			for i, th := range threads {
+				gotIDs[i] = th.ID
+			}
+			assert.Equal(t, tc.wantIDs, gotIDs)
+		})
+	}
 }

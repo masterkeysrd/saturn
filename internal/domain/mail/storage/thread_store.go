@@ -507,16 +507,47 @@ func (s *ThreadStore) Upsert(ctx context.Context, t *mail.Thread) error {
 	return nil
 }
 
-// PruneThreadsOlderThanWindow removes non-starred cached threads older than the given timestamp.
+// PruneThreadsOlderThanWindow removes non-starred cached threads older than the given timestamp,
+// preserving threads within any backfilled sync window recorded on mail.sync_states.
 func (s *ThreadStore) PruneThreadsOlderThanWindow(ctx context.Context, olderThan time.Time) (int64, error) {
 	const op errors.Op = "mail/storage.ThreadStore.PruneThreadsOlderThanWindow"
 
-	query := `DELETE FROM mail.threads WHERE is_starred = FALSE AND last_message_at < $1`
+	query := `
+		DELETE FROM mail.threads t
+		WHERE t.is_starred = FALSE
+		  AND t.last_message_at < $1
+		  AND NOT EXISTS (
+			SELECT 1
+			FROM mail.sync_states s
+			WHERE s.connected_account_id = t.connected_account_id
+			  AND s.oldest_synced_time IS NOT NULL
+			  AND t.last_message_at >= s.oldest_synced_time
+		  )
+	`
 	res, err := s.db.Exec(ctx, query, olderThan)
 	if err != nil {
 		return 0, errors.E(op, err)
 	}
 	return res.RowsAffected()
+}
+
+// ListProviderThreadIDs retrieves all non-empty provider thread IDs cached for a connected account.
+func (s *ThreadStore) ListProviderThreadIDs(ctx context.Context, spaceID, connectedAccountID string) ([]string, error) {
+	const op errors.Op = "mail/storage.ThreadStore.ListProviderThreadIDs"
+
+	query := `
+		SELECT provider_thread_id
+		FROM mail.threads
+		WHERE space_id = $1
+		  AND connected_account_id = $2
+		  AND provider_thread_id IS NOT NULL
+		  AND provider_thread_id <> ''
+	`
+	var ids []string
+	if err := s.db.Select(ctx, &ids, query, spaceID, connectedAccountID); err != nil {
+		return nil, errors.E(op, err)
+	}
+	return ids, nil
 }
 
 // DeleteByConnectedAccount removes all threads associated with a connected account.

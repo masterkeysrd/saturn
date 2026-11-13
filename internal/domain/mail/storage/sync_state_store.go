@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/lib/pq"
 	"github.com/masterkeysrd/saturn/internal/domain/mail"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
@@ -16,17 +17,23 @@ type SyncStateRecord struct {
 	SyncCursor         sql.NullString `db:"sync_cursor"`
 	WindowDays         int            `db:"window_days"`
 	OldestSyncedTime   sql.NullTime   `db:"oldest_synced_time"`
+	ExhaustedBuckets   pq.StringArray `db:"exhausted_buckets"`
 	LastSyncedAt       sql.NullTime   `db:"last_synced_at"`
 	WatchExpiration    sql.NullTime   `db:"watch_expiration"`
 }
 
 func (r *SyncStateRecord) toModel() *mail.SyncState {
+	exhausted := []string(r.ExhaustedBuckets)
+	if exhausted == nil {
+		exhausted = []string{}
+	}
 	return &mail.SyncState{
 		ConnectedAccountID: r.ConnectedAccountID,
 		SpaceID:            r.SpaceID,
 		SyncCursor:         nullStringToStrPtr(r.SyncCursor),
 		WindowDays:         r.WindowDays,
 		OldestSyncedTime:   nullTimeToTimePtr(r.OldestSyncedTime),
+		ExhaustedBuckets:   exhausted,
 		LastSyncedAt:       nullTimeToTimePtr(r.LastSyncedAt),
 		WatchExpiration:    nullTimeToTimePtr(r.WatchExpiration),
 	}
@@ -49,7 +56,7 @@ func (s *SyncStateStore) Get(ctx context.Context, spaceID, connectedAccountID st
 	query := `
 		SELECT
 			connected_account_id, space_id, sync_cursor, window_days,
-			oldest_synced_time, last_synced_at, watch_expiration
+			oldest_synced_time, exhausted_buckets, last_synced_at, watch_expiration
 		FROM mail.sync_states
 		WHERE space_id = $1 AND connected_account_id = $2
 	`
@@ -70,18 +77,24 @@ func (s *SyncStateStore) Get(ctx context.Context, spaceID, connectedAccountID st
 func (s *SyncStateStore) Upsert(ctx context.Context, state *mail.SyncState) error {
 	const op errors.Op = "mail/storage.SyncStateStore.Upsert"
 
+	exhausted := state.ExhaustedBuckets
+	if exhausted == nil {
+		exhausted = []string{}
+	}
+
 	query := `
 		INSERT INTO mail.sync_states (
 			connected_account_id, space_id, sync_cursor, window_days,
-			oldest_synced_time, last_synced_at, watch_expiration
+			oldest_synced_time, exhausted_buckets, last_synced_at, watch_expiration
 		) VALUES (
 			$1, $2, $3, $4,
-			$5, $6, $7
+			$5, $6, $7, $8
 		)
 		ON CONFLICT (connected_account_id) DO UPDATE SET
 			sync_cursor = EXCLUDED.sync_cursor,
 			window_days = EXCLUDED.window_days,
 			oldest_synced_time = EXCLUDED.oldest_synced_time,
+			exhausted_buckets = EXCLUDED.exhausted_buckets,
 			last_synced_at = EXCLUDED.last_synced_at,
 			watch_expiration = EXCLUDED.watch_expiration
 	`
@@ -94,6 +107,7 @@ func (s *SyncStateStore) Upsert(ctx context.Context, state *mail.SyncState) erro
 		strToNullString(state.SyncCursor),
 		state.WindowDays,
 		timeToNullTime(state.OldestSyncedTime),
+		pq.Array(exhausted),
 		timeToNullTime(state.LastSyncedAt),
 		timeToNullTime(state.WatchExpiration),
 	)

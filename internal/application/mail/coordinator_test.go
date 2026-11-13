@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +13,8 @@ import (
 	domainmail "github.com/masterkeysrd/saturn/internal/domain/mail"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/platform/connector"
+	"github.com/masterkeysrd/saturn/internal/platform/crypto"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -118,15 +121,62 @@ func (m *mockThreadStore) Delete(ctx context.Context, spaceID, id string) error 
 func (m *mockThreadStore) ListBySpace(ctx context.Context, spaceID string, filter *domainmail.ListThreadsFilter) ([]*domainmail.Thread, error) {
 	var list []*domainmail.Thread
 	for _, th := range m.threads {
-		if th.SpaceID == spaceID {
-			list = append(list, th)
+		if th.SpaceID != spaceID {
+			continue
 		}
+		if filter != nil {
+			if filter.ConnectedAccountID != nil && *filter.ConnectedAccountID != "" && th.ConnectedAccountID != *filter.ConnectedAccountID {
+				continue
+			}
+			if filter.SystemBucket != nil {
+				switch *filter.SystemBucket {
+				case domainmail.SystemBucketInbox:
+					if !th.InInbox || th.InTrash || th.InSpam {
+						continue
+					}
+				case domainmail.SystemBucketSent:
+					if !th.InSent || th.InTrash {
+						continue
+					}
+				}
+			}
+		}
+		list = append(list, th)
+	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].LastMessageAt.After(list[j].LastMessageAt)
+	})
+	if filter != nil && (filter.Limit > 0 || filter.Offset > 0) {
+		if filter.Offset >= len(list) {
+			return nil, nil
+		}
+		end := len(list)
+		if filter.Limit > 0 && filter.Offset+filter.Limit < end {
+			end = filter.Offset + filter.Limit
+		}
+		return list[filter.Offset:end], nil
 	}
 	return list, nil
 }
 func (m *mockThreadStore) CountBySpace(ctx context.Context, spaceID string, filter *domainmail.ListThreadsFilter) (int, error) {
-	list, err := m.ListBySpace(ctx, spaceID, filter)
+	var countFilter *domainmail.ListThreadsFilter
+	if filter != nil {
+		cp := *filter
+		cp.Limit = 0
+		cp.Offset = 0
+		countFilter = &cp
+	}
+	list, err := m.ListBySpace(ctx, spaceID, countFilter)
 	return len(list), err
+}
+func (m *mockThreadStore) ListProviderThreadIDs(ctx context.Context, spaceID, connectedAccountID string) ([]string, error) {
+	var ids []string
+	for _, th := range m.threads {
+		if th.SpaceID == spaceID && th.ConnectedAccountID == connectedAccountID && th.ProviderThreadID != nil && *th.ProviderThreadID != "" {
+			ids = append(ids, *th.ProviderThreadID)
+		}
+	}
+	return ids, nil
 }
 func (m *mockThreadStore) Upsert(ctx context.Context, th *domainmail.Thread) error {
 	m.threads[th.ID] = th
@@ -308,7 +358,8 @@ func (m *mockSyncStateStore) Delete(ctx context.Context, spaceID, connectedAccou
 }
 
 type mockExternalMailProvider struct {
-	syncThreadsFunc func(ctx context.Context, accessToken string, req *domainmail.SyncThreadsRequest) (*domainmail.SyncThreadsResult, error)
+	syncThreadsFunc       func(ctx context.Context, accessToken string, req *domainmail.SyncThreadsRequest) (*domainmail.SyncThreadsResult, error)
+	fetchOlderThreadsFunc func(ctx context.Context, accessToken string, req *domainmail.FetchOlderThreadsRequest) (*domainmail.FetchOlderThreadsResult, error)
 }
 
 func (m *mockExternalMailProvider) Provider() string { return "google" }
@@ -320,6 +371,12 @@ func (m *mockExternalMailProvider) SyncThreads(ctx context.Context, accessToken 
 		return m.syncThreadsFunc(ctx, accessToken, req)
 	}
 	return &domainmail.SyncThreadsResult{}, nil
+}
+func (m *mockExternalMailProvider) FetchOlderThreads(ctx context.Context, accessToken string, req *domainmail.FetchOlderThreadsRequest) (*domainmail.FetchOlderThreadsResult, error) {
+	if m.fetchOlderThreadsFunc != nil {
+		return m.fetchOlderThreadsFunc(ctx, accessToken, req)
+	}
+	return &domainmail.FetchOlderThreadsResult{}, nil
 }
 func (m *mockExternalMailProvider) FetchThread(ctx context.Context, accessToken, providerThreadID string) (*domainmail.Thread, []*domainmail.Message, error) {
 	return nil, nil, nil
@@ -604,10 +661,10 @@ func TestCoordinator_PruneWindowAndBodies(t *testing.T) {
 	err := coord.PruneWindowAndBodies(ctx, &appmail.PruneWindowAndBodiesRequest{Now: time.Now().UTC()})
 	require.NoError(t, err)
 
-	// Verify old thread pruned
+	// Verify thread metadata preserved while expired body evicted
 	th, err := thStore.GetByID(ctx, "spc_1", "mth_old")
 	require.NoError(t, err)
-	assert.Nil(t, th)
+	assert.NotNil(t, th)
 
 	// Verify expired body evicted
 	b, err := msgStore.GetBody(ctx, "spc_1", "msg_old")
@@ -730,6 +787,223 @@ func TestCoordinator_DeleteDraft_SyncedMessages(t *testing.T) {
 				assert.Equal(t, tc.wantThreadInDrafts, th.InDrafts)
 				assert.Equal(t, tc.wantMsgCount, th.MessageCount)
 				assert.NotContains(t, th.MailboxIDs, "DRAFT")
+			}
+		})
+	}
+}
+
+type mockAccountStore struct {
+	connector.Store
+	accounts map[string]*connector.ConnectedAccount
+}
+
+func (m *mockAccountStore) GetAccount(ctx context.Context, spaceID, accountID string) (*connector.ConnectedAccount, error) {
+	acc, ok := m.accounts[accountID]
+	if !ok || acc.SpaceID != spaceID {
+		return nil, nil
+	}
+	return acc, nil
+}
+
+func (m *mockAccountStore) ListAccounts(ctx context.Context, spaceID string) ([]*connector.ConnectedAccount, error) {
+	var list []*connector.ConnectedAccount
+	for _, acc := range m.accounts {
+		if acc.SpaceID == spaceID {
+			list = append(list, acc)
+		}
+	}
+	return list, nil
+}
+
+func TestCoordinator_SyncOlderThreads(t *testing.T) {
+	cipher, err := crypto.NewCipher("12345678901234567890123456789012")
+	require.NoError(t, err)
+	encAccess, err := cipher.Encrypt("access-token-123")
+	require.NoError(t, err)
+	encRefresh, err := cipher.Encrypt("refresh-token-123")
+	require.NoError(t, err)
+
+	now := time.Now().UTC()
+	cachedTime := now.Add(-10 * 24 * time.Hour)
+	olderTime := now.Add(-120 * 24 * time.Hour)
+
+	tests := []struct {
+		name               string
+		ctx                context.Context
+		hasAccount         bool
+		initialExhausted   []string
+		providerResult     *domainmail.FetchOlderThreadsResult
+		wantErr            bool
+		wantProviderCalled bool
+		wantSyncedCount    int
+		wantHasMore        bool
+		wantExhausted      bool
+		wantBeforeTime     *time.Time
+		wantOldestSaved    *time.Time
+	}{
+		{
+			name:    "rejects missing space context",
+			ctx:     context.Background(),
+			wantErr: true,
+		},
+		{
+			name:            "returns zero when no mail accounts exist",
+			ctx:             contextWithAuth("spc_1", string(space.RoleMember)),
+			hasAccount:      false,
+			wantSyncedCount: 0,
+			wantHasMore:     false,
+		},
+		{
+			name:               "skips provider when bucket is already marked exhausted",
+			ctx:                contextWithAuth("spc_1", string(space.RoleMember)),
+			hasAccount:         true,
+			initialExhausted:   []string{"inbox"},
+			wantProviderCalled: false,
+			wantSyncedCount:    0,
+			wantHasMore:        false,
+			wantExhausted:      true,
+		},
+		{
+			name:               "backfills older threads beyond rolling window and updates oldest_synced_time",
+			ctx:                contextWithAuth("spc_1", string(space.RoleMember)),
+			hasAccount:         true,
+			wantProviderCalled: true,
+			providerResult: &domainmail.FetchOlderThreadsResult{
+				Threads: []*domainmail.Thread{
+					{
+						ID:               "mth_temp_older",
+						ProviderThreadID: new("gmail_th_older_1"),
+						Subject:          "Older Email",
+						InInbox:          true,
+						LastMessageAt:    olderTime,
+					},
+				},
+				Messages: []*domainmail.Message{
+					{
+						ID:                "msg_temp_older",
+						ThreadID:          "mth_temp_older",
+						ProviderMessageID: new("gmail_msg_older_1"),
+						Subject:           "Older Email",
+					},
+				},
+				HasMore:          false,
+				OldestSyncedTime: &olderTime,
+			},
+			wantSyncedCount: 1,
+			wantHasMore:     false,
+			wantExhausted:   true,
+			wantBeforeTime:  &cachedTime,
+			wantOldestSaved: &olderTime,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mbxStore := newMockMailboxStore()
+			thStore := newMockThreadStore()
+			msgStore := newMockMessageStore()
+			dftStore := newMockDraftStore()
+			syncStore := newMockSyncStateStore()
+			accStore := &mockAccountStore{accounts: make(map[string]*connector.ConnectedAccount)}
+
+			var capturedReq *domainmail.FetchOlderThreadsRequest
+			providerCalled := false
+			extProv := &mockExternalMailProvider{
+				fetchOlderThreadsFunc: func(ctx context.Context, accessToken string, req *domainmail.FetchOlderThreadsRequest) (*domainmail.FetchOlderThreadsResult, error) {
+					providerCalled = true
+					capturedReq = req
+					if tc.providerResult != nil {
+						return tc.providerResult, nil
+					}
+					return &domainmail.FetchOlderThreadsResult{}, nil
+				},
+			}
+
+			if tc.hasAccount {
+				accStore.accounts["acc_1"] = &connector.ConnectedAccount{
+					ID:                  "acc_1",
+					SpaceID:             "spc_1",
+					Provider:            "google",
+					Status:              connector.AccountStatusHealthy,
+					EnabledCapabilities: []string{string(connector.CapabilityMail)},
+					AccessTokenEnc:      encAccess,
+					RefreshTokenEnc:     encRefresh,
+					TokenExpiry:         now.Add(1 * time.Hour),
+				}
+				require.NoError(t, thStore.Create(context.Background(), &domainmail.Thread{
+					ID:                 "mth_existing",
+					SpaceID:            "spc_1",
+					ConnectedAccountID: "acc_1",
+					ProviderThreadID:   new("gmail_th_existing"),
+					InInbox:            true,
+					LastMessageAt:      cachedTime,
+				}))
+				if len(tc.initialExhausted) > 0 {
+					require.NoError(t, syncStore.Upsert(context.Background(), &domainmail.SyncState{
+						ConnectedAccountID: "acc_1",
+						SpaceID:            "spc_1",
+						WindowDays:         90,
+						ExhaustedBuckets:   tc.initialExhausted,
+					}))
+				}
+			}
+
+			tokenMgr := connector.NewTokenManager(accStore, cipher, connector.NewProviderRegistry(), nil)
+			domainService := domainmail.NewService(domainmail.Dependencies{
+				MailboxStore:   mbxStore,
+				ThreadStore:    thStore,
+				MessageStore:   msgStore,
+				DraftStore:     dftStore,
+				SyncStateStore: syncStore,
+			})
+
+			coord := appmail.NewCoordinator(appmail.Dependencies{
+				DomainService:  domainService,
+				MailboxStore:   mbxStore,
+				ThreadStore:    thStore,
+				MessageStore:   msgStore,
+				DraftStore:     dftStore,
+				SyncStateStore: syncStore,
+				AccountStore:   accStore,
+				TokenManager:   tokenMgr,
+				ExternalProviders: map[string]domainmail.ExternalMailProvider{
+					"google": extProv,
+				},
+				HMACSecret: []byte("test-super-secret-hmac-key-32bytes"),
+			})
+
+			bucket := domainmail.SystemBucketInbox
+			res, callErr := coord.SyncOlderThreads(tc.ctx, &appmail.SyncOlderThreadsRequest{
+				SystemBucket: &bucket,
+				PageSize:     50,
+			})
+			if tc.wantErr {
+				require.Error(t, callErr)
+				return
+			}
+			require.NoError(t, callErr)
+			assert.Equal(t, tc.wantProviderCalled, providerCalled)
+			assert.Equal(t, tc.wantSyncedCount, res.SyncedCount)
+			assert.Equal(t, tc.wantHasMore, res.HasMore)
+
+			if tc.wantBeforeTime != nil {
+				require.NotNil(t, capturedReq)
+				require.NotNil(t, capturedReq.Before)
+				assert.Equal(t, tc.wantBeforeTime.Unix(), capturedReq.Before.Unix())
+				assert.Contains(t, capturedReq.ExcludeProviderIDs, "gmail_th_existing")
+			}
+			if tc.wantOldestSaved != nil {
+				st, getErr := syncStore.Get(context.Background(), "spc_1", "acc_1")
+				require.NoError(t, getErr)
+				require.NotNil(t, st)
+				require.NotNil(t, st.OldestSyncedTime)
+				assert.Equal(t, tc.wantOldestSaved.Unix(), st.OldestSyncedTime.Unix())
+			}
+			if tc.wantExhausted {
+				st, getErr := syncStore.Get(context.Background(), "spc_1", "acc_1")
+				require.NoError(t, getErr)
+				require.NotNil(t, st)
+				assert.Contains(t, st.ExhaustedBuckets, "inbox")
 			}
 		})
 	}

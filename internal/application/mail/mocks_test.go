@@ -47,6 +47,9 @@ type CoordinatorMock struct {
 	// SyncConnectedAccountMailFunc mocks the SyncConnectedAccountMail method.
 	SyncConnectedAccountMailFunc func(ctx context.Context, req *SyncConnectedAccountMailRequest) error
 
+	// SyncOlderThreadsFunc mocks the SyncOlderThreads method.
+	SyncOlderThreadsFunc func(ctx context.Context, req *SyncOlderThreadsRequest) (*SyncOlderThreadsResult, error)
+
 	// PruneWindowAndBodiesFunc mocks the PruneWindowAndBodies method.
 	PruneWindowAndBodiesFunc func(ctx context.Context, req *PruneWindowAndBodiesRequest) error
 
@@ -96,6 +99,10 @@ type CoordinatorMock struct {
 			Ctx context.Context
 			Req *SyncConnectedAccountMailRequest
 		}
+		SyncOlderThreads []struct {
+			Ctx context.Context
+			Req *SyncOlderThreadsRequest
+		}
 		PruneWindowAndBodies []struct {
 			Ctx context.Context
 			Req *PruneWindowAndBodiesRequest
@@ -112,6 +119,7 @@ type CoordinatorMock struct {
 	lockSendDraft                sync.RWMutex
 	lockUploadDraftAttachment    sync.RWMutex
 	lockSyncConnectedAccountMail sync.RWMutex
+	lockSyncOlderThreads         sync.RWMutex
 	lockPruneWindowAndBodies     sync.RWMutex
 }
 
@@ -410,6 +418,33 @@ func (mock *CoordinatorMock) SyncConnectedAccountMailCalls() []struct {
 	mock.lockSyncConnectedAccountMail.RLock()
 	defer mock.lockSyncConnectedAccountMail.RUnlock()
 	return mock.calls.SyncConnectedAccountMail
+}
+
+// SyncOlderThreads calls SyncOlderThreadsFunc.
+func (mock *CoordinatorMock) SyncOlderThreads(ctx context.Context, req *SyncOlderThreadsRequest) (*SyncOlderThreadsResult, error) {
+	if mock.SyncOlderThreadsFunc == nil {
+		panic("CoordinatorMock.SyncOlderThreadsFunc: method is nil but Coordinator.SyncOlderThreads was just called")
+	}
+	mock.lockSyncOlderThreads.Lock()
+	mock.calls.SyncOlderThreads = append(mock.calls.SyncOlderThreads, struct {
+		Ctx context.Context
+		Req *SyncOlderThreadsRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockSyncOlderThreads.Unlock()
+	return mock.SyncOlderThreadsFunc(ctx, req)
+}
+
+// SyncOlderThreadsCalls returns all calls made to SyncOlderThreads.
+func (mock *CoordinatorMock) SyncOlderThreadsCalls() []struct {
+	Ctx context.Context
+	Req *SyncOlderThreadsRequest
+} {
+	mock.lockSyncOlderThreads.RLock()
+	defer mock.lockSyncOlderThreads.RUnlock()
+	return mock.calls.SyncOlderThreads
 }
 
 // PruneWindowAndBodies calls PruneWindowAndBodiesFunc.

@@ -56,6 +56,9 @@ type Coordinator interface {
 	SyncConnectedAccountMail(ctx context.Context, req *SyncConnectedAccountMailRequest) error
 
 	// @transactional
+	SyncOlderThreads(ctx context.Context, req *SyncOlderThreadsRequest) (*SyncOlderThreadsResult, error)
+
+	// @transactional
 	PruneWindowAndBodies(ctx context.Context, req *PruneWindowAndBodiesRequest) error
 }
 
@@ -134,6 +137,20 @@ type UploadDraftAttachmentRequest struct {
 type SyncConnectedAccountMailRequest struct {
 	SpaceID            string
 	ConnectedAccountID string
+}
+
+// SyncOlderThreadsRequest represents parameters to backfill older email threads from connected providers.
+type SyncOlderThreadsRequest struct {
+	ConnectedAccountID string
+	SystemBucket       *domainmail.SystemBucket
+	MailboxID          string
+	PageSize           int
+}
+
+// SyncOlderThreadsResult summarizes an older-thread backfill pass.
+type SyncOlderThreadsResult struct {
+	SyncedCount int
+	HasMore     bool
 }
 
 // PruneWindowAndBodiesRequest represents parameters to evict expired bodies and old threads.

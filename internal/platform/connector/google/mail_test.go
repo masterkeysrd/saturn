@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	domainmail "github.com/masterkeysrd/saturn/internal/domain/mail"
 	"github.com/stretchr/testify/assert"
@@ -398,4 +399,100 @@ func TestProvider_DeleteDraft_ResolvesMessageID(t *testing.T) {
 	err := provider.DeleteDraft(context.Background(), "test-token", "gmail_msg_42")
 	require.NoError(t, err)
 	assert.True(t, deletedResolvedDraft)
+}
+
+func TestProvider_FetchOlderThreads(t *testing.T) {
+	tests := []struct {
+		name               string
+		bucket             domainmail.SystemBucket
+		excludeIDs         map[string]struct{}
+		limit              int
+		wantQueryContains  string
+		wantLabelID        string
+		wantFetchedIDs     []string
+		wantHasMore        bool
+		nextPageTokenResp1 string
+	}{
+		{
+			name:              "fetches older inbox threads before cutoff and skips already cached IDs",
+			bucket:            domainmail.SystemBucketInbox,
+			excludeIDs:        map[string]struct{}{"th_cached": {}},
+			limit:             1,
+			wantQueryContains: "before:1700000001",
+			wantLabelID:       "INBOX",
+			wantFetchedIDs:    []string{"th_older_1"},
+			wantHasMore:       true,
+		},
+		{
+			name:              "fetches archive threads using archive query without labelIds",
+			bucket:            domainmail.SystemBucketArchive,
+			limit:             10,
+			wantQueryContains: "-in:inbox -in:trash -in:spam",
+			wantLabelID:       "",
+			wantFetchedIDs:    []string{"th_older_1", "th_older_2"},
+			wantHasMore:       false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/users/me/threads", func(w http.ResponseWriter, r *http.Request) {
+				q := r.URL.Query().Get("q")
+				assert.Contains(t, q, tc.wantQueryContains)
+				assert.Equal(t, tc.wantLabelID, r.URL.Query().Get("labelIds"))
+
+				resp := gmailThreadsListResponse{
+					Threads: []gmailThreadHeader{
+						{ID: "th_cached"},
+						{ID: "th_older_1"},
+						{ID: "th_older_2"},
+					},
+					NextPageToken: tc.nextPageTokenResp1,
+				}
+				_ = json.MarshalWrite(w, resp)
+			})
+
+			for _, id := range []string{"th_older_1", "th_older_2"} {
+				tid := id
+				mux.HandleFunc("/users/me/threads/"+tid, func(w http.ResponseWriter, r *http.Request) {
+					resp := gmailThread{
+						ID: tid,
+						Messages: []gmailMessage{
+							{
+								ID:           "msg_" + tid,
+								ThreadID:     tid,
+								LabelIDs:     []string{"INBOX"},
+								InternalDate: "1690000000000",
+								Payload: &gmailMessagePayload{
+									Headers: []gmailHeader{{Name: "Subject", Value: "Older " + tid}},
+								},
+							},
+						},
+					}
+					_ = json.MarshalWrite(w, resp)
+				})
+			}
+
+			server := httptest.NewServer(mux)
+			defer server.Close()
+
+			provider := NewProvider(Config{GmailURL: server.URL})
+			before := time.Unix(1700000000, 0).UTC()
+			res, err := provider.FetchOlderThreads(context.Background(), "test-token", &domainmail.FetchOlderThreadsRequest{
+				Before:             &before,
+				SystemBucket:       tc.bucket,
+				Limit:              tc.limit,
+				ExcludeProviderIDs: tc.excludeIDs,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantHasMore, res.HasMore)
+			require.Len(t, res.Threads, len(tc.wantFetchedIDs))
+			for i, wantID := range tc.wantFetchedIDs {
+				require.NotNil(t, res.Threads[i].ProviderThreadID)
+				assert.Equal(t, wantID, *res.Threads[i].ProviderThreadID)
+			}
+			assert.NotNil(t, res.OldestSyncedTime)
+		})
+	}
 }

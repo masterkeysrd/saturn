@@ -398,6 +398,9 @@ type ThreadStoreMock struct {
 	// PruneThreadsOlderThanWindowFunc mocks the PruneThreadsOlderThanWindow method.
 	PruneThreadsOlderThanWindowFunc func(ctx context.Context, olderThan time.Time) (int64, error)
 
+	// ListProviderThreadIDsFunc mocks the ListProviderThreadIDs method.
+	ListProviderThreadIDsFunc func(ctx context.Context, spaceID string, connectedAccountID string) ([]string, error)
+
 	// DeleteByConnectedAccountFunc mocks the DeleteByConnectedAccount method.
 	DeleteByConnectedAccountFunc func(ctx context.Context, spaceID string, connectedAccountID string) error
 
@@ -445,6 +448,11 @@ type ThreadStoreMock struct {
 			Ctx       context.Context
 			OlderThan time.Time
 		}
+		ListProviderThreadIDs []struct {
+			Ctx                context.Context
+			SpaceID            string
+			ConnectedAccountID string
+		}
 		DeleteByConnectedAccount []struct {
 			Ctx                context.Context
 			SpaceID            string
@@ -460,6 +468,7 @@ type ThreadStoreMock struct {
 	lockCountBySpace                sync.RWMutex
 	lockUpsert                      sync.RWMutex
 	lockPruneThreadsOlderThanWindow sync.RWMutex
+	lockListProviderThreadIDs       sync.RWMutex
 	lockDeleteByConnectedAccount    sync.RWMutex
 }
 
@@ -722,6 +731,36 @@ func (mock *ThreadStoreMock) PruneThreadsOlderThanWindowCalls() []struct {
 	mock.lockPruneThreadsOlderThanWindow.RLock()
 	defer mock.lockPruneThreadsOlderThanWindow.RUnlock()
 	return mock.calls.PruneThreadsOlderThanWindow
+}
+
+// ListProviderThreadIDs calls ListProviderThreadIDsFunc.
+func (mock *ThreadStoreMock) ListProviderThreadIDs(ctx context.Context, spaceID string, connectedAccountID string) ([]string, error) {
+	if mock.ListProviderThreadIDsFunc == nil {
+		panic("ThreadStoreMock.ListProviderThreadIDsFunc: method is nil but ThreadStore.ListProviderThreadIDs was just called")
+	}
+	mock.lockListProviderThreadIDs.Lock()
+	mock.calls.ListProviderThreadIDs = append(mock.calls.ListProviderThreadIDs, struct {
+		Ctx                context.Context
+		SpaceID            string
+		ConnectedAccountID string
+	}{
+		Ctx:                ctx,
+		SpaceID:            spaceID,
+		ConnectedAccountID: connectedAccountID,
+	})
+	mock.lockListProviderThreadIDs.Unlock()
+	return mock.ListProviderThreadIDsFunc(ctx, spaceID, connectedAccountID)
+}
+
+// ListProviderThreadIDsCalls returns all calls made to ListProviderThreadIDs.
+func (mock *ThreadStoreMock) ListProviderThreadIDsCalls() []struct {
+	Ctx                context.Context
+	SpaceID            string
+	ConnectedAccountID string
+} {
+	mock.lockListProviderThreadIDs.RLock()
+	defer mock.lockListProviderThreadIDs.RUnlock()
+	return mock.calls.ListProviderThreadIDs
 }
 
 // DeleteByConnectedAccount calls DeleteByConnectedAccountFunc.
@@ -1593,6 +1632,9 @@ type ExternalMailProviderMock struct {
 	// SyncThreadsFunc mocks the SyncThreads method.
 	SyncThreadsFunc func(ctx context.Context, accessToken string, req *SyncThreadsRequest) (*SyncThreadsResult, error)
 
+	// FetchOlderThreadsFunc mocks the FetchOlderThreads method.
+	FetchOlderThreadsFunc func(ctx context.Context, accessToken string, req *FetchOlderThreadsRequest) (*FetchOlderThreadsResult, error)
+
 	// FetchThreadFunc mocks the FetchThread method.
 	FetchThreadFunc func(ctx context.Context, accessToken string, providerThreadID string) (*Thread, []*Message, error)
 
@@ -1637,6 +1679,11 @@ type ExternalMailProviderMock struct {
 			Ctx         context.Context
 			AccessToken string
 			Req         *SyncThreadsRequest
+		}
+		FetchOlderThreads []struct {
+			Ctx         context.Context
+			AccessToken string
+			Req         *FetchOlderThreadsRequest
 		}
 		FetchThread []struct {
 			Ctx              context.Context
@@ -1706,6 +1753,7 @@ type ExternalMailProviderMock struct {
 	lockProvider              sync.RWMutex
 	lockListMailboxes         sync.RWMutex
 	lockSyncThreads           sync.RWMutex
+	lockFetchOlderThreads     sync.RWMutex
 	lockFetchThread           sync.RWMutex
 	lockFetchMessageBody      sync.RWMutex
 	lockSearchThreads         sync.RWMutex
@@ -1792,6 +1840,36 @@ func (mock *ExternalMailProviderMock) SyncThreadsCalls() []struct {
 	mock.lockSyncThreads.RLock()
 	defer mock.lockSyncThreads.RUnlock()
 	return mock.calls.SyncThreads
+}
+
+// FetchOlderThreads calls FetchOlderThreadsFunc.
+func (mock *ExternalMailProviderMock) FetchOlderThreads(ctx context.Context, accessToken string, req *FetchOlderThreadsRequest) (*FetchOlderThreadsResult, error) {
+	if mock.FetchOlderThreadsFunc == nil {
+		panic("ExternalMailProviderMock.FetchOlderThreadsFunc: method is nil but ExternalMailProvider.FetchOlderThreads was just called")
+	}
+	mock.lockFetchOlderThreads.Lock()
+	mock.calls.FetchOlderThreads = append(mock.calls.FetchOlderThreads, struct {
+		Ctx         context.Context
+		AccessToken string
+		Req         *FetchOlderThreadsRequest
+	}{
+		Ctx:         ctx,
+		AccessToken: accessToken,
+		Req:         req,
+	})
+	mock.lockFetchOlderThreads.Unlock()
+	return mock.FetchOlderThreadsFunc(ctx, accessToken, req)
+}
+
+// FetchOlderThreadsCalls returns all calls made to FetchOlderThreads.
+func (mock *ExternalMailProviderMock) FetchOlderThreadsCalls() []struct {
+	Ctx         context.Context
+	AccessToken string
+	Req         *FetchOlderThreadsRequest
+} {
+	mock.lockFetchOlderThreads.RLock()
+	defer mock.lockFetchOlderThreads.RUnlock()
+	return mock.calls.FetchOlderThreads
 }
 
 // FetchThread calls FetchThreadFunc.

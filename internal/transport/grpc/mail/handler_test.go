@@ -18,12 +18,15 @@ import (
 
 type mockCoordinator struct {
 	appmail.Coordinator
-	createdMailbox *domainmail.Mailbox
-	updatedMailbox *domainmail.Mailbox
-	modifiedThread *domainmail.Thread
-	createdDraft   *domainmail.Draft
-	updatedDraft   *domainmail.Draft
-	sentMessage    *domainmail.Message
+	createdMailbox      *domainmail.Mailbox
+	updatedMailbox      *domainmail.Mailbox
+	modifiedThread      *domainmail.Thread
+	syncOlderThreadsRes *appmail.SyncOlderThreadsResult
+	syncOlderThreadsReq *appmail.SyncOlderThreadsRequest
+	syncOlderThreadsFn  func(ctx context.Context, req *appmail.SyncOlderThreadsRequest) (*appmail.SyncOlderThreadsResult, error)
+	createdDraft        *domainmail.Draft
+	updatedDraft        *domainmail.Draft
+	sentMessage         *domainmail.Message
 }
 
 func (m *mockCoordinator) CreateMailbox(ctx context.Context, req *appmail.CreateMailboxRequest) (*domainmail.Mailbox, error) {
@@ -40,6 +43,16 @@ func (m *mockCoordinator) ModifyThread(ctx context.Context, req *appmail.ModifyT
 }
 func (m *mockCoordinator) BatchModifyThreads(ctx context.Context, req *appmail.BatchModifyThreadsRequest) error {
 	return nil
+}
+func (m *mockCoordinator) SyncOlderThreads(ctx context.Context, req *appmail.SyncOlderThreadsRequest) (*appmail.SyncOlderThreadsResult, error) {
+	m.syncOlderThreadsReq = req
+	if m.syncOlderThreadsFn != nil {
+		return m.syncOlderThreadsFn(ctx, req)
+	}
+	if m.syncOlderThreadsRes != nil {
+		return m.syncOlderThreadsRes, nil
+	}
+	return &appmail.SyncOlderThreadsResult{}, nil
 }
 func (m *mockCoordinator) CreateDraft(ctx context.Context, req *appmail.CreateDraftRequest) (*domainmail.Draft, error) {
 	return m.createdDraft, nil
@@ -65,7 +78,9 @@ func (m *mockMailboxReader) ListBySpace(ctx context.Context, spaceID string, fil
 	}, nil
 }
 
-type mockThreadReader struct{}
+type mockThreadReader struct {
+	threads []*domainmail.Thread
+}
 
 func (m *mockThreadReader) GetByID(ctx context.Context, spaceID, id string) (*domainmail.Thread, error) {
 	now := time.Now().UTC()
@@ -76,12 +91,20 @@ func (m *mockThreadReader) GetByProviderID(ctx context.Context, spaceID, connect
 	return &domainmail.Thread{ID: "mth_1", SpaceID: spaceID, Subject: "Thread 1", LastMessageAt: now}, nil
 }
 func (m *mockThreadReader) ListBySpace(ctx context.Context, spaceID string, filter *domainmail.ListThreadsFilter) ([]*domainmail.Thread, error) {
+	if len(m.threads) > 0 {
+		start := min(filter.Offset, len(m.threads))
+		end := min(start+filter.Limit, len(m.threads))
+		return m.threads[start:end], nil
+	}
 	now := time.Now().UTC()
 	return []*domainmail.Thread{
 		{ID: "mth_1", SpaceID: spaceID, Subject: "Thread 1", LastMessageAt: now},
 	}, nil
 }
 func (m *mockThreadReader) CountBySpace(ctx context.Context, spaceID string, filter *domainmail.ListThreadsFilter) (int, error) {
+	if len(m.threads) > 0 {
+		return len(m.threads), nil
+	}
 	return 1, nil
 }
 func (m *mockThreadReader) Upsert(ctx context.Context, thread *domainmail.Thread) error {
@@ -273,4 +296,122 @@ func TestHandler_DraftOperations(t *testing.T) {
 	// DeleteDraft
 	_, err = handler.DeleteDraft(ctx, &mailv1.DeleteDraftRequest{Id: "mdf_1"})
 	require.NoError(t, err)
+}
+
+func TestHandler_ListThreadsPagination(t *testing.T) {
+	now := time.Now().UTC()
+	allThreads := []*domainmail.Thread{
+		{ID: "mth_1", SpaceID: "spc_1", Subject: "T1", LastMessageAt: now},
+		{ID: "mth_2", SpaceID: "spc_1", Subject: "T2", LastMessageAt: now},
+		{ID: "mth_3", SpaceID: "spc_1", Subject: "T3", LastMessageAt: now},
+	}
+
+	agg := mailaggregator.NewService(
+		&mockMailboxReader{},
+		&mockThreadReader{threads: allThreads},
+		&mockMessageReader{},
+		&mockDraftReader{},
+		nil,
+		nil,
+		nil,
+		[]byte("secret"),
+	)
+	handler := grpcmail.NewHandler(&mockCoordinator{}, agg)
+	ctx := contextWithAuth("spc_1")
+
+	tests := []struct {
+		name          string
+		pageSize      int32
+		pageToken     string
+		wantIDs       []string
+		wantNextToken string
+		wantTotal     int32
+	}{
+		{
+			name:          "first page returns next_page_token",
+			pageSize:      2,
+			pageToken:     "",
+			wantIDs:       []string{"mth_1", "mth_2"},
+			wantNextToken: "2",
+			wantTotal:     3,
+		},
+		{
+			name:          "second page using page_token returns remaining thread and empty next_page_token",
+			pageSize:      2,
+			pageToken:     "2",
+			wantIDs:       []string{"mth_3"},
+			wantNextToken: "",
+			wantTotal:     3,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, err := handler.ListThreads(ctx, &mailv1.ListThreadsRequest{
+				PageSize:  tc.pageSize,
+				PageToken: tc.pageToken,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantTotal, resp.TotalSize)
+			assert.Equal(t, tc.wantNextToken, resp.NextPageToken)
+
+			gotIDs := make([]string, len(resp.Threads))
+			for i, th := range resp.Threads {
+				gotIDs[i] = th.Id
+			}
+			assert.Equal(t, tc.wantIDs, gotIDs)
+		})
+	}
+}
+
+func TestHandler_ListThreadsReadThroughBackfill(t *testing.T) {
+	now := time.Now().UTC()
+	thReader := &mockThreadReader{
+		threads: []*domainmail.Thread{
+			{ID: "mth_1", SpaceID: "spc_1", Subject: "T1", LastMessageAt: now},
+			{ID: "mth_2", SpaceID: "spc_1", Subject: "T2", LastMessageAt: now.Add(-time.Minute)},
+		},
+	}
+
+	coord := &mockCoordinator{
+		syncOlderThreadsFn: func(ctx context.Context, req *appmail.SyncOlderThreadsRequest) (*appmail.SyncOlderThreadsResult, error) {
+			thReader.threads = append(thReader.threads, &domainmail.Thread{
+				ID:            "mth_3",
+				SpaceID:       "spc_1",
+				Subject:       "T3 (Backfilled)",
+				LastMessageAt: now.Add(-2 * time.Minute),
+			})
+			return &appmail.SyncOlderThreadsResult{
+				SyncedCount: 1,
+				HasMore:     true,
+			}, nil
+		},
+	}
+
+	agg := mailaggregator.NewService(&mockMailboxReader{}, thReader, &mockMessageReader{}, &mockDraftReader{}, nil, nil, nil, []byte("secret"))
+	handler := grpcmail.NewHandler(coord, agg)
+	ctx := contextWithAuth("spc_1")
+
+	// Page 1 (limit=1, offset=0 < total 2): should NOT trigger backfill
+	resp1, err := handler.ListThreads(ctx, &mailv1.ListThreadsRequest{
+		SystemBucket: mailv1.MailboxRole_MAILBOX_ROLE_INBOX,
+		PageSize:     1,
+	})
+	require.NoError(t, err)
+	assert.Nil(t, coord.syncOlderThreadsReq)
+	assert.Equal(t, "1", resp1.NextPageToken)
+
+	// Page 2 (limit=2, offset=1 -> reaches end of cached 2 rows): should backfill mth_3 and return nextPageToken="3"
+	resp2, err := handler.ListThreads(ctx, &mailv1.ListThreadsRequest{
+		SystemBucket: mailv1.MailboxRole_MAILBOX_ROLE_INBOX,
+		PageSize:     2,
+		PageToken:    "1",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, coord.syncOlderThreadsReq)
+	assert.Equal(t, domainmail.SystemBucketInbox, *coord.syncOlderThreadsReq.SystemBucket)
+	require.Len(t, resp2.Threads, 2)
+	assert.Equal(t, "mth_2", resp2.Threads[0].Id)
+	assert.Equal(t, "mth_3", resp2.Threads[1].Id)
+	assert.Equal(t, "3", resp2.NextPageToken)
 }

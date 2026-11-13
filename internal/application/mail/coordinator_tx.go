@@ -243,6 +243,26 @@ func (t *TransactionalCoordinator) SyncConnectedAccountMail(ctx context.Context,
 	return nil
 }
 
+// SyncOlderThreads executes next.SyncOlderThreads inside a database transaction.
+func (t *TransactionalCoordinator) SyncOlderThreads(ctx context.Context, req *SyncOlderThreadsRequest) (*SyncOlderThreadsResult, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.SyncOlderThreads(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 // PruneWindowAndBodies executes next.PruneWindowAndBodies inside a database transaction.
 func (t *TransactionalCoordinator) PruneWindowAndBodies(ctx context.Context, req *PruneWindowAndBodiesRequest) error {
 	ctx, tx, err := t.txr.Begin(ctx)

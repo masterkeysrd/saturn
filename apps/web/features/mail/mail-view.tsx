@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react"
 import {
-  useMailThreads,
+  useInfiniteMailThreads,
   useModifyThread,
   useBatchModifyThreads,
   useSaveDraft,
@@ -62,7 +62,7 @@ export function MailView() {
     attendees: [],
   })
 
-  // Build filter query for useMailThreads
+  // Build filter query for useInfiniteMailThreads
   const filter = useMemo<ListThreadsRequest>(() => {
     const f: ListThreadsRequest = {
       connectedAccountId: selectedAccountId || "",
@@ -77,14 +77,31 @@ export function MailView() {
     return f
   }, [selectedAccountId, selectedMailboxId, selectedRole, searchQuery])
 
-  // Fetch threads
+  // Fetch threads with pagination
   const {
     data: threadsData,
     isLoading: threadsLoading,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
     refetch: refetchThreads,
-  } = useMailThreads(filter)
+  } = useInfiniteMailThreads(filter)
 
-  const threads = useMemo(() => threadsData?.threads || [], [threadsData])
+  const threads = useMemo(() => {
+    const seen = new Set<string>()
+    const list: Thread[] = []
+    for (const page of threadsData?.pages || []) {
+      for (const t of page.threads || []) {
+        if (!seen.has(t.id)) {
+          seen.add(t.id)
+          list.push(t)
+        }
+      }
+    }
+    return list
+  }, [threadsData])
+
+  const totalCount = threadsData?.pages[0]?.totalSize
 
   // Active selected thread (no conversation selected by default until clicked)
   const activeThread = useMemo(() => {
@@ -339,7 +356,7 @@ export function MailView() {
   return (
     <div
       data-testid="mail-main-view"
-      className="flex h-full w-full overflow-hidden bg-background"
+      className="flex h-full min-h-0 w-full flex-1 overflow-hidden bg-background"
     >
       {/* Pane 1: Mailbox & Accounts Rail */}
       <MailboxRail
@@ -377,6 +394,14 @@ export function MailView() {
         onOpenCompose={() => setComposeOpen(true)}
         onRefresh={handleRefresh}
         isLoading={threadsLoading || syncAccountMutation.isPending}
+        hasNextPage={Boolean(hasNextPage)}
+        isFetchingNextPage={Boolean(isFetchingNextPage)}
+        totalCount={totalCount}
+        onLoadMore={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage()
+          }
+        }}
       />
 
       {/* Pane 3: Thread Reader */}

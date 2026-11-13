@@ -112,17 +112,25 @@ func (s *Service) hybridSearchThreads(ctx context.Context, spaceID string, filte
 
 	var (
 		localResults []*domainmail.Thread
+		localTotal   int
 		localErr     error
 	)
 
-	// 1. Run local FTS query
+	// 1. Run local FTS query using cumulative window so merged pagination does not double-apply offset
+	localFilter := *filter
+	localFilter.Offset = 0
+	localFilter.Limit = filter.Offset + filter.Limit + 1
+
 	g.Go(func() error {
-		res, err := s.threadReader.ListBySpace(ctx, spaceID, filter)
+		res, err := s.threadReader.ListBySpace(ctx, spaceID, &localFilter)
 		if err != nil {
 			localErr = err
 			return err
 		}
 		localResults = res
+		if count, countErr := s.threadReader.CountBySpace(ctx, spaceID, &localFilter); countErr == nil {
+			localTotal = count
+		}
 		return nil
 	})
 
@@ -157,7 +165,7 @@ func (s *Service) hybridSearchThreads(ctx context.Context, spaceID string, filte
 				continue
 			}
 
-			rThreads, err := prov.SearchThreads(ctx, token, filter.Query, filter.Limit)
+			rThreads, err := prov.SearchThreads(ctx, token, filter.Query, localFilter.Limit)
 			if err != nil {
 				continue
 			}
@@ -212,7 +220,7 @@ func (s *Service) hybridSearchThreads(ctx context.Context, spaceID string, filte
 		return merged[i].LastMessageAt.After(merged[j].LastMessageAt)
 	})
 
-	totalCount := len(merged)
+	totalCount := max(len(merged), localTotal)
 
 	// Apply offset and limit
 	start := min(filter.Offset, len(merged))

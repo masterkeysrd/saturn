@@ -297,11 +297,23 @@ describe("MailView Web Feature", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof hooks.useMailboxes>)
 
-    vi.spyOn(hooks, "useMailThreads").mockReturnValue({
-      data: { threads: mockThreads, nextPageToken: "" },
+    vi.spyOn(hooks, "useInfiniteMailThreads").mockReturnValue({
+      data: {
+        pages: [
+          {
+            threads: mockThreads,
+            nextPageToken: "",
+            totalSize: mockThreads.length,
+          },
+        ],
+        pageParams: [""],
+      },
       isLoading: false,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
       refetch: vi.fn(),
-    } as unknown as ReturnType<typeof hooks.useMailThreads>)
+    } as unknown as ReturnType<typeof hooks.useInfiniteMailThreads>)
 
     vi.spyOn(hooks, "useMailThread").mockImplementation((threadId) => {
       const match = mockThreads.find((t) => t.id === threadId) || mockThreads[0]
@@ -428,7 +440,7 @@ describe("MailView Web Feature", () => {
     const workAccBtn = screen.getByTestId("account-filter-acc_work")
     fireEvent.click(workAccBtn)
 
-    expect(hooks.useMailThreads).toHaveBeenCalledWith(
+    expect(hooks.useInfiniteMailThreads).toHaveBeenCalledWith(
       expect.objectContaining({ connectedAccountId: "acc_work" })
     )
 
@@ -436,7 +448,7 @@ describe("MailView Web Feature", () => {
     const allAccBtn = screen.getByTestId("account-filter-all")
     fireEvent.click(allAccBtn)
 
-    expect(hooks.useMailThreads).toHaveBeenLastCalledWith(
+    expect(hooks.useInfiniteMailThreads).toHaveBeenLastCalledWith(
       expect.objectContaining({ connectedAccountId: "" })
     )
   })
@@ -668,11 +680,17 @@ describe("MailView Web Feature", () => {
       ],
     }
 
-    vi.spyOn(hooks, "useMailThreads").mockReturnValue({
-      data: { threads: [stubThread], nextPageToken: "" },
+    vi.spyOn(hooks, "useInfiniteMailThreads").mockReturnValue({
+      data: {
+        pages: [{ threads: [stubThread], nextPageToken: "", totalSize: 1 }],
+        pageParams: [""],
+      },
       isLoading: false,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
       refetch: vi.fn(),
-    } as unknown as ReturnType<typeof hooks.useMailThreads>)
+    } as unknown as ReturnType<typeof hooks.useInfiniteMailThreads>)
 
     vi.spyOn(hooks, "useMailThread").mockImplementation(() => {
       return {
@@ -714,5 +732,130 @@ describe("MailView Web Feature", () => {
         id: "msg_draft_1",
       })
     })
+  })
+
+  it("renders Load more button when more pages exist and calls fetchNextPage", () => {
+    const mockFetchNextPage = vi.fn()
+    vi.spyOn(hooks, "useInfiniteMailThreads").mockReturnValue({
+      data: {
+        pages: [
+          {
+            threads: mockThreads,
+            nextPageToken: "50",
+            totalSize: 120,
+          },
+        ],
+        pageParams: [""],
+      },
+      isLoading: false,
+      hasNextPage: true,
+      isFetchingNextPage: false,
+      fetchNextPage: mockFetchNextPage,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof hooks.useInfiniteMailThreads>)
+
+    render(<MailView />, { wrapper: createWrapper() })
+
+    const loadMoreBtn = screen.getByTestId("load-more-threads-btn")
+    expect(loadMoreBtn).toBeDefined()
+    fireEvent.click(loadMoreBtn)
+    expect(mockFetchNextPage).toHaveBeenCalledTimes(1)
+  })
+
+  it("calls fetchNextPage when scrolling near bottom of thread list", () => {
+    const mockFetchNextPage = vi.fn()
+    vi.spyOn(hooks, "useInfiniteMailThreads").mockReturnValue({
+      data: {
+        pages: [
+          {
+            threads: mockThreads,
+            nextPageToken: "50",
+            totalSize: 120,
+          },
+        ],
+        pageParams: [""],
+      },
+      isLoading: false,
+      hasNextPage: true,
+      isFetchingNextPage: false,
+      fetchNextPage: mockFetchNextPage,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof hooks.useInfiniteMailThreads>)
+
+    render(<MailView />, { wrapper: createWrapper() })
+
+    const scrollContainer = screen.getByTestId("thread-list-scroll-container")
+    Object.defineProperty(scrollContainer, "scrollHeight", {
+      value: 1000,
+      configurable: true,
+    })
+    Object.defineProperty(scrollContainer, "clientHeight", {
+      value: 400,
+      configurable: true,
+    })
+    Object.defineProperty(scrollContainer, "scrollTop", {
+      value: 450,
+      configurable: true,
+    })
+
+    fireEvent.scroll(scrollContainer)
+    expect(mockFetchNextPage).toHaveBeenCalledTimes(1)
+  })
+
+  it("calls fetchNextPage via IntersectionObserver when load-more sentinel intersects", () => {
+    const mockFetchNextPage = vi.fn()
+    let observerCallback: IntersectionObserverCallback | undefined
+    const observeMock = vi.fn()
+    const disconnectMock = vi.fn()
+
+    class MockIntersectionObserver {
+      constructor(cb: IntersectionObserverCallback) {
+        observerCallback = cb
+      }
+      observe = observeMock
+      disconnect = disconnectMock
+      unobserve = vi.fn()
+      takeRecords = vi.fn(() => [])
+      root = null
+      rootMargin = ""
+      thresholds = []
+    }
+
+    vi.stubGlobal("IntersectionObserver", MockIntersectionObserver)
+
+    try {
+      vi.spyOn(hooks, "useInfiniteMailThreads").mockReturnValue({
+        data: {
+          pages: [
+            {
+              threads: mockThreads,
+              nextPageToken: "50",
+              totalSize: 120,
+            },
+          ],
+          pageParams: [""],
+        },
+        isLoading: false,
+        hasNextPage: true,
+        isFetchingNextPage: false,
+        fetchNextPage: mockFetchNextPage,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof hooks.useInfiniteMailThreads>)
+
+      render(<MailView />, { wrapper: createWrapper() })
+
+      const sentinel = screen.getByTestId("load-more-sentinel")
+      expect(observeMock).toHaveBeenCalledWith(sentinel)
+      expect(observerCallback).toBeDefined()
+
+      observerCallback?.(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver
+      )
+
+      expect(mockFetchNextPage).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
