@@ -65,6 +65,12 @@ describe("formatParticipantDisplay", () => {
         email: "sarah@example.com",
       })
     ).toBe("Sarah Connor <sarah@example.com>")
+    expect(
+      formatParticipantDisplay({
+        name: "Sarah Connor",
+        email: "sarah@example.com",
+      })
+    ).toBe("Sarah Connor <sarah@example.com>")
   })
 
   it("formats participant with empty name or same name as email", () => {

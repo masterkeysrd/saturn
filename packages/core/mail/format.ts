@@ -1,6 +1,7 @@
 export interface ParticipantInput {
   email: string
   displayName?: string
+  name?: string
 }
 
 /**
@@ -38,7 +39,7 @@ export function formatParticipantDisplay(
 ): string {
   if (!participant) return ""
   const email = participant.email?.trim() || ""
-  const name = participant.displayName?.trim() || ""
+  const name = (participant.displayName || participant.name || "").trim()
 
   if (name && name.toLowerCase() !== email.toLowerCase()) {
     return `${name} <${email}>`
