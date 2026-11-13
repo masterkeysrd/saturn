@@ -578,6 +578,7 @@ func (c *coordinator) enqueueAccountSync(ctx context.Context, account *connector
 					"space_id":   account.SpaceID,
 					"account_id": account.ID,
 				},
+				MaxAttempts: 1,
 			})
 		case connector.CapabilityMail:
 			_ = c.scheduler.Enqueue(ctx, scheduler.Job{
@@ -587,6 +588,7 @@ func (c *coordinator) enqueueAccountSync(ctx context.Context, account *connector
 					"space_id":   account.SpaceID,
 					"account_id": account.ID,
 				},
+				MaxAttempts: 1,
 			})
 		}
 	}

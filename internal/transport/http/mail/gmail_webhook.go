@@ -72,6 +72,7 @@ func (h *GmailWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 				"email":      data.EmailAddress,
 				"history_id": data.HistoryID,
 			},
+			MaxAttempts: 1,
 		})
 	}
 

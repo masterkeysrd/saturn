@@ -35,7 +35,7 @@ func RegisterConnectorJobs(engine *scheduler.Engine, coord connectorapp.Coordina
 						"space_id":   acc.SpaceID,
 						"account_id": acc.ID,
 					},
-					MaxAttempts: 3,
+					MaxAttempts: 1,
 				})
 			}
 			if acc.HasCapability(connector.CapabilityMail) {
@@ -46,7 +46,7 @@ func RegisterConnectorJobs(engine *scheduler.Engine, coord connectorapp.Coordina
 						"space_id":   acc.SpaceID,
 						"account_id": acc.ID,
 					},
-					MaxAttempts: 3,
+					MaxAttempts: 1,
 				})
 			}
 		}

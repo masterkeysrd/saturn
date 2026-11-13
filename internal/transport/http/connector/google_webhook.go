@@ -78,8 +78,9 @@ func (h *GoogleWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	if h.scheduler != nil {
 		if err := h.scheduler.Enqueue(r.Context(), scheduler.Job{
-			JobType: jobType,
-			Payload: payload,
+			JobType:     jobType,
+			Payload:     payload,
+			MaxAttempts: 1,
 		}); err != nil {
 			log.Error(r.Context(), "failed to enqueue push sync job",
 				log.Err(err),
