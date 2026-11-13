@@ -158,6 +158,10 @@ message Participant {
   string name = 1;
   // Email address of the participant.
   string email = 2;
+  // Resolved brand logo, contact picture, or BIMI SVG URL.
+  string avatar_url = 3;
+  // Whether the sender domain is cryptographically verified via BIMI / DKIM.
+  bool is_verified = 4;
 }
 
 // Attachment models metadata and signed download URL for an attachment without carrying raw bytes.

@@ -169,7 +169,11 @@ type Participant struct {
 	// Display name of the participant.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Email address of the participant.
-	Email         string `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	Email string `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	// Resolved brand logo, contact picture, or BIMI SVG URL.
+	AvatarUrl string `protobuf:"bytes,3,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	// Whether the sender domain is cryptographically verified via BIMI / DKIM.
+	IsVerified    bool `protobuf:"varint,4,opt,name=is_verified,json=isVerified,proto3" json:"is_verified,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -216,6 +220,20 @@ func (x *Participant) GetEmail() string {
 		return x.Email
 	}
 	return ""
+}
+
+func (x *Participant) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *Participant) GetIsVerified() bool {
+	if x != nil {
+		return x.IsVerified
+	}
+	return false
 }
 
 // Attachment models metadata and signed download URL for an attachment without carrying raw bytes.
@@ -2251,10 +2269,14 @@ var File_saturn_mail_v1_mail_proto protoreflect.FileDescriptor
 
 const file_saturn_mail_v1_mail_proto_rawDesc = "" +
 	"\n" +
-	"\x19saturn/mail/v1/mail.proto\x12\x0esaturn.mail.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"7\n" +
+	"\x19saturn/mail/v1/mail.proto\x12\x0esaturn.mail.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"w\n" +
 	"\vParticipant\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
-	"\x05email\x18\x02 \x01(\tR\x05email\"\xce\x01\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1d\n" +
+	"\n" +
+	"avatar_url\x18\x03 \x01(\tR\tavatarUrl\x12\x1f\n" +
+	"\vis_verified\x18\x04 \x01(\bR\n" +
+	"isVerified\"\xce\x01\n" +
 	"\n" +
 	"Attachment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +

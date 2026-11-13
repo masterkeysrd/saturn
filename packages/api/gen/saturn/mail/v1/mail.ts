@@ -87,6 +87,14 @@ export interface Participant {
    * Email address of the participant.
    */
   email: string
+  /**
+   * Resolved brand logo, contact picture, or BIMI SVG URL.
+   */
+  avatarUrl: string
+  /**
+   * Whether the sender domain is cryptographically verified via BIMI / DKIM.
+   */
+  isVerified: boolean
 }
 
 /**

@@ -12661,6 +12661,14 @@
         "email": {
           "type": "string",
           "description": "Email address of the participant."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "Resolved brand logo, contact picture, or BIMI SVG URL."
+        },
+        "isVerified": {
+          "type": "boolean",
+          "description": "Whether the sender domain is cryptographically verified via BIMI / DKIM."
         }
       },
       "description": "Participant represents an email sender, recipient, or correspondent."
