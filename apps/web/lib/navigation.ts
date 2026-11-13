@@ -9,11 +9,13 @@ export interface FeatureMenu {
   group?: "main" | "docs"
   adminOnly?: boolean
   requiresSpace?: boolean
+  badge?: ComponentType
   items?: {
     title: string
     url: string
     icon?: ComponentType
     requiresSpace?: boolean
+    badge?: ComponentType
   }[]
 }
 

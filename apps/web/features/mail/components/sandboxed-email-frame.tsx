@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { ShieldAlert, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Attachment } from "@saturn/api/saturn/mail/v1/mail"
+import { cn } from "@/lib/utils"
 
 export interface SandboxedEmailFrameProps {
   html: string
@@ -30,9 +31,26 @@ export function SandboxedEmailFrame({
   })
   const [loadImages, setLoadImages] = useState(false)
   const [iframeHeight, setIframeHeight] = useState(60)
+  const [isAppDark, setIsAppDark] = useState<boolean>(() => {
+    if (typeof document === "undefined") return false
+    return document.documentElement.classList.contains("dark")
+  })
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   const shouldLoadImages = loadImages || autoLoadImages
+
+  // Track root .dark class changes without requiring ThemeProvider in standalone renders
+  useEffect(() => {
+    if (typeof document === "undefined") return
+    const root = document.documentElement
+    const updateTheme = () => {
+      setIsAppDark(root.classList.contains("dark"))
+    }
+    updateTheme()
+    const observer = new MutationObserver(updateTheme)
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] })
+    return () => observer.disconnect()
+  }, [])
 
   // Listen to cross-component auto-load images preference changes
   useEffect(() => {
@@ -107,9 +125,12 @@ export function SandboxedEmailFrame({
     return source
   }, [html, plainText, attachments, shouldLoadImages])
 
-  // Construct complete srcDoc document
-  // Option 1: Clean, un-mutated white canvas styling matching Gmail & macOS Mail.
+  // Construct complete srcDoc document on clean light paper matching Gmail Web
   const srcDoc = useMemo(() => {
+    const bodyPaddingCss = isAppDark
+      ? "padding: 12px 16px; box-sizing: border-box;"
+      : "padding: 0;"
+
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -120,16 +141,24 @@ export function SandboxedEmailFrame({
     :root {
       color-scheme: light;
     }
-    html, body {
+    html {
       margin: 0;
       padding: 0;
+      overflow-x: hidden;
+    }
+    html, body {
+      margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       font-size: 14px;
       line-height: 1.6;
       background-color: #ffffff;
       color: #18181b;
-      overflow: hidden !important;
+      overflow-y: hidden !important;
       word-break: break-word;
+    }
+    body {
+      overflow-x: auto;
+      ${bodyPaddingCss}
     }
     img {
       max-width: 100% !important;
@@ -145,10 +174,11 @@ export function SandboxedEmailFrame({
   </style>
 </head>
 <body>
-  ${processedHtml}
+  <div id="saturn-email-root" style="display: flow-root; width: 100%; height: auto !important; min-height: 0 !important;">${processedHtml}</div>
+  <style>html, body { height: auto !important; min-height: 0 !important; }</style>
 </body>
 </html>`
-  }, [processedHtml])
+  }, [processedHtml, isAppDark])
 
   // Height measurement function
   const updateHeight = useCallback(() => {
@@ -159,22 +189,24 @@ export function SandboxedEmailFrame({
       const doc = iframe.contentDocument
       if (!doc) return
       const body = doc.body
-      const htmlEl = doc.documentElement
-      if (!body || !htmlEl) return
+      if (!body) return
 
-      const measured = Math.max(
-        body.scrollHeight,
-        body.offsetHeight,
-        htmlEl.scrollHeight,
-        htmlEl.offsetHeight
-      )
-      if (measured > 0) {
-        setIframeHeight(measured + 8)
+      const root = doc.getElementById("saturn-email-root")
+      const contentHeight = root
+        ? Math.ceil(
+            Math.max(root.scrollHeight, root.getBoundingClientRect().height)
+          )
+        : Math.ceil(body.scrollHeight)
+      const verticalPadding = root && isAppDark ? 24 : 0
+      const nextHeight = contentHeight + verticalPadding
+
+      if (nextHeight > 0) {
+        setIframeHeight((prev) => (prev === nextHeight ? prev : nextHeight))
       }
     } catch {
       // Fallback
     }
-  }, [])
+  }, [isAppDark])
 
   // Dynamically update iframe height to eliminate inner scrollbars
   useEffect(() => {
@@ -189,11 +221,12 @@ export function SandboxedEmailFrame({
       try {
         const doc = iframe.contentDocument
         if (doc?.body) {
+          const target = doc.getElementById("saturn-email-root") || doc.body
           if (typeof window !== "undefined" && window.ResizeObserver) {
             resizeObserver = new ResizeObserver(() => {
               updateHeight()
             })
-            resizeObserver.observe(doc.body)
+            resizeObserver.observe(target)
           }
 
           // Attach listeners to images for height recalculation when images finish downloading
@@ -294,7 +327,13 @@ export function SandboxedEmailFrame({
       ) : null}
 
       {/* Email Canvas Container */}
-      <div className="w-full bg-white text-zinc-900">
+      <div
+        data-testid="sandboxed-email-container"
+        className={cn(
+          "relative w-full min-w-0 overflow-hidden rounded-lg transition-colors",
+          isAppDark ? "bg-white" : "bg-transparent"
+        )}
+      >
         <iframe
           ref={iframeRef}
           data-testid="sandboxed-email-frame"

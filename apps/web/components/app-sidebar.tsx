@@ -17,6 +17,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  SidebarMenuBadge,
   useSidebar,
 } from "@/components/ui/sidebar"
 import {
@@ -151,6 +152,11 @@ function SidebarNavItem({
         <item.icon />
         <span>{item.title}</span>
       </SidebarMenuButton>
+      {item.badge && (
+        <SidebarMenuBadge>
+          <item.badge />
+        </SidebarMenuBadge>
+      )}
     </SidebarMenuItem>
   )
 }

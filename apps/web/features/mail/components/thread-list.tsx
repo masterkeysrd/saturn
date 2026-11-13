@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useTimezone, useConnectedAccounts } from "@saturn/hooks"
+import { formatThreadParticipants } from "@saturn/core"
 import type { Thread } from "@saturn/api/saturn/mail/v1/mail"
 import { cn } from "@/lib/utils"
 
@@ -69,6 +70,10 @@ export function ThreadList({
       }
     }
     return map
+  }, [accounts])
+
+  const allAccountEmails = useMemo(() => {
+    return accounts.map((a) => a.email).filter(Boolean) as string[]
   }, [accounts])
 
   // Multi-select state
@@ -345,11 +350,15 @@ export function ThreadList({
                   })
               : ""
 
-            // Participants summary
-            const participantNames =
-              thread.participants
-                ?.map((p) => p.name || p.email.split("@")[0])
-                .join(", ") || "Unknown"
+            // Participants summary (cleanly excluding user's receiving account)
+            const selfEmails = account?.email
+              ? [account.email]
+              : allAccountEmails
+            const participantNames = formatThreadParticipants({
+              participants: thread.participants,
+              selfEmails,
+              isSentBucket: Boolean(thread.inSent && !thread.inInbox),
+            })
 
             return (
               <div

@@ -137,7 +137,7 @@ export function SenderAvatar({
         "relative flex shrink-0 items-center justify-center rounded-full font-bold transition-transform select-none hover:scale-105",
         sizeClass,
         logoUrl && !imgError
-          ? "border border-zinc-200/80 bg-white p-0.5 shadow-xs"
+          ? "border border-border/80 bg-background p-0.5 shadow-xs"
           : cn("border", paletteClass),
         className
       )}
@@ -157,7 +157,7 @@ export function SenderAvatar({
       {/* Verified checkmark badge for major company senders */}
       {isVerifiedSender && (
         <span
-          className="absolute -right-0.5 -bottom-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-600 text-[8px] text-white ring-1 ring-white"
+          className="absolute -right-0.5 -bottom-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-600 text-[8px] text-white ring-1 ring-background"
           title={`Verified organization: ${domain}`}
         >
           <Check className="h-2 w-2 stroke-[3]" />
@@ -183,14 +183,14 @@ export function SenderAvatar({
       <PopoverContent
         align="start"
         sideOffset={6}
-        className="w-72 rounded-xl border border-zinc-200/80 bg-white p-4 text-zinc-900 shadow-xl"
+        className="w-72 rounded-xl border border-border/80 bg-popover p-4 text-popover-foreground shadow-xl"
       >
         <div className="flex items-start gap-3">
           <div
             className={cn(
               "flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-bold select-none",
               logoUrl && !imgError
-                ? "border border-zinc-200/80 bg-white p-1 shadow-xs"
+                ? "border border-border/80 bg-background p-1 shadow-xs"
                 : cn("border text-sm", paletteClass)
             )}
           >
@@ -207,13 +207,15 @@ export function SenderAvatar({
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-sm font-semibold text-zinc-900">
+            <span className="truncate text-sm font-semibold text-foreground">
               {name || email.split("@")[0]}
             </span>
-            <span className="truncate text-xs text-zinc-500">{email}</span>
+            <span className="truncate text-xs text-muted-foreground">
+              {email}
+            </span>
 
             {isVerifiedSender && (
-              <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-emerald-600">
+              <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
                 <ShieldCheck className="h-3 w-3" />
                 <span className="truncate">Verified from {domain}</span>
               </div>
@@ -221,16 +223,16 @@ export function SenderAvatar({
           </div>
         </div>
 
-        <div className="mt-3 flex items-center gap-2 border-t border-zinc-100 pt-3">
+        <div className="mt-3 flex items-center gap-2 border-t border-border/50 pt-3">
           <Button
             variant="outline"
             size="sm"
             onClick={handleCopyEmail}
-            className="h-7 flex-1 gap-1 border-zinc-300 bg-white text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+            className="h-7 flex-1 gap-1 border-border/60 bg-background text-xs font-medium text-foreground hover:bg-muted"
           >
             {copied ? (
               <>
-                <Check className="h-3 w-3 text-emerald-600" />
+                <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                 <span>Copied</span>
               </>
             ) : (
@@ -261,7 +263,7 @@ export function SenderAvatar({
               href={`https://${domain}`}
               target="_blank"
               rel="noreferrer"
-              className="flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
               title={`Visit ${domain}`}
             >
               <ExternalLink className="h-3 w-3" />

@@ -5,6 +5,7 @@ import {
   useBatchModifyThreads,
   useSaveDraft,
   useSendDraft,
+  useDeleteDraft,
   useConnectedAccounts,
   useSyncConnectedAccount,
 } from "@saturn/hooks"
@@ -85,10 +86,10 @@ export function MailView() {
 
   const threads = useMemo(() => threadsData?.threads || [], [threadsData])
 
-  // Ensure selectedThreadId stays valid or points to first thread if available
+  // Active selected thread (no conversation selected by default until clicked)
   const activeThread = useMemo(() => {
-    if (!selectedThreadId) return threads[0]
-    return threads.find((t) => t.id === selectedThreadId) || threads[0]
+    if (!selectedThreadId) return undefined
+    return threads.find((t) => t.id === selectedThreadId)
   }, [threads, selectedThreadId])
 
   // Mutations
@@ -133,6 +134,19 @@ export function MailView() {
 
   const saveDraftMutation = useSaveDraft()
   const sendDraftMutation = useSendDraft()
+  const deleteDraftMutation = useDeleteDraft({
+    onSuccess: () => {
+      toast.add({ title: "Draft discarded", type: "success" })
+      refetchThreads()
+    },
+    onError: (err) => {
+      toast.add({
+        title: "Failed to discard draft",
+        description: err.message,
+        type: "error",
+      })
+    },
+  })
 
   const syncAccountMutation = useSyncConnectedAccount({
     onSuccess: () => {
@@ -150,19 +164,64 @@ export function MailView() {
 
   // Actions
   const handleArchiveThread = (thread: Thread) => {
+    if (selectedThreadId === thread.id) {
+      const idx = threads.findIndex((t) => t.id === thread.id)
+      const nextThread = threads[idx + 1] || threads[idx - 1]
+      setSelectedThreadId(nextThread?.id)
+    }
+
     modifyThreadMutation.mutate({
       id: thread.id,
       req: { id: thread.id, inInbox: false },
     })
-    toast.add({ title: "Conversation archived", type: "success" })
+
+    toast.add({
+      title: "Conversation archived",
+      type: "success",
+      actionProps: {
+        children: "Undo",
+        onClick: () => {
+          modifyThreadMutation.mutate({
+            id: thread.id,
+            req: { id: thread.id, inInbox: true },
+          })
+          setSelectedThreadId(thread.id)
+          toast.add({
+            title: "Conversation restored to inbox",
+            type: "success",
+          })
+        },
+      },
+    })
   }
 
   const handleTrashThread = (thread: Thread) => {
+    if (selectedThreadId === thread.id) {
+      const idx = threads.findIndex((t) => t.id === thread.id)
+      const nextThread = threads[idx + 1] || threads[idx - 1]
+      setSelectedThreadId(nextThread?.id)
+    }
+
     modifyThreadMutation.mutate({
       id: thread.id,
       req: { id: thread.id, inTrash: true },
     })
-    toast.add({ title: "Conversation moved to trash", type: "success" })
+
+    toast.add({
+      title: "Conversation moved to trash",
+      type: "success",
+      actionProps: {
+        children: "Undo",
+        onClick: () => {
+          modifyThreadMutation.mutate({
+            id: thread.id,
+            req: { id: thread.id, inTrash: false, inInbox: true },
+          })
+          setSelectedThreadId(thread.id)
+          toast.add({ title: "Conversation restored", type: "success" })
+        },
+      },
+    })
   }
 
   const handleToggleStar = (thread: Thread) => {
@@ -331,6 +390,20 @@ export function MailView() {
         onToggleRead={handleToggleRead}
         onCreateEvent={handleOpenCreateEventDialog}
         onSendReply={handleSendMail}
+        onSaveDraft={async (draft) => {
+          return saveDraftMutation.mutateAsync({
+            ...draft,
+            connectedAccountId:
+              draft.connectedAccountId || accounts[0]?.id || "",
+          })
+        }}
+        onDiscardDraft={async (draftId) => {
+          await deleteDraftMutation.mutateAsync({ id: draftId })
+          refetchThreads()
+          if (activeThread && activeThread.messageCount <= 1) {
+            setSelectedThreadId(undefined)
+          }
+        }}
       />
 
       {/* Docked / Floating Compose Modal */}
