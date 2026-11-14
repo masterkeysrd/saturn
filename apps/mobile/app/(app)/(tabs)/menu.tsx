@@ -8,6 +8,8 @@ import {
 } from "react-native"
 import { useRouter } from "expo-router"
 import {
+  Calendar,
+  Mail,
   ReceiptText,
   PiggyBank,
   Landmark,
@@ -51,7 +53,37 @@ export default function MenuScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Section 1: Finance (Web + Mobile Parity) */}
+        {/* Section 1: Calendar & Mail */}
+        <View style={styles.section}>
+          <Text style={styles.sectionHeader}>CALENDAR & MAIL</Text>
+          <Card style={styles.menuGroup}>
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/(tabs)/calendar")}
+            >
+              <View style={styles.menuLeft}>
+                <Calendar size={18} color={theme.colors.primary} />
+                <Text style={styles.menuLabel}>Calendar</Text>
+              </View>
+              <ChevronRight size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/(tabs)/mail")}
+            >
+              <View style={styles.menuLeft}>
+                <Mail size={18} color={theme.colors.accent} />
+                <Text style={styles.menuLabel}>Mail</Text>
+              </View>
+              <ChevronRight size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          </Card>
+        </View>
+
+        {/* Section 2: Finance (Web + Mobile Parity) */}
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>FINANCE</Text>
           <Card style={styles.menuGroup}>
