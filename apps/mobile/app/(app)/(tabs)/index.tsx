@@ -7,29 +7,32 @@ import {
   RefreshControl,
 } from "react-native"
 import { useQueryClient } from "@tanstack/react-query"
+import { useTimezone } from "@saturn/hooks"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { FinanceSummaryWidget } from "@/components/widgets/finance-summary-widget"
 import { CalendarSummaryWidget } from "@/components/widgets/calendar-summary-widget"
+import { MailSummaryWidget } from "@/components/widgets/mail-summary-widget"
 
 export default function OverviewScreen() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const { refetchSpaces } = useSpace()
+  const tz = useTimezone()
   const [refreshing, setRefreshing] = useState(false)
 
   const formattedDate = useMemo(() => {
-    return new Date().toLocaleDateString("en-US", {
+    return tz.format(tz.now(), {
       weekday: "long",
       month: "short",
       day: "numeric",
     })
-  }, [])
+  }, [tz])
 
   const getGreeting = () => {
-    const hour = new Date().getHours()
+    const hour = tz.parts(tz.now())?.hour ?? 12
     if (hour < 12) return "Good morning"
     if (hour < 18) return "Good afternoon"
     return "Good evening"
@@ -85,6 +88,7 @@ export default function OverviewScreen() {
 
         {/* Feature Widgets */}
         <CalendarSummaryWidget />
+        <MailSummaryWidget />
         <FinanceSummaryWidget />
       </ScrollView>
     </View>
@@ -102,27 +106,29 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingTop: 14,
+    paddingTop: 12,
     paddingBottom: 80,
-    gap: 16,
+    gap: 12,
   },
   greetingHeader: {
     paddingHorizontal: 4,
-    paddingTop: 2,
-    paddingBottom: 4,
-    gap: 3,
+    gap: 0,
   },
   dateLabel: {
-    fontSize: 12,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: "600",
     color: theme.colors.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.8,
+    includeFontPadding: false,
   },
   greetingTitle: {
     fontSize: 22,
+    lineHeight: 26,
     fontWeight: "700",
     color: theme.colors.textPrimary,
     letterSpacing: -0.5,
+    includeFontPadding: false,
   },
 })

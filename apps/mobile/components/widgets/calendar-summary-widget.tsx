@@ -101,19 +101,17 @@ export function CalendarSummaryWidget() {
           testID="calendar-widget-header-btn"
         >
           <View style={styles.headerTitleRow}>
-            <View style={styles.iconBadge}>
-              <CalendarIcon size={16} color={theme.colors.primary} />
-            </View>
-            <View>
-              <Text style={styles.titleText}>{"Today's Schedule"}</Text>
-              <Text style={styles.subtitleText}>
-                {todayEvents.length === 0
-                  ? "No events"
-                  : `${todayEvents.length} event${todayEvents.length === 1 ? "" : "s"}`}
-              </Text>
-            </View>
+            <CalendarIcon size={16} color={theme.colors.primary} />
+            <Text style={styles.titleText}>{"Today's Schedule"}</Text>
           </View>
-          <ChevronRight size={18} color={theme.colors.textMuted} />
+          <View style={styles.headerRight}>
+            <Text style={styles.subtitleText}>
+              {todayEvents.length === 0
+                ? "No events"
+                : `${todayEvents.length} event${todayEvents.length === 1 ? "" : "s"}`}
+            </Text>
+            <ChevronRight size={16} color={theme.colors.textMuted} />
+          </View>
         </TouchableOpacity>
       </CardHeader>
 
@@ -154,10 +152,9 @@ export function CalendarSummaryWidget() {
                   key={occ.instanceId || occ.eventId}
                   activeOpacity={0.7}
                   onPress={handleNavigateCalendar}
-                  style={styles.eventRow}
+                  style={[styles.eventRow, { borderLeftColor: color }]}
                   testID={`calendar-widget-event-${occ.instanceId || occ.eventId}`}
                 >
-                  <View style={[styles.colorDot, { backgroundColor: color }]} />
                   <View style={styles.eventInfo}>
                     <Text numberOfLines={1} style={styles.eventTitle}>
                       {occ.title || "(No title)"}
@@ -208,25 +205,23 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingTop: 14,
-    paddingBottom: 8,
+    paddingBottom: 6,
   },
   headerButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
   },
   headerTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
-  iconBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.primarySubtle,
+  headerRight: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 4,
   },
   titleText: {
     fontSize: 15,
@@ -236,11 +231,10 @@ const styles = StyleSheet.create({
   subtitleText: {
     fontSize: 12,
     color: theme.colors.textMuted,
-    marginTop: 1,
   },
   content: {
     paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingBottom: 12,
     paddingTop: 4,
   },
   loadingContainer: {
@@ -250,33 +244,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderRadius: theme.radius.sm,
+    paddingVertical: 6,
   },
   emptyText: {
     fontSize: 13,
     color: theme.colors.textSecondary,
   },
   eventsList: {
-    gap: 8,
+    gap: 7,
   },
   eventRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: theme.colors.surfaceElevated,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: theme.radius.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  colorDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    borderLeftWidth: 3,
+    paddingLeft: 10,
+    paddingVertical: 2,
   },
   eventInfo: {
     flex: 1,

@@ -14,7 +14,7 @@ import {
   useGetSettingsQuery,
   useGetInsightsQuery,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
+import { useCurrencyConversionPreview, useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { Card } from "@/components/ui/card"
 import { MonoAmount, Caption } from "@/components/ui/typography"
@@ -25,6 +25,7 @@ import { haptics } from "@/lib/haptics"
 export function FinanceSummaryWidget() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
+  const tz = useTimezone()
 
   // 1. Fetch space finance settings (base currency)
   const { data: settingsData, isLoading: settingsLoading } =
@@ -72,8 +73,8 @@ export function FinanceSummaryWidget() {
   const totalSpentCents = insightsData?.spent?.totalSpent || "0"
 
   const currentMonthLabel = useMemo(() => {
-    return new Date().toLocaleDateString("en-US", { month: "short" })
-  }, [])
+    return tz.format(tz.now(), { month: "short" })
+  }, [tz])
 
   const isLoading =
     (accountsLoading || insightsLoading || settingsLoading || ratesLoading) &&
@@ -112,19 +113,26 @@ export function FinanceSummaryWidget() {
     <Card style={styles.card}>
       <View style={styles.cardBody}>
         {/* Widget Header */}
-        <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.header}
+          onPress={navigateToFinance}
+          activeOpacity={0.7}
+          testID="finance-widget-header-btn"
+        >
           <View style={styles.headerLeft}>
-            <Landmark size={15} color={theme.colors.primary} />
-            <Caption style={styles.headerTitle}>FINANCIAL SNAPSHOT</Caption>
+            <Landmark size={16} color={theme.colors.primary} />
+            <Text style={styles.headerTitle}>Financial Snapshot</Text>
           </View>
-          <TouchableOpacity
-            style={styles.linkButton}
-            onPress={navigateToFinance}
-            activeOpacity={0.7}
-          >
-            <ChevronRight size={14} color={theme.colors.textMuted} />
-          </TouchableOpacity>
-        </View>
+          <View style={styles.headerRight}>
+            {accounts.length > 0 ? (
+              <Text style={styles.headerSubtitle}>
+                {accounts.length}{" "}
+                {accounts.length === 1 ? "account" : "accounts"}
+              </Text>
+            ) : null}
+            <ChevronRight size={16} color={theme.colors.textMuted} />
+          </View>
+        </TouchableOpacity>
 
         {/* Real Net Worth Figure */}
         <View style={styles.balanceSection}>
@@ -146,8 +154,14 @@ export function FinanceSummaryWidget() {
               <ArrowDownLeft size={14} color={theme.colors.success} />
             </View>
             <View>
-              <Caption>Income ({currentMonthLabel})</Caption>
-              <MonoAmount size="sm" color={theme.colors.success}>
+              <Caption style={styles.statLabel}>
+                Income ({currentMonthLabel})
+              </Caption>
+              <MonoAmount
+                size="sm"
+                color={theme.colors.success}
+                style={styles.statAmount}
+              >
                 +{formatAmount(totalIncomeCents, baseCurrency)}
               </MonoAmount>
             </View>
@@ -163,8 +177,14 @@ export function FinanceSummaryWidget() {
               <ArrowUpRight size={14} color={theme.colors.destructive} />
             </View>
             <View>
-              <Caption>Expenses ({currentMonthLabel})</Caption>
-              <MonoAmount size="sm" color={theme.colors.destructive}>
+              <Caption style={styles.statLabel}>
+                Expenses ({currentMonthLabel})
+              </Caption>
+              <MonoAmount
+                size="sm"
+                color={theme.colors.destructive}
+                style={styles.statAmount}
+              >
                 -{formatAmount(totalSpentCents, baseCurrency)}
               </MonoAmount>
             </View>
@@ -194,53 +214,70 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   cardBody: {
-    padding: 18,
-    gap: 14,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
+    gap: 8,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
   },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
   },
   headerTitle: {
-    letterSpacing: 0.8,
+    fontSize: 15,
     fontWeight: "600",
+    color: theme.colors.textPrimary,
   },
-  linkButton: {
+  headerRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
-  },
-  linkText: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    fontWeight: "500",
-  },
-  balanceSection: {
     gap: 4,
   },
+  headerSubtitle: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+  },
+  balanceSection: {
+    gap: 0,
+  },
   balanceLabel: {
+    fontSize: 11,
+    lineHeight: 14,
     letterSpacing: 0.6,
+    includeFontPadding: false,
   },
   balanceAmount: {
-    marginTop: 2,
+    lineHeight: 32,
+    includeFontPadding: false,
   },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingTop: 14,
-    borderTopWidth: 1,
+    gap: 12,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: theme.colors.border,
   },
   statItem: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+  },
+  statLabel: {
+    lineHeight: 15,
+    includeFontPadding: false,
+  },
+  statAmount: {
+    lineHeight: 17,
+    includeFontPadding: false,
   },
   statIconBadge: {
     width: 28,
@@ -254,9 +291,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: theme.colors.border,
     backgroundColor: theme.colors.surfaceElevated,
   },
@@ -268,8 +305,8 @@ const styles = StyleSheet.create({
   footerSkeleton: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    borderTopWidth: 1,
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: theme.colors.border,
     backgroundColor: theme.colors.surfaceElevated,
   },
