@@ -378,6 +378,90 @@ export interface UpdateSettingsRequest {
 }
 
 /**
+ * APIKeyGrant represents an API key access grant scoped to a specific workspace.
+ */
+export interface APIKeyGrant {
+  /**
+   * Output only. The unique identifier of the API key (`apk_...`).
+   */
+  apiKeyId?: string
+  /**
+   * Output only. The unique identifier of the granted workspace (`spc_...`).
+   */
+  spaceId?: string
+  /**
+   * Output only. The user identifier of the API key owner (`usr_...`).
+   */
+  userId?: string
+  /**
+   * Output only. The display name of the API key owner.
+   */
+  userName?: string
+  /**
+   * Output only. The email address of the API key owner.
+   */
+  userEmail?: string
+  /**
+   * Output only. The display name of the API key.
+   */
+  keyName?: string
+  /**
+   * Output only. First 12 characters of the raw token (e.g., `sat_9xQ4kL2m`).
+   */
+  keyPrefix?: string
+  /**
+   * Output only. Declarative permission scopes granted to the API key.
+   */
+  scopes?: string[]
+  /**
+   * Output only. Timestamp after which the API key expires, if set.
+   */
+  expiresAt?: string
+  /**
+   * Output only. Timestamp when the API key was last used.
+   */
+  lastUsedAt?: string
+  /**
+   * Output only. Timestamp when the grant to this workspace was created.
+   */
+  grantCreateTime?: string
+}
+
+/**
+ * Request message for Spaces.ListSpaceAPIKeyGrants.
+ */
+export interface ListSpaceAPIKeyGrantsRequest {
+  /**
+   * Required. The unique identifier of the workspace whose API key grants are listed.
+   */
+  spaceId: string
+}
+
+/**
+ * Response message for Spaces.ListSpaceAPIKeyGrants.
+ */
+export interface ListSpaceAPIKeyGrantsResponse {
+  /**
+   * Output only. List of active API key grants for this workspace.
+   */
+  grants?: APIKeyGrant[]
+}
+
+/**
+ * Request message for Spaces.RevokeSpaceAPIKeyGrant.
+ */
+export interface RevokeSpaceAPIKeyGrantRequest {
+  /**
+   * Required. The unique identifier of the workspace (`spc_...`).
+   */
+  spaceId: string
+  /**
+   * Required. The unique identifier of the API key (`apk_...`) whose workspace access is revoked.
+   */
+  apiKeyId: string
+}
+
+/**
  * Spaces provides workspace management including CRUD operations and member administration.
  */
 /**
@@ -703,6 +787,65 @@ export function useUpdateSettingsMutation(
     { space_id: string; req: UpdateSettingsRequest }
   >({
     mutationFn: ({ space_id, req }) => updateSettings(space_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Lists all active API key grants targeting a workspace (admin/owner only).
+ */
+export async function listSpaceAPIKeyGrants(
+  space_id: string,
+  _req: ListSpaceAPIKeyGrantsRequest
+): Promise<ListSpaceAPIKeyGrantsResponse> {
+  return request<ListSpaceAPIKeyGrantsResponse>({
+    method: "GET",
+    url: `/api/v1/spaces/${space_id}/api-keys`,
+  })
+}
+
+export function useListSpaceAPIKeyGrantsQuery(
+  req: ListSpaceAPIKeyGrantsRequest,
+  options?: Omit<
+    UseQueryOptions<ListSpaceAPIKeyGrantsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListSpaceAPIKeyGrantsResponse, Error>({
+    queryKey: [`/api/v1/spaces/${req.spaceId}/api-keys`, req],
+    queryFn: () => listSpaceAPIKeyGrants(req.spaceId, req),
+    ...options,
+  })
+}
+
+/**
+ * Revokes a specific API key's grant to access a workspace (admin/owner only).
+ */
+export async function revokeSpaceAPIKeyGrant(
+  space_id: string,
+  api_key_id: string,
+  _req: RevokeSpaceAPIKeyGrantRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: `/api/v1/spaces/${space_id}/api-keys/${api_key_id}`,
+  })
+}
+
+export function useRevokeSpaceAPIKeyGrantMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    { space_id: string; api_key_id: string; req: RevokeSpaceAPIKeyGrantRequest }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { space_id: string; api_key_id: string; req: RevokeSpaceAPIKeyGrantRequest }
+  >({
+    mutationFn: ({ space_id, api_key_id, req }) =>
+      revokeSpaceAPIKeyGrant(space_id, api_key_id, req),
     ...options,
   })
 }

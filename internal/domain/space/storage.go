@@ -68,3 +68,15 @@ type ListMembersFilter struct {
 	PageSize      int32
 	NextPageToken string
 }
+
+// APIKeyGrantStore defines persistence operations for space-scoped API key grants.
+//
+// @Mock
+type APIKeyGrantStore interface {
+	UpsertGrants(ctx context.Context, grants []*APIKeyGrant) error
+	DeleteGrantsForKeyExcept(ctx context.Context, apiKeyID string, keepSpaceIDs []SpaceID) error
+	DeleteGrant(ctx context.Context, apiKeyID string, spaceID SpaceID) error
+	ListBySpaceID(ctx context.Context, spaceID SpaceID) ([]*APIKeyGrant, error)
+	ListSpaceIDsByAPIKeyID(ctx context.Context, apiKeyID string) ([]SpaceID, error)
+	ListSpaceIDsByAPIKeyIDs(ctx context.Context, apiKeyIDs []string) (map[string][]SpaceID, error)
+}

@@ -843,3 +843,123 @@ func (l *LoggingCoordinator) DeleteAccount(ctx context.Context, req *DeleteAccou
 	)
 	return nil
 }
+
+// CreateAPIKey executes next.CreateAPIKey and logs execution duration and errors.
+func (l *LoggingCoordinator) CreateAPIKey(ctx context.Context, req *CreateAPIKeyRequest) (*identity.APIKey, error) {
+	start := time.Now()
+	res, err := l.next.CreateAPIKey(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.CreateAPIKey failed",
+			log.String("component", "iam"),
+			log.String("operation", "CreateAPIKey"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.CreateAPIKey completed",
+		log.String("component", "iam"),
+		log.String("operation", "CreateAPIKey"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// GetAPIKey executes next.GetAPIKey and logs execution duration and errors.
+func (l *LoggingCoordinator) GetAPIKey(ctx context.Context, req *GetAPIKeyRequest) (*identity.APIKey, error) {
+	start := time.Now()
+	res, err := l.next.GetAPIKey(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.GetAPIKey failed",
+			log.String("component", "iam"),
+			log.String("operation", "GetAPIKey"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.GetAPIKey completed",
+		log.String("component", "iam"),
+		log.String("operation", "GetAPIKey"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// ListAPIKeys executes next.ListAPIKeys and logs execution duration and errors.
+func (l *LoggingCoordinator) ListAPIKeys(ctx context.Context, req *ListAPIKeysRequest) ([]*identity.APIKey, error) {
+	start := time.Now()
+	res, err := l.next.ListAPIKeys(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.ListAPIKeys failed",
+			log.String("component", "iam"),
+			log.String("operation", "ListAPIKeys"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.ListAPIKeys completed",
+		log.String("component", "iam"),
+		log.String("operation", "ListAPIKeys"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// UpdateAPIKey executes next.UpdateAPIKey and logs execution duration and errors.
+func (l *LoggingCoordinator) UpdateAPIKey(ctx context.Context, req *UpdateAPIKeyRequest) (*identity.APIKey, error) {
+	start := time.Now()
+	res, err := l.next.UpdateAPIKey(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.UpdateAPIKey failed",
+			log.String("component", "iam"),
+			log.String("operation", "UpdateAPIKey"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.UpdateAPIKey completed",
+		log.String("component", "iam"),
+		log.String("operation", "UpdateAPIKey"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// DeleteAPIKey executes next.DeleteAPIKey and logs execution duration and errors.
+func (l *LoggingCoordinator) DeleteAPIKey(ctx context.Context, req *DeleteAPIKeyRequest) error {
+	start := time.Now()
+	err := l.next.DeleteAPIKey(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.DeleteAPIKey failed",
+			log.String("component", "iam"),
+			log.String("operation", "DeleteAPIKey"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return err
+	}
+
+	l.logger.Info(ctx, "iam.DeleteAPIKey completed",
+		log.String("component", "iam"),
+		log.String("operation", "DeleteAPIKey"),
+		log.Duration("duration", duration),
+	)
+	return nil
+}

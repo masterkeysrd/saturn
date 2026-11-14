@@ -14,9 +14,25 @@ documentation:
 
 authentication:
   rules:
-    # All space endpoints require authentication
+    # All space endpoints require authentication (default-deny for API keys unless explicitly scoped)
     - selector: "saturn.space.v1.Spaces.*"
       auth_required: true
+    - selector: "saturn.space.v1.Spaces.ListSpaces"
+      auth_required: true
+      api_key_scopes:
+        - spaces:read
+    - selector: "saturn.space.v1.Spaces.GetSpace"
+      auth_required: true
+      api_key_scopes:
+        - spaces:read
+    - selector: "saturn.space.v1.Spaces.GetSettings"
+      auth_required: true
+      api_key_scopes:
+        - spaces:read
+    - selector: "saturn.space.v1.Spaces.ListSpaceMembers"
+      auth_required: true
+      api_key_scopes:
+        - spaces:read
 
 space:
   rules:

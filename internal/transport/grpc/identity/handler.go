@@ -695,6 +695,153 @@ func (h *Handler) DeleteAccount(ctx context.Context, req *identityv1.DeleteAccou
 	return &emptypb.Empty{}, nil
 }
 
+// CreateAPIKey creates a new fine-grained personal API key bound to one or more spaces.
+func (h *Handler) CreateAPIKey(ctx context.Context, req *identityv1.CreateAPIKeyRequest) (*identityv1.APIKey, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	ua, ip := extractClientInfo(ctx)
+	pbKey := req.GetApiKey()
+
+	appReq := &iam.CreateAPIKeyRequest{
+		UserID:      identity.UserID(principal.Subject),
+		Name:        pbKey.GetName(),
+		Description: pbKey.GetDescription(),
+		Scopes:      pbKey.GetScopes(),
+		SpaceIDs:    pbKey.GetSpaceIds(),
+		UserAgent:   ua,
+		IPAddress:   ip,
+	}
+	if pbKey.GetExpiresAt() != nil {
+		appReq.ExpiresAt = new(pbKey.GetExpiresAt().AsTime())
+	}
+
+	key, err := h.IAM.Coordinator.CreateAPIKey(ctx, appReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return toProtoAPIKey(key, true), nil
+}
+
+// GetAPIKey retrieves metadata for a personal API key owned by the caller.
+func (h *Handler) GetAPIKey(ctx context.Context, req *identityv1.GetAPIKeyRequest) (*identityv1.APIKey, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	key, err := h.IAM.Coordinator.GetAPIKey(ctx, &iam.GetAPIKeyRequest{
+		UserID: identity.UserID(principal.Subject),
+		ID:     identity.APIKeyID(req.GetId()),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return toProtoAPIKey(key, false), nil
+}
+
+// ListAPIKeys lists all personal API keys owned by the caller.
+func (h *Handler) ListAPIKeys(ctx context.Context, _ *identityv1.ListAPIKeysRequest) (*identityv1.ListAPIKeysResponse, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	keys, err := h.IAM.Coordinator.ListAPIKeys(ctx, &iam.ListAPIKeysRequest{
+		UserID: identity.UserID(principal.Subject),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	pbKeys := make([]*identityv1.APIKey, len(keys))
+	for i, k := range keys {
+		pbKeys[i] = toProtoAPIKey(k, false)
+	}
+
+	return &identityv1.ListAPIKeysResponse{
+		ApiKeys: pbKeys,
+	}, nil
+}
+
+// UpdateAPIKey updates metadata, scopes, or space grants for a personal API key.
+func (h *Handler) UpdateAPIKey(ctx context.Context, req *identityv1.UpdateAPIKeyRequest) (*identityv1.APIKey, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	ua, ip := extractClientInfo(ctx)
+
+	key, err := h.IAM.Coordinator.UpdateAPIKey(ctx, &iam.UpdateAPIKeyRequest{
+		UserID:      identity.UserID(principal.Subject),
+		ID:          identity.APIKeyID(req.GetId()),
+		Name:        req.GetApiKey().GetName(),
+		Description: req.GetApiKey().GetDescription(),
+		Scopes:      req.GetApiKey().GetScopes(),
+		SpaceIDs:    req.GetApiKey().GetSpaceIds(),
+		UpdateMask:  req.GetUpdateMask().GetPaths(),
+		UserAgent:   ua,
+		IPAddress:   ip,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return toProtoAPIKey(key, false), nil
+}
+
+// DeleteAPIKey permanently deletes a personal API key and revokes all of its space grants.
+func (h *Handler) DeleteAPIKey(ctx context.Context, req *identityv1.DeleteAPIKeyRequest) (*emptypb.Empty, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	ua, ip := extractClientInfo(ctx)
+
+	if err := h.IAM.Coordinator.DeleteAPIKey(ctx, &iam.DeleteAPIKeyRequest{
+		UserID:    identity.UserID(principal.Subject),
+		ID:        identity.APIKeyID(req.GetId()),
+		UserAgent: ua,
+		IPAddress: ip,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func toProtoAPIKey(k *identity.APIKey, includeRawKey bool) *identityv1.APIKey {
+	if k == nil {
+		return nil
+	}
+	pb := &identityv1.APIKey{
+		Id:          string(k.ID),
+		Name:        k.Name,
+		Description: k.Description,
+		KeyPrefix:   k.KeyPrefix,
+		Scopes:      k.Scopes,
+		SpaceIds:    k.SpaceIDs,
+		CreateTime:  timestamppb.New(k.CreateTime),
+		UpdateTime:  timestamppb.New(k.UpdateTime),
+	}
+	if includeRawKey {
+		pb.RawKey = k.RawKey
+	}
+	if k.ExpiresAt != nil {
+		pb.ExpiresAt = timestamppb.New(*k.ExpiresAt)
+	}
+	if k.LastUsedAt != nil {
+		pb.LastUsedAt = timestamppb.New(*k.LastUsedAt)
+	}
+	return pb
+}
+
 func extractClientInfo(ctx context.Context) (userAgent, ipAddress string) {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if ua := md.Get("grpcgateway-user-agent"); len(ua) > 0 {

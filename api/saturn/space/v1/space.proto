@@ -92,6 +92,18 @@ service Spaces {
     };
     option (google.api.method_signature) = "space_id,settings,update_mask";
   }
+
+  // Lists all active API key grants targeting a workspace (admin/owner only).
+  rpc ListSpaceAPIKeyGrants(ListSpaceAPIKeyGrantsRequest) returns (ListSpaceAPIKeyGrantsResponse) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/api-keys"};
+    option (google.api.method_signature) = "space_id";
+  }
+
+  // Revokes a specific API key's grant to access a workspace (admin/owner only).
+  rpc RevokeSpaceAPIKeyGrant(RevokeSpaceAPIKeyGrantRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/spaces/{space_id}/api-keys/{api_key_id}"};
+    option (google.api.method_signature) = "space_id,api_key_id";
+  }
 }
 
 // Space represents a workspace resource.
@@ -355,4 +367,61 @@ message UpdateSettingsRequest {
 
   // Optional. The optimistic concurrency control version expected for this update.
   optional int64 version = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// APIKeyGrant represents an API key access grant scoped to a specific workspace.
+message APIKeyGrant {
+  // Output only. The unique identifier of the API key (`apk_...`).
+  string api_key_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The unique identifier of the granted workspace (`spc_...`).
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The user identifier of the API key owner (`usr_...`).
+  string user_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The display name of the API key owner.
+  string user_name = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The email address of the API key owner.
+  string user_email = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The display name of the API key.
+  string key_name = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. First 12 characters of the raw token (e.g., `sat_9xQ4kL2m`).
+  string key_prefix = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Declarative permission scopes granted to the API key.
+  repeated string scopes = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp after which the API key expires, if set.
+  optional google.protobuf.Timestamp expires_at = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the API key was last used.
+  optional google.protobuf.Timestamp last_used_at = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the grant to this workspace was created.
+  google.protobuf.Timestamp grant_create_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Spaces.ListSpaceAPIKeyGrants.
+message ListSpaceAPIKeyGrantsRequest {
+  // Required. The unique identifier of the workspace whose API key grants are listed.
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Response message for Spaces.ListSpaceAPIKeyGrants.
+message ListSpaceAPIKeyGrantsResponse {
+  // Output only. List of active API key grants for this workspace.
+  repeated APIKeyGrant grants = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Spaces.RevokeSpaceAPIKeyGrant.
+message RevokeSpaceAPIKeyGrantRequest {
+  // Required. The unique identifier of the workspace (`spc_...`).
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The unique identifier of the API key (`apk_...`) whose workspace access is revoked.
+  string api_key_id = 2 [(google.api.field_behavior) = REQUIRED];
 }

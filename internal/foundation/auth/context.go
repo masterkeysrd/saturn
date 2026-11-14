@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"slices"
 )
 
 type contextKey int
@@ -11,13 +12,42 @@ const (
 	keyCurrentUser
 )
 
-// Principal contains stable authentication and authorization data derived from validated JWT claims.
+// Principal contains stable authentication and authorization data derived from validated JWT claims or an API key.
 type Principal struct {
-	Subject     string
-	AccessLevel string
-	TokenID     string
-	AuthVersion int64
-	SessionID   string
+	Subject         string
+	AccessLevel     string
+	TokenID         string
+	AuthVersion     int64
+	SessionID       string
+	APIKeyID        string
+	Scopes          []string
+	GrantedSpaceIDs []string
+}
+
+// IsAPIKey returns true if the request was authenticated via a fine-grained API key.
+func (p Principal) IsAPIKey() bool {
+	return p.APIKeyID != ""
+}
+
+// HasScope returns true if the principal is not an API key or possesses at least one of the required scopes.
+func (p Principal) HasScope(required ...string) bool {
+	if !p.IsAPIKey() {
+		return true
+	}
+	for _, r := range required {
+		if slices.Contains(p.Scopes, r) {
+			return true
+		}
+	}
+	return false
+}
+
+// HasSpaceGrant returns true if the principal is not an API key or has an active grant for the given spaceID.
+func (p Principal) HasSpaceGrant(spaceID string) bool {
+	if !p.IsAPIKey() {
+		return true
+	}
+	return slices.Contains(p.GrantedSpaceIDs, spaceID)
 }
 
 // CurrentUser contains current profile and account data for RPCs that explicitly require it.

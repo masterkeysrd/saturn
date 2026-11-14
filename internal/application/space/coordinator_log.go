@@ -219,3 +219,27 @@ func (l *LoggingCoordinator) UpdateSettings(ctx context.Context, req *UpdateSett
 	)
 	return res, nil
 }
+
+// RevokeSpaceAPIKeyGrant executes next.RevokeSpaceAPIKeyGrant and logs execution duration and errors.
+func (l *LoggingCoordinator) RevokeSpaceAPIKeyGrant(ctx context.Context, req *RevokeSpaceAPIKeyGrantRequest) error {
+	start := time.Now()
+	err := l.next.RevokeSpaceAPIKeyGrant(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "space.RevokeSpaceAPIKeyGrant failed",
+			log.String("component", "space"),
+			log.String("operation", "RevokeSpaceAPIKeyGrant"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return err
+	}
+
+	l.logger.Info(ctx, "space.RevokeSpaceAPIKeyGrant completed",
+		log.String("component", "space"),
+		log.String("operation", "RevokeSpaceAPIKeyGrant"),
+		log.Duration("duration", duration),
+	)
+	return nil
+}

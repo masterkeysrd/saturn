@@ -387,3 +387,86 @@ func (c *Client) DeleteAccount(ctx context.Context, req *DeleteAccountRequest) (
 	}
 	return &resp, nil
 }
+
+// CreateAPIKey executes POST /api/v1/identity/api-keys.
+func (c *Client) CreateAPIKey(ctx context.Context, req *CreateAPIKeyRequest) (*APIKey, error) {
+	var resp APIKey
+	path := "/api/v1/identity/api-keys"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetApiKey()
+	if payload == nil {
+		return nil, fmt.Errorf("api_key payload is required")
+	}
+	if err := c.base.Do(ctx, "POST", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// GetAPIKey executes GET /api/v1/identity/api-keys/{id}.
+func (c *Client) GetAPIKey(ctx context.Context, req *GetAPIKeyRequest) (*APIKey, error) {
+	var resp APIKey
+	path := fmt.Sprintf("/api/v1/identity/api-keys/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ListAPIKeys executes GET /api/v1/identity/api-keys.
+func (c *Client) ListAPIKeys(ctx context.Context, req *ListAPIKeysRequest) (*ListAPIKeysResponse, error) {
+	var resp ListAPIKeysResponse
+	path := "/api/v1/identity/api-keys"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// UpdateAPIKey executes PATCH /api/v1/identity/api-keys/{id}.
+func (c *Client) UpdateAPIKey(ctx context.Context, req *UpdateAPIKeyRequest) (*APIKey, error) {
+	var resp APIKey
+	path := fmt.Sprintf("/api/v1/identity/api-keys/%s", req.GetId())
+	var query []string
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetApiKey()
+	if payload == nil {
+		return nil, fmt.Errorf("api_key payload is required")
+	}
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// DeleteAPIKey executes DELETE /api/v1/identity/api-keys/{id}.
+func (c *Client) DeleteAPIKey(ctx context.Context, req *DeleteAPIKeyRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
+	path := fmt.Sprintf("/api/v1/identity/api-keys/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}

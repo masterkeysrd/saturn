@@ -230,3 +230,31 @@ func (c *Client) UpdateSettings(ctx context.Context, req *UpdateSettingsRequest)
 	}
 	return &resp, nil
 }
+
+// ListSpaceAPIKeyGrants executes GET /api/v1/spaces/{space_id}/api-keys.
+func (c *Client) ListSpaceAPIKeyGrants(ctx context.Context, req *ListSpaceAPIKeyGrantsRequest) (*ListSpaceAPIKeyGrantsResponse, error) {
+	var resp ListSpaceAPIKeyGrantsResponse
+	path := fmt.Sprintf("/api/v1/spaces/%s/api-keys", req.GetSpaceId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// RevokeSpaceAPIKeyGrant executes DELETE /api/v1/spaces/{space_id}/api-keys/{api_key_id}.
+func (c *Client) RevokeSpaceAPIKeyGrant(ctx context.Context, req *RevokeSpaceAPIKeyGrantRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
+	path := fmt.Sprintf("/api/v1/spaces/%s/api-keys/%s", req.GetSpaceId(), req.GetApiKeyId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}

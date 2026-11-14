@@ -626,6 +626,100 @@ func local_request_Spaces_UpdateSettings_0(ctx context.Context, marshaler runtim
 	return msg, metadata, err
 }
 
+func request_Spaces_ListSpaceAPIKeyGrants_0(ctx context.Context, marshaler runtime.Marshaler, client SpacesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListSpaceAPIKeyGrantsRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["space_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
+	}
+	protoReq.SpaceId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.ListSpaceAPIKeyGrants(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Spaces_ListSpaceAPIKeyGrants_0(ctx context.Context, marshaler runtime.Marshaler, server SpacesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListSpaceAPIKeyGrantsRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["space_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
+	}
+	protoReq.SpaceId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
+	}
+	msg, err := server.ListSpaceAPIKeyGrants(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_Spaces_RevokeSpaceAPIKeyGrant_0(ctx context.Context, marshaler runtime.Marshaler, client SpacesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq RevokeSpaceAPIKeyGrantRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["space_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
+	}
+	protoReq.SpaceId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
+	}
+	val, ok = pathParams["api_key_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "api_key_id")
+	}
+	protoReq.ApiKeyId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "api_key_id", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.RevokeSpaceAPIKeyGrant(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Spaces_RevokeSpaceAPIKeyGrant_0(ctx context.Context, marshaler runtime.Marshaler, server SpacesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq RevokeSpaceAPIKeyGrantRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["space_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
+	}
+	protoReq.SpaceId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
+	}
+	val, ok = pathParams["api_key_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "api_key_id")
+	}
+	protoReq.ApiKeyId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "api_key_id", err)
+	}
+	msg, err := server.RevokeSpaceAPIKeyGrant(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 // RegisterSpacesHandlerServer registers the http handlers for service Spaces to "mux".
 // UnaryRPC     :call SpacesServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
@@ -851,6 +945,46 @@ func RegisterSpacesHandlerServer(ctx context.Context, mux *runtime.ServeMux, ser
 			return
 		}
 		forward_Spaces_UpdateSettings_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Spaces_ListSpaceAPIKeyGrants_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.space.v1.Spaces/ListSpaceAPIKeyGrants", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/api-keys"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Spaces_ListSpaceAPIKeyGrants_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Spaces_ListSpaceAPIKeyGrants_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodDelete, pattern_Spaces_RevokeSpaceAPIKeyGrant_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.space.v1.Spaces/RevokeSpaceAPIKeyGrant", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/api-keys/{api_key_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Spaces_RevokeSpaceAPIKeyGrant_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Spaces_RevokeSpaceAPIKeyGrant_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 
 	return nil
@@ -1079,33 +1213,71 @@ func RegisterSpacesHandlerClient(ctx context.Context, mux *runtime.ServeMux, cli
 		}
 		forward_Spaces_UpdateSettings_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_Spaces_ListSpaceAPIKeyGrants_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.space.v1.Spaces/ListSpaceAPIKeyGrants", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/api-keys"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Spaces_ListSpaceAPIKeyGrants_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Spaces_ListSpaceAPIKeyGrants_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodDelete, pattern_Spaces_RevokeSpaceAPIKeyGrant_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.space.v1.Spaces/RevokeSpaceAPIKeyGrant", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/api-keys/{api_key_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Spaces_RevokeSpaceAPIKeyGrant_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Spaces_RevokeSpaceAPIKeyGrant_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	return nil
 }
 
 var (
-	pattern_Spaces_CreateSpace_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "spaces"}, ""))
-	pattern_Spaces_GetSpace_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "spaces", "space_id"}, ""))
-	pattern_Spaces_UpdateSpace_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "spaces", "space_id"}, ""))
-	pattern_Spaces_DeleteSpace_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "spaces", "space_id"}, ""))
-	pattern_Spaces_ListSpaces_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "spaces"}, ""))
-	pattern_Spaces_CreateSpaceMember_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "spaces", "space_id", "members"}, ""))
-	pattern_Spaces_DeleteSpaceMember_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "spaces", "space_id", "members", "user_id"}, ""))
-	pattern_Spaces_UpdateSpaceMember_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "spaces", "space_id", "members", "member.user_id"}, ""))
-	pattern_Spaces_ListSpaceMembers_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "spaces", "space_id", "members"}, ""))
-	pattern_Spaces_GetSettings_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "spaces", "space_id", "settings"}, ""))
-	pattern_Spaces_UpdateSettings_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "spaces", "space_id", "settings"}, ""))
+	pattern_Spaces_CreateSpace_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "spaces"}, ""))
+	pattern_Spaces_GetSpace_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "spaces", "space_id"}, ""))
+	pattern_Spaces_UpdateSpace_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "spaces", "space_id"}, ""))
+	pattern_Spaces_DeleteSpace_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "spaces", "space_id"}, ""))
+	pattern_Spaces_ListSpaces_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "spaces"}, ""))
+	pattern_Spaces_CreateSpaceMember_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "spaces", "space_id", "members"}, ""))
+	pattern_Spaces_DeleteSpaceMember_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "spaces", "space_id", "members", "user_id"}, ""))
+	pattern_Spaces_UpdateSpaceMember_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "spaces", "space_id", "members", "member.user_id"}, ""))
+	pattern_Spaces_ListSpaceMembers_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "spaces", "space_id", "members"}, ""))
+	pattern_Spaces_GetSettings_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "spaces", "space_id", "settings"}, ""))
+	pattern_Spaces_UpdateSettings_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "spaces", "space_id", "settings"}, ""))
+	pattern_Spaces_ListSpaceAPIKeyGrants_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "spaces", "space_id", "api-keys"}, ""))
+	pattern_Spaces_RevokeSpaceAPIKeyGrant_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "spaces", "space_id", "api-keys", "api_key_id"}, ""))
 )
 
 var (
-	forward_Spaces_CreateSpace_0       = runtime.ForwardResponseMessage
-	forward_Spaces_GetSpace_0          = runtime.ForwardResponseMessage
-	forward_Spaces_UpdateSpace_0       = runtime.ForwardResponseMessage
-	forward_Spaces_DeleteSpace_0       = runtime.ForwardResponseMessage
-	forward_Spaces_ListSpaces_0        = runtime.ForwardResponseMessage
-	forward_Spaces_CreateSpaceMember_0 = runtime.ForwardResponseMessage
-	forward_Spaces_DeleteSpaceMember_0 = runtime.ForwardResponseMessage
-	forward_Spaces_UpdateSpaceMember_0 = runtime.ForwardResponseMessage
-	forward_Spaces_ListSpaceMembers_0  = runtime.ForwardResponseMessage
-	forward_Spaces_GetSettings_0       = runtime.ForwardResponseMessage
-	forward_Spaces_UpdateSettings_0    = runtime.ForwardResponseMessage
+	forward_Spaces_CreateSpace_0            = runtime.ForwardResponseMessage
+	forward_Spaces_GetSpace_0               = runtime.ForwardResponseMessage
+	forward_Spaces_UpdateSpace_0            = runtime.ForwardResponseMessage
+	forward_Spaces_DeleteSpace_0            = runtime.ForwardResponseMessage
+	forward_Spaces_ListSpaces_0             = runtime.ForwardResponseMessage
+	forward_Spaces_CreateSpaceMember_0      = runtime.ForwardResponseMessage
+	forward_Spaces_DeleteSpaceMember_0      = runtime.ForwardResponseMessage
+	forward_Spaces_UpdateSpaceMember_0      = runtime.ForwardResponseMessage
+	forward_Spaces_ListSpaceMembers_0       = runtime.ForwardResponseMessage
+	forward_Spaces_GetSettings_0            = runtime.ForwardResponseMessage
+	forward_Spaces_UpdateSettings_0         = runtime.ForwardResponseMessage
+	forward_Spaces_ListSpaceAPIKeyGrants_0  = runtime.ForwardResponseMessage
+	forward_Spaces_RevokeSpaceAPIKeyGrant_0 = runtime.ForwardResponseMessage
 )

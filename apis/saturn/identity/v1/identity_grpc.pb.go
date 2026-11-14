@@ -45,6 +45,11 @@ const (
 	Identity_UpdateProfile_FullMethodName         = "/saturn.identity.v1.Identity/UpdateProfile"
 	Identity_ChangeEmail_FullMethodName           = "/saturn.identity.v1.Identity/ChangeEmail"
 	Identity_DeleteAccount_FullMethodName         = "/saturn.identity.v1.Identity/DeleteAccount"
+	Identity_CreateAPIKey_FullMethodName          = "/saturn.identity.v1.Identity/CreateAPIKey"
+	Identity_GetAPIKey_FullMethodName             = "/saturn.identity.v1.Identity/GetAPIKey"
+	Identity_ListAPIKeys_FullMethodName           = "/saturn.identity.v1.Identity/ListAPIKeys"
+	Identity_UpdateAPIKey_FullMethodName          = "/saturn.identity.v1.Identity/UpdateAPIKey"
+	Identity_DeleteAPIKey_FullMethodName          = "/saturn.identity.v1.Identity/DeleteAPIKey"
 )
 
 // IdentityClient is the client API for Identity service.
@@ -104,6 +109,16 @@ type IdentityClient interface {
 	ChangeEmail(ctx context.Context, in *ChangeEmailRequest, opts ...grpc.CallOption) (*User, error)
 	// Authenticated RPC: Permanently deactivates and deletes personal credentials for the current user account.
 	DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Authenticated RPC: Creates a new fine-grained personal API key bound to one or more spaces.
+	CreateAPIKey(ctx context.Context, in *CreateAPIKeyRequest, opts ...grpc.CallOption) (*APIKey, error)
+	// Authenticated RPC: Retrieves metadata for a personal API key owned by the caller.
+	GetAPIKey(ctx context.Context, in *GetAPIKeyRequest, opts ...grpc.CallOption) (*APIKey, error)
+	// Authenticated RPC: Lists all personal API keys owned by the caller.
+	ListAPIKeys(ctx context.Context, in *ListAPIKeysRequest, opts ...grpc.CallOption) (*ListAPIKeysResponse, error)
+	// Authenticated RPC: Updates metadata, scopes, or space grants for a personal API key.
+	UpdateAPIKey(ctx context.Context, in *UpdateAPIKeyRequest, opts ...grpc.CallOption) (*APIKey, error)
+	// Authenticated RPC: Permanently deletes a personal API key and revokes all of its space grants.
+	DeleteAPIKey(ctx context.Context, in *DeleteAPIKeyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type identityClient struct {
@@ -364,6 +379,56 @@ func (c *identityClient) DeleteAccount(ctx context.Context, in *DeleteAccountReq
 	return out, nil
 }
 
+func (c *identityClient) CreateAPIKey(ctx context.Context, in *CreateAPIKeyRequest, opts ...grpc.CallOption) (*APIKey, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(APIKey)
+	err := c.cc.Invoke(ctx, Identity_CreateAPIKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) GetAPIKey(ctx context.Context, in *GetAPIKeyRequest, opts ...grpc.CallOption) (*APIKey, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(APIKey)
+	err := c.cc.Invoke(ctx, Identity_GetAPIKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) ListAPIKeys(ctx context.Context, in *ListAPIKeysRequest, opts ...grpc.CallOption) (*ListAPIKeysResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAPIKeysResponse)
+	err := c.cc.Invoke(ctx, Identity_ListAPIKeys_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) UpdateAPIKey(ctx context.Context, in *UpdateAPIKeyRequest, opts ...grpc.CallOption) (*APIKey, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(APIKey)
+	err := c.cc.Invoke(ctx, Identity_UpdateAPIKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) DeleteAPIKey(ctx context.Context, in *DeleteAPIKeyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Identity_DeleteAPIKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IdentityServer is the server API for Identity service.
 // All implementations should embed UnimplementedIdentityServer
 // for forward compatibility.
@@ -421,6 +486,16 @@ type IdentityServer interface {
 	ChangeEmail(context.Context, *ChangeEmailRequest) (*User, error)
 	// Authenticated RPC: Permanently deactivates and deletes personal credentials for the current user account.
 	DeleteAccount(context.Context, *DeleteAccountRequest) (*emptypb.Empty, error)
+	// Authenticated RPC: Creates a new fine-grained personal API key bound to one or more spaces.
+	CreateAPIKey(context.Context, *CreateAPIKeyRequest) (*APIKey, error)
+	// Authenticated RPC: Retrieves metadata for a personal API key owned by the caller.
+	GetAPIKey(context.Context, *GetAPIKeyRequest) (*APIKey, error)
+	// Authenticated RPC: Lists all personal API keys owned by the caller.
+	ListAPIKeys(context.Context, *ListAPIKeysRequest) (*ListAPIKeysResponse, error)
+	// Authenticated RPC: Updates metadata, scopes, or space grants for a personal API key.
+	UpdateAPIKey(context.Context, *UpdateAPIKeyRequest) (*APIKey, error)
+	// Authenticated RPC: Permanently deletes a personal API key and revokes all of its space grants.
+	DeleteAPIKey(context.Context, *DeleteAPIKeyRequest) (*emptypb.Empty, error)
 }
 
 // UnimplementedIdentityServer should be embedded to have
@@ -504,6 +579,21 @@ func (UnimplementedIdentityServer) ChangeEmail(context.Context, *ChangeEmailRequ
 }
 func (UnimplementedIdentityServer) DeleteAccount(context.Context, *DeleteAccountRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteAccount not implemented")
+}
+func (UnimplementedIdentityServer) CreateAPIKey(context.Context, *CreateAPIKeyRequest) (*APIKey, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateAPIKey not implemented")
+}
+func (UnimplementedIdentityServer) GetAPIKey(context.Context, *GetAPIKeyRequest) (*APIKey, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAPIKey not implemented")
+}
+func (UnimplementedIdentityServer) ListAPIKeys(context.Context, *ListAPIKeysRequest) (*ListAPIKeysResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAPIKeys not implemented")
+}
+func (UnimplementedIdentityServer) UpdateAPIKey(context.Context, *UpdateAPIKeyRequest) (*APIKey, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateAPIKey not implemented")
+}
+func (UnimplementedIdentityServer) DeleteAPIKey(context.Context, *DeleteAPIKeyRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteAPIKey not implemented")
 }
 func (UnimplementedIdentityServer) testEmbeddedByValue() {}
 
@@ -975,6 +1065,96 @@ func _Identity_DeleteAccount_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Identity_CreateAPIKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAPIKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).CreateAPIKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_CreateAPIKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).CreateAPIKey(ctx, req.(*CreateAPIKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_GetAPIKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAPIKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).GetAPIKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_GetAPIKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).GetAPIKey(ctx, req.(*GetAPIKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_ListAPIKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAPIKeysRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).ListAPIKeys(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_ListAPIKeys_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).ListAPIKeys(ctx, req.(*ListAPIKeysRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_UpdateAPIKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAPIKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).UpdateAPIKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_UpdateAPIKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).UpdateAPIKey(ctx, req.(*UpdateAPIKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_DeleteAPIKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAPIKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).DeleteAPIKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_DeleteAPIKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).DeleteAPIKey(ctx, req.(*DeleteAPIKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Identity_ServiceDesc is the grpc.ServiceDesc for Identity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1081,6 +1261,26 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteAccount",
 			Handler:    _Identity_DeleteAccount_Handler,
+		},
+		{
+			MethodName: "CreateAPIKey",
+			Handler:    _Identity_CreateAPIKey_Handler,
+		},
+		{
+			MethodName: "GetAPIKey",
+			Handler:    _Identity_GetAPIKey_Handler,
+		},
+		{
+			MethodName: "ListAPIKeys",
+			Handler:    _Identity_ListAPIKeys_Handler,
+		},
+		{
+			MethodName: "UpdateAPIKey",
+			Handler:    _Identity_UpdateAPIKey_Handler,
+		},
+		{
+			MethodName: "DeleteAPIKey",
+			Handler:    _Identity_DeleteAPIKey_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -16,6 +16,218 @@ authentication:
     # All finance endpoints require authentication
     - selector: "saturn.finance.v1.Finance.*"
       auth_required: true
+    # Read RPCs (allowed with finance:read or finance:write)
+    - selector: "saturn.finance.v1.Finance.GetSettings"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.GetBudget"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ListBudgets"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.GetBudgetPeriod"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.GetExchangeRate"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ListExchangeRates"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ListTransactions"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.GetTransaction"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ListTransactionEvents"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.GetInsights"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ListRecurringTransactions"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ListScheduledTransactions"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.GetScheduledTransaction"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.GetBorrowing"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ListBorrowings"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.GetAccount"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ListAccounts"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ListInstitutions"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ResolveInstitution"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ListTransfers"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ListCurrencies"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ListInboxItems"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.GetStatement"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ListStatements"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    - selector: "saturn.finance.v1.Finance.ListStatementLines"
+      auth_required: true
+      api_key_scopes: [finance:read, finance:write]
+    # Write RPCs (require finance:write)
+    - selector: "saturn.finance.v1.Finance.Setup"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.UpdateSettings"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.CreateBudget"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.UpdateBudget"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.DeleteBudget"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.CreateExchangeRate"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.UpdateExchangeRate"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.DeleteExchangeRate"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.CreateExpense"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.UpdateExpense"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.CreateIncome"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.UpdateIncome"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.DeleteTransaction"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.CreateRecurringTransaction"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.UpdateRecurringTransaction"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.DeleteRecurringTransaction"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.ConfirmScheduledTransaction"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.MatchScheduledTransaction"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.SkipScheduledTransaction"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.CreateBorrowing"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.UpdateBorrowing"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.DeleteBorrowing"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.LogBorrowingTransaction"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.UpdateBorrowingTransaction"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.DeleteBorrowingTransaction"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.AdjustBorrowingBalance"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.CreateAccount"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.UpdateAccount"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.AdjustAccountBalance"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.DeleteAccount"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.CreateInstitution"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.UpdateInstitution"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.DeleteInstitution"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.CreateTransfer"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.UpdateInboxItem"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.ApproveInboxItem"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.DiscardInboxItem"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.ImportStatement"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.IngestStatementDocument"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.AnalyzeStatementDocument"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.DeleteStatement"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.UpdateStatementLine"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.UpdateStatement"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.CompleteStatement"
+      auth_required: true
+      api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.InvertStatementSigns"
+      auth_required: true
+      api_key_scopes: [finance:write]
 
 space:
   rules:

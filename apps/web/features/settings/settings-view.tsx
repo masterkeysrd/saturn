@@ -13,6 +13,7 @@ import {
   Building2Icon,
   LaptopIcon,
   KeyRoundIcon,
+  KeyIcon,
   ActivityIcon,
   Sliders,
   Blocks,
@@ -32,6 +33,8 @@ import { SpacePreferences } from "./components/space-preferences"
 import { FinanceSettings } from "./components/finance-settings"
 import { IntegrationSettings } from "./components/integration-settings"
 import { ConnectedAccountsView } from "./connected-accounts-view"
+import { APIKeysSettings } from "./components/api-keys-settings"
+import { SpaceAPIKeysSettings } from "./components/space-api-keys-settings"
 
 interface NavItem {
   to: string
@@ -85,6 +88,11 @@ export function SettingsView() {
             label: "Security Activity Log",
             icon: ActivityIcon,
           },
+          {
+            to: "/settings/security/api-keys",
+            label: "API Keys",
+            icon: KeyIcon,
+          },
         ],
       },
       {
@@ -106,6 +114,11 @@ export function SettingsView() {
                   to: "/settings/finance",
                   label: "Finance",
                   icon: Landmark,
+                },
+                {
+                  to: "/settings/api-keys",
+                  label: "API Keys",
+                  icon: KeyIcon,
                 },
               ]
             : []),
@@ -255,6 +268,7 @@ export function SettingsView() {
               path="security/activity"
               element={<ActivityLogSettingsView />}
             />
+            <Route path="security/api-keys" element={<APIKeysSettings />} />
 
             {/* Backwards-compatibility aliases */}
             <Route
@@ -274,6 +288,7 @@ export function SettingsView() {
             <Route path="spaces" element={<SpaceSettings />} />
             <Route path="preferences" element={<SpacePreferences />} />
             <Route path="finance" element={<FinanceSettings />} />
+            <Route path="api-keys" element={<SpaceAPIKeysSettings />} />
             <Route path="integrations" element={<IntegrationSettings />} />
             <Route
               path="connected-accounts"

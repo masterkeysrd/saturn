@@ -4575,3 +4575,166 @@ func TestService_ChangePassword(t *testing.T) {
 		})
 	})
 }
+
+func TestService_APIKeys(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("CreateAPIKey", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			params     CreateAPIKeyParams
+			setup      func(k *APIKeyStoreMock, u *UserStoreProviderMock, s *SecurityEventStoreMock)
+			wantErr    bool
+			wantKind   errors.Kind
+			wantEvents int
+		}{
+			{
+				name: "Success",
+				params: CreateAPIKeyParams{
+					UserID:      "usr_1",
+					Name:        "CLI Key",
+					Description: "Automation",
+					Scopes:      []string{"finance:read", "spaces:read"},
+					ExpiresAt:   new(time.Now().UTC().Add(24 * time.Hour)),
+				},
+				setup: func(k *APIKeyStoreMock, u *UserStoreProviderMock, s *SecurityEventStoreMock) {
+					k.CreateFunc = func(ctx context.Context, key *APIKey) error { return nil }
+					u.GetByIDFunc = func(ctx context.Context, id UserID) (*User, error) {
+						return &User{ID: id, Email: "alice@example.com"}, nil
+					}
+					s.CreateFunc = func(ctx context.Context, event *SecurityEvent) error { return nil }
+				},
+				wantEvents: 1,
+			},
+			{
+				name: "Missing user ID",
+				params: CreateAPIKeyParams{
+					Name:   "CLI Key",
+					Scopes: []string{"finance:read"},
+				},
+				wantErr:  true,
+				wantKind: errors.Invalid,
+			},
+			{
+				name: "Past expiration",
+				params: CreateAPIKeyParams{
+					UserID:    "usr_1",
+					Name:      "CLI Key",
+					Scopes:    []string{"finance:read"},
+					ExpiresAt: new(time.Now().UTC().Add(-time.Minute)),
+				},
+				wantErr:  true,
+				wantKind: errors.Invalid,
+			},
+			{
+				name: "Invalid scope",
+				params: CreateAPIKeyParams{
+					UserID: "usr_1",
+					Name:   "CLI Key",
+					Scopes: []string{"bad:scope"},
+				},
+				wantErr:  true,
+				wantKind: errors.Invalid,
+			},
+			{
+				name: "Store failure",
+				params: CreateAPIKeyParams{
+					UserID: "usr_1",
+					Name:   "CLI Key",
+					Scopes: []string{"finance:read"},
+				},
+				setup: func(k *APIKeyStoreMock, u *UserStoreProviderMock, s *SecurityEventStoreMock) {
+					k.CreateFunc = func(ctx context.Context, key *APIKey) error {
+						return errors.New("db error")
+					}
+				},
+				wantErr: true,
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				kStore := &APIKeyStoreMock{}
+				uStore := &UserStoreProviderMock{}
+				sStore := &SecurityEventStoreMock{}
+				if tc.setup != nil {
+					tc.setup(kStore, uStore, sStore)
+				}
+				svc := NewService(Dependencies{
+					APIKeyStore:        kStore,
+					UserStore:          uStore,
+					SecurityEventStore: sStore,
+				})
+				key, err := svc.CreateAPIKey(ctx, tc.params)
+				if tc.wantErr {
+					if err == nil {
+						t.Fatal("expected error, got nil")
+					}
+					if tc.wantKind != 0 && errors.KindOf(err) != tc.wantKind {
+						t.Errorf("expected error kind %v, got %v", tc.wantKind, errors.KindOf(err))
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if key.RawKey == "" || key.KeyPrefix == "" || key.KeyHash == "" {
+					t.Errorf("expected generated token fields, got %+v", key)
+				}
+				if len(sStore.CreateCalls()) != tc.wantEvents {
+					t.Errorf("expected %d security events, got %d", tc.wantEvents, len(sStore.CreateCalls()))
+				}
+			})
+		}
+	})
+
+	t.Run("GetUpdateDeleteAPIKey", func(t *testing.T) {
+		existing := &APIKey{
+			ID:     "apk_1",
+			UserID: "usr_1",
+			Name:   "Original",
+			Scopes: []string{"finance:read"},
+		}
+
+		kStore := &APIKeyStoreMock{
+			GetByIDFunc: func(ctx context.Context, id APIKeyID) (*APIKey, error) {
+				if id != "apk_1" {
+					return nil, errors.E(errors.NotExist)
+				}
+				cp := *existing
+				return &cp, nil
+			},
+			UpdateFunc: func(ctx context.Context, key *APIKey) error { return nil },
+			DeleteFunc: func(ctx context.Context, id APIKeyID) error { return nil },
+		}
+		sStore := &SecurityEventStoreMock{
+			CreateFunc: func(ctx context.Context, event *SecurityEvent) error { return nil },
+		}
+		svc := NewService(Dependencies{APIKeyStore: kStore, SecurityEventStore: sStore})
+
+		if _, err := svc.GetAPIKey(ctx, "usr_other", "apk_1"); errors.CodeOf(err) != APIKeyNotFound {
+			t.Errorf("expected APIKeyNotFound for other user, got %v", err)
+		}
+		got, err := svc.GetAPIKey(ctx, "usr_1", "apk_1")
+		if err != nil || got.Name != "Original" {
+			t.Fatalf("GetAPIKey failed: got=%+v err=%v", got, err)
+		}
+
+		updated, err := svc.UpdateAPIKey(ctx, UpdateAPIKeyParams{
+			UserID:   "usr_1",
+			ID:       "apk_1",
+			Incoming: &APIKey{Name: "Renamed", Scopes: []string{"finance:write"}},
+			Mask:     []string{"name", "scopes"},
+		})
+		if err != nil || updated.Name != "Renamed" {
+			t.Fatalf("UpdateAPIKey failed: updated=%+v err=%v", updated, err)
+		}
+
+		if err := svc.DeleteAPIKey(ctx, DeleteAPIKeyParams{UserID: "usr_1", ID: "apk_1"}); err != nil {
+			t.Fatalf("DeleteAPIKey failed: %v", err)
+		}
+		if len(sStore.CreateCalls()) != 2 {
+			t.Errorf("expected 2 security events (update + revoke), got %d", len(sStore.CreateCalls()))
+		}
+	})
+}

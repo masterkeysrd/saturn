@@ -20,17 +20,19 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Spaces_CreateSpace_FullMethodName       = "/saturn.space.v1.Spaces/CreateSpace"
-	Spaces_GetSpace_FullMethodName          = "/saturn.space.v1.Spaces/GetSpace"
-	Spaces_UpdateSpace_FullMethodName       = "/saturn.space.v1.Spaces/UpdateSpace"
-	Spaces_DeleteSpace_FullMethodName       = "/saturn.space.v1.Spaces/DeleteSpace"
-	Spaces_ListSpaces_FullMethodName        = "/saturn.space.v1.Spaces/ListSpaces"
-	Spaces_CreateSpaceMember_FullMethodName = "/saturn.space.v1.Spaces/CreateSpaceMember"
-	Spaces_DeleteSpaceMember_FullMethodName = "/saturn.space.v1.Spaces/DeleteSpaceMember"
-	Spaces_UpdateSpaceMember_FullMethodName = "/saturn.space.v1.Spaces/UpdateSpaceMember"
-	Spaces_ListSpaceMembers_FullMethodName  = "/saturn.space.v1.Spaces/ListSpaceMembers"
-	Spaces_GetSettings_FullMethodName       = "/saturn.space.v1.Spaces/GetSettings"
-	Spaces_UpdateSettings_FullMethodName    = "/saturn.space.v1.Spaces/UpdateSettings"
+	Spaces_CreateSpace_FullMethodName            = "/saturn.space.v1.Spaces/CreateSpace"
+	Spaces_GetSpace_FullMethodName               = "/saturn.space.v1.Spaces/GetSpace"
+	Spaces_UpdateSpace_FullMethodName            = "/saturn.space.v1.Spaces/UpdateSpace"
+	Spaces_DeleteSpace_FullMethodName            = "/saturn.space.v1.Spaces/DeleteSpace"
+	Spaces_ListSpaces_FullMethodName             = "/saturn.space.v1.Spaces/ListSpaces"
+	Spaces_CreateSpaceMember_FullMethodName      = "/saturn.space.v1.Spaces/CreateSpaceMember"
+	Spaces_DeleteSpaceMember_FullMethodName      = "/saturn.space.v1.Spaces/DeleteSpaceMember"
+	Spaces_UpdateSpaceMember_FullMethodName      = "/saturn.space.v1.Spaces/UpdateSpaceMember"
+	Spaces_ListSpaceMembers_FullMethodName       = "/saturn.space.v1.Spaces/ListSpaceMembers"
+	Spaces_GetSettings_FullMethodName            = "/saturn.space.v1.Spaces/GetSettings"
+	Spaces_UpdateSettings_FullMethodName         = "/saturn.space.v1.Spaces/UpdateSettings"
+	Spaces_ListSpaceAPIKeyGrants_FullMethodName  = "/saturn.space.v1.Spaces/ListSpaceAPIKeyGrants"
+	Spaces_RevokeSpaceAPIKeyGrant_FullMethodName = "/saturn.space.v1.Spaces/RevokeSpaceAPIKeyGrant"
 )
 
 // SpacesClient is the client API for Spaces service.
@@ -61,6 +63,10 @@ type SpacesClient interface {
 	GetSettings(ctx context.Context, in *GetSettingsRequest, opts ...grpc.CallOption) (*Settings, error)
 	// Updates the configuration settings for a workspace.
 	UpdateSettings(ctx context.Context, in *UpdateSettingsRequest, opts ...grpc.CallOption) (*Settings, error)
+	// Lists all active API key grants targeting a workspace (admin/owner only).
+	ListSpaceAPIKeyGrants(ctx context.Context, in *ListSpaceAPIKeyGrantsRequest, opts ...grpc.CallOption) (*ListSpaceAPIKeyGrantsResponse, error)
+	// Revokes a specific API key's grant to access a workspace (admin/owner only).
+	RevokeSpaceAPIKeyGrant(ctx context.Context, in *RevokeSpaceAPIKeyGrantRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type spacesClient struct {
@@ -181,6 +187,26 @@ func (c *spacesClient) UpdateSettings(ctx context.Context, in *UpdateSettingsReq
 	return out, nil
 }
 
+func (c *spacesClient) ListSpaceAPIKeyGrants(ctx context.Context, in *ListSpaceAPIKeyGrantsRequest, opts ...grpc.CallOption) (*ListSpaceAPIKeyGrantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSpaceAPIKeyGrantsResponse)
+	err := c.cc.Invoke(ctx, Spaces_ListSpaceAPIKeyGrants_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *spacesClient) RevokeSpaceAPIKeyGrant(ctx context.Context, in *RevokeSpaceAPIKeyGrantRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Spaces_RevokeSpaceAPIKeyGrant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SpacesServer is the server API for Spaces service.
 // All implementations should embed UnimplementedSpacesServer
 // for forward compatibility.
@@ -209,6 +235,10 @@ type SpacesServer interface {
 	GetSettings(context.Context, *GetSettingsRequest) (*Settings, error)
 	// Updates the configuration settings for a workspace.
 	UpdateSettings(context.Context, *UpdateSettingsRequest) (*Settings, error)
+	// Lists all active API key grants targeting a workspace (admin/owner only).
+	ListSpaceAPIKeyGrants(context.Context, *ListSpaceAPIKeyGrantsRequest) (*ListSpaceAPIKeyGrantsResponse, error)
+	// Revokes a specific API key's grant to access a workspace (admin/owner only).
+	RevokeSpaceAPIKeyGrant(context.Context, *RevokeSpaceAPIKeyGrantRequest) (*emptypb.Empty, error)
 }
 
 // UnimplementedSpacesServer should be embedded to have
@@ -250,6 +280,12 @@ func (UnimplementedSpacesServer) GetSettings(context.Context, *GetSettingsReques
 }
 func (UnimplementedSpacesServer) UpdateSettings(context.Context, *UpdateSettingsRequest) (*Settings, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSettings not implemented")
+}
+func (UnimplementedSpacesServer) ListSpaceAPIKeyGrants(context.Context, *ListSpaceAPIKeyGrantsRequest) (*ListSpaceAPIKeyGrantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSpaceAPIKeyGrants not implemented")
+}
+func (UnimplementedSpacesServer) RevokeSpaceAPIKeyGrant(context.Context, *RevokeSpaceAPIKeyGrantRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeSpaceAPIKeyGrant not implemented")
 }
 func (UnimplementedSpacesServer) testEmbeddedByValue() {}
 
@@ -469,6 +505,42 @@ func _Spaces_UpdateSettings_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Spaces_ListSpaceAPIKeyGrants_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSpaceAPIKeyGrantsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpacesServer).ListSpaceAPIKeyGrants(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Spaces_ListSpaceAPIKeyGrants_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpacesServer).ListSpaceAPIKeyGrants(ctx, req.(*ListSpaceAPIKeyGrantsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Spaces_RevokeSpaceAPIKeyGrant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeSpaceAPIKeyGrantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpacesServer).RevokeSpaceAPIKeyGrant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Spaces_RevokeSpaceAPIKeyGrant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpacesServer).RevokeSpaceAPIKeyGrant(ctx, req.(*RevokeSpaceAPIKeyGrantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Spaces_ServiceDesc is the grpc.ServiceDesc for Spaces service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -519,6 +591,14 @@ var Spaces_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateSettings",
 			Handler:    _Spaces_UpdateSettings_Handler,
+		},
+		{
+			MethodName: "ListSpaceAPIKeyGrants",
+			Handler:    _Spaces_ListSpaceAPIKeyGrants_Handler,
+		},
+		{
+			MethodName: "RevokeSpaceAPIKeyGrant",
+			Handler:    _Spaces_RevokeSpaceAPIKeyGrant_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

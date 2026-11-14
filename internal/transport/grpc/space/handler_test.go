@@ -36,6 +36,8 @@ type mockSpaceService struct {
 	listSpaceMembersFunc      func(ctx context.Context, session space.Session, filter *space.ListMembersFilter) (*paging.Page[*space.Member], error)
 	getSettingsFunc           func(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error)
 	updateSettingsFunc        func(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error)
+	listSpaceAPIKeyGrantsFunc func(ctx context.Context, session space.Session) ([]*space.APIKeyGrant, error)
+	revokeSpaceAPIKeyFunc     func(ctx context.Context, session space.Session, apiKeyID string) error
 }
 
 func (m *mockSpaceService) CreateSpace(ctx context.Context, sp *space.Space) (*space.Space, error) {
@@ -147,8 +149,30 @@ func (m *mockSpaceService) UpdateSettings(ctx context.Context, session space.Ses
 	}, nil
 }
 
+func (m *mockSpaceService) ListSpaceAPIKeyGrants(ctx context.Context, session space.Session) ([]*space.APIKeyGrant, error) {
+	if m.listSpaceAPIKeyGrantsFunc != nil {
+		return m.listSpaceAPIKeyGrantsFunc(ctx, session)
+	}
+	return nil, nil
+}
+
+func (m *mockSpaceService) RevokeSpaceAPIKeyGrant(ctx context.Context, session space.Session, apiKeyID string) error {
+	if m.revokeSpaceAPIKeyFunc != nil {
+		return m.revokeSpaceAPIKeyFunc(ctx, session, apiKeyID)
+	}
+	return nil
+}
+
 type mockIdentityService struct {
-	getUserByIDFunc func(ctx context.Context, id identity.UserID) (*identity.User, error)
+	getUserByIDFunc      func(ctx context.Context, id identity.UserID) (*identity.User, error)
+	listAPIKeysByIDsFunc func(ctx context.Context, ids []identity.APIKeyID) ([]*identity.APIKey, error)
+}
+
+func (m *mockIdentityService) ListAPIKeysByIDs(ctx context.Context, ids []identity.APIKeyID) ([]*identity.APIKey, error) {
+	if m.listAPIKeysByIDsFunc != nil {
+		return m.listAPIKeysByIDsFunc(ctx, ids)
+	}
+	return nil, nil
 }
 
 func (m *mockIdentityService) GetUserByID(ctx context.Context, id identity.UserID) (*identity.User, error) {
@@ -734,4 +758,39 @@ func TestHandler_UpdateSettings(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 	})
+}
+
+func TestHandler_SpaceAPIKeyGrants(t *testing.T) {
+	mockSpace := &mockSpaceService{
+		listSpaceAPIKeyGrantsFunc: func(ctx context.Context, session space.Session) ([]*space.APIKeyGrant, error) {
+			return []*space.APIKeyGrant{
+				{APIKeyID: "apk_1", SpaceID: session.SpaceID, UserID: "usr_1"},
+			}, nil
+		},
+	}
+	mockIdent := &mockIdentityService{
+		listAPIKeysByIDsFunc: func(ctx context.Context, ids []identity.APIKeyID) ([]*identity.APIKey, error) {
+			return []*identity.APIKey{
+				{ID: "apk_1", Name: "Bot", KeyPrefix: "sat_12345678", Scopes: []string{"finance:read"}},
+			}, nil
+		},
+	}
+
+	coord := spaceapp.NewCoordinator(spaceapp.Dependencies{SpaceService: mockSpace, IdentityService: mockIdent})
+	agg := spaceaggregator.NewService(mockSpace, mockIdent)
+	h := spacegrpc.NewHandler(coord, agg)
+
+	ctx := auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_admin"})
+
+	listResp, err := h.ListSpaceAPIKeyGrants(ctx, &spacev1.ListSpaceAPIKeyGrantsRequest{SpaceId: "spc_1"})
+	if err != nil {
+		t.Fatalf("ListSpaceAPIKeyGrants failed: %v", err)
+	}
+	if len(listResp.GetGrants()) != 1 || listResp.GetGrants()[0].GetKeyName() != "Bot" {
+		t.Errorf("unexpected grants response: %+v", listResp)
+	}
+
+	if _, err := h.RevokeSpaceAPIKeyGrant(ctx, &spacev1.RevokeSpaceAPIKeyGrantRequest{SpaceId: "spc_1", ApiKeyId: "apk_1"}); err != nil {
+		t.Fatalf("RevokeSpaceAPIKeyGrant failed: %v", err)
+	}
 }

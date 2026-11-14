@@ -35,4 +35,8 @@ const (
 	ResetTokenUsed         errors.Code = "RESET_TOKEN_USED"
 	PasswordMatchesCurrent errors.Code = "PASSWORD_MATCHES_CURRENT"
 	EmailExists            errors.Code = "EMAIL_EXISTS"
+	APIKeyNotFound         errors.Code = "API_KEY_NOT_FOUND"
+	APIKeyExpired          errors.Code = "API_KEY_EXPIRED"
+	InvalidAPIKeyScope     errors.Code = "INVALID_API_KEY_SCOPE"
+	InvalidAPIKeyID        errors.Code = "INVALID_API_KEY_ID"
 )

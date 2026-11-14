@@ -2,6 +2,7 @@ package interceptors
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"sync"
 
@@ -19,7 +20,7 @@ type MemberStoreProvider interface {
 	GetByID(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) (*space.Member, error)
 }
 
-// SpaceInterceptor validates space-scoped gRPC requests by checking user membership.
+// SpaceInterceptor validates space-scoped gRPC requests by checking user membership and API key grants.
 type SpaceInterceptor struct {
 	memberStore MemberStoreProvider
 	rules       []api.SpaceRule
@@ -58,34 +59,48 @@ func (si *SpaceInterceptor) StreamServerInterceptor() grpc.StreamServerIntercept
 
 // intercept validates space scope for the given method and updates context.
 func (si *SpaceInterceptor) intercept(ctx context.Context, fullMethod string) (context.Context, error) {
-	// Determine if this method requires space scoping
 	if !si.resolveSpacePolicy(fullMethod) {
 		return ctx, nil
 	}
 
-	// Extract Space-Id from metadata
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return ctx, status.Error(codes.InvalidArgument, "missing metadata")
-	}
-
-	spaceIDs := md["space-id"]
-	if len(spaceIDs) == 0 {
-		return ctx, status.Error(codes.InvalidArgument, "missing space-id header")
-	}
-
-	spaceIDStr := strings.TrimSpace(spaceIDs[0])
-	if spaceIDStr == "" {
-		return ctx, status.Error(codes.InvalidArgument, "empty space-id header")
-	}
-
-	// Extract user ID from principal
 	principal, ok := foundationauth.PrincipalFromContext(ctx)
 	if !ok {
 		return ctx, status.Error(codes.Unauthenticated, "missing principal")
 	}
 
-	// Validate space ID format
+	md, hasMD := metadata.FromIncomingContext(ctx)
+	var spaceIDStr string
+	if hasMD {
+		if spaceIDs := md["space-id"]; len(spaceIDs) > 0 {
+			spaceIDStr = strings.TrimSpace(spaceIDs[0])
+		}
+	}
+
+	if principal.IsAPIKey() {
+		if spaceIDStr == "" {
+			switch len(principal.GrantedSpaceIDs) {
+			case 0:
+				return ctx, status.Error(codes.PermissionDenied, "API key has no active space grants")
+			case 1:
+				spaceIDStr = principal.GrantedSpaceIDs[0]
+			default:
+				return ctx, status.Error(codes.InvalidArgument, "multiple spaces granted to this API key; provide the space-id header")
+			}
+		} else if !slices.Contains(principal.GrantedSpaceIDs, spaceIDStr) {
+			return ctx, status.Error(codes.PermissionDenied, "API key does not have access to this space")
+		}
+	} else {
+		if !hasMD {
+			return ctx, status.Error(codes.InvalidArgument, "missing metadata")
+		}
+		if len(md["space-id"]) == 0 {
+			return ctx, status.Error(codes.InvalidArgument, "missing space-id header")
+		}
+		if spaceIDStr == "" {
+			return ctx, status.Error(codes.InvalidArgument, "empty space-id header")
+		}
+	}
+
 	spaceID, err := space.ParseSpaceID(spaceIDStr)
 	if err != nil {
 		return ctx, status.Error(codes.InvalidArgument, "invalid space-id format")
@@ -93,29 +108,24 @@ func (si *SpaceInterceptor) intercept(ctx context.Context, fullMethod string) (c
 
 	userID := space.SpaceID(principal.Subject)
 
-	// Check user membership
 	member, err := si.memberStore.GetByID(ctx, spaceID, userID)
 	if err != nil {
 		return ctx, status.Error(codes.PermissionDenied, "user is not a member of this space")
 	}
 
-	// Inject space scope into context
 	return foundationauth.WithSpaceScope(ctx, string(spaceID), string(member.Role)), nil
 }
 
 // resolveSpacePolicy evaluates the space scoping rules for a given gRPC method name.
 // Returns true if space scoping is required.
 func (si *SpaceInterceptor) resolveSpacePolicy(method string) bool {
-	// Check cache first
 	if cached, ok := si.cache.Load(method); ok {
 		return cached.(bool)
 	}
 
-	// Normalize gRPC method (e.g. "/saturn.space.v1.Spaces/CreateSpace" -> "saturn.space.v1.Spaces.CreateSpace")
 	normalizedMethod := strings.TrimPrefix(method, "/")
 	normalizedMethod = strings.ReplaceAll(normalizedMethod, "/", ".")
 
-	// Iterate all rules; last matching rule wins
 	scoped := false
 	for _, rule := range si.rules {
 		if matchSelector(rule.Selector, normalizedMethod) {
@@ -123,7 +133,6 @@ func (si *SpaceInterceptor) resolveSpacePolicy(method string) bool {
 		}
 	}
 
-	// Cache the result
 	si.cache.Store(method, scoped)
 	return scoped
 }

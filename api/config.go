@@ -48,6 +48,7 @@ type AuthRule struct {
 	Selector     string   `yaml:"selector"`
 	AuthRequired bool     `yaml:"auth_required"`
 	AccessLevels []string `yaml:"access_levels,omitempty"`
+	APIKeyScopes []string `yaml:"api_key_scopes,omitempty"`
 }
 
 // SpaceRule defines the space-scoping policy for gRPC methods matching the selector.

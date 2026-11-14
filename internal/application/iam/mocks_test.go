@@ -120,6 +120,21 @@ type CoordinatorMock struct {
 	// DeleteAccountFunc mocks the DeleteAccount method.
 	DeleteAccountFunc func(ctx context.Context, req *DeleteAccountRequest) error
 
+	// CreateAPIKeyFunc mocks the CreateAPIKey method.
+	CreateAPIKeyFunc func(ctx context.Context, req *CreateAPIKeyRequest) (*identity.APIKey, error)
+
+	// GetAPIKeyFunc mocks the GetAPIKey method.
+	GetAPIKeyFunc func(ctx context.Context, req *GetAPIKeyRequest) (*identity.APIKey, error)
+
+	// ListAPIKeysFunc mocks the ListAPIKeys method.
+	ListAPIKeysFunc func(ctx context.Context, req *ListAPIKeysRequest) ([]*identity.APIKey, error)
+
+	// UpdateAPIKeyFunc mocks the UpdateAPIKey method.
+	UpdateAPIKeyFunc func(ctx context.Context, req *UpdateAPIKeyRequest) (*identity.APIKey, error)
+
+	// DeleteAPIKeyFunc mocks the DeleteAPIKey method.
+	DeleteAPIKeyFunc func(ctx context.Context, req *DeleteAPIKeyRequest) error
+
 	// calls tracks calls to the methods.
 	calls struct {
 		Authenticate []struct {
@@ -258,6 +273,26 @@ type CoordinatorMock struct {
 			Ctx context.Context
 			Req *DeleteAccountRequest
 		}
+		CreateAPIKey []struct {
+			Ctx context.Context
+			Req *CreateAPIKeyRequest
+		}
+		GetAPIKey []struct {
+			Ctx context.Context
+			Req *GetAPIKeyRequest
+		}
+		ListAPIKeys []struct {
+			Ctx context.Context
+			Req *ListAPIKeysRequest
+		}
+		UpdateAPIKey []struct {
+			Ctx context.Context
+			Req *UpdateAPIKeyRequest
+		}
+		DeleteAPIKey []struct {
+			Ctx context.Context
+			Req *DeleteAPIKeyRequest
+		}
 	}
 	lockAuthenticate          sync.RWMutex
 	lockGetAuthVersion        sync.RWMutex
@@ -293,6 +328,11 @@ type CoordinatorMock struct {
 	lockUpdateProfile         sync.RWMutex
 	lockChangeEmail           sync.RWMutex
 	lockDeleteAccount         sync.RWMutex
+	lockCreateAPIKey          sync.RWMutex
+	lockGetAPIKey             sync.RWMutex
+	lockListAPIKeys           sync.RWMutex
+	lockUpdateAPIKey          sync.RWMutex
+	lockDeleteAPIKey          sync.RWMutex
 }
 
 // Authenticate calls AuthenticateFunc.
@@ -1213,6 +1253,141 @@ func (mock *CoordinatorMock) DeleteAccountCalls() []struct {
 	return mock.calls.DeleteAccount
 }
 
+// CreateAPIKey calls CreateAPIKeyFunc.
+func (mock *CoordinatorMock) CreateAPIKey(ctx context.Context, req *CreateAPIKeyRequest) (*identity.APIKey, error) {
+	if mock.CreateAPIKeyFunc == nil {
+		panic("CoordinatorMock.CreateAPIKeyFunc: method is nil but Coordinator.CreateAPIKey was just called")
+	}
+	mock.lockCreateAPIKey.Lock()
+	mock.calls.CreateAPIKey = append(mock.calls.CreateAPIKey, struct {
+		Ctx context.Context
+		Req *CreateAPIKeyRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockCreateAPIKey.Unlock()
+	return mock.CreateAPIKeyFunc(ctx, req)
+}
+
+// CreateAPIKeyCalls returns all calls made to CreateAPIKey.
+func (mock *CoordinatorMock) CreateAPIKeyCalls() []struct {
+	Ctx context.Context
+	Req *CreateAPIKeyRequest
+} {
+	mock.lockCreateAPIKey.RLock()
+	defer mock.lockCreateAPIKey.RUnlock()
+	return mock.calls.CreateAPIKey
+}
+
+// GetAPIKey calls GetAPIKeyFunc.
+func (mock *CoordinatorMock) GetAPIKey(ctx context.Context, req *GetAPIKeyRequest) (*identity.APIKey, error) {
+	if mock.GetAPIKeyFunc == nil {
+		panic("CoordinatorMock.GetAPIKeyFunc: method is nil but Coordinator.GetAPIKey was just called")
+	}
+	mock.lockGetAPIKey.Lock()
+	mock.calls.GetAPIKey = append(mock.calls.GetAPIKey, struct {
+		Ctx context.Context
+		Req *GetAPIKeyRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockGetAPIKey.Unlock()
+	return mock.GetAPIKeyFunc(ctx, req)
+}
+
+// GetAPIKeyCalls returns all calls made to GetAPIKey.
+func (mock *CoordinatorMock) GetAPIKeyCalls() []struct {
+	Ctx context.Context
+	Req *GetAPIKeyRequest
+} {
+	mock.lockGetAPIKey.RLock()
+	defer mock.lockGetAPIKey.RUnlock()
+	return mock.calls.GetAPIKey
+}
+
+// ListAPIKeys calls ListAPIKeysFunc.
+func (mock *CoordinatorMock) ListAPIKeys(ctx context.Context, req *ListAPIKeysRequest) ([]*identity.APIKey, error) {
+	if mock.ListAPIKeysFunc == nil {
+		panic("CoordinatorMock.ListAPIKeysFunc: method is nil but Coordinator.ListAPIKeys was just called")
+	}
+	mock.lockListAPIKeys.Lock()
+	mock.calls.ListAPIKeys = append(mock.calls.ListAPIKeys, struct {
+		Ctx context.Context
+		Req *ListAPIKeysRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockListAPIKeys.Unlock()
+	return mock.ListAPIKeysFunc(ctx, req)
+}
+
+// ListAPIKeysCalls returns all calls made to ListAPIKeys.
+func (mock *CoordinatorMock) ListAPIKeysCalls() []struct {
+	Ctx context.Context
+	Req *ListAPIKeysRequest
+} {
+	mock.lockListAPIKeys.RLock()
+	defer mock.lockListAPIKeys.RUnlock()
+	return mock.calls.ListAPIKeys
+}
+
+// UpdateAPIKey calls UpdateAPIKeyFunc.
+func (mock *CoordinatorMock) UpdateAPIKey(ctx context.Context, req *UpdateAPIKeyRequest) (*identity.APIKey, error) {
+	if mock.UpdateAPIKeyFunc == nil {
+		panic("CoordinatorMock.UpdateAPIKeyFunc: method is nil but Coordinator.UpdateAPIKey was just called")
+	}
+	mock.lockUpdateAPIKey.Lock()
+	mock.calls.UpdateAPIKey = append(mock.calls.UpdateAPIKey, struct {
+		Ctx context.Context
+		Req *UpdateAPIKeyRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockUpdateAPIKey.Unlock()
+	return mock.UpdateAPIKeyFunc(ctx, req)
+}
+
+// UpdateAPIKeyCalls returns all calls made to UpdateAPIKey.
+func (mock *CoordinatorMock) UpdateAPIKeyCalls() []struct {
+	Ctx context.Context
+	Req *UpdateAPIKeyRequest
+} {
+	mock.lockUpdateAPIKey.RLock()
+	defer mock.lockUpdateAPIKey.RUnlock()
+	return mock.calls.UpdateAPIKey
+}
+
+// DeleteAPIKey calls DeleteAPIKeyFunc.
+func (mock *CoordinatorMock) DeleteAPIKey(ctx context.Context, req *DeleteAPIKeyRequest) error {
+	if mock.DeleteAPIKeyFunc == nil {
+		panic("CoordinatorMock.DeleteAPIKeyFunc: method is nil but Coordinator.DeleteAPIKey was just called")
+	}
+	mock.lockDeleteAPIKey.Lock()
+	mock.calls.DeleteAPIKey = append(mock.calls.DeleteAPIKey, struct {
+		Ctx context.Context
+		Req *DeleteAPIKeyRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockDeleteAPIKey.Unlock()
+	return mock.DeleteAPIKeyFunc(ctx, req)
+}
+
+// DeleteAPIKeyCalls returns all calls made to DeleteAPIKey.
+func (mock *CoordinatorMock) DeleteAPIKeyCalls() []struct {
+	Ctx context.Context
+	Req *DeleteAPIKeyRequest
+} {
+	mock.lockDeleteAPIKey.RLock()
+	defer mock.lockDeleteAPIKey.RUnlock()
+	return mock.calls.DeleteAPIKey
+}
+
 // Compile-time interface assertion.
 var _ PasswordHasher = (*PasswordHasherMock)(nil)
 
@@ -1653,6 +1828,21 @@ type IdentityServiceMock struct {
 	// DeleteAccountFunc mocks the DeleteAccount method.
 	DeleteAccountFunc func(ctx context.Context, params identity.DeleteAccountParams) error
 
+	// CreateAPIKeyFunc mocks the CreateAPIKey method.
+	CreateAPIKeyFunc func(ctx context.Context, params identity.CreateAPIKeyParams) (*identity.APIKey, error)
+
+	// GetAPIKeyFunc mocks the GetAPIKey method.
+	GetAPIKeyFunc func(ctx context.Context, userID identity.UserID, id identity.APIKeyID) (*identity.APIKey, error)
+
+	// ListAPIKeysFunc mocks the ListAPIKeys method.
+	ListAPIKeysFunc func(ctx context.Context, userID identity.UserID) ([]*identity.APIKey, error)
+
+	// UpdateAPIKeyFunc mocks the UpdateAPIKey method.
+	UpdateAPIKeyFunc func(ctx context.Context, params identity.UpdateAPIKeyParams) (*identity.APIKey, error)
+
+	// DeleteAPIKeyFunc mocks the DeleteAPIKey method.
+	DeleteAPIKeyFunc func(ctx context.Context, params identity.DeleteAPIKeyParams) error
+
 	// calls tracks calls to the methods.
 	calls struct {
 		CreateUser []struct {
@@ -1839,6 +2029,27 @@ type IdentityServiceMock struct {
 			Ctx    context.Context
 			Params identity.DeleteAccountParams
 		}
+		CreateAPIKey []struct {
+			Ctx    context.Context
+			Params identity.CreateAPIKeyParams
+		}
+		GetAPIKey []struct {
+			Ctx    context.Context
+			UserID identity.UserID
+			Id     identity.APIKeyID
+		}
+		ListAPIKeys []struct {
+			Ctx    context.Context
+			UserID identity.UserID
+		}
+		UpdateAPIKey []struct {
+			Ctx    context.Context
+			Params identity.UpdateAPIKeyParams
+		}
+		DeleteAPIKey []struct {
+			Ctx    context.Context
+			Params identity.DeleteAPIKeyParams
+		}
 	}
 	lockCreateUser                       sync.RWMutex
 	lockCreateCredential                 sync.RWMutex
@@ -1885,6 +2096,11 @@ type IdentityServiceMock struct {
 	lockUpdateProfile                    sync.RWMutex
 	lockChangeEmail                      sync.RWMutex
 	lockDeleteAccount                    sync.RWMutex
+	lockCreateAPIKey                     sync.RWMutex
+	lockGetAPIKey                        sync.RWMutex
+	lockListAPIKeys                      sync.RWMutex
+	lockUpdateAPIKey                     sync.RWMutex
+	lockDeleteAPIKey                     sync.RWMutex
 }
 
 // CreateUser calls CreateUserFunc.
@@ -3114,6 +3330,144 @@ func (mock *IdentityServiceMock) DeleteAccountCalls() []struct {
 	return mock.calls.DeleteAccount
 }
 
+// CreateAPIKey calls CreateAPIKeyFunc.
+func (mock *IdentityServiceMock) CreateAPIKey(ctx context.Context, params identity.CreateAPIKeyParams) (*identity.APIKey, error) {
+	if mock.CreateAPIKeyFunc == nil {
+		panic("IdentityServiceMock.CreateAPIKeyFunc: method is nil but IdentityService.CreateAPIKey was just called")
+	}
+	mock.lockCreateAPIKey.Lock()
+	mock.calls.CreateAPIKey = append(mock.calls.CreateAPIKey, struct {
+		Ctx    context.Context
+		Params identity.CreateAPIKeyParams
+	}{
+		Ctx:    ctx,
+		Params: params,
+	})
+	mock.lockCreateAPIKey.Unlock()
+	return mock.CreateAPIKeyFunc(ctx, params)
+}
+
+// CreateAPIKeyCalls returns all calls made to CreateAPIKey.
+func (mock *IdentityServiceMock) CreateAPIKeyCalls() []struct {
+	Ctx    context.Context
+	Params identity.CreateAPIKeyParams
+} {
+	mock.lockCreateAPIKey.RLock()
+	defer mock.lockCreateAPIKey.RUnlock()
+	return mock.calls.CreateAPIKey
+}
+
+// GetAPIKey calls GetAPIKeyFunc.
+func (mock *IdentityServiceMock) GetAPIKey(ctx context.Context, userID identity.UserID, id identity.APIKeyID) (*identity.APIKey, error) {
+	if mock.GetAPIKeyFunc == nil {
+		panic("IdentityServiceMock.GetAPIKeyFunc: method is nil but IdentityService.GetAPIKey was just called")
+	}
+	mock.lockGetAPIKey.Lock()
+	mock.calls.GetAPIKey = append(mock.calls.GetAPIKey, struct {
+		Ctx    context.Context
+		UserID identity.UserID
+		Id     identity.APIKeyID
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+		Id:     id,
+	})
+	mock.lockGetAPIKey.Unlock()
+	return mock.GetAPIKeyFunc(ctx, userID, id)
+}
+
+// GetAPIKeyCalls returns all calls made to GetAPIKey.
+func (mock *IdentityServiceMock) GetAPIKeyCalls() []struct {
+	Ctx    context.Context
+	UserID identity.UserID
+	Id     identity.APIKeyID
+} {
+	mock.lockGetAPIKey.RLock()
+	defer mock.lockGetAPIKey.RUnlock()
+	return mock.calls.GetAPIKey
+}
+
+// ListAPIKeys calls ListAPIKeysFunc.
+func (mock *IdentityServiceMock) ListAPIKeys(ctx context.Context, userID identity.UserID) ([]*identity.APIKey, error) {
+	if mock.ListAPIKeysFunc == nil {
+		panic("IdentityServiceMock.ListAPIKeysFunc: method is nil but IdentityService.ListAPIKeys was just called")
+	}
+	mock.lockListAPIKeys.Lock()
+	mock.calls.ListAPIKeys = append(mock.calls.ListAPIKeys, struct {
+		Ctx    context.Context
+		UserID identity.UserID
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+	})
+	mock.lockListAPIKeys.Unlock()
+	return mock.ListAPIKeysFunc(ctx, userID)
+}
+
+// ListAPIKeysCalls returns all calls made to ListAPIKeys.
+func (mock *IdentityServiceMock) ListAPIKeysCalls() []struct {
+	Ctx    context.Context
+	UserID identity.UserID
+} {
+	mock.lockListAPIKeys.RLock()
+	defer mock.lockListAPIKeys.RUnlock()
+	return mock.calls.ListAPIKeys
+}
+
+// UpdateAPIKey calls UpdateAPIKeyFunc.
+func (mock *IdentityServiceMock) UpdateAPIKey(ctx context.Context, params identity.UpdateAPIKeyParams) (*identity.APIKey, error) {
+	if mock.UpdateAPIKeyFunc == nil {
+		panic("IdentityServiceMock.UpdateAPIKeyFunc: method is nil but IdentityService.UpdateAPIKey was just called")
+	}
+	mock.lockUpdateAPIKey.Lock()
+	mock.calls.UpdateAPIKey = append(mock.calls.UpdateAPIKey, struct {
+		Ctx    context.Context
+		Params identity.UpdateAPIKeyParams
+	}{
+		Ctx:    ctx,
+		Params: params,
+	})
+	mock.lockUpdateAPIKey.Unlock()
+	return mock.UpdateAPIKeyFunc(ctx, params)
+}
+
+// UpdateAPIKeyCalls returns all calls made to UpdateAPIKey.
+func (mock *IdentityServiceMock) UpdateAPIKeyCalls() []struct {
+	Ctx    context.Context
+	Params identity.UpdateAPIKeyParams
+} {
+	mock.lockUpdateAPIKey.RLock()
+	defer mock.lockUpdateAPIKey.RUnlock()
+	return mock.calls.UpdateAPIKey
+}
+
+// DeleteAPIKey calls DeleteAPIKeyFunc.
+func (mock *IdentityServiceMock) DeleteAPIKey(ctx context.Context, params identity.DeleteAPIKeyParams) error {
+	if mock.DeleteAPIKeyFunc == nil {
+		panic("IdentityServiceMock.DeleteAPIKeyFunc: method is nil but IdentityService.DeleteAPIKey was just called")
+	}
+	mock.lockDeleteAPIKey.Lock()
+	mock.calls.DeleteAPIKey = append(mock.calls.DeleteAPIKey, struct {
+		Ctx    context.Context
+		Params identity.DeleteAPIKeyParams
+	}{
+		Ctx:    ctx,
+		Params: params,
+	})
+	mock.lockDeleteAPIKey.Unlock()
+	return mock.DeleteAPIKeyFunc(ctx, params)
+}
+
+// DeleteAPIKeyCalls returns all calls made to DeleteAPIKey.
+func (mock *IdentityServiceMock) DeleteAPIKeyCalls() []struct {
+	Ctx    context.Context
+	Params identity.DeleteAPIKeyParams
+} {
+	mock.lockDeleteAPIKey.RLock()
+	defer mock.lockDeleteAPIKey.RUnlock()
+	return mock.calls.DeleteAPIKey
+}
+
 // Compile-time interface assertion.
 var _ SpaceService = (*SpaceServiceMock)(nil)
 
@@ -3122,14 +3476,40 @@ type SpaceServiceMock struct {
 	// CreateSpaceFunc mocks the CreateSpace method.
 	CreateSpaceFunc func(ctx context.Context, sp *space.Space) (*space.Space, error)
 
+	// SyncAPIKeyGrantsFunc mocks the SyncAPIKeyGrants method.
+	SyncAPIKeyGrantsFunc func(ctx context.Context, apiKeyID string, userID space.SpaceID, spaceIDs []space.SpaceID) error
+
+	// ListAPIKeyGrantedSpacesFunc mocks the ListAPIKeyGrantedSpaces method.
+	ListAPIKeyGrantedSpacesFunc func(ctx context.Context, apiKeyID string) ([]space.SpaceID, error)
+
+	// ListAPIKeysGrantedSpacesFunc mocks the ListAPIKeysGrantedSpaces method.
+	ListAPIKeysGrantedSpacesFunc func(ctx context.Context, apiKeyIDs []string) (map[string][]space.SpaceID, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		CreateSpace []struct {
 			Ctx context.Context
 			Sp  *space.Space
 		}
+		SyncAPIKeyGrants []struct {
+			Ctx      context.Context
+			ApiKeyID string
+			UserID   space.SpaceID
+			SpaceIDs []space.SpaceID
+		}
+		ListAPIKeyGrantedSpaces []struct {
+			Ctx      context.Context
+			ApiKeyID string
+		}
+		ListAPIKeysGrantedSpaces []struct {
+			Ctx       context.Context
+			ApiKeyIDs []string
+		}
 	}
-	lockCreateSpace sync.RWMutex
+	lockCreateSpace              sync.RWMutex
+	lockSyncAPIKeyGrants         sync.RWMutex
+	lockListAPIKeyGrantedSpaces  sync.RWMutex
+	lockListAPIKeysGrantedSpaces sync.RWMutex
 }
 
 // CreateSpace calls CreateSpaceFunc.
@@ -3157,4 +3537,91 @@ func (mock *SpaceServiceMock) CreateSpaceCalls() []struct {
 	mock.lockCreateSpace.RLock()
 	defer mock.lockCreateSpace.RUnlock()
 	return mock.calls.CreateSpace
+}
+
+// SyncAPIKeyGrants calls SyncAPIKeyGrantsFunc.
+func (mock *SpaceServiceMock) SyncAPIKeyGrants(ctx context.Context, apiKeyID string, userID space.SpaceID, spaceIDs []space.SpaceID) error {
+	if mock.SyncAPIKeyGrantsFunc == nil {
+		panic("SpaceServiceMock.SyncAPIKeyGrantsFunc: method is nil but SpaceService.SyncAPIKeyGrants was just called")
+	}
+	mock.lockSyncAPIKeyGrants.Lock()
+	mock.calls.SyncAPIKeyGrants = append(mock.calls.SyncAPIKeyGrants, struct {
+		Ctx      context.Context
+		ApiKeyID string
+		UserID   space.SpaceID
+		SpaceIDs []space.SpaceID
+	}{
+		Ctx:      ctx,
+		ApiKeyID: apiKeyID,
+		UserID:   userID,
+		SpaceIDs: spaceIDs,
+	})
+	mock.lockSyncAPIKeyGrants.Unlock()
+	return mock.SyncAPIKeyGrantsFunc(ctx, apiKeyID, userID, spaceIDs)
+}
+
+// SyncAPIKeyGrantsCalls returns all calls made to SyncAPIKeyGrants.
+func (mock *SpaceServiceMock) SyncAPIKeyGrantsCalls() []struct {
+	Ctx      context.Context
+	ApiKeyID string
+	UserID   space.SpaceID
+	SpaceIDs []space.SpaceID
+} {
+	mock.lockSyncAPIKeyGrants.RLock()
+	defer mock.lockSyncAPIKeyGrants.RUnlock()
+	return mock.calls.SyncAPIKeyGrants
+}
+
+// ListAPIKeyGrantedSpaces calls ListAPIKeyGrantedSpacesFunc.
+func (mock *SpaceServiceMock) ListAPIKeyGrantedSpaces(ctx context.Context, apiKeyID string) ([]space.SpaceID, error) {
+	if mock.ListAPIKeyGrantedSpacesFunc == nil {
+		panic("SpaceServiceMock.ListAPIKeyGrantedSpacesFunc: method is nil but SpaceService.ListAPIKeyGrantedSpaces was just called")
+	}
+	mock.lockListAPIKeyGrantedSpaces.Lock()
+	mock.calls.ListAPIKeyGrantedSpaces = append(mock.calls.ListAPIKeyGrantedSpaces, struct {
+		Ctx      context.Context
+		ApiKeyID string
+	}{
+		Ctx:      ctx,
+		ApiKeyID: apiKeyID,
+	})
+	mock.lockListAPIKeyGrantedSpaces.Unlock()
+	return mock.ListAPIKeyGrantedSpacesFunc(ctx, apiKeyID)
+}
+
+// ListAPIKeyGrantedSpacesCalls returns all calls made to ListAPIKeyGrantedSpaces.
+func (mock *SpaceServiceMock) ListAPIKeyGrantedSpacesCalls() []struct {
+	Ctx      context.Context
+	ApiKeyID string
+} {
+	mock.lockListAPIKeyGrantedSpaces.RLock()
+	defer mock.lockListAPIKeyGrantedSpaces.RUnlock()
+	return mock.calls.ListAPIKeyGrantedSpaces
+}
+
+// ListAPIKeysGrantedSpaces calls ListAPIKeysGrantedSpacesFunc.
+func (mock *SpaceServiceMock) ListAPIKeysGrantedSpaces(ctx context.Context, apiKeyIDs []string) (map[string][]space.SpaceID, error) {
+	if mock.ListAPIKeysGrantedSpacesFunc == nil {
+		panic("SpaceServiceMock.ListAPIKeysGrantedSpacesFunc: method is nil but SpaceService.ListAPIKeysGrantedSpaces was just called")
+	}
+	mock.lockListAPIKeysGrantedSpaces.Lock()
+	mock.calls.ListAPIKeysGrantedSpaces = append(mock.calls.ListAPIKeysGrantedSpaces, struct {
+		Ctx       context.Context
+		ApiKeyIDs []string
+	}{
+		Ctx:       ctx,
+		ApiKeyIDs: apiKeyIDs,
+	})
+	mock.lockListAPIKeysGrantedSpaces.Unlock()
+	return mock.ListAPIKeysGrantedSpacesFunc(ctx, apiKeyIDs)
+}
+
+// ListAPIKeysGrantedSpacesCalls returns all calls made to ListAPIKeysGrantedSpaces.
+func (mock *SpaceServiceMock) ListAPIKeysGrantedSpacesCalls() []struct {
+	Ctx       context.Context
+	ApiKeyIDs []string
+} {
+	mock.lockListAPIKeysGrantedSpaces.RLock()
+	defer mock.lockListAPIKeysGrantedSpaces.RUnlock()
+	return mock.calls.ListAPIKeysGrantedSpaces
 }

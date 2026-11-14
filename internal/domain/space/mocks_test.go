@@ -627,3 +627,231 @@ func (mock *MemberStoreMock) ExistsCalls() []struct {
 	defer mock.lockExists.RUnlock()
 	return mock.calls.Exists
 }
+
+// Compile-time interface assertion.
+var _ APIKeyGrantStore = (*APIKeyGrantStoreMock)(nil)
+
+// APIKeyGrantStoreMock is a mock implementation of APIKeyGrantStore.
+type APIKeyGrantStoreMock struct {
+	// UpsertGrantsFunc mocks the UpsertGrants method.
+	UpsertGrantsFunc func(ctx context.Context, grants []*APIKeyGrant) error
+
+	// DeleteGrantsForKeyExceptFunc mocks the DeleteGrantsForKeyExcept method.
+	DeleteGrantsForKeyExceptFunc func(ctx context.Context, apiKeyID string, keepSpaceIDs []SpaceID) error
+
+	// DeleteGrantFunc mocks the DeleteGrant method.
+	DeleteGrantFunc func(ctx context.Context, apiKeyID string, spaceID SpaceID) error
+
+	// ListBySpaceIDFunc mocks the ListBySpaceID method.
+	ListBySpaceIDFunc func(ctx context.Context, spaceID SpaceID) ([]*APIKeyGrant, error)
+
+	// ListSpaceIDsByAPIKeyIDFunc mocks the ListSpaceIDsByAPIKeyID method.
+	ListSpaceIDsByAPIKeyIDFunc func(ctx context.Context, apiKeyID string) ([]SpaceID, error)
+
+	// ListSpaceIDsByAPIKeyIDsFunc mocks the ListSpaceIDsByAPIKeyIDs method.
+	ListSpaceIDsByAPIKeyIDsFunc func(ctx context.Context, apiKeyIDs []string) (map[string][]SpaceID, error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		UpsertGrants []struct {
+			Ctx    context.Context
+			Grants []*APIKeyGrant
+		}
+		DeleteGrantsForKeyExcept []struct {
+			Ctx          context.Context
+			ApiKeyID     string
+			KeepSpaceIDs []SpaceID
+		}
+		DeleteGrant []struct {
+			Ctx      context.Context
+			ApiKeyID string
+			SpaceID  SpaceID
+		}
+		ListBySpaceID []struct {
+			Ctx     context.Context
+			SpaceID SpaceID
+		}
+		ListSpaceIDsByAPIKeyID []struct {
+			Ctx      context.Context
+			ApiKeyID string
+		}
+		ListSpaceIDsByAPIKeyIDs []struct {
+			Ctx       context.Context
+			ApiKeyIDs []string
+		}
+	}
+	lockUpsertGrants             sync.RWMutex
+	lockDeleteGrantsForKeyExcept sync.RWMutex
+	lockDeleteGrant              sync.RWMutex
+	lockListBySpaceID            sync.RWMutex
+	lockListSpaceIDsByAPIKeyID   sync.RWMutex
+	lockListSpaceIDsByAPIKeyIDs  sync.RWMutex
+}
+
+// UpsertGrants calls UpsertGrantsFunc.
+func (mock *APIKeyGrantStoreMock) UpsertGrants(ctx context.Context, grants []*APIKeyGrant) error {
+	if mock.UpsertGrantsFunc == nil {
+		panic("APIKeyGrantStoreMock.UpsertGrantsFunc: method is nil but APIKeyGrantStore.UpsertGrants was just called")
+	}
+	mock.lockUpsertGrants.Lock()
+	mock.calls.UpsertGrants = append(mock.calls.UpsertGrants, struct {
+		Ctx    context.Context
+		Grants []*APIKeyGrant
+	}{
+		Ctx:    ctx,
+		Grants: grants,
+	})
+	mock.lockUpsertGrants.Unlock()
+	return mock.UpsertGrantsFunc(ctx, grants)
+}
+
+// UpsertGrantsCalls returns all calls made to UpsertGrants.
+func (mock *APIKeyGrantStoreMock) UpsertGrantsCalls() []struct {
+	Ctx    context.Context
+	Grants []*APIKeyGrant
+} {
+	mock.lockUpsertGrants.RLock()
+	defer mock.lockUpsertGrants.RUnlock()
+	return mock.calls.UpsertGrants
+}
+
+// DeleteGrantsForKeyExcept calls DeleteGrantsForKeyExceptFunc.
+func (mock *APIKeyGrantStoreMock) DeleteGrantsForKeyExcept(ctx context.Context, apiKeyID string, keepSpaceIDs []SpaceID) error {
+	if mock.DeleteGrantsForKeyExceptFunc == nil {
+		panic("APIKeyGrantStoreMock.DeleteGrantsForKeyExceptFunc: method is nil but APIKeyGrantStore.DeleteGrantsForKeyExcept was just called")
+	}
+	mock.lockDeleteGrantsForKeyExcept.Lock()
+	mock.calls.DeleteGrantsForKeyExcept = append(mock.calls.DeleteGrantsForKeyExcept, struct {
+		Ctx          context.Context
+		ApiKeyID     string
+		KeepSpaceIDs []SpaceID
+	}{
+		Ctx:          ctx,
+		ApiKeyID:     apiKeyID,
+		KeepSpaceIDs: keepSpaceIDs,
+	})
+	mock.lockDeleteGrantsForKeyExcept.Unlock()
+	return mock.DeleteGrantsForKeyExceptFunc(ctx, apiKeyID, keepSpaceIDs)
+}
+
+// DeleteGrantsForKeyExceptCalls returns all calls made to DeleteGrantsForKeyExcept.
+func (mock *APIKeyGrantStoreMock) DeleteGrantsForKeyExceptCalls() []struct {
+	Ctx          context.Context
+	ApiKeyID     string
+	KeepSpaceIDs []SpaceID
+} {
+	mock.lockDeleteGrantsForKeyExcept.RLock()
+	defer mock.lockDeleteGrantsForKeyExcept.RUnlock()
+	return mock.calls.DeleteGrantsForKeyExcept
+}
+
+// DeleteGrant calls DeleteGrantFunc.
+func (mock *APIKeyGrantStoreMock) DeleteGrant(ctx context.Context, apiKeyID string, spaceID SpaceID) error {
+	if mock.DeleteGrantFunc == nil {
+		panic("APIKeyGrantStoreMock.DeleteGrantFunc: method is nil but APIKeyGrantStore.DeleteGrant was just called")
+	}
+	mock.lockDeleteGrant.Lock()
+	mock.calls.DeleteGrant = append(mock.calls.DeleteGrant, struct {
+		Ctx      context.Context
+		ApiKeyID string
+		SpaceID  SpaceID
+	}{
+		Ctx:      ctx,
+		ApiKeyID: apiKeyID,
+		SpaceID:  spaceID,
+	})
+	mock.lockDeleteGrant.Unlock()
+	return mock.DeleteGrantFunc(ctx, apiKeyID, spaceID)
+}
+
+// DeleteGrantCalls returns all calls made to DeleteGrant.
+func (mock *APIKeyGrantStoreMock) DeleteGrantCalls() []struct {
+	Ctx      context.Context
+	ApiKeyID string
+	SpaceID  SpaceID
+} {
+	mock.lockDeleteGrant.RLock()
+	defer mock.lockDeleteGrant.RUnlock()
+	return mock.calls.DeleteGrant
+}
+
+// ListBySpaceID calls ListBySpaceIDFunc.
+func (mock *APIKeyGrantStoreMock) ListBySpaceID(ctx context.Context, spaceID SpaceID) ([]*APIKeyGrant, error) {
+	if mock.ListBySpaceIDFunc == nil {
+		panic("APIKeyGrantStoreMock.ListBySpaceIDFunc: method is nil but APIKeyGrantStore.ListBySpaceID was just called")
+	}
+	mock.lockListBySpaceID.Lock()
+	mock.calls.ListBySpaceID = append(mock.calls.ListBySpaceID, struct {
+		Ctx     context.Context
+		SpaceID SpaceID
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+	})
+	mock.lockListBySpaceID.Unlock()
+	return mock.ListBySpaceIDFunc(ctx, spaceID)
+}
+
+// ListBySpaceIDCalls returns all calls made to ListBySpaceID.
+func (mock *APIKeyGrantStoreMock) ListBySpaceIDCalls() []struct {
+	Ctx     context.Context
+	SpaceID SpaceID
+} {
+	mock.lockListBySpaceID.RLock()
+	defer mock.lockListBySpaceID.RUnlock()
+	return mock.calls.ListBySpaceID
+}
+
+// ListSpaceIDsByAPIKeyID calls ListSpaceIDsByAPIKeyIDFunc.
+func (mock *APIKeyGrantStoreMock) ListSpaceIDsByAPIKeyID(ctx context.Context, apiKeyID string) ([]SpaceID, error) {
+	if mock.ListSpaceIDsByAPIKeyIDFunc == nil {
+		panic("APIKeyGrantStoreMock.ListSpaceIDsByAPIKeyIDFunc: method is nil but APIKeyGrantStore.ListSpaceIDsByAPIKeyID was just called")
+	}
+	mock.lockListSpaceIDsByAPIKeyID.Lock()
+	mock.calls.ListSpaceIDsByAPIKeyID = append(mock.calls.ListSpaceIDsByAPIKeyID, struct {
+		Ctx      context.Context
+		ApiKeyID string
+	}{
+		Ctx:      ctx,
+		ApiKeyID: apiKeyID,
+	})
+	mock.lockListSpaceIDsByAPIKeyID.Unlock()
+	return mock.ListSpaceIDsByAPIKeyIDFunc(ctx, apiKeyID)
+}
+
+// ListSpaceIDsByAPIKeyIDCalls returns all calls made to ListSpaceIDsByAPIKeyID.
+func (mock *APIKeyGrantStoreMock) ListSpaceIDsByAPIKeyIDCalls() []struct {
+	Ctx      context.Context
+	ApiKeyID string
+} {
+	mock.lockListSpaceIDsByAPIKeyID.RLock()
+	defer mock.lockListSpaceIDsByAPIKeyID.RUnlock()
+	return mock.calls.ListSpaceIDsByAPIKeyID
+}
+
+// ListSpaceIDsByAPIKeyIDs calls ListSpaceIDsByAPIKeyIDsFunc.
+func (mock *APIKeyGrantStoreMock) ListSpaceIDsByAPIKeyIDs(ctx context.Context, apiKeyIDs []string) (map[string][]SpaceID, error) {
+	if mock.ListSpaceIDsByAPIKeyIDsFunc == nil {
+		panic("APIKeyGrantStoreMock.ListSpaceIDsByAPIKeyIDsFunc: method is nil but APIKeyGrantStore.ListSpaceIDsByAPIKeyIDs was just called")
+	}
+	mock.lockListSpaceIDsByAPIKeyIDs.Lock()
+	mock.calls.ListSpaceIDsByAPIKeyIDs = append(mock.calls.ListSpaceIDsByAPIKeyIDs, struct {
+		Ctx       context.Context
+		ApiKeyIDs []string
+	}{
+		Ctx:       ctx,
+		ApiKeyIDs: apiKeyIDs,
+	})
+	mock.lockListSpaceIDsByAPIKeyIDs.Unlock()
+	return mock.ListSpaceIDsByAPIKeyIDsFunc(ctx, apiKeyIDs)
+}
+
+// ListSpaceIDsByAPIKeyIDsCalls returns all calls made to ListSpaceIDsByAPIKeyIDs.
+func (mock *APIKeyGrantStoreMock) ListSpaceIDsByAPIKeyIDsCalls() []struct {
+	Ctx       context.Context
+	ApiKeyIDs []string
+} {
+	mock.lockListSpaceIDsByAPIKeyIDs.RLock()
+	defer mock.lockListSpaceIDsByAPIKeyIDs.RUnlock()
+	return mock.calls.ListSpaceIDsByAPIKeyIDs
+}

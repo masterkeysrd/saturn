@@ -6,6 +6,7 @@ import "google/api/annotations.proto";
 import "google/api/client.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1";
@@ -201,6 +202,41 @@ service Identity {
       post: "/v1/identity/users/me:delete"
       body: "*"
     };
+  }
+
+  // Authenticated RPC: Creates a new fine-grained personal API key bound to one or more spaces.
+  rpc CreateAPIKey(CreateAPIKeyRequest) returns (APIKey) {
+    option (google.api.http) = {
+      post: "/v1/identity/api-keys"
+      body: "api_key"
+    };
+    option (google.api.method_signature) = "api_key";
+  }
+
+  // Authenticated RPC: Retrieves metadata for a personal API key owned by the caller.
+  rpc GetAPIKey(GetAPIKeyRequest) returns (APIKey) {
+    option (google.api.http) = {get: "/v1/identity/api-keys/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Authenticated RPC: Lists all personal API keys owned by the caller.
+  rpc ListAPIKeys(ListAPIKeysRequest) returns (ListAPIKeysResponse) {
+    option (google.api.http) = {get: "/v1/identity/api-keys"};
+  }
+
+  // Authenticated RPC: Updates metadata, scopes, or space grants for a personal API key.
+  rpc UpdateAPIKey(UpdateAPIKeyRequest) returns (APIKey) {
+    option (google.api.http) = {
+      patch: "/v1/identity/api-keys/{id}"
+      body: "api_key"
+    };
+    option (google.api.method_signature) = "id,api_key,update_mask";
+  }
+
+  // Authenticated RPC: Permanently deletes a personal API key and revokes all of its space grants.
+  rpc DeleteAPIKey(DeleteAPIKeyRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/identity/api-keys/{id}"};
+    option (google.api.method_signature) = "id";
   }
 }
 
@@ -716,4 +752,79 @@ message DeleteAccountRequest {
 
   // Optional/Conditional. Current 6-digit TOTP code (required if MFA is enabled).
   string totp_code = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// APIKey represents a user-owned fine-grained personal access token bound to one or more workspaces.
+message APIKey {
+  // Output only. The unique identifier of the API key formatted as `apk_<ksuid>`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. User-assigned display name for the API key.
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. User-provided description explaining the purpose of this key.
+  string description = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. First 12 characters of the raw token (e.g., `sat_9xQ4kL2m`) for UI identification.
+  string key_prefix = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Full raw secret token (`sat_...`). Populated only once in CreateAPIKey response.
+  string raw_key = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Declarative permission scopes granted to this key (e.g., `finance:read`).
+  repeated string scopes = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. List of workspace IDs (`spc_...`) where this key is authorized.
+  repeated string space_ids = 7 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Timestamp after which the API key automatically expires.
+  optional google.protobuf.Timestamp expires_at = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Timestamp when the API key was last used to authenticate a request.
+  google.protobuf.Timestamp last_used_at = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the API key was created.
+  google.protobuf.Timestamp create_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the API key was last updated.
+  google.protobuf.Timestamp update_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Identity.CreateAPIKey.
+message CreateAPIKeyRequest {
+  // Required. The API key resource to create.
+  APIKey api_key = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Identity.GetAPIKey.
+message GetAPIKeyRequest {
+  // Required. The unique identifier of the API key (`apk_...`).
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Identity.ListAPIKeys.
+message ListAPIKeysRequest {}
+
+// Response message for Identity.ListAPIKeys.
+message ListAPIKeysResponse {
+  // Output only. List of personal API keys owned by the authenticated user.
+  repeated APIKey api_keys = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Identity.UpdateAPIKey.
+message UpdateAPIKeyRequest {
+  // Required. The unique identifier of the API key (`apk_...`) to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. API key fields containing updated values.
+  APIKey api_key = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Field mask specifying which fields (`name`, `description`, `scopes`, `space_ids`) to update.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Identity.DeleteAPIKey.
+message DeleteAPIKeyRequest {
+  // Required. The unique identifier of the API key (`apk_...`) to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
 }

@@ -32,6 +32,7 @@ import {
   Check,
   X,
   Link2,
+  KeyRound,
 } from "lucide-react-native"
 import {
   useListActiveSessionsQuery,
@@ -460,7 +461,7 @@ export default function SettingsScreen() {
             )}
 
             <TouchableOpacity
-              style={styles.menuItem}
+              style={[styles.menuItem, styles.menuItemBorder]}
               activeOpacity={0.7}
               onPress={() => router.push("/(app)/settings/security")}
             >
@@ -474,6 +475,23 @@ export default function SettingsScreen() {
                   size="sm"
                   label={`${sessionCount} ${sessionCount === 1 ? "device" : "devices"}`}
                 />
+                <ChevronRight size={16} color={theme.colors.textMuted} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => {
+                haptics.light()
+                router.push("/(app)/settings/api-keys")
+              }}
+            >
+              <View style={styles.menuLeft}>
+                <KeyRound size={18} color={theme.colors.primary} />
+                <Text style={styles.menuLabel}>Personal API Keys</Text>
+              </View>
+              <View style={styles.menuRight}>
                 <ChevronRight size={16} color={theme.colors.textMuted} />
               </View>
             </TouchableOpacity>

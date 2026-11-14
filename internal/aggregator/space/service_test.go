@@ -8,6 +8,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
@@ -238,4 +239,96 @@ func TestListSpaceMembers(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 	})
+}
+
+func TestService_ListSpaces_APIKeyFiltering(t *testing.T) {
+	ctx := auth.WithPrincipal(context.Background(), auth.Principal{
+		Subject:         "usr_1",
+		APIKeyID:        "apk_1",
+		Scopes:          []string{"spaces:read"},
+		GrantedSpaceIDs: []string{"spc_2"},
+	})
+
+	mockSpace := &SpaceServiceMock{
+		ListSpacesFunc: func(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
+			return &paging.Page[*space.Space]{
+				Items: []*space.Space{
+					{ID: "spc_1", Name: "Space 1"},
+					{ID: "spc_2", Name: "Space 2"},
+					{ID: "spc_3", Name: "Space 3"},
+				},
+			}, nil
+		},
+		GetSpaceFunc: func(ctx context.Context, session space.Session) (*space.Space, error) {
+			return &space.Space{ID: session.SpaceID}, nil
+		},
+	}
+
+	svc := NewService(mockSpace, nil)
+	page, err := svc.ListSpaces(ctx, "usr_1", &space.ListSpacesFilter{})
+	if err != nil {
+		t.Fatalf("ListSpaces failed: %v", err)
+	}
+	if len(page.Items) != 1 || page.Items[0].ID != "spc_2" {
+		t.Errorf("expected only spc_2, got %+v", page.Items)
+	}
+
+	if _, err := svc.GetSpace(ctx, "spc_1", "usr_1"); err == nil {
+		t.Error("expected GetSpace to reject ungranted space spc_1 for API key")
+	}
+	if _, err := svc.GetSpace(ctx, "spc_2", "usr_1"); err != nil {
+		t.Errorf("expected GetSpace to allow granted space spc_2, got %v", err)
+	}
+}
+
+func TestService_ListSpaceAPIKeyGrants(t *testing.T) {
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	mockSpace := &SpaceServiceMock{
+		ListSpaceAPIKeyGrantsFunc: func(ctx context.Context, session space.Session) ([]*space.APIKeyGrant, error) {
+			return []*space.APIKeyGrant{
+				{
+					APIKeyID:   "apk_1",
+					SpaceID:    session.SpaceID,
+					UserID:     "usr_owner",
+					CreateTime: now,
+				},
+			}, nil
+		},
+	}
+	mockIdentity := &IdentityServiceMock{
+		ListAPIKeysByIDsFunc: func(ctx context.Context, ids []identity.APIKeyID) ([]*identity.APIKey, error) {
+			return []*identity.APIKey{
+				{
+					ID:        "apk_1",
+					UserID:    "usr_owner",
+					Name:      "Webhook Token",
+					KeyPrefix: "sat_abc12345",
+					Scopes:    []string{"finance:write"},
+					SpaceIDs:  []string{"spc_1", "spc_other_secret"},
+				},
+			}, nil
+		},
+		GetUserByIDFunc: func(ctx context.Context, id identity.UserID) (*identity.User, error) {
+			return &identity.User{
+				ID:    id,
+				Name:  "Alice",
+				Email: "alice@example.com",
+			}, nil
+		},
+	}
+
+	svc := NewService(mockSpace, mockIdentity)
+	grants, err := svc.ListSpaceAPIKeyGrants(ctx, "spc_1", "usr_admin")
+	if err != nil {
+		t.Fatalf("ListSpaceAPIKeyGrants failed: %v", err)
+	}
+	if len(grants) != 1 {
+		t.Fatalf("expected 1 grant, got %d", len(grants))
+	}
+	g := grants[0]
+	if g.KeyName != "Webhook Token" || g.KeyPrefix != "sat_abc12345" || g.UserName != "Alice" || g.UserEmail != "alice@example.com" {
+		t.Errorf("unexpected hydrated grant: %+v", g)
+	}
 }

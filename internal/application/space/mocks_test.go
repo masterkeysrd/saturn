@@ -40,6 +40,9 @@ type SpaceServiceMock struct {
 	// UpdateSettingsFunc mocks the UpdateSettings method.
 	UpdateSettingsFunc func(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error)
 
+	// RevokeSpaceAPIKeyGrantFunc mocks the RevokeSpaceAPIKeyGrant method.
+	RevokeSpaceAPIKeyGrantFunc func(ctx context.Context, session space.Session, apiKeyID string) error
+
 	// calls tracks calls to the methods.
 	calls struct {
 		CreateSpace []struct {
@@ -83,15 +86,21 @@ type SpaceServiceMock struct {
 			Mask            []string
 			ExpectedVersion *int64
 		}
+		RevokeSpaceAPIKeyGrant []struct {
+			Ctx      context.Context
+			Session  space.Session
+			ApiKeyID string
+		}
 	}
-	lockCreateSpace       sync.RWMutex
-	lockUpdateSpace       sync.RWMutex
-	lockDeleteSpace       sync.RWMutex
-	lockAddSpaceMember    sync.RWMutex
-	lockRemoveSpaceMember sync.RWMutex
-	lockUpdateSpaceMember sync.RWMutex
-	lockGetSettings       sync.RWMutex
-	lockUpdateSettings    sync.RWMutex
+	lockCreateSpace            sync.RWMutex
+	lockUpdateSpace            sync.RWMutex
+	lockDeleteSpace            sync.RWMutex
+	lockAddSpaceMember         sync.RWMutex
+	lockRemoveSpaceMember      sync.RWMutex
+	lockUpdateSpaceMember      sync.RWMutex
+	lockGetSettings            sync.RWMutex
+	lockUpdateSettings         sync.RWMutex
+	lockRevokeSpaceAPIKeyGrant sync.RWMutex
 }
 
 // CreateSpace calls CreateSpaceFunc.
@@ -335,6 +344,36 @@ func (mock *SpaceServiceMock) UpdateSettingsCalls() []struct {
 	mock.lockUpdateSettings.RLock()
 	defer mock.lockUpdateSettings.RUnlock()
 	return mock.calls.UpdateSettings
+}
+
+// RevokeSpaceAPIKeyGrant calls RevokeSpaceAPIKeyGrantFunc.
+func (mock *SpaceServiceMock) RevokeSpaceAPIKeyGrant(ctx context.Context, session space.Session, apiKeyID string) error {
+	if mock.RevokeSpaceAPIKeyGrantFunc == nil {
+		panic("SpaceServiceMock.RevokeSpaceAPIKeyGrantFunc: method is nil but SpaceService.RevokeSpaceAPIKeyGrant was just called")
+	}
+	mock.lockRevokeSpaceAPIKeyGrant.Lock()
+	mock.calls.RevokeSpaceAPIKeyGrant = append(mock.calls.RevokeSpaceAPIKeyGrant, struct {
+		Ctx      context.Context
+		Session  space.Session
+		ApiKeyID string
+	}{
+		Ctx:      ctx,
+		Session:  session,
+		ApiKeyID: apiKeyID,
+	})
+	mock.lockRevokeSpaceAPIKeyGrant.Unlock()
+	return mock.RevokeSpaceAPIKeyGrantFunc(ctx, session, apiKeyID)
+}
+
+// RevokeSpaceAPIKeyGrantCalls returns all calls made to RevokeSpaceAPIKeyGrant.
+func (mock *SpaceServiceMock) RevokeSpaceAPIKeyGrantCalls() []struct {
+	Ctx      context.Context
+	Session  space.Session
+	ApiKeyID string
+} {
+	mock.lockRevokeSpaceAPIKeyGrant.RLock()
+	defer mock.lockRevokeSpaceAPIKeyGrant.RUnlock()
+	return mock.calls.RevokeSpaceAPIKeyGrant
 }
 
 // Compile-time interface assertion.

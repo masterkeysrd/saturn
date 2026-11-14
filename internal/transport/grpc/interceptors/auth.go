@@ -10,6 +10,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
 	"google.golang.org/grpc"
@@ -18,31 +19,54 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// UserStoreProvider provides auth_version lookups for the interceptor.
+// UserStoreProvider provides auth_version and user status lookups for the interceptor.
 type UserStoreProvider interface {
 	GetAuthVersion(ctx context.Context, id identity.UserID) (int64, error)
+	GetByID(ctx context.Context, id identity.UserID) (*identity.User, error)
+}
+
+// APIKeyStoreProvider provides API key lookup and last-used timestamp updates for the interceptor.
+type APIKeyStoreProvider interface {
+	GetByHash(ctx context.Context, keyHash string) (*identity.APIKey, error)
+	TouchLastUsed(ctx context.Context, id identity.APIKeyID, lastUsedAt time.Time) error
+}
+
+// APIKeyGrantProvider provides active granted space lookups for an API key.
+type APIKeyGrantProvider interface {
+	ListSpaceIDsByAPIKeyID(ctx context.Context, apiKeyID string) ([]space.SpaceID, error)
 }
 
 // resolvedPolicy holds the evaluated authentication and authorization policy for a method.
 type resolvedPolicy struct {
 	AuthRequired bool
 	AccessLevels []string
+	APIKeyScopes []string
 }
 
-// AuthInterceptor validates JWT access tokens and injects Principal into gRPC context.
+// AuthInterceptor validates JWT access tokens and sat_ API keys, injecting Principal into gRPC context.
 type AuthInterceptor struct {
-	validator token.Service
-	store     UserStoreProvider
-	rules     []api.AuthRule
-	cache     sync.Map // Cache of: string (method) -> *resolvedPolicy
+	validator   token.Service
+	store       UserStoreProvider
+	apiKeyStore APIKeyStoreProvider
+	grantStore  APIKeyGrantProvider
+	rules       []api.AuthRule
+	cache       sync.Map // Cache of: string (method) -> *resolvedPolicy
 }
 
-// NewAuthInterceptor creates an interceptor with the given token service, user store, and auth rules.
-func NewAuthInterceptor(validator token.Service, store UserStoreProvider, rules []api.AuthRule) *AuthInterceptor {
+// NewAuthInterceptor creates an interceptor with the given token service, user store, API key stores, and auth rules.
+func NewAuthInterceptor(
+	validator token.Service,
+	store UserStoreProvider,
+	apiKeyStore APIKeyStoreProvider,
+	grantStore APIKeyGrantProvider,
+	rules []api.AuthRule,
+) *AuthInterceptor {
 	return &AuthInterceptor{
-		validator: validator,
-		store:     store,
-		rules:     rules,
+		validator:   validator,
+		store:       store,
+		apiKeyStore: apiKeyStore,
+		grantStore:  grantStore,
+		rules:       rules,
 	}
 }
 
@@ -71,7 +95,7 @@ func (ai *AuthInterceptor) StreamServerInterceptor() grpc.StreamServerIntercepto
 func (ai *AuthInterceptor) intercept(ctx context.Context, fullMethod string) (context.Context, error) {
 	policy, _ := ai.resolvePolicy(fullMethod)
 	if policy != nil && policy.AuthRequired {
-		return ai.authenticate(ctx, policy.AccessLevels)
+		return ai.authenticate(ctx, policy)
 	}
 	return ctx, nil
 }
@@ -79,39 +103,34 @@ func (ai *AuthInterceptor) intercept(ctx context.Context, fullMethod string) (co
 // resolvePolicy evaluates the auth rules for a given gRPC method name.
 // Returns the resolved policy and a cache hit flag.
 func (ai *AuthInterceptor) resolvePolicy(method string) (*resolvedPolicy, bool) {
-	// Check cache first
 	if cached, ok := ai.cache.Load(method); ok {
 		return cached.(*resolvedPolicy), true
 	}
 
-	// Normalize gRPC method (e.g. "/saturn.identity.v1.Identity/LoginUser" -> "saturn.identity.v1.Identity.LoginUser")
 	normalizedMethod := strings.TrimPrefix(method, "/")
 	normalizedMethod = strings.ReplaceAll(normalizedMethod, "/", ".")
 
-	// Iterate all rules; last matching rule wins
 	var policy *resolvedPolicy
 	for _, rule := range ai.rules {
 		if matchSelector(rule.Selector, normalizedMethod) {
 			policy = &resolvedPolicy{
 				AuthRequired: rule.AuthRequired,
 				AccessLevels: rule.AccessLevels,
+				APIKeyScopes: rule.APIKeyScopes,
 			}
 		}
 	}
 
 	if policy == nil {
-		// No matching rule found; default to no auth required
 		policy = &resolvedPolicy{AuthRequired: false}
 	}
 
-	// Cache the result
 	ai.cache.Store(method, policy)
 	return policy, false
 }
 
-// authenticate validates the JWT from gRPC metadata and injects Principal into context.
-// If accessLevels is non-empty, it asserts that the token's principal matches one of them.
-func (ai *AuthInterceptor) authenticate(ctx context.Context, accessLevels []string) (context.Context, error) {
+// authenticate validates either a JWT or a sat_ API key from gRPC metadata and injects Principal into context.
+func (ai *AuthInterceptor) authenticate(ctx context.Context, policy *resolvedPolicy) (context.Context, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return ctx, status.Error(codes.Unauthenticated, "missing metadata")
@@ -125,14 +144,18 @@ func (ai *AuthInterceptor) authenticate(ctx context.Context, accessLevels []stri
 	}
 
 	if len(strings.TrimSpace(tokenStr)) == 0 {
-		// Fallback: Check if cookie is set (passed by gRPC-Gateway proxy)
 		if cookies := md["grpcgateway-cookie"]; len(cookies) > 0 {
 			tokenStr = extractCookieValue(cookies[0], "access_token")
 		}
 	}
 
-	if len(strings.TrimSpace(tokenStr)) == 0 {
+	tokenStr = strings.TrimSpace(tokenStr)
+	if tokenStr == "" {
 		return ctx, status.Error(codes.Unauthenticated, "missing or invalid authorization credentials")
+	}
+
+	if strings.HasPrefix(tokenStr, identity.APIKeyTokenPrefix) {
+		return ai.authenticateAPIKey(ctx, tokenStr, policy)
 	}
 
 	claims, err := ai.validator.ValidateAccessToken(tokenStr, timeNow())
@@ -140,7 +163,6 @@ func (ai *AuthInterceptor) authenticate(ctx context.Context, accessLevels []stri
 		return ctx, status.Error(codes.Unauthenticated, "invalid token")
 	}
 
-	// Check auth version against the database
 	authVersion, err := ai.store.GetAuthVersion(ctx, identity.UserID(claims.Subject))
 	if err != nil {
 		return ctx, status.Error(codes.Unauthenticated, "auth version check failed")
@@ -150,7 +172,6 @@ func (ai *AuthInterceptor) authenticate(ctx context.Context, accessLevels []stri
 		return ctx, status.Error(codes.Unauthenticated, "token invalidated")
 	}
 
-	// Attach Principal to context
 	principal := auth.Principal{
 		Subject:     claims.Subject,
 		AccessLevel: claims.AccessLevel,
@@ -159,10 +180,8 @@ func (ai *AuthInterceptor) authenticate(ctx context.Context, accessLevels []stri
 		SessionID:   claims.SessionID,
 	}
 
-	// Check access level restrictions
-	if len(accessLevels) > 0 {
-		allowed := slices.Contains(accessLevels, principal.AccessLevel)
-		if !allowed {
+	if len(policy.AccessLevels) > 0 {
+		if !slices.Contains(policy.AccessLevels, principal.AccessLevel) {
 			return ctx, status.Error(codes.PermissionDenied, "insufficient access level")
 		}
 	}
@@ -170,10 +189,78 @@ func (ai *AuthInterceptor) authenticate(ctx context.Context, accessLevels []stri
 	return auth.WithPrincipal(ctx, principal), nil
 }
 
+func (ai *AuthInterceptor) authenticateAPIKey(ctx context.Context, tokenStr string, policy *resolvedPolicy) (context.Context, error) {
+	if ai.apiKeyStore == nil || ai.grantStore == nil {
+		return ctx, status.Error(codes.Unauthenticated, "API key authentication unavailable")
+	}
+
+	now := timeNow()
+	keyHash := identity.HashAPIKeyToken(tokenStr)
+	key, err := ai.apiKeyStore.GetByHash(ctx, keyHash)
+	if err != nil || key == nil {
+		return ctx, status.Error(codes.Unauthenticated, "invalid API key")
+	}
+
+	if key.IsExpired(now) {
+		return ctx, status.Error(codes.Unauthenticated, "API key expired")
+	}
+
+	user, err := ai.store.GetByID(ctx, key.UserID)
+	if err != nil || user == nil || user.Status != identity.UserStatusActive || user.IsLocked(now) {
+		return ctx, status.Error(codes.Unauthenticated, "account is inactive or locked")
+	}
+
+	grantedSpaces, err := ai.grantStore.ListSpaceIDsByAPIKeyID(ctx, string(key.ID))
+	if err != nil || len(grantedSpaces) == 0 {
+		return ctx, status.Error(codes.Unauthenticated, "API key has no active space grants")
+	}
+
+	if len(policy.APIKeyScopes) == 0 || !hasAnyScope(policy.APIKeyScopes, key.Scopes) {
+		return ctx, status.Error(codes.PermissionDenied, "API key lacks required scope")
+	}
+
+	if len(policy.AccessLevels) > 0 {
+		if !slices.Contains(policy.AccessLevels, string(user.AccessLevel)) {
+			return ctx, status.Error(codes.PermissionDenied, "insufficient access level")
+		}
+	}
+
+	if key.LastUsedAt == nil || now.Sub(*key.LastUsedAt) >= time.Minute {
+		go func(id identity.APIKeyID, ts time.Time) {
+			touchCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = ai.apiKeyStore.TouchLastUsed(touchCtx, id, ts)
+		}(key.ID, now)
+	}
+
+	grantedSpaceIDs := make([]string, len(grantedSpaces))
+	for i, sid := range grantedSpaces {
+		grantedSpaceIDs[i] = string(sid)
+	}
+
+	principal := auth.Principal{
+		Subject:         string(key.UserID),
+		AccessLevel:     string(user.AccessLevel),
+		APIKeyID:        string(key.ID),
+		Scopes:          key.Scopes,
+		GrantedSpaceIDs: grantedSpaceIDs,
+	}
+
+	return auth.WithPrincipal(ctx, principal), nil
+}
+
+func hasAnyScope(required, granted []string) bool {
+	for _, r := range required {
+		if slices.Contains(granted, r) {
+			return true
+		}
+	}
+	return false
+}
+
 // matchSelector matches a fully-qualified method name against a YAML selector pattern.
 // Supports wildcards: "*" matches anything, ".*" matches suffix.
 func matchSelector(selector, method string) bool {
-	// Convert selector to regex: "*" → ".*"
 	pattern := "^" + regexp.QuoteMeta(selector) + "$"
 	pattern = strings.ReplaceAll(pattern, `\*`, `.*`)
 	matched, _ := regexp.MatchString(pattern, method)

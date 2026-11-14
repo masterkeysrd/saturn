@@ -178,6 +178,16 @@ export default function RootLayout() {
                       }}
                     />
                     <Stack.Screen
+                      name="modal/manage-api-key"
+                      options={{
+                        presentation: "modal",
+                        headerTitle: "API Key",
+                        headerStyle: {
+                          backgroundColor: theme.colors.surface,
+                        },
+                      }}
+                    />
+                    <Stack.Screen
                       name="+not-found"
                       options={{
                         title: "Not Found",

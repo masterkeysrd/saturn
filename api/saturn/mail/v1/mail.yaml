@@ -16,6 +16,67 @@ authentication:
     # All mail endpoints require authentication
     - selector: "saturn.mail.v1.MailService.*"
       auth_required: true
+    - selector: "saturn.mail.v1.MailService.ListMailboxes"
+      auth_required: true
+      api_key_scopes:
+        - mail:read
+        - mail:write
+    - selector: "saturn.mail.v1.MailService.ListThreads"
+      auth_required: true
+      api_key_scopes:
+        - mail:read
+        - mail:write
+    - selector: "saturn.mail.v1.MailService.GetThread"
+      auth_required: true
+      api_key_scopes:
+        - mail:read
+        - mail:write
+    - selector: "saturn.mail.v1.MailService.ListDrafts"
+      auth_required: true
+      api_key_scopes:
+        - mail:read
+        - mail:write
+    - selector: "saturn.mail.v1.MailService.GetDraft"
+      auth_required: true
+      api_key_scopes:
+        - mail:read
+        - mail:write
+    - selector: "saturn.mail.v1.MailService.CreateMailbox"
+      auth_required: true
+      api_key_scopes:
+        - mail:write
+    - selector: "saturn.mail.v1.MailService.UpdateMailbox"
+      auth_required: true
+      api_key_scopes:
+        - mail:write
+    - selector: "saturn.mail.v1.MailService.DeleteMailbox"
+      auth_required: true
+      api_key_scopes:
+        - mail:write
+    - selector: "saturn.mail.v1.MailService.ModifyThread"
+      auth_required: true
+      api_key_scopes:
+        - mail:write
+    - selector: "saturn.mail.v1.MailService.BatchModifyThreads"
+      auth_required: true
+      api_key_scopes:
+        - mail:write
+    - selector: "saturn.mail.v1.MailService.CreateDraft"
+      auth_required: true
+      api_key_scopes:
+        - mail:write
+    - selector: "saturn.mail.v1.MailService.UpdateDraft"
+      auth_required: true
+      api_key_scopes:
+        - mail:write
+    - selector: "saturn.mail.v1.MailService.DeleteDraft"
+      auth_required: true
+      api_key_scopes:
+        - mail:write
+    - selector: "saturn.mail.v1.MailService.SendDraft"
+      auth_required: true
+      api_key_scopes:
+        - mail:write
 
 space:
   rules:

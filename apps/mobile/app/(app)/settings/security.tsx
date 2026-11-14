@@ -353,6 +353,31 @@ export default function SecuritySessionsScreen() {
           </Button>
         </Card>
 
+        <Card style={styles.actionCard}>
+          <View style={styles.actionHeader}>
+            <View style={styles.actionIconBox}>
+              <KeyRound size={20} color={theme.colors.primary} />
+            </View>
+            <View style={styles.actionTextContainer}>
+              <Text style={styles.actionTitle}>Personal API Keys</Text>
+              <Text style={styles.actionSubtitle}>
+                Create fine-grained tokens for scripts, Shortcuts, and webhooks.
+              </Text>
+            </View>
+          </View>
+          <Button
+            variant="outline"
+            size="sm"
+            onPress={() => {
+              haptics.light()
+              router.push("/(app)/settings/api-keys")
+            }}
+            style={styles.changePasswordBtn}
+          >
+            Manage API Keys
+          </Button>
+        </Card>
+
         {/* Section: Trusted Hardware Devices */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionHeader}>

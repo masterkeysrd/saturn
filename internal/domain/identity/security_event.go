@@ -19,6 +19,9 @@ const (
 	SecurityEventPasswordChange  SecurityEventType = "password_change"
 	SecurityEventEmailChange     SecurityEventType = "email_change"
 	SecurityEventAccountDelete   SecurityEventType = "account_deleted"
+	SecurityEventAPIKeyCreated   SecurityEventType = "api_key_created"
+	SecurityEventAPIKeyUpdated   SecurityEventType = "api_key_updated"
+	SecurityEventAPIKeyRevoked   SecurityEventType = "api_key_revoked"
 )
 
 // SecurityEvent represents a recorded authentication or authorization event.

@@ -61,6 +61,14 @@ type Coordinator interface {
 	ChangeEmail(ctx context.Context, req *ChangeEmailRequest) (*identity.User, error)
 	// @transactional
 	DeleteAccount(ctx context.Context, req *DeleteAccountRequest) error
+	// @transactional
+	CreateAPIKey(ctx context.Context, req *CreateAPIKeyRequest) (*identity.APIKey, error)
+	GetAPIKey(ctx context.Context, req *GetAPIKeyRequest) (*identity.APIKey, error)
+	ListAPIKeys(ctx context.Context, req *ListAPIKeysRequest) ([]*identity.APIKey, error)
+	// @transactional
+	UpdateAPIKey(ctx context.Context, req *UpdateAPIKeyRequest) (*identity.APIKey, error)
+	// @transactional
+	DeleteAPIKey(ctx context.Context, req *DeleteAPIKeyRequest) error
 }
 
 // PasswordHasher defines the interface for computing and verifying password hashes.
@@ -177,10 +185,18 @@ type IdentityService interface {
 	UpdateProfile(ctx context.Context, params identity.UpdateProfileParams) (*identity.User, error)
 	ChangeEmail(ctx context.Context, params identity.ChangeEmailParams) (*identity.User, error)
 	DeleteAccount(ctx context.Context, params identity.DeleteAccountParams) error
+	CreateAPIKey(ctx context.Context, params identity.CreateAPIKeyParams) (*identity.APIKey, error)
+	GetAPIKey(ctx context.Context, userID identity.UserID, id identity.APIKeyID) (*identity.APIKey, error)
+	ListAPIKeys(ctx context.Context, userID identity.UserID) ([]*identity.APIKey, error)
+	UpdateAPIKey(ctx context.Context, params identity.UpdateAPIKeyParams) (*identity.APIKey, error)
+	DeleteAPIKey(ctx context.Context, params identity.DeleteAPIKeyParams) error
 }
 
 // SpaceService defines the interface for space operations required by IAM application.
 // @Mock
 type SpaceService interface {
 	CreateSpace(ctx context.Context, sp *space.Space) (*space.Space, error)
+	SyncAPIKeyGrants(ctx context.Context, apiKeyID string, userID space.SpaceID, spaceIDs []space.SpaceID) error
+	ListAPIKeyGrantedSpaces(ctx context.Context, apiKeyID string) ([]space.SpaceID, error)
+	ListAPIKeysGrantedSpaces(ctx context.Context, apiKeyIDs []string) (map[string][]space.SpaceID, error)
 }

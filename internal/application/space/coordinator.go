@@ -5,6 +5,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
@@ -36,6 +37,8 @@ type Coordinator interface {
 	GetSettings(ctx context.Context, req *GetSettingsRequest) (*settings.Entry[space.Settings], error)
 	// @transactional
 	UpdateSettings(ctx context.Context, req *UpdateSettingsRequest) (*settings.Entry[space.Settings], error)
+	// @transactional
+	RevokeSpaceAPIKeyGrant(ctx context.Context, req *RevokeSpaceAPIKeyGrantRequest) error
 }
 
 // Dependencies defines the inputs for creating a new Coordinator.
@@ -116,6 +119,13 @@ type UpdateSettingsRequest struct {
 	Settings        *space.Settings
 	UpdateMask      []string
 	ExpectedVersion *int64
+}
+
+// RevokeSpaceAPIKeyGrantRequest represents the input for revoking an API key's access grant to a workspace.
+type RevokeSpaceAPIKeyGrantRequest struct {
+	SpaceID  string
+	UserID   string
+	APIKeyID string
 }
 
 // CreateSpace orchestrates space creation.
@@ -218,6 +228,9 @@ func (c *coordinator) UpdateSpaceMember(ctx context.Context, req *UpdateSpaceMem
 // GetSettings orchestrates workspace settings retrieval.
 func (c *coordinator) GetSettings(ctx context.Context, req *GetSettingsRequest) (*settings.Entry[space.Settings], error) {
 	const op errors.Op = "application/space.GetSettings"
+	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsAPIKey() && !principal.HasSpaceGrant(req.SpaceID) {
+		return nil, errors.E(op, errors.Permission, "API key does not have access to this space")
+	}
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
 		UserID:  space.SpaceID(req.UserID),
@@ -243,6 +256,22 @@ func (c *coordinator) UpdateSettings(ctx context.Context, req *UpdateSettingsReq
 	return res, nil
 }
 
+// RevokeSpaceAPIKeyGrant revokes an API key's grant to access the workspace.
+func (c *coordinator) RevokeSpaceAPIKeyGrant(ctx context.Context, req *RevokeSpaceAPIKeyGrantRequest) error {
+	const op errors.Op = "application/space.RevokeSpaceAPIKeyGrant"
+	if req == nil {
+		return errors.E(op, errors.Invalid, "request is required")
+	}
+	session := space.Session{
+		SpaceID: space.SpaceID(req.SpaceID),
+		UserID:  space.SpaceID(req.UserID),
+	}
+	if err := c.spaceService.RevokeSpaceAPIKeyGrant(ctx, session, req.APIKeyID); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
+}
+
 // SpaceService defines the interface for space domain operations.
 // @Mock
 type SpaceService interface {
@@ -254,6 +283,7 @@ type SpaceService interface {
 	UpdateSpaceMember(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error)
 	GetSettings(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error)
 	UpdateSettings(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error)
+	RevokeSpaceAPIKeyGrant(ctx context.Context, session space.Session, apiKeyID string) error
 }
 
 // IdentityService defines the interface for required identity operations.

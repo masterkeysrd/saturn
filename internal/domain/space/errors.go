@@ -12,4 +12,5 @@ const (
 	MemberAlreadyExists errors.Code = "MEMBER_ALREADY_EXISTS"
 	InvalidRole         errors.Code = "INVALID_ROLE"
 	VersionMismatch     errors.Code = "SPACE_VERSION_MISMATCH"
+	APIKeyGrantNotFound errors.Code = "API_KEY_GRANT_NOT_FOUND"
 )

@@ -185,3 +185,22 @@ func (t *TransactionalCoordinator) UpdateSettings(ctx context.Context, req *Upda
 
 	return res, nil
 }
+
+// RevokeSpaceAPIKeyGrant executes next.RevokeSpaceAPIKeyGrant inside a database transaction.
+func (t *TransactionalCoordinator) RevokeSpaceAPIKeyGrant(ctx context.Context, req *RevokeSpaceAPIKeyGrantRequest) error {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := t.next.RevokeSpaceAPIKeyGrant(ctx, req); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}

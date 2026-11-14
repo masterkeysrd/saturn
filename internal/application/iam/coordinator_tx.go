@@ -321,3 +321,70 @@ func (t *TransactionalCoordinator) DeleteAccount(ctx context.Context, req *Delet
 
 	return nil
 }
+
+// CreateAPIKey executes next.CreateAPIKey inside a database transaction.
+func (t *TransactionalCoordinator) CreateAPIKey(ctx context.Context, req *CreateAPIKeyRequest) (*identity.APIKey, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.CreateAPIKey(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (t *TransactionalCoordinator) GetAPIKey(ctx context.Context, req *GetAPIKeyRequest) (*identity.APIKey, error) {
+	return t.next.GetAPIKey(ctx, req)
+}
+
+func (t *TransactionalCoordinator) ListAPIKeys(ctx context.Context, req *ListAPIKeysRequest) ([]*identity.APIKey, error) {
+	return t.next.ListAPIKeys(ctx, req)
+}
+
+// UpdateAPIKey executes next.UpdateAPIKey inside a database transaction.
+func (t *TransactionalCoordinator) UpdateAPIKey(ctx context.Context, req *UpdateAPIKeyRequest) (*identity.APIKey, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.UpdateAPIKey(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// DeleteAPIKey executes next.DeleteAPIKey inside a database transaction.
+func (t *TransactionalCoordinator) DeleteAPIKey(ctx context.Context, req *DeleteAPIKeyRequest) error {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := t.next.DeleteAPIKey(ctx, req); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}

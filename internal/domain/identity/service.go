@@ -75,6 +75,7 @@ type Dependencies struct {
 	ChallengeStore     AuthChallengeStore
 	DeviceVerifier     DeviceVerifier
 	PasswordResetStore PasswordResetStore
+	APIKeyStore        APIKeyStore
 }
 
 // Hasher is the password hashing interface used for authentication.
@@ -1680,4 +1681,204 @@ func (s *Service) DeleteAccount(ctx context.Context, params DeleteAccountParams)
 	}
 
 	return nil
+}
+
+// CreateAPIKeyParams contains inputs for creating a new user-owned API key.
+type CreateAPIKeyParams struct {
+	UserID      UserID
+	Name        string
+	Description string
+	Scopes      []string
+	ExpiresAt   *time.Time
+	IPAddress   string
+	UserAgent   string
+}
+
+// UpdateAPIKeyParams contains inputs for updating an existing user-owned API key.
+type UpdateAPIKeyParams struct {
+	UserID    UserID
+	ID        APIKeyID
+	Incoming  *APIKey
+	Mask      []string
+	IPAddress string
+	UserAgent string
+}
+
+// DeleteAPIKeyParams contains inputs for deleting a user-owned API key.
+type DeleteAPIKeyParams struct {
+	UserID    UserID
+	ID        APIKeyID
+	IPAddress string
+	UserAgent string
+}
+
+// CreateAPIKey validates inputs, generates a cryptographically random `sat_...` token,
+// persists its SHA-256 digest, and returns the created APIKey with RawKey populated once.
+func (s *Service) CreateAPIKey(ctx context.Context, params CreateAPIKeyParams) (*APIKey, error) {
+	const op errors.Op = "domain/identity.CreateAPIKey"
+
+	if params.UserID == "" {
+		return nil, errors.E(op, errors.Invalid, InvalidUserID, "user id is required")
+	}
+
+	now := time.Now().UTC()
+	if params.ExpiresAt != nil && !params.ExpiresAt.After(now) {
+		return nil, errors.E(op, errors.Invalid, "expires_at must be in the future")
+	}
+
+	keyID, err := NewAPIKeyID()
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	rawKey, keyPrefix, keyHash, err := GenerateAPIKeyToken()
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	key := &APIKey{
+		ID:          keyID,
+		UserID:      params.UserID,
+		Name:        params.Name,
+		Description: params.Description,
+		KeyPrefix:   keyPrefix,
+		KeyHash:     keyHash,
+		RawKey:      rawKey,
+		Scopes:      params.Scopes,
+		ExpiresAt:   params.ExpiresAt,
+		CreateTime:  now,
+		UpdateTime:  now,
+	}
+
+	if err := key.Validate(); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	if err := s.deps.APIKeyStore.Create(ctx, key); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	s.recordAPIKeySecurityEvent(ctx, params.UserID, SecurityEventAPIKeyCreated, params.IPAddress, params.UserAgent, now)
+
+	return key, nil
+}
+
+// GetAPIKey retrieves an API key by ID and verifies ownership by userID.
+func (s *Service) GetAPIKey(ctx context.Context, userID UserID, id APIKeyID) (*APIKey, error) {
+	const op errors.Op = "domain/identity.GetAPIKey"
+
+	if userID == "" {
+		return nil, errors.E(op, errors.Invalid, InvalidUserID, "user id is required")
+	}
+	if id == "" {
+		return nil, errors.E(op, errors.Invalid, InvalidAPIKeyID, "api key id is required")
+	}
+
+	key, err := s.deps.APIKeyStore.GetByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.NotExist, APIKeyNotFound, "API key not found")
+		}
+		return nil, errors.E(op, err)
+	}
+
+	if key.UserID != userID {
+		return nil, errors.E(op, errors.NotExist, APIKeyNotFound, "API key not found")
+	}
+
+	return key, nil
+}
+
+// ListAPIKeys returns all API keys owned by userID.
+func (s *Service) ListAPIKeys(ctx context.Context, userID UserID) ([]*APIKey, error) {
+	const op errors.Op = "domain/identity.ListAPIKeys"
+
+	if userID == "" {
+		return nil, errors.E(op, errors.Invalid, InvalidUserID, "user id is required")
+	}
+
+	keys, err := s.deps.APIKeyStore.ListByUserID(ctx, userID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return keys, nil
+}
+
+// ListAPIKeysByIDs returns API keys matching the provided IDs (used for workspace grant hydration).
+func (s *Service) ListAPIKeysByIDs(ctx context.Context, ids []APIKeyID) ([]*APIKey, error) {
+	const op errors.Op = "domain/identity.ListAPIKeysByIDs"
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	keys, err := s.deps.APIKeyStore.ListByIDs(ctx, ids)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return keys, nil
+}
+
+// UpdateAPIKey patches mutable metadata and scopes of an API key owned by userID.
+func (s *Service) UpdateAPIKey(ctx context.Context, params UpdateAPIKeyParams) (*APIKey, error) {
+	const op errors.Op = "domain/identity.UpdateAPIKey"
+
+	key, err := s.GetAPIKey(ctx, params.UserID, params.ID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	if err := key.ApplyPatch(params.Incoming, params.Mask); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	if err := s.deps.APIKeyStore.Update(ctx, key); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	s.recordAPIKeySecurityEvent(ctx, params.UserID, SecurityEventAPIKeyUpdated, params.IPAddress, params.UserAgent, time.Now().UTC())
+
+	return key, nil
+}
+
+// DeleteAPIKey revokes and permanently deletes an API key owned by userID.
+func (s *Service) DeleteAPIKey(ctx context.Context, params DeleteAPIKeyParams) error {
+	const op errors.Op = "domain/identity.DeleteAPIKey"
+
+	if _, err := s.GetAPIKey(ctx, params.UserID, params.ID); err != nil {
+		return errors.E(op, err)
+	}
+
+	if err := s.deps.APIKeyStore.Delete(ctx, params.ID); err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.NotExist, APIKeyNotFound, "API key not found")
+		}
+		return errors.E(op, err)
+	}
+
+	s.recordAPIKeySecurityEvent(ctx, params.UserID, SecurityEventAPIKeyRevoked, params.IPAddress, params.UserAgent, time.Now().UTC())
+
+	return nil
+}
+
+func (s *Service) recordAPIKeySecurityEvent(ctx context.Context, userID UserID, eventType SecurityEventType, ipAddress, userAgent string, now time.Time) {
+	if s.deps.SecurityEventStore == nil {
+		return
+	}
+	var email string
+	if s.deps.UserStore != nil {
+		if user, err := s.deps.UserStore.GetByID(ctx, userID); err == nil && user != nil {
+			email = user.Email
+		}
+	}
+	eventID, _ := id.Generate("evt_")
+	_ = s.deps.SecurityEventStore.Create(ctx, &SecurityEvent{
+		ID:        eventID,
+		UserID:    &userID,
+		Email:     email,
+		EventType: eventType,
+		IPAddress: ipAddress,
+		UserAgent: userAgent,
+		CreatedAt: now,
+	})
 }

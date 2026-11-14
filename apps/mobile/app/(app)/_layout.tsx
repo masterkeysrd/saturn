@@ -76,6 +76,18 @@ export default function AppLayout() {
         }}
       />
       <Stack.Screen
+        name="settings/api-keys"
+        options={{
+          headerShown: true,
+          headerTitle: "API Keys",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Security",
+        }}
+      />
+      <Stack.Screen
         name="settings/connected-accounts"
         options={{
           headerShown: true,

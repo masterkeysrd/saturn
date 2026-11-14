@@ -451,3 +451,69 @@ func (h *Handler) UpdateSettings(ctx context.Context, req *spacev1.UpdateSetting
 
 	return toProtoSettings(entry), nil
 }
+
+// ListSpaceAPIKeyGrants lists all active API key grants targeting a workspace.
+func (h *Handler) ListSpaceAPIKeyGrants(ctx context.Context, req *spacev1.ListSpaceAPIKeyGrantsRequest) (*spacev1.ListSpaceAPIKeyGrantsResponse, error) {
+	const op errors.Op = "transport/grpc/space.ListSpaceAPIKeyGrants"
+	userID, err := h.getSpaceUserID(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	grants, err := h.Aggregator.ListSpaceAPIKeyGrants(ctx, space.SpaceID(req.GetSpaceId()), space.SpaceID(userID))
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	pbGrants := make([]*spacev1.APIKeyGrant, 0, len(grants))
+	for _, g := range grants {
+		pbGrants = append(pbGrants, toProtoAPIKeyGrant(g))
+	}
+
+	return &spacev1.ListSpaceAPIKeyGrantsResponse{
+		Grants: pbGrants,
+	}, nil
+}
+
+// RevokeSpaceAPIKeyGrant revokes an API key's grant to access the workspace.
+func (h *Handler) RevokeSpaceAPIKeyGrant(ctx context.Context, req *spacev1.RevokeSpaceAPIKeyGrantRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "transport/grpc/space.RevokeSpaceAPIKeyGrant"
+	userID, err := h.getSpaceUserID(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	if err := h.Coordinator.RevokeSpaceAPIKeyGrant(ctx, &spaceapp.RevokeSpaceAPIKeyGrantRequest{
+		SpaceID:  req.GetSpaceId(),
+		UserID:   userID,
+		APIKeyID: req.GetApiKeyId(),
+	}); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func toProtoAPIKeyGrant(g *spaceaggregator.APIKeyGrant) *spacev1.APIKeyGrant {
+	if g == nil {
+		return nil
+	}
+	pb := &spacev1.APIKeyGrant{
+		ApiKeyId:        g.APIKeyID,
+		SpaceId:         string(g.SpaceID),
+		UserId:          string(g.UserID),
+		UserName:        g.UserName,
+		UserEmail:       g.UserEmail,
+		KeyName:         g.KeyName,
+		KeyPrefix:       g.KeyPrefix,
+		Scopes:          g.Scopes,
+		GrantCreateTime: timestamppb.New(g.GrantCreateTime),
+	}
+	if g.ExpiresAt != nil {
+		pb.ExpiresAt = timestamppb.New(*g.ExpiresAt)
+	}
+	if g.LastUsedAt != nil {
+		pb.LastUsedAt = timestamppb.New(*g.LastUsedAt)
+	}
+	return pb
+}

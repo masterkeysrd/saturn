@@ -196,3 +196,34 @@ func TestApplyConfig(t *testing.T) {
 		t.Errorf("expected admin endpoint to have x-access-levels=['admin'], got %v", adminOp.XAccessLevels)
 	}
 }
+
+func TestLoadServiceConfigs_APIKeyScopes(t *testing.T) {
+	global, modules, err := LoadServiceConfigs()
+	if err != nil {
+		t.Fatalf("LoadServiceConfigs failed: %v", err)
+	}
+
+	rules := CompileAllRules(global, modules)
+	findRule := func(selector string) *AuthRule {
+		var found *AuthRule
+		for i := range rules {
+			if rules[i].Selector == selector {
+				found = &rules[i]
+			}
+		}
+		return found
+	}
+
+	if r := findRule("saturn.finance.v1.Finance.ListBudgets"); r == nil || len(r.APIKeyScopes) != 2 {
+		t.Errorf("expected Finance.ListBudgets to allow finance:read and finance:write, got %+v", r)
+	}
+	if r := findRule("saturn.finance.v1.Finance.CreateBudget"); r == nil || len(r.APIKeyScopes) != 1 || r.APIKeyScopes[0] != "finance:write" {
+		t.Errorf("expected Finance.CreateBudget to allow finance:write, got %+v", r)
+	}
+	if r := findRule("saturn.space.v1.Spaces.ListSpaces"); r == nil || len(r.APIKeyScopes) != 1 || r.APIKeyScopes[0] != "spaces:read" {
+		t.Errorf("expected Spaces.ListSpaces to allow spaces:read, got %+v", r)
+	}
+	if r := findRule("saturn.identity.v1.Identity.*"); r != nil && len(r.APIKeyScopes) > 0 {
+		t.Errorf("expected Identity.* to have no api_key_scopes, got %+v", r)
+	}
+}

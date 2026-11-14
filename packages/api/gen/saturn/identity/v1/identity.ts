@@ -756,6 +756,119 @@ export interface DeleteAccountRequest {
 }
 
 /**
+ * APIKey represents a user-owned fine-grained personal access token bound to one or more workspaces.
+ */
+export interface APIKey {
+  /**
+   * Output only. The unique identifier of the API key formatted as `apk_<ksuid>`.
+   */
+  id?: string
+  /**
+   * Required. User-assigned display name for the API key.
+   */
+  name: string
+  /**
+   * Optional. User-provided description explaining the purpose of this key.
+   */
+  description: string
+  /**
+   * Output only. First 12 characters of the raw token (e.g., `sat_9xQ4kL2m`) for UI identification.
+   */
+  keyPrefix?: string
+  /**
+   * Output only. Full raw secret token (`sat_...`). Populated only once in CreateAPIKey response.
+   */
+  rawKey?: string
+  /**
+   * Required. Declarative permission scopes granted to this key (e.g., `finance:read`).
+   */
+  scopes: string[]
+  /**
+   * Required. List of workspace IDs (`spc_...`) where this key is authorized.
+   */
+  spaceIds: string[]
+  /**
+   * Optional. Timestamp after which the API key automatically expires.
+   */
+  expiresAt?: string
+  /**
+   * Output only. Timestamp when the API key was last used to authenticate a request.
+   */
+  lastUsedAt?: string
+  /**
+   * Output only. Timestamp when the API key was created.
+   */
+  createTime?: string
+  /**
+   * Output only. Timestamp when the API key was last updated.
+   */
+  updateTime?: string
+}
+
+/**
+ * Request message for Identity.CreateAPIKey.
+ */
+export interface CreateAPIKeyRequest {
+  /**
+   * Required. The API key resource to create.
+   */
+  apiKey: APIKey
+}
+
+/**
+ * Request message for Identity.GetAPIKey.
+ */
+export interface GetAPIKeyRequest {
+  /**
+   * Required. The unique identifier of the API key (`apk_...`).
+   */
+  id: string
+}
+
+/**
+ * Request message for Identity.ListAPIKeys.
+ */
+export type ListAPIKeysRequest = Record<string, never>
+
+/**
+ * Response message for Identity.ListAPIKeys.
+ */
+export interface ListAPIKeysResponse {
+  /**
+   * Output only. List of personal API keys owned by the authenticated user.
+   */
+  apiKeys?: APIKey[]
+}
+
+/**
+ * Request message for Identity.UpdateAPIKey.
+ */
+export interface UpdateAPIKeyRequest {
+  /**
+   * Required. The unique identifier of the API key (`apk_...`) to update.
+   */
+  id: string
+  /**
+   * Required. API key fields containing updated values.
+   */
+  apiKey: APIKey
+  /**
+   * Required. Field mask specifying which fields (`name`, `description`, `scopes`, `space_ids`) to update.
+   */
+  updateMask: { paths?: string[] }
+}
+
+/**
+ * Request message for Identity.DeleteAPIKey.
+ */
+export interface DeleteAPIKeyRequest {
+  /**
+   * Required. The unique identifier of the API key (`apk_...`) to delete.
+   */
+  id: string
+}
+
+/**
  * Identity provides user authentication and session management.
  */
 /**
@@ -1401,6 +1514,137 @@ export function useDeleteAccountMutation(
 ) {
   return useMutation<Record<string, never>, Error, DeleteAccountRequest>({
     mutationFn: (req) => deleteAccount(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Creates a new fine-grained personal API key bound to one or more spaces.
+ */
+export async function createAPIKey(req: CreateAPIKeyRequest): Promise<APIKey> {
+  return request<APIKey>({
+    method: "POST",
+    url: "/api/v1/identity/api-keys",
+    data: req.apiKey,
+  })
+}
+
+export function useCreateAPIKeyMutation(
+  options?: UseMutationOptions<APIKey, Error, CreateAPIKeyRequest>
+) {
+  return useMutation<APIKey, Error, CreateAPIKeyRequest>({
+    mutationFn: (req) => createAPIKey(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Retrieves metadata for a personal API key owned by the caller.
+ */
+export async function getAPIKey(
+  id: string,
+  _req: GetAPIKeyRequest
+): Promise<APIKey> {
+  return request<APIKey>({
+    method: "GET",
+    url: `/api/v1/identity/api-keys/${id}`,
+  })
+}
+
+export function useGetAPIKeyQuery(
+  req: GetAPIKeyRequest,
+  options?: Omit<UseQueryOptions<APIKey, Error>, "queryKey" | "queryFn">
+) {
+  return useQuery<APIKey, Error>({
+    queryKey: [`/api/v1/identity/api-keys/${req.id}`, req],
+    queryFn: () => getAPIKey(req.id, req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Lists all personal API keys owned by the caller.
+ */
+export async function listAPIKeys(
+  _req?: ListAPIKeysRequest
+): Promise<ListAPIKeysResponse> {
+  return request<ListAPIKeysResponse>({
+    method: "GET",
+    url: "/api/v1/identity/api-keys",
+  })
+}
+
+export function useListAPIKeysQuery(
+  req: ListAPIKeysRequest,
+  options?: Omit<
+    UseQueryOptions<ListAPIKeysResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListAPIKeysResponse, Error>({
+    queryKey: ["/api/v1/identity/api-keys", req],
+    queryFn: () => listAPIKeys(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Updates metadata, scopes, or space grants for a personal API key.
+ */
+export async function updateAPIKey(
+  id: string,
+  req: UpdateAPIKeyRequest
+): Promise<APIKey> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  delete (params as Record<string, unknown>).apiKey
+  return request<APIKey>({
+    method: "PATCH",
+    url: `/api/v1/identity/api-keys/${id}`,
+    params: params,
+    data: req.apiKey,
+  })
+}
+
+export function useUpdateAPIKeyMutation(
+  options?: UseMutationOptions<
+    APIKey,
+    Error,
+    { id: string; req: UpdateAPIKeyRequest }
+  >
+) {
+  return useMutation<APIKey, Error, { id: string; req: UpdateAPIKeyRequest }>({
+    mutationFn: ({ id, req }) => updateAPIKey(id, req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Permanently deletes a personal API key and revokes all of its space grants.
+ */
+export async function deleteAPIKey(
+  id: string,
+  _req: DeleteAPIKeyRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: `/api/v1/identity/api-keys/${id}`,
+  })
+}
+
+export function useDeleteAPIKeyMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    { id: string; req: DeleteAPIKeyRequest }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { id: string; req: DeleteAPIKeyRequest }
+  >({
+    mutationFn: ({ id, req }) => deleteAPIKey(id, req),
     ...options,
   })
 }

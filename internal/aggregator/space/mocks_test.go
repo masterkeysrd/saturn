@@ -25,6 +25,9 @@ type SpaceServiceMock struct {
 	// ListSpaceMembersFunc mocks the ListSpaceMembers method.
 	ListSpaceMembersFunc func(ctx context.Context, session space.Session, filter *space.ListMembersFilter) (*paging.Page[*space.Member], error)
 
+	// ListSpaceAPIKeyGrantsFunc mocks the ListSpaceAPIKeyGrants method.
+	ListSpaceAPIKeyGrantsFunc func(ctx context.Context, session space.Session) ([]*space.APIKeyGrant, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		GetSpace []struct {
@@ -41,10 +44,15 @@ type SpaceServiceMock struct {
 			Session space.Session
 			Filter  *space.ListMembersFilter
 		}
+		ListSpaceAPIKeyGrants []struct {
+			Ctx     context.Context
+			Session space.Session
+		}
 	}
-	lockGetSpace         sync.RWMutex
-	lockListSpaces       sync.RWMutex
-	lockListSpaceMembers sync.RWMutex
+	lockGetSpace              sync.RWMutex
+	lockListSpaces            sync.RWMutex
+	lockListSpaceMembers      sync.RWMutex
+	lockListSpaceAPIKeyGrants sync.RWMutex
 }
 
 // GetSpace calls GetSpaceFunc.
@@ -134,6 +142,33 @@ func (mock *SpaceServiceMock) ListSpaceMembersCalls() []struct {
 	return mock.calls.ListSpaceMembers
 }
 
+// ListSpaceAPIKeyGrants calls ListSpaceAPIKeyGrantsFunc.
+func (mock *SpaceServiceMock) ListSpaceAPIKeyGrants(ctx context.Context, session space.Session) ([]*space.APIKeyGrant, error) {
+	if mock.ListSpaceAPIKeyGrantsFunc == nil {
+		panic("SpaceServiceMock.ListSpaceAPIKeyGrantsFunc: method is nil but SpaceService.ListSpaceAPIKeyGrants was just called")
+	}
+	mock.lockListSpaceAPIKeyGrants.Lock()
+	mock.calls.ListSpaceAPIKeyGrants = append(mock.calls.ListSpaceAPIKeyGrants, struct {
+		Ctx     context.Context
+		Session space.Session
+	}{
+		Ctx:     ctx,
+		Session: session,
+	})
+	mock.lockListSpaceAPIKeyGrants.Unlock()
+	return mock.ListSpaceAPIKeyGrantsFunc(ctx, session)
+}
+
+// ListSpaceAPIKeyGrantsCalls returns all calls made to ListSpaceAPIKeyGrants.
+func (mock *SpaceServiceMock) ListSpaceAPIKeyGrantsCalls() []struct {
+	Ctx     context.Context
+	Session space.Session
+} {
+	mock.lockListSpaceAPIKeyGrants.RLock()
+	defer mock.lockListSpaceAPIKeyGrants.RUnlock()
+	return mock.calls.ListSpaceAPIKeyGrants
+}
+
 // Compile-time interface assertion.
 var _ IdentityService = (*IdentityServiceMock)(nil)
 
@@ -142,14 +177,22 @@ type IdentityServiceMock struct {
 	// GetUserByIDFunc mocks the GetUserByID method.
 	GetUserByIDFunc func(ctx context.Context, id identity.UserID) (*identity.User, error)
 
+	// ListAPIKeysByIDsFunc mocks the ListAPIKeysByIDs method.
+	ListAPIKeysByIDsFunc func(ctx context.Context, ids []identity.APIKeyID) ([]*identity.APIKey, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		GetUserByID []struct {
 			Ctx context.Context
 			Id  identity.UserID
 		}
+		ListAPIKeysByIDs []struct {
+			Ctx context.Context
+			Ids []identity.APIKeyID
+		}
 	}
-	lockGetUserByID sync.RWMutex
+	lockGetUserByID      sync.RWMutex
+	lockListAPIKeysByIDs sync.RWMutex
 }
 
 // GetUserByID calls GetUserByIDFunc.
@@ -177,4 +220,31 @@ func (mock *IdentityServiceMock) GetUserByIDCalls() []struct {
 	mock.lockGetUserByID.RLock()
 	defer mock.lockGetUserByID.RUnlock()
 	return mock.calls.GetUserByID
+}
+
+// ListAPIKeysByIDs calls ListAPIKeysByIDsFunc.
+func (mock *IdentityServiceMock) ListAPIKeysByIDs(ctx context.Context, ids []identity.APIKeyID) ([]*identity.APIKey, error) {
+	if mock.ListAPIKeysByIDsFunc == nil {
+		panic("IdentityServiceMock.ListAPIKeysByIDsFunc: method is nil but IdentityService.ListAPIKeysByIDs was just called")
+	}
+	mock.lockListAPIKeysByIDs.Lock()
+	mock.calls.ListAPIKeysByIDs = append(mock.calls.ListAPIKeysByIDs, struct {
+		Ctx context.Context
+		Ids []identity.APIKeyID
+	}{
+		Ctx: ctx,
+		Ids: ids,
+	})
+	mock.lockListAPIKeysByIDs.Unlock()
+	return mock.ListAPIKeysByIDsFunc(ctx, ids)
+}
+
+// ListAPIKeysByIDsCalls returns all calls made to ListAPIKeysByIDs.
+func (mock *IdentityServiceMock) ListAPIKeysByIDsCalls() []struct {
+	Ctx context.Context
+	Ids []identity.APIKeyID
+} {
+	mock.lockListAPIKeysByIDs.RLock()
+	defer mock.lockListAPIKeysByIDs.RUnlock()
+	return mock.calls.ListAPIKeysByIDs
 }

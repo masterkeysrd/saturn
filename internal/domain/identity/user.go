@@ -87,3 +87,8 @@ func (uid UserID) IsValid() bool {
 func (uid UserID) Validate() error {
 	return id.Validate(string(uid), userIDPrefix)
 }
+
+// IsLocked reports whether the user account is temporarily locked out at the given instant.
+func (u *User) IsLocked(now time.Time) bool {
+	return u != nil && u.LockedUntil != nil && now.Before(*u.LockedUntil)
+}

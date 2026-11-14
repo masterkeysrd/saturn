@@ -4401,6 +4401,163 @@
         ]
       }
     },
+    "/v1/identity/api-keys": {
+      "get": {
+        "summary": "Authenticated RPC: Lists all personal API keys owned by the caller.",
+        "operationId": "Identity_ListAPIKeys",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListAPIKeysResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Identity"
+        ]
+      },
+      "post": {
+        "summary": "Authenticated RPC: Creates a new fine-grained personal API key bound to one or more spaces.",
+        "operationId": "Identity_CreateAPIKey",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1APIKey"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "apiKey",
+            "description": "Required. The API key resource to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1APIKey"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/api-keys/{id}": {
+      "get": {
+        "summary": "Authenticated RPC: Retrieves metadata for a personal API key owned by the caller.",
+        "operationId": "Identity_GetAPIKey",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1APIKey"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. The unique identifier of the API key (`apk_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      },
+      "delete": {
+        "summary": "Authenticated RPC: Permanently deletes a personal API key and revokes all of its space grants.",
+        "operationId": "Identity_DeleteAPIKey",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. The unique identifier of the API key (`apk_...`) to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      },
+      "patch": {
+        "summary": "Authenticated RPC: Updates metadata, scopes, or space grants for a personal API key.",
+        "operationId": "Identity_UpdateAPIKey",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1APIKey"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. The unique identifier of the API key (`apk_...`) to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "apiKey",
+            "description": "Required. API key fields containing updated values.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1APIKey"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
     "/v1/identity/devices": {
       "get": {
         "summary": "Authenticated RPC: Lists all registered devices for the caller.",
@@ -7023,6 +7180,78 @@
         ]
       }
     },
+    "/v1/spaces/{spaceId}/api-keys": {
+      "get": {
+        "summary": "Lists all active API key grants targeting a workspace (admin/owner only).",
+        "operationId": "Spaces_ListSpaceAPIKeyGrants",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSpaceAPIKeyGrantsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace whose API key grants are listed.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/api-keys/{apiKeyId}": {
+      "delete": {
+        "summary": "Revokes a specific API key's grant to access a workspace (admin/owner only).",
+        "operationId": "Spaces_RevokeSpaceAPIKeyGrant",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace (`spc_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "apiKeyId",
+            "description": "Required. The unique identifier of the API key (`apk_...`) whose workspace access is revoked.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      }
+    },
     "/v1/spaces/{spaceId}/members": {
       "get": {
         "summary": "Lists all members belonging to a workspace.",
@@ -8782,6 +9011,144 @@
         }
       },
       "description": "Settings represents workspace-level configuration."
+    },
+    "v1APIKey": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. The unique identifier of the API key formatted as `apk_\u003cksuid\u003e`.",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Required. User-assigned display name for the API key."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional. User-provided description explaining the purpose of this key."
+        },
+        "keyPrefix": {
+          "type": "string",
+          "description": "Output only. First 12 characters of the raw token (e.g., `sat_9xQ4kL2m`) for UI identification.",
+          "readOnly": true
+        },
+        "rawKey": {
+          "type": "string",
+          "description": "Output only. Full raw secret token (`sat_...`). Populated only once in CreateAPIKey response.",
+          "readOnly": true
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Required. Declarative permission scopes granted to this key (e.g., `finance:read`)."
+        },
+        "spaceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Required. List of workspace IDs (`spc_...`) where this key is authorized."
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optional. Timestamp after which the API key automatically expires."
+        },
+        "lastUsedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the API key was last used to authenticate a request.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the API key was created.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the API key was last updated.",
+          "readOnly": true
+        }
+      },
+      "description": "APIKey represents a user-owned fine-grained personal access token bound to one or more workspaces.",
+      "required": [
+        "name",
+        "scopes",
+        "spaceIds"
+      ]
+    },
+    "v1APIKeyGrant": {
+      "type": "object",
+      "properties": {
+        "apiKeyId": {
+          "type": "string",
+          "description": "Output only. The unique identifier of the API key (`apk_...`).",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. The unique identifier of the granted workspace (`spc_...`).",
+          "readOnly": true
+        },
+        "userId": {
+          "type": "string",
+          "description": "Output only. The user identifier of the API key owner (`usr_...`).",
+          "readOnly": true
+        },
+        "userName": {
+          "type": "string",
+          "description": "Output only. The display name of the API key owner.",
+          "readOnly": true
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Output only. The email address of the API key owner.",
+          "readOnly": true
+        },
+        "keyName": {
+          "type": "string",
+          "description": "Output only. The display name of the API key.",
+          "readOnly": true
+        },
+        "keyPrefix": {
+          "type": "string",
+          "description": "Output only. First 12 characters of the raw token (e.g., `sat_9xQ4kL2m`).",
+          "readOnly": true
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Output only. Declarative permission scopes granted to the API key.",
+          "readOnly": true
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp after which the API key expires, if set.",
+          "readOnly": true
+        },
+        "lastUsedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the API key was last used.",
+          "readOnly": true
+        },
+        "grantCreateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the grant to this workspace was created.",
+          "readOnly": true
+        }
+      },
+      "description": "APIKeyGrant represents an API key access grant scoped to a specific workspace."
     },
     "v1AccessLevel": {
       "type": "string",
@@ -11673,6 +12040,21 @@
       ],
       "description": "LimitPropagation defines how changes in budget limits propagate to future periods.\n\n - LIMIT_PROPAGATION_CURRENT_PERIOD: Apply the limit modification only to the current active period.\n - LIMIT_PROPAGATION_NEXT_PERIODS_ONLY: Propagate limits to all future budget periods without modifying history."
     },
+    "v1ListAPIKeysResponse": {
+      "type": "object",
+      "properties": {
+        "apiKeys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1APIKey"
+          },
+          "description": "Output only. List of personal API keys owned by the authenticated user.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for Identity.ListAPIKeys."
+    },
     "v1ListAccountsResponse": {
       "type": "object",
       "properties": {
@@ -12157,6 +12539,21 @@
         }
       },
       "description": "Response message for AdminIdentity.ListSecurityEvents."
+    },
+    "v1ListSpaceAPIKeyGrantsResponse": {
+      "type": "object",
+      "properties": {
+        "grants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1APIKeyGrant"
+          },
+          "description": "Output only. List of active API key grants for this workspace.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for Spaces.ListSpaceAPIKeyGrants."
     },
     "v1ListSpaceMembersResponse": {
       "type": "object",

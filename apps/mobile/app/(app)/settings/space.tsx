@@ -39,8 +39,12 @@ import {
   useCreateSpaceMemberMutation,
   useDeleteSpaceMemberMutation,
   useUpdateSettingsMutation,
+  useListSpaceAPIKeyGrantsQuery,
+  useRevokeSpaceAPIKeyGrantMutation,
+  type APIKeyGrant,
   type SpaceMember_Role,
 } from "@saturn/api/saturn/space/v1/space"
+import { useTimezone } from "@saturn/hooks"
 import { COMMON_TIMEZONES, SPACE_ROLE_OPTIONS } from "@saturn/core"
 import { useSpace } from "@/lib/space-context"
 import { useAuth } from "@/lib/auth-context"
@@ -103,6 +107,8 @@ export default function SpaceSettingsScreen() {
 
   // Member removal states
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null)
+  const [grantToRevoke, setGrantToRevoke] = useState<APIKeyGrant | null>(null)
+  const tz = useTimezone()
 
   // Queries & Mutations
   const {
@@ -124,6 +130,14 @@ export default function SpaceSettingsScreen() {
   const updateSettingsMutation = useUpdateSettingsMutation()
   const createMemberMutation = useCreateSpaceMemberMutation()
   const deleteMemberMutation = useDeleteSpaceMemberMutation()
+  const revokeGrantMutation = useRevokeSpaceAPIKeyGrantMutation()
+
+  const { data: grantsData, isLoading: isGrantsLoading } =
+    useListSpaceAPIKeyGrantsQuery(
+      { spaceId: activeSpaceId || "" },
+      { enabled: !!activeSpaceId && canManageMembers }
+    )
+  const apiKeyGrants = grantsData?.grants || []
 
   const handleSelectTimezone = async (tz: string) => {
     if (!activeSpaceId) return
@@ -249,6 +263,41 @@ export default function SpaceSettingsScreen() {
       })
     } finally {
       setMemberToRemove(null)
+    }
+  }
+
+  const handleConfirmRevokeGrant = async () => {
+    if (!grantToRevoke?.apiKeyId || !activeSpaceId) return
+    try {
+      await revokeGrantMutation.mutateAsync({
+        space_id: activeSpaceId,
+        api_key_id: grantToRevoke.apiKeyId,
+        req: {
+          spaceId: activeSpaceId,
+          apiKeyId: grantToRevoke.apiKeyId,
+        },
+      })
+      await queryClient.invalidateQueries({
+        queryKey: [`/api/v1/spaces/${activeSpaceId}/api-keys`],
+      })
+      haptics.success()
+      toast.show({
+        type: "success",
+        title: "Workspace Access Revoked",
+        message: `Removed "${grantToRevoke.keyName}" access from this workspace.`,
+      })
+    } catch (err: unknown) {
+      haptics.error()
+      toast.show({
+        type: "error",
+        title: "Error",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Failed to revoke API key access",
+      })
+    } finally {
+      setGrantToRevoke(null)
     }
   }
 
@@ -449,6 +498,79 @@ export default function SpaceSettingsScreen() {
           )}
         </View>
 
+        {/* Active API Key Grants (Admins & Owners Only) */}
+        {canManageMembers && (
+          <View style={styles.section}>
+            <Caption style={styles.sectionHeader}>
+              ACTIVE API KEY GRANTS ({apiKeyGrants.length})
+            </Caption>
+            {isGrantsLoading ? (
+              <SkeletonCard />
+            ) : (
+              <Card style={styles.membersList}>
+                {apiKeyGrants.map((grant) => (
+                  <View key={grant.apiKeyId} style={styles.memberRow}>
+                    <View style={styles.memberLeft}>
+                      <Avatar
+                        name={
+                          grant.userName ||
+                          grant.userEmail ||
+                          grant.userId ||
+                          "User"
+                        }
+                        size={38}
+                      />
+                      <View style={styles.memberInfo}>
+                        <View style={styles.nameBadgeRow}>
+                          <Text style={styles.memberName} numberOfLines={1}>
+                            {grant.keyName}
+                          </Text>
+                          <Badge
+                            variant="default"
+                            size="sm"
+                            label={grant.keyPrefix}
+                          />
+                        </View>
+                        <Text style={styles.memberSub} numberOfLines={1}>
+                          {grant.userName || grant.userId}
+                          {grant.userEmail ? ` · ${grant.userEmail}` : ""}
+                        </Text>
+                        <Text style={styles.memberSub} numberOfLines={1}>
+                          {(grant.scopes || []).join(", ")} ·{" "}
+                          {grant.lastUsedAt
+                            ? `Used ${tz.formatDate(grant.lastUsedAt)}`
+                            : "Never used"}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        haptics.medium()
+                        setGrantToRevoke(grant)
+                      }}
+                      style={styles.removeBtn}
+                      accessibilityLabel={`Revoke ${grant.keyName}`}
+                    >
+                      <Trash2 size={16} color={theme.colors.destructive} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+
+                {apiKeyGrants.length === 0 && (
+                  <View style={styles.emptyMembers}>
+                    <Key size={24} color={theme.colors.textMuted} />
+                    <Text style={styles.emptyText}>
+                      No active API key grants on this workspace
+                    </Text>
+                  </View>
+                )}
+              </Card>
+            )}
+          </View>
+        )}
+
         {/* Member Invitation Modal */}
         {inviteModalVisible && (
           <View style={styles.inviteOverlay}>
@@ -581,6 +703,19 @@ export default function SpaceSettingsScreen() {
           loading={deleteMemberMutation.isPending}
           onConfirm={handleConfirmRemoveMember}
           onCancel={() => setMemberToRemove(null)}
+        />
+
+        {/* Confirm API Key Grant Revocation Dialog */}
+        <ConfirmDialog
+          visible={!!grantToRevoke}
+          title="Revoke Workspace Access"
+          message={`Remove access for "${grantToRevoke?.keyName || ""}" from this workspace? The owner's other workspaces will remain unaffected.`}
+          confirmText="Revoke Access"
+          cancelText="Cancel"
+          isDestructive
+          loading={revokeGrantMutation.isPending}
+          onConfirm={handleConfirmRevokeGrant}
+          onCancel={() => setGrantToRevoke(null)}
         />
       </ScrollView>
     </KeyboardAvoidingView>

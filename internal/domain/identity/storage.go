@@ -110,3 +110,16 @@ type PasswordResetStore interface {
 	GetByTokenHash(ctx context.Context, tokenHash []byte) (*PasswordResetToken, error)
 	Update(ctx context.Context, token *PasswordResetToken) error
 }
+
+// APIKeyStore defines persistence operations for user-owned fine-grained API keys.
+// @Mock
+type APIKeyStore interface {
+	Create(ctx context.Context, key *APIKey) error
+	GetByID(ctx context.Context, id APIKeyID) (*APIKey, error)
+	GetByHash(ctx context.Context, keyHash string) (*APIKey, error)
+	ListByUserID(ctx context.Context, userID UserID) ([]*APIKey, error)
+	ListByIDs(ctx context.Context, ids []APIKeyID) ([]*APIKey, error)
+	Update(ctx context.Context, key *APIKey) error
+	Delete(ctx context.Context, id APIKeyID) error
+	TouchLastUsed(ctx context.Context, id APIKeyID, lastUsedAt time.Time) error
+}

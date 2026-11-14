@@ -661,3 +661,52 @@ func TestCoordinator_UpdateSettings(t *testing.T) {
 		}
 	})
 }
+
+func TestCoordinator_RevokeSpaceAPIKeyGrant(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Success", func(t *testing.T) {
+		mockSpace := &SpaceServiceMock{
+			RevokeSpaceAPIKeyGrantFunc: func(ctx context.Context, session space.Session, apiKeyID string) error {
+				if session.SpaceID != "spc_123" || session.UserID != "usr_456" || apiKeyID != "apk_789" {
+					t.Errorf("unexpected args: session=%+v apiKeyID=%s", session, apiKeyID)
+				}
+				return nil
+			},
+		}
+		coord := NewCoordinator(Dependencies{SpaceService: mockSpace})
+		err := coord.RevokeSpaceAPIKeyGrant(ctx, &RevokeSpaceAPIKeyGrantRequest{
+			SpaceID:  "spc_123",
+			UserID:   "usr_456",
+			APIKeyID: "apk_789",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("Nil request", func(t *testing.T) {
+		coord := NewCoordinator(Dependencies{SpaceService: &SpaceServiceMock{}})
+		err := coord.RevokeSpaceAPIKeyGrant(ctx, nil)
+		if err == nil || errors.KindOf(err) != errors.Invalid {
+			t.Fatalf("expected Invalid error, got %v", err)
+		}
+	})
+
+	t.Run("Domain error propagation", func(t *testing.T) {
+		mockSpace := &SpaceServiceMock{
+			RevokeSpaceAPIKeyGrantFunc: func(ctx context.Context, session space.Session, apiKeyID string) error {
+				return errors.E(errors.Permission, "admin required")
+			},
+		}
+		coord := NewCoordinator(Dependencies{SpaceService: mockSpace})
+		err := coord.RevokeSpaceAPIKeyGrant(ctx, &RevokeSpaceAPIKeyGrantRequest{
+			SpaceID:  "spc_123",
+			UserID:   "usr_456",
+			APIKeyID: "apk_789",
+		})
+		if err == nil || errors.KindOf(err) != errors.Permission {
+			t.Fatalf("expected Permission error, got %v", err)
+		}
+	})
+}

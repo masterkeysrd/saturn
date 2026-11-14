@@ -147,6 +147,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	deviceStore := identitystorage.NewDeviceStore(dbClient)
 	ecdsaVerifier := crypto.NewECDSAVerifier()
 	passwordResetStore := identitystorage.NewPasswordResetStore(dbClient)
+	apiKeyStore := identitystorage.NewAPIKeyStore(dbClient)
 	identityService := identity.NewService(
 		identity.Dependencies{
 			UserStore:          userStore,
@@ -161,6 +162,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 			ChallengeStore:     deviceStore,
 			DeviceVerifier:     ecdsaVerifier,
 			PasswordResetStore: passwordResetStore,
+			APIKeyStore:        apiKeyStore,
 		},
 	)
 
@@ -168,12 +170,14 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	platformSettingsStore := settings.NewPostgresStore(dbClient)
 	spaceStore := spacestorage.NewSpaceStore(dbClient)
 	memberStore := spacestorage.NewMemberStore(dbClient)
+	apiKeyGrantStore := spacestorage.NewAPIKeyGrantStore(dbClient)
 
 	// Wire Space service
 	spaceService := space.NewService(space.Dependencies{
-		SpaceStore:  spaceStore,
-		MemberStore: memberStore,
-		Settings:    settings.Bind(platformSettingsStore, space.SettingsKey),
+		SpaceStore:       spaceStore,
+		MemberStore:      memberStore,
+		APIKeyGrantStore: apiKeyGrantStore,
+		Settings:         settings.Bind(platformSettingsStore, space.SettingsKey),
 	})
 
 	// Wire JWT token service
@@ -234,7 +238,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	spaceRules := api.CompileAllSpaceRules(global, modules)
 
 	// Wire auth interceptor with loaded rules
-	authInterceptor := interceptors.NewAuthInterceptor(tokenService, userStore, rules)
+	authInterceptor := interceptors.NewAuthInterceptor(tokenService, userStore, apiKeyStore, apiKeyGrantStore, rules)
 
 	// Wire space interceptor
 	spaceInterceptor := interceptors.NewSpaceInterceptor(memberStore, spaceRules)

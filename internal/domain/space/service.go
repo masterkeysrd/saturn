@@ -11,9 +11,10 @@ import (
 
 // Dependencies holds all storage interfaces and clients required by the Service.
 type Dependencies struct {
-	SpaceStore  SpaceStore
-	MemberStore MemberStore
-	Settings    SettingsClient
+	SpaceStore       SpaceStore
+	MemberStore      MemberStore
+	APIKeyGrantStore APIKeyGrantStore
+	Settings         SettingsClient
 }
 
 // Service handles space business logic.
@@ -419,4 +420,129 @@ func (s *Service) UpdateSettings(ctx context.Context, session Session, incoming 
 	}
 
 	return entry, nil
+}
+
+// SyncAPIKeyGrants validates caller membership in every requested space and synchronizes
+// the active space grants for the given API key.
+func (s *Service) SyncAPIKeyGrants(ctx context.Context, apiKeyID string, userID SpaceID, spaceIDs []SpaceID) error {
+	const op errors.Op = "domain/space.SyncAPIKeyGrants"
+
+	if apiKeyID == "" {
+		return errors.E(op, errors.Invalid, "api_key_id is required")
+	}
+	if userID == "" {
+		return errors.E(op, errors.Invalid, "user_id is required")
+	}
+	if len(spaceIDs) == 0 {
+		return errors.E(op, errors.Invalid, "at least one space_id is required")
+	}
+
+	seen := make(map[SpaceID]struct{}, len(spaceIDs))
+	unique := make([]SpaceID, 0, len(spaceIDs))
+	for _, sid := range spaceIDs {
+		if sid == "" {
+			return errors.E(op, errors.Invalid, "space_id cannot be empty")
+		}
+		if err := sid.Validate(); err != nil {
+			return errors.E(op, errors.Invalid, err)
+		}
+		if _, dup := seen[sid]; !dup {
+			seen[sid] = struct{}{}
+			unique = append(unique, sid)
+		}
+	}
+
+	for _, sid := range unique {
+		exists, err := s.deps.MemberStore.Exists(ctx, sid, userID)
+		if err != nil {
+			return errors.E(op, err)
+		}
+		if !exists {
+			return errors.E(op, errors.Permission, InsufficientRole, "user is not a member of requested space")
+		}
+	}
+
+	now := time.Now().UTC()
+	grants := make([]*APIKeyGrant, len(unique))
+	for i, sid := range unique {
+		grants[i] = &APIKeyGrant{
+			APIKeyID:   apiKeyID,
+			SpaceID:    sid,
+			UserID:     userID,
+			CreateTime: now,
+		}
+	}
+
+	if err := s.deps.APIKeyGrantStore.DeleteGrantsForKeyExcept(ctx, apiKeyID, unique); err != nil {
+		return errors.E(op, err)
+	}
+	if err := s.deps.APIKeyGrantStore.UpsertGrants(ctx, grants); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
+}
+
+// ListAPIKeyGrantedSpaces returns the active granted space IDs for a single API key.
+func (s *Service) ListAPIKeyGrantedSpaces(ctx context.Context, apiKeyID string) ([]SpaceID, error) {
+	const op errors.Op = "domain/space.ListAPIKeyGrantedSpaces"
+
+	if apiKeyID == "" {
+		return nil, errors.E(op, errors.Invalid, "api_key_id is required")
+	}
+	spaceIDs, err := s.deps.APIKeyGrantStore.ListSpaceIDsByAPIKeyID(ctx, apiKeyID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return spaceIDs, nil
+}
+
+// ListAPIKeysGrantedSpaces batch-fetches active granted space IDs for multiple API keys.
+func (s *Service) ListAPIKeysGrantedSpaces(ctx context.Context, apiKeyIDs []string) (map[string][]SpaceID, error) {
+	const op errors.Op = "domain/space.ListAPIKeysGrantedSpaces"
+
+	if len(apiKeyIDs) == 0 {
+		return map[string][]SpaceID{}, nil
+	}
+	grants, err := s.deps.APIKeyGrantStore.ListSpaceIDsByAPIKeyIDs(ctx, apiKeyIDs)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return grants, nil
+}
+
+// ListSpaceAPIKeyGrants returns all active API key grants targeting a workspace.
+// Requires the caller to be a workspace admin or owner.
+func (s *Service) ListSpaceAPIKeyGrants(ctx context.Context, session Session) ([]*APIKeyGrant, error) {
+	const op errors.Op = "domain/space.ListSpaceAPIKeyGrants"
+
+	if _, err := s.authorize(ctx, session, requireManageSettings); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	grants, err := s.deps.APIKeyGrantStore.ListBySpaceID(ctx, session.SpaceID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return grants, nil
+}
+
+// RevokeSpaceAPIKeyGrant removes a specific API key's grant to access the workspace.
+// Requires the caller to be a workspace admin or owner.
+func (s *Service) RevokeSpaceAPIKeyGrant(ctx context.Context, session Session, apiKeyID string) error {
+	const op errors.Op = "domain/space.RevokeSpaceAPIKeyGrant"
+
+	if _, err := s.authorize(ctx, session, requireManageSettings); err != nil {
+		return errors.E(op, err)
+	}
+	if apiKeyID == "" {
+		return errors.E(op, errors.Invalid, "api_key_id is required")
+	}
+
+	if err := s.deps.APIKeyGrantStore.DeleteGrant(ctx, apiKeyID, session.SpaceID); err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.NotExist, APIKeyGrantNotFound, "API key grant not found for this space")
+		}
+		return errors.E(op, err)
+	}
+	return nil
 }

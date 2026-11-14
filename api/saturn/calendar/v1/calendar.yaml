@@ -16,6 +16,58 @@ authentication:
     # All calendar endpoints require authentication
     - selector: "saturn.calendar.v1.CalendarService.*"
       auth_required: true
+    - selector: "saturn.calendar.v1.CalendarService.ListCalendars"
+      auth_required: true
+      api_key_scopes:
+        - calendar:read
+        - calendar:write
+    - selector: "saturn.calendar.v1.CalendarService.GetCalendar"
+      auth_required: true
+      api_key_scopes:
+        - calendar:read
+        - calendar:write
+    - selector: "saturn.calendar.v1.CalendarService.ListEvents"
+      auth_required: true
+      api_key_scopes:
+        - calendar:read
+        - calendar:write
+    - selector: "saturn.calendar.v1.CalendarService.GetEvent"
+      auth_required: true
+      api_key_scopes:
+        - calendar:read
+        - calendar:write
+    - selector: "saturn.calendar.v1.CalendarService.CreateCalendar"
+      auth_required: true
+      api_key_scopes:
+        - calendar:write
+    - selector: "saturn.calendar.v1.CalendarService.UpdateCalendar"
+      auth_required: true
+      api_key_scopes:
+        - calendar:write
+    - selector: "saturn.calendar.v1.CalendarService.DeleteCalendar"
+      auth_required: true
+      api_key_scopes:
+        - calendar:write
+    - selector: "saturn.calendar.v1.CalendarService.EnsureDefaultCalendar"
+      auth_required: true
+      api_key_scopes:
+        - calendar:write
+    - selector: "saturn.calendar.v1.CalendarService.CreateEvent"
+      auth_required: true
+      api_key_scopes:
+        - calendar:write
+    - selector: "saturn.calendar.v1.CalendarService.UpdateEvent"
+      auth_required: true
+      api_key_scopes:
+        - calendar:write
+    - selector: "saturn.calendar.v1.CalendarService.DeleteEvent"
+      auth_required: true
+      api_key_scopes:
+        - calendar:write
+    - selector: "saturn.calendar.v1.CalendarService.RespondToEvent"
+      auth_required: true
+      api_key_scopes:
+        - calendar:write
 
 space:
   rules:

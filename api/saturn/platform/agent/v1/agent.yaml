@@ -16,6 +16,70 @@ authentication:
     # All agent endpoints require authentication
     - selector: "saturn.platform.agent.v1.AgentService.*"
       auth_required: true
+    - selector: "saturn.platform.agent.v1.AgentService.GetProvider"
+      auth_required: true
+      api_key_scopes:
+        - agents:read
+        - agents:write
+    - selector: "saturn.platform.agent.v1.AgentService.ListProviders"
+      auth_required: true
+      api_key_scopes:
+        - agents:read
+        - agents:write
+    - selector: "saturn.platform.agent.v1.AgentService.GetAgent"
+      auth_required: true
+      api_key_scopes:
+        - agents:read
+        - agents:write
+    - selector: "saturn.platform.agent.v1.AgentService.ListAgents"
+      auth_required: true
+      api_key_scopes:
+        - agents:read
+        - agents:write
+    - selector: "saturn.platform.agent.v1.AgentService.ListAgentRuns"
+      auth_required: true
+      api_key_scopes:
+        - agents:read
+        - agents:write
+    - selector: "saturn.platform.agent.v1.AgentService.GetAgentCatalog"
+      auth_required: true
+      api_key_scopes:
+        - agents:read
+        - agents:write
+    - selector: "saturn.platform.agent.v1.AgentService.GetProviderCatalog"
+      auth_required: true
+      api_key_scopes:
+        - agents:read
+        - agents:write
+    - selector: "saturn.platform.agent.v1.AgentService.GetSuggestions"
+      auth_required: true
+      api_key_scopes:
+        - agents:read
+        - agents:write
+    - selector: "saturn.platform.agent.v1.AgentService.CreateProvider"
+      auth_required: true
+      api_key_scopes:
+        - agents:write
+    - selector: "saturn.platform.agent.v1.AgentService.UpdateProvider"
+      auth_required: true
+      api_key_scopes:
+        - agents:write
+    - selector: "saturn.platform.agent.v1.AgentService.DeleteProvider"
+      auth_required: true
+      api_key_scopes:
+        - agents:write
+    - selector: "saturn.platform.agent.v1.AgentService.CreateAgent"
+      auth_required: true
+      api_key_scopes:
+        - agents:write
+    - selector: "saturn.platform.agent.v1.AgentService.UpdateAgent"
+      auth_required: true
+      api_key_scopes:
+        - agents:write
+    - selector: "saturn.platform.agent.v1.AgentService.DeleteAgent"
+      auth_required: true
+      api_key_scopes:
+        - agents:write
 
 space:
   rules:

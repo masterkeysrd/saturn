@@ -1958,3 +1958,297 @@ func (mock *PasswordResetStoreMock) UpdateCalls() []struct {
 	defer mock.lockUpdate.RUnlock()
 	return mock.calls.Update
 }
+
+// Compile-time interface assertion.
+var _ APIKeyStore = (*APIKeyStoreMock)(nil)
+
+// APIKeyStoreMock is a mock implementation of APIKeyStore.
+type APIKeyStoreMock struct {
+	// CreateFunc mocks the Create method.
+	CreateFunc func(ctx context.Context, key *APIKey) error
+
+	// GetByIDFunc mocks the GetByID method.
+	GetByIDFunc func(ctx context.Context, id APIKeyID) (*APIKey, error)
+
+	// GetByHashFunc mocks the GetByHash method.
+	GetByHashFunc func(ctx context.Context, keyHash string) (*APIKey, error)
+
+	// ListByUserIDFunc mocks the ListByUserID method.
+	ListByUserIDFunc func(ctx context.Context, userID UserID) ([]*APIKey, error)
+
+	// ListByIDsFunc mocks the ListByIDs method.
+	ListByIDsFunc func(ctx context.Context, ids []APIKeyID) ([]*APIKey, error)
+
+	// UpdateFunc mocks the Update method.
+	UpdateFunc func(ctx context.Context, key *APIKey) error
+
+	// DeleteFunc mocks the Delete method.
+	DeleteFunc func(ctx context.Context, id APIKeyID) error
+
+	// TouchLastUsedFunc mocks the TouchLastUsed method.
+	TouchLastUsedFunc func(ctx context.Context, id APIKeyID, lastUsedAt time.Time) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Create []struct {
+			Ctx context.Context
+			Key *APIKey
+		}
+		GetByID []struct {
+			Ctx context.Context
+			Id  APIKeyID
+		}
+		GetByHash []struct {
+			Ctx     context.Context
+			KeyHash string
+		}
+		ListByUserID []struct {
+			Ctx    context.Context
+			UserID UserID
+		}
+		ListByIDs []struct {
+			Ctx context.Context
+			Ids []APIKeyID
+		}
+		Update []struct {
+			Ctx context.Context
+			Key *APIKey
+		}
+		Delete []struct {
+			Ctx context.Context
+			Id  APIKeyID
+		}
+		TouchLastUsed []struct {
+			Ctx        context.Context
+			Id         APIKeyID
+			LastUsedAt time.Time
+		}
+	}
+	lockCreate        sync.RWMutex
+	lockGetByID       sync.RWMutex
+	lockGetByHash     sync.RWMutex
+	lockListByUserID  sync.RWMutex
+	lockListByIDs     sync.RWMutex
+	lockUpdate        sync.RWMutex
+	lockDelete        sync.RWMutex
+	lockTouchLastUsed sync.RWMutex
+}
+
+// Create calls CreateFunc.
+func (mock *APIKeyStoreMock) Create(ctx context.Context, key *APIKey) error {
+	if mock.CreateFunc == nil {
+		panic("APIKeyStoreMock.CreateFunc: method is nil but APIKeyStore.Create was just called")
+	}
+	mock.lockCreate.Lock()
+	mock.calls.Create = append(mock.calls.Create, struct {
+		Ctx context.Context
+		Key *APIKey
+	}{
+		Ctx: ctx,
+		Key: key,
+	})
+	mock.lockCreate.Unlock()
+	return mock.CreateFunc(ctx, key)
+}
+
+// CreateCalls returns all calls made to Create.
+func (mock *APIKeyStoreMock) CreateCalls() []struct {
+	Ctx context.Context
+	Key *APIKey
+} {
+	mock.lockCreate.RLock()
+	defer mock.lockCreate.RUnlock()
+	return mock.calls.Create
+}
+
+// GetByID calls GetByIDFunc.
+func (mock *APIKeyStoreMock) GetByID(ctx context.Context, id APIKeyID) (*APIKey, error) {
+	if mock.GetByIDFunc == nil {
+		panic("APIKeyStoreMock.GetByIDFunc: method is nil but APIKeyStore.GetByID was just called")
+	}
+	mock.lockGetByID.Lock()
+	mock.calls.GetByID = append(mock.calls.GetByID, struct {
+		Ctx context.Context
+		Id  APIKeyID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockGetByID.Unlock()
+	return mock.GetByIDFunc(ctx, id)
+}
+
+// GetByIDCalls returns all calls made to GetByID.
+func (mock *APIKeyStoreMock) GetByIDCalls() []struct {
+	Ctx context.Context
+	Id  APIKeyID
+} {
+	mock.lockGetByID.RLock()
+	defer mock.lockGetByID.RUnlock()
+	return mock.calls.GetByID
+}
+
+// GetByHash calls GetByHashFunc.
+func (mock *APIKeyStoreMock) GetByHash(ctx context.Context, keyHash string) (*APIKey, error) {
+	if mock.GetByHashFunc == nil {
+		panic("APIKeyStoreMock.GetByHashFunc: method is nil but APIKeyStore.GetByHash was just called")
+	}
+	mock.lockGetByHash.Lock()
+	mock.calls.GetByHash = append(mock.calls.GetByHash, struct {
+		Ctx     context.Context
+		KeyHash string
+	}{
+		Ctx:     ctx,
+		KeyHash: keyHash,
+	})
+	mock.lockGetByHash.Unlock()
+	return mock.GetByHashFunc(ctx, keyHash)
+}
+
+// GetByHashCalls returns all calls made to GetByHash.
+func (mock *APIKeyStoreMock) GetByHashCalls() []struct {
+	Ctx     context.Context
+	KeyHash string
+} {
+	mock.lockGetByHash.RLock()
+	defer mock.lockGetByHash.RUnlock()
+	return mock.calls.GetByHash
+}
+
+// ListByUserID calls ListByUserIDFunc.
+func (mock *APIKeyStoreMock) ListByUserID(ctx context.Context, userID UserID) ([]*APIKey, error) {
+	if mock.ListByUserIDFunc == nil {
+		panic("APIKeyStoreMock.ListByUserIDFunc: method is nil but APIKeyStore.ListByUserID was just called")
+	}
+	mock.lockListByUserID.Lock()
+	mock.calls.ListByUserID = append(mock.calls.ListByUserID, struct {
+		Ctx    context.Context
+		UserID UserID
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+	})
+	mock.lockListByUserID.Unlock()
+	return mock.ListByUserIDFunc(ctx, userID)
+}
+
+// ListByUserIDCalls returns all calls made to ListByUserID.
+func (mock *APIKeyStoreMock) ListByUserIDCalls() []struct {
+	Ctx    context.Context
+	UserID UserID
+} {
+	mock.lockListByUserID.RLock()
+	defer mock.lockListByUserID.RUnlock()
+	return mock.calls.ListByUserID
+}
+
+// ListByIDs calls ListByIDsFunc.
+func (mock *APIKeyStoreMock) ListByIDs(ctx context.Context, ids []APIKeyID) ([]*APIKey, error) {
+	if mock.ListByIDsFunc == nil {
+		panic("APIKeyStoreMock.ListByIDsFunc: method is nil but APIKeyStore.ListByIDs was just called")
+	}
+	mock.lockListByIDs.Lock()
+	mock.calls.ListByIDs = append(mock.calls.ListByIDs, struct {
+		Ctx context.Context
+		Ids []APIKeyID
+	}{
+		Ctx: ctx,
+		Ids: ids,
+	})
+	mock.lockListByIDs.Unlock()
+	return mock.ListByIDsFunc(ctx, ids)
+}
+
+// ListByIDsCalls returns all calls made to ListByIDs.
+func (mock *APIKeyStoreMock) ListByIDsCalls() []struct {
+	Ctx context.Context
+	Ids []APIKeyID
+} {
+	mock.lockListByIDs.RLock()
+	defer mock.lockListByIDs.RUnlock()
+	return mock.calls.ListByIDs
+}
+
+// Update calls UpdateFunc.
+func (mock *APIKeyStoreMock) Update(ctx context.Context, key *APIKey) error {
+	if mock.UpdateFunc == nil {
+		panic("APIKeyStoreMock.UpdateFunc: method is nil but APIKeyStore.Update was just called")
+	}
+	mock.lockUpdate.Lock()
+	mock.calls.Update = append(mock.calls.Update, struct {
+		Ctx context.Context
+		Key *APIKey
+	}{
+		Ctx: ctx,
+		Key: key,
+	})
+	mock.lockUpdate.Unlock()
+	return mock.UpdateFunc(ctx, key)
+}
+
+// UpdateCalls returns all calls made to Update.
+func (mock *APIKeyStoreMock) UpdateCalls() []struct {
+	Ctx context.Context
+	Key *APIKey
+} {
+	mock.lockUpdate.RLock()
+	defer mock.lockUpdate.RUnlock()
+	return mock.calls.Update
+}
+
+// Delete calls DeleteFunc.
+func (mock *APIKeyStoreMock) Delete(ctx context.Context, id APIKeyID) error {
+	if mock.DeleteFunc == nil {
+		panic("APIKeyStoreMock.DeleteFunc: method is nil but APIKeyStore.Delete was just called")
+	}
+	mock.lockDelete.Lock()
+	mock.calls.Delete = append(mock.calls.Delete, struct {
+		Ctx context.Context
+		Id  APIKeyID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockDelete.Unlock()
+	return mock.DeleteFunc(ctx, id)
+}
+
+// DeleteCalls returns all calls made to Delete.
+func (mock *APIKeyStoreMock) DeleteCalls() []struct {
+	Ctx context.Context
+	Id  APIKeyID
+} {
+	mock.lockDelete.RLock()
+	defer mock.lockDelete.RUnlock()
+	return mock.calls.Delete
+}
+
+// TouchLastUsed calls TouchLastUsedFunc.
+func (mock *APIKeyStoreMock) TouchLastUsed(ctx context.Context, id APIKeyID, lastUsedAt time.Time) error {
+	if mock.TouchLastUsedFunc == nil {
+		panic("APIKeyStoreMock.TouchLastUsedFunc: method is nil but APIKeyStore.TouchLastUsed was just called")
+	}
+	mock.lockTouchLastUsed.Lock()
+	mock.calls.TouchLastUsed = append(mock.calls.TouchLastUsed, struct {
+		Ctx        context.Context
+		Id         APIKeyID
+		LastUsedAt time.Time
+	}{
+		Ctx:        ctx,
+		Id:         id,
+		LastUsedAt: lastUsedAt,
+	})
+	mock.lockTouchLastUsed.Unlock()
+	return mock.TouchLastUsedFunc(ctx, id, lastUsedAt)
+}
+
+// TouchLastUsedCalls returns all calls made to TouchLastUsed.
+func (mock *APIKeyStoreMock) TouchLastUsedCalls() []struct {
+	Ctx        context.Context
+	Id         APIKeyID
+	LastUsedAt time.Time
+} {
+	mock.lockTouchLastUsed.RLock()
+	defer mock.lockTouchLastUsed.RUnlock()
+	return mock.calls.TouchLastUsed
+}

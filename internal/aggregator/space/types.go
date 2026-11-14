@@ -1,6 +1,8 @@
 package spaceaggregator
 
 import (
+	"time"
+
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 )
 
@@ -15,4 +17,19 @@ type MemberProfile struct {
 type SpaceMember struct {
 	*space.Member
 	Profile *MemberProfile
+}
+
+// APIKeyGrant represents an active workspace API key grant hydrated with key metadata and owner profile.
+type APIKeyGrant struct {
+	APIKeyID        string
+	SpaceID         space.SpaceID
+	UserID          space.SpaceID
+	UserName        string
+	UserEmail       string
+	KeyName         string
+	KeyPrefix       string
+	Scopes          []string
+	ExpiresAt       *time.Time
+	LastUsedAt      *time.Time
+	GrantCreateTime time.Time
 }
