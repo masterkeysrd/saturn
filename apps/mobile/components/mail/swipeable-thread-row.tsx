@@ -154,14 +154,14 @@ interface LeftSwipeActionProps {
 
 function LeftSwipeAction({ drag, testID, onPress }: LeftSwipeActionProps) {
   const containerStyle = useAnimatedStyle(() => {
-    // Only fade in container background when actively swiped right
-    const opacity = interpolate(drag.value, [0, 20], [0, 1], "clamp")
+    // Only fade in container background after deliberate horizontal drag
+    const opacity = interpolate(drag.value, [12, 32], [0, 1], "clamp")
     return { opacity }
   })
 
   const contentStyle = useAnimatedStyle(() => {
-    const scale = interpolate(drag.value, [0, 80], [0.5, 1], "clamp")
-    const opacity = interpolate(drag.value, [10, 40], [0, 1], "clamp")
+    const scale = interpolate(drag.value, [12, 80], [0.5, 1], "clamp")
+    const opacity = interpolate(drag.value, [16, 44], [0, 1], "clamp")
     return { transform: [{ scale }], opacity }
   })
 
@@ -197,14 +197,14 @@ function RightSwipeActions({
   onTrash,
 }: RightSwipeActionsProps) {
   const containerStyle = useAnimatedStyle(() => {
-    // Only fade in container background when actively swiped left (negative drag.value)
-    const opacity = interpolate(drag.value, [-20, 0], [1, 0], "clamp")
+    // Only fade in container background after deliberate horizontal drag
+    const opacity = interpolate(drag.value, [-32, -12], [1, 0], "clamp")
     return { opacity }
   })
 
   const contentStyle = useAnimatedStyle(() => {
     const scale = interpolate(drag.value, [-140, -40], [1, 0.5], "clamp")
-    const opacity = interpolate(drag.value, [-40, -10], [1, 0], "clamp")
+    const opacity = interpolate(drag.value, [-44, -16], [1, 0], "clamp")
     return { transform: [{ scale }], opacity }
   })
 
@@ -324,12 +324,12 @@ export function SwipeableThreadRow({
         />
       )}
       onSwipeableWillOpen={() => haptics.selection()}
-      // Tuned sensitivity so diagonal list scrolling does not accidentally trigger swipe actions
-      dragOffsetFromLeft={35}
-      dragOffsetFromRight={-35}
-      leftThreshold={90}
-      rightThreshold={110}
-      friction={3.5}
+      // Tuned for effortless horizontal swipes while preserving vertical scroll stability
+      dragOffsetFromLeft={24}
+      dragOffsetFromRight={-24}
+      leftThreshold={40}
+      rightThreshold={60}
+      friction={1.5}
       overshootLeft={false}
       overshootRight={false}
     >

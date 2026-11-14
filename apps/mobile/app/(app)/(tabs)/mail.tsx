@@ -2,14 +2,13 @@ import React, { useState, useMemo, useCallback } from "react"
 import {
   View,
   Text,
-  FlatList,
   TextInput,
   Pressable,
-  RefreshControl,
   StyleSheet,
   ActivityIndicator,
   Platform,
 } from "react-native"
+import { FlatList, RefreshControl } from "react-native-gesture-handler"
 import { useRouter } from "expo-router"
 import { Search, X, Edit, Inbox, AlertCircle } from "lucide-react-native"
 import {

@@ -315,21 +315,24 @@ describe("Mobile Mail Feature Logic & Component Unit Tests", () => {
   })
 
   describe("Mobile Thread Row Avatar & Swipe Sensitivity Calibration", () => {
-    it("configures firm swipe thresholds and friction to prevent accidental triggers during vertical scrolling", () => {
+    it("configures balanced swipe thresholds and friction so actions open smoothly without accidental scroll triggers", () => {
       const swipeConfig = {
-        dragOffsetFromLeft: 35,
-        dragOffsetFromRight: -35,
-        leftThreshold: 90,
-        rightThreshold: 110,
-        friction: 3.5,
+        dragOffsetFromLeft: 24,
+        dragOffsetFromRight: -24,
+        leftThreshold: 40,
+        rightThreshold: 60,
+        friction: 1.5,
         overshootLeft: false,
         overshootRight: false,
       }
 
-      // Assert swipe requires deliberate drag distance
-      expect(swipeConfig.dragOffsetFromLeft).toBeGreaterThanOrEqual(30)
-      expect(swipeConfig.dragOffsetFromRight).toBeLessThanOrEqual(-30)
-      expect(swipeConfig.friction).toBeGreaterThanOrEqual(3)
+      // Assert deliberate horizontal activation offset while keeping thresholds <= action widths
+      expect(swipeConfig.dragOffsetFromLeft).toBeGreaterThanOrEqual(20)
+      expect(swipeConfig.dragOffsetFromRight).toBeLessThanOrEqual(-20)
+      expect(swipeConfig.leftThreshold).toBeLessThanOrEqual(80)
+      expect(swipeConfig.rightThreshold).toBeLessThanOrEqual(140)
+      expect(swipeConfig.friction).toBeGreaterThanOrEqual(1)
+      expect(swipeConfig.friction).toBeLessThanOrEqual(2)
       expect(swipeConfig.overshootLeft).toBe(false)
       expect(swipeConfig.overshootRight).toBe(false)
     })
