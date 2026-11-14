@@ -2,7 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { renderHook, act, waitFor } from "@testing-library/react"
 import { createElement, type ReactNode } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { mailKeys, useMailThread, useModifyThread } from "./use-mail"
+import {
+  mailKeys,
+  useMailThread,
+  useInfiniteMailThreads,
+  useModifyThread,
+} from "./use-mail"
 import * as api from "@saturn/api/saturn/mail/v1/mail"
 
 vi.mock("@saturn/api/saturn/mail/v1/mail", async () => {
@@ -180,6 +185,93 @@ describe("useMail hooks", () => {
         expect(rolledBack?.threads).toHaveLength(2)
         expect(rolledBack?.threads.map((t) => t.id)).toContain("mth_to_archive")
       })
+    })
+  })
+
+  describe("useInfiniteMailThreads", () => {
+    it("fetches subsequent pages using nextPageToken", async () => {
+      vi.mocked(api.listThreads)
+        .mockResolvedValueOnce({
+          threads: [
+            {
+              id: "mth_page_1",
+              spaceId: "sp_1",
+              connectedAccountId: "acc_1",
+              providerThreadId: "p_1",
+              subject: "Page 1",
+              snippet: "",
+              participants: [],
+              messageCount: 1,
+              hasAttachments: false,
+              isUnread: false,
+              isStarred: false,
+              inInbox: true,
+              inSent: false,
+              inDrafts: false,
+              inTrash: false,
+              inSpam: false,
+              mailboxIds: [],
+              lastMessageAt: "",
+              createTime: "",
+              updateTime: "",
+              messages: [],
+            },
+          ],
+          nextPageToken: "50",
+          totalSize: 2,
+        })
+        .mockResolvedValueOnce({
+          threads: [
+            {
+              id: "mth_page_2",
+              spaceId: "sp_1",
+              connectedAccountId: "acc_1",
+              providerThreadId: "p_2",
+              subject: "Page 2",
+              snippet: "",
+              participants: [],
+              messageCount: 1,
+              hasAttachments: false,
+              isUnread: false,
+              isStarred: false,
+              inInbox: true,
+              inSent: false,
+              inDrafts: false,
+              inTrash: false,
+              inSpam: false,
+              mailboxIds: [],
+              lastMessageAt: "",
+              createTime: "",
+              updateTime: "",
+              messages: [],
+            },
+          ],
+          nextPageToken: "",
+          totalSize: 2,
+        })
+
+      const { result } = renderHook(
+        () => useInfiniteMailThreads({ pageSize: 50 }),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(() => {
+        expect(result.current.data?.pages).toHaveLength(1)
+      })
+      expect(result.current.hasNextPage).toBe(true)
+
+      await act(async () => {
+        await result.current.fetchNextPage()
+      })
+
+      await waitFor(() => {
+        expect(result.current.data?.pages).toHaveLength(2)
+      })
+      expect(vi.mocked(api.listThreads)).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ pageToken: "50", pageSize: 50 })
+      )
+      expect(result.current.hasNextPage).toBe(false)
     })
   })
 })

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react"
+import React, { useState, useMemo, useEffect, useRef } from "react"
 import {
   View,
   Text,
@@ -12,14 +12,22 @@ import {
   Platform,
 } from "react-native"
 import { useLocalSearchParams, useRouter } from "expo-router"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import * as DocumentPicker from "expo-document-picker"
 import {
   X,
   Send,
   Paperclip,
-  ChevronDown,
-  ChevronUp,
   Trash2,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  Heading2,
+  List,
+  ListOrdered,
+  Quote,
+  Image as ImageIcon,
 } from "lucide-react-native"
 import {
   useConnectedAccounts,
@@ -34,14 +42,26 @@ import {
   normalizeReplySubject,
   normalizeForwardSubject,
   computeReplyRecipients,
+  buildQuotedReplyHtml,
+  buildForwardedMessageHtml,
+  prepareUnifiedDraftHtml,
+  stripHtmlToPlainText,
   formatAttachmentBytes,
 } from "@saturn/core"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { RecipientInput } from "@/components/mail/recipient-input"
+import {
+  EmailRichEditor,
+  EMPTY_ACTIVE_FORMATS,
+  type EmailRichEditorHandle,
+  type EmailEditorCommand,
+  type EmailEditorActiveFormats,
+} from "@/components/mail/email-rich-editor"
 
 export default function ComposeMailModal() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{
     threadId?: string
     replyToMessageId?: string
@@ -91,19 +111,43 @@ export default function ComposeMailModal() {
   )
   const [showCcBcc, setShowCcBcc] = useState(false)
 
-  // Subject & Body
+  // Subject & Unified Rich Editor Body
   const [subject, setSubject] = useState("")
-  const [bodyText, setBodyText] = useState("")
+  const [initialBodyHtml, setInitialBodyHtml] = useState("")
   const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [activeFormats, setActiveFormats] =
+    useState<EmailEditorActiveFormats>(EMPTY_ACTIVE_FORMATS)
+  const [remoteImagesRevealed, setRemoteImagesRevealed] = useState(false)
 
-  // Quoted reply HTML preservation
-  const [quotedHtml, setQuotedHtml] = useState("")
-  const [showQuotePreview, setShowQuotePreview] = useState(false)
+  const editorRef = useRef<EmailRichEditorHandle>(null)
+  const initializedKeyRef = useRef<string | null>(null)
 
   const [isSending, setIsSending] = useState(false)
 
   const saveDraftMutation = useSaveDraft()
   const sendDraftMutation = useSendDraft()
+
+  const targetMessage = useMemo(() => {
+    if (!thread?.messages?.length) return undefined
+    if (params.replyToMessageId) {
+      return (
+        thread.messages.find((m) => m.id === params.replyToMessageId) ||
+        thread.messages[thread.messages.length - 1]
+      )
+    }
+    return thread.messages[thread.messages.length - 1]
+  }, [thread, params.replyToMessageId])
+
+  const preparedContent = useMemo(
+    () =>
+      prepareUnifiedDraftHtml({
+        bodyHtml: initialBodyHtml,
+        bodyText: "",
+        attachments: targetMessage?.attachments,
+        loadRemoteImages: false,
+      }),
+    [initialBodyHtml, targetMessage?.attachments]
+  )
 
   // Initialize reply/forward fields from thread when available
   useEffect(() => {
@@ -114,80 +158,131 @@ export default function ComposeMailModal() {
       setSubject(params.initialSubject)
     }
 
-    if (thread && params.replyToMessageId) {
-      const targetMsg =
-        thread.messages?.find((m) => m.id === params.replyToMessageId) ||
-        thread.messages?.[thread.messages.length - 1]
+    const isReplyOrForward =
+      params.mode === "DRAFT_MODE_REPLY" ||
+      params.mode === "DRAFT_MODE_REPLY_ALL" ||
+      params.mode === "DRAFT_MODE_FORWARD"
 
-      if (targetMsg) {
-        if (params.mode === "DRAFT_MODE_REPLY") {
-          setSubject(normalizeReplySubject(thread.subject))
-          const recipients = computeReplyRecipients({
-            replyType: "reply",
-            from: {
-              email: targetMsg.from?.email || "",
-              displayName: targetMsg.from?.name || "",
-            },
-            replyTo: (targetMsg.replyTo || []).map((p) => ({
-              email: p.email,
-              displayName: p.name || "",
-            })),
-          })
-          setToRecipients(
-            recipients.to.map((r) => ({
-              email: r.email,
-              displayName: r.displayName || "",
-            }))
-          )
-        } else if (params.mode === "DRAFT_MODE_REPLY_ALL") {
-          setSubject(normalizeReplySubject(thread.subject))
-          const selfAccount = accounts.find(
-            (a) => a.id === thread.connectedAccountId
-          )
-          const selfEmails = selfAccount?.email ? [selfAccount.email] : []
-          const recipients = computeReplyRecipients({
-            replyType: "reply-all",
-            from: {
-              email: targetMsg.from?.email || "",
-              displayName: targetMsg.from?.name || "",
-            },
-            to: (targetMsg.to || []).map((p) => ({
-              email: p.email,
-              displayName: p.name || "",
-            })),
-            cc: (targetMsg.cc || []).map((p) => ({
-              email: p.email,
-              displayName: p.name || "",
-            })),
-            replyTo: (targetMsg.replyTo || []).map((p) => ({
-              email: p.email,
-              displayName: p.name || "",
-            })),
-            selfEmails,
-          })
-          setToRecipients(
-            recipients.to.map((r) => ({
-              email: r.email,
-              displayName: r.displayName || "",
-            }))
-          )
-          setCcRecipients(
-            recipients.cc.map((r) => ({
-              email: r.email,
-              displayName: r.displayName || "",
-            }))
-          )
-          if (recipients.cc.length > 0) setShowCcBcc(true)
-        } else if (params.mode === "DRAFT_MODE_FORWARD") {
-          setSubject(normalizeForwardSubject(thread.subject))
-        }
+    if (
+      thread &&
+      targetMessage &&
+      (params.replyToMessageId || isReplyOrForward)
+    ) {
+      const initKey = `${thread.id}:${targetMessage.id}:${params.mode || ""}`
+      if (initializedKeyRef.current === initKey) return
+      initializedKeyRef.current = initKey
 
-        if (targetMsg.bodyHtml) {
-          setQuotedHtml(targetMsg.bodyHtml)
+      if (params.mode === "DRAFT_MODE_REPLY") {
+        setSubject(normalizeReplySubject(thread.subject))
+        const recipients = computeReplyRecipients({
+          replyType: "reply",
+          from: {
+            email: targetMessage.from?.email || "",
+            displayName: targetMessage.from?.name || "",
+          },
+          replyTo: (targetMessage.replyTo || []).map((p) => ({
+            email: p.email,
+            displayName: p.name || "",
+          })),
+        })
+        setToRecipients(
+          recipients.to.map((r) => ({
+            email: r.email,
+            displayName: r.displayName || "",
+          }))
+        )
+      } else if (params.mode === "DRAFT_MODE_REPLY_ALL") {
+        setSubject(normalizeReplySubject(thread.subject))
+        const selfAccount = accounts.find(
+          (a) => a.id === thread.connectedAccountId
+        )
+        const selfEmails = selfAccount?.email ? [selfAccount.email] : []
+        const recipients = computeReplyRecipients({
+          replyType: "reply-all",
+          from: {
+            email: targetMessage.from?.email || "",
+            displayName: targetMessage.from?.name || "",
+          },
+          to: (targetMessage.to || []).map((p) => ({
+            email: p.email,
+            displayName: p.name || "",
+          })),
+          cc: (targetMessage.cc || []).map((p) => ({
+            email: p.email,
+            displayName: p.name || "",
+          })),
+          replyTo: (targetMessage.replyTo || []).map((p) => ({
+            email: p.email,
+            displayName: p.name || "",
+          })),
+          selfEmails,
+        })
+        setToRecipients(
+          recipients.to.map((r) => ({
+            email: r.email,
+            displayName: r.displayName || "",
+          }))
+        )
+        setCcRecipients(
+          recipients.cc.map((r) => ({
+            email: r.email,
+            displayName: r.displayName || "",
+          }))
+        )
+        if (recipients.cc.length > 0) setShowCcBcc(true)
+      } else if (params.mode === "DRAFT_MODE_FORWARD") {
+        setSubject(normalizeForwardSubject(thread.subject))
+        if (targetMessage.attachments && targetMessage.attachments.length > 0) {
+          setAttachments(targetMessage.attachments)
         }
       }
+
+      const hasOriginalContent = Boolean(
+        targetMessage.bodyHtml?.trim() ||
+        targetMessage.bodyPlain?.trim() ||
+        targetMessage.snippet?.trim()
+      )
+
+      if (params.mode === "DRAFT_MODE_FORWARD") {
+        setInitialBodyHtml(
+          buildForwardedMessageHtml({
+            from: {
+              email: targetMessage.from?.email || "",
+              displayName: targetMessage.from?.name || "",
+            },
+            to: (targetMessage.to || []).map((p) => ({
+              email: p.email,
+              displayName: p.name || "",
+            })),
+            cc: (targetMessage.cc || []).map((p) => ({
+              email: p.email,
+              displayName: p.name || "",
+            })),
+            subject: targetMessage.subject || thread.subject || "",
+            sentAt: targetMessage.sentAt,
+            bodyHtml: targetMessage.bodyHtml,
+            bodyText: targetMessage.bodyPlain || targetMessage.snippet,
+            preserveStyles: true,
+            attachments: targetMessage.attachments,
+          })
+        )
+      } else if (hasOriginalContent) {
+        setInitialBodyHtml(
+          buildQuotedReplyHtml({
+            from: {
+              email: targetMessage.from?.email || "",
+              displayName: targetMessage.from?.name || "",
+            },
+            sentAt: targetMessage.sentAt,
+            bodyHtml: targetMessage.bodyHtml,
+            bodyText: targetMessage.bodyPlain || targetMessage.snippet,
+            preserveStyles: true,
+            attachments: targetMessage.attachments,
+          })
+        )
+      }
     }
-  }, [thread, params, accounts])
+  }, [thread, targetMessage, params, accounts])
 
   // Attachments picker via expo-document-picker
   const handlePickAttachment = async () => {
@@ -260,19 +355,10 @@ export default function ComposeMailModal() {
       setIsSending(true)
       haptics.selection()
 
-      // Convert plain text to clean HTML
-      const escapedBody = bodyText
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;")
-        .replace(/\n/g, "<br>")
-
-      let finalHtml = `<div style="font-family: -apple-system, sans-serif; font-size: 14px; line-height: 1.5;">${escapedBody}</div>`
-      if (quotedHtml) {
-        finalHtml += `<br><br><div class="saturn-quoted-reply"><blockquote style="margin: 0 0 0 0.8ex; border-left: 1px solid #ccc; padding-left: 1ex;">${quotedHtml}</blockquote></div>`
-      }
+      const finalHtml =
+        editorRef.current?.getHTML() || preparedContent.bodyHtml || ""
+      const plainBodyText =
+        editorRef.current?.getText() || stripHtmlToPlainText(finalHtml)
 
       // 1. Save draft
       const draftPayload: SaveDraftVariables = {
@@ -299,7 +385,7 @@ export default function ComposeMailModal() {
         })),
         subject: subject.trim(),
         bodyHtml: finalHtml,
-        bodyText,
+        bodyText: plainBodyText,
         mode: params.mode || "DRAFT_MODE_NEW",
         attachments,
       }
@@ -494,49 +580,98 @@ export default function ComposeMailModal() {
             </View>
           )}
 
-          {/* Body Native Text Input */}
-          <TextInput
-            testID="mobile-composer-body-input"
-            value={bodyText}
-            onChangeText={setBodyText}
-            placeholder="Compose email..."
-            placeholderTextColor={theme.colors.textMuted}
-            multiline
-            textAlignVertical="top"
-            style={styles.bodyInput}
-          />
+          {/* Formatting Toolbar */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="always"
+            style={styles.formattingBar}
+            contentContainerStyle={styles.formattingBarContent}
+          >
+            {(
+              [
+                { cmd: "bold", label: "Bold", Icon: Bold },
+                { cmd: "italic", label: "Italic", Icon: Italic },
+                { cmd: "underline", label: "Underline", Icon: Underline },
+                { cmd: "strike", label: "Strikethrough", Icon: Strikethrough },
+                { cmd: "heading2", label: "Heading", Icon: Heading2 },
+                { cmd: "bulletList", label: "Bullet list", Icon: List },
+                {
+                  cmd: "orderedList",
+                  label: "Numbered list",
+                  Icon: ListOrdered,
+                },
+                { cmd: "blockquote", label: "Blockquote", Icon: Quote },
+              ] as {
+                cmd: EmailEditorCommand
+                label: string
+                Icon: typeof Bold
+              }[]
+            ).map(({ cmd, label, Icon }) => {
+              const isActive = activeFormats[cmd]
+              return (
+                <Pressable
+                  key={cmd}
+                  accessibilityLabel={label}
+                  onPress={() => {
+                    haptics.selection()
+                    editorRef.current?.execFormat(cmd)
+                  }}
+                  style={[styles.formatBtn, isActive && styles.formatBtnActive]}
+                >
+                  <Icon
+                    size={16}
+                    color={
+                      isActive ? theme.colors.primary : theme.colors.textMuted
+                    }
+                  />
+                </Pressable>
+              )
+            })}
+          </ScrollView>
 
-          {/* Quoted Reply Preview */}
-          {quotedHtml.length > 0 && (
-            <View style={styles.quotedContainer}>
-              <Pressable
-                onPress={() => setShowQuotePreview((prev) => !prev)}
-                style={styles.quotedHeader}
-              >
-                <Text style={styles.quotedHeaderText}>
-                  {showQuotePreview
-                    ? "Hide quoted message"
-                    : "Show quoted message"}
+          {/* Remote Images Hidden Banner */}
+          {preparedContent.hasRemoteImages && !remoteImagesRevealed && (
+            <View style={styles.remoteBanner}>
+              <View style={styles.remoteBannerLeft}>
+                <ImageIcon size={14} color={theme.colors.warning} />
+                <Text style={styles.remoteBannerText}>
+                  Remote images in this draft are hidden.
                 </Text>
-                {showQuotePreview ? (
-                  <ChevronUp size={14} color={theme.colors.textMuted} />
-                ) : (
-                  <ChevronDown size={14} color={theme.colors.textMuted} />
-                )}
+              </View>
+              <Pressable
+                testID="mobile-composer-show-images-btn"
+                onPress={() => {
+                  haptics.selection()
+                  setRemoteImagesRevealed(true)
+                  editorRef.current?.revealRemoteImages()
+                }}
+              >
+                <Text style={styles.remoteBannerAction}>Show images</Text>
               </Pressable>
-              {showQuotePreview && (
-                <View style={styles.quotedContent}>
-                  <Text style={styles.quotedText}>
-                    (Original message preserved in sent email)
-                  </Text>
-                </View>
-              )}
             </View>
           )}
+
+          {/* Unified Editable HTML Composer */}
+          <EmailRichEditor
+            ref={editorRef}
+            testID="mobile-composer-body-input"
+            bodyHtml={preparedContent.bodyHtml}
+            stylesHtml={preparedContent.stylesHtml}
+            placeholder="Compose email..."
+            minHeight={240}
+            autoFocus={true}
+            onActiveFormatsChange={setActiveFormats}
+          />
         </ScrollView>
 
         {/* Bottom Toolbar */}
-        <View style={styles.bottomToolbar}>
+        <View
+          style={[
+            styles.bottomToolbar,
+            { paddingBottom: Math.max(insets.bottom, 10) },
+          ]}
+        >
           <Pressable
             testID="mobile-composer-add-attachment"
             onPress={handlePickAttachment}
@@ -706,44 +841,58 @@ const styles = StyleSheet.create({
   attRemoveBtn: {
     padding: 2,
   },
-  bodyInput: {
-    flex: 1,
-    minHeight: 220,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: theme.colors.textPrimary,
-    lineHeight: 22,
-  },
-  quotedContainer: {
-    marginHorizontal: 16,
-    marginTop: 10,
-    borderRadius: theme.radius.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+  formattingBar: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
-    overflow: "hidden",
+    maxHeight: 42,
   },
-  quotedHeader: {
+  formattingBarContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 4,
+  },
+  formatBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: theme.radius.xs,
+  },
+  formatBtnActive: {
+    backgroundColor: theme.colors.primarySubtle,
+  },
+  remoteBanner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 12,
+    marginHorizontal: 12,
+    marginVertical: 8,
+    paddingHorizontal: 10,
     paddingVertical: 8,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.warningSubtle,
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.3)",
   },
-  quotedHeaderText: {
+  remoteBannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+    marginRight: 8,
+  },
+  remoteBannerText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: theme.colors.warning,
     fontWeight: "500",
+    flexShrink: 1,
   },
-  quotedContent: {
-    paddingHorizontal: 12,
-    paddingBottom: 8,
-  },
-  quotedText: {
+  remoteBannerAction: {
     fontSize: 12,
-    color: theme.colors.textMuted,
-    fontStyle: "italic",
+    color: theme.colors.warning,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
   bottomToolbar: {
     flexDirection: "row",

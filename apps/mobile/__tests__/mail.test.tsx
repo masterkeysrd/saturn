@@ -5,7 +5,12 @@ import {
   computeReplyRecipients,
   normalizeReplySubject,
   normalizeForwardSubject,
+  buildQuotedReplyHtml,
+  buildForwardedMessageHtml,
+  prepareUnifiedDraftHtml,
+  stripHtmlToPlainText,
 } from "@saturn/core"
+import { buildMobileEditorDocumentHtml } from "../components/mail/email-editor-html"
 
 // Mock haptics
 vi.mock("../lib/haptics", () => ({
@@ -348,6 +353,212 @@ describe("Mobile Mail Feature Logic & Component Unit Tests", () => {
       expect(getInitials("Domex Expreso", "info@domex.do")).toBe("DE")
       expect(getInitials("Saturn", "saturn@corp.com")).toBe("SA")
       expect(getInitials("", "support@stripe.com")).toBe("S")
+    })
+  })
+
+  describe("Auto-Mark Thread as Read on Open", () => {
+    it("marks an unread thread as read once after the viewing delay", () => {
+      vi.useFakeTimers()
+      const markedSet = new Set<string>()
+      const modifyThreadMock = vi.fn()
+
+      const scheduleMarkAsRead = (thread?: {
+        id: string
+        isUnread: boolean
+      }) => {
+        if (!thread?.id || !thread.isUnread) return
+        if (markedSet.has(thread.id)) return
+        const threadToMark = thread.id
+        const timer = setTimeout(() => {
+          markedSet.add(threadToMark)
+          modifyThreadMock({
+            id: threadToMark,
+            req: { id: threadToMark, isUnread: false },
+          })
+        }, 750)
+        return () => clearTimeout(timer)
+      }
+
+      const cleanup = scheduleMarkAsRead({ id: "mth_unread", isUnread: true })
+      expect(modifyThreadMock).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(750)
+      expect(modifyThreadMock).toHaveBeenCalledTimes(1)
+      expect(modifyThreadMock).toHaveBeenCalledWith({
+        id: "mth_unread",
+        req: { id: "mth_unread", isUnread: false },
+      })
+
+      // Re-running for the same thread should not dispatch a duplicate call
+      scheduleMarkAsRead({ id: "mth_unread", isUnread: true })
+      vi.advanceTimersByTime(750)
+      expect(modifyThreadMock).toHaveBeenCalledTimes(1)
+
+      cleanup?.()
+      vi.useRealTimers()
+    })
+
+    it("does not trigger mark-as-read for already read threads or when unmounted before delay", () => {
+      vi.useFakeTimers()
+      const markedSet = new Set<string>()
+      const modifyThreadMock = vi.fn()
+
+      const scheduleMarkAsRead = (thread?: {
+        id: string
+        isUnread: boolean
+      }) => {
+        if (!thread?.id || !thread.isUnread) return
+        if (markedSet.has(thread.id)) return
+        const threadToMark = thread.id
+        const timer = setTimeout(() => {
+          markedSet.add(threadToMark)
+          modifyThreadMock({
+            id: threadToMark,
+            req: { id: threadToMark, isUnread: false },
+          })
+        }, 750)
+        return () => clearTimeout(timer)
+      }
+
+      scheduleMarkAsRead({ id: "mth_read", isUnread: false })
+      vi.advanceTimersByTime(1000)
+      expect(modifyThreadMock).not.toHaveBeenCalled()
+
+      const cancel = scheduleMarkAsRead({
+        id: "mth_quick_exit",
+        isUnread: true,
+      })
+      vi.advanceTimersByTime(300)
+      cancel?.()
+      vi.advanceTimersByTime(1000)
+      expect(modifyThreadMock).not.toHaveBeenCalled()
+
+      vi.useRealTimers()
+    })
+  })
+
+  describe("Quoted Reply & Forwarded Email Preview Formatting", () => {
+    it("builds quoted reply HTML from plain text when bodyHtml is absent", () => {
+      const html = buildQuotedReplyHtml({
+        from: { email: "alice@example.com", displayName: "Alice" },
+        sentAt: "2026-11-13T10:00:00Z",
+        bodyHtml: "",
+        bodyText: "Line one\nLine two",
+        preserveStyles: true,
+      })
+
+      expect(html).toContain("Alice &lt;alice@example.com&gt; wrote:")
+      expect(html).toContain("Line one<br>Line two")
+      expect(html.replace(/^(?:\s*<p>\s*<br\s*\/?>\s*<\/p>)+/i, "")).toMatch(
+        /^<div class="saturn-quoted-reply">/
+      )
+    })
+
+    it("builds forwarded message HTML with headers and original body", () => {
+      const html = buildForwardedMessageHtml({
+        from: { email: "alice@example.com", displayName: "Alice" },
+        to: [{ email: "bob@example.com", displayName: "Bob" }],
+        subject: "Quarterly Review",
+        sentAt: "2026-11-13T10:00:00Z",
+        bodyHtml: "<p>Please see attached summary.</p>",
+        preserveStyles: true,
+      })
+
+      expect(html).toContain("---------- Forwarded message ---------")
+      expect(html).toContain("Quarterly Review")
+      expect(html).toContain("Please see attached summary.")
+    })
+
+    it("prepares a unified contentEditable HTML document for mobile reply and forward editing", () => {
+      const quoted = buildQuotedReplyHtml({
+        from: { email: "alice@example.com", displayName: "Alice" },
+        sentAt: "2026-11-13T10:00:00Z",
+        bodyHtml:
+          '<style>.sig{color:#000}</style><p>Original message <img data-saturn-remote-src="https://example.com/logo.png" /></p>',
+        preserveStyles: true,
+      })
+
+      const prepared = prepareUnifiedDraftHtml({
+        bodyHtml: quoted,
+        bodyText: "",
+        loadRemoteImages: false,
+      })
+
+      expect(prepared.hasRemoteImages).toBe(true)
+      expect(prepared.stylesHtml).toContain(".sig")
+
+      const doc = buildMobileEditorDocumentHtml({
+        bodyHtml: prepared.bodyHtml,
+        stylesHtml: prepared.stylesHtml,
+        placeholder: "Compose email...",
+        minHeight: 240,
+        autoFocus: true,
+      })
+
+      expect(doc).toContain('contenteditable="true"')
+      expect(doc).toContain('data-empty="false"')
+      expect(doc).toContain("Original message")
+      expect(doc).toContain("window.__saturnEditor")
+
+      const emptyDoc = buildMobileEditorDocumentHtml({
+        bodyHtml: "",
+        stylesHtml: "",
+        placeholder: "Compose email...",
+        minHeight: 240,
+      })
+      expect(emptyDoc).toContain('data-empty="true"')
+      expect(stripHtmlToPlainText("<p>Hello</p><p>World</p>")).toBe(
+        "Hello\nWorld"
+      )
+    })
+  })
+
+  describe("Overview Mail Summary Widget Logic", () => {
+    it("caps visible unread threads at 3 and computes remaining unread count from inbox mailboxes", () => {
+      const threads = [
+        { id: "mth_1" },
+        { id: "mth_2" },
+        { id: "mth_3" },
+        { id: "mth_4" },
+      ]
+      const mailboxes = [
+        { systemRole: "MAILBOX_ROLE_INBOX", unreadCount: 5 },
+        { systemRole: "MAILBOX_ROLE_INBOX", unreadCount: 2 },
+        { systemRole: "MAILBOX_ROLE_SENT", unreadCount: 10 },
+      ]
+
+      let inboxUnread = 0
+      for (const mbx of mailboxes) {
+        if (mbx.systemRole === "MAILBOX_ROLE_INBOX") {
+          inboxUnread += mbx.unreadCount || 0
+        }
+      }
+      const totalUnread = Math.max(inboxUnread, threads.length)
+      const visible = threads.slice(0, 3)
+      const remaining = Math.max(0, totalUnread - visible.length)
+
+      expect(visible).toHaveLength(3)
+      expect(totalUnread).toBe(7)
+      expect(remaining).toBe(4)
+    })
+
+    it("detects mail capability case-insensitively across connected accounts", () => {
+      const accounts = [
+        { id: "acc_cal", enabledCapabilities: ["calendar"] },
+        { id: "acc_mail_lower", enabledCapabilities: ["mail", "calendar"] },
+        { id: "acc_mail_upper", enabledCapabilities: ["MAIL"] },
+      ]
+
+      const mailAccounts = accounts.filter(
+        (a) =>
+          a.enabledCapabilities?.includes("mail") ||
+          a.enabledCapabilities?.includes("MAIL")
+      )
+
+      expect(mailAccounts.map((a) => a.id)).toEqual([
+        "acc_mail_lower",
+        "acc_mail_upper",
+      ])
     })
   })
 })

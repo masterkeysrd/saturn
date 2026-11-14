@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react"
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Platform,
 } from "react-native"
 import { useLocalSearchParams, useRouter, Stack } from "expo-router"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import * as FileSystem from "expo-file-system/legacy"
 import * as Sharing from "expo-sharing"
 import {
@@ -36,11 +37,32 @@ import { MessageWebView } from "@/components/mail/message-webview"
 
 export default function MobileThreadReaderScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { threadId } = useLocalSearchParams<{ threadId: string }>()
 
   const { data: thread, isLoading, error } = useMailThread(threadId)
   const modifyMutation = useModifyThread()
+  const { mutate: modifyThread } = modifyMutation
   const toast = useToast()
+
+  // Auto-mark conversation as read when opened
+  const markedAsReadRef = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!thread?.id || !thread.isUnread) return
+    if (markedAsReadRef.current.has(thread.id)) return
+
+    const threadToMark = thread.id
+    const timer = setTimeout(() => {
+      markedAsReadRef.current.add(threadToMark)
+      modifyThread({
+        id: threadToMark,
+        req: { id: threadToMark, isUnread: false },
+      })
+    }, 750)
+
+    return () => clearTimeout(timer)
+  }, [thread?.id, thread?.isUnread, modifyThread])
 
   // Track which messages are collapsed/expanded
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
@@ -301,7 +323,10 @@ export default function MobileThreadReaderScreen() {
         }}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Thread Subject Header */}
         <View style={styles.subjectCard}>
           <Text style={styles.subjectText}>
@@ -463,7 +488,12 @@ export default function MobileThreadReaderScreen() {
       </ScrollView>
 
       {/* Bottom Sticky Action Bar */}
-      <View style={styles.bottomActionBar}>
+      <View
+        style={[
+          styles.bottomActionBar,
+          { paddingBottom: Math.max(insets.bottom, 12) + 6 },
+        ]}
+      >
         <Pressable
           testID="mobile-reply-btn"
           onPress={() => handleReply("DRAFT_MODE_REPLY")}
@@ -537,8 +567,11 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontWeight: "600",
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
-    paddingBottom: 90,
+    paddingBottom: 16,
   },
   subjectCard: {
     paddingHorizontal: 16,
@@ -724,11 +757,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   bottomActionBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 58,
     backgroundColor: theme.colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: theme.colors.border,
@@ -736,6 +764,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-around",
     paddingHorizontal: 16,
+    paddingTop: 10,
   },
   replyActionBarBtn: {
     flexDirection: "row",

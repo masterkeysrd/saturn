@@ -1,6 +1,8 @@
 import {
   useQuery,
   type UseQueryOptions,
+  useInfiniteQuery,
+  type InfiniteData,
   useMutation,
   type UseMutationOptions,
   useQueryClient,
@@ -45,6 +47,8 @@ export const mailKeys = {
   mailboxes: (connectedAccountId?: string) =>
     ["mail", "mailboxes", { connectedAccountId }] as const,
   threads: (filter?: ListThreadsFilter) => ["mail", "threads", filter] as const,
+  infiniteThreads: (filter?: ListThreadsFilter) =>
+    ["mail", "threads", filter, "infinite"] as const,
   allThreads: () => ["mail", "threads"] as const,
   thread: (id: string) => ["mail", "thread", id] as const,
 }
@@ -114,6 +118,34 @@ export function useMailThreads(
   })
 }
 
+export function useInfiniteMailThreads(filter: ListThreadsFilter = {}) {
+  return useInfiniteQuery<
+    ListThreadsResponse,
+    Error,
+    InfiniteData<ListThreadsResponse>,
+    readonly unknown[],
+    string
+  >({
+    queryKey: mailKeys.infiniteThreads(filter),
+    initialPageParam: "",
+    queryFn: ({ pageParam }) =>
+      listThreads({
+        connectedAccountId: filter.connectedAccountId || "",
+        mailboxId: filter.mailboxId || "",
+        systemBucket:
+          filter.systemBucket ?? ("MAILBOX_ROLE_UNSPECIFIED" as MailboxRole),
+        isUnread: filter.isUnread,
+        isStarred: filter.isStarred,
+        query: filter.query || "",
+        pageSize: filter.pageSize || 50,
+        pageToken: pageParam || "",
+      }),
+    getNextPageParam: (lastPage) => lastPage.nextPageToken || undefined,
+    refetchInterval: isTestEnv ? false : 60_000,
+    refetchOnWindowFocus: true,
+  })
+}
+
 export function useMailThread(
   threadId?: string,
   options?: Omit<UseQueryOptions<Thread, Error>, "queryKey" | "queryFn">
@@ -140,15 +172,39 @@ export interface ModifyThreadVariables {
   req: ModifyThreadRequest
 }
 
+type ThreadsCacheValue =
+  ListThreadsResponse | InfiniteData<ListThreadsResponse> | undefined
+
+function mapThreadsCacheValue(
+  data: ThreadsCacheValue,
+  mapper: (threads: Thread[]) => Thread[]
+): ThreadsCacheValue {
+  if (!data) return data
+  if ("pages" in data) {
+    return {
+      ...data,
+      pages: data.pages.map((page) => ({
+        ...page,
+        threads: mapper(page.threads),
+      })),
+    }
+  }
+  if ("threads" in data) {
+    return {
+      ...data,
+      threads: mapper(data.threads),
+    }
+  }
+  return data
+}
+
 export function useModifyThread(
   options?: UseMutationOptions<
     Thread,
     Error,
     ModifyThreadVariables,
     {
-      previousQueries?: Array<
-        [readonly unknown[], ListThreadsResponse | undefined]
-      >
+      previousQueries?: Array<[readonly unknown[], ThreadsCacheValue]>
     }
   >
 ) {
@@ -159,21 +215,18 @@ export function useModifyThread(
     Error,
     ModifyThreadVariables,
     {
-      previousQueries?: Array<
-        [readonly unknown[], ListThreadsResponse | undefined]
-      >
+      previousQueries?: Array<[readonly unknown[], ThreadsCacheValue]>
     }
   >({
     mutationFn: ({ id, req }) => modifyThread(id, req),
     onMutate: async ({ id, req }) => {
       await queryClient.cancelQueries({ queryKey: mailKeys.allThreads() })
 
-      const matchingQueries = queryClient.getQueriesData<ListThreadsResponse>({
+      const matchingQueries = queryClient.getQueriesData<ThreadsCacheValue>({
         queryKey: mailKeys.allThreads(),
       })
-      const previousQueries: Array<
-        [readonly unknown[], ListThreadsResponse | undefined]
-      > = matchingQueries.map(([key, data]) => [key, data])
+      const previousQueries: Array<[readonly unknown[], ThreadsCacheValue]> =
+        matchingQueries.map(([key, data]) => [key, data])
 
       const isArchiving =
         req.inInbox === false ||
@@ -192,53 +245,50 @@ export function useModifyThread(
         const isInboxView =
           filter.systemBucket === "MAILBOX_ROLE_INBOX" ||
           (!filter.systemBucket && !filter.mailboxId && !filter.query)
-
-        let updatedThreads = data.threads.map((t) => {
-          if (t.id === id) {
-            const updated = { ...t }
-            if (req.isUnread !== undefined) {
-              updated.isUnread = req.isUnread
-            }
-            if (req.isStarred !== undefined) {
-              updated.isStarred = req.isStarred
-            }
-            if (req.inInbox !== undefined) {
-              updated.inInbox = req.inInbox
-            }
-            if (isArchiving) {
-              updated.inInbox = false
-            }
-            if (req.inTrash !== undefined) {
-              updated.inTrash = req.inTrash
-              if (req.inTrash) {
-                updated.inInbox = false
-              }
-            }
-            if (req.inSpam !== undefined) {
-              updated.inSpam = req.inSpam
-              if (req.inSpam) {
-                updated.inInbox = false
-              }
-            }
-            return updated
-          }
-          return t
-        })
-
         const isTrashView = filter.systemBucket === "MAILBOX_ROLE_TRASH"
 
-        // If thread is trashed, immediately remove it from all non-trash views
-        if (req.inTrash && !isTrashView) {
-          updatedThreads = updatedThreads.filter((t) => t.id !== id)
-        } else if (isInboxView && (isArchiving || req.inSpam)) {
-          // If viewing inbox and thread is archived or spammed, filter it out immediately
-          updatedThreads = updatedThreads.filter((t) => t.id !== id)
-        }
+        const updatedData = mapThreadsCacheValue(data, (threads) => {
+          let updatedThreads = threads.map((t) => {
+            if (t.id === id) {
+              const updated = { ...t }
+              if (req.isUnread !== undefined) {
+                updated.isUnread = req.isUnread
+              }
+              if (req.isStarred !== undefined) {
+                updated.isStarred = req.isStarred
+              }
+              if (req.inInbox !== undefined) {
+                updated.inInbox = req.inInbox
+              }
+              if (isArchiving) {
+                updated.inInbox = false
+              }
+              if (req.inTrash !== undefined) {
+                updated.inTrash = req.inTrash
+                if (req.inTrash) {
+                  updated.inInbox = false
+                }
+              }
+              if (req.inSpam !== undefined) {
+                updated.inSpam = req.inSpam
+                if (req.inSpam) {
+                  updated.inInbox = false
+                }
+              }
+              return updated
+            }
+            return t
+          })
 
-        queryClient.setQueryData<ListThreadsResponse>(key, {
-          ...data,
-          threads: updatedThreads,
+          if (req.inTrash && !isTrashView) {
+            updatedThreads = updatedThreads.filter((t) => t.id !== id)
+          } else if (isInboxView && (isArchiving || req.inSpam)) {
+            updatedThreads = updatedThreads.filter((t) => t.id !== id)
+          }
+          return updatedThreads
         })
+
+        queryClient.setQueryData<ThreadsCacheValue>(key, updatedData)
       }
 
       return { previousQueries }
@@ -267,9 +317,7 @@ export function useBatchModifyThreads(
     Error,
     BatchModifyThreadsRequest,
     {
-      previousQueries?: Array<
-        [readonly unknown[], ListThreadsResponse | undefined]
-      >
+      previousQueries?: Array<[readonly unknown[], ThreadsCacheValue]>
     }
   >
 ) {
@@ -280,21 +328,18 @@ export function useBatchModifyThreads(
     Error,
     BatchModifyThreadsRequest,
     {
-      previousQueries?: Array<
-        [readonly unknown[], ListThreadsResponse | undefined]
-      >
+      previousQueries?: Array<[readonly unknown[], ThreadsCacheValue]>
     }
   >({
     mutationFn: (req) => batchModifyThreads(req),
     onMutate: async (req) => {
       await queryClient.cancelQueries({ queryKey: mailKeys.allThreads() })
 
-      const matchingQueries = queryClient.getQueriesData<ListThreadsResponse>({
+      const matchingQueries = queryClient.getQueriesData<ThreadsCacheValue>({
         queryKey: mailKeys.allThreads(),
       })
-      const previousQueries: Array<
-        [readonly unknown[], ListThreadsResponse | undefined]
-      > = matchingQueries.map(([key, data]) => [key, data])
+      const previousQueries: Array<[readonly unknown[], ThreadsCacheValue]> =
+        matchingQueries.map(([key, data]) => [key, data])
 
       const threadIdsSet = new Set(req.ids || [])
       const isArchiving =
@@ -313,51 +358,54 @@ export function useBatchModifyThreads(
         const isInboxView =
           filter.systemBucket === "MAILBOX_ROLE_INBOX" ||
           (!filter.systemBucket && !filter.mailboxId && !filter.query)
-
-        let updatedThreads = data.threads.map((t) => {
-          if (threadIdsSet.has(t.id)) {
-            const updated = { ...t }
-            if (req.isUnread !== undefined) {
-              updated.isUnread = req.isUnread
-            }
-            if (req.isStarred !== undefined) {
-              updated.isStarred = req.isStarred
-            }
-            if (req.inInbox !== undefined) {
-              updated.inInbox = req.inInbox
-            }
-            if (isArchiving) {
-              updated.inInbox = false
-            }
-            if (req.inTrash !== undefined) {
-              updated.inTrash = req.inTrash
-              if (req.inTrash) {
-                updated.inInbox = false
-              }
-            }
-            if (req.inSpam !== undefined) {
-              updated.inSpam = req.inSpam
-              if (req.inSpam) {
-                updated.inInbox = false
-              }
-            }
-            return updated
-          }
-          return t
-        })
-
         const isTrashView = filter.systemBucket === "MAILBOX_ROLE_TRASH"
 
-        if (req.inTrash && !isTrashView) {
-          updatedThreads = updatedThreads.filter((t) => !threadIdsSet.has(t.id))
-        } else if (isInboxView && (isArchiving || req.inSpam)) {
-          updatedThreads = updatedThreads.filter((t) => !threadIdsSet.has(t.id))
-        }
+        const updatedData = mapThreadsCacheValue(data, (threads) => {
+          let updatedThreads = threads.map((t) => {
+            if (threadIdsSet.has(t.id)) {
+              const updated = { ...t }
+              if (req.isUnread !== undefined) {
+                updated.isUnread = req.isUnread
+              }
+              if (req.isStarred !== undefined) {
+                updated.isStarred = req.isStarred
+              }
+              if (req.inInbox !== undefined) {
+                updated.inInbox = req.inInbox
+              }
+              if (isArchiving) {
+                updated.inInbox = false
+              }
+              if (req.inTrash !== undefined) {
+                updated.inTrash = req.inTrash
+                if (req.inTrash) {
+                  updated.inInbox = false
+                }
+              }
+              if (req.inSpam !== undefined) {
+                updated.inSpam = req.inSpam
+                if (req.inSpam) {
+                  updated.inInbox = false
+                }
+              }
+              return updated
+            }
+            return t
+          })
 
-        queryClient.setQueryData<ListThreadsResponse>(key, {
-          ...data,
-          threads: updatedThreads,
+          if (req.inTrash && !isTrashView) {
+            updatedThreads = updatedThreads.filter(
+              (t) => !threadIdsSet.has(t.id)
+            )
+          } else if (isInboxView && (isArchiving || req.inSpam)) {
+            updatedThreads = updatedThreads.filter(
+              (t) => !threadIdsSet.has(t.id)
+            )
+          }
+          return updatedThreads
         })
+
+        queryClient.setQueryData<ThreadsCacheValue>(key, updatedData)
       }
 
       return { previousQueries }
