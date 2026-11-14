@@ -4,6 +4,8 @@ package integration_test
 
 import (
 	"context"
+	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -149,9 +151,16 @@ func TestCalendarWorkflow_EndToEnd(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, initRes.GetAuthUrl())
 
-	// Simulate OAuth callback code exchange
-	_, err = d.HTTPClient().Get(d.Env().ServerURL + "/api/v1/platform/connectors/oauth/google/callback?code=mock_auth_code&state=" + initRes.GetState())
+	// Simulate OAuth callback code exchange without following the frontend redirect
+	noRedirectClient := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	callbackResp, err := noRedirectClient.Get(d.Env().ServerURL + "/api/v1/platform/connectors/oauth/google/callback?code=mock_auth_code&state=" + url.QueryEscape(initRes.GetState()))
 	require.NoError(t, err)
+	defer func() { _ = callbackResp.Body.Close() }()
+	assert.Equal(t, http.StatusFound, callbackResp.StatusCode)
 
 	// Verify connected account exists
 	accsRes, err := connClient.ListConnectedAccounts(ctx, &connectorv1.ListConnectedAccountsRequest{})

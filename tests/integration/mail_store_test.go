@@ -180,7 +180,7 @@ func TestMailStore_UnifiedInbox_FTS_TTL_And_Purge(t *testing.T) {
 
 	// 3. Unified Space Inbox pagination across 2 ConnectedAccounts
 	baseTime := time.Date(2025, 2, 10, 10, 0, 0, 0, time.UTC)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		thID, _ := mail.GenerateThreadID()
 		require.NoError(t, threadStore.Create(ctx, &mail.Thread{
 			ID:                 thID,
@@ -193,7 +193,7 @@ func TestMailStore_UnifiedInbox_FTS_TTL_And_Purge(t *testing.T) {
 		}))
 	}
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		thID, _ := mail.GenerateThreadID()
 		require.NoError(t, threadStore.Create(ctx, &mail.Thread{
 			ID:                 thID,
