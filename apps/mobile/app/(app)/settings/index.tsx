@@ -33,6 +33,7 @@ import {
   X,
   Link2,
   KeyRound,
+  Workflow,
 } from "lucide-react-native"
 import {
   useListActiveSessionsQuery,
@@ -400,6 +401,23 @@ export default function SettingsScreen() {
               <View style={styles.menuLeft}>
                 <Link2 size={18} color={theme.colors.primary} />
                 <Text style={styles.menuLabel}>Connected Accounts</Text>
+              </View>
+              <View style={styles.menuRight}>
+                <ChevronRight size={16} color={theme.colors.textMuted} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+              onPress={() => {
+                haptics.light()
+                router.push("/(app)/workflows" as never)
+              }}
+            >
+              <View style={styles.menuLeft}>
+                <Workflow size={18} color={theme.colors.accent} />
+                <Text style={styles.menuLabel}>Workflows</Text>
               </View>
               <View style={styles.menuRight}>
                 <ChevronRight size={16} color={theme.colors.textMuted} />

@@ -21,6 +21,7 @@ import {
   Settings,
   ChevronRight,
   Link2,
+  Workflow,
 } from "lucide-react-native"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
@@ -215,13 +216,25 @@ export default function MenuScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.menuItem}
+              style={[styles.menuItem, styles.menuItemBorder]}
               activeOpacity={0.7}
               onPress={() => navigateTo("/(app)/settings/connected-accounts")}
             >
               <View style={styles.menuLeft}>
                 <Link2 size={18} color={theme.colors.primary} />
                 <Text style={styles.menuLabel}>Connected Accounts</Text>
+              </View>
+              <ChevronRight size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/workflows")}
+            >
+              <View style={styles.menuLeft}>
+                <Workflow size={18} color={theme.colors.accent} />
+                <Text style={styles.menuLabel}>Workflows</Text>
               </View>
               <ChevronRight size={16} color={theme.colors.textMuted} />
             </TouchableOpacity>

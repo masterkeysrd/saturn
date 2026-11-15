@@ -219,6 +219,42 @@ export default function AppLayout() {
           headerBackTitle: "Mail",
         }}
       />
+      <Stack.Screen
+        name="workflows/index"
+        options={{
+          headerShown: true,
+          headerTitle: "Workflows",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Back",
+        }}
+      />
+      <Stack.Screen
+        name="workflows/[id]"
+        options={{
+          headerShown: true,
+          headerTitle: "Workflow Editor",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Workflows",
+        }}
+      />
+      <Stack.Screen
+        name="workflows/runs/[runId]"
+        options={{
+          headerShown: true,
+          headerTitle: "Run Trace",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Workflows",
+        }}
+      />
     </Stack>
   )
 }
