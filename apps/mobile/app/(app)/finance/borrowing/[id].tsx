@@ -48,7 +48,7 @@ import {
   getTimezoneParts,
   formatDateWithTimezone,
 } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -60,7 +60,6 @@ import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { TransactionListItem } from "@/components/finance/transaction-list-item"
 import { DateSectionHeader } from "@/components/finance/date-section-header"
 import { useToast } from "@/components/ui/toast"
-import { invalidateFinanceQueries } from "@/components/finance/finance-utils"
 
 // Cross-platform menu icons
 const paymentIcon = Icon.select({

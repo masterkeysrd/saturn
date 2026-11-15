@@ -26,16 +26,18 @@ import {
   useListBorrowingsQuery,
   useDeleteBorrowingMutation,
   useGetSettingsQuery,
+  useListExchangeRatesQuery,
   type Borrowing,
 } from "@saturn/api/saturn/finance/v1/finance"
 import {
+  convertCentsToBase,
   formatAmount,
   parseDate,
-  getStartOfDay,
+  getDaysDiff,
   getTimezoneParts,
   formatDateWithTimezone,
 } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -45,7 +47,6 @@ import { MonoAmount } from "@/components/ui/typography"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { useToast } from "@/components/ui/toast"
-import { invalidateFinanceQueries } from "@/components/finance/finance-utils"
 
 type FilterTab = "ALL" | "LENT" | "BORROWED" | "SETTLED"
 
@@ -74,20 +75,6 @@ const deleteIcon = Icon.select({
   ios: "trash",
   android: require("@expo/material-symbols/delete.xml"),
 })
-
-function getDaysDiff(
-  dateStr?: string,
-  timezone: string = "UTC"
-): number | null {
-  if (!dateStr) return null
-  const target = parseDate(dateStr)
-  if (!target) return null
-  const now = new Date()
-  const startToday = getStartOfDay(now, timezone)
-  const startTarget = getStartOfDay(target, timezone)
-  const diffTime = startTarget.getTime() - startToday.getTime()
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-}
 
 function formatDate(dateStr?: string, timezone: string = "UTC"): string {
   if (!dateStr) return ""
@@ -119,6 +106,15 @@ export default function BorrowingScreen() {
   )
   const baseCurrency = settingsData?.baseCurrency || "USD"
 
+  const { data: ratesData } = useListExchangeRatesQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!activeSpaceId }
+  )
+  const exchangeRates = useMemo(
+    () => ratesData?.exchangeRates || [],
+    [ratesData?.exchangeRates]
+  )
+
   const {
     data: borrowingsData,
     isLoading,
@@ -146,7 +142,7 @@ export default function BorrowingScreen() {
     }
   }
 
-  // Summary Metrics
+  // Summary Metrics (converted to workspace base currency)
   const { totalLentCents, totalBorrowedCents, netPositionCents } =
     useMemo(() => {
       let lent = 0
@@ -154,11 +150,16 @@ export default function BorrowingScreen() {
 
       borrowings.forEach((b) => {
         if (b.status === "ACTIVE") {
-          const rem = parseFloat(b.remainingAmount || "0")
+          const remBase = convertCentsToBase(
+            b.remainingAmount,
+            b.currency,
+            baseCurrency,
+            exchangeRates
+          )
           if (b.direction === "LENT") {
-            lent += rem
+            lent += remBase
           } else if (b.direction === "BORROWED") {
-            borrowed += rem
+            borrowed += remBase
           }
         }
       })
@@ -168,7 +169,7 @@ export default function BorrowingScreen() {
         totalBorrowedCents: borrowed,
         netPositionCents: lent - borrowed,
       }
-    }, [borrowings])
+    }, [borrowings, baseCurrency, exchangeRates])
 
   // Filtered List
   const filteredBorrowings = useMemo(() => {

@@ -53,7 +53,10 @@ import {
   formatCents,
   RECURRING_INTERVAL_OPTIONS,
 } from "@saturn/core"
-import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
+import {
+  invalidateFinanceQueries,
+  useCurrencyConversionPreview,
+} from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -73,7 +76,6 @@ import {
   AccountPickerSheet,
 } from "@/components/finance/sheets"
 import { AccountCardSelect } from "@/components/finance/account-select"
-import { invalidateFinanceQueries } from "@/components/finance/finance-utils"
 
 export default function ManageRecurringModal() {
   const router = useRouter()

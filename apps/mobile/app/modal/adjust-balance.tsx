@@ -30,6 +30,7 @@ import {
   useAdjustAccountBalanceMutation,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { formatAmount, formatCents, toCentsString } from "@saturn/core"
+import { invalidateFinanceQueries } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -37,7 +38,6 @@ import { Card } from "@/components/ui/card"
 import { TextInput } from "@/components/ui/text-input"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
-import { invalidateFinanceQueries } from "@/components/finance/finance-utils"
 
 export default function AdjustBalanceModal() {
   const router = useRouter()

@@ -22,7 +22,13 @@ import {
   ConfirmTransactionSchema,
   type ConfirmTransactionFormValues,
 } from "@saturn/schemas"
-import { toCentsString, formatAmount } from "@saturn/core"
+import {
+  toCentsString,
+  formatAmount,
+  getCurrencySymbol,
+  getScheduledDisplayName,
+} from "@saturn/core"
+import { invalidateFinanceQueries } from "@saturn/hooks"
 import {
   useConfirmScheduledTransactionMutation,
   type Budget,
@@ -43,11 +49,6 @@ import {
   AccountPickerSheet,
 } from "../sheets"
 import { AccountRow } from "../account-select"
-import {
-  getCurrencySymbol,
-  invalidateFinanceQueries,
-  getScheduledDisplayName,
-} from "../finance-utils"
 import { HeroAmountInput } from "@/components/ui/amount-input"
 import { FormRowInput, FormDateRow } from "@/components/ui/form-primitives"
 import { formStyles } from "./form-styles"

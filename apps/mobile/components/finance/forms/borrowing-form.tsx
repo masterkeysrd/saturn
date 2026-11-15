@@ -19,7 +19,8 @@ import {
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { RepaymentSchema, type RepaymentFormValues } from "@saturn/schemas"
-import { toCentsString, formatAmount } from "@saturn/core"
+import { toCentsString, formatAmount, getCurrencySymbol } from "@saturn/core"
+import { invalidateFinanceQueries } from "@saturn/hooks"
 import {
   useLogBorrowingTransactionMutation,
   type Account,
@@ -34,7 +35,6 @@ import { useToast } from "@/components/ui/toast"
 import { toLocalISODate } from "@/components/ui/date-picker-sheet"
 import { BorrowingPickerSheet, AccountPickerSheet } from "../sheets"
 import { AccountRow } from "../account-select"
-import { getCurrencySymbol, invalidateFinanceQueries } from "../finance-utils"
 import { HeroAmountInput } from "@/components/ui/amount-input"
 import {
   FormRowInput,

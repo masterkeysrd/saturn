@@ -8,10 +8,10 @@ import BottomSheet, {
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Check, Search } from "lucide-react-native"
 import { type CurrencyInfo } from "@saturn/api/saturn/finance/v1/finance"
+import { getCurrencySymbol } from "@saturn/core"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
-import { getCurrencySymbol } from "../finance-utils"
 import { sheetStyles } from "./sheet-styles"
 
 export interface CurrencyPickerSheetProps {

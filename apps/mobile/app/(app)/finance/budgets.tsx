@@ -26,7 +26,7 @@ import {
 } from "lucide-react-native"
 import { Icon } from "@expo/ui"
 import { MenuView } from "@expo/ui/community/menu"
-import { formatAmount } from "@saturn/core"
+import { formatAmount, formatInterval } from "@saturn/core"
 import {
   useListBudgetsQuery,
   useGetSettingsQuery,
@@ -37,14 +37,10 @@ import {
   type Budget_Status,
   type Account,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { useTimezone } from "@saturn/hooks"
+import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
 import { getBudgetIcon } from "@/lib/budget-icons"
-import {
-  formatInterval,
-  invalidateFinanceQueries,
-} from "@/components/finance/finance-utils"
 import { Card } from "@/components/ui/card"
 import { Caption, MonoAmount } from "@/components/ui/typography"
 import { Badge } from "@/components/ui/badge"

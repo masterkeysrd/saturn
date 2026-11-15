@@ -35,7 +35,7 @@ import {
   loginWithBiometrics as apiLoginWithBiometrics,
   enrollDeviceBiometrics,
 } from "./biometrics"
-import { decodeJwt, isTokenExpired } from "./jwt"
+import { decodeJwt, isTokenExpired } from "@saturn/core"
 import {
   getApiBaseUrl,
   loadServerUrl,
@@ -152,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setCachedUser(null)
             setSession({ accessToken: null, hasSession: false })
             setAccessToken(null)
+            queryClient.clear()
           },
         })
 
@@ -224,7 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     initClientAndSession()
-  }, [])
+  }, [queryClient])
 
   // Fetch full user profile from API when accessToken is present
   const { data: apiUser } = useGetCurrentUserQuery(

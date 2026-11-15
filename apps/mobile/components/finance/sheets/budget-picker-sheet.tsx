@@ -7,12 +7,11 @@ import BottomSheet, {
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Check } from "lucide-react-native"
 import { type Budget } from "@saturn/api/saturn/finance/v1/finance"
-import { formatAmount } from "@saturn/core"
+import { formatAmount, formatInterval } from "@saturn/core"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
 import { getBudgetIcon } from "@/lib/budget-icons"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
-import { formatInterval } from "../finance-utils"
 import { sheetStyles } from "./sheet-styles"
 
 export interface BudgetPickerSheetProps {

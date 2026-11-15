@@ -44,7 +44,8 @@ import {
   type Account_InstitutionInfo,
   type CurrencyInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { formatCents, toCentsString } from "@saturn/core"
+import { formatCents, getCurrencySymbol, toCentsString } from "@saturn/core"
+import { invalidateFinanceQueries } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -56,10 +57,6 @@ import {
   AccountPickerSheet,
 } from "@/components/finance/sheets"
 import { AccountRow } from "@/components/finance/account-select"
-import {
-  getCurrencySymbol,
-  invalidateFinanceQueries,
-} from "@/components/finance/finance-utils"
 import { formStyles } from "@/components/finance/forms/form-styles"
 import { HeroAmountInput } from "@/components/ui/amount-input"
 import {

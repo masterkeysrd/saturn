@@ -12,7 +12,7 @@ import {
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { IncomeSchema, type IncomeFormValues } from "@saturn/schemas"
-import { toCentsString, convertCurrency } from "@saturn/core"
+import { toCentsString, convertCurrency, getCurrencySymbol } from "@saturn/core"
 import {
   useCreateIncomeMutation,
   useUpdateIncomeMutation,
@@ -28,8 +28,8 @@ import { Card } from "@/components/ui/card"
 import { useToast } from "@/components/ui/toast"
 import { toLocalISODate } from "@/components/ui/date-picker-sheet"
 import { AccountPickerSheet, CurrencyPickerSheet } from "../sheets"
+import { invalidateFinanceQueries } from "@saturn/hooks"
 import { AccountRow } from "../account-select"
-import { getCurrencySymbol, invalidateFinanceQueries } from "../finance-utils"
 import { HeroAmountInput } from "@/components/ui/amount-input"
 import {
   FormRowInput,

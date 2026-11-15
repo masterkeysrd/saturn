@@ -32,6 +32,7 @@ import {
   useUpdateEvent,
   useDeleteEvent,
   useContactSuggestions,
+  useDebounce,
 } from "@saturn/hooks"
 import {
   buildRRule,
@@ -48,7 +49,6 @@ import {
 import type { RecurrenceScope } from "@saturn/api/saturn/calendar/v1/calendar"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
-import { useDebounce } from "@/lib/use-debounce"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 
 export type ManageEventParams = {

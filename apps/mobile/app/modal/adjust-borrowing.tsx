@@ -36,6 +36,7 @@ import {
   type Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { formatAmount, formatCents, toCentsString } from "@saturn/core"
+import { invalidateFinanceQueries } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -47,7 +48,6 @@ import { FormDateRow } from "@/components/ui/form-primitives"
 import { toLocalISODate } from "@/components/ui/date-picker-sheet"
 import { AccountRow } from "@/components/finance/account-select"
 import { AccountPickerSheet } from "@/components/finance/sheets"
-import { invalidateFinanceQueries } from "@/components/finance/finance-utils"
 
 export default function AdjustBorrowingModal() {
   const router = useRouter()

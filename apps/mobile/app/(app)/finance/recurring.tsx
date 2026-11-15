@@ -39,11 +39,12 @@ import {
   formatAmount,
   formatInterval,
   formatNextDueDate,
+  getScheduledDisplayName,
   isStatusActive,
   parseDate,
   getStartOfDay,
 } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
@@ -54,10 +55,6 @@ import { MonoAmount, Caption } from "@/components/ui/typography"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { useToast } from "@/components/ui/toast"
-import {
-  invalidateFinanceQueries,
-  getScheduledDisplayName,
-} from "@/components/finance/finance-utils"
 
 const WEEKS_IN_YEAR = 52
 const MONTHS_IN_YEAR = 12

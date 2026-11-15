@@ -48,6 +48,7 @@ import {
   ACCOUNT_TYPES,
   type AccountTypeIconName,
 } from "@saturn/core"
+import { invalidateFinanceQueries } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -60,7 +61,6 @@ import {
   CurrencyPickerSheet,
   InstitutionPickerSheet,
 } from "@/components/finance/sheets"
-import { invalidateFinanceQueries } from "@/components/finance/finance-utils"
 import { CardAccountItem } from "@/components/finance/card-account-item"
 
 const ACCOUNT_TYPE_ICONS: Record<AccountTypeIconName, any> = {

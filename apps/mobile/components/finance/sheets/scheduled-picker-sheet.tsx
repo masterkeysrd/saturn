@@ -10,10 +10,10 @@ import {
   type ScheduledTransaction,
   type RecurringTransaction,
 } from "@saturn/api/saturn/finance/v1/finance"
+import { getScheduledDisplayName } from "@saturn/core"
 import { useTimezone } from "@saturn/hooks"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
-import { getScheduledDisplayName } from "../finance-utils"
 import { sheetStyles } from "./sheet-styles"
 
 export interface ScheduledPickerSheetProps {
