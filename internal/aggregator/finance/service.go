@@ -35,7 +35,7 @@ type FinanceService interface {
 	ListBudgets(ctx context.Context, rCtx finance.Context, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error)
 	GetBudget(ctx context.Context, rCtx finance.Context, id finance.BudgetID) (*finance.Budget, error)
 	GetBudgets(ctx context.Context, rCtx finance.Context, ids []finance.BudgetID) ([]*finance.Budget, error)
-	GetOrCreatePeriods(ctx context.Context, rCtx finance.Context, budgets []*finance.Budget, date time.Time) (map[finance.BudgetID]*finance.BudgetPeriod, error)
+	GetOrProjectPeriods(ctx context.Context, rCtx finance.Context, budgets []*finance.Budget, date time.Time) (map[finance.BudgetID]*finance.BudgetPeriod, error)
 	AggregateSpentBatch(ctx context.Context, rCtx finance.Context, periodIDs []finance.PeriodID) ([]finance.PeriodSpent, error)
 
 	// Recurring & Scheduled Transactions

@@ -5750,6 +5750,53 @@ func TestService_GetOrCreatePeriods(t *testing.T) {
 	}
 }
 
+func TestService_GetOrProjectPeriods(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	bID, _ := NewBudgetID()
+	targetDate := time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC)
+
+	yearlyBudget := &Budget{
+		ID:          bID,
+		Name:        "Annual Insurance",
+		LimitAmount: 100000,
+		Currency:    "USD",
+		Interval:    IntervalYearly,
+		Status:      BudgetStatusActive,
+	}
+
+	pStore := newPeriodStoreMock(nil)
+	sStore := newSettingsStoreMock(map[SpaceID]*Settings{
+		validSpace: {BaseCurrency: "USD"},
+	})
+	rateStore := newExchangeRateStoreMock(nil)
+	svc := newTestService(Dependencies{
+		Settings:          sStore,
+		PeriodStore:       pStore,
+		ExchangeRateStore: rateStore,
+	})
+
+	rCtx := NewRequestContext(validSpace, "usr_1", time.UTC, "USD").(*SimpleContext).WithFiscalYearStartMonth(4)
+
+	res, err := svc.GetOrProjectPeriods(ctx, rCtx, []*Budget{yearlyBudget}, targetDate)
+	if err != nil {
+		t.Fatalf("GetOrProjectPeriods() error = %v", err)
+	}
+	p := res[bID]
+	if p == nil {
+		t.Fatal("expected projected period in result map")
+	}
+	if p.ID != "" {
+		t.Errorf("expected virtual period ID to be empty, got %q", p.ID)
+	}
+	if p.StartDate.Year() != 2025 || p.StartDate.Month() != time.April {
+		t.Errorf("expected fiscal year starting April 2025, got %v", p.StartDate)
+	}
+	if len(pStore.CreateCalls()) != 0 {
+		t.Errorf("expected GetOrProjectPeriods to perform zero writes, got %d Create calls", len(pStore.CreateCalls()))
+	}
+}
+
 func TestService_UpdatePeriodLimit(t *testing.T) {
 	ctx := context.Background()
 	validPID, _ := NewPeriodID()

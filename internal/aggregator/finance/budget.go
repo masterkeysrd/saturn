@@ -56,18 +56,22 @@ func (s *Service) ListBudgets(
 			targetDate = rCtx.Now()
 		}
 
-		periods, err := s.financeService.GetOrCreatePeriods(ctx, rCtx, budgets, targetDate)
+		periods, err := s.financeService.GetOrProjectPeriods(ctx, rCtx, budgets, targetDate)
 		if err == nil && periods != nil {
 			periodIDs := make([]finance.PeriodID, 0, len(periods))
 			for _, p := range periods {
-				periodIDs = append(periodIDs, p.ID)
+				if p.ID != "" {
+					periodIDs = append(periodIDs, p.ID)
+				}
 			}
 
-			stats, aggErr := s.financeService.AggregateSpentBatch(ctx, rCtx, periodIDs)
 			statsMap := make(map[finance.PeriodID]finance.PeriodSpent)
-			if aggErr == nil {
-				for _, s := range stats {
-					statsMap[s.PeriodID] = s
+			if len(periodIDs) > 0 {
+				stats, aggErr := s.financeService.AggregateSpentBatch(ctx, rCtx, periodIDs)
+				if aggErr == nil {
+					for _, s := range stats {
+						statsMap[s.PeriodID] = s
+					}
 				}
 			}
 
@@ -75,9 +79,11 @@ func (s *Service) ListBudgets(
 				if period, ok := periods[ab.ID]; ok {
 					var spentInBase int64
 					var spentAmount int64
-					if stat, ok := statsMap[period.ID]; ok {
-						spentInBase = stat.SpentInBase
-						spentAmount = stat.SpentAmount
+					if period.ID != "" {
+						if stat, ok := statsMap[period.ID]; ok {
+							spentInBase = stat.SpentInBase
+							spentAmount = stat.SpentAmount
+						}
 					}
 					ab.Period = &AggregatedBudgetPeriod{
 						BudgetPeriod: period,
@@ -98,14 +104,14 @@ func (s *Service) ListBudgets(
 	}, nil
 }
 
-// GetBudgetPeriod retrieves or lazily spawns a budget period, hydrating its spent progress.
+// GetBudgetPeriod retrieves or projects a budget period, hydrating its spent progress.
 func (s *Service) GetBudgetPeriod(ctx context.Context, rCtx finance.Context, budgetID finance.BudgetID, date time.Time) (*AggregatedBudgetPeriod, error) {
 	budget, err := s.financeService.GetBudget(ctx, rCtx, budgetID)
 	if err != nil {
 		return nil, err
 	}
 
-	periods, err := s.financeService.GetOrCreatePeriods(ctx, rCtx, []*finance.Budget{budget}, date)
+	periods, err := s.financeService.GetOrProjectPeriods(ctx, rCtx, []*finance.Budget{budget}, date)
 	if err != nil {
 		return nil, err
 	}
@@ -115,11 +121,13 @@ func (s *Service) GetBudgetPeriod(ctx context.Context, rCtx finance.Context, bud
 		return nil, errors.E(errors.NotExist, finance.PeriodNotFound, "budget period not found")
 	}
 
-	stats, err := s.financeService.AggregateSpentBatch(ctx, rCtx, []finance.PeriodID{period.ID})
 	var spentInBase, spentAmount int64
-	if err == nil && len(stats) > 0 {
-		spentInBase = stats[0].SpentInBase
-		spentAmount = stats[0].SpentAmount
+	if period.ID != "" {
+		stats, err := s.financeService.AggregateSpentBatch(ctx, rCtx, []finance.PeriodID{period.ID})
+		if err == nil && len(stats) > 0 {
+			spentInBase = stats[0].SpentInBase
+			spentAmount = stats[0].SpentAmount
+		}
 	}
 
 	return &AggregatedBudgetPeriod{

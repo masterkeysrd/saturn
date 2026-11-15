@@ -305,8 +305,8 @@ func TestListAggregatedBudgets(t *testing.T) {
 	_ = bs.Create(ctx, rCtx, b2)
 	_ = bs.Create(ctx, rCtx, b3)
 
-	// Pre-create periods in mock database so GetOrCreatePeriod retrieves them and updates spent metrics
-	startDate, endDate := b1.CalculateBounds(finance.BudgetBoundsOpts{TargetDate: time.Now()})
+	// Pre-create periods in mock database so GetOrProjectPeriods retrieves them and updates spent metrics
+	startDate, endDate := b1.CalculateBounds(finance.BudgetBoundsOpts{TargetDate: rCtx.Now(), Location: rCtx.Location()})
 	p1 := &finance.BudgetPeriod{
 		ID:                 finance.PeriodID("prd_" + ksuid.New().String()),
 		BudgetID:           b1ID,
@@ -422,6 +422,58 @@ func TestListAggregatedBudgets(t *testing.T) {
 		}
 		if page2.HasMore {
 			t.Error("expected has more to be false on last page")
+		}
+	})
+
+	t.Run("Full View - Read-Only Virtual Projection Without Persisted Period", func(t *testing.T) {
+		b4ID := finance.BudgetID("bgt_" + ksuid.New().String())
+		b4 := &finance.Budget{
+			ID:          b4ID,
+			Name:        "Annual Tax",
+			LimitAmount: 120000,
+			Currency:    finance.Currency("USD"),
+			Interval:    finance.IntervalYearly,
+			Status:      finance.BudgetStatusActive,
+		}
+		_ = bs.Create(ctx, rCtx, b4)
+
+		initialPeriodCount := len(ps.periods)
+		fiscalCtx := finance.NewRequestContext(spaceID, "usr_test", time.UTC, "USD").(*finance.SimpleContext).WithFiscalYearStartMonth(4)
+
+		targetDate := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+		page, err := aggService.ListBudgets(ctx, fiscalCtx, ListBudgetsFilter{
+			Statuses:    []finance.BudgetStatus{finance.BudgetStatusActive},
+			SearchQuery: new("Annual Tax"),
+			TargetDate:  targetDate,
+			PageSize:    10,
+			View:        ViewFull,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(page.Items) != 1 || page.Items[0].Period == nil {
+			t.Fatalf("expected 1 budget with virtual period, got %+v", page.Items)
+		}
+		if len(ps.periods) != initialPeriodCount {
+			t.Fatalf("expected aggregator ListBudgets to be read-only (periods count %d -> %d)", initialPeriodCount, len(ps.periods))
+		}
+		p := page.Items[0].Period
+		if p.StartDate.Year() != 2025 || p.StartDate.Month() != time.April {
+			t.Errorf("expected fiscal year starting April 2025, got %v", p.StartDate)
+		}
+		if p.SpentAmount != 0 || p.LimitInBase != 120000 {
+			t.Errorf("unexpected virtual period amounts: spent=%d limitInBase=%d", p.SpentAmount, p.LimitInBase)
+		}
+
+		singlePeriod, err := aggService.GetBudgetPeriod(ctx, fiscalCtx, b4ID, targetDate)
+		if err != nil {
+			t.Fatalf("GetBudgetPeriod failed: %v", err)
+		}
+		if len(ps.periods) != initialPeriodCount {
+			t.Fatalf("expected aggregator GetBudgetPeriod to be read-only")
+		}
+		if singlePeriod.StartDate.Year() != 2025 || singlePeriod.StartDate.Month() != time.April {
+			t.Errorf("expected fiscal year starting April 2025, got %v", singlePeriod.StartDate)
 		}
 	})
 }

@@ -55,8 +55,8 @@ type FinanceServiceMock struct {
 	// GetBudgetsFunc mocks the GetBudgets method.
 	GetBudgetsFunc func(ctx context.Context, rCtx finance.Context, ids []finance.BudgetID) ([]*finance.Budget, error)
 
-	// GetOrCreatePeriodsFunc mocks the GetOrCreatePeriods method.
-	GetOrCreatePeriodsFunc func(ctx context.Context, rCtx finance.Context, budgets []*finance.Budget, date time.Time) (map[finance.BudgetID]*finance.BudgetPeriod, error)
+	// GetOrProjectPeriodsFunc mocks the GetOrProjectPeriods method.
+	GetOrProjectPeriodsFunc func(ctx context.Context, rCtx finance.Context, budgets []*finance.Budget, date time.Time) (map[finance.BudgetID]*finance.BudgetPeriod, error)
 
 	// AggregateSpentBatchFunc mocks the AggregateSpentBatch method.
 	AggregateSpentBatchFunc func(ctx context.Context, rCtx finance.Context, periodIDs []finance.PeriodID) ([]finance.PeriodSpent, error)
@@ -156,7 +156,7 @@ type FinanceServiceMock struct {
 			RCtx finance.Context
 			Ids  []finance.BudgetID
 		}
-		GetOrCreatePeriods []struct {
+		GetOrProjectPeriods []struct {
 			Ctx     context.Context
 			RCtx    finance.Context
 			Budgets []*finance.Budget
@@ -226,7 +226,7 @@ type FinanceServiceMock struct {
 	lockListBudgets               sync.RWMutex
 	lockGetBudget                 sync.RWMutex
 	lockGetBudgets                sync.RWMutex
-	lockGetOrCreatePeriods        sync.RWMutex
+	lockGetOrProjectPeriods       sync.RWMutex
 	lockAggregateSpentBatch       sync.RWMutex
 	lockListRecurringTransactions sync.RWMutex
 	lockGetRecurringTransactions  sync.RWMutex
@@ -632,13 +632,13 @@ func (mock *FinanceServiceMock) GetBudgetsCalls() []struct {
 	return mock.calls.GetBudgets
 }
 
-// GetOrCreatePeriods calls GetOrCreatePeriodsFunc.
-func (mock *FinanceServiceMock) GetOrCreatePeriods(ctx context.Context, rCtx finance.Context, budgets []*finance.Budget, date time.Time) (map[finance.BudgetID]*finance.BudgetPeriod, error) {
-	if mock.GetOrCreatePeriodsFunc == nil {
-		panic("FinanceServiceMock.GetOrCreatePeriodsFunc: method is nil but FinanceService.GetOrCreatePeriods was just called")
+// GetOrProjectPeriods calls GetOrProjectPeriodsFunc.
+func (mock *FinanceServiceMock) GetOrProjectPeriods(ctx context.Context, rCtx finance.Context, budgets []*finance.Budget, date time.Time) (map[finance.BudgetID]*finance.BudgetPeriod, error) {
+	if mock.GetOrProjectPeriodsFunc == nil {
+		panic("FinanceServiceMock.GetOrProjectPeriodsFunc: method is nil but FinanceService.GetOrProjectPeriods was just called")
 	}
-	mock.lockGetOrCreatePeriods.Lock()
-	mock.calls.GetOrCreatePeriods = append(mock.calls.GetOrCreatePeriods, struct {
+	mock.lockGetOrProjectPeriods.Lock()
+	mock.calls.GetOrProjectPeriods = append(mock.calls.GetOrProjectPeriods, struct {
 		Ctx     context.Context
 		RCtx    finance.Context
 		Budgets []*finance.Budget
@@ -649,20 +649,20 @@ func (mock *FinanceServiceMock) GetOrCreatePeriods(ctx context.Context, rCtx fin
 		Budgets: budgets,
 		Date:    date,
 	})
-	mock.lockGetOrCreatePeriods.Unlock()
-	return mock.GetOrCreatePeriodsFunc(ctx, rCtx, budgets, date)
+	mock.lockGetOrProjectPeriods.Unlock()
+	return mock.GetOrProjectPeriodsFunc(ctx, rCtx, budgets, date)
 }
 
-// GetOrCreatePeriodsCalls returns all calls made to GetOrCreatePeriods.
-func (mock *FinanceServiceMock) GetOrCreatePeriodsCalls() []struct {
+// GetOrProjectPeriodsCalls returns all calls made to GetOrProjectPeriods.
+func (mock *FinanceServiceMock) GetOrProjectPeriodsCalls() []struct {
 	Ctx     context.Context
 	RCtx    finance.Context
 	Budgets []*finance.Budget
 	Date    time.Time
 } {
-	mock.lockGetOrCreatePeriods.RLock()
-	defer mock.lockGetOrCreatePeriods.RUnlock()
-	return mock.calls.GetOrCreatePeriods
+	mock.lockGetOrProjectPeriods.RLock()
+	defer mock.lockGetOrProjectPeriods.RUnlock()
+	return mock.calls.GetOrProjectPeriods
 }
 
 // AggregateSpentBatch calls AggregateSpentBatchFunc.

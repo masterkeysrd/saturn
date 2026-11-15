@@ -317,11 +317,13 @@ func (s *Service) GetOrCreatePeriods(ctx context.Context, rCtx Context, budgets 
 		}
 
 		newPeriod, err := b.NewPeriod(NewPeriodOpts{
-			StartDate:          bounds.Start,
-			EndDate:            bounds.End,
-			BaseCurrency:       rCtx.BaseCurrency(),
-			ExchangeRateToBase: rate,
-			Location:           rCtx.Location(),
+			TargetDate:           date,
+			StartDate:            bounds.Start,
+			EndDate:              bounds.End,
+			BaseCurrency:         rCtx.BaseCurrency(),
+			ExchangeRateToBase:   rate,
+			Location:             rCtx.Location(),
+			FiscalYearStartMonth: rCtx.FiscalYearStartMonth(),
 		})
 		if err != nil {
 			return nil, err
@@ -332,6 +334,68 @@ func (s *Service) GetOrCreatePeriods(ctx context.Context, rCtx Context, budgets 
 		}
 
 		periodsMap[b.ID] = newPeriod
+	}
+
+	return periodsMap, nil
+}
+
+// GetOrProjectPeriods retrieves existing persisted budget periods in batch and computes
+// read-only virtual in-memory projections for any budgets lacking a persisted period row.
+func (s *Service) GetOrProjectPeriods(ctx context.Context, rCtx Context, budgets []*Budget, date time.Time) (map[BudgetID]*BudgetPeriod, error) {
+	if len(budgets) == 0 {
+		return make(map[BudgetID]*BudgetPeriod), nil
+	}
+
+	if rCtx.BaseCurrency() == "" {
+		return nil, errors.E(errors.Precondition, SettingsNotFound, "workspace base currency is not configured")
+	}
+
+	keys := make([]PeriodRangeKey, len(budgets))
+	boundsMap := make(map[BudgetID]struct{ Start, End time.Time }, len(budgets))
+	for i, b := range budgets {
+		start, end := b.CalculateBounds(BudgetBoundsOpts{
+			TargetDate:           date,
+			Location:             rCtx.Location(),
+			FiscalYearStartMonth: rCtx.FiscalYearStartMonth(),
+		})
+		keys[i] = PeriodRangeKey{
+			BudgetID:  b.ID,
+			StartDate: start,
+			EndDate:   end,
+		}
+		boundsMap[b.ID] = struct{ Start, End time.Time }{Start: start, End: end}
+	}
+
+	existingPeriods, err := s.deps.PeriodStore.GetByRanges(ctx, rCtx, keys)
+	if err != nil {
+		return nil, fmt.Errorf("bulk fetch existing budget periods: %w", err)
+	}
+
+	periodsMap := make(map[BudgetID]*BudgetPeriod, len(budgets))
+	for _, p := range existingPeriods {
+		periodsMap[p.BudgetID] = p
+	}
+
+	for _, b := range budgets {
+		if _, exists := periodsMap[b.ID]; exists {
+			continue
+		}
+
+		bounds := boundsMap[b.ID]
+		rate, err := s.resolveExchangeRate(ctx, rCtx, b.Currency, rCtx.BaseCurrency(), date, true)
+		if err != nil {
+			return nil, err
+		}
+
+		periodsMap[b.ID] = &BudgetPeriod{
+			BudgetID:           b.ID,
+			StartDate:          bounds.Start,
+			EndDate:            bounds.End,
+			LimitAmount:        b.LimitAmount,
+			Currency:           b.Currency,
+			BaseCurrency:       rCtx.BaseCurrency(),
+			ExchangeRateToBase: rate,
+		}
 	}
 
 	return periodsMap, nil

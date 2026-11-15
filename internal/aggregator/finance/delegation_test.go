@@ -144,7 +144,7 @@ func TestDelegations(t *testing.T) {
 			GetBudgetFunc: func(ctx context.Context, rCtx finance.Context, id finance.BudgetID) (*finance.Budget, error) {
 				return bgt, nil
 			},
-			GetOrCreatePeriodsFunc: func(ctx context.Context, rCtx finance.Context, budgets []*finance.Budget, date time.Time) (map[finance.BudgetID]*finance.BudgetPeriod, error) {
+			GetOrProjectPeriodsFunc: func(ctx context.Context, rCtx finance.Context, budgets []*finance.Budget, date time.Time) (map[finance.BudgetID]*finance.BudgetPeriod, error) {
 				return map[finance.BudgetID]*finance.BudgetPeriod{
 					bgtID: period,
 				}, nil
