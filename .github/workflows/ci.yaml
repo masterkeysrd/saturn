@@ -49,6 +49,9 @@ jobs:
       - name: Verify frontend packages (Lint, Typecheck & Build)
         run: npx turbo run lint typecheck build
 
+      - name: Run frontend and shared package unit tests
+        run: npm run test:web
+
   go-lint:
     name: Go Lint (golangci-lint)
     runs-on: ubuntu-latest
