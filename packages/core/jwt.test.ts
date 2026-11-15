@@ -1,0 +1,44 @@
+import { describe, it, expect } from "vitest"
+import { decodeJwt, isTokenExpired } from "./jwt"
+
+function makeToken(payload: Record<string, unknown>): string {
+  const header = btoa(JSON.stringify({ alg: "EdDSA", typ: "JWT" }))
+  const bytes = new TextEncoder().encode(JSON.stringify(payload))
+  let bin = ""
+  for (const b of bytes) {
+    bin += String.fromCharCode(b)
+  }
+  const body = btoa(bin)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "")
+  return `${header}.${body}.sig`
+}
+
+describe("jwt utilities", () => {
+  it("decodes base64url payloads including UTF-8 characters", () => {
+    const token = makeToken({
+      sub: "usr_123",
+      name: "José Núñez 🚀",
+      role: "admin",
+      exp: Math.floor(Date.now() / 1000) + 600,
+    })
+
+    const claims = decodeJwt(token)
+    expect(claims).toMatchObject({
+      sub: "usr_123",
+      name: "José Núñez 🚀",
+      role: "admin",
+    })
+    expect(isTokenExpired(token)).toBe(false)
+  })
+
+  it("returns null for malformed tokens and treats missing/past exp as expired", () => {
+    expect(decodeJwt("invalid")).toBeNull()
+    const expired = makeToken({
+      sub: "usr_1",
+      exp: Math.floor(Date.now() / 1000) - 10,
+    })
+    expect(isTokenExpired(expired)).toBe(true)
+  })
+})

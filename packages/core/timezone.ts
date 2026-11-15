@@ -1,12 +1,46 @@
 export type DateInput = Date | string | number | null | undefined
 
+export const MS_PER_SECOND = 1000
+export const SECONDS_PER_MINUTE = 60
+export const MINUTES_PER_HOUR = 60
+export const HOURS_PER_DAY = 24
+export const MS_PER_HOUR = MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND
+export const MS_PER_DAY = HOURS_PER_DAY * MS_PER_HOUR
+export const MS_PER_HALF_DAY = MS_PER_DAY / 2
+
+const NOON_UTC_HOUR = 12
+const MIDNIGHT_ROLLOVER_HOUR = 24
+const END_OF_DAY_OFFSET_MS = MS_PER_DAY - 1
+
+const formatterCache = new Map<string, Intl.DateTimeFormat>()
+
+function getCachedFormatter(
+  locale: string,
+  timeZone: string,
+  options: Intl.DateTimeFormatOptions
+): Intl.DateTimeFormat {
+  const optionEntries = Object.entries(options)
+    .filter(([, v]) => v !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b))
+  const key = `${locale}|${timeZone}|${JSON.stringify(optionEntries)}`
+  let formatter = formatterCache.get(key)
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, {
+      timeZone,
+      ...options,
+    })
+    formatterCache.set(key, formatter)
+  }
+  return formatter
+}
+
 export function parseDate(date: DateInput): Date | null {
   if (date === null || date === undefined || date === "") {
     return null
   }
   if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
     const [y, m, d] = date.split("-").map(Number)
-    return new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+    return new Date(Date.UTC(y, m - 1, d, NOON_UTC_HOUR, 0, 0))
   }
   const d = date instanceof Date ? date : new Date(date)
   if (isNaN(d.getTime())) {
@@ -47,8 +81,7 @@ export function getTimezoneParts(
   if (!d) return null
 
   const tz = sanitizeTimezone(timeZone)
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: tz,
+  const formatter = getCachedFormatter("en-US", tz, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -78,7 +111,8 @@ export function getTimezoneParts(
         day = Number(part.value)
         break
       case "hour":
-        hour = Number(part.value) === 24 ? 0 : Number(part.value)
+        hour =
+          Number(part.value) === MIDNIGHT_ROLLOVER_HOUR ? 0 : Number(part.value)
         break
       case "minute":
         minute = Number(part.value)
@@ -116,10 +150,11 @@ export function formatDateWithTimezone(
     day: "numeric",
   }
   try {
-    return new Intl.DateTimeFormat(locale || "en-US", {
-      timeZone: tz,
-      ...(options || defaultOptions),
-    }).format(d)
+    return getCachedFormatter(
+      locale || "en-US",
+      tz,
+      options || defaultOptions
+    ).format(d)
   } catch {
     return ""
   }
@@ -179,14 +214,14 @@ export function getEndOfDay(date: DateInput, timeZone: string): Date {
   } else {
     const d = parseDate(date) ?? new Date()
     const parts = getTimezoneParts(d, tz)
-    if (!parts) return new Date(d.getTime() + 86399999)
+    if (!parts) return new Date(d.getTime() + END_OF_DAY_OFFSET_MS)
     year = parts.year
     month = parts.month
     day = parts.day
   }
 
   const nextDayNoonUtc = new Date(
-    Date.UTC(year, month - 1, day + 1, 12, 0, 0, 0)
+    Date.UTC(year, month - 1, day + 1, NOON_UTC_HOUR, 0, 0, 0)
   )
   const nextStart = getStartOfDay(nextDayNoonUtc, tz)
   return new Date(nextStart.getTime() - 1)
@@ -201,6 +236,19 @@ export function isSameDayInTimezone(
   const p2 = getTimezoneParts(d2, timeZone)
   if (!p1 || !p2) return false
   return p1.year === p2.year && p1.month === p2.month && p1.day === p2.day
+}
+
+export function getDaysDiff(
+  date: DateInput,
+  timeZone: string = "UTC",
+  now: Date = new Date()
+): number | null {
+  const target = parseDate(date)
+  if (!target) return null
+  const startToday = getStartOfDay(now, timeZone)
+  const startTarget = getStartOfDay(target, timeZone)
+  const diffTime = startTarget.getTime() - startToday.getTime()
+  return Math.round(diffTime / MS_PER_DAY)
 }
 
 export const COMMON_TIMEZONES: string[] = (() => {

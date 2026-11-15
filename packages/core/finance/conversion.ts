@@ -110,6 +110,49 @@ export function getAccountBaseCents(
   return rawCents
 }
 
+/**
+ * Converts a monetary amount in cents from a source currency to baseCurrency
+ * using direct or inverse exchange rates. Falls back to rawCents if no rate is configured.
+ */
+export function convertCentsToBase(
+  cents: string | number | undefined | null,
+  fromCurrency: string | undefined | null,
+  baseCurrency: string,
+  exchangeRates: ExchangeRateLike[]
+): number {
+  const rawCents = Number(cents || 0)
+  if (isNaN(rawCents)) return 0
+  if (!fromCurrency || !baseCurrency || fromCurrency === baseCurrency) {
+    return rawCents
+  }
+  if (rawCents === 0) return 0
+
+  const direct = convertCurrency(
+    formatCents(rawCents),
+    fromCurrency,
+    baseCurrency,
+    exchangeRates
+  )
+  if ("amount" in direct) {
+    return Math.round(direct.amount * 100)
+  }
+
+  const inverseMatches = exchangeRates.filter(
+    (r) =>
+      r.fromCurrency === baseCurrency &&
+      r.toCurrency === fromCurrency &&
+      r.rate > 0
+  )
+  if (inverseMatches.length > 0) {
+    const latestInverse = [...inverseMatches].sort(
+      (a, b) => new Date(b.rateDate).getTime() - new Date(a.rateDate).getTime()
+    )[0]
+    return Math.round(rawCents / latestInverse.rate)
+  }
+
+  return rawCents
+}
+
 export interface AccountMetrics {
   netWorthCents: number
   totalAssetsCents: number
