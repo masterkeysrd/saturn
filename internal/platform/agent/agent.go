@@ -56,7 +56,7 @@ const (
 // AgentRun represents an execution log and audit trail of an agent run.
 type AgentRun struct {
 	ID           string         `db:"id" json:"id"`
-	AgentID      string         `db:"agent_id" json:"agent_id"`
+	AgentID      *string        `db:"agent_id" json:"agent_id"`
 	SpaceID      string         `db:"space_id" json:"space_id"`
 	Status       AgentRunStatus `db:"status" json:"status"`
 	InputRaw     string         `db:"input_raw" json:"input_raw"`

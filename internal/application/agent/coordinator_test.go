@@ -55,7 +55,7 @@ func TestCoordinator_ExecuteAgent(t *testing.T) {
 					APIKey:            &apiKey,
 				}, nil
 			},
-			LogRunFunc: func(ctx context.Context, agentID string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error) {
+			LogRunFunc: func(ctx context.Context, agentID *string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error) {
 				return &agent.AgentRun{ID: "run_test"}, nil
 			},
 		}
@@ -129,30 +129,27 @@ func TestCoordinator_ErrorMapping(t *testing.T) {
 	})
 }
 
-func TestCoordinator_CRUDAndSuggestions(t *testing.T) {
+func TestCoordinator_CRUDAndPrompts(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("CreateAgent detects existing agent for same purpose", func(t *testing.T) {
+	t.Run("CreateAgent allows custom and duplicate purposes", func(t *testing.T) {
 		mockStore := &AgentStoreMock{
-			GetAgentFunc: func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
-				return &agent.Agent{ID: "agt_existing", Purpose: "INBOX_PARSER"}, nil
+			CreateAgentFunc: func(ctx context.Context, spaceID string, providerID *string, name string, desc *string, purpose string, tags []string, model string, prompt *string, temp float64) (*agent.Agent, error) {
+				return &agent.Agent{ID: "agt_custom", SpaceID: spaceID, Name: name, Purpose: purpose, ModelName: model}, nil
 			},
 		}
 		coord := NewCoordinator(mockStore, agent.NewClient())
-		_, err := coord.CreateAgent(ctx, &CreateAgentRequest{
+		created, err := coord.CreateAgent(ctx, &CreateAgentRequest{
 			SpaceID:   "spc_1",
-			Name:      "Hyperion",
-			Purpose:   "INBOX_PARSER",
-			ModelName: "model",
+			Name:      "Workflow Custom Agent",
+			Purpose:   "CUSTOM_WORKFLOW_TASK",
+			ModelName: "gemini-2.5-flash",
 		})
-		if err == nil {
-			t.Fatal("expected error, got nil")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
 		}
-		if errors.KindOf(err) != errors.Exist {
-			t.Errorf("expected Exist kind, got %v", errors.KindOf(err))
-		}
-		if errors.CodeOf(err) != AgentExists {
-			t.Errorf("expected AgentExists code, got %v", errors.CodeOf(err))
+		if created.Purpose != "CUSTOM_WORKFLOW_TASK" {
+			t.Errorf("expected purpose CUSTOM_WORKFLOW_TASK, got %q", created.Purpose)
 		}
 	})
 
@@ -188,20 +185,6 @@ func TestCoordinator_CRUDAndSuggestions(t *testing.T) {
 		}
 	})
 
-	t.Run("GetSuggestions fails for unregistered purpose", func(t *testing.T) {
-		coord := NewCoordinator(&AgentStoreMock{}, agent.NewClient())
-		_, err := coord.GetSuggestions(ctx, "spc_1", "unknown_purpose", &SuggestionRequest{})
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if errors.KindOf(err) != errors.NotExist {
-			t.Errorf("expected NotExist kind, got %v", errors.KindOf(err))
-		}
-		if errors.CodeOf(err) != SuggestionProcessorNotFound {
-			t.Errorf("expected SuggestionProcessorNotFound code, got %v", errors.CodeOf(err))
-		}
-	})
-
 	t.Run("LoggingCoordinator wraps Coordinator transparently", func(t *testing.T) {
 		mockStore := &AgentStoreMock{
 			ListProvidersFunc: func(ctx context.Context, spaceID string) ([]*agent.LLMProvider, error) {
@@ -222,49 +205,130 @@ func TestCoordinator_CRUDAndSuggestions(t *testing.T) {
 	})
 }
 
-func TestCoordinator_Suggestions(t *testing.T) {
+func TestCoordinator_ExecutePrompt(t *testing.T) {
 	ctx := context.Background()
+	mockKey := "mock-key"
 
-	t.Run("Empty purpose returns Invalid", func(t *testing.T) {
-		coord := NewCoordinator(&AgentStoreMock{}, agent.NewClient())
-		_, err := coord.GetSuggestions(ctx, "spc_1", "", &SuggestionRequest{})
-		if err == nil || errors.KindOf(err) != errors.Invalid {
-			t.Fatalf("expected Invalid kind for empty purpose, got %v", err)
-		}
-	})
-
-	t.Run("Registered processor success", func(t *testing.T) {
-		coord := NewCoordinator(&AgentStoreMock{}, agent.NewClient())
-		procMock := &SuggestionProcessorMock{
-			ProcessSuggestionsFunc: func(ctx context.Context, spaceID string, req *SuggestionRequest) (map[string]any, error) {
-				return map[string]any{"confidence": 0.95}, nil
+	tests := []struct {
+		name         string
+		req          ExecutePromptRequest
+		setupStore   func() *AgentStoreMock
+		wantAgentRun bool
+		wantNilAgent bool
+		wantErrKind  errors.Kind
+		wantErr      bool
+	}{
+		{
+			name:    "Missing space_id returns Invalid",
+			req:     ExecutePromptRequest{Prompt: "hello"},
+			wantErr: true, wantErrKind: errors.Invalid,
+		},
+		{
+			name:    "Missing prompt returns Invalid",
+			req:     ExecutePromptRequest{SpaceID: "spc_1"},
+			wantErr: true, wantErrKind: errors.Invalid,
+		},
+		{
+			name:    "Missing model_name returns Invalid",
+			req:     ExecutePromptRequest{SpaceID: "spc_1", Prompt: "Classify this"},
+			wantErr: true, wantErrKind: errors.Invalid,
+		},
+		{
+			name: "Inline prompt with model_name uses space default provider and logs nullable agent_id",
+			req:  ExecutePromptRequest{SpaceID: "spc_1", ModelName: new("gpt-4o"), Prompt: "Classify this"},
+			setupStore: func() *AgentStoreMock {
+				return &AgentStoreMock{
+					ListProvidersFunc: func(ctx context.Context, spaceID string) ([]*agent.LLMProvider, error) {
+						return []*agent.LLMProvider{{
+							ID:                "prv_default",
+							CompatibilityMode: agent.ModeGeminiNative,
+							APIKey:            &mockKey,
+						}}, nil
+					},
+					LogRunFunc: func(ctx context.Context, agentID *string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error) {
+						if agentID != nil {
+							t.Errorf("expected nil agentID, got %v", *agentID)
+						}
+						return &agent.AgentRun{ID: "run_inline", SpaceID: spaceID}, nil
+					},
+				}
 			},
-		}
-
-		coord.RegisterSuggestionProcessor("invoice_parser", procMock)
-		res, err := coord.GetSuggestions(ctx, "spc_1", "invoice_parser", &SuggestionRequest{TextContent: "invoice #123"})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if res["confidence"] != 0.95 {
-			t.Errorf("expected confidence 0.95, got %v", res["confidence"])
-		}
-	})
-
-	t.Run("Registered processor returns error", func(t *testing.T) {
-		coord := NewCoordinator(&AgentStoreMock{}, agent.NewClient())
-		procMock := &SuggestionProcessorMock{
-			ProcessSuggestionsFunc: func(ctx context.Context, spaceID string, req *SuggestionRequest) (map[string]any, error) {
-				return nil, errors.New("processing timeout")
+			wantAgentRun: true,
+			wantNilAgent: true,
+		},
+		{
+			name: "Named agent resolves agent and logs agent_id",
+			req:  ExecutePromptRequest{SpaceID: "spc_1", AgentID: new("agt_1"), Prompt: "Extract receipt"},
+			setupStore: func() *AgentStoreMock {
+				return &AgentStoreMock{
+					GetAgentFunc: func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
+						return &agent.Agent{
+							ID:            "agt_1",
+							SpaceID:       q.SpaceID,
+							LLMProviderID: new("prv_1"),
+							ModelName:     "gemini-2.5-pro",
+							Temperature:   0.2,
+						}, nil
+					},
+					GetProviderFunc: func(ctx context.Context, q agent.GetLLMProvider) (*agent.LLMProvider, error) {
+						return &agent.LLMProvider{
+							ID:                "prv_1",
+							CompatibilityMode: agent.ModeGeminiNative,
+							APIKey:            &mockKey,
+						}, nil
+					},
+					LogRunFunc: func(ctx context.Context, agentID *string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error) {
+						if agentID == nil || *agentID != "agt_1" {
+							t.Errorf("expected agentID agt_1, got %v", agentID)
+						}
+						return &agent.AgentRun{ID: "run_named", AgentID: agentID, SpaceID: spaceID}, nil
+					},
+				}
 			},
-		}
+			wantAgentRun: true,
+		},
+		{
+			name: "Missing named agent returns NotExist",
+			req:  ExecutePromptRequest{SpaceID: "spc_1", AgentID: new("agt_missing"), Prompt: "hi"},
+			setupStore: func() *AgentStoreMock {
+				return &AgentStoreMock{
+					GetAgentFunc: func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
+						return nil, nil
+					},
+				}
+			},
+			wantErr: true, wantErrKind: errors.NotExist,
+		},
+	}
 
-		coord.RegisterSuggestionProcessor("invoice_parser", procMock)
-		_, err := coord.GetSuggestions(ctx, "spc_1", "invoice_parser", &SuggestionRequest{})
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-	})
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			store := &AgentStoreMock{}
+			if tc.setupStore != nil {
+				store = tc.setupStore()
+			}
+			coord := NewCoordinator(store, agent.NewClient())
+			res, err := coord.ExecutePrompt(ctx, tc.req)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if tc.wantErrKind != 0 && errors.KindOf(err) != tc.wantErrKind {
+					t.Fatalf("expected error kind %v, got %v", tc.wantErrKind, errors.KindOf(err))
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tc.wantAgentRun && res.AgentRunID == "" {
+				t.Error("expected non-empty AgentRunID")
+			}
+			if res.Text == "" {
+				t.Error("expected non-empty Text")
+			}
+		})
+	}
 }
 
 func TestCoordinator_Providers(t *testing.T) {
@@ -419,32 +483,26 @@ func TestCoordinator_Agents(t *testing.T) {
 			t.Fatalf("expected Invalid for empty purpose, got %v", err)
 		}
 
+		_, err = coord.CreateAgent(ctx, &CreateAgentRequest{SpaceID: spaceID, Name: "Agent", Purpose: "PURPOSE_1"})
+		if err == nil || errors.KindOf(err) != errors.Invalid {
+			t.Fatalf("expected Invalid for empty model_name, got %v", err)
+		}
+
 		mockStore := &AgentStoreMock{
-			GetAgentFunc: func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
-				return nil, errors.New("store query error")
+			CreateAgentFunc: func(ctx context.Context, sid string, provID *string, name string, desc *string, purpose string, tags []string, model string, prompt *string, temp float64) (*agent.Agent, error) {
+				return nil, errors.New("store create error")
 			},
 		}
 		coord = NewCoordinator(mockStore, agent.NewClient())
-		_, err = coord.CreateAgent(ctx, &CreateAgentRequest{SpaceID: spaceID, Name: "Agent", Purpose: "PURPOSE_1"})
-		if err == nil {
-			t.Fatal("expected error from store lookup, got nil")
-		}
-
-		mockStore.GetAgentFunc = func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
-			return nil, errors.E("store.GetAgent", errors.NotExist, "not found")
-		}
-		mockStore.CreateAgentFunc = func(ctx context.Context, sid string, provID *string, name string, desc *string, purpose string, tags []string, model string, prompt *string, temp float64) (*agent.Agent, error) {
-			return nil, errors.New("store create error")
-		}
-		_, err = coord.CreateAgent(ctx, &CreateAgentRequest{SpaceID: spaceID, Name: "Agent", Purpose: "PURPOSE_1"})
+		_, err = coord.CreateAgent(ctx, &CreateAgentRequest{SpaceID: spaceID, Name: "Agent", Purpose: "PURPOSE_1", ModelName: "gpt-4o"})
 		if err == nil {
 			t.Fatal("expected error from store create, got nil")
 		}
 
 		mockStore.CreateAgentFunc = func(ctx context.Context, sid string, provID *string, name string, desc *string, purpose string, tags []string, model string, prompt *string, temp float64) (*agent.Agent, error) {
-			return &agent.Agent{ID: agentID, SpaceID: sid, Name: name, Purpose: purpose}, nil
+			return &agent.Agent{ID: agentID, SpaceID: sid, Name: name, Purpose: purpose, ModelName: model}, nil
 		}
-		a, err := coord.CreateAgent(ctx, &CreateAgentRequest{SpaceID: spaceID, Name: "Agent", Purpose: "PURPOSE_1"})
+		a, err := coord.CreateAgent(ctx, &CreateAgentRequest{SpaceID: spaceID, Name: "Agent", Purpose: "PURPOSE_1", ModelName: "gpt-4o"})
 		if err != nil || a.ID != agentID {
 			t.Fatalf("unexpected result: %v, %v", a, err)
 		}
@@ -513,7 +571,7 @@ func TestCoordinator_Agents(t *testing.T) {
 			},
 		}
 		coord = NewCoordinator(mockStore, agent.NewClient())
-		_, err = coord.UpdateAgent(ctx, &UpdateAgentRequest{SpaceID: spaceID, ID: agentID})
+		_, err = coord.UpdateAgent(ctx, &UpdateAgentRequest{SpaceID: spaceID, ID: agentID, ModelName: "gpt-4o"})
 		if err == nil || errors.KindOf(err) != errors.NotExist {
 			t.Fatalf("expected NotExist for missing agent, got %v", err)
 		}
@@ -521,15 +579,15 @@ func TestCoordinator_Agents(t *testing.T) {
 		mockStore.UpdateAgentFunc = func(ctx context.Context, sid string, id string, provID *string, name string, desc *string, tags []string, model string, prompt *string, temp float64, isEnabled bool) (*agent.Agent, error) {
 			return nil, errors.New("update error")
 		}
-		_, err = coord.UpdateAgent(ctx, &UpdateAgentRequest{SpaceID: spaceID, ID: agentID})
+		_, err = coord.UpdateAgent(ctx, &UpdateAgentRequest{SpaceID: spaceID, ID: agentID, ModelName: "gpt-4o"})
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
 
 		mockStore.UpdateAgentFunc = func(ctx context.Context, sid string, id string, provID *string, name string, desc *string, tags []string, model string, prompt *string, temp float64, isEnabled bool) (*agent.Agent, error) {
-			return &agent.Agent{ID: id, SpaceID: sid, Name: name, IsEnabled: isEnabled}, nil
+			return &agent.Agent{ID: id, SpaceID: sid, Name: name, ModelName: model, IsEnabled: isEnabled}, nil
 		}
-		a, err := coord.UpdateAgent(ctx, &UpdateAgentRequest{SpaceID: spaceID, ID: agentID, Name: "Updated Agent", IsEnabled: true})
+		a, err := coord.UpdateAgent(ctx, &UpdateAgentRequest{SpaceID: spaceID, ID: agentID, Name: "Updated Agent", ModelName: "gpt-4o", IsEnabled: true})
 		if err != nil || a.Name != "Updated Agent" {
 			t.Fatalf("unexpected updated agent: %v, %v", a, err)
 		}
@@ -678,18 +736,34 @@ func TestCoordinator_ExecuteAgent_EdgeCases(t *testing.T) {
 		}
 	})
 
+	mockEdgeStore := func(purpose string) *AgentStoreMock {
+		return &AgentStoreMock{
+			GetAgentFunc: func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
+				return &agent.Agent{
+					ID:            "agt_edge",
+					SpaceID:       q.SpaceID,
+					Purpose:       purpose,
+					LLMProviderID: new("prv_1"),
+					ModelName:     "gpt-4o",
+				}, nil
+			},
+			GetProviderFunc: func(ctx context.Context, q agent.GetLLMProvider) (*agent.LLMProvider, error) {
+				return &agent.LLMProvider{
+					ID:                "prv_1",
+					SpaceID:           q.SpaceID,
+					CompatibilityMode: agent.ModeOpenAICompatible,
+				}, nil
+			},
+		}
+	}
+
 	t.Run("System instruction parse error", func(t *testing.T) {
 		agent.RegisterAgent(agent.AgentDescriptor{
 			Purpose:                  "BAD_SYS_PARSE",
 			DefaultPromptTemplate:    "prompt",
 			DefaultSystemInstruction: "{{.unclosed",
 		})
-		mockStore := &AgentStoreMock{
-			GetAgentFunc: func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
-				return nil, nil
-			},
-		}
-		coord := NewCoordinator(mockStore, agent.NewClient())
+		coord := NewCoordinator(mockEdgeStore("BAD_SYS_PARSE"), agent.NewClient())
 		_, err := coord.ExecuteAgent(ctx, ExecutionRequest{
 			SpaceID: "spc_1",
 			Purpose: "BAD_SYS_PARSE",
@@ -705,12 +779,7 @@ func TestCoordinator_ExecuteAgent_EdgeCases(t *testing.T) {
 			DefaultPromptTemplate:    "prompt",
 			DefaultSystemInstruction: "{{call .bad}}",
 		})
-		mockStore := &AgentStoreMock{
-			GetAgentFunc: func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
-				return nil, nil
-			},
-		}
-		coord := NewCoordinator(mockStore, agent.NewClient())
+		coord := NewCoordinator(mockEdgeStore("BAD_SYS_EXEC"), agent.NewClient())
 		_, err := coord.ExecuteAgent(ctx, ExecutionRequest{
 			SpaceID: "spc_1",
 			Purpose: "BAD_SYS_EXEC",
@@ -727,12 +796,7 @@ func TestCoordinator_ExecuteAgent_EdgeCases(t *testing.T) {
 			DefaultPromptTemplate:  "prompt",
 			RequiredResponseSchema: "{{.unclosed",
 		})
-		mockStore := &AgentStoreMock{
-			GetAgentFunc: func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
-				return nil, nil
-			},
-		}
-		coord := NewCoordinator(mockStore, agent.NewClient())
+		coord := NewCoordinator(mockEdgeStore("BAD_SCHEMA_PARSE"), agent.NewClient())
 		_, err := coord.ExecuteAgent(ctx, ExecutionRequest{
 			SpaceID: "spc_1",
 			Purpose: "BAD_SCHEMA_PARSE",
@@ -748,12 +812,7 @@ func TestCoordinator_ExecuteAgent_EdgeCases(t *testing.T) {
 			DefaultPromptTemplate:  "prompt",
 			RequiredResponseSchema: "{{call .bad}}",
 		})
-		mockStore := &AgentStoreMock{
-			GetAgentFunc: func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
-				return nil, nil
-			},
-		}
-		coord := NewCoordinator(mockStore, agent.NewClient())
+		coord := NewCoordinator(mockEdgeStore("BAD_SCHEMA_EXEC"), agent.NewClient())
 		_, err := coord.ExecuteAgent(ctx, ExecutionRequest{
 			SpaceID: "spc_1",
 			Purpose: "BAD_SCHEMA_EXEC",
@@ -769,18 +828,9 @@ func TestCoordinator_ExecuteAgent_EdgeCases(t *testing.T) {
 			Purpose:               "LOG_RUN_FAILURE",
 			DefaultPromptTemplate: "ok",
 		})
-		mockStore := &AgentStoreMock{
-			GetAgentFunc: func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
-				return &agent.Agent{
-					ID:        "agt_log_fail",
-					SpaceID:   "spc_1",
-					Purpose:   "LOG_RUN_FAILURE",
-					ModelName: "mock-model",
-				}, nil
-			},
-			LogRunFunc: func(ctx context.Context, agentID string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error) {
-				return nil, errors.New("db disk full")
-			},
+		mockStore := mockEdgeStore("LOG_RUN_FAILURE")
+		mockStore.LogRunFunc = func(ctx context.Context, agentID *string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error) {
+			return nil, errors.New("db disk full")
 		}
 		coord := NewCoordinator(mockStore, agent.NewClient())
 		// Model execution will fail because there is no live mock server, but it confirms LogRunFunc was reached
@@ -843,23 +893,20 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 	ctx := context.Background()
 	logger := log.New()
 
-	var getSuggestionsCalled, executeAgentCalled, registerProcessorCalled bool
+	var executePromptCalled, executeAgentCalled bool
 	var createProviderCalled, getProviderCalled, listProvidersCalled bool
 	var updateProviderCalled, deleteProviderCalled bool
 	var createAgentCalled, getAgentCalled, listAgentsCalled bool
 	var updateAgentCalled, deleteAgentCalled, listRunsCalled bool
 
 	coordMock := &CoordinatorMock{
-		GetSuggestionsFunc: func(ctx context.Context, spaceID string, purpose string, req *SuggestionRequest) (map[string]any, error) {
-			getSuggestionsCalled = true
-			return map[string]any{"ok": true}, nil
+		ExecutePromptFunc: func(ctx context.Context, req ExecutePromptRequest) (*ExecutePromptResult, error) {
+			executePromptCalled = true
+			return &ExecutePromptResult{Text: "ok", ModelName: "gemini-2.5-flash"}, nil
 		},
 		ExecuteAgentFunc: func(ctx context.Context, req ExecutionRequest) (string, error) {
 			executeAgentCalled = true
 			return "result", nil
-		},
-		RegisterSuggestionProcessorFunc: func(purpose string, processor SuggestionProcessor) {
-			registerProcessorCalled = true
 		},
 		CreateProviderFunc: func(ctx context.Context, req *CreateProviderRequest) (*agent.LLMProvider, error) {
 			createProviderCalled = true
@@ -909,15 +956,9 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 
 	logged := NewLoggingCoordinator(coordMock, logger)
 
-	proc := &SuggestionProcessorMock{}
-	logged.RegisterSuggestionProcessor("logged_purpose", proc)
-	if !registerProcessorCalled {
-		t.Error("expected RegisterSuggestionProcessor to be delegated")
-	}
-
-	res, err := logged.GetSuggestions(ctx, "spc_1", "logged_purpose", &SuggestionRequest{})
-	if err != nil || res["ok"] != true || !getSuggestionsCalled {
-		t.Fatalf("unexpected GetSuggestions: %v, %v", res, err)
+	promptRes, err := logged.ExecutePrompt(ctx, ExecutePromptRequest{SpaceID: "spc_1", Prompt: "hi"})
+	if err != nil || promptRes.Text != "ok" || !executePromptCalled {
+		t.Fatalf("unexpected ExecutePrompt: %v, %v", promptRes, err)
 	}
 
 	execRes, err := logged.ExecuteAgent(ctx, ExecutionRequest{
@@ -990,7 +1031,7 @@ func TestLoggingCoordinator_ErrorDelegation(t *testing.T) {
 
 	expectedErr := errors.New("delegated error")
 	coordMock := &CoordinatorMock{
-		GetSuggestionsFunc: func(ctx context.Context, spaceID string, purpose string, req *SuggestionRequest) (map[string]any, error) {
+		ExecutePromptFunc: func(ctx context.Context, req ExecutePromptRequest) (*ExecutePromptResult, error) {
 			return nil, expectedErr
 		},
 		ExecuteAgentFunc: func(ctx context.Context, req ExecutionRequest) (string, error) {
@@ -1033,7 +1074,7 @@ func TestLoggingCoordinator_ErrorDelegation(t *testing.T) {
 
 	logged := NewLoggingCoordinator(coordMock, logger)
 
-	if _, err := logged.GetSuggestions(ctx, "spc_1", "p", &SuggestionRequest{}); err != expectedErr {
+	if _, err := logged.ExecutePrompt(ctx, ExecutePromptRequest{SpaceID: "spc_1", Prompt: "p"}); err != expectedErr {
 		t.Errorf("expected %v, got %v", expectedErr, err)
 	}
 	if _, err := logged.ExecuteAgent(ctx, ExecutionRequest{SpaceID: "spc_1", Purpose: "p"}); err != expectedErr {

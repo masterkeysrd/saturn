@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 
 	agentv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1"
 	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
@@ -10,7 +9,6 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/agent"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -81,6 +79,10 @@ func toProtoAgent(a *agent.Agent) *agentv1.Agent {
 }
 
 func toProtoAgentRun(r *agent.AgentRun) *agentv1.AgentRun {
+	agentID := ""
+	if r.AgentID != nil {
+		agentID = *r.AgentID
+	}
 	outputRaw := ""
 	if r.OutputRaw != nil {
 		outputRaw = *r.OutputRaw
@@ -91,7 +93,7 @@ func toProtoAgentRun(r *agent.AgentRun) *agentv1.AgentRun {
 	}
 	return &agentv1.AgentRun{
 		Id:           r.ID,
-		AgentId:      r.AgentID,
+		AgentId:      agentID,
 		SpaceId:      r.SpaceID,
 		Status:       string(r.Status),
 		InputRaw:     r.InputRaw,
@@ -407,51 +409,4 @@ func (h *Handler) GetProviderCatalog(ctx context.Context, _ *agentv1.GetProvider
 		})
 	}
 	return res, nil
-}
-
-func (h *Handler) GetSuggestions(ctx context.Context, req *agentv1.GetSuggestionsRequest) (*agentv1.GetSuggestionsResponse, error) {
-	const op errors.Op = "grpc/agent.GetSuggestions"
-
-	spaceID, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
-	}
-
-	if req.GetPurpose() == "" {
-		return nil, errors.E(op, errors.Invalid, "purpose is required")
-	}
-
-	docs := make([]agentapp.DocumentFile, len(req.GetDocuments()))
-	for i, d := range req.GetDocuments() {
-		docs[i] = agentapp.DocumentFile{
-			Filename:    d.GetFilename(),
-			ContentType: d.GetContentType(),
-			Content:     d.GetContent(),
-		}
-	}
-
-	appReq := &agentapp.SuggestionRequest{
-		TextContent: req.GetTextContent(),
-		Documents:   docs,
-	}
-
-	resMap, err := h.coordinator.GetSuggestions(ctx, string(spaceID), req.GetPurpose(), appReq)
-	if err != nil {
-		return nil, err
-	}
-
-	stStruct, err := structpb.NewStruct(resMap)
-	if err != nil {
-		return nil, errors.E(op, errors.Internal, fmt.Errorf("encode structured suggestion: %w", err))
-	}
-
-	rawOutput := ""
-	if vendor, ok := resMap["vendor"].(string); ok {
-		rawOutput = vendor
-	}
-
-	return &agentv1.GetSuggestionsResponse{
-		RawOutput:            rawOutput,
-		StructuredSuggestion: stStruct,
-	}, nil
 }

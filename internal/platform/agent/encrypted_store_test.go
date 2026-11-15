@@ -18,7 +18,7 @@ type mockProviderStore struct {
 	deleteProviderFn func(ctx context.Context, spaceID string, id string) error
 
 	getAgentFn    func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error)
-	logRunFn      func(ctx context.Context, agentID string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error)
+	logRunFn      func(ctx context.Context, agentID *string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error)
 	createAgentFn func(ctx context.Context, spaceID string, providerID *string, name string, desc *string, purpose string, tags []string, model string, prompt *string, temp float64) (*agent.Agent, error)
 	listAgentsFn  func(ctx context.Context, spaceID string) ([]*agent.Agent, error)
 	updateAgentFn func(ctx context.Context, spaceID string, id string, providerID *string, name string, desc *string, tags []string, model string, prompt *string, temp float64, isEnabled bool) (*agent.Agent, error)
@@ -68,7 +68,7 @@ func (m *mockProviderStore) GetAgent(ctx context.Context, q agent.GetAgent) (*ag
 	return nil, nil
 }
 
-func (m *mockProviderStore) LogRun(ctx context.Context, agentID string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error) {
+func (m *mockProviderStore) LogRun(ctx context.Context, agentID *string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error) {
 	if m.logRunFn != nil {
 		return m.logRunFn(ctx, agentID, spaceID, status, input, output, errMsg, tokens)
 	}
@@ -273,7 +273,7 @@ func TestEncryptedStore(t *testing.T) {
 				called["GetAgent"] = true
 				return &agent.Agent{ID: "agt_1"}, nil
 			},
-			logRunFn: func(ctx context.Context, agentID string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error) {
+			logRunFn: func(ctx context.Context, agentID *string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error) {
 				called["LogRun"] = true
 				return &agent.AgentRun{ID: "run_1"}, nil
 			},
@@ -303,7 +303,7 @@ func TestEncryptedStore(t *testing.T) {
 
 		_ = store.DeleteProvider(ctx, "spc_1", "prv_1")
 		_, _ = store.GetAgent(ctx, agent.GetAgent{SpaceID: "spc_1", ID: "agt_1"})
-		_, _ = store.LogRun(ctx, "agt_1", "spc_1", agent.RunSuccess, "input", nil, nil, 10)
+		_, _ = store.LogRun(ctx, new("agt_1"), "spc_1", agent.RunSuccess, "input", nil, nil, 10)
 		_, _ = store.CreateAgent(ctx, "spc_1", nil, "agent", nil, "PURPOSE", nil, "model", nil, 0.5)
 		_, _ = store.ListAgents(ctx, "spc_1")
 		_, _ = store.UpdateAgent(ctx, "spc_1", "agt_1", nil, "agent", nil, nil, "model", nil, 0.5, true)

@@ -17,7 +17,7 @@ type ProviderStore interface {
 	DeleteProvider(ctx context.Context, spaceID string, id string) error
 
 	GetAgent(ctx context.Context, q GetAgent) (*Agent, error)
-	LogRun(ctx context.Context, agentID string, spaceID string, status AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*AgentRun, error)
+	LogRun(ctx context.Context, agentID *string, spaceID string, status AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*AgentRun, error)
 	CreateAgent(ctx context.Context, spaceID string, providerID *string, name string, desc *string, purpose string, tags []string, model string, prompt *string, temp float64) (*Agent, error)
 	ListAgents(ctx context.Context, spaceID string) ([]*Agent, error)
 	UpdateAgent(ctx context.Context, spaceID string, id string, providerID *string, name string, desc *string, tags []string, model string, prompt *string, temp float64, isEnabled bool) (*Agent, error)
@@ -124,7 +124,7 @@ func (s *EncryptedStore) GetAgent(ctx context.Context, q GetAgent) (*Agent, erro
 	return s.next.GetAgent(ctx, q)
 }
 
-func (s *EncryptedStore) LogRun(ctx context.Context, agentID string, spaceID string, status AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*AgentRun, error) {
+func (s *EncryptedStore) LogRun(ctx context.Context, agentID *string, spaceID string, status AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*AgentRun, error) {
 	return s.next.LogRun(ctx, agentID, spaceID, status, input, output, errMsg, tokens)
 }
 

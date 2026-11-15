@@ -282,7 +282,7 @@ func TestStore_AgentOperations(t *testing.T) {
 			getFn: func(ctx context.Context, dest any, query string, args ...any) error {
 				r := dest.(*agent.AgentRun)
 				r.ID = "run_123"
-				r.AgentID = "agt_1"
+				r.AgentID = new("agt_1")
 				r.SpaceID = "spc_1"
 				r.Status = agent.RunSuccess
 				r.TokensUsed = 42
@@ -293,7 +293,7 @@ func TestStore_AgentOperations(t *testing.T) {
 				list := dest.(*[]*agent.AgentRun)
 				*list = append(*list, &agent.AgentRun{
 					ID:         "run_1",
-					AgentID:    "agt_1",
+					AgentID:    new("agt_1"),
 					SpaceID:    "spc_1",
 					Status:     agent.RunSuccess,
 					CreateTime: now,
@@ -305,7 +305,7 @@ func TestStore_AgentOperations(t *testing.T) {
 
 		// LogRun
 		out := "hello"
-		run, err := store.LogRun(ctx, "agt_1", "spc_1", agent.RunSuccess, "input", &out, nil, 42)
+		run, err := store.LogRun(ctx, new("agt_1"), "spc_1", agent.RunSuccess, "input", &out, nil, 42)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

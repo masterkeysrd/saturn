@@ -9,16 +9,15 @@ import (
 
 // Typed error codes for the agent domain.
 const (
-	ProviderNotFound            errors.Code = "LLM_PROVIDER_NOT_FOUND"
-	ProviderExists              errors.Code = "LLM_PROVIDER_EXISTS"
-	AgentNotFound               errors.Code = "AGENT_NOT_FOUND"
-	AgentExists                 errors.Code = "AGENT_EXISTS"
-	RunNotFound                 errors.Code = "AGENT_RUN_NOT_FOUND"
-	InvalidAgentPurpose         errors.Code = "INVALID_AGENT_PURPOSE"
-	InvalidTemplate             errors.Code = "INVALID_TEMPLATE"
-	ModelExecutionFailed        errors.Code = "MODEL_EXECUTION_FAILED"
-	ModelUnavailable            errors.Code = "MODEL_UNAVAILABLE"
-	SuggestionProcessorNotFound errors.Code = "SUGGESTION_PROCESSOR_NOT_FOUND"
+	ProviderNotFound     errors.Code = "LLM_PROVIDER_NOT_FOUND"
+	ProviderExists       errors.Code = "LLM_PROVIDER_EXISTS"
+	AgentNotFound        errors.Code = "AGENT_NOT_FOUND"
+	AgentExists          errors.Code = "AGENT_EXISTS"
+	RunNotFound          errors.Code = "AGENT_RUN_NOT_FOUND"
+	InvalidAgentPurpose  errors.Code = "INVALID_AGENT_PURPOSE"
+	InvalidTemplate      errors.Code = "INVALID_TEMPLATE"
+	ModelExecutionFailed errors.Code = "MODEL_EXECUTION_FAILED"
+	ModelUnavailable     errors.Code = "MODEL_UNAVAILABLE"
 )
 
 // MapExecutionError translates low-level model or network failures into platform errors

@@ -208,8 +208,8 @@ func (s *Store) DeleteAgent(ctx context.Context, spaceID string, id string) erro
 // Agent Runs Logging Operations
 // ============================================================================
 
-// LogRun inserts a record of an agent execution attempt.
-func (s *Store) LogRun(ctx context.Context, agentID string, spaceID string, status AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*AgentRun, error) {
+// LogRun inserts a record of an agent execution attempt (agentID may be nil for inline workflow prompts).
+func (s *Store) LogRun(ctx context.Context, agentID *string, spaceID string, status AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*AgentRun, error) {
 	const op errors.Op = "platform/agent/storage.LogRun"
 
 	runID, err := id.Generate("run_")
@@ -274,4 +274,23 @@ func (s *Store) ListRuns(ctx context.Context, q ListAgentRuns) (*paging.Page[*Ag
 			ID:        item.ID,
 		}
 	}), nil
+}
+
+// GetRunsByIDs retrieves agent run audit rows for the given IDs within a workspace.
+func (s *Store) GetRunsByIDs(ctx context.Context, spaceID string, ids []string) ([]*AgentRun, error) {
+	const op errors.Op = "platform/agent/storage.GetRunsByIDs"
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	const query = `SELECT id, agent_id, space_id, status, input_raw, output_raw, error_message, tokens_used, create_time
+	               FROM platform.agent_runs
+	               WHERE space_id = $1 AND id = ANY($2)`
+
+	var list []*AgentRun
+	if err := s.db.Select(ctx, &list, query, spaceID, pq.Array(ids)); err != nil {
+		return nil, errors.E(op, err)
+	}
+	return list, nil
 }

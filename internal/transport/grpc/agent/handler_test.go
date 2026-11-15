@@ -16,7 +16,7 @@ import (
 )
 
 type mockCoordinator struct {
-	getSuggestionsFn func(ctx context.Context, spaceID string, purpose string, req *agentapp.SuggestionRequest) (map[string]any, error)
+	executePromptFn  func(ctx context.Context, req agentapp.ExecutePromptRequest) (*agentapp.ExecutePromptResult, error)
 	executeAgentFn   func(ctx context.Context, req agentapp.ExecutionRequest) (string, error)
 	createProviderFn func(ctx context.Context, req *agentapp.CreateProviderRequest) (*agent.LLMProvider, error)
 	getProviderFn    func(ctx context.Context, spaceID string, id string) (*agent.LLMProvider, error)
@@ -31,19 +31,17 @@ type mockCoordinator struct {
 	listRunsFn       func(ctx context.Context, q agent.ListAgentRuns) (*paging.Page[*agent.AgentRun], error)
 }
 
-func (m *mockCoordinator) GetSuggestions(ctx context.Context, spaceID string, purpose string, req *agentapp.SuggestionRequest) (map[string]any, error) {
-	if m.getSuggestionsFn != nil {
-		return m.getSuggestionsFn(ctx, spaceID, purpose, req)
+func (m *mockCoordinator) ExecutePrompt(ctx context.Context, req agentapp.ExecutePromptRequest) (*agentapp.ExecutePromptResult, error) {
+	if m.executePromptFn != nil {
+		return m.executePromptFn(ctx, req)
 	}
-	return nil, nil
+	return &agentapp.ExecutePromptResult{}, nil
 }
 func (m *mockCoordinator) ExecuteAgent(ctx context.Context, req agentapp.ExecutionRequest) (string, error) {
 	if m.executeAgentFn != nil {
 		return m.executeAgentFn(ctx, req)
 	}
 	return "", nil
-}
-func (m *mockCoordinator) RegisterSuggestionProcessor(purpose string, processor agentapp.SuggestionProcessor) {
 }
 func (m *mockCoordinator) CreateProvider(ctx context.Context, req *agentapp.CreateProviderRequest) (*agent.LLMProvider, error) {
 	if m.createProviderFn != nil {

@@ -22,7 +22,7 @@ type AgentStoreMock struct {
 	GetProviderFunc func(ctx context.Context, q agent.GetLLMProvider) (*agent.LLMProvider, error)
 
 	// LogRunFunc mocks the LogRun method.
-	LogRunFunc func(ctx context.Context, agentID string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error)
+	LogRunFunc func(ctx context.Context, agentID *string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error)
 
 	// CreateProviderFunc mocks the CreateProvider method.
 	CreateProviderFunc func(ctx context.Context, spaceID string, name string, mode agent.CompatibilityMode, url *string, key *string) (*agent.LLMProvider, error)
@@ -63,7 +63,7 @@ type AgentStoreMock struct {
 		}
 		LogRun []struct {
 			Ctx     context.Context
-			AgentID string
+			AgentID *string
 			SpaceID string
 			Status  agent.AgentRunStatus
 			Input   string
@@ -204,14 +204,14 @@ func (mock *AgentStoreMock) GetProviderCalls() []struct {
 }
 
 // LogRun calls LogRunFunc.
-func (mock *AgentStoreMock) LogRun(ctx context.Context, agentID string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error) {
+func (mock *AgentStoreMock) LogRun(ctx context.Context, agentID *string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error) {
 	if mock.LogRunFunc == nil {
 		panic("AgentStoreMock.LogRunFunc: method is nil but AgentStore.LogRun was just called")
 	}
 	mock.lockLogRun.Lock()
 	mock.calls.LogRun = append(mock.calls.LogRun, struct {
 		Ctx     context.Context
-		AgentID string
+		AgentID *string
 		SpaceID string
 		Status  agent.AgentRunStatus
 		Input   string
@@ -235,7 +235,7 @@ func (mock *AgentStoreMock) LogRun(ctx context.Context, agentID string, spaceID 
 // LogRunCalls returns all calls made to LogRun.
 func (mock *AgentStoreMock) LogRunCalls() []struct {
 	Ctx     context.Context
-	AgentID string
+	AgentID *string
 	SpaceID string
 	Status  agent.AgentRunStatus
 	Input   string
@@ -573,67 +573,15 @@ func (mock *AgentStoreMock) ListRunsCalls() []struct {
 }
 
 // Compile-time interface assertion.
-var _ SuggestionProcessor = (*SuggestionProcessorMock)(nil)
-
-// SuggestionProcessorMock is a mock implementation of SuggestionProcessor.
-type SuggestionProcessorMock struct {
-	// ProcessSuggestionsFunc mocks the ProcessSuggestions method.
-	ProcessSuggestionsFunc func(ctx context.Context, spaceID string, req *SuggestionRequest) (map[string]any, error)
-
-	// calls tracks calls to the methods.
-	calls struct {
-		ProcessSuggestions []struct {
-			Ctx     context.Context
-			SpaceID string
-			Req     *SuggestionRequest
-		}
-	}
-	lockProcessSuggestions sync.RWMutex
-}
-
-// ProcessSuggestions calls ProcessSuggestionsFunc.
-func (mock *SuggestionProcessorMock) ProcessSuggestions(ctx context.Context, spaceID string, req *SuggestionRequest) (map[string]any, error) {
-	if mock.ProcessSuggestionsFunc == nil {
-		panic("SuggestionProcessorMock.ProcessSuggestionsFunc: method is nil but SuggestionProcessor.ProcessSuggestions was just called")
-	}
-	mock.lockProcessSuggestions.Lock()
-	mock.calls.ProcessSuggestions = append(mock.calls.ProcessSuggestions, struct {
-		Ctx     context.Context
-		SpaceID string
-		Req     *SuggestionRequest
-	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Req:     req,
-	})
-	mock.lockProcessSuggestions.Unlock()
-	return mock.ProcessSuggestionsFunc(ctx, spaceID, req)
-}
-
-// ProcessSuggestionsCalls returns all calls made to ProcessSuggestions.
-func (mock *SuggestionProcessorMock) ProcessSuggestionsCalls() []struct {
-	Ctx     context.Context
-	SpaceID string
-	Req     *SuggestionRequest
-} {
-	mock.lockProcessSuggestions.RLock()
-	defer mock.lockProcessSuggestions.RUnlock()
-	return mock.calls.ProcessSuggestions
-}
-
-// Compile-time interface assertion.
 var _ Coordinator = (*CoordinatorMock)(nil)
 
 // CoordinatorMock is a mock implementation of Coordinator.
 type CoordinatorMock struct {
-	// GetSuggestionsFunc mocks the GetSuggestions method.
-	GetSuggestionsFunc func(ctx context.Context, spaceID string, purpose string, req *SuggestionRequest) (map[string]any, error)
+	// ExecutePromptFunc mocks the ExecutePrompt method.
+	ExecutePromptFunc func(ctx context.Context, req ExecutePromptRequest) (*ExecutePromptResult, error)
 
 	// ExecuteAgentFunc mocks the ExecuteAgent method.
 	ExecuteAgentFunc func(ctx context.Context, req ExecutionRequest) (string, error)
-
-	// RegisterSuggestionProcessorFunc mocks the RegisterSuggestionProcessor method.
-	RegisterSuggestionProcessorFunc func(purpose string, processor SuggestionProcessor)
 
 	// CreateProviderFunc mocks the CreateProvider method.
 	CreateProviderFunc func(ctx context.Context, req *CreateProviderRequest) (*agent.LLMProvider, error)
@@ -670,19 +618,13 @@ type CoordinatorMock struct {
 
 	// calls tracks calls to the methods.
 	calls struct {
-		GetSuggestions []struct {
-			Ctx     context.Context
-			SpaceID string
-			Purpose string
-			Req     *SuggestionRequest
+		ExecutePrompt []struct {
+			Ctx context.Context
+			Req ExecutePromptRequest
 		}
 		ExecuteAgent []struct {
 			Ctx context.Context
 			Req ExecutionRequest
-		}
-		RegisterSuggestionProcessor []struct {
-			Purpose   string
-			Processor SuggestionProcessor
 		}
 		CreateProvider []struct {
 			Ctx context.Context
@@ -733,53 +675,46 @@ type CoordinatorMock struct {
 			Q   agent.ListAgentRuns
 		}
 	}
-	lockGetSuggestions              sync.RWMutex
-	lockExecuteAgent                sync.RWMutex
-	lockRegisterSuggestionProcessor sync.RWMutex
-	lockCreateProvider              sync.RWMutex
-	lockGetProvider                 sync.RWMutex
-	lockListProviders               sync.RWMutex
-	lockUpdateProvider              sync.RWMutex
-	lockDeleteProvider              sync.RWMutex
-	lockCreateAgent                 sync.RWMutex
-	lockGetAgent                    sync.RWMutex
-	lockListAgents                  sync.RWMutex
-	lockUpdateAgent                 sync.RWMutex
-	lockDeleteAgent                 sync.RWMutex
-	lockListRuns                    sync.RWMutex
+	lockExecutePrompt  sync.RWMutex
+	lockExecuteAgent   sync.RWMutex
+	lockCreateProvider sync.RWMutex
+	lockGetProvider    sync.RWMutex
+	lockListProviders  sync.RWMutex
+	lockUpdateProvider sync.RWMutex
+	lockDeleteProvider sync.RWMutex
+	lockCreateAgent    sync.RWMutex
+	lockGetAgent       sync.RWMutex
+	lockListAgents     sync.RWMutex
+	lockUpdateAgent    sync.RWMutex
+	lockDeleteAgent    sync.RWMutex
+	lockListRuns       sync.RWMutex
 }
 
-// GetSuggestions calls GetSuggestionsFunc.
-func (mock *CoordinatorMock) GetSuggestions(ctx context.Context, spaceID string, purpose string, req *SuggestionRequest) (map[string]any, error) {
-	if mock.GetSuggestionsFunc == nil {
-		panic("CoordinatorMock.GetSuggestionsFunc: method is nil but Coordinator.GetSuggestions was just called")
+// ExecutePrompt calls ExecutePromptFunc.
+func (mock *CoordinatorMock) ExecutePrompt(ctx context.Context, req ExecutePromptRequest) (*ExecutePromptResult, error) {
+	if mock.ExecutePromptFunc == nil {
+		panic("CoordinatorMock.ExecutePromptFunc: method is nil but Coordinator.ExecutePrompt was just called")
 	}
-	mock.lockGetSuggestions.Lock()
-	mock.calls.GetSuggestions = append(mock.calls.GetSuggestions, struct {
-		Ctx     context.Context
-		SpaceID string
-		Purpose string
-		Req     *SuggestionRequest
+	mock.lockExecutePrompt.Lock()
+	mock.calls.ExecutePrompt = append(mock.calls.ExecutePrompt, struct {
+		Ctx context.Context
+		Req ExecutePromptRequest
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Purpose: purpose,
-		Req:     req,
+		Ctx: ctx,
+		Req: req,
 	})
-	mock.lockGetSuggestions.Unlock()
-	return mock.GetSuggestionsFunc(ctx, spaceID, purpose, req)
+	mock.lockExecutePrompt.Unlock()
+	return mock.ExecutePromptFunc(ctx, req)
 }
 
-// GetSuggestionsCalls returns all calls made to GetSuggestions.
-func (mock *CoordinatorMock) GetSuggestionsCalls() []struct {
-	Ctx     context.Context
-	SpaceID string
-	Purpose string
-	Req     *SuggestionRequest
+// ExecutePromptCalls returns all calls made to ExecutePrompt.
+func (mock *CoordinatorMock) ExecutePromptCalls() []struct {
+	Ctx context.Context
+	Req ExecutePromptRequest
 } {
-	mock.lockGetSuggestions.RLock()
-	defer mock.lockGetSuggestions.RUnlock()
-	return mock.calls.GetSuggestions
+	mock.lockExecutePrompt.RLock()
+	defer mock.lockExecutePrompt.RUnlock()
+	return mock.calls.ExecutePrompt
 }
 
 // ExecuteAgent calls ExecuteAgentFunc.
@@ -807,33 +742,6 @@ func (mock *CoordinatorMock) ExecuteAgentCalls() []struct {
 	mock.lockExecuteAgent.RLock()
 	defer mock.lockExecuteAgent.RUnlock()
 	return mock.calls.ExecuteAgent
-}
-
-// RegisterSuggestionProcessor calls RegisterSuggestionProcessorFunc.
-func (mock *CoordinatorMock) RegisterSuggestionProcessor(purpose string, processor SuggestionProcessor) {
-	if mock.RegisterSuggestionProcessorFunc == nil {
-		panic("CoordinatorMock.RegisterSuggestionProcessorFunc: method is nil but Coordinator.RegisterSuggestionProcessor was just called")
-	}
-	mock.lockRegisterSuggestionProcessor.Lock()
-	mock.calls.RegisterSuggestionProcessor = append(mock.calls.RegisterSuggestionProcessor, struct {
-		Purpose   string
-		Processor SuggestionProcessor
-	}{
-		Purpose:   purpose,
-		Processor: processor,
-	})
-	mock.lockRegisterSuggestionProcessor.Unlock()
-	mock.RegisterSuggestionProcessorFunc(purpose, processor)
-}
-
-// RegisterSuggestionProcessorCalls returns all calls made to RegisterSuggestionProcessor.
-func (mock *CoordinatorMock) RegisterSuggestionProcessorCalls() []struct {
-	Purpose   string
-	Processor SuggestionProcessor
-} {
-	mock.lockRegisterSuggestionProcessor.RLock()
-	defer mock.lockRegisterSuggestionProcessor.RUnlock()
-	return mock.calls.RegisterSuggestionProcessor
 }
 
 // CreateProvider calls CreateProviderFunc.

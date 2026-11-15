@@ -28,25 +28,25 @@ func NewLoggingCoordinator(next Coordinator, logger log.Logger) *LoggingCoordina
 // Compile-time interface assertion.
 var _ Coordinator = (*LoggingCoordinator)(nil)
 
-// GetSuggestions executes next.GetSuggestions and logs execution duration and errors.
-func (l *LoggingCoordinator) GetSuggestions(ctx context.Context, spaceID string, purpose string, req *SuggestionRequest) (map[string]any, error) {
+// ExecutePrompt executes next.ExecutePrompt and logs execution duration and errors.
+func (l *LoggingCoordinator) ExecutePrompt(ctx context.Context, req ExecutePromptRequest) (*ExecutePromptResult, error) {
 	start := time.Now()
-	res, err := l.next.GetSuggestions(ctx, spaceID, purpose, req)
+	res, err := l.next.ExecutePrompt(ctx, req)
 	duration := time.Since(start)
 
 	if err != nil {
-		l.logger.Error(ctx, "agent.GetSuggestions failed",
+		l.logger.Error(ctx, "agent.ExecutePrompt failed",
 			log.String("component", "agent"),
-			log.String("operation", "GetSuggestions"),
+			log.String("operation", "ExecutePrompt"),
 			log.Duration("duration", duration),
 			log.Err(err),
 		)
 		return nil, err
 	}
 
-	l.logger.Info(ctx, "agent.GetSuggestions completed",
+	l.logger.Info(ctx, "agent.ExecutePrompt completed",
 		log.String("component", "agent"),
-		log.String("operation", "GetSuggestions"),
+		log.String("operation", "ExecutePrompt"),
 		log.Duration("duration", duration),
 	)
 	return res, nil
@@ -74,19 +74,6 @@ func (l *LoggingCoordinator) ExecuteAgent(ctx context.Context, req ExecutionRequ
 		log.Duration("duration", duration),
 	)
 	return res, nil
-}
-
-// RegisterSuggestionProcessor executes next.RegisterSuggestionProcessor and logs execution duration and errors.
-func (l *LoggingCoordinator) RegisterSuggestionProcessor(purpose string, processor SuggestionProcessor) {
-	start := time.Now()
-	l.next.RegisterSuggestionProcessor(purpose, processor)
-	duration := time.Since(start)
-
-	l.logger.Info(context.Background(), "agent.RegisterSuggestionProcessor completed",
-		log.String("component", "agent"),
-		log.String("operation", "RegisterSuggestionProcessor"),
-		log.Duration("duration", duration),
-	)
 }
 
 // CreateProvider executes next.CreateProvider and logs execution duration and errors.

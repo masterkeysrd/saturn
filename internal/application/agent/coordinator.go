@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"sync"
+	"strings"
 	"text/template"
 	"time"
 
@@ -21,7 +21,7 @@ import (
 type AgentStore interface {
 	GetAgent(ctx context.Context, q agent.GetAgent) (*agent.Agent, error)
 	GetProvider(ctx context.Context, q agent.GetLLMProvider) (*agent.LLMProvider, error)
-	LogRun(ctx context.Context, agentID string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error)
+	LogRun(ctx context.Context, agentID *string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error)
 
 	CreateProvider(ctx context.Context, spaceID string, name string, mode agent.CompatibilityMode, url *string, key *string) (*agent.LLMProvider, error)
 	ListProviders(ctx context.Context, spaceID string) ([]*agent.LLMProvider, error)
@@ -36,24 +36,24 @@ type AgentStore interface {
 	ListRuns(ctx context.Context, q agent.ListAgentRuns) (*paging.Page[*agent.AgentRun], error)
 }
 
-// DocumentFile represents an attached file payload for signal analysis.
-type DocumentFile struct {
-	Filename    string `json:"filename"`
-	ContentType string `json:"contentType"`
-	Content     []byte `json:"content"`
+// ExecutePromptRequest defines inputs for executing an ad-hoc or agent-backed LLM prompt.
+type ExecutePromptRequest struct {
+	SpaceID           string
+	AgentID           *string
+	ProviderID        *string
+	ModelName         *string
+	Temperature       *float64
+	SystemInstruction string
+	Prompt            string
+	ResponseSchema    string
 }
 
-// SuggestionRequest holds generic incoming signal data for suggestion processing.
-type SuggestionRequest struct {
-	TextContent string         `json:"textContent"`
-	Documents   []DocumentFile `json:"documents"`
-	Metadata    map[string]any `json:"metadata"`
-}
-
-// SuggestionProcessor interface abstracts purpose-based suggestion engines.
-// @Mock
-type SuggestionProcessor interface {
-	ProcessSuggestions(ctx context.Context, spaceID string, req *SuggestionRequest) (map[string]any, error)
+// ExecutePromptResult holds the generated output and audit metadata from ExecutePrompt.
+type ExecutePromptResult struct {
+	Text       string
+	TokensUsed int
+	AgentRunID string
+	ModelName  string
 }
 
 // ExecutionRequest defines options for running an agent with parameters.
@@ -110,12 +110,11 @@ type UpdateAgentRequest struct {
 
 //go:generate go run github.com/masterkeysrd/saturn/tools/loggen -target=Coordinator -component=agent
 
-// Coordinator orchestrates AI agent blueprints, LLM providers, audit runs, and suggestions.
+// Coordinator orchestrates AI agent blueprints, LLM providers, and audit runs.
 // @Mock
 type Coordinator interface {
-	GetSuggestions(ctx context.Context, spaceID string, purpose string, req *SuggestionRequest) (map[string]any, error)
+	ExecutePrompt(ctx context.Context, req ExecutePromptRequest) (*ExecutePromptResult, error)
 	ExecuteAgent(ctx context.Context, req ExecutionRequest) (string, error)
-	RegisterSuggestionProcessor(purpose string, processor SuggestionProcessor)
 
 	CreateProvider(ctx context.Context, req *CreateProviderRequest) (*agent.LLMProvider, error)
 	GetProvider(ctx context.Context, spaceID string, id string) (*agent.LLMProvider, error)
@@ -136,49 +135,42 @@ type Coordinator interface {
 var _ Coordinator = (*coordinator)(nil)
 
 type coordinator struct {
-	store      AgentStore
-	client     *agent.Client
-	processors map[string]SuggestionProcessor
-	mu         sync.RWMutex
+	store   AgentStore
+	client  *agent.Client
+	service *agent.Service
 }
 
 // NewCoordinator creates a new Agent Coordinator instance.
 func NewCoordinator(store AgentStore, client *agent.Client) Coordinator {
 	return &coordinator{
-		store:      store,
-		client:     client,
-		processors: make(map[string]SuggestionProcessor),
+		store:   store,
+		client:  client,
+		service: agent.NewService(store, client),
 	}
 }
 
-// RegisterSuggestionProcessor registers a suggestion engine for a specific purpose key (e.g. "transaction_extractor").
-func (c *coordinator) RegisterSuggestionProcessor(purpose string, processor SuggestionProcessor) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.processors[purpose] = processor
-}
-
-// GetSuggestions dispatches a suggestion request to the registered processor for the target purpose.
-func (c *coordinator) GetSuggestions(ctx context.Context, spaceID string, purpose string, req *SuggestionRequest) (map[string]any, error) {
-	const op errors.Op = "application/agent.GetSuggestions"
-
-	if purpose == "" {
-		return nil, errors.E(op, errors.Invalid, "purpose is required")
+// ExecutePrompt resolves an agent, inline provider/model, or space default provider,
+// runs the prompt via the LLM client, and logs an audit row in platform.agent_runs (with nullable agent_id).
+func (c *coordinator) ExecutePrompt(ctx context.Context, req ExecutePromptRequest) (*ExecutePromptResult, error) {
+	res, err := c.service.ExecutePrompt(ctx, agent.ExecutePromptRequest{
+		SpaceID:           req.SpaceID,
+		AgentID:           req.AgentID,
+		ProviderID:        req.ProviderID,
+		ModelName:         req.ModelName,
+		Temperature:       req.Temperature,
+		SystemInstruction: req.SystemInstruction,
+		Prompt:            req.Prompt,
+		ResponseSchema:    req.ResponseSchema,
+	})
+	if res == nil {
+		return nil, err
 	}
-
-	c.mu.RLock()
-	processor, ok := c.processors[purpose]
-	c.mu.RUnlock()
-
-	if !ok {
-		return nil, errors.E(op, errors.NotExist, SuggestionProcessorNotFound, fmt.Sprintf("no suggestion processor registered for purpose %q", purpose))
-	}
-
-	res, err := processor.ProcessSuggestions(ctx, spaceID, req)
-	if err != nil {
-		return nil, errors.E(op, err)
-	}
-	return res, nil
+	return &ExecutePromptResult{
+		Text:       res.Text,
+		TokensUsed: res.TokensUsed,
+		AgentRunID: res.AgentRunID,
+		ModelName:  res.ModelName,
+	}, err
 }
 
 // ExecuteAgent resolves and runs the active agent configured for a specific workspace and purpose.
@@ -218,41 +210,43 @@ func (c *coordinator) ExecuteAgent(ctx context.Context, req ExecutionRequest) (s
 	if err != nil {
 		return "", errors.E(op, fmt.Errorf("lookup workspace agent: %w", err))
 	}
+	if a == nil {
+		return "", errors.E(op, errors.NotExist, AgentNotFound, "agent not found for purpose")
+	}
 
-	var providerMode = agent.ModeGeminiNative
+	var providerMode agent.CompatibilityMode
 	var apiURL string
 	var apiKey string
-	var modelName = "gemini-2.5-flash"
-	var temperature = 0.0
-	var agentID string
+	modelName := a.ModelName
+	if strings.TrimSpace(modelName) == "" {
+		return "", errors.E(op, errors.Invalid, "model_name is required")
+	}
+	temperature := a.Temperature
+	agentID := a.ID
 
 	// Resolve the raw system instruction to compile
 	rawSystemInstruction := descriptor.DefaultSystemInstruction
-	if a != nil {
-		agentID = a.ID
-		modelName = a.ModelName
-		temperature = a.Temperature
+	if a.SystemInstruction != nil && *a.SystemInstruction != "" {
+		rawSystemInstruction = *a.SystemInstruction
+	}
 
-		if a.SystemInstruction != nil && *a.SystemInstruction != "" {
-			rawSystemInstruction = *a.SystemInstruction
-		}
-
-		// Resolve referenced LLM provider connection
-		if a.LLMProviderID != nil {
-			prov, err := c.store.GetProvider(ctx, agent.GetLLMProvider{SpaceID: req.SpaceID, ID: *a.LLMProviderID})
-			if err != nil {
-				return "", errors.E(op, fmt.Errorf("load agent provider: %w", err))
-			}
-			if prov != nil {
-				providerMode = prov.CompatibilityMode
-				if prov.APIUrl != nil {
-					apiURL = *prov.APIUrl
-				}
-				if prov.APIKey != nil {
-					apiKey = *prov.APIKey
-				}
-			}
-		}
+	// Resolve referenced LLM provider connection
+	if a.LLMProviderID == nil || *a.LLMProviderID == "" {
+		return "", errors.E(op, errors.Invalid, "llm_provider_id is required")
+	}
+	prov, err := c.store.GetProvider(ctx, agent.GetLLMProvider{SpaceID: req.SpaceID, ID: *a.LLMProviderID})
+	if err != nil {
+		return "", errors.E(op, fmt.Errorf("load agent provider: %w", err))
+	}
+	if prov == nil {
+		return "", errors.E(op, errors.NotExist, ProviderNotFound, "llm provider not found")
+	}
+	providerMode = prov.CompatibilityMode
+	if prov.APIUrl != nil {
+		apiURL = *prov.APIUrl
+	}
+	if prov.APIKey != nil {
+		apiKey = *prov.APIKey
 	}
 
 	// 2. Compile System Instruction Template
@@ -317,7 +311,7 @@ func (c *coordinator) ExecuteAgent(ctx context.Context, req ExecutionRequest) (s
 		} else {
 			output = &resp.Text
 		}
-		_, logErr := c.store.LogRun(ctx, agentID, req.SpaceID, status, prompt, output, errMsg, resp.TokensUsed)
+		_, logErr := c.store.LogRun(ctx, new(agentID), req.SpaceID, status, prompt, output, errMsg, resp.TokensUsed)
 		if logErr != nil {
 			log.Warn(ctx, "failed to log run execution", log.Err(logErr))
 		}
@@ -437,14 +431,8 @@ func (c *coordinator) CreateAgent(ctx context.Context, req *CreateAgentRequest) 
 	if req.Purpose == "" {
 		return nil, errors.E(op, errors.Invalid, "agent purpose is required")
 	}
-
-	// Detect if an agent configuration for this purpose already exists in this workspace
-	existing, err := c.store.GetAgent(ctx, agent.GetAgent{SpaceID: req.SpaceID, Purpose: req.Purpose})
-	if err != nil && !errors.Is(err, errors.NotExist) {
-		return nil, errors.E(op, err)
-	}
-	if existing != nil {
-		return nil, errors.E(op, errors.Exist, AgentExists, "an agent configuration for this purpose already exists in this workspace")
+	if strings.TrimSpace(req.ModelName) == "" {
+		return nil, errors.E(op, errors.Invalid, "model_name is required")
 	}
 
 	a, err := c.store.CreateAgent(ctx, req.SpaceID, req.LLMProviderID, req.Name, req.Description, req.Purpose, req.Tags, req.ModelName, req.SystemInstruction, req.Temperature)
@@ -485,6 +473,9 @@ func (c *coordinator) UpdateAgent(ctx context.Context, req *UpdateAgentRequest) 
 
 	if req == nil {
 		return nil, errors.E(op, errors.Invalid, "request is required")
+	}
+	if strings.TrimSpace(req.ModelName) == "" {
+		return nil, errors.E(op, errors.Invalid, "model_name is required")
 	}
 
 	a, err := c.store.UpdateAgent(ctx, req.SpaceID, req.ID, req.LLMProviderID, req.Name, req.Description, req.Tags, req.ModelName, req.SystemInstruction, req.Temperature, req.IsEnabled)
