@@ -2,10 +2,9 @@ import { useState, useRef, useMemo } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   type Account,
-  type IngestStatementDocumentResponse,
   useImportStatementMutation,
-  useIngestStatementDocumentMutation,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
+import { useExecuteFlowMutation } from "@saturn/api/gen/saturn/platform/workflow/v1/workflow"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -111,6 +110,66 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary)
 }
 
+interface StatementIngestionDraft {
+  id: string
+  accountId: string
+  currency: string
+  statementEndingBalance: number
+}
+
+interface StatementIngestionReport {
+  currency: string
+  discrepancy: number
+  isBalanced: boolean
+}
+
+interface StatementIngestionResult {
+  needsPassword: boolean
+  errors: string[]
+  createdStatements: StatementIngestionDraft[]
+  sectionReports: StatementIngestionReport[]
+}
+
+function parseStatementIngestionOutput(
+  output: Record<string, unknown> | undefined
+): StatementIngestionResult {
+  if (!output) {
+    return {
+      needsPassword: false,
+      errors: [],
+      createdStatements: [],
+      sectionReports: [],
+    }
+  }
+  const rawCreated = Array.isArray(output.created_statements)
+    ? output.created_statements
+    : []
+  const rawReports = Array.isArray(output.section_reports)
+    ? output.section_reports
+    : []
+  const rawErrors = Array.isArray(output.errors) ? output.errors : []
+
+  return {
+    needsPassword: Boolean(output.needs_password),
+    errors: rawErrors.filter((e): e is string => typeof e === "string"),
+    createdStatements: rawCreated
+      .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+      .map((s) => ({
+        id: String(s.id ?? ""),
+        accountId: String(s.account_id ?? ""),
+        currency: String(s.currency ?? ""),
+        statementEndingBalance: Number(s.statement_ending_balance ?? 0),
+      })),
+    sectionReports: rawReports
+      .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+      .map((r) => ({
+        currency: String(r.currency ?? ""),
+        discrepancy: Number(r.discrepancy ?? 0),
+        isBalanced: Boolean(r.is_balanced),
+      })),
+  }
+}
+
 export function ImportStatementModal({
   open,
   onOpenChange,
@@ -143,9 +202,9 @@ export function ImportStatementModal({
     useState<boolean>(false)
   const [isPasswordVerified, setIsPasswordVerified] = useState<boolean>(false)
   const [multiCurrencyResult, setMultiCurrencyResult] =
-    useState<IngestStatementDocumentResponse | null>(null)
+    useState<StatementIngestionResult | null>(null)
 
-  const ingestDocMutation = useIngestStatementDocumentMutation()
+  const executeFlowMutation = useExecuteFlowMutation()
 
   // Balances
   const [startingBalanceStr, setStartingBalanceStr] = useState<string>("0.00")
@@ -383,15 +442,40 @@ export function ImportStatementModal({
     if (!pdfFile || !pdfBase64) return
     setPdfError(null)
 
+    const effectivePassword =
+      passwordOverride !== undefined ? passwordOverride : pdfPassword
+
     try {
-      const res = await ingestDocMutation.mutateAsync({
-        filename: pdfFile.name,
-        contentType: pdfFile.type || "application/pdf",
-        documentBytes: pdfBase64,
-        password:
-          passwordOverride !== undefined ? passwordOverride : pdfPassword,
-        targetAccountId: undefined,
+      const run = await executeFlowMutation.mutateAsync({
+        id: "system.finance.statement_ingestion",
+        req: {
+          id: "system.finance.statement_ingestion",
+          input: {
+            filename: pdfFile.name,
+            content_type: pdfFile.type || "application/pdf",
+            password: effectivePassword || "",
+            dry_run: false,
+          },
+          artifacts: [
+            {
+              filename: pdfFile.name,
+              contentType: pdfFile.type || "application/pdf",
+              data: pdfBase64,
+              fieldName: "document",
+            },
+          ],
+          async: false,
+        },
       })
+
+      if (run.status === "failed" || run.error?.message) {
+        setPdfError(
+          run.error?.message || "Statement ingestion workflow failed."
+        )
+        return
+      }
+
+      const res = parseStatementIngestionOutput(run.output)
 
       if (res.needsPassword) {
         setNeedsPassword(true)
@@ -399,12 +483,12 @@ export function ImportStatementModal({
         return
       }
 
-      if (res.errors && res.errors.length > 0) {
+      if (res.errors.length > 0) {
         setPdfError(res.errors.join(". "))
         return
       }
 
-      if (res.createdStatements && res.createdStatements.length > 0) {
+      if (res.createdStatements.length > 0) {
         await queryClient.invalidateQueries({
           queryKey: ["/api/v1/finance/statements"],
         })
@@ -726,7 +810,7 @@ export function ImportStatementModal({
                                   e.key === "Enter" &&
                                   pdfPassword &&
                                   !isValidatingPassword &&
-                                  !ingestDocMutation.isPending
+                                  !executeFlowMutation.isPending
                                 ) {
                                   e.preventDefault()
                                   handleValidateAndUnlock()
@@ -734,7 +818,7 @@ export function ImportStatementModal({
                               }}
                               disabled={
                                 isValidatingPassword ||
-                                ingestDocMutation.isPending
+                                executeFlowMutation.isPending
                               }
                               className="h-9 rounded-xl bg-background/80 text-xs"
                             />
@@ -743,14 +827,14 @@ export function ImportStatementModal({
                               size="sm"
                               disabled={
                                 isValidatingPassword ||
-                                ingestDocMutation.isPending ||
+                                executeFlowMutation.isPending ||
                                 !pdfPassword
                               }
                               onClick={() => handleValidateAndUnlock()}
                               className="rounded-xl text-xs font-bold"
                             >
                               {isValidatingPassword ||
-                              ingestDocMutation.isPending ? (
+                              executeFlowMutation.isPending ? (
                                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                               ) : isPasswordVerified ? (
                                 <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-emerald-400" />
@@ -759,7 +843,7 @@ export function ImportStatementModal({
                               )}
                               {isValidatingPassword
                                 ? "Verifying..."
-                                : ingestDocMutation.isPending
+                                : executeFlowMutation.isPending
                                   ? "Extracting..."
                                   : isPasswordVerified
                                     ? "Verified"
@@ -1306,7 +1390,7 @@ export function ImportStatementModal({
                 <Button
                   type="button"
                   disabled={
-                    ingestDocMutation.isPending ||
+                    executeFlowMutation.isPending ||
                     isCheckingPdf ||
                     isValidatingPassword ||
                     !pdfBase64 ||
@@ -1321,7 +1405,7 @@ export function ImportStatementModal({
                   }}
                   className="h-10 rounded-xl bg-gradient-to-r from-primary to-accent px-6 text-xs font-bold text-white shadow-lg transition-all hover:scale-[1.01]"
                 >
-                  {ingestDocMutation.isPending ||
+                  {executeFlowMutation.isPending ||
                   isCheckingPdf ||
                   isValidatingPassword ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1332,7 +1416,7 @@ export function ImportStatementModal({
                     ? "Checking Encryption..."
                     : isValidatingPassword
                       ? "Verifying Password..."
-                      : ingestDocMutation.isPending
+                      : executeFlowMutation.isPending
                         ? "Extracting with Janus..."
                         : "Extract & Reconcile with Janus"}
                 </Button>

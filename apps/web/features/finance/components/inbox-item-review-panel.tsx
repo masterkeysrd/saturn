@@ -1,7 +1,9 @@
 import { useState, useMemo } from "react"
+import { Link } from "react-router-dom"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { InboxReviewSchema, type InboxReviewFormValues } from "@saturn/schemas"
+import { useActiveSpaceContext } from "@/features/space/use-space"
 import type {
   InboxItem,
   Account,
@@ -90,6 +92,7 @@ export function InboxItemReviewPanel({
   hasMore,
   error,
 }: InboxItemReviewPanelProps) {
+  const { spaceId } = useActiveSpaceContext()
   const [nowTime] = useState(() => Date.now())
   const [rawOpen, setRawOpen] = useState(false)
   const [popoverOpen, setPopoverOpen] = useState(false)
@@ -447,16 +450,26 @@ export function InboxItemReviewPanel({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              {selectedItem.integrationId?.includes("gmail") ? (
-                <Mail className="h-6 w-6" />
+              {selectedItem.flowRunId ? (
+                <Sparkles className="h-6 w-6" />
               ) : (
                 <FileText className="h-6 w-6" />
               )}
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                {selectedItem.integrationId || "Manual Upload"}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                  {selectedItem.flowRunId ? "Workflow Run" : "Manual Upload"}
+                </span>
+                {selectedItem.flowRunId && spaceId && (
+                  <Link
+                    to={`/space/${spaceId}/workflows/runs/${selectedItem.flowRunId}`}
+                    className="font-mono text-[11px] font-semibold text-primary hover:underline"
+                  >
+                    {selectedItem.flowRunId}
+                  </Link>
+                )}
+              </div>
               <h3 className="text-lg font-bold text-foreground">
                 {selectedItem.vendorName || "Staged Document"}
               </h3>

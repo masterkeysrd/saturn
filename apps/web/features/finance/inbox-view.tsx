@@ -248,7 +248,7 @@ export function InboxView() {
           inboxItem: {
             id,
             spaceId: tx.spaceId,
-            integrationId: tx.integrationId,
+            flowRunId: tx.flowRunId,
             status: tx.status,
             docType: docType as Parameters<
               typeof updateInboxMutation.mutateAsync
@@ -386,8 +386,8 @@ export function InboxView() {
             No items pending review
           </h4>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-            All your transaction receipts, bank swipes, and email integrations
-            have been successfully reconciled. Clean ledger!
+            All your transaction receipts, bank swipes, and workflow runs have
+            been successfully reconciled. Clean ledger!
           </p>
         </div>
       ) : (
