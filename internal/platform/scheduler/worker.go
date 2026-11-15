@@ -13,21 +13,98 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/requestid"
 )
 
-// Start begins the background loops for spawning cron schedules and executing pending jobs.
+// Start begins the background loops for spawning cron schedules, recovering stale jobs, and executing pending jobs.
 func (e *Engine) Start(ctx context.Context) {
-	// Initialize the job execution queue channel
+	workerCtx, cancel := context.WithCancel(ctx)
+	e.mu.Lock()
+	e.cancel = cancel
 	e.jobQueue = make(chan jobInstance, 100)
+	e.mu.Unlock()
 
 	// Start the pool of concurrent workers
-	for i := 0; i < e.workerCount; i++ {
-		go e.runJobWorker(ctx)
+	for range e.workerCount {
+		e.wg.Go(func() {
+			e.runJobWorker(workerCtx)
+		})
 	}
 
 	// Spawner loop: checks for recurrent schedules due to run (every 30 seconds)
-	go e.runSpawnerLoop(ctx)
+	e.wg.Go(func() {
+		e.runSpawnerLoop(workerCtx)
+	})
 
 	// Executor loop: checks for pending jobs in the queue (every 5 seconds)
-	go e.runExecutorLoop(ctx)
+	e.wg.Go(func() {
+		e.runExecutorLoop(workerCtx)
+	})
+
+	// Stale recovery loop: resets jobs stuck in 'processing' beyond staleJobTimeout
+	e.wg.Go(func() {
+		e.runStaleRecoveryLoop(workerCtx)
+	})
+}
+
+// Shutdown cancels background loops and waits for all active job workers to finish
+// or until ctx expires.
+func (e *Engine) Shutdown(ctx context.Context) error {
+	e.mu.Lock()
+	cancel := e.cancel
+	e.cancel = nil
+	e.mu.Unlock()
+
+	if cancel != nil {
+		cancel()
+	}
+
+	done := make(chan struct{})
+	go func() {
+		e.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (e *Engine) runStaleRecoveryLoop(ctx context.Context) {
+	if err := e.RecoverStaleJobs(ctx); err != nil {
+		log.Error(ctx, "failed initial stale scheduler job recovery", log.Err(err))
+	}
+
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if err := e.RecoverStaleJobs(ctx); err != nil {
+				log.Error(ctx, "failed to recover stale scheduler jobs", log.Err(err))
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+// RecoverStaleJobs resets jobs stuck in 'processing' state beyond staleJobTimeout back to 'pending'.
+func (e *Engine) RecoverStaleJobs(ctx context.Context) error {
+	const op errors.Op = "platform/scheduler.RecoverStaleJobs"
+
+	timeout := e.staleJobTimeout
+	if timeout <= 0 {
+		timeout = 5 * time.Minute
+	}
+	cutoff := time.Now().UTC().Add(-timeout)
+
+	query := `UPDATE platform.job SET status = 'pending', update_time = NOW() WHERE status = 'processing' AND update_time < $1`
+	if _, err := e.db.Exec(ctx, query, cutoff); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 func (e *Engine) runSpawnerLoop(ctx context.Context) {

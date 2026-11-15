@@ -549,8 +549,7 @@ func TestEngineExecutePendingJobs(t *testing.T) {
 }
 
 func TestEngineStartAndShutdown(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	dbMock := &DatabaseMock{
 		ExecFunc: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
@@ -561,7 +560,42 @@ func TestEngineStartAndShutdown(t *testing.T) {
 	engine.WithWorkerCount(2)
 	engine.Start(ctx)
 
-	// Cancel context to stop loops and workers
-	cancel()
-	time.Sleep(20 * time.Millisecond)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer shutdownCancel()
+	if err := engine.Shutdown(shutdownCtx); err != nil {
+		t.Fatalf("Shutdown returned error: %v", err)
+	}
+}
+
+func TestEngineRecoverStaleJobs(t *testing.T) {
+	var capturedQuery string
+	var capturedArgs []any
+
+	dbMock := &DatabaseMock{
+		ExecFunc: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
+			capturedQuery = query
+			capturedArgs = args
+			return nil, nil
+		},
+	}
+
+	engine := NewEngine(dbMock).WithStaleJobTimeout(10 * time.Minute)
+	before := time.Now().UTC()
+	if err := engine.RecoverStaleJobs(context.Background()); err != nil {
+		t.Fatalf("RecoverStaleJobs returned error: %v", err)
+	}
+
+	if !strings.Contains(capturedQuery, "status = 'pending'") || !strings.Contains(capturedQuery, "status = 'processing'") {
+		t.Errorf("unexpected recovery query: %q", capturedQuery)
+	}
+	if len(capturedArgs) != 1 {
+		t.Fatalf("expected 1 cutoff arg, got %d", len(capturedArgs))
+	}
+	cutoff, ok := capturedArgs[0].(time.Time)
+	if !ok {
+		t.Fatalf("expected time.Time cutoff arg, got %T", capturedArgs[0])
+	}
+	if diff := before.Sub(cutoff); diff < 9*time.Minute || diff > 11*time.Minute {
+		t.Errorf("expected cutoff ~10m ago, got diff %v", diff)
+	}
 }

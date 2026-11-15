@@ -137,12 +137,15 @@ var _ Scheduler = (*Engine)(nil)
 
 // Engine implements the Scheduler interface and manages background polling and job execution.
 type Engine struct {
-	db          Database
-	handlers    map[string]Handler
-	mu          sync.RWMutex
-	cronParser  cron.Parser
-	workerCount int
-	jobQueue    chan jobInstance
+	db              Database
+	handlers        map[string]Handler
+	mu              sync.RWMutex
+	cronParser      cron.Parser
+	workerCount     int
+	staleJobTimeout time.Duration
+	jobQueue        chan jobInstance
+	wg              sync.WaitGroup
+	cancel          context.CancelFunc
 }
 
 // NewEngine instantiates a new scheduler Engine.
@@ -153,7 +156,8 @@ func NewEngine(database Database) *Engine {
 		cronParser: cron.NewParser(
 			cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor,
 		),
-		workerCount: 5, // Default to 5 workers
+		workerCount:     5, // Default to 5 workers
+		staleJobTimeout: 5 * time.Minute,
 	}
 }
 
@@ -161,6 +165,14 @@ func NewEngine(database Database) *Engine {
 func (e *Engine) WithWorkerCount(count int) *Engine {
 	if count > 0 {
 		e.workerCount = count
+	}
+	return e
+}
+
+// WithStaleJobTimeout overrides the lock timeout after which 'processing' jobs are reset to 'pending'.
+func (e *Engine) WithStaleJobTimeout(timeout time.Duration) *Engine {
+	if timeout > 0 {
+		e.staleJobTimeout = timeout
 	}
 	return e
 }
