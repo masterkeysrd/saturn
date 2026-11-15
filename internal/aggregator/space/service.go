@@ -18,7 +18,7 @@ import (
 // @Mock
 type SpaceService interface {
 	GetSpace(ctx context.Context, session space.Session) (*space.Space, error)
-	ListSpaces(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error)
+	ListSpaces(ctx context.Context, userID space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error)
 	ListSpaceMembers(ctx context.Context, session space.Session, filter *space.ListMembersFilter) (*paging.Page[*space.Member], error)
 	ListSpaceAPIKeyGrants(ctx context.Context, session space.Session) ([]*space.APIKeyGrant, error)
 }
@@ -46,7 +46,7 @@ func NewService(spaceService SpaceService, identityService IdentityService) *Ser
 }
 
 // GetSpace retrieves a single space by its ID.
-func (s *Service) GetSpace(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) (*space.Space, error) {
+func (s *Service) GetSpace(ctx context.Context, spaceID space.SpaceID, userID space.UserID) (*space.Space, error) {
 	const op errors.Op = "aggregator/space.GetSpace"
 	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsAPIKey() && !principal.HasSpaceGrant(string(spaceID)) {
 		return nil, errors.E(op, errors.Permission, "API key does not have access to this space")
@@ -64,7 +64,7 @@ func (s *Service) GetSpace(ctx context.Context, spaceID space.SpaceID, userID sp
 
 // ListSpaces retrieves spaces accessible to the user with keyset pagination.
 // When authenticated via an API key, results are filtered strictly to spaces granted to the key.
-func (s *Service) ListSpaces(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
+func (s *Service) ListSpaces(ctx context.Context, userID space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 	const op errors.Op = "aggregator/space.ListSpaces"
 
 	principal, hasPrincipal := auth.PrincipalFromContext(ctx)
@@ -103,7 +103,7 @@ func (s *Service) ListSpaces(ctx context.Context, userID space.SpaceID, filter *
 }
 
 // ListSpaceMembers retrieves workspace members and enriches each member with their user profile.
-func (s *Service) ListSpaceMembers(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID, filter *space.ListMembersFilter) (*paging.Page[*SpaceMember], error) {
+func (s *Service) ListSpaceMembers(ctx context.Context, spaceID space.SpaceID, userID space.UserID, filter *space.ListMembersFilter) (*paging.Page[*SpaceMember], error) {
 	const op errors.Op = "aggregator/space.ListSpaceMembers"
 	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsAPIKey() && !principal.HasSpaceGrant(string(spaceID)) {
 		return nil, errors.E(op, errors.Permission, "API key does not have access to this space")
@@ -165,7 +165,7 @@ func (s *Service) ListSpaceMembers(ctx context.Context, spaceID space.SpaceID, u
 
 // ListSpaceAPIKeyGrants retrieves all active API key grants for a workspace and hydrates
 // each grant with API key metadata and owner profile in parallel without exposing sibling spaces.
-func (s *Service) ListSpaceAPIKeyGrants(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) ([]*APIKeyGrant, error) {
+func (s *Service) ListSpaceAPIKeyGrants(ctx context.Context, spaceID space.SpaceID, userID space.UserID) ([]*APIKeyGrant, error) {
 	const op errors.Op = "aggregator/space.ListSpaceAPIKeyGrants"
 
 	session := space.Session{

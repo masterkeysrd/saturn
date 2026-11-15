@@ -15,7 +15,7 @@ import (
 func TestGetSpace(t *testing.T) {
 	ctx := context.Background()
 	spaceID := space.SpaceID("sp_1")
-	userID := space.SpaceID("usr_1")
+	userID := space.UserID("usr_1")
 
 	t.Run("Success", func(t *testing.T) {
 		mockSpace := &SpaceServiceMock{
@@ -60,11 +60,11 @@ func TestGetSpace(t *testing.T) {
 
 func TestListSpaces(t *testing.T) {
 	ctx := context.Background()
-	userID := space.SpaceID("usr_1")
+	userID := space.UserID("usr_1")
 
 	t.Run("Success", func(t *testing.T) {
 		mockSpace := &SpaceServiceMock{
-			ListSpacesFunc: func(ctx context.Context, uid space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
+			ListSpacesFunc: func(ctx context.Context, uid space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 				return &paging.Page[*space.Space]{
 					Items: []*space.Space{
 						{ID: "sp_1", Name: "Personal"},
@@ -93,7 +93,7 @@ func TestListSpaces(t *testing.T) {
 
 	t.Run("Domain error", func(t *testing.T) {
 		mockSpace := &SpaceServiceMock{
-			ListSpacesFunc: func(ctx context.Context, uid space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
+			ListSpacesFunc: func(ctx context.Context, uid space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 				return nil, errors.New("query failed")
 			},
 		}
@@ -109,7 +109,7 @@ func TestListSpaces(t *testing.T) {
 func TestListSpaceMembers(t *testing.T) {
 	ctx := context.Background()
 	spaceID := space.SpaceID("sp_1")
-	userID := space.SpaceID("usr_1")
+	userID := space.UserID("usr_1")
 
 	member1 := &space.Member{
 		SpaceID:    spaceID,
@@ -247,7 +247,7 @@ func TestService_ListSpaces_APIKeyFiltering(t *testing.T) {
 	})
 
 	mockSpace := &SpaceServiceMock{
-		ListSpacesFunc: func(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
+		ListSpacesFunc: func(ctx context.Context, userID space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 			return &paging.Page[*space.Space]{
 				Items: []*space.Space{
 					{ID: "spc_1", Name: "Space 1"},

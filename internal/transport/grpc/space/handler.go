@@ -54,7 +54,7 @@ func toDomainSpace(pb *spacev1.Space) *space.Space {
 		ID:          space.SpaceID(pb.GetId()),
 		Name:        pb.GetName(),
 		Description: pb.GetDescription(),
-		OwnerID:     space.SpaceID(pb.GetOwnerId()),
+		OwnerID:     space.UserID(pb.GetOwnerId()),
 		Version:     pb.GetVersion(),
 	}
 }
@@ -66,7 +66,7 @@ func toDomainSpaceMember(pb *spacev1.SpaceMember) *space.Member {
 	}
 	return &space.Member{
 		SpaceID: space.SpaceID(pb.GetSpaceId()),
-		UserID:  space.SpaceID(pb.GetUserId()),
+		UserID:  space.UserID(pb.GetUserId()),
 		Role:    toDomainSpaceRole(pb.GetRole()),
 	}
 }
@@ -187,7 +187,7 @@ func (h *Handler) GetSpace(ctx context.Context, req *spacev1.GetSpaceRequest) (*
 
 	spaceID := space.SpaceID(req.GetSpaceId())
 
-	sp, err := h.Aggregator.GetSpace(ctx, spaceID, space.SpaceID(userID))
+	sp, err := h.Aggregator.GetSpace(ctx, spaceID, space.UserID(userID))
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
@@ -261,7 +261,7 @@ func (h *Handler) ListSpaces(ctx context.Context, req *spacev1.ListSpacesRequest
 		NextPageToken: req.GetPageToken(),
 	}
 
-	page, err := h.Aggregator.ListSpaces(ctx, space.SpaceID(userID), filter)
+	page, err := h.Aggregator.ListSpaces(ctx, space.UserID(userID), filter)
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
@@ -311,7 +311,7 @@ func (h *Handler) DeleteSpaceMember(ctx context.Context, req *spacev1.DeleteSpac
 	}
 
 	spaceID := space.SpaceID(req.GetSpaceId())
-	memberID := space.SpaceID(req.GetUserId())
+	memberID := space.UserID(req.GetUserId())
 
 	if err := h.Coordinator.RemoveSpaceMember(ctx, &spaceapp.RemoveSpaceMemberRequest{
 		SpaceID:      string(spaceID),
@@ -373,7 +373,7 @@ func (h *Handler) ListSpaceMembers(ctx context.Context, req *spacev1.ListSpaceMe
 		NextPageToken: req.GetPageToken(),
 	}
 
-	page, err := h.Aggregator.ListSpaceMembers(ctx, spaceID, space.SpaceID(userID), filter)
+	page, err := h.Aggregator.ListSpaceMembers(ctx, spaceID, space.UserID(userID), filter)
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
@@ -460,7 +460,7 @@ func (h *Handler) ListSpaceAPIKeyGrants(ctx context.Context, req *spacev1.ListSp
 		return nil, errors.E(op, err)
 	}
 
-	grants, err := h.Aggregator.ListSpaceAPIKeyGrants(ctx, space.SpaceID(req.GetSpaceId()), space.SpaceID(userID))
+	grants, err := h.Aggregator.ListSpaceAPIKeyGrants(ctx, space.SpaceID(req.GetSpaceId()), space.UserID(userID))
 	if err != nil {
 		return nil, errors.E(op, err)
 	}

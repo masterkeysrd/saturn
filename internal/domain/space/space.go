@@ -53,7 +53,45 @@ func (sid SpaceID) Validate() error {
 	return id.Validate(string(sid), spacePrefix)
 }
 
-const spacePrefix = "spc_"
+const (
+	spacePrefix = "spc_"
+	userPrefix  = "usr_"
+)
+
+// UserID is a custom string type representing a user's unique identifier within a space.
+type UserID string
+
+// ParseUserID parses a string into a UserID and validates it.
+func ParseUserID(s string) (UserID, error) {
+	if err := id.Validate(s, userPrefix); err != nil {
+		return "", fmt.Errorf("invalid user ID: %w", err)
+	}
+	return UserID(s), nil
+}
+
+// MustUserID panics if the string is not a valid UserID.
+func MustUserID(s string) UserID {
+	userID, err := ParseUserID(s)
+	if err != nil {
+		panic(err)
+	}
+	return userID
+}
+
+// String returns the string representation of the UserID.
+func (uid UserID) String() string {
+	return string(uid)
+}
+
+// IsValid checks if the UserID is non-empty.
+func (uid UserID) IsValid() bool {
+	return uid != ""
+}
+
+// Validate checks if the UserID is valid against the default generator.
+func (uid UserID) Validate() error {
+	return id.Validate(string(uid), userPrefix)
+}
 
 // SpaceRole defines the role of a user within a space.
 type SpaceRole string
@@ -70,7 +108,7 @@ func (r SpaceRole) IsValid() bool {
 // Session represents the active user session context in a workspace.
 type Session struct {
 	SpaceID SpaceID
-	UserID  SpaceID
+	UserID  UserID
 }
 
 const (
@@ -85,7 +123,7 @@ type Space struct {
 	ID          SpaceID   `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	OwnerID     SpaceID   `json:"owner_id"`
+	OwnerID     UserID    `json:"owner_id"`
 	Version     int64     `json:"version"`
 	CreateTime  time.Time `json:"create_time"`
 	UpdateTime  time.Time `json:"update_time"`

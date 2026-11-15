@@ -3477,7 +3477,7 @@ type SpaceServiceMock struct {
 	CreateSpaceFunc func(ctx context.Context, sp *space.Space) (*space.Space, error)
 
 	// SyncAPIKeyGrantsFunc mocks the SyncAPIKeyGrants method.
-	SyncAPIKeyGrantsFunc func(ctx context.Context, apiKeyID string, userID space.SpaceID, spaceIDs []space.SpaceID) error
+	SyncAPIKeyGrantsFunc func(ctx context.Context, apiKeyID string, userID space.UserID, spaceIDs []space.SpaceID) error
 
 	// ListAPIKeyGrantedSpacesFunc mocks the ListAPIKeyGrantedSpaces method.
 	ListAPIKeyGrantedSpacesFunc func(ctx context.Context, apiKeyID string) ([]space.SpaceID, error)
@@ -3494,7 +3494,7 @@ type SpaceServiceMock struct {
 		SyncAPIKeyGrants []struct {
 			Ctx      context.Context
 			ApiKeyID string
-			UserID   space.SpaceID
+			UserID   space.UserID
 			SpaceIDs []space.SpaceID
 		}
 		ListAPIKeyGrantedSpaces []struct {
@@ -3540,7 +3540,7 @@ func (mock *SpaceServiceMock) CreateSpaceCalls() []struct {
 }
 
 // SyncAPIKeyGrants calls SyncAPIKeyGrantsFunc.
-func (mock *SpaceServiceMock) SyncAPIKeyGrants(ctx context.Context, apiKeyID string, userID space.SpaceID, spaceIDs []space.SpaceID) error {
+func (mock *SpaceServiceMock) SyncAPIKeyGrants(ctx context.Context, apiKeyID string, userID space.UserID, spaceIDs []space.SpaceID) error {
 	if mock.SyncAPIKeyGrantsFunc == nil {
 		panic("SpaceServiceMock.SyncAPIKeyGrantsFunc: method is nil but SpaceService.SyncAPIKeyGrants was just called")
 	}
@@ -3548,7 +3548,7 @@ func (mock *SpaceServiceMock) SyncAPIKeyGrants(ctx context.Context, apiKeyID str
 	mock.calls.SyncAPIKeyGrants = append(mock.calls.SyncAPIKeyGrants, struct {
 		Ctx      context.Context
 		ApiKeyID string
-		UserID   space.SpaceID
+		UserID   space.UserID
 		SpaceIDs []space.SpaceID
 	}{
 		Ctx:      ctx,
@@ -3564,7 +3564,7 @@ func (mock *SpaceServiceMock) SyncAPIKeyGrants(ctx context.Context, apiKeyID str
 func (mock *SpaceServiceMock) SyncAPIKeyGrantsCalls() []struct {
 	Ctx      context.Context
 	ApiKeyID string
-	UserID   space.SpaceID
+	UserID   space.UserID
 	SpaceIDs []space.SpaceID
 } {
 	mock.lockSyncAPIKeyGrants.RLock()

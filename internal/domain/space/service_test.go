@@ -64,11 +64,11 @@ func (m *memorySpaceStore) Delete(ctx context.Context, id space.SpaceID) error {
 	return nil
 }
 
-func (m *memorySpaceStore) ListByUser(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
+func (m *memorySpaceStore) ListByUser(ctx context.Context, userID space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 	return m.ListByUserOwned(ctx, userID, filter)
 }
 
-func (m *memorySpaceStore) ListByUserOwned(ctx context.Context, ownerID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
+func (m *memorySpaceStore) ListByUserOwned(ctx context.Context, ownerID space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	var res []*space.Space
@@ -91,7 +91,7 @@ func newMemoryMemberStore() *memoryMemberStore {
 	return &memoryMemberStore{members: make(map[string]*space.Member)}
 }
 
-func memberKey(spaceID, userID space.SpaceID) string {
+func memberKey(spaceID space.SpaceID, userID space.UserID) string {
 	return string(spaceID) + ":" + string(userID)
 }
 
@@ -103,7 +103,7 @@ func (m *memoryMemberStore) Create(ctx context.Context, member *space.Member) er
 	return nil
 }
 
-func (m *memoryMemberStore) GetByID(ctx context.Context, spaceID, userID space.SpaceID) (*space.Member, error) {
+func (m *memoryMemberStore) GetByID(ctx context.Context, spaceID space.SpaceID, userID space.UserID) (*space.Member, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	mem, ok := m.members[memberKey(spaceID, userID)]
@@ -124,7 +124,7 @@ func (m *memoryMemberStore) Update(ctx context.Context, member *space.Member) er
 	return nil
 }
 
-func (m *memoryMemberStore) Delete(ctx context.Context, spaceID, userID space.SpaceID) error {
+func (m *memoryMemberStore) Delete(ctx context.Context, spaceID space.SpaceID, userID space.UserID) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	delete(m.members, memberKey(spaceID, userID))
@@ -145,7 +145,7 @@ func (m *memoryMemberStore) ListBySpace(ctx context.Context, spaceID space.Space
 	}, nil
 }
 
-func (m *memoryMemberStore) ListByUser(ctx context.Context, userID space.SpaceID) ([]*space.Member, error) {
+func (m *memoryMemberStore) ListByUser(ctx context.Context, userID space.UserID) ([]*space.Member, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	var res []*space.Member
@@ -157,7 +157,7 @@ func (m *memoryMemberStore) ListByUser(ctx context.Context, userID space.SpaceID
 	return res, nil
 }
 
-func (m *memoryMemberStore) Exists(ctx context.Context, spaceID, userID space.SpaceID) (bool, error) {
+func (m *memoryMemberStore) Exists(ctx context.Context, spaceID space.SpaceID, userID space.UserID) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	_, ok := m.members[memberKey(spaceID, userID)]
@@ -802,4 +802,69 @@ func TestSpace_Validate(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+}
+
+func TestUserID(t *testing.T) {
+	validKSUID := "usr_27qN4V6eP2dZ9xM1kR8sT0wX3yZ"
+
+	tests := []struct {
+		name      string
+		raw       string
+		wantErr   bool
+		wantValid bool
+	}{
+		{
+			name:      "valid user ID",
+			raw:       validKSUID,
+			wantErr:   false,
+			wantValid: true,
+		},
+		{
+			name:      "wrong prefix (space ID) fails validation",
+			raw:       "spc_27qN4V6eP2dZ9xM1kR8sT0wX3yZ",
+			wantErr:   true,
+			wantValid: true,
+		},
+		{
+			name:      "empty user ID fails validation",
+			raw:       "",
+			wantErr:   true,
+			wantValid: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			uid := space.UserID(tc.raw)
+			if uid.String() != tc.raw {
+				t.Errorf("String() = %q, want %q", uid.String(), tc.raw)
+			}
+			if uid.IsValid() != tc.wantValid {
+				t.Errorf("IsValid() = %v, want %v", uid.IsValid(), tc.wantValid)
+			}
+
+			parsed, err := space.ParseUserID(tc.raw)
+			if tc.wantErr {
+				if err == nil {
+					t.Errorf("ParseUserID(%q) expected error, got nil", tc.raw)
+				}
+				if err := uid.Validate(); err == nil {
+					t.Errorf("Validate() expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ParseUserID(%q) unexpected error: %v", tc.raw, err)
+			}
+			if parsed != uid {
+				t.Errorf("ParseUserID() = %q, want %q", parsed, uid)
+			}
+			if got := space.MustUserID(tc.raw); got != uid {
+				t.Errorf("MustUserID() = %q, want %q", got, uid)
+			}
+			if err := uid.Validate(); err != nil {
+				t.Errorf("Validate() unexpected error: %v", err)
+			}
+		})
+	}
 }

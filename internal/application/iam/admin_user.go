@@ -119,7 +119,7 @@ func (c *coordinator) ApproveUser(ctx context.Context, req *ApproveUserRequest) 
 		defaultSpace := &space.Space{
 			Name:        fmt.Sprintf("%s's Workspace", user.Username),
 			Description: "My personal workspace",
-			OwnerID:     space.SpaceID(userID),
+			OwnerID:     space.UserID(userID),
 		}
 		if _, err := c.spaceService.CreateSpace(ctx, defaultSpace); err != nil {
 			return nil, err

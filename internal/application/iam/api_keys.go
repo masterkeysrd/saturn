@@ -83,7 +83,7 @@ func (c *coordinator) CreateAPIKey(ctx context.Context, req *CreateAPIKeyRequest
 		return nil, errors.E(op, err)
 	}
 
-	if err := c.spaceService.SyncAPIKeyGrants(ctx, string(key.ID), space.SpaceID(req.UserID), spaceIDs); err != nil {
+	if err := c.spaceService.SyncAPIKeyGrants(ctx, string(key.ID), space.UserID(req.UserID), spaceIDs); err != nil {
 		return nil, errors.E(op, err)
 	}
 
@@ -180,7 +180,7 @@ func (c *coordinator) UpdateAPIKey(ctx context.Context, req *UpdateAPIKeyRequest
 		if err != nil {
 			return nil, errors.E(op, err)
 		}
-		if err := c.spaceService.SyncAPIKeyGrants(ctx, string(key.ID), space.SpaceID(req.UserID), spaceIDs); err != nil {
+		if err := c.spaceService.SyncAPIKeyGrants(ctx, string(key.ID), space.UserID(req.UserID), spaceIDs); err != nil {
 			return nil, errors.E(op, err)
 		}
 	}

@@ -51,9 +51,9 @@ func TestSettings_ApplyPatch(t *testing.T) {
 func TestService_Settings(t *testing.T) {
 	ctx := context.Background()
 	spaceID := space.SpaceID("spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R")
-	ownerID := space.SpaceID("usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R")
-	memberID := space.SpaceID("usr_01H7B6K5Z8A3QW9J4C2N6P0Y2M")
-	nonMemberID := space.SpaceID("usr_01H7B6K5Z8A3QW9J4C2N6P0Y3N")
+	ownerID := space.UserID("usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R")
+	memberID := space.UserID("usr_01H7B6K5Z8A3QW9J4C2N6P0Y2M")
+	nonMemberID := space.UserID("usr_01H7B6K5Z8A3QW9J4C2N6P0Y3N")
 
 	var currentSettings *settings.Entry[space.Settings]
 
@@ -71,7 +71,7 @@ func TestService_Settings(t *testing.T) {
 	}
 
 	memberMock := &space.MemberStoreMock{
-		GetByIDFunc: func(ctx context.Context, sID space.SpaceID, uID space.SpaceID) (*space.Member, error) {
+		GetByIDFunc: func(ctx context.Context, sID space.SpaceID, uID space.UserID) (*space.Member, error) {
 			if m, ok := members[string(uID)]; ok && sID == spaceID {
 				return m, nil
 			}

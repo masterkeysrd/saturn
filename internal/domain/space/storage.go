@@ -25,10 +25,10 @@ type SpaceStore interface {
 	Delete(ctx context.Context, id SpaceID) error
 
 	// ListByUser returns spaces owned or joined by the user.
-	ListByUser(ctx context.Context, userID SpaceID, filter *ListSpacesFilter) (*paging.Page[*Space], error)
+	ListByUser(ctx context.Context, userID UserID, filter *ListSpacesFilter) (*paging.Page[*Space], error)
 
 	// ListByUserOwned returns spaces owned by the user.
-	ListByUserOwned(ctx context.Context, ownerID SpaceID, filter *ListSpacesFilter) (*paging.Page[*Space], error)
+	ListByUserOwned(ctx context.Context, ownerID UserID, filter *ListSpacesFilter) (*paging.Page[*Space], error)
 }
 
 // MemberStore defines the interface for member persistence operations.
@@ -39,22 +39,22 @@ type MemberStore interface {
 	Create(ctx context.Context, member *Member) error
 
 	// GetByID retrieves a membership by space ID and user ID.
-	GetByID(ctx context.Context, spaceID SpaceID, userID SpaceID) (*Member, error)
+	GetByID(ctx context.Context, spaceID SpaceID, userID UserID) (*Member, error)
 
 	// Update modifies an existing membership.
 	Update(ctx context.Context, member *Member) error
 
 	// Delete removes a membership.
-	Delete(ctx context.Context, spaceID SpaceID, userID SpaceID) error
+	Delete(ctx context.Context, spaceID SpaceID, userID UserID) error
 
 	// ListBySpace returns all members of a space.
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListMembersFilter) (*paging.Page[*Member], error)
 
 	// ListByUser returns all spaces where the user is a member.
-	ListByUser(ctx context.Context, userID SpaceID) ([]*Member, error)
+	ListByUser(ctx context.Context, userID UserID) ([]*Member, error)
 
 	// Exists checks if a membership exists.
-	Exists(ctx context.Context, spaceID SpaceID, userID SpaceID) (bool, error)
+	Exists(ctx context.Context, spaceID SpaceID, userID UserID) (bool, error)
 }
 
 // ListSpacesFilter encapsulates filtering parameters for listing spaces.

@@ -21,7 +21,7 @@ func toDomainAPIKeyGrant(rec *apiKeyGrantDB) *space.APIKeyGrant {
 	return &space.APIKeyGrant{
 		APIKeyID:   rec.APIKeyID,
 		SpaceID:    space.SpaceID(rec.SpaceID),
-		UserID:     space.SpaceID(rec.UserID),
+		UserID:     space.UserID(rec.UserID),
 		CreateTime: rec.CreateTime,
 	}
 }

@@ -35,7 +35,7 @@ func NewMemberStore(database db.DB) *MemberStore {
 func toDomainMember(m *memberDB) *space.Member {
 	return &space.Member{
 		SpaceID:    space.SpaceID(m.SpaceID),
-		UserID:     space.SpaceID(m.UserID),
+		UserID:     space.UserID(m.UserID),
 		Role:       space.SpaceRole(m.Role),
 		CreateTime: nullTimeToTime(m.CreateTime),
 		UpdateTime: nullTimeToTime(m.UpdateTime),
@@ -77,7 +77,7 @@ func (s *MemberStore) Create(ctx context.Context, member *space.Member) error {
 }
 
 // GetByID retrieves a membership by space ID and user ID.
-func (s *MemberStore) GetByID(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) (*space.Member, error) {
+func (s *MemberStore) GetByID(ctx context.Context, spaceID space.SpaceID, userID space.UserID) (*space.Member, error) {
 	const op errors.Op = "domain/space/storage.GetMemberByID"
 	ds := pgDialect.From(goqu.S("space").Table("member")).
 		Select("*").
@@ -119,7 +119,7 @@ func (s *MemberStore) Update(ctx context.Context, member *space.Member) error {
 }
 
 // Delete removes a membership.
-func (s *MemberStore) Delete(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) error {
+func (s *MemberStore) Delete(ctx context.Context, spaceID space.SpaceID, userID space.UserID) error {
 	const op errors.Op = "domain/space/storage.DeleteMember"
 	ds := pgDialect.Delete(goqu.S("space").Table("member")).
 		Where(goqu.Ex{
@@ -183,7 +183,7 @@ func (s *MemberStore) ListBySpace(ctx context.Context, spaceID space.SpaceID, fi
 }
 
 // ListByUser returns all spaces where the user is a member.
-func (s *MemberStore) ListByUser(ctx context.Context, userID space.SpaceID) ([]*space.Member, error) {
+func (s *MemberStore) ListByUser(ctx context.Context, userID space.UserID) ([]*space.Member, error) {
 	const op errors.Op = "domain/space/storage.ListMembersByUser"
 	ds := pgDialect.From(goqu.S("space").Table("member")).
 		Select("*").
@@ -208,7 +208,7 @@ func (s *MemberStore) ListByUser(ctx context.Context, userID space.SpaceID) ([]*
 }
 
 // Exists checks if a membership exists.
-func (s *MemberStore) Exists(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) (bool, error) {
+func (s *MemberStore) Exists(ctx context.Context, spaceID space.SpaceID, userID space.UserID) (bool, error) {
 	const op errors.Op = "domain/space/storage.MemberExists"
 	ds := pgDialect.From(goqu.S("space").Table("member")).
 		Select(goqu.L("1")).

@@ -375,7 +375,7 @@ func TestCoordinator_RemoveSpaceMember(t *testing.T) {
 	tests := []struct {
 		name          string
 		req           *RemoveSpaceMemberRequest
-		mockRemove    func(ctx context.Context, session space.Session, targetUserID space.SpaceID) error
+		mockRemove    func(ctx context.Context, session space.Session, targetUserID space.UserID) error
 		expectedError bool
 		expectedKind  errors.Kind
 		expectedCode  errors.Code
@@ -387,7 +387,7 @@ func TestCoordinator_RemoveSpaceMember(t *testing.T) {
 				UserID:       "usr_caller",
 				TargetUserID: "usr_owner",
 			},
-			mockRemove: func(ctx context.Context, session space.Session, targetUserID space.SpaceID) error {
+			mockRemove: func(ctx context.Context, session space.Session, targetUserID space.UserID) error {
 				return errors.E(errors.Permission, space.OwnerOnly, "cannot remove space owner")
 			},
 			expectedError: true,
@@ -401,7 +401,7 @@ func TestCoordinator_RemoveSpaceMember(t *testing.T) {
 				UserID:       "usr_caller",
 				TargetUserID: "usr_target",
 			},
-			mockRemove: func(ctx context.Context, session space.Session, targetUserID space.SpaceID) error {
+			mockRemove: func(ctx context.Context, session space.Session, targetUserID space.UserID) error {
 				return errors.E(errors.NotExist, space.MemberNotFound, "member not found")
 			},
 			expectedError: true,
@@ -415,7 +415,7 @@ func TestCoordinator_RemoveSpaceMember(t *testing.T) {
 				UserID:       "usr_caller",
 				TargetUserID: "usr_target",
 			},
-			mockRemove: func(ctx context.Context, session space.Session, targetUserID space.SpaceID) error {
+			mockRemove: func(ctx context.Context, session space.Session, targetUserID space.UserID) error {
 				if session.SpaceID != "sp_123" || session.UserID != "usr_caller" {
 					t.Errorf("unexpected session: %+v", session)
 				}

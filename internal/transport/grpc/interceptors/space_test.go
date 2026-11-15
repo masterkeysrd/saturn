@@ -15,10 +15,10 @@ import (
 )
 
 type mockMemberStoreProvider struct {
-	GetByIDFunc func(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) (*space.Member, error)
+	GetByIDFunc func(ctx context.Context, spaceID space.SpaceID, userID space.UserID) (*space.Member, error)
 }
 
-func (m *mockMemberStoreProvider) GetByID(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) (*space.Member, error) {
+func (m *mockMemberStoreProvider) GetByID(ctx context.Context, spaceID space.SpaceID, userID space.UserID) (*space.Member, error) {
 	if m.GetByIDFunc != nil {
 		return m.GetByIDFunc(ctx, spaceID, userID)
 	}
@@ -123,7 +123,7 @@ func TestSpaceInterceptor_APIKey(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			si := NewSpaceInterceptor(&mockMemberStoreProvider{
-				GetByIDFunc: func(ctx context.Context, spaceID, userID space.SpaceID) (*space.Member, error) {
+				GetByIDFunc: func(ctx context.Context, spaceID space.SpaceID, userID space.UserID) (*space.Member, error) {
 					if tc.memberErr != nil {
 						return nil, tc.memberErr
 					}
@@ -164,7 +164,7 @@ func TestSpaceInterceptor_MemberCache(t *testing.T) {
 	spc1, _ := space.NewSpaceID()
 	var calls int
 	si := NewSpaceInterceptor(&mockMemberStoreProvider{
-		GetByIDFunc: func(ctx context.Context, spaceID, userID space.SpaceID) (*space.Member, error) {
+		GetByIDFunc: func(ctx context.Context, spaceID space.SpaceID, userID space.UserID) (*space.Member, error) {
 			calls++
 			return &space.Member{SpaceID: spaceID, UserID: userID, Role: space.RoleAdmin}, nil
 		},

@@ -29,7 +29,7 @@ type SpaceServiceMock struct {
 	AddSpaceMemberFunc func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
 
 	// RemoveSpaceMemberFunc mocks the RemoveSpaceMember method.
-	RemoveSpaceMemberFunc func(ctx context.Context, session space.Session, targetUserID space.SpaceID) error
+	RemoveSpaceMemberFunc func(ctx context.Context, session space.Session, targetUserID space.UserID) error
 
 	// UpdateSpaceMemberFunc mocks the UpdateSpaceMember method.
 	UpdateSpaceMemberFunc func(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error)
@@ -67,7 +67,7 @@ type SpaceServiceMock struct {
 		RemoveSpaceMember []struct {
 			Ctx          context.Context
 			Session      space.Session
-			TargetUserID space.SpaceID
+			TargetUserID space.UserID
 		}
 		UpdateSpaceMember []struct {
 			Ctx     context.Context
@@ -221,7 +221,7 @@ func (mock *SpaceServiceMock) AddSpaceMemberCalls() []struct {
 }
 
 // RemoveSpaceMember calls RemoveSpaceMemberFunc.
-func (mock *SpaceServiceMock) RemoveSpaceMember(ctx context.Context, session space.Session, targetUserID space.SpaceID) error {
+func (mock *SpaceServiceMock) RemoveSpaceMember(ctx context.Context, session space.Session, targetUserID space.UserID) error {
 	if mock.RemoveSpaceMemberFunc == nil {
 		panic("SpaceServiceMock.RemoveSpaceMemberFunc: method is nil but SpaceService.RemoveSpaceMember was just called")
 	}
@@ -229,7 +229,7 @@ func (mock *SpaceServiceMock) RemoveSpaceMember(ctx context.Context, session spa
 	mock.calls.RemoveSpaceMember = append(mock.calls.RemoveSpaceMember, struct {
 		Ctx          context.Context
 		Session      space.Session
-		TargetUserID space.SpaceID
+		TargetUserID space.UserID
 	}{
 		Ctx:          ctx,
 		Session:      session,
@@ -243,7 +243,7 @@ func (mock *SpaceServiceMock) RemoveSpaceMember(ctx context.Context, session spa
 func (mock *SpaceServiceMock) RemoveSpaceMemberCalls() []struct {
 	Ctx          context.Context
 	Session      space.Session
-	TargetUserID space.SpaceID
+	TargetUserID space.UserID
 } {
 	mock.lockRemoveSpaceMember.RLock()
 	defer mock.lockRemoveSpaceMember.RUnlock()

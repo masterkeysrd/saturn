@@ -28,9 +28,9 @@ type mockSpaceService struct {
 	getSpaceFunc              func(ctx context.Context, session space.Session) (*space.Space, error)
 	updateSpaceFunc           func(ctx context.Context, session space.Session, sp *space.Space, mask []string) (*space.Space, error)
 	deleteSpaceFunc           func(ctx context.Context, session space.Session) error
-	listSpacesFunc            func(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error)
+	listSpacesFunc            func(ctx context.Context, userID space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error)
 	addSpaceMemberFunc        func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
-	removeSpaceMemberFunc     func(ctx context.Context, session space.Session, targetUserID space.SpaceID) error
+	removeSpaceMemberFunc     func(ctx context.Context, session space.Session, targetUserID space.UserID) error
 	updateSpaceMemberRoleFunc func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
 	updateSpaceMemberFunc     func(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error)
 	listSpaceMembersFunc      func(ctx context.Context, session space.Session, filter *space.ListMembersFilter) (*paging.Page[*space.Member], error)
@@ -71,7 +71,7 @@ func (m *mockSpaceService) DeleteSpace(ctx context.Context, session space.Sessio
 	return nil
 }
 
-func (m *mockSpaceService) ListSpaces(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
+func (m *mockSpaceService) ListSpaces(ctx context.Context, userID space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 	if m.listSpacesFunc != nil {
 		return m.listSpacesFunc(ctx, userID, filter)
 	}
@@ -88,7 +88,7 @@ func (m *mockSpaceService) AddSpaceMember(ctx context.Context, session space.Ses
 	return member, nil
 }
 
-func (m *mockSpaceService) RemoveSpaceMember(ctx context.Context, session space.Session, targetUserID space.SpaceID) error {
+func (m *mockSpaceService) RemoveSpaceMember(ctx context.Context, session space.Session, targetUserID space.UserID) error {
 	if m.removeSpaceMemberFunc != nil {
 		return m.removeSpaceMemberFunc(ctx, session, targetUserID)
 	}

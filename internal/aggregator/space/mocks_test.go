@@ -20,7 +20,7 @@ type SpaceServiceMock struct {
 	GetSpaceFunc func(ctx context.Context, session space.Session) (*space.Space, error)
 
 	// ListSpacesFunc mocks the ListSpaces method.
-	ListSpacesFunc func(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error)
+	ListSpacesFunc func(ctx context.Context, userID space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error)
 
 	// ListSpaceMembersFunc mocks the ListSpaceMembers method.
 	ListSpaceMembersFunc func(ctx context.Context, session space.Session, filter *space.ListMembersFilter) (*paging.Page[*space.Member], error)
@@ -36,7 +36,7 @@ type SpaceServiceMock struct {
 		}
 		ListSpaces []struct {
 			Ctx    context.Context
-			UserID space.SpaceID
+			UserID space.UserID
 			Filter *space.ListSpacesFilter
 		}
 		ListSpaceMembers []struct {
@@ -83,14 +83,14 @@ func (mock *SpaceServiceMock) GetSpaceCalls() []struct {
 }
 
 // ListSpaces calls ListSpacesFunc.
-func (mock *SpaceServiceMock) ListSpaces(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
+func (mock *SpaceServiceMock) ListSpaces(ctx context.Context, userID space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 	if mock.ListSpacesFunc == nil {
 		panic("SpaceServiceMock.ListSpacesFunc: method is nil but SpaceService.ListSpaces was just called")
 	}
 	mock.lockListSpaces.Lock()
 	mock.calls.ListSpaces = append(mock.calls.ListSpaces, struct {
 		Ctx    context.Context
-		UserID space.SpaceID
+		UserID space.UserID
 		Filter *space.ListSpacesFilter
 	}{
 		Ctx:    ctx,
@@ -104,7 +104,7 @@ func (mock *SpaceServiceMock) ListSpaces(ctx context.Context, userID space.Space
 // ListSpacesCalls returns all calls made to ListSpaces.
 func (mock *SpaceServiceMock) ListSpacesCalls() []struct {
 	Ctx    context.Context
-	UserID space.SpaceID
+	UserID space.UserID
 	Filter *space.ListSpacesFilter
 } {
 	mock.lockListSpaces.RLock()

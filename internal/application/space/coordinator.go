@@ -132,7 +132,7 @@ type RevokeSpaceAPIKeyGrantRequest struct {
 func (c *coordinator) CreateSpace(ctx context.Context, req *CreateSpaceRequest) (*space.Space, error) {
 	const op errors.Op = "application/space.CreateSpace"
 	sp := &space.Space{
-		OwnerID:     space.SpaceID(req.OwnerID),
+		OwnerID:     space.UserID(req.OwnerID),
 		Name:        req.Name,
 		Description: req.Description,
 	}
@@ -148,7 +148,7 @@ func (c *coordinator) UpdateSpace(ctx context.Context, req *UpdateSpaceRequest) 
 	const op errors.Op = "application/space.UpdateSpace"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
-		UserID:  space.SpaceID(req.UserID),
+		UserID:  space.UserID(req.UserID),
 	}
 	res, err := c.spaceService.UpdateSpace(ctx, session, req.Space, req.UpdateMask)
 	if err != nil {
@@ -162,7 +162,7 @@ func (c *coordinator) DeleteSpace(ctx context.Context, req *DeleteSpaceRequest) 
 	const op errors.Op = "application/space.DeleteSpace"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
-		UserID:  space.SpaceID(req.UserID),
+		UserID:  space.UserID(req.UserID),
 	}
 	if err := c.spaceService.DeleteSpace(ctx, session); err != nil {
 		return errors.E(op, err)
@@ -189,7 +189,7 @@ func (c *coordinator) AddSpaceMember(ctx context.Context, req *AddSpaceMemberReq
 
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
-		UserID:  space.SpaceID(req.UserID),
+		UserID:  space.UserID(req.UserID),
 	}
 	res, err := c.spaceService.AddSpaceMember(ctx, session, req.Member)
 	if err != nil {
@@ -203,9 +203,9 @@ func (c *coordinator) RemoveSpaceMember(ctx context.Context, req *RemoveSpaceMem
 	const op errors.Op = "application/space.RemoveSpaceMember"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
-		UserID:  space.SpaceID(req.UserID),
+		UserID:  space.UserID(req.UserID),
 	}
-	if err := c.spaceService.RemoveSpaceMember(ctx, session, space.SpaceID(req.TargetUserID)); err != nil {
+	if err := c.spaceService.RemoveSpaceMember(ctx, session, space.UserID(req.TargetUserID)); err != nil {
 		return errors.E(op, err)
 	}
 	return nil
@@ -216,7 +216,7 @@ func (c *coordinator) UpdateSpaceMember(ctx context.Context, req *UpdateSpaceMem
 	const op errors.Op = "application/space.UpdateSpaceMember"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
-		UserID:  space.SpaceID(req.UserID),
+		UserID:  space.UserID(req.UserID),
 	}
 	res, err := c.spaceService.UpdateSpaceMember(ctx, session, req.Member, req.UpdateMask)
 	if err != nil {
@@ -233,7 +233,7 @@ func (c *coordinator) GetSettings(ctx context.Context, req *GetSettingsRequest) 
 	}
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
-		UserID:  space.SpaceID(req.UserID),
+		UserID:  space.UserID(req.UserID),
 	}
 	res, err := c.spaceService.GetSettings(ctx, session)
 	if err != nil {
@@ -247,7 +247,7 @@ func (c *coordinator) UpdateSettings(ctx context.Context, req *UpdateSettingsReq
 	const op errors.Op = "application/space.UpdateSettings"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
-		UserID:  space.SpaceID(req.UserID),
+		UserID:  space.UserID(req.UserID),
 	}
 	res, err := c.spaceService.UpdateSettings(ctx, session, req.Settings, req.UpdateMask, req.ExpectedVersion)
 	if err != nil {
@@ -264,7 +264,7 @@ func (c *coordinator) RevokeSpaceAPIKeyGrant(ctx context.Context, req *RevokeSpa
 	}
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
-		UserID:  space.SpaceID(req.UserID),
+		UserID:  space.UserID(req.UserID),
 	}
 	if err := c.spaceService.RevokeSpaceAPIKeyGrant(ctx, session, req.APIKeyID); err != nil {
 		return errors.E(op, err)
@@ -279,7 +279,7 @@ type SpaceService interface {
 	UpdateSpace(ctx context.Context, session space.Session, sp *space.Space, mask []string) (*space.Space, error)
 	DeleteSpace(ctx context.Context, session space.Session) error
 	AddSpaceMember(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
-	RemoveSpaceMember(ctx context.Context, session space.Session, targetUserID space.SpaceID) error
+	RemoveSpaceMember(ctx context.Context, session space.Session, targetUserID space.UserID) error
 	UpdateSpaceMember(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error)
 	GetSettings(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error)
 	UpdateSettings(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error)

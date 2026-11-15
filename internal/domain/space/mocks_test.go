@@ -147,10 +147,10 @@ type SpaceStoreMock struct {
 	DeleteFunc func(ctx context.Context, id SpaceID) error
 
 	// ListByUserFunc mocks the ListByUser method.
-	ListByUserFunc func(ctx context.Context, userID SpaceID, filter *ListSpacesFilter) (*paging.Page[*Space], error)
+	ListByUserFunc func(ctx context.Context, userID UserID, filter *ListSpacesFilter) (*paging.Page[*Space], error)
 
 	// ListByUserOwnedFunc mocks the ListByUserOwned method.
-	ListByUserOwnedFunc func(ctx context.Context, ownerID SpaceID, filter *ListSpacesFilter) (*paging.Page[*Space], error)
+	ListByUserOwnedFunc func(ctx context.Context, ownerID UserID, filter *ListSpacesFilter) (*paging.Page[*Space], error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -172,12 +172,12 @@ type SpaceStoreMock struct {
 		}
 		ListByUser []struct {
 			Ctx    context.Context
-			UserID SpaceID
+			UserID UserID
 			Filter *ListSpacesFilter
 		}
 		ListByUserOwned []struct {
 			Ctx     context.Context
-			OwnerID SpaceID
+			OwnerID UserID
 			Filter  *ListSpacesFilter
 		}
 	}
@@ -298,14 +298,14 @@ func (mock *SpaceStoreMock) DeleteCalls() []struct {
 }
 
 // ListByUser calls ListByUserFunc.
-func (mock *SpaceStoreMock) ListByUser(ctx context.Context, userID SpaceID, filter *ListSpacesFilter) (*paging.Page[*Space], error) {
+func (mock *SpaceStoreMock) ListByUser(ctx context.Context, userID UserID, filter *ListSpacesFilter) (*paging.Page[*Space], error) {
 	if mock.ListByUserFunc == nil {
 		panic("SpaceStoreMock.ListByUserFunc: method is nil but SpaceStore.ListByUser was just called")
 	}
 	mock.lockListByUser.Lock()
 	mock.calls.ListByUser = append(mock.calls.ListByUser, struct {
 		Ctx    context.Context
-		UserID SpaceID
+		UserID UserID
 		Filter *ListSpacesFilter
 	}{
 		Ctx:    ctx,
@@ -319,7 +319,7 @@ func (mock *SpaceStoreMock) ListByUser(ctx context.Context, userID SpaceID, filt
 // ListByUserCalls returns all calls made to ListByUser.
 func (mock *SpaceStoreMock) ListByUserCalls() []struct {
 	Ctx    context.Context
-	UserID SpaceID
+	UserID UserID
 	Filter *ListSpacesFilter
 } {
 	mock.lockListByUser.RLock()
@@ -328,14 +328,14 @@ func (mock *SpaceStoreMock) ListByUserCalls() []struct {
 }
 
 // ListByUserOwned calls ListByUserOwnedFunc.
-func (mock *SpaceStoreMock) ListByUserOwned(ctx context.Context, ownerID SpaceID, filter *ListSpacesFilter) (*paging.Page[*Space], error) {
+func (mock *SpaceStoreMock) ListByUserOwned(ctx context.Context, ownerID UserID, filter *ListSpacesFilter) (*paging.Page[*Space], error) {
 	if mock.ListByUserOwnedFunc == nil {
 		panic("SpaceStoreMock.ListByUserOwnedFunc: method is nil but SpaceStore.ListByUserOwned was just called")
 	}
 	mock.lockListByUserOwned.Lock()
 	mock.calls.ListByUserOwned = append(mock.calls.ListByUserOwned, struct {
 		Ctx     context.Context
-		OwnerID SpaceID
+		OwnerID UserID
 		Filter  *ListSpacesFilter
 	}{
 		Ctx:     ctx,
@@ -349,7 +349,7 @@ func (mock *SpaceStoreMock) ListByUserOwned(ctx context.Context, ownerID SpaceID
 // ListByUserOwnedCalls returns all calls made to ListByUserOwned.
 func (mock *SpaceStoreMock) ListByUserOwnedCalls() []struct {
 	Ctx     context.Context
-	OwnerID SpaceID
+	OwnerID UserID
 	Filter  *ListSpacesFilter
 } {
 	mock.lockListByUserOwned.RLock()
@@ -366,22 +366,22 @@ type MemberStoreMock struct {
 	CreateFunc func(ctx context.Context, member *Member) error
 
 	// GetByIDFunc mocks the GetByID method.
-	GetByIDFunc func(ctx context.Context, spaceID SpaceID, userID SpaceID) (*Member, error)
+	GetByIDFunc func(ctx context.Context, spaceID SpaceID, userID UserID) (*Member, error)
 
 	// UpdateFunc mocks the Update method.
 	UpdateFunc func(ctx context.Context, member *Member) error
 
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(ctx context.Context, spaceID SpaceID, userID SpaceID) error
+	DeleteFunc func(ctx context.Context, spaceID SpaceID, userID UserID) error
 
 	// ListBySpaceFunc mocks the ListBySpace method.
 	ListBySpaceFunc func(ctx context.Context, spaceID SpaceID, filter *ListMembersFilter) (*paging.Page[*Member], error)
 
 	// ListByUserFunc mocks the ListByUser method.
-	ListByUserFunc func(ctx context.Context, userID SpaceID) ([]*Member, error)
+	ListByUserFunc func(ctx context.Context, userID UserID) ([]*Member, error)
 
 	// ExistsFunc mocks the Exists method.
-	ExistsFunc func(ctx context.Context, spaceID SpaceID, userID SpaceID) (bool, error)
+	ExistsFunc func(ctx context.Context, spaceID SpaceID, userID UserID) (bool, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -392,7 +392,7 @@ type MemberStoreMock struct {
 		GetByID []struct {
 			Ctx     context.Context
 			SpaceID SpaceID
-			UserID  SpaceID
+			UserID  UserID
 		}
 		Update []struct {
 			Ctx    context.Context
@@ -401,7 +401,7 @@ type MemberStoreMock struct {
 		Delete []struct {
 			Ctx     context.Context
 			SpaceID SpaceID
-			UserID  SpaceID
+			UserID  UserID
 		}
 		ListBySpace []struct {
 			Ctx     context.Context
@@ -410,12 +410,12 @@ type MemberStoreMock struct {
 		}
 		ListByUser []struct {
 			Ctx    context.Context
-			UserID SpaceID
+			UserID UserID
 		}
 		Exists []struct {
 			Ctx     context.Context
 			SpaceID SpaceID
-			UserID  SpaceID
+			UserID  UserID
 		}
 	}
 	lockCreate      sync.RWMutex
@@ -455,7 +455,7 @@ func (mock *MemberStoreMock) CreateCalls() []struct {
 }
 
 // GetByID calls GetByIDFunc.
-func (mock *MemberStoreMock) GetByID(ctx context.Context, spaceID SpaceID, userID SpaceID) (*Member, error) {
+func (mock *MemberStoreMock) GetByID(ctx context.Context, spaceID SpaceID, userID UserID) (*Member, error) {
 	if mock.GetByIDFunc == nil {
 		panic("MemberStoreMock.GetByIDFunc: method is nil but MemberStore.GetByID was just called")
 	}
@@ -463,7 +463,7 @@ func (mock *MemberStoreMock) GetByID(ctx context.Context, spaceID SpaceID, userI
 	mock.calls.GetByID = append(mock.calls.GetByID, struct {
 		Ctx     context.Context
 		SpaceID SpaceID
-		UserID  SpaceID
+		UserID  UserID
 	}{
 		Ctx:     ctx,
 		SpaceID: spaceID,
@@ -477,7 +477,7 @@ func (mock *MemberStoreMock) GetByID(ctx context.Context, spaceID SpaceID, userI
 func (mock *MemberStoreMock) GetByIDCalls() []struct {
 	Ctx     context.Context
 	SpaceID SpaceID
-	UserID  SpaceID
+	UserID  UserID
 } {
 	mock.lockGetByID.RLock()
 	defer mock.lockGetByID.RUnlock()
@@ -512,7 +512,7 @@ func (mock *MemberStoreMock) UpdateCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *MemberStoreMock) Delete(ctx context.Context, spaceID SpaceID, userID SpaceID) error {
+func (mock *MemberStoreMock) Delete(ctx context.Context, spaceID SpaceID, userID UserID) error {
 	if mock.DeleteFunc == nil {
 		panic("MemberStoreMock.DeleteFunc: method is nil but MemberStore.Delete was just called")
 	}
@@ -520,7 +520,7 @@ func (mock *MemberStoreMock) Delete(ctx context.Context, spaceID SpaceID, userID
 	mock.calls.Delete = append(mock.calls.Delete, struct {
 		Ctx     context.Context
 		SpaceID SpaceID
-		UserID  SpaceID
+		UserID  UserID
 	}{
 		Ctx:     ctx,
 		SpaceID: spaceID,
@@ -534,7 +534,7 @@ func (mock *MemberStoreMock) Delete(ctx context.Context, spaceID SpaceID, userID
 func (mock *MemberStoreMock) DeleteCalls() []struct {
 	Ctx     context.Context
 	SpaceID SpaceID
-	UserID  SpaceID
+	UserID  UserID
 } {
 	mock.lockDelete.RLock()
 	defer mock.lockDelete.RUnlock()
@@ -572,14 +572,14 @@ func (mock *MemberStoreMock) ListBySpaceCalls() []struct {
 }
 
 // ListByUser calls ListByUserFunc.
-func (mock *MemberStoreMock) ListByUser(ctx context.Context, userID SpaceID) ([]*Member, error) {
+func (mock *MemberStoreMock) ListByUser(ctx context.Context, userID UserID) ([]*Member, error) {
 	if mock.ListByUserFunc == nil {
 		panic("MemberStoreMock.ListByUserFunc: method is nil but MemberStore.ListByUser was just called")
 	}
 	mock.lockListByUser.Lock()
 	mock.calls.ListByUser = append(mock.calls.ListByUser, struct {
 		Ctx    context.Context
-		UserID SpaceID
+		UserID UserID
 	}{
 		Ctx:    ctx,
 		UserID: userID,
@@ -591,7 +591,7 @@ func (mock *MemberStoreMock) ListByUser(ctx context.Context, userID SpaceID) ([]
 // ListByUserCalls returns all calls made to ListByUser.
 func (mock *MemberStoreMock) ListByUserCalls() []struct {
 	Ctx    context.Context
-	UserID SpaceID
+	UserID UserID
 } {
 	mock.lockListByUser.RLock()
 	defer mock.lockListByUser.RUnlock()
@@ -599,7 +599,7 @@ func (mock *MemberStoreMock) ListByUserCalls() []struct {
 }
 
 // Exists calls ExistsFunc.
-func (mock *MemberStoreMock) Exists(ctx context.Context, spaceID SpaceID, userID SpaceID) (bool, error) {
+func (mock *MemberStoreMock) Exists(ctx context.Context, spaceID SpaceID, userID UserID) (bool, error) {
 	if mock.ExistsFunc == nil {
 		panic("MemberStoreMock.ExistsFunc: method is nil but MemberStore.Exists was just called")
 	}
@@ -607,7 +607,7 @@ func (mock *MemberStoreMock) Exists(ctx context.Context, spaceID SpaceID, userID
 	mock.calls.Exists = append(mock.calls.Exists, struct {
 		Ctx     context.Context
 		SpaceID SpaceID
-		UserID  SpaceID
+		UserID  UserID
 	}{
 		Ctx:     ctx,
 		SpaceID: spaceID,
@@ -621,7 +621,7 @@ func (mock *MemberStoreMock) Exists(ctx context.Context, spaceID SpaceID, userID
 func (mock *MemberStoreMock) ExistsCalls() []struct {
 	Ctx     context.Context
 	SpaceID SpaceID
-	UserID  SpaceID
+	UserID  UserID
 } {
 	mock.lockExists.RLock()
 	defer mock.lockExists.RUnlock()

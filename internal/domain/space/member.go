@@ -10,7 +10,7 @@ import (
 // Member represents a membership in a workspace.
 type Member struct {
 	SpaceID    SpaceID   `json:"space_id"`
-	UserID     SpaceID   `json:"user_id"`
+	UserID     UserID    `json:"user_id"`
 	Role       SpaceRole `json:"role"`
 	CreateTime time.Time `json:"create_time"`
 	UpdateTime time.Time `json:"update_time"`

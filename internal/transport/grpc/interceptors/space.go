@@ -18,7 +18,7 @@ import (
 
 // MemberStoreProvider provides access to MemberStore for the interceptor.
 type MemberStoreProvider interface {
-	GetByID(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) (*space.Member, error)
+	GetByID(ctx context.Context, spaceID space.SpaceID, userID space.UserID) (*space.Member, error)
 }
 
 // SpaceInterceptor validates space-scoped gRPC requests by checking user membership and API key grants.
@@ -32,7 +32,7 @@ type SpaceInterceptor struct {
 
 type memberCacheKey struct {
 	spaceID space.SpaceID
-	userID  space.SpaceID
+	userID  space.UserID
 }
 
 type memberCacheEntry struct {
@@ -52,7 +52,7 @@ func NewSpaceInterceptor(memberStore MemberStoreProvider, rules []api.SpaceRule)
 }
 
 // InvalidateMember evicts a cached workspace membership record.
-func (si *SpaceInterceptor) InvalidateMember(spaceID, userID space.SpaceID) {
+func (si *SpaceInterceptor) InvalidateMember(spaceID space.SpaceID, userID space.UserID) {
 	si.memberCache.Delete(memberCacheKey{spaceID: spaceID, userID: userID})
 }
 
@@ -127,7 +127,7 @@ func (si *SpaceInterceptor) intercept(ctx context.Context, fullMethod string) (c
 		return ctx, status.Error(codes.InvalidArgument, "invalid space-id format")
 	}
 
-	userID := space.SpaceID(principal.Subject)
+	userID := space.UserID(principal.Subject)
 
 	member, err := si.getMember(ctx, spaceID, userID)
 	if err != nil {
@@ -137,7 +137,7 @@ func (si *SpaceInterceptor) intercept(ctx context.Context, fullMethod string) (c
 	return foundationauth.WithSpaceScope(ctx, string(spaceID), string(member.Role)), nil
 }
 
-func (si *SpaceInterceptor) getMember(ctx context.Context, spaceID, userID space.SpaceID) (*space.Member, error) {
+func (si *SpaceInterceptor) getMember(ctx context.Context, spaceID space.SpaceID, userID space.UserID) (*space.Member, error) {
 	key := memberCacheKey{spaceID: spaceID, userID: userID}
 	now := timeNow()
 	if si.memberCacheTTL > 0 {

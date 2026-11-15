@@ -10,7 +10,7 @@ import (
 type APIKeyGrant struct {
 	APIKeyID   string    `json:"api_key_id"`
 	SpaceID    SpaceID   `json:"space_id"`
-	UserID     SpaceID   `json:"user_id"`
+	UserID     UserID    `json:"user_id"`
 	CreateTime time.Time `json:"create_time"`
 }
 

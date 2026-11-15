@@ -42,7 +42,7 @@ func TestCoordinator_APIKeys(t *testing.T) {
 							Scopes:    params.Scopes,
 						}, nil
 					}
-					spSvc.SyncAPIKeyGrantsFunc = func(ctx context.Context, apiKeyID string, userID space.SpaceID, spaceIDs []space.SpaceID) error {
+					spSvc.SyncAPIKeyGrantsFunc = func(ctx context.Context, apiKeyID string, userID space.UserID, spaceIDs []space.SpaceID) error {
 						return nil
 					}
 					spSvc.ListAPIKeyGrantedSpacesFunc = func(ctx context.Context, apiKeyID string) ([]space.SpaceID, error) {
@@ -89,7 +89,7 @@ func TestCoordinator_APIKeys(t *testing.T) {
 					idSvc.CreateAPIKeyFunc = func(ctx context.Context, params identity.CreateAPIKeyParams) (*identity.APIKey, error) {
 						return &identity.APIKey{ID: "apk_1", UserID: params.UserID}, nil
 					}
-					spSvc.SyncAPIKeyGrantsFunc = func(ctx context.Context, apiKeyID string, userID space.SpaceID, spaceIDs []space.SpaceID) error {
+					spSvc.SyncAPIKeyGrantsFunc = func(ctx context.Context, apiKeyID string, userID space.UserID, spaceIDs []space.SpaceID) error {
 						return errors.E(errors.Permission, "not a member")
 					}
 				},
@@ -165,7 +165,7 @@ func TestCoordinator_APIKeys(t *testing.T) {
 			},
 		}
 		spSvc := &SpaceServiceMock{
-			SyncAPIKeyGrantsFunc: func(ctx context.Context, apiKeyID string, userID space.SpaceID, spaceIDs []space.SpaceID) error {
+			SyncAPIKeyGrantsFunc: func(ctx context.Context, apiKeyID string, userID space.UserID, spaceIDs []space.SpaceID) error {
 				return nil
 			},
 			ListAPIKeyGrantedSpacesFunc: func(ctx context.Context, apiKeyID string) ([]space.SpaceID, error) {

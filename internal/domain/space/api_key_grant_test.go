@@ -16,7 +16,7 @@ func TestService_APIKeyGrants(t *testing.T) {
 		tests := []struct {
 			name     string
 			apiKeyID string
-			userID   SpaceID
+			userID   UserID
 			spaceIDs []SpaceID
 			setup    func(m *MemberStoreMock, g *APIKeyGrantStoreMock)
 			wantErr  bool
@@ -28,7 +28,7 @@ func TestService_APIKeyGrants(t *testing.T) {
 				userID:   "usr_1",
 				spaceIDs: []SpaceID{spc1, spc2, spc1},
 				setup: func(m *MemberStoreMock, g *APIKeyGrantStoreMock) {
-					m.ExistsFunc = func(ctx context.Context, spaceID, userID SpaceID) (bool, error) {
+					m.ExistsFunc = func(ctx context.Context, spaceID SpaceID, userID UserID) (bool, error) {
 						return true, nil
 					}
 					g.DeleteGrantsForKeyExceptFunc = func(ctx context.Context, apiKeyID string, keepSpaceIDs []SpaceID) error {
@@ -51,7 +51,7 @@ func TestService_APIKeyGrants(t *testing.T) {
 				userID:   "usr_1",
 				spaceIDs: []SpaceID{spc1},
 				setup: func(m *MemberStoreMock, g *APIKeyGrantStoreMock) {
-					m.ExistsFunc = func(ctx context.Context, spaceID, userID SpaceID) (bool, error) {
+					m.ExistsFunc = func(ctx context.Context, spaceID SpaceID, userID UserID) (bool, error) {
 						return false, nil
 					}
 				},
@@ -120,7 +120,7 @@ func TestService_APIKeyGrants(t *testing.T) {
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
 				mStore := &MemberStoreMock{
-					GetByIDFunc: func(ctx context.Context, spaceID, userID SpaceID) (*Member, error) {
+					GetByIDFunc: func(ctx context.Context, spaceID SpaceID, userID UserID) (*Member, error) {
 						return &Member{SpaceID: spaceID, UserID: userID, Role: tc.role}, nil
 					},
 				}

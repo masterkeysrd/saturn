@@ -39,7 +39,7 @@ func toDomainSpace(s *spaceDB) *space.Space {
 		ID:          space.SpaceID(s.ID),
 		Name:        s.Name,
 		Description: ptrToString(s.Description),
-		OwnerID:     space.SpaceID(s.OwnerID),
+		OwnerID:     space.UserID(s.OwnerID),
 		Version:     s.Version,
 		CreateTime:  nullTimeToTime(s.CreateTime),
 		UpdateTime:  nullTimeToTime(s.UpdateTime),
@@ -148,7 +148,7 @@ func (s *SpaceStore) Delete(ctx context.Context, id space.SpaceID) error {
 }
 
 // ListByUser returns spaces owned or joined by the user.
-func (s *SpaceStore) ListByUser(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
+func (s *SpaceStore) ListByUser(ctx context.Context, userID space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 	const op errors.Op = "domain/space/storage.ListByUser"
 	pageSize := filter.PageSize
 	if pageSize <= 0 || pageSize > 100 {
@@ -205,7 +205,7 @@ func (s *SpaceStore) ListByUser(ctx context.Context, userID space.SpaceID, filte
 }
 
 // ListByUserOwned returns spaces owned by the user (without needing member table).
-func (s *SpaceStore) ListByUserOwned(ctx context.Context, ownerID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
+func (s *SpaceStore) ListByUserOwned(ctx context.Context, ownerID space.UserID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 	const op errors.Op = "domain/space/storage.ListByUserOwned"
 	pageSize := filter.PageSize
 	if pageSize <= 0 || pageSize > 100 {

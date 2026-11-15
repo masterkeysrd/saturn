@@ -191,7 +191,7 @@ func (s *Service) DeleteSpace(ctx context.Context, session Session) error {
 }
 
 // ListSpaces lists all spaces the user has access to (owned or joined).
-func (s *Service) ListSpaces(ctx context.Context, userID SpaceID, filter *ListSpacesFilter) (*paging.Page[*Space], error) {
+func (s *Service) ListSpaces(ctx context.Context, userID UserID, filter *ListSpacesFilter) (*paging.Page[*Space], error) {
 	const op errors.Op = "domain/space.ListSpaces"
 
 	page, err := s.deps.SpaceStore.ListByUser(ctx, userID, filter)
@@ -250,7 +250,7 @@ func (s *Service) AddSpaceMember(ctx context.Context, session Session, member *M
 }
 
 // RemoveSpaceMember removes a member from a workspace.
-func (s *Service) RemoveSpaceMember(ctx context.Context, session Session, userID SpaceID) error {
+func (s *Service) RemoveSpaceMember(ctx context.Context, session Session, userID UserID) error {
 	const op errors.Op = "domain/space.RemoveSpaceMember"
 
 	if _, err := s.authorize(ctx, session, requireManageMembers); err != nil {
@@ -347,7 +347,7 @@ func (s *Service) ListSpaceMembers(ctx context.Context, session Session, filter 
 }
 
 // GetMember retrieves a member by space ID and user ID.
-func (s *Service) GetMember(ctx context.Context, spaceID SpaceID, userID SpaceID) (*Member, error) {
+func (s *Service) GetMember(ctx context.Context, spaceID SpaceID, userID UserID) (*Member, error) {
 	const op errors.Op = "domain/space.GetMember"
 
 	member, err := s.deps.MemberStore.GetByID(ctx, spaceID, userID)
@@ -361,12 +361,12 @@ func (s *Service) GetMember(ctx context.Context, spaceID SpaceID, userID SpaceID
 }
 
 // GetUserSpaceMembership checks if the user is a member of the space and returns the membership.
-func (s *Service) GetUserSpaceMembership(ctx context.Context, spaceID SpaceID, userID SpaceID) (*Member, error) {
+func (s *Service) GetUserSpaceMembership(ctx context.Context, spaceID SpaceID, userID UserID) (*Member, error) {
 	return s.deps.MemberStore.GetByID(ctx, spaceID, userID)
 }
 
 // IsSpaceMember checks if the user is a member of the space.
-func (s *Service) IsSpaceMember(ctx context.Context, spaceID SpaceID, userID SpaceID) (bool, error) {
+func (s *Service) IsSpaceMember(ctx context.Context, spaceID SpaceID, userID UserID) (bool, error) {
 	_, err := s.deps.MemberStore.GetByID(ctx, spaceID, userID)
 	if err != nil {
 		return false, nil
@@ -424,7 +424,7 @@ func (s *Service) UpdateSettings(ctx context.Context, session Session, incoming 
 
 // SyncAPIKeyGrants validates caller membership in every requested space and synchronizes
 // the active space grants for the given API key.
-func (s *Service) SyncAPIKeyGrants(ctx context.Context, apiKeyID string, userID SpaceID, spaceIDs []SpaceID) error {
+func (s *Service) SyncAPIKeyGrants(ctx context.Context, apiKeyID string, userID UserID, spaceIDs []SpaceID) error {
 	const op errors.Op = "domain/space.SyncAPIKeyGrants"
 
 	if apiKeyID == "" {

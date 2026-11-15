@@ -202,7 +202,7 @@ type IdentityService interface {
 // @Mock
 type SpaceService interface {
 	CreateSpace(ctx context.Context, sp *space.Space) (*space.Space, error)
-	SyncAPIKeyGrants(ctx context.Context, apiKeyID string, userID space.SpaceID, spaceIDs []space.SpaceID) error
+	SyncAPIKeyGrants(ctx context.Context, apiKeyID string, userID space.UserID, spaceIDs []space.SpaceID) error
 	ListAPIKeyGrantedSpaces(ctx context.Context, apiKeyID string) ([]space.SpaceID, error)
 	ListAPIKeysGrantedSpaces(ctx context.Context, apiKeyIDs []string) (map[string][]space.SpaceID, error)
 }

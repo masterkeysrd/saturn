@@ -23,7 +23,7 @@ type SpaceMember struct {
 type APIKeyGrant struct {
 	APIKeyID        string
 	SpaceID         space.SpaceID
-	UserID          space.SpaceID
+	UserID          space.UserID
 	UserName        string
 	UserEmail       string
 	KeyName         string
