@@ -691,7 +691,8 @@ func TestCoordinator_Integrations(t *testing.T) {
 			name          string
 			ctx           context.Context
 			item          *finance.InboxItem
-			mockFn        func(ctx context.Context, rCtx finance.Context, item *finance.InboxItem) (*finance.InboxItem, error)
+			mask          []string
+			mockFn        func(ctx context.Context, rCtx finance.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error)
 			expectedID    string
 			expectedError bool
 		}{
@@ -699,7 +700,8 @@ func TestCoordinator_Integrations(t *testing.T) {
 				name: "Success",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				item: &finance.InboxItem{ID: "inbox_1", VendorName: "Uber"},
-				mockFn: func(ctx context.Context, rCtx finance.Context, item *finance.InboxItem) (*finance.InboxItem, error) {
+				mask: []string{"vendor_name"},
+				mockFn: func(ctx context.Context, rCtx finance.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error) {
 					return item, nil
 				},
 				expectedID:    "inbox_1",
@@ -715,7 +717,7 @@ func TestCoordinator_Integrations(t *testing.T) {
 				name: "Domain error",
 				ctx:  newTestContext("spc_1", "usr_1"),
 				item: &finance.InboxItem{ID: "inbox_1"},
-				mockFn: func(ctx context.Context, rCtx finance.Context, item *finance.InboxItem) (*finance.InboxItem, error) {
+				mockFn: func(ctx context.Context, rCtx finance.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error) {
 					return nil, errors.New("update failed")
 				},
 				expectedError: true,
@@ -726,7 +728,7 @@ func TestCoordinator_Integrations(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				fsMock := &FinanceServiceMock{UpdateInboxItemFunc: tc.mockFn}
 				coord := NewCoordinator(Dependencies{FinanceService: fsMock})
-				res, err := coord.UpdateInboxItem(tc.ctx, tc.item)
+				res, err := coord.UpdateInboxItem(tc.ctx, tc.item, tc.mask)
 				if tc.expectedError {
 					if err == nil {
 						t.Fatal("expected error, got nil")
@@ -1033,7 +1035,7 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 			discardInboxCalled = true
 			return nil
 		},
-		UpdateInboxItemFunc: func(ctx context.Context, item *finance.InboxItem) (*finance.InboxItem, error) {
+		UpdateInboxItemFunc: func(ctx context.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error) {
 			updateInboxCalled = true
 			return &finance.InboxItem{ID: "inbox_1"}, nil
 		},
@@ -1099,7 +1101,7 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 	_, _ = logged.CompleteStatement(ctx, "stmt_1")
 	_, _, _ = logged.InvertStatementSigns(ctx, "stmt_1")
 	_ = logged.DiscardInboxItem(ctx, "inbox_1")
-	_, _ = logged.UpdateInboxItem(ctx, &finance.InboxItem{})
+	_, _ = logged.UpdateInboxItem(ctx, &finance.InboxItem{}, nil)
 	_, _ = logged.ApproveInboxItem(ctx, "inbox_1")
 
 	if !configureCalled || !getSettingsCalled || !listCurrenciesCalled ||
@@ -1284,7 +1286,7 @@ func TestLoggingCoordinator_Errors(t *testing.T) {
 		DiscardInboxItemFunc: func(ctx context.Context, id string) error {
 			return expectedErr
 		},
-		UpdateInboxItemFunc: func(ctx context.Context, item *finance.InboxItem) (*finance.InboxItem, error) {
+		UpdateInboxItemFunc: func(ctx context.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error) {
 			return nil, expectedErr
 		},
 		ApproveInboxItemFunc: func(ctx context.Context, id string) (*finance.InboxItem, error) {
@@ -1453,7 +1455,7 @@ func TestLoggingCoordinator_Errors(t *testing.T) {
 	if err := logged.DiscardInboxItem(ctx, "inbox_1"); err != expectedErr {
 		t.Errorf("expected %v, got %v", expectedErr, err)
 	}
-	if _, err := logged.UpdateInboxItem(ctx, &finance.InboxItem{}); err != expectedErr {
+	if _, err := logged.UpdateInboxItem(ctx, &finance.InboxItem{}, nil); err != expectedErr {
 		t.Errorf("expected %v, got %v", expectedErr, err)
 	}
 	if _, err := logged.ApproveInboxItem(ctx, "inbox_1"); err != expectedErr {

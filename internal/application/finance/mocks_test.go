@@ -135,7 +135,7 @@ type FinanceServiceMock struct {
 	GetExchangeRateByIDFunc func(ctx context.Context, rCtx finance.Context, id string) (*finance.ExchangeRate, error)
 
 	// UpdateExchangeRateFunc mocks the UpdateExchangeRate method.
-	UpdateExchangeRateFunc func(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate) (*finance.ExchangeRate, error)
+	UpdateExchangeRateFunc func(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate, mask []string) (*finance.ExchangeRate, error)
 
 	// ListExchangeRatesFunc mocks the ListExchangeRates method.
 	ListExchangeRatesFunc func(ctx context.Context, rCtx finance.Context, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error)
@@ -273,7 +273,7 @@ type FinanceServiceMock struct {
 	StageInboxItemFunc func(ctx context.Context, rCtx finance.Context, req *finance.StageInboxItem) (*finance.InboxItem, error)
 
 	// UpdateInboxItemFunc mocks the UpdateInboxItem method.
-	UpdateInboxItemFunc func(ctx context.Context, rCtx finance.Context, item *finance.InboxItem) (*finance.InboxItem, error)
+	UpdateInboxItemFunc func(ctx context.Context, rCtx finance.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error)
 
 	// DiscardInboxItemFunc mocks the DiscardInboxItem method.
 	DiscardInboxItemFunc func(ctx context.Context, rCtx finance.Context, id string) error
@@ -385,6 +385,7 @@ type FinanceServiceMock struct {
 			RCtx finance.Context
 			Id   string
 			Rate *finance.ExchangeRate
+			Mask []string
 		}
 		ListExchangeRates []struct {
 			Ctx    context.Context
@@ -618,6 +619,7 @@ type FinanceServiceMock struct {
 			Ctx  context.Context
 			RCtx finance.Context
 			Item *finance.InboxItem
+			Mask []string
 		}
 		DiscardInboxItem []struct {
 			Ctx  context.Context
@@ -1138,7 +1140,7 @@ func (mock *FinanceServiceMock) GetExchangeRateByIDCalls() []struct {
 }
 
 // UpdateExchangeRate calls UpdateExchangeRateFunc.
-func (mock *FinanceServiceMock) UpdateExchangeRate(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate) (*finance.ExchangeRate, error) {
+func (mock *FinanceServiceMock) UpdateExchangeRate(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate, mask []string) (*finance.ExchangeRate, error) {
 	if mock.UpdateExchangeRateFunc == nil {
 		panic("FinanceServiceMock.UpdateExchangeRateFunc: method is nil but FinanceService.UpdateExchangeRate was just called")
 	}
@@ -1148,14 +1150,16 @@ func (mock *FinanceServiceMock) UpdateExchangeRate(ctx context.Context, rCtx fin
 		RCtx finance.Context
 		Id   string
 		Rate *finance.ExchangeRate
+		Mask []string
 	}{
 		Ctx:  ctx,
 		RCtx: rCtx,
 		Id:   id,
 		Rate: rate,
+		Mask: mask,
 	})
 	mock.lockUpdateExchangeRate.Unlock()
-	return mock.UpdateExchangeRateFunc(ctx, rCtx, id, rate)
+	return mock.UpdateExchangeRateFunc(ctx, rCtx, id, rate, mask)
 }
 
 // UpdateExchangeRateCalls returns all calls made to UpdateExchangeRate.
@@ -1164,6 +1168,7 @@ func (mock *FinanceServiceMock) UpdateExchangeRateCalls() []struct {
 	RCtx finance.Context
 	Id   string
 	Rate *finance.ExchangeRate
+	Mask []string
 } {
 	mock.lockUpdateExchangeRate.RLock()
 	defer mock.lockUpdateExchangeRate.RUnlock()
@@ -2530,7 +2535,7 @@ func (mock *FinanceServiceMock) StageInboxItemCalls() []struct {
 }
 
 // UpdateInboxItem calls UpdateInboxItemFunc.
-func (mock *FinanceServiceMock) UpdateInboxItem(ctx context.Context, rCtx finance.Context, item *finance.InboxItem) (*finance.InboxItem, error) {
+func (mock *FinanceServiceMock) UpdateInboxItem(ctx context.Context, rCtx finance.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error) {
 	if mock.UpdateInboxItemFunc == nil {
 		panic("FinanceServiceMock.UpdateInboxItemFunc: method is nil but FinanceService.UpdateInboxItem was just called")
 	}
@@ -2539,13 +2544,15 @@ func (mock *FinanceServiceMock) UpdateInboxItem(ctx context.Context, rCtx financ
 		Ctx  context.Context
 		RCtx finance.Context
 		Item *finance.InboxItem
+		Mask []string
 	}{
 		Ctx:  ctx,
 		RCtx: rCtx,
 		Item: item,
+		Mask: mask,
 	})
 	mock.lockUpdateInboxItem.Unlock()
-	return mock.UpdateInboxItemFunc(ctx, rCtx, item)
+	return mock.UpdateInboxItemFunc(ctx, rCtx, item, mask)
 }
 
 // UpdateInboxItemCalls returns all calls made to UpdateInboxItem.
@@ -2553,6 +2560,7 @@ func (mock *FinanceServiceMock) UpdateInboxItemCalls() []struct {
 	Ctx  context.Context
 	RCtx finance.Context
 	Item *finance.InboxItem
+	Mask []string
 } {
 	mock.lockUpdateInboxItem.RLock()
 	defer mock.lockUpdateInboxItem.RUnlock()
@@ -3138,7 +3146,7 @@ type CoordinatorMock struct {
 	DiscardInboxItemFunc func(ctx context.Context, id string) error
 
 	// UpdateInboxItemFunc mocks the UpdateInboxItem method.
-	UpdateInboxItemFunc func(ctx context.Context, item *finance.InboxItem) (*finance.InboxItem, error)
+	UpdateInboxItemFunc func(ctx context.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error)
 
 	// ApproveInboxItemFunc mocks the ApproveInboxItem method.
 	ApproveInboxItemFunc func(ctx context.Context, id string) (*finance.InboxItem, error)
@@ -3372,6 +3380,7 @@ type CoordinatorMock struct {
 		UpdateInboxItem []struct {
 			Ctx  context.Context
 			Item *finance.InboxItem
+			Mask []string
 		}
 		ApproveInboxItem []struct {
 			Ctx context.Context
@@ -4935,7 +4944,7 @@ func (mock *CoordinatorMock) DiscardInboxItemCalls() []struct {
 }
 
 // UpdateInboxItem calls UpdateInboxItemFunc.
-func (mock *CoordinatorMock) UpdateInboxItem(ctx context.Context, item *finance.InboxItem) (*finance.InboxItem, error) {
+func (mock *CoordinatorMock) UpdateInboxItem(ctx context.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error) {
 	if mock.UpdateInboxItemFunc == nil {
 		panic("CoordinatorMock.UpdateInboxItemFunc: method is nil but Coordinator.UpdateInboxItem was just called")
 	}
@@ -4943,18 +4952,21 @@ func (mock *CoordinatorMock) UpdateInboxItem(ctx context.Context, item *finance.
 	mock.calls.UpdateInboxItem = append(mock.calls.UpdateInboxItem, struct {
 		Ctx  context.Context
 		Item *finance.InboxItem
+		Mask []string
 	}{
 		Ctx:  ctx,
 		Item: item,
+		Mask: mask,
 	})
 	mock.lockUpdateInboxItem.Unlock()
-	return mock.UpdateInboxItemFunc(ctx, item)
+	return mock.UpdateInboxItemFunc(ctx, item, mask)
 }
 
 // UpdateInboxItemCalls returns all calls made to UpdateInboxItem.
 func (mock *CoordinatorMock) UpdateInboxItemCalls() []struct {
 	Ctx  context.Context
 	Item *finance.InboxItem
+	Mask []string
 } {
 	mock.lockUpdateInboxItem.RLock()
 	defer mock.lockUpdateInboxItem.RUnlock()

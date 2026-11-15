@@ -180,15 +180,15 @@ func TestCoordinator_UpdateExchangeRate(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *UpdateExchangeRateRequest
-		mockFn        func(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate) (*finance.ExchangeRate, error)
+		mockFn        func(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate, mask []string) (*finance.ExchangeRate, error)
 		expectedID    string
 		expectedError bool
 	}{
 		{
 			name: "Success",
 			ctx:  newTestContext("spc_1", "usr_1"),
-			req:  &UpdateExchangeRateRequest{ID: "rate_1", Rate: 0.95},
-			mockFn: func(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate) (*finance.ExchangeRate, error) {
+			req:  &UpdateExchangeRateRequest{ID: "rate_1", Rate: 0.95, UpdateMask: []string{"rate"}},
+			mockFn: func(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate, mask []string) (*finance.ExchangeRate, error) {
 				if rCtx.SpaceID() != "spc_1" || id != "rate_1" || rate.Rate != 0.95 {
 					t.Errorf("unexpected update args: space=%v id=%v rate=%+v", rCtx.SpaceID(), id, rate)
 				}
@@ -207,7 +207,7 @@ func TestCoordinator_UpdateExchangeRate(t *testing.T) {
 			name: "Domain error",
 			ctx:  newTestContext("spc_1", "usr_1"),
 			req:  &UpdateExchangeRateRequest{ID: "rate_1"},
-			mockFn: func(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate) (*finance.ExchangeRate, error) {
+			mockFn: func(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate, mask []string) (*finance.ExchangeRate, error) {
 				return nil, errors.New("update rate failed")
 			},
 			expectedError: true,

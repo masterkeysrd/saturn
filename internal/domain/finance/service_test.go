@@ -2253,7 +2253,7 @@ func TestService_ApproveInboxItem(t *testing.T) {
 				t.Fatalf("StageInboxItem failed: %v", err)
 			}
 			staged.BudgetID = &bIDStr
-			_, _ = svc.UpdateInboxItem(ctx, rCtx, staged)
+			_, _ = svc.UpdateInboxItem(ctx, rCtx, staged, nil)
 
 			var existingTxnID TransactionID
 			if tt.linkExistingTxn {
@@ -2270,7 +2270,7 @@ func TestService_ApproveInboxItem(t *testing.T) {
 
 				txnIDStr := string(existingTxnID)
 				staged.TransactionID = &txnIDStr
-				_, _ = svc.UpdateInboxItem(ctx, rCtx, staged)
+				_, _ = svc.UpdateInboxItem(ctx, rCtx, staged, nil)
 			}
 
 			_, err = svc.ApproveInboxItem(ctx, rCtx, staged.ID)
@@ -2624,7 +2624,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 				t.Fatalf("StageInboxItem failed: %v", err)
 			}
 			staged.BudgetID = &bIDStr
-			_, _ = svc.UpdateInboxItem(ctx, rCtx, staged)
+			_, _ = svc.UpdateInboxItem(ctx, rCtx, staged, nil)
 
 			if tt.linkScheduledPayment {
 				pIDStr := string(preExistingPayID)
@@ -2633,7 +2633,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 					tIDStr := string(preExistingTxnID)
 					staged.TransactionID = &tIDStr
 				}
-				_, _ = svc.UpdateInboxItem(ctx, rCtx, staged)
+				_, _ = svc.UpdateInboxItem(ctx, rCtx, staged, nil)
 			}
 
 			switch tt.action {
@@ -6153,6 +6153,7 @@ func TestService_UpdateInboxItem(t *testing.T) {
 		name       string
 		spaceID    SpaceID
 		item       *InboxItem
+		mask       []string
 		setupStore func() *InboxItemStoreMock
 		wantErr    bool
 		checkItem  func(t *testing.T, res *InboxItem)
@@ -6252,6 +6253,48 @@ func TestService_UpdateInboxItem(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:    "partial update via field mask updates only masked fields",
+			spaceID: validSpace,
+			item: &InboxItem{
+				ID:         "ibx_1",
+				Amount:     4200,
+				VendorName: "Ignored Vendor",
+			},
+			mask: []string{"amount"},
+			setupStore: func() *InboxItemStoreMock {
+				return newInboxItemStoreMock(map[string]*InboxItem{
+					"ibx_1": {
+						ID:         "ibx_1",
+						Status:     InboxItemPending,
+						DocType:    InboxItemDocReceipt,
+						Amount:     1000,
+						Currency:   "USD",
+						VendorName: "Kept Vendor",
+					},
+				})
+			},
+			wantErr: false,
+			checkItem: func(t *testing.T, res *InboxItem) {
+				if res.Amount != 4200 || res.VendorName != "Kept Vendor" {
+					t.Errorf("expected amount=4200 and VendorName='Kept Vendor', got %+v", res)
+				}
+			},
+		},
+		{
+			name:    "unsupported field in update_mask fails",
+			spaceID: validSpace,
+			item: &InboxItem{
+				ID: "ibx_1",
+			},
+			mask: []string{"unknown_field"},
+			setupStore: func() *InboxItemStoreMock {
+				return newInboxItemStoreMock(map[string]*InboxItem{
+					"ibx_1": {ID: "ibx_1", Status: InboxItemPending},
+				})
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -6259,7 +6302,7 @@ func TestService_UpdateInboxItem(t *testing.T) {
 			store := tt.setupStore()
 			svc := newTestService(Dependencies{InboxItemStore: store})
 			rCtx := NewRequestContext(tt.spaceID, "usr_1", time.UTC, "USD")
-			res, err := svc.UpdateInboxItem(ctx, rCtx, tt.item)
+			res, err := svc.UpdateInboxItem(ctx, rCtx, tt.item, tt.mask)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UpdateInboxItem() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -7727,12 +7770,15 @@ func TestService_ExchangeRates(t *testing.T) {
 					})
 				}
 				svc := newTestService(Dependencies{ExchangeRateStore: store})
-				res, err := svc.UpdateExchangeRate(ctx, rCtx, tt.id, &ExchangeRate{Rate: tt.newRate})
+				res, err := svc.UpdateExchangeRate(ctx, rCtx, tt.id, &ExchangeRate{Rate: tt.newRate}, []string{"rate"})
 				if (err != nil) != tt.wantErr {
 					t.Errorf("UpdateExchangeRate() error = %v, wantErr %v", err, tt.wantErr)
 				}
 				if !tt.wantErr && res.Rate != tt.newRate {
 					t.Errorf("res.Rate = %f, want %f", res.Rate, tt.newRate)
+				}
+				if _, invalidMaskErr := svc.UpdateExchangeRate(ctx, rCtx, tt.id, &ExchangeRate{Rate: tt.newRate}, []string{"from_currency"}); invalidMaskErr == nil {
+					t.Errorf("expected error for unsupported update_mask field 'from_currency'")
 				}
 			})
 		}

@@ -20,8 +20,9 @@ type GetExchangeRateRequest struct {
 }
 
 type UpdateExchangeRateRequest struct {
-	ID   string
-	Rate float64
+	ID         string
+	Rate       float64
+	UpdateMask []string
 }
 
 type ListExchangeRatesRequest struct {
@@ -73,7 +74,7 @@ func (c *coordinator) UpdateExchangeRate(ctx context.Context, req *UpdateExchang
 		Rate: req.Rate,
 	}
 
-	return c.financeService.UpdateExchangeRate(ctx, rCtx, req.ID, rate)
+	return c.financeService.UpdateExchangeRate(ctx, rCtx, req.ID, rate, req.UpdateMask)
 }
 
 func (c *coordinator) ListExchangeRates(ctx context.Context, req *ListExchangeRatesRequest) ([]*finance.ExchangeRate, string, error) {

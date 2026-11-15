@@ -925,14 +925,14 @@ func (t *TransactionalCoordinator) DiscardInboxItem(ctx context.Context, id stri
 }
 
 // UpdateInboxItem executes next.UpdateInboxItem inside a database transaction.
-func (t *TransactionalCoordinator) UpdateInboxItem(ctx context.Context, item *finance.InboxItem) (*finance.InboxItem, error) {
+func (t *TransactionalCoordinator) UpdateInboxItem(ctx context.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error) {
 	ctx, tx, err := t.txr.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	res, err := t.next.UpdateInboxItem(ctx, item)
+	res, err := t.next.UpdateInboxItem(ctx, item, mask)
 	if err != nil {
 		return nil, err
 	}

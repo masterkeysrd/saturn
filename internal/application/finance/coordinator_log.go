@@ -1329,9 +1329,9 @@ func (l *LoggingCoordinator) DiscardInboxItem(ctx context.Context, id string) er
 }
 
 // UpdateInboxItem executes next.UpdateInboxItem and logs execution duration and errors.
-func (l *LoggingCoordinator) UpdateInboxItem(ctx context.Context, item *finance.InboxItem) (*finance.InboxItem, error) {
+func (l *LoggingCoordinator) UpdateInboxItem(ctx context.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error) {
 	start := time.Now()
-	res, err := l.next.UpdateInboxItem(ctx, item)
+	res, err := l.next.UpdateInboxItem(ctx, item, mask)
 	duration := time.Since(start)
 
 	if err != nil {

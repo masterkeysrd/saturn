@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/patch"
 )
 
 type InboxItemStatus string
@@ -322,4 +324,25 @@ func (i *InboxItem) GetSortValue(field string) string {
 		return fn(i)
 	}
 	return i.GetSortValue(DefaultInboxItemSortField)
+}
+
+// InboxItemPatchSchema defines all patchable draft fields for an InboxItem entity.
+var InboxItemPatchSchema = patch.NewSchema[InboxItem]().
+	Field("status", func(i *InboxItem) *InboxItemStatus { return &i.Status }).
+	Field("doc_type", func(i *InboxItem) *InboxItemDocType { return &i.DocType }).
+	Field("amount", func(i *InboxItem) *int64 { return &i.Amount }).
+	Field("currency", func(i *InboxItem) *string { return &i.Currency }).
+	Field("vendor_name", func(i *InboxItem) *string { return &i.VendorName }).
+	Field("transaction_date", func(i *InboxItem) *time.Time { return &i.TransactionDate }).
+	Field("account_id", func(i *InboxItem) **string { return &i.AccountID }).
+	Field("budget_id", func(i *InboxItem) **string { return &i.BudgetID }).
+	Field("scheduled_transaction_id", func(i *InboxItem) **string { return &i.ScheduledTransactionID }).
+	Field("transaction_id", func(i *InboxItem) **string { return &i.TransactionID }).
+	Field("borrowing_id", func(i *InboxItem) **string { return &i.BorrowingID }).
+	Field("borrowing_link_type", func(i *InboxItem) **BorrowingLinkType { return &i.BorrowingLinkType }).
+	Field("metadata", func(i *InboxItem) *map[string]any { return &i.Metadata })
+
+// ApplyPatch applies partial updates from an incoming inbox item based on the field mask.
+func (i *InboxItem) ApplyPatch(incoming *InboxItem, mask []string) error {
+	return InboxItemPatchSchema.Apply(i, incoming, mask)
 }

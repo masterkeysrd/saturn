@@ -450,7 +450,7 @@ func (s *Service) GetExchangeRateByID(ctx context.Context, rCtx Context, id stri
 }
 
 // UpdateExchangeRate corrects the multiplier on an existing exchange rate record.
-func (s *Service) UpdateExchangeRate(ctx context.Context, rCtx Context, id string, rate *ExchangeRate) (*ExchangeRate, error) {
+func (s *Service) UpdateExchangeRate(ctx context.Context, rCtx Context, id string, rate *ExchangeRate, mask []string) (*ExchangeRate, error) {
 	const op errors.Op = "domain/finance.UpdateExchangeRate"
 
 	if err := rCtx.SpaceID().Validate(); err != nil {
@@ -471,9 +471,15 @@ func (s *Service) UpdateExchangeRate(ctx context.Context, rCtx Context, id strin
 		return nil, err
 	}
 
-	existing.Rate = rate.Rate
-	if err := existing.Validate(); err != nil {
-		return nil, errors.E(op, errors.Invalid, err)
+	if len(mask) > 0 {
+		if err := existing.ApplyPatch(rate, mask); err != nil {
+			return nil, errors.E(op, errors.Invalid, err)
+		}
+	} else {
+		existing.Rate = rate.Rate
+		if err := existing.Validate(); err != nil {
+			return nil, errors.E(op, errors.Invalid, err)
+		}
 	}
 
 	if err := s.deps.ExchangeRateStore.Update(ctx, rCtx, existing); err != nil {
@@ -2296,7 +2302,7 @@ func (s *Service) ListInboxItems(ctx context.Context, rCtx Context, filter *List
 }
 
 // UpdateInboxItem updates a staging inbox item's draft properties.
-func (s *Service) UpdateInboxItem(ctx context.Context, rCtx Context, item *InboxItem) (*InboxItem, error) {
+func (s *Service) UpdateInboxItem(ctx context.Context, rCtx Context, item *InboxItem, mask []string) (*InboxItem, error) {
 	if err := rCtx.SpaceID().Validate(); err != nil {
 		return nil, err
 	}
@@ -2306,6 +2312,16 @@ func (s *Service) UpdateInboxItem(ctx context.Context, rCtx Context, item *Inbox
 	existing, err := s.deps.InboxItemStore.Get(ctx, rCtx, item.ID)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(mask) > 0 {
+		if err := existing.ApplyPatch(item, mask); err != nil {
+			return nil, errors.E(errors.Invalid, err)
+		}
+		if err := s.deps.InboxItemStore.Update(ctx, rCtx, existing); err != nil {
+			return nil, err
+		}
+		return existing, nil
 	}
 
 	if item.Status == "" {

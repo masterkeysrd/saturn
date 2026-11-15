@@ -7,12 +7,12 @@ import (
 )
 
 // UpdateInboxItem updates a staging inbox item's draft properties.
-func (c *coordinator) UpdateInboxItem(ctx context.Context, item *finance.InboxItem) (*finance.InboxItem, error) {
+func (c *coordinator) UpdateInboxItem(ctx context.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return c.financeService.UpdateInboxItem(ctx, rCtx, item)
+	return c.financeService.UpdateInboxItem(ctx, rCtx, item, mask)
 }
 
 // DiscardInboxItem deletes a staging inbox item without ledger modification.

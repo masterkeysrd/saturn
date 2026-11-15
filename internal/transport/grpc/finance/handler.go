@@ -498,8 +498,9 @@ func (h *Handler) UpdateExchangeRate(ctx context.Context, req *financev1.UpdateE
 	}
 
 	appReq := &financeapp.UpdateExchangeRateRequest{
-		ID:   req.GetId(),
-		Rate: exRate.GetRate(),
+		ID:         req.GetId(),
+		Rate:       exRate.GetRate(),
+		UpdateMask: req.GetUpdateMask().GetPaths(),
 	}
 
 	rate, err := h.Coordinator.UpdateExchangeRate(ctx, appReq)
@@ -1824,7 +1825,7 @@ func (h *Handler) UpdateInboxItem(ctx context.Context, req *financev1.UpdateInbo
 	domainItem := toDomainInboxItem(req.GetInboxItem())
 	domainItem.ID = req.GetId()
 
-	res, err := h.Coordinator.UpdateInboxItem(ctx, domainItem)
+	res, err := h.Coordinator.UpdateInboxItem(ctx, domainItem, req.GetUpdateMask().GetPaths())
 	if err != nil {
 		return nil, err
 	}

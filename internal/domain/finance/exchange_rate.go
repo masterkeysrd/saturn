@@ -6,6 +6,8 @@ import (
 	"math"
 	"strings"
 	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/patch"
 )
 
 // ExchangeRate represents a daily rate record.
@@ -103,4 +105,16 @@ func ConvertAmount(amount int64, rate float64) int64 {
 		return amount
 	}
 	return int64(math.Round(float64(amount) * rate))
+}
+
+// ExchangeRatePatchSchema defines patchable fields for an ExchangeRate entity.
+var ExchangeRatePatchSchema = patch.NewSchema[ExchangeRate]().
+	Field("rate", func(r *ExchangeRate) *float64 { return &r.Rate })
+
+// ApplyPatch applies partial updates from an incoming exchange rate based on the field mask.
+func (r *ExchangeRate) ApplyPatch(incoming *ExchangeRate, mask []string) error {
+	if err := ExchangeRatePatchSchema.Apply(r, incoming, mask); err != nil {
+		return err
+	}
+	return r.Validate()
 }

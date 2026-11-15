@@ -37,7 +37,7 @@ type FinanceService interface {
 	UpdatePeriodLimit(ctx context.Context, rCtx finance.Context, id finance.PeriodID, limit int64) error
 	CreateExchangeRate(ctx context.Context, rCtx finance.Context, rate *finance.ExchangeRate) (*finance.ExchangeRate, error)
 	GetExchangeRateByID(ctx context.Context, rCtx finance.Context, id string) (*finance.ExchangeRate, error)
-	UpdateExchangeRate(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate) (*finance.ExchangeRate, error)
+	UpdateExchangeRate(ctx context.Context, rCtx finance.Context, id string, rate *finance.ExchangeRate, mask []string) (*finance.ExchangeRate, error)
 	ListExchangeRates(ctx context.Context, rCtx finance.Context, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error)
 	DeleteExchangeRateByID(ctx context.Context, rCtx finance.Context, id string) error
 	CreateExpense(ctx context.Context, rCtx finance.Context, txn *finance.Transaction) (*finance.Transaction, error)
@@ -87,7 +87,7 @@ type FinanceService interface {
 	ListTransfers(ctx context.Context, rCtx finance.Context, limit int32, pageToken string) ([]*finance.Transfer, string, error)
 
 	StageInboxItem(ctx context.Context, rCtx finance.Context, req *finance.StageInboxItem) (*finance.InboxItem, error)
-	UpdateInboxItem(ctx context.Context, rCtx finance.Context, item *finance.InboxItem) (*finance.InboxItem, error)
+	UpdateInboxItem(ctx context.Context, rCtx finance.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error)
 	DiscardInboxItem(ctx context.Context, rCtx finance.Context, id string) error
 	ApproveInboxItem(ctx context.Context, rCtx finance.Context, id string) (*finance.InboxItem, error)
 
@@ -229,7 +229,7 @@ type Coordinator interface {
 	// @transactional
 	DiscardInboxItem(ctx context.Context, id string) error
 	// @transactional
-	UpdateInboxItem(ctx context.Context, item *finance.InboxItem) (*finance.InboxItem, error)
+	UpdateInboxItem(ctx context.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error)
 	// @transactional
 	ApproveInboxItem(ctx context.Context, id string) (*finance.InboxItem, error)
 }
@@ -301,7 +301,7 @@ func (r *RequestContext) SpaceSettings() *space.Settings {
 		}
 		session := space.Session{
 			SpaceID: space.SpaceID(r.spaceID),
-			UserID:  space.SpaceID(r.userID),
+			UserID:  space.UserID(r.userID),
 		}
 		entry, err := r.coord.spaceService.GetSettings(r.ctx, session)
 		if err != nil || entry == nil || entry.Value.Timezone == "" {
