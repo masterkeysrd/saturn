@@ -362,7 +362,7 @@ export default function ComposeMailModal() {
 
       // 1. Save draft
       const draftPayload: SaveDraftVariables = {
-        connectedAccountId: selectedAccountId || accounts[0]?.id || "",
+        connectedAccountId: selectedAccountId,
         threadId: params.threadId,
         replyToMessageId: params.replyToMessageId,
         to: toRecipients.map((r) => ({
