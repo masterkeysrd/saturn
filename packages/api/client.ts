@@ -45,6 +45,118 @@ export function getClientConfig(): ClientConfig {
   return clientConfig
 }
 
+export interface FieldViolation {
+  field: string
+  description: string
+}
+
+export class SaturnApiError extends Error {
+  readonly status: number
+  readonly code?: number | string
+  readonly reason?: string
+  readonly metadata?: Record<string, string>
+  readonly fieldViolations?: FieldViolation[]
+  readonly details?: unknown[]
+
+  constructor(opts: {
+    message: string
+    status: number
+    code?: number | string
+    reason?: string
+    metadata?: Record<string, string>
+    fieldViolations?: FieldViolation[]
+    details?: unknown[]
+  }) {
+    super(opts.message)
+    this.name = "SaturnApiError"
+    this.status = opts.status
+    this.code = opts.code
+    this.reason = opts.reason
+    this.metadata = opts.metadata
+    this.fieldViolations = opts.fieldViolations
+    this.details = opts.details
+    Object.setPrototypeOf(this, SaturnApiError.prototype)
+  }
+}
+
+async function buildApiError(response: Response): Promise<SaturnApiError> {
+  const raw = (await response.json().catch(() => ({}))) as Record<
+    string,
+    unknown
+  >
+  const payload =
+    raw && typeof raw.error === "object" && raw.error !== null
+      ? (raw.error as Record<string, unknown>)
+      : raw
+
+  const message =
+    typeof payload?.message === "string" && payload.message
+      ? payload.message
+      : `Request failed with status ${response.status}`
+
+  const code =
+    typeof payload?.code === "number" || typeof payload?.code === "string"
+      ? payload.code
+      : undefined
+
+  const details = Array.isArray(payload?.details)
+    ? (payload.details as unknown[])
+    : undefined
+
+  let reason: string | undefined
+  let metadata: Record<string, string> | undefined
+  let fieldViolations: FieldViolation[] | undefined
+
+  if (details) {
+    for (const item of details) {
+      if (!item || typeof item !== "object") continue
+      const detail = item as Record<string, unknown>
+      const typeUrl = typeof detail["@type"] === "string" ? detail["@type"] : ""
+
+      if (
+        typeUrl.includes("ErrorInfo") ||
+        (typeof detail.reason === "string" && typeof detail.domain === "string")
+      ) {
+        if (typeof detail.reason === "string" && detail.reason) {
+          reason = detail.reason
+        }
+        if (
+          detail.metadata &&
+          typeof detail.metadata === "object" &&
+          !Array.isArray(detail.metadata)
+        ) {
+          metadata = detail.metadata as Record<string, string>
+        }
+      }
+
+      if (
+        typeUrl.includes("BadRequest") ||
+        Array.isArray(detail.fieldViolations)
+      ) {
+        if (Array.isArray(detail.fieldViolations)) {
+          fieldViolations = detail.fieldViolations.filter(
+            (fv): fv is FieldViolation =>
+              Boolean(fv) &&
+              typeof fv === "object" &&
+              typeof (fv as FieldViolation).field === "string" &&
+              typeof (fv as FieldViolation).description === "string"
+          )
+        }
+      }
+    }
+  }
+
+  return new SaturnApiError({
+    message,
+    status: response.status,
+    code,
+    reason,
+    metadata,
+    fieldViolations,
+    details,
+  })
+}
+
 let refreshPromise: Promise<string> | null = null
 
 async function performRefresh(): Promise<string> {
@@ -73,7 +185,7 @@ async function performRefresh(): Promise<string> {
   })
 
   if (!response.ok) {
-    throw new Error("Refresh request failed")
+    throw await buildApiError(response)
   }
 
   const data = await response.json()
@@ -88,6 +200,15 @@ async function performRefresh(): Promise<string> {
   clientConfig.onRefreshed?.(data.accessToken)
 
   return data.accessToken
+}
+
+export function refreshSession(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = performRefresh().finally(() => {
+      refreshPromise = null
+    })
+  }
+  return refreshPromise
 }
 
 export async function request<TResponse, TData = unknown, TParams = unknown>({
@@ -151,60 +272,67 @@ export async function request<TResponse, TData = unknown, TParams = unknown>({
   })
 
   if (!response.ok) {
-    if (response.status === 401) {
-      const isAuthEndpoint =
-        url.includes("/identity/users:login") ||
-        url.includes("/identity/users:register") ||
-        url.includes("/identity/sessions:refresh")
-      if (!isAuthEndpoint) {
+    const apiError = await buildApiError(response)
+
+    const isAuthEndpoint =
+      url.includes("/identity/users:login") ||
+      url.includes("/identity/users:register") ||
+      url.includes("/identity/sessions:refresh") ||
+      url.includes("/identity/users:change-password") ||
+      url.includes("/identity/users/me:change-email") ||
+      url.includes("/identity/users/me:delete")
+
+    const isCredentialFailure =
+      apiError.reason === "INVALID_CREDENTIALS" ||
+      apiError.reason === "MFA_INVALID_CODE"
+
+    if (response.status === 401 && !isAuthEndpoint && !isCredentialFailure) {
+      let newAccessToken: string
+      try {
+        newAccessToken = await refreshSession()
+      } catch (refreshErr) {
+        clientConfig.onUnauthorized?.()
+        throw refreshErr
+      }
+
+      const retryResponse = await fetch(fullUrl, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${newAccessToken}`,
+          ...(spaceId && { "Space-Id": spaceId }),
+        },
+        ...(data && { body: JSON.stringify(data) }),
+        credentials: "same-origin",
+      })
+
+      if (retryResponse.ok) {
+        if (retryResponse.status === 204) {
+          return {} as TResponse
+        }
+        const text = await retryResponse.text()
+        if (!text) {
+          return {} as TResponse
+        }
         try {
-          if (!refreshPromise) {
-            refreshPromise = performRefresh().finally(() => {
-              refreshPromise = null
-            })
-          }
-          const newAccessToken = await refreshPromise
-
-          const retryResponse = await fetch(fullUrl, {
-            method,
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${newAccessToken}`,
-              ...(spaceId && { "Space-Id": spaceId }),
-            },
-            ...(data && { body: JSON.stringify(data) }),
-            credentials: "same-origin",
-          })
-
-          if (retryResponse.ok) {
-            if (retryResponse.status === 204) {
-              return {} as TResponse
-            }
-            const text = await retryResponse.text()
-            if (!text) {
-              return {} as TResponse
-            }
-            return JSON.parse(text) as TResponse
-          }
-
-          if (retryResponse.status === 401) {
-            clientConfig.onUnauthorized?.()
-          }
-          const errorData = await retryResponse.json().catch(() => ({}))
-          throw new Error(
-            errorData.message ||
-              `Request failed with status ${retryResponse.status}`
-          )
-        } catch (refreshErr) {
-          clientConfig.onUnauthorized?.()
-          throw refreshErr
+          return JSON.parse(text) as TResponse
+        } catch {
+          return text as unknown as TResponse
         }
       }
+
+      const retryError = await buildApiError(retryResponse)
+      if (
+        retryResponse.status === 401 &&
+        retryError.reason !== "INVALID_CREDENTIALS" &&
+        retryError.reason !== "MFA_INVALID_CODE"
+      ) {
+        clientConfig.onUnauthorized?.()
+      }
+      throw retryError
     }
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(
-      errorData.message || `Request failed with status ${response.status}`
-    )
+
+    throw apiError
   }
 
   // gRPC Gateway/REST 204 No Content or empty responses
