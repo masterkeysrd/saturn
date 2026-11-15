@@ -85,6 +85,7 @@ func (c *coordinator) SyncConnectedAccountMail(ctx context.Context, req *SyncCon
 	}
 
 	// 5. Sync threads (bootstrap or incremental delta)
+	isDeltaSync := syncState.SyncCursor != nil
 	cursorStr := ""
 	if syncState.SyncCursor != nil {
 		cursorStr = *syncState.SyncCursor
@@ -103,6 +104,7 @@ func (c *coordinator) SyncConnectedAccountMail(ctx context.Context, req *SyncCon
 
 	// If historyId was expired on provider (404), reset cursor and re-bootstrap rolling window
 	if result.ExpiredCursor {
+		isDeltaSync = false
 		syncState.SyncCursor = nil
 		syncReq.SyncCursor = ""
 		result, err = prov.SyncThreads(ctx, token, syncReq)
@@ -130,6 +132,7 @@ func (c *coordinator) SyncConnectedAccountMail(ctx context.Context, req *SyncCon
 	}
 
 	messageIDMap := make(map[string]string)
+	newlyInsertedMessages := make([]*domainmail.Message, 0)
 	for _, msg := range result.Messages {
 		origMsgID := msg.ID
 		msg.SpaceID = spaceID
@@ -137,18 +140,24 @@ func (c *coordinator) SyncConnectedAccountMail(ctx context.Context, req *SyncCon
 		if actualThreadID, ok := threadIDMap[msg.ThreadID]; ok {
 			msg.ThreadID = actualThreadID
 		}
+		var isExisting bool
 		if msg.ProviderMessageID != nil && *msg.ProviderMessageID != "" {
 			existing, err := c.messageStore.GetByProviderID(ctx, spaceID, req.ConnectedAccountID, *msg.ProviderMessageID)
 			if err == nil && existing != nil {
 				msg.ID = existing.ID
+				isExisting = true
 			}
 		}
 		messageIDMap[origMsgID] = msg.ID
 		if err := c.messageStore.Upsert(ctx, msg); err != nil {
 			return errors.E(op, err)
 		}
+		if isDeltaSync && !isExisting && !msg.IsDraft {
+			newlyInsertedMessages = append(newlyInsertedMessages, msg)
+		}
 	}
 
+	bodiesByMsgID := make(map[string]*domainmail.MessageBody, len(result.Bodies))
 	for _, body := range result.Bodies {
 		body.SpaceID = spaceID
 		if actualMsgID, ok := messageIDMap[body.MessageID]; ok {
@@ -156,6 +165,28 @@ func (c *coordinator) SyncConnectedAccountMail(ctx context.Context, req *SyncCon
 		}
 		if err := c.messageStore.SaveBody(ctx, body); err != nil {
 			return errors.E(op, err)
+		}
+		bodiesByMsgID[body.MessageID] = body
+	}
+
+	if isDeltaSync && len(newlyInsertedMessages) > 0 {
+		eventCtx := ctx
+		if _, ok := auth.SpaceIDFromContext(eventCtx); !ok {
+			eventCtx = auth.WithSpaceID(eventCtx, spaceID)
+		}
+		for _, msg := range newlyInsertedMessages {
+			var bodyPlain, bodyHTML string
+			if body, ok := bodiesByMsgID[msg.ID]; ok && body != nil {
+				bodyPlain = body.PlainText
+				bodyHTML = body.SanitizedHTML
+			}
+			if err := c.events.Publish(eventCtx, domainmail.TopicMessageReceived, &domainmail.MessageReceivedEvent{
+				Message:   msg,
+				BodyPlain: bodyPlain,
+				BodyHTML:  bodyHTML,
+			}); err != nil {
+				return errors.E(op, err)
+			}
 		}
 	}
 

@@ -16,6 +16,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/connector"
 	"github.com/masterkeysrd/saturn/internal/platform/crypto"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -448,6 +449,7 @@ func newTestCoordinator(t *testing.T) (appmail.Coordinator, *mockMailboxStore, *
 		ExternalProviders: map[string]domainmail.ExternalMailProvider{
 			"google": extProv,
 		},
+		Events:     eventbus.NoopPublisher{},
 		HMACSecret: []byte("test-super-secret-hmac-key-32bytes"),
 	})
 
@@ -969,6 +971,7 @@ func TestCoordinator_SyncOlderThreads(t *testing.T) {
 				ExternalProviders: map[string]domainmail.ExternalMailProvider{
 					"google": extProv,
 				},
+				Events:     eventbus.NoopPublisher{},
 				HMACSecret: []byte("test-super-secret-hmac-key-32bytes"),
 			})
 

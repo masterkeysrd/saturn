@@ -15,6 +15,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/connector"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 )
 
 // Coordinator defines application use-case operations for mailboxes, threads, drafts, and sync.
@@ -169,6 +170,7 @@ type Dependencies struct {
 	AccountStore      connector.Store
 	TokenManager      *connector.TokenManager
 	ExternalProviders map[string]domainmail.ExternalMailProvider
+	Events            eventbus.EventPublisher
 	HMACSecret        []byte
 }
 
@@ -182,6 +184,7 @@ type coordinator struct {
 	accountStore      connector.Store
 	tokenManager      *connector.TokenManager
 	externalProviders map[string]domainmail.ExternalMailProvider
+	events            eventbus.EventPublisher
 	hmacSecret        []byte
 }
 
@@ -197,6 +200,7 @@ func NewCoordinator(deps Dependencies) Coordinator {
 		accountStore:      deps.AccountStore,
 		tokenManager:      deps.TokenManager,
 		externalProviders: deps.ExternalProviders,
+		events:            deps.Events,
 		hmacSecret:        deps.HMACSecret,
 	}
 }
