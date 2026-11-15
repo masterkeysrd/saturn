@@ -11,6 +11,7 @@ WORKDIR /app
 # Cache node dependencies across workspace
 COPY package*.json turbo.json ./
 COPY apps/web/package*.json ./apps/web/
+COPY apps/mobile/package*.json ./apps/mobile/
 COPY packages/schemas/package*.json ./packages/schemas/
 COPY packages/core/package*.json ./packages/core/
 COPY packages/hooks/package*.json ./packages/hooks/
