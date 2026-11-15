@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "saturn/calendar/v1/calendar.proto",
+    "title": "saturn/platform/message/v1/options.proto",
     "version": "version not set"
   },
   "tags": [
@@ -38,16 +38,16 @@
       "description": "ConnectorService manages external connected account integrations (e.g., Google, Microsoft 365),\nOAuth2 PKCE initiation, capability management, contact suggestions, and synchronization."
     },
     {
-      "name": "IntegrationService",
-      "description": "IntegrationService handles configuring, getting, and managing active integrations and their tokens."
-    },
-    {
       "name": "MessageAdmin",
       "description": "MessageAdmin service provides administrative endpoints for monitoring event bus message queues."
     },
     {
       "name": "SchedulerAdmin",
       "description": "SchedulerAdmin provides endpoints for operations monitoring,\nscheduling manual runs, and retrying or killing queued jobs."
+    },
+    {
+      "name": "WorkflowService",
+      "description": "WorkflowService manages workflow definitions, triggers, system flows, execution,\nwebhook invocation, dry-run testing, AI flow generation, and run observability."
     },
     {
       "name": "Spaces",
@@ -2694,7 +2694,7 @@
           },
           {
             "name": "docType",
-            "description": "Optional. Document category classification filter.\n\n - INVOICE: Invoice document.\n - RECEIPT: Receipt document.\n - BANK_NOTIFICATION: Bank notification document.\n - UNKNOWN: Unknown document type.\n - SYSTEM_VERIFICATION: System verification document.",
+            "description": "Optional. Document category classification filter.\n\n - INVOICE: Invoice document.\n - RECEIPT: Receipt document.\n - BANK_NOTIFICATION: Bank notification document.\n - UNKNOWN: Unknown document type.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -2702,8 +2702,7 @@
               "INVOICE",
               "RECEIPT",
               "BANK_NOTIFICATION",
-              "UNKNOWN",
-              "SYSTEM_VERIFICATION"
+              "UNKNOWN"
             ]
           },
           {
@@ -4030,74 +4029,6 @@
             "in": "path",
             "required": true,
             "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/finance/statements:analyze-document": {
-      "post": {
-        "summary": "Analyzes a statement document without persisting drafts (preview/dry-run mode).",
-        "operationId": "Finance_AnalyzeStatementDocument",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1AnalyzeStatementDocumentResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googleRpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "description": "The request for\n[AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument].",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1AnalyzeStatementDocumentRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/finance/statements:ingest-document": {
-      "post": {
-        "summary": "Ingests an unstructured statement document (PDF, image, or text),\nparses multi-currency sections, validates math, and persists draft statements.",
-        "operationId": "Finance_IngestStatementDocument",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1IngestStatementDocumentResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googleRpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "description": "The request for\n[IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument].",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1IngestStatementDocumentRequest"
-            }
           }
         ],
         "tags": [
@@ -6372,40 +6303,6 @@
         ]
       }
     },
-    "/v1/platform/agent/suggestions": {
-      "post": {
-        "summary": "Analyzes signal content against a target agent purpose blueprint and returns structured suggestions.",
-        "operationId": "AgentService_GetSuggestions",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetSuggestionsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googleRpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "description": "Request message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1GetSuggestionsRequest"
-            }
-          }
-        ],
-        "tags": [
-          "AgentService"
-        ]
-      }
-    },
     "/v1/platform/connectors/accounts": {
       "get": {
         "summary": "Lists all connected accounts for the current workspace.",
@@ -6677,36 +6574,15 @@
         ]
       }
     },
-    "/v1/platform/integrations": {
+    "/v1/platform/workflows": {
       "get": {
-        "summary": "Lists all configured integrations for the active workspace.",
-        "operationId": "IntegrationService_ListIntegrations",
+        "summary": "Lists all flows in the workspace, lazily seeding registered system flows.",
+        "operationId": "WorkflowService_ListFlows",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ListIntegrationsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googleRpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "IntegrationService"
-        ]
-      },
-      "post": {
-        "summary": "Registers or updates an integration configuration for a workspace.",
-        "operationId": "IntegrationService_ConfigureIntegration",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Integration"
+              "$ref": "#/definitions/v1ListFlowsResponse"
             }
           },
           "default": {
@@ -6718,29 +6594,66 @@
         },
         "parameters": [
           {
-            "name": "body",
-            "description": "Request message for IntegrationService.ConfigureIntegration.",
+            "name": "isSystem",
+            "description": "Optional. Filter by built-in system flow status.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "isEnabled",
+            "description": "Optional. Filter by enabled status.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      },
+      "post": {
+        "summary": "Creates a new user-defined workflow with its trigger bindings and steps.",
+        "operationId": "WorkflowService_CreateFlow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Flow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "flow",
+            "description": "Required. Workflow definition to create.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1ConfigureIntegrationRequest"
+              "$ref": "#/definitions/v1Flow"
             }
           }
         ],
         "tags": [
-          "IntegrationService"
+          "WorkflowService"
         ]
       }
     },
-    "/v1/platform/integrations/catalog": {
+    "/v1/platform/workflows/catalog": {
       "get": {
-        "summary": "Lists all available integration descriptors from the catalog.",
-        "operationId": "IntegrationService_ListCatalog",
+        "summary": "Retrieves the catalog of registered trigger topics, steps, data loaders, and CEL helpers.",
+        "operationId": "WorkflowService_GetCatalog",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ListCatalogResponse"
+              "$ref": "#/definitions/v1Catalog"
             }
           },
           "default": {
@@ -6751,19 +6664,19 @@
           }
         },
         "tags": [
-          "IntegrationService"
+          "WorkflowService"
         ]
       }
     },
-    "/v1/platform/integrations/{provider}": {
+    "/v1/platform/workflows/runs": {
       "get": {
-        "summary": "Retrieves the configuration details for a specific integration provider.",
-        "operationId": "IntegrationService_GetIntegration",
+        "summary": "Lists workflow execution runs in the workspace with optional filters and pagination.",
+        "operationId": "WorkflowService_ListFlowRuns",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1Integration"
+              "$ref": "#/definitions/v1ListFlowRunsResponse"
             }
           },
           "default": {
@@ -6775,34 +6688,49 @@
         },
         "parameters": [
           {
-            "name": "provider",
-            "description": "Required. The provider identifier to retrieve.",
-            "in": "path",
-            "required": true,
+            "name": "flowId",
+            "description": "Optional. Filter runs by flow ID.",
+            "in": "query",
+            "required": false,
             "type": "string"
           },
           {
-            "name": "kind",
-            "description": "Optional. The integration kind or category.",
+            "name": "status",
+            "description": "Optional. Filter runs by terminal or active status.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "description": "Optional. Maximum number of runs to return per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "description": "Optional. Cursor token from a previous ListFlowRunsResponse.",
             "in": "query",
             "required": false,
             "type": "string"
           }
         ],
         "tags": [
-          "IntegrationService"
+          "WorkflowService"
         ]
       }
     },
-    "/v1/platform/integrations/{provider}/tokens": {
+    "/v1/platform/workflows/runs/{id}": {
       "get": {
-        "summary": "Lists all active authentication tokens for an integration.",
-        "operationId": "IntegrationService_ListIntegrationTokens",
+        "summary": "Retrieves a single workflow execution run hydrated with its step run timeline.",
+        "operationId": "WorkflowService_GetFlowRun",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ListIntegrationTokensResponse"
+              "$ref": "#/definitions/v1FlowRun"
             }
           },
           "default": {
@@ -6814,32 +6742,27 @@
         },
         "parameters": [
           {
-            "name": "provider",
-            "description": "Required. The provider identifier whose tokens are to be listed.",
+            "name": "id",
+            "description": "Required. Flow run ID (`wfr_...`).",
             "in": "path",
             "required": true,
-            "type": "string"
-          },
-          {
-            "name": "kind",
-            "description": "Optional. The integration kind or category.",
-            "in": "query",
-            "required": false,
             "type": "string"
           }
         ],
         "tags": [
-          "IntegrationService"
+          "WorkflowService"
         ]
-      },
+      }
+    },
+    "/v1/platform/workflows/triggers/{triggerId}:webhook": {
       "post": {
-        "summary": "Generates a new named authentication token for an integration.",
-        "operationId": "IntegrationService_CreateIntegrationToken",
+        "summary": "Invokes a webhook trigger with an arbitrary JSON payload and enqueues an async FlowRun.",
+        "operationId": "WorkflowService_InvokeWebhookTrigger",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1CreateIntegrationTokenResponse"
+              "$ref": "#/definitions/v1FlowRun"
             }
           },
           "default": {
@@ -6851,30 +6774,61 @@
         },
         "parameters": [
           {
-            "name": "provider",
-            "description": "Required. The provider identifier to create a token for.",
+            "name": "triggerId",
+            "description": "Required. Webhook trigger ID (`trg_...`).",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
-            "name": "body",
+            "name": "payload",
+            "description": "Required. Arbitrary JSON payload sent to the webhook endpoint.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/IntegrationServiceCreateIntegrationTokenBody"
+              "type": "object"
             }
           }
         ],
         "tags": [
-          "IntegrationService"
+          "WorkflowService"
         ]
       }
     },
-    "/v1/platform/integrations/{provider}/tokens/{id}": {
+    "/v1/platform/workflows/{id}": {
+      "get": {
+        "summary": "Retrieves a single flow by ID or system key.",
+        "operationId": "WorkflowService_GetFlow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Flow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Flow ID (`flw_...`) or built-in system key (`system.*`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      },
       "delete": {
-        "summary": "Revokes and deletes a specific authentication token by ID.",
-        "operationId": "IntegrationService_DeleteIntegrationToken",
+        "summary": "Deletes a user-defined flow. System flows cannot be deleted.",
+        "operationId": "WorkflowService_DeleteFlow",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -6892,41 +6846,66 @@
         },
         "parameters": [
           {
-            "name": "provider",
-            "description": "Required. The provider identifier owning the token.",
+            "name": "id",
+            "description": "Required. Flow ID (`flw_...`) to delete.",
             "in": "path",
             "required": true,
             "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      },
+      "patch": {
+        "summary": "Updates an existing flow definition using a field mask.",
+        "operationId": "WorkflowService_UpdateFlow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Flow"
+            }
           },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
           {
             "name": "id",
-            "description": "Required. The unique identifier of the token to delete.",
+            "description": "Required. Flow ID (`flw_...`) or built-in system key to update.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
-            "name": "kind",
-            "description": "Optional. The integration kind or category.",
-            "in": "query",
-            "required": false,
-            "type": "string"
+            "name": "flow",
+            "description": "Required. Updated flow definition.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Flow"
+            }
           }
         ],
         "tags": [
-          "IntegrationService"
+          "WorkflowService"
         ]
       }
     },
-    "/v1/platform/integrations/{provider}:rotate-token": {
+    "/v1/platform/workflows/{id}:disable": {
       "post": {
-        "summary": "Rotates the hashed token for an integration.",
-        "operationId": "IntegrationService_RotateIntegrationToken",
+        "summary": "Disables a flow so its triggers do not dispatch new runs.",
+        "operationId": "WorkflowService_DisableFlow",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1RotateIntegrationTokenResponse"
+              "$ref": "#/definitions/v1Flow"
             }
           },
           "default": {
@@ -6938,8 +6917,8 @@
         },
         "parameters": [
           {
-            "name": "provider",
-            "description": "Required. The provider identifier whose token is to be rotated.",
+            "name": "id",
+            "description": "Required. Flow ID (`flw_...`) or built-in system key to disable.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -6949,24 +6928,24 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/IntegrationServiceRotateIntegrationTokenBody"
+              "$ref": "#/definitions/WorkflowServiceDisableFlowBody"
             }
           }
         ],
         "tags": [
-          "IntegrationService"
+          "WorkflowService"
         ]
       }
     },
-    "/v1/platform/integrations/{provider}:simulate": {
+    "/v1/platform/workflows/{id}:enable": {
       "post": {
-        "summary": "Runs a developer simulation parsing a mock webhook payload.",
-        "operationId": "IntegrationService_SimulateWebhook",
+        "summary": "Enables a flow so its triggers become active.",
+        "operationId": "WorkflowService_EnableFlow",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1SimulateWebhookResponse"
+              "$ref": "#/definitions/v1Flow"
             }
           },
           "default": {
@@ -6978,8 +6957,8 @@
         },
         "parameters": [
           {
-            "name": "provider",
-            "description": "Required. The provider identifier to simulate.",
+            "name": "id",
+            "description": "Required. Flow ID (`flw_...`) or built-in system key to enable.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -6989,12 +6968,160 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/IntegrationServiceSimulateWebhookBody"
+              "$ref": "#/definitions/WorkflowServiceEnableFlowBody"
             }
           }
         ],
         "tags": [
-          "IntegrationService"
+          "WorkflowService"
+        ]
+      }
+    },
+    "/v1/platform/workflows/{id}:execute": {
+      "post": {
+        "summary": "Executes a flow by ID or system key, synchronously by default or asynchronously.",
+        "operationId": "WorkflowService_ExecuteFlow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1FlowRun"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Flow ID (`flw_...`) or built-in system key (`system.*`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceExecuteFlowBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/v1/platform/workflows/{id}:reset": {
+      "post": {
+        "summary": "Resets a built-in system flow back to its factory blueprint defaults.",
+        "operationId": "WorkflowService_ResetFlow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Flow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Flow ID (`flw_...`) or built-in system key to reset to factory defaults.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceResetFlowBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/v1/platform/workflows:generate": {
+      "post": {
+        "summary": "Generates a validated unsaved flow draft from a natural-language prompt.",
+        "operationId": "WorkflowService_GenerateFlow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Flow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Request message for WorkflowService.GenerateFlow.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GenerateFlowRequest"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/v1/platform/workflows:test": {
+      "post": {
+        "summary": "Tests a saved or unsaved flow definition in-memory without persisting throwaway run rows.",
+        "operationId": "WorkflowService_TestFlow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1FlowRun"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Request message for WorkflowService.TestFlow.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1TestFlowRequest"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
         ]
       }
     },
@@ -7768,6 +7895,140 @@
         "response"
       ]
     },
+    "CatalogCelHelper": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Output only. Helper function name (e.g. toCents, localTime).",
+          "readOnly": true
+        },
+        "signature": {
+          "type": "string",
+          "description": "Output only. Function signature.",
+          "readOnly": true
+        },
+        "description": {
+          "type": "string",
+          "description": "Output only. Description of helper behavior.",
+          "readOnly": true
+        },
+        "example": {
+          "type": "string",
+          "description": "Output only. Example CEL expression using the helper.",
+          "readOnly": true
+        }
+      },
+      "description": "CelHelper documents a Saturn CEL helper function available in expressions."
+    },
+    "CatalogLoader": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Output only. Registered loader name (e.g. finance.accounts, mail.message).",
+          "readOnly": true
+        },
+        "owner": {
+          "type": "string",
+          "description": "Output only. Owning domain (e.g. finance, calendar, mail).",
+          "readOnly": true
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Output only. Human-readable loader title.",
+          "readOnly": true
+        },
+        "description": {
+          "type": "string",
+          "description": "Output only. Description of the data returned by this loader.",
+          "readOnly": true
+        },
+        "paramsSchema": {
+          "type": "object",
+          "description": "Output only. JSON Schema describing accepted `params`.",
+          "readOnly": true
+        },
+        "outputSchema": {
+          "type": "object",
+          "description": "Output only. JSON Schema describing the data bound to `sources.\u003calias\u003e`.",
+          "readOnly": true
+        }
+      },
+      "description": "Loader describes a registered read-only data loader available in `sources`."
+    },
+    "CatalogStep": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Output only. Registered step type identifier (e.g. llm.generate, finance.create_inbox_item).",
+          "readOnly": true
+        },
+        "owner": {
+          "type": "string",
+          "description": "Output only. Owning package or domain (e.g. platform, finance, calendar, mail).",
+          "readOnly": true
+        },
+        "category": {
+          "type": "string",
+          "description": "Output only. Step category ('control', 'ai', 'document', 'action').",
+          "readOnly": true
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Output only. Human-readable step name.",
+          "readOnly": true
+        },
+        "description": {
+          "type": "string",
+          "description": "Output only. Description of what the step does.",
+          "readOnly": true
+        },
+        "inputsSchema": {
+          "type": "object",
+          "description": "Output only. JSON Schema describing step `inputs`.",
+          "readOnly": true
+        },
+        "outputSchema": {
+          "type": "object",
+          "description": "Output only. JSON Schema describing the step output bound to `steps.\u003cid\u003e`.",
+          "readOnly": true
+        }
+      },
+      "description": "Step describes a registered workflow step type."
+    },
+    "CatalogTriggerTopic": {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "description": "Output only. Eventbus topic key (e.g. mail.message.received).",
+          "readOnly": true
+        },
+        "domain": {
+          "type": "string",
+          "description": "Output only. Owning domain name (e.g. mail, finance, calendar).",
+          "readOnly": true
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Output only. Human-readable title for the trigger topic.",
+          "readOnly": true
+        },
+        "description": {
+          "type": "string",
+          "description": "Output only. Description of when the event is emitted.",
+          "readOnly": true
+        },
+        "payloadSchema": {
+          "type": "object",
+          "description": "Output only. JSON Schema describing `trigger.data` fields.",
+          "readOnly": true
+        }
+      },
+      "description": "TriggerTopic describes a domain event topic available for `event` triggers."
+    },
     "ConfigCsvConfig": {
       "type": "object",
       "properties": {
@@ -7952,6 +8213,332 @@
       "type": "object",
       "description": "The request for [SkipScheduledTransaction][saturn.finance.v1.Finance.SkipScheduledTransaction]."
     },
+    "FlowRunStepRun": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique identifier with prefix `wsr_`.",
+          "readOnly": true
+        },
+        "flowRunId": {
+          "type": "string",
+          "description": "Output only. Parent flow run identifier (`wfr_...`).",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. Workspace identifier (`spc_...`).",
+          "readOnly": true
+        },
+        "stepId": {
+          "type": "string",
+          "description": "Output only. Step identifier within the flow definition.",
+          "readOnly": true
+        },
+        "stepType": {
+          "type": "string",
+          "description": "Output only. Step type executed.",
+          "readOnly": true
+        },
+        "executionKey": {
+          "type": "string",
+          "description": "Output only. Unique invocation key (e.g. `extract_tx` or `each_pay[0].upsert`).",
+          "readOnly": true
+        },
+        "status": {
+          "type": "string",
+          "description": "Output only. Step execution status ('running', 'completed', 'filtered', 'stopped', 'failed', 'failed_continued').",
+          "readOnly": true
+        },
+        "output": {
+          "type": "object",
+          "description": "Output only. Step output object bound to `steps.\u003cid\u003e`.",
+          "readOnly": true
+        },
+        "error": {
+          "$ref": "#/definitions/v1FlowError",
+          "description": "Output only. Structured error if the step failed.",
+          "readOnly": true
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Output only. Telemetry metadata (duration_ms, tokens_used, source loader stats).",
+          "readOnly": true
+        },
+        "agentRunId": {
+          "type": "string",
+          "description": "Output only. Linked platform.agent_runs ID for `llm.generate` steps.",
+          "readOnly": true
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the step started executing.",
+          "readOnly": true
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when the step finished executing.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Last update timestamp.",
+          "readOnly": true
+        }
+      },
+      "description": "StepRun records the execution state and output of an individual step invocation."
+    },
+    "FlowSourceBinding": {
+      "type": "object",
+      "properties": {
+        "loader": {
+          "type": "string",
+          "description": "Required. Registered data loader name (e.g. finance.accounts)."
+        },
+        "params": {
+          "type": "object",
+          "description": "Optional. Loader parameters evaluated via CEL."
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Optional. Whether loader failure should fail the step."
+        }
+      },
+      "description": "SourceBinding declares a read-only data loader dependency evaluated before step execution.",
+      "required": [
+        "loader"
+      ]
+    },
+    "FlowStats": {
+      "type": "object",
+      "properties": {
+        "totalRuns7d": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Total number of runs in the last 7 days.",
+          "readOnly": true
+        },
+        "completedRuns7d": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Completed runs in the last 7 days.",
+          "readOnly": true
+        },
+        "failedRuns7d": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Failed runs in the last 7 days.",
+          "readOnly": true
+        },
+        "filteredRuns7d": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Filtered runs in the last 7 days.",
+          "readOnly": true
+        },
+        "lastRunAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp of the most recent run.",
+          "readOnly": true
+        },
+        "lastRunStatus": {
+          "type": "string",
+          "description": "Output only. Status of the most recent run.",
+          "readOnly": true
+        },
+        "dailyCounts7d": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": "Output only. Daily run counts over the last 7 days ordered oldest to newest.",
+          "readOnly": true
+        }
+      },
+      "description": "Stats summarizes 7-day execution metrics for a flow."
+    },
+    "FlowStepNode": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Required. Unique step identifier within the flow (used as `steps.\u003cid\u003e` in CEL)."
+        },
+        "name": {
+          "type": "string",
+          "description": "Optional. Human-readable display label for the step."
+        },
+        "type": {
+          "type": "string",
+          "description": "Required. Registered step type (e.g. llm.generate, filter, switch, finance.create_inbox_item)."
+        },
+        "onError": {
+          "type": "string",
+          "description": "Optional. Error policy ('fail' or 'continue', defaults to 'fail')."
+        },
+        "model": {
+          "$ref": "#/definitions/v1ModelConfig",
+          "description": "Optional. Step-level LLM model override for `llm.generate` steps."
+        },
+        "sources": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/FlowSourceBinding"
+          },
+          "description": "Optional. Read-only data loaders resolved into step-local `sources.\u003calias\u003e`."
+        },
+        "inputs": {
+          "type": "object",
+          "description": "Optional. Step input configuration and CEL binding expressions."
+        },
+        "cases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/FlowSwitchCase"
+          },
+          "description": "Optional. Conditional branches for `switch` control steps."
+        },
+        "default": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/FlowStepNode"
+          },
+          "description": "Optional. Fallback steps for `switch` control steps when no case matches."
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/FlowStepNode"
+          },
+          "description": "Optional. Loop body steps for `for_each` control steps."
+        }
+      },
+      "description": "StepNode defines a single step in a flat-first workflow sequence or nested control branch.",
+      "required": [
+        "id",
+        "type"
+      ]
+    },
+    "FlowSwitchCase": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Required. Unique case label within the switch step."
+        },
+        "condition": {
+          "type": "string",
+          "description": "Required. CEL boolean expression evaluated against FlowState."
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/FlowStepNode"
+          },
+          "description": "Optional. Steps executed when this case matches."
+        }
+      },
+      "description": "SwitchCase defines a conditional branch inside a `switch` control step.",
+      "required": [
+        "name",
+        "condition"
+      ]
+    },
+    "FlowTrigger": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique identifier with prefix `trg_`.",
+          "readOnly": true
+        },
+        "flowId": {
+          "type": "string",
+          "description": "Output only. Parent flow identifier (`flw_...`).",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. Workspace identifier (`spc_...`).",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Required. Human-readable name of the trigger."
+        },
+        "type": {
+          "type": "string",
+          "description": "Required. Trigger kind ('event', 'webhook', 'schedule', 'manual')."
+        },
+        "config": {
+          "$ref": "#/definitions/FlowTriggerConfig",
+          "description": "Optional. Trigger configuration and CEL mapping/filter rules."
+        },
+        "isEnabled": {
+          "type": "boolean",
+          "description": "Optional. Whether this trigger is active."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Last update timestamp.",
+          "readOnly": true
+        }
+      },
+      "description": "Trigger represents a trigger binding attached to a flow.",
+      "required": [
+        "name",
+        "type"
+      ]
+    },
+    "FlowTriggerConfig": {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "description": "Optional. Event topic name for 'event' triggers (e.g. mail.message.received)."
+        },
+        "cron": {
+          "type": "string",
+          "description": "Optional. Cron expression for 'schedule' triggers."
+        },
+        "scheduleId": {
+          "type": "string",
+          "description": "Optional. Linked platform.schedules ID for 'schedule' triggers."
+        },
+        "filter": {
+          "type": "string",
+          "description": "Optional. CEL boolean pre-guard evaluated against raw trigger.data before creating a FlowRun."
+        },
+        "inputMapping": {
+          "type": "object",
+          "description": "Optional. CEL mapping normalizing trigger.data into flow input.*."
+        }
+      },
+      "description": "Config stores polymorphic trigger configuration and binding rules."
+    },
     "IdentityRevokeDeviceBody": {
       "type": "object",
       "description": "Request message for Identity.RevokeDevice."
@@ -7970,10 +8557,9 @@
         "INVOICE",
         "RECEIPT",
         "BANK_NOTIFICATION",
-        "UNKNOWN",
-        "SYSTEM_VERIFICATION"
+        "UNKNOWN"
       ],
-      "description": "Document category classification enum.\n\n - INVOICE: Invoice document.\n - RECEIPT: Receipt document.\n - BANK_NOTIFICATION: Bank notification document.\n - UNKNOWN: Unknown document type.\n - SYSTEM_VERIFICATION: System verification document."
+      "description": "Document category classification enum.\n\n - INVOICE: Invoice document.\n - RECEIPT: Receipt document.\n - BANK_NOTIFICATION: Bank notification document.\n - UNKNOWN: Unknown document type."
     },
     "IncomeInsightsAccountContribution": {
       "type": "object",
@@ -8065,57 +8651,6 @@
         }
       },
       "description": "IncomeSource break downs contributions by description keywords."
-    },
-    "IntegrationServiceCreateIntegrationTokenBody": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Required. A descriptive name identifying the intended use of the token."
-        },
-        "kind": {
-          "type": "string",
-          "description": "Optional. The integration kind or category."
-        }
-      },
-      "description": "Request message for IntegrationService.CreateIntegrationToken.",
-      "required": [
-        "name"
-      ]
-    },
-    "IntegrationServiceRotateIntegrationTokenBody": {
-      "type": "object",
-      "properties": {
-        "kind": {
-          "type": "string",
-          "description": "Optional. The integration kind or category."
-        }
-      },
-      "description": "Request message for IntegrationService.RotateIntegrationToken."
-    },
-    "IntegrationServiceSimulateWebhookBody": {
-      "type": "object",
-      "properties": {
-        "payload": {
-          "type": "string",
-          "description": "Required. The raw webhook payload body to parse and simulate."
-        },
-        "headers": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Optional. HTTP headers accompanying the simulated webhook request."
-        },
-        "kind": {
-          "type": "string",
-          "description": "Optional. The integration kind or category."
-        }
-      },
-      "description": "Request message for IntegrationService.SimulateWebhook.",
-      "required": [
-        "payload"
-      ]
     },
     "ListUsersRequestStatusFilter": {
       "type": "string",
@@ -8517,16 +9052,6 @@
       },
       "description": "HighValueExpense tracks outlier transactions exceeding typical limits."
     },
-    "StatementConfig": {
-      "type": "object",
-      "properties": {
-        "csv": {
-          "$ref": "#/definitions/ConfigCsvConfig",
-          "description": "Configuration for parsing CSV statement files."
-        }
-      },
-      "description": "Nested parsing configuration."
-    },
     "StatementLineConfirmScheduledAction": {
       "type": "object",
       "properties": {
@@ -8639,6 +9164,40 @@
         }
       },
       "description": "AccountInfo wraps minimal account details required for UI listing."
+    },
+    "WorkflowServiceDisableFlowBody": {
+      "type": "object",
+      "description": "Request message for WorkflowService.DisableFlow."
+    },
+    "WorkflowServiceEnableFlowBody": {
+      "type": "object",
+      "description": "Request message for WorkflowService.EnableFlow."
+    },
+    "WorkflowServiceExecuteFlowBody": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "object",
+          "description": "Optional. Structured input payload matching the flow's input_schema."
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1InlineArtifact"
+          },
+          "description": "Optional. Inline binary artifacts mapped into ephemeral:// ArtifactRefs."
+        },
+        "async": {
+          "type": "boolean",
+          "description": "Optional. If true, dispatches execution asynchronously and returns a pending FlowRun."
+        }
+      },
+      "description": "Request message for WorkflowService.ExecuteFlow."
+    },
+    "WorkflowServiceResetFlowBody": {
+      "type": "object",
+      "description": "Request message for WorkflowService.ResetFlow."
     },
     "googleRpcStatus": {
       "type": "object",
@@ -9496,70 +10055,6 @@
       },
       "description": "Record of an individual execution run performed by an agent."
     },
-    "v1AnalyzeStatementDocumentRequest": {
-      "type": "object",
-      "properties": {
-        "targetAccountId": {
-          "type": "string",
-          "description": "Optional. Target account identifier override.\nValues are of the form `acc_[a-zA-Z0-9]+`."
-        },
-        "filename": {
-          "type": "string",
-          "description": "Required. Original file name."
-        },
-        "contentType": {
-          "type": "string",
-          "description": "Required. MIME content type."
-        },
-        "documentBytes": {
-          "type": "string",
-          "format": "byte",
-          "description": "Required. Raw document binary payload."
-        },
-        "password": {
-          "type": "string",
-          "description": "Optional. Password for encrypted PDFs."
-        }
-      },
-      "description": "The request for\n[AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument].",
-      "required": [
-        "filename",
-        "contentType",
-        "documentBytes"
-      ]
-    },
-    "v1AnalyzeStatementDocumentResponse": {
-      "type": "object",
-      "properties": {
-        "sectionReports": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1SectionValidationReport"
-          },
-          "description": "Section balance validation reports."
-        },
-        "unmappedSections": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of unmapped currency sections found in the document."
-        },
-        "needsPassword": {
-          "type": "boolean",
-          "description": "Indicates whether a password is required to decrypt the document."
-        },
-        "errors": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Extraction or validation warning and error messages."
-        }
-      },
-      "description": "The response for\n[AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument]."
-    },
     "v1Attachment": {
       "type": "object",
       "properties": {
@@ -10153,52 +10648,47 @@
       ],
       "description": "CalendarSource denotes whether a calendar is native to Saturn or mirrored from an external provider.\n\n - CALENDAR_SOURCE_NATIVE: Native calendar managed entirely inside Saturn.\n - CALENDAR_SOURCE_EXTERNAL: External calendar mirrored from a connected account (e.g., Google Calendar)."
     },
-    "v1CatalogDescriptor": {
+    "v1Catalog": {
       "type": "object",
       "properties": {
-        "provider": {
-          "type": "string",
-          "description": "Required. The unique identifier of the provider."
+        "triggerTopics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/CatalogTriggerTopic"
+          },
+          "description": "Output only. Registered domain event trigger topics.",
+          "readOnly": true
         },
-        "kind": {
-          "type": "string",
-          "description": "Required. The category or kind of integration."
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/CatalogStep"
+          },
+          "description": "Output only. Registered platform and domain workflow steps.",
+          "readOnly": true
         },
-        "name": {
-          "type": "string",
-          "description": "Required. The display name of the integration provider."
+        "loaders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/CatalogLoader"
+          },
+          "description": "Output only. Registered read-only data loaders.",
+          "readOnly": true
         },
-        "description": {
-          "type": "string",
-          "description": "Optional. A human-readable description of the integration capabilities."
-        },
-        "icon": {
-          "type": "string",
-          "description": "Optional. An icon identifier or URL representing the provider."
-        },
-        "configSchema": {
-          "type": "string",
-          "description": "Optional. JSON schema describing configuration parameters."
-        },
-        "requestSchema": {
-          "type": "string",
-          "description": "Optional. JSON schema describing expected incoming requests."
-        },
-        "responseSchema": {
-          "type": "string",
-          "description": "Optional. JSON schema describing response payloads."
-        },
-        "samplePayload": {
-          "type": "string",
-          "description": "Optional. An example payload demonstrating typical webhook data."
+        "celHelpers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/CatalogCelHelper"
+          },
+          "description": "Output only. Documented Saturn CEL helper functions.",
+          "readOnly": true
         }
       },
-      "description": "CatalogDescriptor represents metadata for an available integration type.",
-      "required": [
-        "provider",
-        "kind",
-        "name"
-      ]
+      "description": "Catalog returns all registered workflow capabilities for authoring and AI generation."
     },
     "v1ChangeEmailRequest": {
       "type": "object",
@@ -10292,33 +10782,6 @@
       "required": [
         "token",
         "newPassword"
-      ]
-    },
-    "v1ConfigureIntegrationRequest": {
-      "type": "object",
-      "properties": {
-        "provider": {
-          "type": "string",
-          "description": "Required. The provider identifier to configure."
-        },
-        "kind": {
-          "type": "string",
-          "description": "Required. The integration category or kind."
-        },
-        "configJson": {
-          "type": "string",
-          "description": "Required. The JSON configuration payload for the provider."
-        },
-        "isEnabled": {
-          "type": "boolean",
-          "description": "Optional. Whether to immediately enable the integration."
-        }
-      },
-      "description": "Request message for IntegrationService.ConfigureIntegration.",
-      "required": [
-        "provider",
-        "kind",
-        "configJson"
       ]
     },
     "v1ConfirmTOTPRequest": {
@@ -10529,22 +10992,6 @@
         }
       },
       "description": "Response message for Identity.CreateAuthChallenge."
-    },
-    "v1CreateIntegrationTokenResponse": {
-      "type": "object",
-      "properties": {
-        "token": {
-          "$ref": "#/definitions/v1IntegrationToken",
-          "description": "Output only. The persisted token metadata.",
-          "readOnly": true
-        },
-        "rawToken": {
-          "type": "string",
-          "description": "Output only. The raw unhashed authentication token, shown once.",
-          "readOnly": true
-        }
-      },
-      "description": "Response message for IntegrationService.CreateIntegrationToken."
     },
     "v1CreateProviderRequest": {
       "type": "object",
@@ -10773,30 +11220,6 @@
         "publicKey",
         "challenge",
         "signature"
-      ]
-    },
-    "v1DocumentFilePayload": {
-      "type": "object",
-      "properties": {
-        "filename": {
-          "type": "string",
-          "description": "Required. The original filename of the document."
-        },
-        "contentType": {
-          "type": "string",
-          "description": "Required. The MIME type of the document (e.g. application/pdf, text/csv)."
-        },
-        "content": {
-          "type": "string",
-          "format": "byte",
-          "description": "Required. The raw binary content of the document."
-        }
-      },
-      "description": "File payload containing document content uploaded for analysis.",
-      "required": [
-        "filename",
-        "contentType",
-        "content"
       ]
     },
     "v1Draft": {
@@ -11268,6 +11691,268 @@
         "currency"
       ]
     },
+    "v1Flow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique identifier with prefix `flw_`.",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. Workspace identifier (`spc_...`).",
+          "readOnly": true
+        },
+        "systemKey": {
+          "type": "string",
+          "description": "Output only. Built-in system blueprint key (e.g. system.finance.inbox_ingestion).",
+          "readOnly": true
+        },
+        "isSystem": {
+          "type": "boolean",
+          "description": "Output only. Whether this is a built-in system flow.",
+          "readOnly": true
+        },
+        "isEnabled": {
+          "type": "boolean",
+          "description": "Optional. Whether this flow is enabled for execution."
+        },
+        "name": {
+          "type": "string",
+          "description": "Required. Human-readable name of the flow."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional. Description of what the flow automates."
+        },
+        "config": {
+          "$ref": "#/definitions/v1FlowConfig",
+          "description": "Optional. Flow-level execution configuration."
+        },
+        "inputSchema": {
+          "type": "object",
+          "description": "Optional. JSON Schema defining the normalized `input.*` contract."
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/FlowStepNode"
+          },
+          "description": "Required. Ordered sequence of workflow steps."
+        },
+        "triggers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/FlowTrigger"
+          },
+          "description": "Optional. Trigger bindings attached to this flow."
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. Monotonic definition version incremented on updates.",
+          "readOnly": true
+        },
+        "stats": {
+          "$ref": "#/definitions/FlowStats",
+          "description": "Output only. Hydrated 7-day execution summary.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Last update timestamp.",
+          "readOnly": true
+        }
+      },
+      "description": "Flow represents a workflow automation definition with triggers and step graph.",
+      "required": [
+        "name",
+        "steps"
+      ]
+    },
+    "v1FlowConfig": {
+      "type": "object",
+      "properties": {
+        "defaultModel": {
+          "$ref": "#/definitions/v1ModelConfig",
+          "description": "Optional. Default LLM model configuration for steps that omit step.model."
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. Execution timeout in seconds."
+        },
+        "maxRetries": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. Maximum retry attempts for failed async runs."
+        }
+      },
+      "description": "Config stores extensible execution settings for a flow."
+    },
+    "v1FlowError": {
+      "type": "object",
+      "properties": {
+        "stepId": {
+          "type": "string",
+          "description": "Optional. Identifier of the step where the error occurred."
+        },
+        "code": {
+          "type": "string",
+          "description": "Optional. Machine-readable error code."
+        },
+        "message": {
+          "type": "string",
+          "description": "Output only. Human-readable error message.",
+          "readOnly": true
+        }
+      },
+      "description": "FlowError describes a structured failure recorded on a FlowRun or StepRun."
+    },
+    "v1FlowRun": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique identifier with prefix `wfr_`.",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. Workspace identifier (`spc_...`).",
+          "readOnly": true
+        },
+        "flowId": {
+          "type": "string",
+          "description": "Output only. Executed flow identifier (`flw_...`).",
+          "readOnly": true
+        },
+        "flowName": {
+          "type": "string",
+          "description": "Output only. Hydrated flow name for display in run lists and traces.",
+          "readOnly": true
+        },
+        "flowVersion": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. Snapshot of the flow version that executed.",
+          "readOnly": true
+        },
+        "triggerId": {
+          "type": "string",
+          "description": "Output only. Trigger identifier that initiated this run (`trg_...`), if any.",
+          "readOnly": true
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "description": "Output only. Idempotency key tying retries back to the same FlowRun.",
+          "readOnly": true
+        },
+        "status": {
+          "type": "string",
+          "description": "Output only. Run status ('pending', 'running', 'waiting', 'completed', 'filtered', 'stopped', 'failed', 'cancelled').",
+          "readOnly": true
+        },
+        "attempts": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Number of execution attempts for this run.",
+          "readOnly": true
+        },
+        "triggerData": {
+          "type": "object",
+          "description": "Output only. Raw trigger envelope payload.",
+          "readOnly": true
+        },
+        "input": {
+          "type": "object",
+          "description": "Output only. Normalized flow input payload.",
+          "readOnly": true
+        },
+        "output": {
+          "type": "object",
+          "description": "Output only. Terminal flow output payload from an `output` step.",
+          "readOnly": true
+        },
+        "error": {
+          "$ref": "#/definitions/v1FlowError",
+          "description": "Output only. Structured error if the run failed.",
+          "readOnly": true
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Output only. Execution telemetry metadata (tokens_used, duration_ms, correlation_id, trigger_type).",
+          "readOnly": true
+        },
+        "stepRuns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/FlowRunStepRun"
+          },
+          "description": "Output only. Step execution trace hydrated on GetFlowRun, ExecuteFlow, and TestFlow.",
+          "readOnly": true
+        },
+        "resumeTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Scheduled resume timestamp for waiting runs.",
+          "readOnly": true
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when execution started.",
+          "readOnly": true
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when execution completed.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Last update timestamp.",
+          "readOnly": true
+        }
+      },
+      "description": "FlowRun records a single execution of a workflow."
+    },
+    "v1GenerateFlowRequest": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Required. Natural-language description of the desired automation."
+        },
+        "model": {
+          "$ref": "#/definitions/v1ModelConfig",
+          "description": "Optional. Model override for the Prompt-to-Flow AI architect."
+        }
+      },
+      "description": "Request message for WorkflowService.GenerateFlow.",
+      "required": [
+        "prompt"
+      ]
+    },
     "v1GetAgentCatalogResponse": {
       "type": "object",
       "properties": {
@@ -11375,47 +12060,6 @@
       },
       "description": "Response message containing scheduler engine configuration and status."
     },
-    "v1GetSuggestionsRequest": {
-      "type": "object",
-      "properties": {
-        "purpose": {
-          "type": "string",
-          "description": "Required. The target agent purpose blueprint guiding analysis."
-        },
-        "textContent": {
-          "type": "string",
-          "description": "Optional. Textual content or query prompt to analyze."
-        },
-        "documents": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1DocumentFilePayload"
-          },
-          "description": "Optional. Attached document files to be ingested and analyzed."
-        }
-      },
-      "description": "Request message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].",
-      "required": [
-        "purpose"
-      ]
-    },
-    "v1GetSuggestionsResponse": {
-      "type": "object",
-      "properties": {
-        "rawOutput": {
-          "type": "string",
-          "description": "Output only. The raw model completion text.",
-          "readOnly": true
-        },
-        "structuredSuggestion": {
-          "type": "object",
-          "description": "Output only. The parsed structured suggestions matching the purpose schema.",
-          "readOnly": true
-        }
-      },
-      "description": "Response message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions]."
-    },
     "v1InboxItem": {
       "type": "object",
       "properties": {
@@ -11429,9 +12073,9 @@
           "description": "Output only. Space identifier.\nValues are of the form `spc_[a-zA-Z0-9]+`.",
           "readOnly": true
         },
-        "integrationId": {
+        "flowRunId": {
           "type": "string",
-          "description": "Output only. Ingestion integration channel identifier.\nValues are of the form `int_[a-zA-Z0-9]+`.",
+          "description": "Output only. Workflow run identifier that staged this inbox item.\nValues are of the form `wfr_[a-zA-Z0-9]+`.",
           "readOnly": true
         },
         "status": {
@@ -11628,82 +12272,6 @@
       },
       "description": "TrendDataPoint tracks income patterns grouped by granular interval."
     },
-    "v1IngestStatementDocumentRequest": {
-      "type": "object",
-      "properties": {
-        "targetAccountId": {
-          "type": "string",
-          "description": "Optional. Target account identifier override.\nValues are of the form `acc_[a-zA-Z0-9]+`."
-        },
-        "filename": {
-          "type": "string",
-          "description": "Required. Original file name."
-        },
-        "contentType": {
-          "type": "string",
-          "description": "Required. MIME content type (e.g. \"application/pdf\", \"text/plain\")."
-        },
-        "documentBytes": {
-          "type": "string",
-          "format": "byte",
-          "description": "Required. Raw document binary payload."
-        },
-        "password": {
-          "type": "string",
-          "description": "Optional. Password for encrypted PDFs."
-        }
-      },
-      "description": "The request for\n[IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument].",
-      "required": [
-        "filename",
-        "contentType",
-        "documentBytes"
-      ]
-    },
-    "v1IngestStatementDocumentResponse": {
-      "type": "object",
-      "properties": {
-        "batchId": {
-          "type": "string",
-          "description": "Ingestion batch identifier."
-        },
-        "createdStatements": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1Statement"
-          },
-          "description": "List of created statement drafts."
-        },
-        "sectionReports": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1SectionValidationReport"
-          },
-          "description": "Section balance validation reports."
-        },
-        "unmappedSections": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of unmapped currency sections found in the document."
-        },
-        "needsPassword": {
-          "type": "boolean",
-          "description": "Indicates whether a password is required to decrypt the document."
-        },
-        "errors": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Extraction or validation warning and error messages."
-        }
-      },
-      "description": "The response for\n[IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument]."
-    },
     "v1InitiateOAuthRequest": {
       "type": "object",
       "properties": {
@@ -11748,6 +12316,34 @@
         }
       },
       "description": "Response message for ConnectorService.InitiateOAuth."
+    },
+    "v1InlineArtifact": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string",
+          "description": "Required. Original filename (e.g. statement.pdf)."
+        },
+        "contentType": {
+          "type": "string",
+          "description": "Required. MIME content type (e.g. application/pdf, text/csv)."
+        },
+        "data": {
+          "type": "string",
+          "format": "byte",
+          "description": "Required. Raw binary file bytes."
+        },
+        "fieldName": {
+          "type": "string",
+          "description": "Optional. Input field hint for mapping the ephemeral ArtifactRef into flow input."
+        }
+      },
+      "description": "InlineArtifact carries an inline binary file uploaded during synchronous ExecuteFlow or TestFlow calls.",
+      "required": [
+        "filename",
+        "contentType",
+        "data"
+      ]
     },
     "v1InsightGranularity": {
       "type": "string",
@@ -11803,99 +12399,6 @@
         }
       },
       "description": "Institution represents a financial bank, brokerage, or payment platform.",
-      "required": [
-        "name"
-      ]
-    },
-    "v1Integration": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Output only. The unique identifier of the integration.",
-          "readOnly": true
-        },
-        "spaceId": {
-          "type": "string",
-          "description": "Output only. The workspace identifier that owns this integration.",
-          "readOnly": true
-        },
-        "kind": {
-          "type": "string",
-          "description": "Required. The integration category or kind (e.g., email, bank, webhook)."
-        },
-        "provider": {
-          "type": "string",
-          "description": "Required. The provider identifier (e.g., plaid, resend, custom)."
-        },
-        "token": {
-          "type": "string",
-          "description": "Output only. The raw unhashed authentication token, shown once on creation or rotation.",
-          "readOnly": true
-        },
-        "configJson": {
-          "type": "string",
-          "description": "Optional. The JSON configuration settings for the integration."
-        },
-        "isEnabled": {
-          "type": "boolean",
-          "description": "Optional. Whether the integration is currently active and processing events."
-        },
-        "createTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Output only. The timestamp when the integration was created.",
-          "readOnly": true
-        },
-        "updateTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Output only. The timestamp when the integration was last updated.",
-          "readOnly": true
-        }
-      },
-      "description": "Integration represents a configured third-party integration instance.",
-      "required": [
-        "kind",
-        "provider"
-      ]
-    },
-    "v1IntegrationToken": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Output only. The unique identifier of the token.",
-          "readOnly": true
-        },
-        "integrationId": {
-          "type": "string",
-          "description": "Output only. The integration identifier associated with this token.",
-          "readOnly": true
-        },
-        "name": {
-          "type": "string",
-          "description": "Required. The user-assigned descriptive name for the token."
-        },
-        "tokenHash": {
-          "type": "string",
-          "description": "Output only. The secure cryptographic hash of the token.",
-          "readOnly": true
-        },
-        "createTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Output only. The timestamp when the token was created.",
-          "readOnly": true
-        },
-        "lastUsedTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Output only. The timestamp when the token was last used.",
-          "readOnly": true
-        }
-      },
-      "description": "IntegrationToken represents an authentication token for an integration.",
       "required": [
         "name"
       ]
@@ -12194,21 +12697,6 @@
       },
       "description": "Response returning calendars in the active workspace."
     },
-    "v1ListCatalogResponse": {
-      "type": "object",
-      "properties": {
-        "catalog": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1CatalogDescriptor"
-          },
-          "description": "Output only. The list of available integration descriptors.",
-          "readOnly": true
-        }
-      },
-      "description": "Response message for IntegrationService.ListCatalog."
-    },
     "v1ListConnectedAccountsResponse": {
       "type": "object",
       "properties": {
@@ -12328,6 +12816,41 @@
       },
       "description": "The response for\n[ListExchangeRates][saturn.finance.v1.Finance.ListExchangeRates]."
     },
+    "v1ListFlowRunsResponse": {
+      "type": "object",
+      "properties": {
+        "runs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FlowRun"
+          },
+          "description": "Output only. Paginated list of workflow execution runs.",
+          "readOnly": true
+        },
+        "nextPageToken": {
+          "type": "string",
+          "description": "Output only. Cursor token for retrieving the next page.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for WorkflowService.ListFlowRuns."
+    },
+    "v1ListFlowsResponse": {
+      "type": "object",
+      "properties": {
+        "flows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Flow"
+          },
+          "description": "Output only. List of flows hydrated with triggers and 7-day stats.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for WorkflowService.ListFlows."
+    },
     "v1ListInboxItemsResponse": {
       "type": "object",
       "properties": {
@@ -12363,36 +12886,6 @@
         }
       },
       "description": "The response for\n[ListInstitutions][saturn.finance.v1.Finance.ListInstitutions]."
-    },
-    "v1ListIntegrationTokensResponse": {
-      "type": "object",
-      "properties": {
-        "tokens": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1IntegrationToken"
-          },
-          "description": "Output only. The active authentication tokens for the integration.",
-          "readOnly": true
-        }
-      },
-      "description": "Response message for IntegrationService.ListIntegrationTokens."
-    },
-    "v1ListIntegrationsResponse": {
-      "type": "object",
-      "properties": {
-        "integrations": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1Integration"
-          },
-          "description": "Output only. The list of configured integration instances.",
-          "readOnly": true
-        }
-      },
-      "description": "Response message for IntegrationService.ListIntegrations."
     },
     "v1ListJobsResponse": {
       "type": "object",
@@ -13030,6 +13523,29 @@
       },
       "description": "MfaFactorDescriptor describes an enrolled multi-factor authentication (MFA) factor."
     },
+    "v1ModelConfig": {
+      "type": "object",
+      "properties": {
+        "agentId": {
+          "type": "string",
+          "description": "Optional. Named agent ID from platform/agent to inherit instructions and model settings from."
+        },
+        "providerId": {
+          "type": "string",
+          "description": "Optional. Explicit LLM provider ID when specifying an inline model."
+        },
+        "modelName": {
+          "type": "string",
+          "description": "Optional. Model identifier (e.g. gemini-2.5-flash)."
+        },
+        "temperature": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional. Sampling temperature parameter."
+        }
+      },
+      "description": "ModelConfig configures the LLM agent or inline provider/model used for AI steps."
+    },
     "v1Organizer": {
       "type": "object",
       "properties": {
@@ -13458,17 +13974,6 @@
       "type": "object",
       "description": "Response message for Identity.RevokeSession."
     },
-    "v1RotateIntegrationTokenResponse": {
-      "type": "object",
-      "properties": {
-        "token": {
-          "type": "string",
-          "description": "Output only. The newly generated raw unhashed authentication token.",
-          "readOnly": true
-        }
-      },
-      "description": "Response message for IntegrationService.RotateIntegrationToken."
-    },
     "v1ScheduleInfo": {
       "type": "object",
       "properties": {
@@ -13647,50 +14152,6 @@
       ],
       "description": "Scoped resource representation view level.\n\n - BASIC: Basic view including summary fields.\n - FULL: Full view including hydrated associations."
     },
-    "v1SectionValidationReport": {
-      "type": "object",
-      "properties": {
-        "currency": {
-          "type": "string",
-          "description": "Currency code for this section."
-        },
-        "startingBalance": {
-          "type": "string",
-          "format": "int64",
-          "description": "Starting balance reported on the statement section in cents."
-        },
-        "endingBalance": {
-          "type": "string",
-          "format": "int64",
-          "description": "Ending balance reported on the statement section in cents."
-        },
-        "calculatedEnding": {
-          "type": "string",
-          "format": "int64",
-          "description": "Calculated ending balance based on starting balance and net line flows."
-        },
-        "netFlow": {
-          "type": "string",
-          "format": "int64",
-          "description": "Net sum of all line amounts in the section."
-        },
-        "discrepancy": {
-          "type": "string",
-          "format": "int64",
-          "description": "Discrepancy between calculated ending balance and reported ending balance."
-        },
-        "isBalanced": {
-          "type": "boolean",
-          "description": "Indicates whether the section is mathematically balanced."
-        },
-        "lineCount": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Total number of transaction lines extracted in this section."
-        }
-      },
-      "description": "SectionValidationReport summarizes the mathematical verification of an extracted currency section."
-    },
     "v1SetupRequest": {
       "type": "object",
       "properties": {
@@ -13747,27 +14208,6 @@
         }
       },
       "description": "Response message for Identity.SetupTOTP.\nReturns the provisional credentials required to configure an authenticator app."
-    },
-    "v1SimulateWebhookResponse": {
-      "type": "object",
-      "properties": {
-        "success": {
-          "type": "boolean",
-          "description": "Output only. Whether the webhook simulation completed successfully.",
-          "readOnly": true
-        },
-        "message": {
-          "type": "string",
-          "description": "Output only. A descriptive status message regarding the simulation result.",
-          "readOnly": true
-        },
-        "result": {
-          "type": "object",
-          "description": "Output only. Structured output produced by processing the simulated webhook.",
-          "readOnly": true
-        }
-      },
-      "description": "Response message for IntegrationService.SimulateWebhook."
     },
     "v1Space": {
       "type": "object",
@@ -13978,7 +14418,7 @@
           "description": "Required. Original file name."
         },
         "config": {
-          "$ref": "#/definitions/StatementConfig",
+          "$ref": "#/definitions/v1StatementConfig",
           "description": "Required. Extensible statement parsing configuration."
         },
         "rawContent": {
@@ -14013,6 +14453,16 @@
         "config",
         "rawContent"
       ]
+    },
+    "v1StatementConfig": {
+      "type": "object",
+      "properties": {
+        "csv": {
+          "$ref": "#/definitions/ConfigCsvConfig",
+          "description": "Configuration for parsing CSV statement files."
+        }
+      },
+      "description": "Nested parsing configuration."
     },
     "v1StatementLine": {
       "type": "object",
@@ -14148,6 +14598,35 @@
         }
       },
       "description": "Response message for ConnectorService.SyncConnectedAccount."
+    },
+    "v1TestFlowRequest": {
+      "type": "object",
+      "properties": {
+        "flow": {
+          "$ref": "#/definitions/v1Flow",
+          "description": "Required. Saved or unsaved Flow definition to test in-memory."
+        },
+        "triggerData": {
+          "type": "object",
+          "description": "Optional. Sample raw trigger envelope payload."
+        },
+        "input": {
+          "type": "object",
+          "description": "Optional. Sample normalized input payload."
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1InlineArtifact"
+          },
+          "description": "Optional. Sample inline binary artifacts for testing document extraction or AI steps."
+        }
+      },
+      "description": "Request message for WorkflowService.TestFlow.",
+      "required": [
+        "flow"
+      ]
     },
     "v1Thread": {
       "type": "object",

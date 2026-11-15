@@ -7,6 +7,7 @@
 package mailv1
 
 import (
+	_ "github.com/masterkeysrd/saturn/apis/saturn/platform/message/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -2265,11 +2266,57 @@ func (x *SendDraftRequest) GetId() string {
 	return ""
 }
 
+// MessageReceivedEvent is published on incremental delta syncs for newly ingested inbound messages.
+type MessageReceivedEvent struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. Received email message.
+	Message       *Message `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MessageReceivedEvent) Reset() {
+	*x = MessageReceivedEvent{}
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MessageReceivedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MessageReceivedEvent) ProtoMessage() {}
+
+func (x *MessageReceivedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_mail_v1_mail_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MessageReceivedEvent.ProtoReflect.Descriptor instead.
+func (*MessageReceivedEvent) Descriptor() ([]byte, []int) {
+	return file_saturn_mail_v1_mail_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *MessageReceivedEvent) GetMessage() *Message {
+	if x != nil {
+		return x.Message
+	}
+	return nil
+}
+
 var File_saturn_mail_v1_mail_proto protoreflect.FileDescriptor
 
 const file_saturn_mail_v1_mail_proto_rawDesc = "" +
 	"\n" +
-	"\x19saturn/mail/v1/mail.proto\x12\x0esaturn.mail.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"w\n" +
+	"\x19saturn/mail/v1/mail.proto\x12\x0esaturn.mail.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a(saturn/platform/message/v1/options.proto\"w\n" +
 	"\vParticipant\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1d\n" +
@@ -2485,7 +2532,9 @@ const file_saturn_mail_v1_mail_proto_rawDesc = "" +
 	"\x12DeleteDraftRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"'\n" +
 	"\x10SendDraftRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id*\xef\x01\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"d\n" +
+	"\x14MessageReceivedEvent\x121\n" +
+	"\amessage\x18\x01 \x01(\v2\x17.saturn.mail.v1.MessageR\amessage:\x19\x92\xb5\x18\x15mail.message.received*\xef\x01\n" +
 	"\vMailboxRole\x12\x1c\n" +
 	"\x18MAILBOX_ROLE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12MAILBOX_ROLE_INBOX\x10\x01\x12\x18\n" +
@@ -2532,7 +2581,7 @@ func file_saturn_mail_v1_mail_proto_rawDescGZIP() []byte {
 }
 
 var file_saturn_mail_v1_mail_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_saturn_mail_v1_mail_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_saturn_mail_v1_mail_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_saturn_mail_v1_mail_proto_goTypes = []any{
 	(MailboxRole)(0),                  // 0: saturn.mail.v1.MailboxRole
 	(DraftMode)(0),                    // 1: saturn.mail.v1.DraftMode
@@ -2559,80 +2608,82 @@ var file_saturn_mail_v1_mail_proto_goTypes = []any{
 	(*UpdateDraftRequest)(nil),        // 22: saturn.mail.v1.UpdateDraftRequest
 	(*DeleteDraftRequest)(nil),        // 23: saturn.mail.v1.DeleteDraftRequest
 	(*SendDraftRequest)(nil),          // 24: saturn.mail.v1.SendDraftRequest
-	(*timestamppb.Timestamp)(nil),     // 25: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),     // 26: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),             // 27: google.protobuf.Empty
+	(*MessageReceivedEvent)(nil),      // 25: saturn.mail.v1.MessageReceivedEvent
+	(*timestamppb.Timestamp)(nil),     // 26: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),     // 27: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),             // 28: google.protobuf.Empty
 }
 var file_saturn_mail_v1_mail_proto_depIdxs = []int32{
 	0,  // 0: saturn.mail.v1.Mailbox.system_role:type_name -> saturn.mail.v1.MailboxRole
-	25, // 1: saturn.mail.v1.Mailbox.create_time:type_name -> google.protobuf.Timestamp
-	25, // 2: saturn.mail.v1.Mailbox.update_time:type_name -> google.protobuf.Timestamp
+	26, // 1: saturn.mail.v1.Mailbox.create_time:type_name -> google.protobuf.Timestamp
+	26, // 2: saturn.mail.v1.Mailbox.update_time:type_name -> google.protobuf.Timestamp
 	2,  // 3: saturn.mail.v1.Message.from:type_name -> saturn.mail.v1.Participant
 	2,  // 4: saturn.mail.v1.Message.to:type_name -> saturn.mail.v1.Participant
 	2,  // 5: saturn.mail.v1.Message.cc:type_name -> saturn.mail.v1.Participant
 	2,  // 6: saturn.mail.v1.Message.bcc:type_name -> saturn.mail.v1.Participant
 	2,  // 7: saturn.mail.v1.Message.reply_to:type_name -> saturn.mail.v1.Participant
-	25, // 8: saturn.mail.v1.Message.sent_at:type_name -> google.protobuf.Timestamp
-	25, // 9: saturn.mail.v1.Message.received_at:type_name -> google.protobuf.Timestamp
+	26, // 8: saturn.mail.v1.Message.sent_at:type_name -> google.protobuf.Timestamp
+	26, // 9: saturn.mail.v1.Message.received_at:type_name -> google.protobuf.Timestamp
 	3,  // 10: saturn.mail.v1.Message.attachments:type_name -> saturn.mail.v1.Attachment
-	25, // 11: saturn.mail.v1.Message.create_time:type_name -> google.protobuf.Timestamp
-	25, // 12: saturn.mail.v1.Message.update_time:type_name -> google.protobuf.Timestamp
+	26, // 11: saturn.mail.v1.Message.create_time:type_name -> google.protobuf.Timestamp
+	26, // 12: saturn.mail.v1.Message.update_time:type_name -> google.protobuf.Timestamp
 	2,  // 13: saturn.mail.v1.Thread.participants:type_name -> saturn.mail.v1.Participant
-	25, // 14: saturn.mail.v1.Thread.last_message_at:type_name -> google.protobuf.Timestamp
-	25, // 15: saturn.mail.v1.Thread.create_time:type_name -> google.protobuf.Timestamp
-	25, // 16: saturn.mail.v1.Thread.update_time:type_name -> google.protobuf.Timestamp
+	26, // 14: saturn.mail.v1.Thread.last_message_at:type_name -> google.protobuf.Timestamp
+	26, // 15: saturn.mail.v1.Thread.create_time:type_name -> google.protobuf.Timestamp
+	26, // 16: saturn.mail.v1.Thread.update_time:type_name -> google.protobuf.Timestamp
 	5,  // 17: saturn.mail.v1.Thread.messages:type_name -> saturn.mail.v1.Message
 	1,  // 18: saturn.mail.v1.Draft.mode:type_name -> saturn.mail.v1.DraftMode
 	2,  // 19: saturn.mail.v1.Draft.to:type_name -> saturn.mail.v1.Participant
 	2,  // 20: saturn.mail.v1.Draft.cc:type_name -> saturn.mail.v1.Participant
 	2,  // 21: saturn.mail.v1.Draft.bcc:type_name -> saturn.mail.v1.Participant
 	3,  // 22: saturn.mail.v1.Draft.attachments:type_name -> saturn.mail.v1.Attachment
-	25, // 23: saturn.mail.v1.Draft.create_time:type_name -> google.protobuf.Timestamp
-	25, // 24: saturn.mail.v1.Draft.update_time:type_name -> google.protobuf.Timestamp
+	26, // 23: saturn.mail.v1.Draft.create_time:type_name -> google.protobuf.Timestamp
+	26, // 24: saturn.mail.v1.Draft.update_time:type_name -> google.protobuf.Timestamp
 	0,  // 25: saturn.mail.v1.ListMailboxesRequest.system_role:type_name -> saturn.mail.v1.MailboxRole
 	4,  // 26: saturn.mail.v1.ListMailboxesResponse.mailboxes:type_name -> saturn.mail.v1.Mailbox
 	4,  // 27: saturn.mail.v1.CreateMailboxRequest.mailbox:type_name -> saturn.mail.v1.Mailbox
 	4,  // 28: saturn.mail.v1.UpdateMailboxRequest.mailbox:type_name -> saturn.mail.v1.Mailbox
-	26, // 29: saturn.mail.v1.UpdateMailboxRequest.update_mask:type_name -> google.protobuf.FieldMask
+	27, // 29: saturn.mail.v1.UpdateMailboxRequest.update_mask:type_name -> google.protobuf.FieldMask
 	0,  // 30: saturn.mail.v1.ListThreadsRequest.system_bucket:type_name -> saturn.mail.v1.MailboxRole
 	6,  // 31: saturn.mail.v1.ListThreadsResponse.threads:type_name -> saturn.mail.v1.Thread
 	7,  // 32: saturn.mail.v1.ListDraftsResponse.drafts:type_name -> saturn.mail.v1.Draft
 	7,  // 33: saturn.mail.v1.CreateDraftRequest.draft:type_name -> saturn.mail.v1.Draft
 	7,  // 34: saturn.mail.v1.UpdateDraftRequest.draft:type_name -> saturn.mail.v1.Draft
-	26, // 35: saturn.mail.v1.UpdateDraftRequest.update_mask:type_name -> google.protobuf.FieldMask
-	8,  // 36: saturn.mail.v1.MailService.ListMailboxes:input_type -> saturn.mail.v1.ListMailboxesRequest
-	10, // 37: saturn.mail.v1.MailService.CreateMailbox:input_type -> saturn.mail.v1.CreateMailboxRequest
-	11, // 38: saturn.mail.v1.MailService.UpdateMailbox:input_type -> saturn.mail.v1.UpdateMailboxRequest
-	12, // 39: saturn.mail.v1.MailService.DeleteMailbox:input_type -> saturn.mail.v1.DeleteMailboxRequest
-	13, // 40: saturn.mail.v1.MailService.ListThreads:input_type -> saturn.mail.v1.ListThreadsRequest
-	15, // 41: saturn.mail.v1.MailService.GetThread:input_type -> saturn.mail.v1.GetThreadRequest
-	16, // 42: saturn.mail.v1.MailService.ModifyThread:input_type -> saturn.mail.v1.ModifyThreadRequest
-	17, // 43: saturn.mail.v1.MailService.BatchModifyThreads:input_type -> saturn.mail.v1.BatchModifyThreadsRequest
-	18, // 44: saturn.mail.v1.MailService.ListDrafts:input_type -> saturn.mail.v1.ListDraftsRequest
-	20, // 45: saturn.mail.v1.MailService.GetDraft:input_type -> saturn.mail.v1.GetDraftRequest
-	21, // 46: saturn.mail.v1.MailService.CreateDraft:input_type -> saturn.mail.v1.CreateDraftRequest
-	22, // 47: saturn.mail.v1.MailService.UpdateDraft:input_type -> saturn.mail.v1.UpdateDraftRequest
-	23, // 48: saturn.mail.v1.MailService.DeleteDraft:input_type -> saturn.mail.v1.DeleteDraftRequest
-	24, // 49: saturn.mail.v1.MailService.SendDraft:input_type -> saturn.mail.v1.SendDraftRequest
-	9,  // 50: saturn.mail.v1.MailService.ListMailboxes:output_type -> saturn.mail.v1.ListMailboxesResponse
-	4,  // 51: saturn.mail.v1.MailService.CreateMailbox:output_type -> saturn.mail.v1.Mailbox
-	4,  // 52: saturn.mail.v1.MailService.UpdateMailbox:output_type -> saturn.mail.v1.Mailbox
-	27, // 53: saturn.mail.v1.MailService.DeleteMailbox:output_type -> google.protobuf.Empty
-	14, // 54: saturn.mail.v1.MailService.ListThreads:output_type -> saturn.mail.v1.ListThreadsResponse
-	6,  // 55: saturn.mail.v1.MailService.GetThread:output_type -> saturn.mail.v1.Thread
-	6,  // 56: saturn.mail.v1.MailService.ModifyThread:output_type -> saturn.mail.v1.Thread
-	27, // 57: saturn.mail.v1.MailService.BatchModifyThreads:output_type -> google.protobuf.Empty
-	19, // 58: saturn.mail.v1.MailService.ListDrafts:output_type -> saturn.mail.v1.ListDraftsResponse
-	7,  // 59: saturn.mail.v1.MailService.GetDraft:output_type -> saturn.mail.v1.Draft
-	7,  // 60: saturn.mail.v1.MailService.CreateDraft:output_type -> saturn.mail.v1.Draft
-	7,  // 61: saturn.mail.v1.MailService.UpdateDraft:output_type -> saturn.mail.v1.Draft
-	27, // 62: saturn.mail.v1.MailService.DeleteDraft:output_type -> google.protobuf.Empty
-	5,  // 63: saturn.mail.v1.MailService.SendDraft:output_type -> saturn.mail.v1.Message
-	50, // [50:64] is the sub-list for method output_type
-	36, // [36:50] is the sub-list for method input_type
-	36, // [36:36] is the sub-list for extension type_name
-	36, // [36:36] is the sub-list for extension extendee
-	0,  // [0:36] is the sub-list for field type_name
+	27, // 35: saturn.mail.v1.UpdateDraftRequest.update_mask:type_name -> google.protobuf.FieldMask
+	5,  // 36: saturn.mail.v1.MessageReceivedEvent.message:type_name -> saturn.mail.v1.Message
+	8,  // 37: saturn.mail.v1.MailService.ListMailboxes:input_type -> saturn.mail.v1.ListMailboxesRequest
+	10, // 38: saturn.mail.v1.MailService.CreateMailbox:input_type -> saturn.mail.v1.CreateMailboxRequest
+	11, // 39: saturn.mail.v1.MailService.UpdateMailbox:input_type -> saturn.mail.v1.UpdateMailboxRequest
+	12, // 40: saturn.mail.v1.MailService.DeleteMailbox:input_type -> saturn.mail.v1.DeleteMailboxRequest
+	13, // 41: saturn.mail.v1.MailService.ListThreads:input_type -> saturn.mail.v1.ListThreadsRequest
+	15, // 42: saturn.mail.v1.MailService.GetThread:input_type -> saturn.mail.v1.GetThreadRequest
+	16, // 43: saturn.mail.v1.MailService.ModifyThread:input_type -> saturn.mail.v1.ModifyThreadRequest
+	17, // 44: saturn.mail.v1.MailService.BatchModifyThreads:input_type -> saturn.mail.v1.BatchModifyThreadsRequest
+	18, // 45: saturn.mail.v1.MailService.ListDrafts:input_type -> saturn.mail.v1.ListDraftsRequest
+	20, // 46: saturn.mail.v1.MailService.GetDraft:input_type -> saturn.mail.v1.GetDraftRequest
+	21, // 47: saturn.mail.v1.MailService.CreateDraft:input_type -> saturn.mail.v1.CreateDraftRequest
+	22, // 48: saturn.mail.v1.MailService.UpdateDraft:input_type -> saturn.mail.v1.UpdateDraftRequest
+	23, // 49: saturn.mail.v1.MailService.DeleteDraft:input_type -> saturn.mail.v1.DeleteDraftRequest
+	24, // 50: saturn.mail.v1.MailService.SendDraft:input_type -> saturn.mail.v1.SendDraftRequest
+	9,  // 51: saturn.mail.v1.MailService.ListMailboxes:output_type -> saturn.mail.v1.ListMailboxesResponse
+	4,  // 52: saturn.mail.v1.MailService.CreateMailbox:output_type -> saturn.mail.v1.Mailbox
+	4,  // 53: saturn.mail.v1.MailService.UpdateMailbox:output_type -> saturn.mail.v1.Mailbox
+	28, // 54: saturn.mail.v1.MailService.DeleteMailbox:output_type -> google.protobuf.Empty
+	14, // 55: saturn.mail.v1.MailService.ListThreads:output_type -> saturn.mail.v1.ListThreadsResponse
+	6,  // 56: saturn.mail.v1.MailService.GetThread:output_type -> saturn.mail.v1.Thread
+	6,  // 57: saturn.mail.v1.MailService.ModifyThread:output_type -> saturn.mail.v1.Thread
+	28, // 58: saturn.mail.v1.MailService.BatchModifyThreads:output_type -> google.protobuf.Empty
+	19, // 59: saturn.mail.v1.MailService.ListDrafts:output_type -> saturn.mail.v1.ListDraftsResponse
+	7,  // 60: saturn.mail.v1.MailService.GetDraft:output_type -> saturn.mail.v1.Draft
+	7,  // 61: saturn.mail.v1.MailService.CreateDraft:output_type -> saturn.mail.v1.Draft
+	7,  // 62: saturn.mail.v1.MailService.UpdateDraft:output_type -> saturn.mail.v1.Draft
+	28, // 63: saturn.mail.v1.MailService.DeleteDraft:output_type -> google.protobuf.Empty
+	5,  // 64: saturn.mail.v1.MailService.SendDraft:output_type -> saturn.mail.v1.Message
+	51, // [51:65] is the sub-list for method output_type
+	37, // [37:51] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_saturn_mail_v1_mail_proto_init() }
@@ -2649,7 +2700,7 @@ func file_saturn_mail_v1_mail_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_mail_v1_mail_proto_rawDesc), len(file_saturn_mail_v1_mail_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   23,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

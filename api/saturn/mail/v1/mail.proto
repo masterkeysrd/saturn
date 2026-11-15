@@ -8,6 +8,7 @@ import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
+import "saturn/platform/message/v1/options.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/mail/v1;mailv1";
 
@@ -520,4 +521,12 @@ message DeleteDraftRequest {
 message SendDraftRequest {
   // Draft identifier to send.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// MessageReceivedEvent is published on incremental delta syncs for newly ingested inbound messages.
+message MessageReceivedEvent {
+  option (saturn.platform.message.v1.topic) = "mail.message.received";
+
+  // Output only. Received email message.
+  Message message = 1;
 }

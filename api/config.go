@@ -21,9 +21,9 @@ import (
 //go:embed saturn/platform/agent/v1/*.yaml
 //go:embed saturn/platform/backup/v1/*.yaml
 //go:embed saturn/platform/connector/v1/*.yaml
-//go:embed saturn/platform/integration/v1/*.yaml
 //go:embed saturn/platform/message/v1/*.yaml
 //go:embed saturn/platform/scheduler/v1/*.yaml
+//go:embed saturn/platform/workflow/v1/*.yaml
 var configFS embed.FS
 
 // ServiceConfig represents a parsed API configuration YAML file.

@@ -207,12 +207,6 @@ authentication:
     - selector: "saturn.finance.v1.Finance.ImportStatement"
       auth_required: true
       api_key_scopes: [finance:write]
-    - selector: "saturn.finance.v1.Finance.IngestStatementDocument"
-      auth_required: true
-      api_key_scopes: [finance:write]
-    - selector: "saturn.finance.v1.Finance.AnalyzeStatementDocument"
-      auth_required: true
-      api_key_scopes: [finance:write]
     - selector: "saturn.finance.v1.Finance.DeleteStatement"
       auth_required: true
       api_key_scopes: [finance:write]

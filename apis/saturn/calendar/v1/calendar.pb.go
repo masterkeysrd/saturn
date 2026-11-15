@@ -7,6 +7,7 @@
 package calendarv1
 
 import (
+	_ "github.com/masterkeysrd/saturn/apis/saturn/platform/message/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -1999,11 +2000,103 @@ func (x *RespondToEventRequest) GetResponse() AttendeeResponseStatus {
 	return AttendeeResponseStatus_ATTENDEE_RESPONSE_STATUS_UNSPECIFIED
 }
 
+// CalendarEventCreatedEvent is published when a calendar event is created.
+type CalendarEventCreatedEvent struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. Created calendar event.
+	Event         *Event `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CalendarEventCreatedEvent) Reset() {
+	*x = CalendarEventCreatedEvent{}
+	mi := &file_saturn_calendar_v1_calendar_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CalendarEventCreatedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CalendarEventCreatedEvent) ProtoMessage() {}
+
+func (x *CalendarEventCreatedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_calendar_v1_calendar_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CalendarEventCreatedEvent.ProtoReflect.Descriptor instead.
+func (*CalendarEventCreatedEvent) Descriptor() ([]byte, []int) {
+	return file_saturn_calendar_v1_calendar_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *CalendarEventCreatedEvent) GetEvent() *Event {
+	if x != nil {
+		return x.Event
+	}
+	return nil
+}
+
+// CalendarEventUpdatedEvent is published when a calendar event is updated.
+type CalendarEventUpdatedEvent struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. Updated calendar event.
+	Event         *Event `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CalendarEventUpdatedEvent) Reset() {
+	*x = CalendarEventUpdatedEvent{}
+	mi := &file_saturn_calendar_v1_calendar_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CalendarEventUpdatedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CalendarEventUpdatedEvent) ProtoMessage() {}
+
+func (x *CalendarEventUpdatedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_calendar_v1_calendar_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CalendarEventUpdatedEvent.ProtoReflect.Descriptor instead.
+func (*CalendarEventUpdatedEvent) Descriptor() ([]byte, []int) {
+	return file_saturn_calendar_v1_calendar_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *CalendarEventUpdatedEvent) GetEvent() *Event {
+	if x != nil {
+		return x.Event
+	}
+	return nil
+}
+
 var File_saturn_calendar_v1_calendar_proto protoreflect.FileDescriptor
 
 const file_saturn_calendar_v1_calendar_proto_rawDesc = "" +
 	"\n" +
-	"!saturn/calendar/v1/calendar.proto\x12\x12saturn.calendar.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"]\n" +
+	"!saturn/calendar/v1/calendar.proto\x12\x12saturn.calendar.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a(saturn/platform/message/v1/options.proto\"]\n" +
 	"\tOrganizer\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x17\n" +
@@ -2154,7 +2247,11 @@ const file_saturn_calendar_v1_calendar_proto_rawDesc = "" +
 	"\x11target_start_date\x18\x04 \x01(\tR\x0ftargetStartDate\"y\n" +
 	"\x15RespondToEventRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12K\n" +
-	"\bresponse\x18\x02 \x01(\x0e2*.saturn.calendar.v1.AttendeeResponseStatusB\x03\xe0A\x02R\bresponse*k\n" +
+	"\bresponse\x18\x02 \x01(\x0e2*.saturn.calendar.v1.AttendeeResponseStatusB\x03\xe0A\x02R\bresponse\"h\n" +
+	"\x19CalendarEventCreatedEvent\x12/\n" +
+	"\x05event\x18\x01 \x01(\v2\x19.saturn.calendar.v1.EventR\x05event:\x1a\x92\xb5\x18\x16calendar.event.created\"h\n" +
+	"\x19CalendarEventUpdatedEvent\x12/\n" +
+	"\x05event\x18\x01 \x01(\v2\x19.saturn.calendar.v1.EventR\x05event:\x1a\x92\xb5\x18\x16calendar.event.updated*k\n" +
 	"\x0eCalendarSource\x12\x1f\n" +
 	"\x1bCALENDAR_SOURCE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16CALENDAR_SOURCE_NATIVE\x10\x01\x12\x1c\n" +
@@ -2210,7 +2307,7 @@ func file_saturn_calendar_v1_calendar_proto_rawDescGZIP() []byte {
 }
 
 var file_saturn_calendar_v1_calendar_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_saturn_calendar_v1_calendar_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_saturn_calendar_v1_calendar_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_saturn_calendar_v1_calendar_proto_goTypes = []any{
 	(CalendarSource)(0),                  // 0: saturn.calendar.v1.CalendarSource
 	(AccessRole)(0),                      // 1: saturn.calendar.v1.AccessRole
@@ -2237,29 +2334,31 @@ var file_saturn_calendar_v1_calendar_proto_goTypes = []any{
 	(*UpdateEventRequest)(nil),           // 22: saturn.calendar.v1.UpdateEventRequest
 	(*DeleteEventRequest)(nil),           // 23: saturn.calendar.v1.DeleteEventRequest
 	(*RespondToEventRequest)(nil),        // 24: saturn.calendar.v1.RespondToEventRequest
-	(*timestamppb.Timestamp)(nil),        // 25: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),        // 26: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),                // 27: google.protobuf.Empty
+	(*CalendarEventCreatedEvent)(nil),    // 25: saturn.calendar.v1.CalendarEventCreatedEvent
+	(*CalendarEventUpdatedEvent)(nil),    // 26: saturn.calendar.v1.CalendarEventUpdatedEvent
+	(*timestamppb.Timestamp)(nil),        // 27: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),        // 28: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),                // 29: google.protobuf.Empty
 }
 var file_saturn_calendar_v1_calendar_proto_depIdxs = []int32{
 	3,  // 0: saturn.calendar.v1.Attendee.response_status:type_name -> saturn.calendar.v1.AttendeeResponseStatus
 	0,  // 1: saturn.calendar.v1.Calendar.source:type_name -> saturn.calendar.v1.CalendarSource
 	1,  // 2: saturn.calendar.v1.Calendar.access_role:type_name -> saturn.calendar.v1.AccessRole
-	25, // 3: saturn.calendar.v1.Calendar.last_sync_time:type_name -> google.protobuf.Timestamp
-	25, // 4: saturn.calendar.v1.Calendar.create_time:type_name -> google.protobuf.Timestamp
-	25, // 5: saturn.calendar.v1.Calendar.update_time:type_name -> google.protobuf.Timestamp
+	27, // 3: saturn.calendar.v1.Calendar.last_sync_time:type_name -> google.protobuf.Timestamp
+	27, // 4: saturn.calendar.v1.Calendar.create_time:type_name -> google.protobuf.Timestamp
+	27, // 5: saturn.calendar.v1.Calendar.update_time:type_name -> google.protobuf.Timestamp
 	0,  // 6: saturn.calendar.v1.Event.source:type_name -> saturn.calendar.v1.CalendarSource
-	25, // 7: saturn.calendar.v1.Event.start_time:type_name -> google.protobuf.Timestamp
-	25, // 8: saturn.calendar.v1.Event.end_time:type_name -> google.protobuf.Timestamp
-	25, // 9: saturn.calendar.v1.Event.original_start_time:type_name -> google.protobuf.Timestamp
+	27, // 7: saturn.calendar.v1.Event.start_time:type_name -> google.protobuf.Timestamp
+	27, // 8: saturn.calendar.v1.Event.end_time:type_name -> google.protobuf.Timestamp
+	27, // 9: saturn.calendar.v1.Event.original_start_time:type_name -> google.protobuf.Timestamp
 	2,  // 10: saturn.calendar.v1.Event.status:type_name -> saturn.calendar.v1.EventStatus
 	5,  // 11: saturn.calendar.v1.Event.organizer:type_name -> saturn.calendar.v1.Organizer
 	6,  // 12: saturn.calendar.v1.Event.attendees:type_name -> saturn.calendar.v1.Attendee
 	7,  // 13: saturn.calendar.v1.Event.reminders:type_name -> saturn.calendar.v1.Reminder
-	25, // 14: saturn.calendar.v1.Event.create_time:type_name -> google.protobuf.Timestamp
-	25, // 15: saturn.calendar.v1.Event.update_time:type_name -> google.protobuf.Timestamp
-	25, // 16: saturn.calendar.v1.EventOccurrence.start_time:type_name -> google.protobuf.Timestamp
-	25, // 17: saturn.calendar.v1.EventOccurrence.end_time:type_name -> google.protobuf.Timestamp
+	27, // 14: saturn.calendar.v1.Event.create_time:type_name -> google.protobuf.Timestamp
+	27, // 15: saturn.calendar.v1.Event.update_time:type_name -> google.protobuf.Timestamp
+	27, // 16: saturn.calendar.v1.EventOccurrence.start_time:type_name -> google.protobuf.Timestamp
+	27, // 17: saturn.calendar.v1.EventOccurrence.end_time:type_name -> google.protobuf.Timestamp
 	2,  // 18: saturn.calendar.v1.EventOccurrence.status:type_name -> saturn.calendar.v1.EventStatus
 	5,  // 19: saturn.calendar.v1.EventOccurrence.organizer:type_name -> saturn.calendar.v1.Organizer
 	6,  // 20: saturn.calendar.v1.EventOccurrence.attendees:type_name -> saturn.calendar.v1.Attendee
@@ -2267,47 +2366,49 @@ var file_saturn_calendar_v1_calendar_proto_depIdxs = []int32{
 	8,  // 22: saturn.calendar.v1.ListCalendarsResponse.calendars:type_name -> saturn.calendar.v1.Calendar
 	8,  // 23: saturn.calendar.v1.CreateCalendarRequest.calendar:type_name -> saturn.calendar.v1.Calendar
 	8,  // 24: saturn.calendar.v1.UpdateCalendarRequest.calendar:type_name -> saturn.calendar.v1.Calendar
-	26, // 25: saturn.calendar.v1.UpdateCalendarRequest.update_mask:type_name -> google.protobuf.FieldMask
-	25, // 26: saturn.calendar.v1.ListEventsRequest.time_min:type_name -> google.protobuf.Timestamp
-	25, // 27: saturn.calendar.v1.ListEventsRequest.time_max:type_name -> google.protobuf.Timestamp
+	28, // 25: saturn.calendar.v1.UpdateCalendarRequest.update_mask:type_name -> google.protobuf.FieldMask
+	27, // 26: saturn.calendar.v1.ListEventsRequest.time_min:type_name -> google.protobuf.Timestamp
+	27, // 27: saturn.calendar.v1.ListEventsRequest.time_max:type_name -> google.protobuf.Timestamp
 	10, // 28: saturn.calendar.v1.ListEventsResponse.occurrences:type_name -> saturn.calendar.v1.EventOccurrence
 	9,  // 29: saturn.calendar.v1.CreateEventRequest.event:type_name -> saturn.calendar.v1.Event
 	9,  // 30: saturn.calendar.v1.UpdateEventRequest.event:type_name -> saturn.calendar.v1.Event
-	26, // 31: saturn.calendar.v1.UpdateEventRequest.update_mask:type_name -> google.protobuf.FieldMask
+	28, // 31: saturn.calendar.v1.UpdateEventRequest.update_mask:type_name -> google.protobuf.FieldMask
 	4,  // 32: saturn.calendar.v1.UpdateEventRequest.recurrence_scope:type_name -> saturn.calendar.v1.RecurrenceScope
-	25, // 33: saturn.calendar.v1.UpdateEventRequest.target_start_time:type_name -> google.protobuf.Timestamp
+	27, // 33: saturn.calendar.v1.UpdateEventRequest.target_start_time:type_name -> google.protobuf.Timestamp
 	4,  // 34: saturn.calendar.v1.DeleteEventRequest.recurrence_scope:type_name -> saturn.calendar.v1.RecurrenceScope
-	25, // 35: saturn.calendar.v1.DeleteEventRequest.target_start_time:type_name -> google.protobuf.Timestamp
+	27, // 35: saturn.calendar.v1.DeleteEventRequest.target_start_time:type_name -> google.protobuf.Timestamp
 	3,  // 36: saturn.calendar.v1.RespondToEventRequest.response:type_name -> saturn.calendar.v1.AttendeeResponseStatus
-	11, // 37: saturn.calendar.v1.CalendarService.ListCalendars:input_type -> saturn.calendar.v1.ListCalendarsRequest
-	13, // 38: saturn.calendar.v1.CalendarService.GetCalendar:input_type -> saturn.calendar.v1.GetCalendarRequest
-	14, // 39: saturn.calendar.v1.CalendarService.CreateCalendar:input_type -> saturn.calendar.v1.CreateCalendarRequest
-	15, // 40: saturn.calendar.v1.CalendarService.UpdateCalendar:input_type -> saturn.calendar.v1.UpdateCalendarRequest
-	16, // 41: saturn.calendar.v1.CalendarService.DeleteCalendar:input_type -> saturn.calendar.v1.DeleteCalendarRequest
-	17, // 42: saturn.calendar.v1.CalendarService.EnsureDefaultCalendar:input_type -> saturn.calendar.v1.EnsureDefaultCalendarRequest
-	18, // 43: saturn.calendar.v1.CalendarService.ListEvents:input_type -> saturn.calendar.v1.ListEventsRequest
-	20, // 44: saturn.calendar.v1.CalendarService.GetEvent:input_type -> saturn.calendar.v1.GetEventRequest
-	21, // 45: saturn.calendar.v1.CalendarService.CreateEvent:input_type -> saturn.calendar.v1.CreateEventRequest
-	22, // 46: saturn.calendar.v1.CalendarService.UpdateEvent:input_type -> saturn.calendar.v1.UpdateEventRequest
-	23, // 47: saturn.calendar.v1.CalendarService.DeleteEvent:input_type -> saturn.calendar.v1.DeleteEventRequest
-	24, // 48: saturn.calendar.v1.CalendarService.RespondToEvent:input_type -> saturn.calendar.v1.RespondToEventRequest
-	12, // 49: saturn.calendar.v1.CalendarService.ListCalendars:output_type -> saturn.calendar.v1.ListCalendarsResponse
-	8,  // 50: saturn.calendar.v1.CalendarService.GetCalendar:output_type -> saturn.calendar.v1.Calendar
-	8,  // 51: saturn.calendar.v1.CalendarService.CreateCalendar:output_type -> saturn.calendar.v1.Calendar
-	8,  // 52: saturn.calendar.v1.CalendarService.UpdateCalendar:output_type -> saturn.calendar.v1.Calendar
-	27, // 53: saturn.calendar.v1.CalendarService.DeleteCalendar:output_type -> google.protobuf.Empty
-	8,  // 54: saturn.calendar.v1.CalendarService.EnsureDefaultCalendar:output_type -> saturn.calendar.v1.Calendar
-	19, // 55: saturn.calendar.v1.CalendarService.ListEvents:output_type -> saturn.calendar.v1.ListEventsResponse
-	9,  // 56: saturn.calendar.v1.CalendarService.GetEvent:output_type -> saturn.calendar.v1.Event
-	9,  // 57: saturn.calendar.v1.CalendarService.CreateEvent:output_type -> saturn.calendar.v1.Event
-	9,  // 58: saturn.calendar.v1.CalendarService.UpdateEvent:output_type -> saturn.calendar.v1.Event
-	27, // 59: saturn.calendar.v1.CalendarService.DeleteEvent:output_type -> google.protobuf.Empty
-	9,  // 60: saturn.calendar.v1.CalendarService.RespondToEvent:output_type -> saturn.calendar.v1.Event
-	49, // [49:61] is the sub-list for method output_type
-	37, // [37:49] is the sub-list for method input_type
-	37, // [37:37] is the sub-list for extension type_name
-	37, // [37:37] is the sub-list for extension extendee
-	0,  // [0:37] is the sub-list for field type_name
+	9,  // 37: saturn.calendar.v1.CalendarEventCreatedEvent.event:type_name -> saturn.calendar.v1.Event
+	9,  // 38: saturn.calendar.v1.CalendarEventUpdatedEvent.event:type_name -> saturn.calendar.v1.Event
+	11, // 39: saturn.calendar.v1.CalendarService.ListCalendars:input_type -> saturn.calendar.v1.ListCalendarsRequest
+	13, // 40: saturn.calendar.v1.CalendarService.GetCalendar:input_type -> saturn.calendar.v1.GetCalendarRequest
+	14, // 41: saturn.calendar.v1.CalendarService.CreateCalendar:input_type -> saturn.calendar.v1.CreateCalendarRequest
+	15, // 42: saturn.calendar.v1.CalendarService.UpdateCalendar:input_type -> saturn.calendar.v1.UpdateCalendarRequest
+	16, // 43: saturn.calendar.v1.CalendarService.DeleteCalendar:input_type -> saturn.calendar.v1.DeleteCalendarRequest
+	17, // 44: saturn.calendar.v1.CalendarService.EnsureDefaultCalendar:input_type -> saturn.calendar.v1.EnsureDefaultCalendarRequest
+	18, // 45: saturn.calendar.v1.CalendarService.ListEvents:input_type -> saturn.calendar.v1.ListEventsRequest
+	20, // 46: saturn.calendar.v1.CalendarService.GetEvent:input_type -> saturn.calendar.v1.GetEventRequest
+	21, // 47: saturn.calendar.v1.CalendarService.CreateEvent:input_type -> saturn.calendar.v1.CreateEventRequest
+	22, // 48: saturn.calendar.v1.CalendarService.UpdateEvent:input_type -> saturn.calendar.v1.UpdateEventRequest
+	23, // 49: saturn.calendar.v1.CalendarService.DeleteEvent:input_type -> saturn.calendar.v1.DeleteEventRequest
+	24, // 50: saturn.calendar.v1.CalendarService.RespondToEvent:input_type -> saturn.calendar.v1.RespondToEventRequest
+	12, // 51: saturn.calendar.v1.CalendarService.ListCalendars:output_type -> saturn.calendar.v1.ListCalendarsResponse
+	8,  // 52: saturn.calendar.v1.CalendarService.GetCalendar:output_type -> saturn.calendar.v1.Calendar
+	8,  // 53: saturn.calendar.v1.CalendarService.CreateCalendar:output_type -> saturn.calendar.v1.Calendar
+	8,  // 54: saturn.calendar.v1.CalendarService.UpdateCalendar:output_type -> saturn.calendar.v1.Calendar
+	29, // 55: saturn.calendar.v1.CalendarService.DeleteCalendar:output_type -> google.protobuf.Empty
+	8,  // 56: saturn.calendar.v1.CalendarService.EnsureDefaultCalendar:output_type -> saturn.calendar.v1.Calendar
+	19, // 57: saturn.calendar.v1.CalendarService.ListEvents:output_type -> saturn.calendar.v1.ListEventsResponse
+	9,  // 58: saturn.calendar.v1.CalendarService.GetEvent:output_type -> saturn.calendar.v1.Event
+	9,  // 59: saturn.calendar.v1.CalendarService.CreateEvent:output_type -> saturn.calendar.v1.Event
+	9,  // 60: saturn.calendar.v1.CalendarService.UpdateEvent:output_type -> saturn.calendar.v1.Event
+	29, // 61: saturn.calendar.v1.CalendarService.DeleteEvent:output_type -> google.protobuf.Empty
+	9,  // 62: saturn.calendar.v1.CalendarService.RespondToEvent:output_type -> saturn.calendar.v1.Event
+	51, // [51:63] is the sub-list for method output_type
+	39, // [39:51] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_saturn_calendar_v1_calendar_proto_init() }
@@ -2321,7 +2422,7 @@ func file_saturn_calendar_v1_calendar_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_calendar_v1_calendar_proto_rawDesc), len(file_saturn_calendar_v1_calendar_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   20,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

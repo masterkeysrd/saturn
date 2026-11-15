@@ -1,0 +1,54 @@
+# Platform Workflow service API configuration.
+#
+# All platform workflow endpoints require JWT Bearer or API Key authentication.
+# Space-scoped endpoints require the Space-Id header (or a single-space API key).
+
+name: saturn.platform.workflow.v1
+title: "Saturn Platform Workflow API"
+apis:
+  - saturn.platform.workflow.v1.WorkflowService
+
+documentation:
+  summary: "Provides workflow automation authoring, built-in system flows, execution, webhook triggers, AI flow generation, and run observability. Space-scoped endpoints require the 'space-id' header containing the workspace ID."
+
+authentication:
+  rules:
+    - selector: "saturn.platform.workflow.v1.WorkflowService.*"
+      auth_required: true
+      api_key_scopes:
+        - "workflows:write"
+
+    - selector: "saturn.platform.workflow.v1.WorkflowService.List*"
+      auth_required: true
+      api_key_scopes:
+        - "workflows:read"
+        - "workflows:write"
+
+    - selector: "saturn.platform.workflow.v1.WorkflowService.Get*"
+      auth_required: true
+      api_key_scopes:
+        - "workflows:read"
+        - "workflows:write"
+
+    - selector: "saturn.platform.workflow.v1.WorkflowService.ExecuteFlow"
+      auth_required: true
+      api_key_scopes:
+        - "workflows:execute"
+        - "workflows:write"
+
+    - selector: "saturn.platform.workflow.v1.WorkflowService.InvokeWebhookTrigger"
+      auth_required: true
+      api_key_scopes:
+        - "workflows:execute"
+        - "workflows:write"
+
+    - selector: "saturn.platform.workflow.v1.WorkflowService.TestFlow"
+      auth_required: true
+      api_key_scopes:
+        - "workflows:execute"
+        - "workflows:write"
+
+space:
+  rules:
+    - selector: "saturn.platform.workflow.v1.WorkflowService.*"
+      scoped: true

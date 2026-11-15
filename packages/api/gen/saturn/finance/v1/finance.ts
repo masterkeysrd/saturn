@@ -462,10 +462,6 @@ export type InboxItem_DocType =
    * Unknown document type.
    */
   | "UNKNOWN"
-  /**
-   * System verification document.
-   */
-  | "SYSTEM_VERIFICATION"
 
 /**
  * Optional representation view.
@@ -3101,10 +3097,10 @@ export interface InboxItem {
    */
   spaceId?: string
   /**
-   * Output only. Ingestion integration channel identifier.
-   * Values are of the form `int_[a-zA-Z0-9]+`.
+   * Output only. Workflow run identifier that staged this inbox item.
+   * Values are of the form `wfr_[a-zA-Z0-9]+`.
    */
-  integrationId?: string
+  flowRunId?: string
   /**
    * Output only. Staging lifecycle status.
    */
@@ -3776,113 +3772,71 @@ export interface SectionValidationReport {
 }
 
 /**
- * The request for
- * [IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument].
+ * ScheduledTransactionCreatedEvent is published when a pending scheduled transaction is created.
  */
-export interface IngestStatementDocumentRequest {
+export interface ScheduledTransactionCreatedEvent {
   /**
-   * Optional. Target account identifier override.
-   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   * Output only. Created scheduled transaction.
    */
-  targetAccountId?: string
-  /**
-   * Required. Original file name.
-   */
-  filename: string
-  /**
-   * Required. MIME content type (e.g. "application/pdf", "text/plain").
-   */
-  contentType: string
-  /**
-   * Required. Raw document binary payload.
-   */
-  documentBytes: string
-  /**
-   * Optional. Password for encrypted PDFs.
-   */
-  password?: string
+  scheduledTransaction: ScheduledTransaction
 }
 
 /**
- * The response for
- * [IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument].
+ * ScheduledTransactionUpdatedEvent is published when a scheduled transaction is modified.
  */
-export interface IngestStatementDocumentResponse {
+export interface ScheduledTransactionUpdatedEvent {
   /**
-   * Ingestion batch identifier.
+   * Output only. Updated scheduled transaction.
    */
-  batchId: string
-  /**
-   * List of created statement drafts.
-   */
-  createdStatements: Statement[]
-  /**
-   * Section balance validation reports.
-   */
-  sectionReports: SectionValidationReport[]
-  /**
-   * List of unmapped currency sections found in the document.
-   */
-  unmappedSections: string[]
-  /**
-   * Indicates whether a password is required to decrypt the document.
-   */
-  needsPassword: boolean
-  /**
-   * Extraction or validation warning and error messages.
-   */
-  errors: string[]
+  scheduledTransaction: ScheduledTransaction
 }
 
 /**
- * The request for
- * [AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument].
+ * ScheduledTransactionPaidEvent is published when a scheduled transaction transitions to paid.
  */
-export interface AnalyzeStatementDocumentRequest {
+export interface ScheduledTransactionPaidEvent {
   /**
-   * Optional. Target account identifier override.
-   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   * Output only. Paid scheduled transaction.
    */
-  targetAccountId?: string
+  scheduledTransaction: ScheduledTransaction
   /**
-   * Required. Original file name.
+   * Output only. Settled ledger transaction ID if linked.
    */
-  filename: string
+  transactionId?: string
   /**
-   * Required. MIME content type.
+   * Output only. Timestamp when the scheduled transaction was paid.
    */
-  contentType: string
-  /**
-   * Required. Raw document binary payload.
-   */
-  documentBytes: string
-  /**
-   * Optional. Password for encrypted PDFs.
-   */
-  password?: string
+  paidAt: string
 }
 
 /**
- * The response for
- * [AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument].
+ * InboxItemCreatedEvent is published when a new pending inbox item is staged.
  */
-export interface AnalyzeStatementDocumentResponse {
+export interface InboxItemCreatedEvent {
   /**
-   * Section balance validation reports.
+   * Output only. Newly staged inbox item.
    */
-  sectionReports: SectionValidationReport[]
+  inboxItem: InboxItem
+}
+
+/**
+ * InboxItemApprovedEvent is published when an inbox item is approved into the ledger.
+ */
+export interface InboxItemApprovedEvent {
   /**
-   * List of unmapped currency sections found in the document.
+   * Output only. Approved inbox item.
    */
-  unmappedSections: string[]
+  inboxItem: InboxItem
+}
+
+/**
+ * TransactionCreatedEvent is published when a ledger transaction is created.
+ */
+export interface TransactionCreatedEvent {
   /**
-   * Indicates whether a password is required to decrypt the document.
+   * Output only. Created ledger transaction.
    */
-  needsPassword: boolean
-  /**
-   * Extraction or validation warning and error messages.
-   */
-  errors: string[]
+  transaction: Transaction
 }
 
 /**
@@ -5606,67 +5560,6 @@ export function useImportStatementMutation(
     { account_id: string; req: ImportStatementRequest }
   >({
     mutationFn: ({ account_id, req }) => importStatement(account_id, req),
-    ...options,
-  })
-}
-
-/**
- * Ingests an unstructured statement document (PDF, image, or text),
- * parses multi-currency sections, validates math, and persists draft statements.
- */
-export async function ingestStatementDocument(
-  req: IngestStatementDocumentRequest
-): Promise<IngestStatementDocumentResponse> {
-  return request<IngestStatementDocumentResponse>({
-    method: "POST",
-    url: "/api/v1/finance/statements:ingest-document",
-    data: req,
-  })
-}
-
-export function useIngestStatementDocumentMutation(
-  options?: UseMutationOptions<
-    IngestStatementDocumentResponse,
-    Error,
-    IngestStatementDocumentRequest
-  >
-) {
-  return useMutation<
-    IngestStatementDocumentResponse,
-    Error,
-    IngestStatementDocumentRequest
-  >({
-    mutationFn: (req) => ingestStatementDocument(req),
-    ...options,
-  })
-}
-
-/**
- * Analyzes a statement document without persisting drafts (preview/dry-run mode).
- */
-export async function analyzeStatementDocument(
-  req: AnalyzeStatementDocumentRequest
-): Promise<AnalyzeStatementDocumentResponse> {
-  return request<AnalyzeStatementDocumentResponse>({
-    method: "POST",
-    url: "/api/v1/finance/statements:analyze-document",
-    data: req,
-  })
-}
-
-export function useAnalyzeStatementDocumentMutation(
-  options?: UseMutationOptions<
-    AnalyzeStatementDocumentResponse,
-    Error,
-    AnalyzeStatementDocumentRequest
-  >
-) {
-  return useMutation<
-    AnalyzeStatementDocumentResponse,
-    Error,
-    AnalyzeStatementDocumentRequest
-  >({
-    mutationFn: (req) => analyzeStatementDocument(req),
     ...options,
   })
 }

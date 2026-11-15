@@ -1,0 +1,709 @@
+syntax = "proto3";
+
+package saturn.platform.workflow.v1;
+
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/platform/workflow/v1;workflowv1";
+
+// WorkflowService manages workflow definitions, triggers, system flows, execution,
+// webhook invocation, dry-run testing, AI flow generation, and run observability.
+service WorkflowService {
+  // Lists all flows in the workspace, lazily seeding registered system flows.
+  rpc ListFlows(ListFlowsRequest) returns (ListFlowsResponse) {
+    option (google.api.http) = {get: "/v1/platform/workflows"};
+  }
+
+  // Retrieves a single flow by ID or system key.
+  rpc GetFlow(GetFlowRequest) returns (Flow) {
+    option (google.api.http) = {get: "/v1/platform/workflows/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Creates a new user-defined workflow with its trigger bindings and steps.
+  rpc CreateFlow(CreateFlowRequest) returns (Flow) {
+    option (google.api.http) = {
+      post: "/v1/platform/workflows"
+      body: "flow"
+    };
+    option (google.api.method_signature) = "flow";
+  }
+
+  // Updates an existing flow definition using a field mask.
+  rpc UpdateFlow(UpdateFlowRequest) returns (Flow) {
+    option (google.api.http) = {
+      patch: "/v1/platform/workflows/{id}"
+      body: "flow"
+    };
+    option (google.api.method_signature) = "id,flow,update_mask";
+  }
+
+  // Deletes a user-defined flow. System flows cannot be deleted.
+  rpc DeleteFlow(DeleteFlowRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/platform/workflows/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Enables a flow so its triggers become active.
+  rpc EnableFlow(EnableFlowRequest) returns (Flow) {
+    option (google.api.http) = {
+      post: "/v1/platform/workflows/{id}:enable"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
+  // Disables a flow so its triggers do not dispatch new runs.
+  rpc DisableFlow(DisableFlowRequest) returns (Flow) {
+    option (google.api.http) = {
+      post: "/v1/platform/workflows/{id}:disable"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
+  // Resets a built-in system flow back to its factory blueprint defaults.
+  rpc ResetFlow(ResetFlowRequest) returns (Flow) {
+    option (google.api.http) = {
+      post: "/v1/platform/workflows/{id}:reset"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
+  // Executes a flow by ID or system key, synchronously by default or asynchronously.
+  rpc ExecuteFlow(ExecuteFlowRequest) returns (FlowRun) {
+    option (google.api.http) = {
+      post: "/v1/platform/workflows/{id}:execute"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
+  // Invokes a webhook trigger with an arbitrary JSON payload and enqueues an async FlowRun.
+  rpc InvokeWebhookTrigger(InvokeWebhookTriggerRequest) returns (FlowRun) {
+    option (google.api.http) = {
+      post: "/v1/platform/workflows/triggers/{trigger_id}:webhook"
+      body: "payload"
+    };
+    option (google.api.method_signature) = "trigger_id,payload";
+  }
+
+  // Tests a saved or unsaved flow definition in-memory without persisting throwaway run rows.
+  rpc TestFlow(TestFlowRequest) returns (FlowRun) {
+    option (google.api.http) = {
+      post: "/v1/platform/workflows:test"
+      body: "*"
+    };
+  }
+
+  // Generates a validated unsaved flow draft from a natural-language prompt.
+  rpc GenerateFlow(GenerateFlowRequest) returns (Flow) {
+    option (google.api.http) = {
+      post: "/v1/platform/workflows:generate"
+      body: "*"
+    };
+    option (google.api.method_signature) = "prompt";
+  }
+
+  // Lists workflow execution runs in the workspace with optional filters and pagination.
+  rpc ListFlowRuns(ListFlowRunsRequest) returns (ListFlowRunsResponse) {
+    option (google.api.http) = {get: "/v1/platform/workflows/runs"};
+  }
+
+  // Retrieves a single workflow execution run hydrated with its step run timeline.
+  rpc GetFlowRun(GetFlowRunRequest) returns (FlowRun) {
+    option (google.api.http) = {get: "/v1/platform/workflows/runs/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Retrieves the catalog of registered trigger topics, steps, data loaders, and CEL helpers.
+  rpc GetCatalog(GetCatalogRequest) returns (Catalog) {
+    option (google.api.http) = {get: "/v1/platform/workflows/catalog"};
+  }
+}
+
+// ModelConfig configures the LLM agent or inline provider/model used for AI steps.
+message ModelConfig {
+  // Optional. Named agent ID from platform/agent to inherit instructions and model settings from.
+  optional string agent_id = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Explicit LLM provider ID when specifying an inline model.
+  optional string provider_id = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Model identifier (e.g. gemini-2.5-flash).
+  optional string model_name = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Sampling temperature parameter.
+  optional double temperature = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Flow represents a workflow automation definition with triggers and step graph.
+message Flow {
+  // Config stores extensible execution settings for a flow.
+  message Config {
+    // Optional. Default LLM model configuration for steps that omit step.model.
+    optional ModelConfig default_model = 1 [(google.api.field_behavior) = OPTIONAL];
+
+    // Optional. Execution timeout in seconds.
+    optional int32 timeout_seconds = 2 [(google.api.field_behavior) = OPTIONAL];
+
+    // Optional. Maximum retry attempts for failed async runs.
+    optional int32 max_retries = 3 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // Trigger represents a trigger binding attached to a flow.
+  message Trigger {
+    // Config stores polymorphic trigger configuration and binding rules.
+    message Config {
+      // Optional. Event topic name for 'event' triggers (e.g. mail.message.received).
+      optional string topic = 1 [(google.api.field_behavior) = OPTIONAL];
+
+      // Optional. Cron expression for 'schedule' triggers.
+      optional string cron = 2 [(google.api.field_behavior) = OPTIONAL];
+
+      // Optional. Linked platform.schedules ID for 'schedule' triggers.
+      optional string schedule_id = 3 [(google.api.field_behavior) = OPTIONAL];
+
+      // Optional. CEL boolean pre-guard evaluated against raw trigger.data before creating a FlowRun.
+      optional string filter = 4 [(google.api.field_behavior) = OPTIONAL];
+
+      // Optional. CEL mapping normalizing trigger.data into flow input.*.
+      optional google.protobuf.Struct input_mapping = 5 [(google.api.field_behavior) = OPTIONAL];
+    }
+
+    // Output only. Unique identifier with prefix `trg_`.
+    string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Parent flow identifier (`flw_...`).
+    string flow_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Workspace identifier (`spc_...`).
+    string space_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Required. Human-readable name of the trigger.
+    string name = 4 [(google.api.field_behavior) = REQUIRED];
+
+    // Required. Trigger kind ('event', 'webhook', 'schedule', 'manual').
+    string type = 5 [(google.api.field_behavior) = REQUIRED];
+
+    // Optional. Trigger configuration and CEL mapping/filter rules.
+    optional Config config = 6 [(google.api.field_behavior) = OPTIONAL];
+
+    // Optional. Whether this trigger is active.
+    bool is_enabled = 7 [(google.api.field_behavior) = OPTIONAL];
+
+    // Output only. Creation timestamp.
+    google.protobuf.Timestamp create_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Last update timestamp.
+    google.protobuf.Timestamp update_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // SourceBinding declares a read-only data loader dependency evaluated before step execution.
+  message SourceBinding {
+    // Required. Registered data loader name (e.g. finance.accounts).
+    string loader = 1 [(google.api.field_behavior) = REQUIRED];
+
+    // Optional. Loader parameters evaluated via CEL.
+    optional google.protobuf.Struct params = 2 [(google.api.field_behavior) = OPTIONAL];
+
+    // Optional. Whether loader failure should fail the step.
+    optional bool required = 3 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // SwitchCase defines a conditional branch inside a `switch` control step.
+  message SwitchCase {
+    // Required. Unique case label within the switch step.
+    string name = 1 [(google.api.field_behavior) = REQUIRED];
+
+    // Required. CEL boolean expression evaluated against FlowState.
+    string condition = 2 [(google.api.field_behavior) = REQUIRED];
+
+    // Optional. Steps executed when this case matches.
+    repeated StepNode steps = 3 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // StepNode defines a single step in a flat-first workflow sequence or nested control branch.
+  message StepNode {
+    // Required. Unique step identifier within the flow (used as `steps.<id>` in CEL).
+    string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+    // Optional. Human-readable display label for the step.
+    optional string name = 2 [(google.api.field_behavior) = OPTIONAL];
+
+    // Required. Registered step type (e.g. llm.generate, filter, switch, finance.create_inbox_item).
+    string type = 3 [(google.api.field_behavior) = REQUIRED];
+
+    // Optional. Error policy ('fail' or 'continue', defaults to 'fail').
+    optional string on_error = 4 [(google.api.field_behavior) = OPTIONAL];
+
+    // Optional. Step-level LLM model override for `llm.generate` steps.
+    optional ModelConfig model = 5 [(google.api.field_behavior) = OPTIONAL];
+
+    // Optional. Read-only data loaders resolved into step-local `sources.<alias>`.
+    map<string, SourceBinding> sources = 6 [(google.api.field_behavior) = OPTIONAL];
+
+    // Optional. Step input configuration and CEL binding expressions.
+    optional google.protobuf.Struct inputs = 7 [(google.api.field_behavior) = OPTIONAL];
+
+    // Optional. Conditional branches for `switch` control steps.
+    repeated SwitchCase cases = 8 [(google.api.field_behavior) = OPTIONAL];
+
+    // Optional. Fallback steps for `switch` control steps when no case matches.
+    repeated StepNode default = 9 [(google.api.field_behavior) = OPTIONAL];
+
+    // Optional. Loop body steps for `for_each` control steps.
+    repeated StepNode steps = 10 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // Stats summarizes 7-day execution metrics for a flow.
+  message Stats {
+    // Output only. Total number of runs in the last 7 days.
+    int32 total_runs_7d = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Completed runs in the last 7 days.
+    int32 completed_runs_7d = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Failed runs in the last 7 days.
+    int32 failed_runs_7d = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Filtered runs in the last 7 days.
+    int32 filtered_runs_7d = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Timestamp of the most recent run.
+    optional google.protobuf.Timestamp last_run_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Status of the most recent run.
+    optional string last_run_status = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Daily run counts over the last 7 days ordered oldest to newest.
+    repeated int32 daily_counts_7d = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // Output only. Unique identifier with prefix `flw_`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Workspace identifier (`spc_...`).
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Built-in system blueprint key (e.g. system.finance.inbox_ingestion).
+  optional string system_key = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Whether this is a built-in system flow.
+  bool is_system = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Whether this flow is enabled for execution.
+  bool is_enabled = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. Human-readable name of the flow.
+  string name = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Description of what the flow automates.
+  string description = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Flow-level execution configuration.
+  optional Config config = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. JSON Schema defining the normalized `input.*` contract.
+  optional google.protobuf.Struct input_schema = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. Ordered sequence of workflow steps.
+  repeated StepNode steps = 10 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Trigger bindings attached to this flow.
+  repeated Trigger triggers = 11 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Monotonic definition version incremented on updates.
+  int64 version = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Hydrated 7-day execution summary.
+  optional Stats stats = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
+  google.protobuf.Timestamp update_time = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// FlowError describes a structured failure recorded on a FlowRun or StepRun.
+message FlowError {
+  // Optional. Identifier of the step where the error occurred.
+  optional string step_id = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Machine-readable error code.
+  optional string code = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Human-readable error message.
+  string message = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// FlowRun records a single execution of a workflow.
+message FlowRun {
+  // StepRun records the execution state and output of an individual step invocation.
+  message StepRun {
+    // Output only. Unique identifier with prefix `wsr_`.
+    string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Parent flow run identifier (`wfr_...`).
+    string flow_run_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Workspace identifier (`spc_...`).
+    string space_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Step identifier within the flow definition.
+    string step_id = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Step type executed.
+    string step_type = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Unique invocation key (e.g. `extract_tx` or `each_pay[0].upsert`).
+    string execution_key = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Step execution status ('running', 'completed', 'filtered', 'stopped', 'failed', 'failed_continued').
+    string status = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Step output object bound to `steps.<id>`.
+    optional google.protobuf.Struct output = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Structured error if the step failed.
+    optional FlowError error = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Telemetry metadata (duration_ms, tokens_used, source loader stats).
+    optional google.protobuf.Struct metadata = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Linked platform.agent_runs ID for `llm.generate` steps.
+    optional string agent_run_id = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Timestamp when the step started executing.
+    google.protobuf.Timestamp start_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Timestamp when the step finished executing.
+    optional google.protobuf.Timestamp end_time = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Creation timestamp.
+    google.protobuf.Timestamp create_time = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Last update timestamp.
+    google.protobuf.Timestamp update_time = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // Output only. Unique identifier with prefix `wfr_`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Workspace identifier (`spc_...`).
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Executed flow identifier (`flw_...`).
+  string flow_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Hydrated flow name for display in run lists and traces.
+  optional string flow_name = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Snapshot of the flow version that executed.
+  int64 flow_version = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Trigger identifier that initiated this run (`trg_...`), if any.
+  optional string trigger_id = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Idempotency key tying retries back to the same FlowRun.
+  optional string idempotency_key = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Run status ('pending', 'running', 'waiting', 'completed', 'filtered', 'stopped', 'failed', 'cancelled').
+  string status = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Number of execution attempts for this run.
+  int32 attempts = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Raw trigger envelope payload.
+  optional google.protobuf.Struct trigger_data = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Normalized flow input payload.
+  optional google.protobuf.Struct input = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Terminal flow output payload from an `output` step.
+  optional google.protobuf.Struct output = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Structured error if the run failed.
+  optional FlowError error = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Execution telemetry metadata (tokens_used, duration_ms, correlation_id, trigger_type).
+  optional google.protobuf.Struct metadata = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Step execution trace hydrated on GetFlowRun, ExecuteFlow, and TestFlow.
+  repeated StepRun step_runs = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Scheduled resume timestamp for waiting runs.
+  optional google.protobuf.Timestamp resume_time = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when execution started.
+  optional google.protobuf.Timestamp start_time = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when execution completed.
+  optional google.protobuf.Timestamp end_time = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 19 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
+  google.protobuf.Timestamp update_time = 20 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// InlineArtifact carries an inline binary file uploaded during synchronous ExecuteFlow or TestFlow calls.
+message InlineArtifact {
+  // Required. Original filename (e.g. statement.pdf).
+  string filename = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. MIME content type (e.g. application/pdf, text/csv).
+  string content_type = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Raw binary file bytes.
+  bytes data = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Input field hint for mapping the ephemeral ArtifactRef into flow input.
+  optional string field_name = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for WorkflowService.ListFlows.
+message ListFlowsRequest {
+  // Optional. Filter by built-in system flow status.
+  optional bool is_system = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter by enabled status.
+  optional bool is_enabled = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for WorkflowService.ListFlows.
+message ListFlowsResponse {
+  // Output only. List of flows hydrated with triggers and 7-day stats.
+  repeated Flow flows = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for WorkflowService.GetFlow.
+message GetFlowRequest {
+  // Required. Flow ID (`flw_...`) or built-in system key (`system.*`).
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for WorkflowService.CreateFlow.
+message CreateFlowRequest {
+  // Required. Workflow definition to create.
+  Flow flow = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for WorkflowService.UpdateFlow.
+message UpdateFlowRequest {
+  // Required. Flow ID (`flw_...`) or built-in system key to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Updated flow definition.
+  Flow flow = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask specifying which fields to update.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for WorkflowService.DeleteFlow.
+message DeleteFlowRequest {
+  // Required. Flow ID (`flw_...`) to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for WorkflowService.EnableFlow.
+message EnableFlowRequest {
+  // Required. Flow ID (`flw_...`) or built-in system key to enable.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for WorkflowService.DisableFlow.
+message DisableFlowRequest {
+  // Required. Flow ID (`flw_...`) or built-in system key to disable.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for WorkflowService.ResetFlow.
+message ResetFlowRequest {
+  // Required. Flow ID (`flw_...`) or built-in system key to reset to factory defaults.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for WorkflowService.ExecuteFlow.
+message ExecuteFlowRequest {
+  // Required. Flow ID (`flw_...`) or built-in system key (`system.*`).
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Structured input payload matching the flow's input_schema.
+  optional google.protobuf.Struct input = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Inline binary artifacts mapped into ephemeral:// ArtifactRefs.
+  repeated InlineArtifact artifacts = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. If true, dispatches execution asynchronously and returns a pending FlowRun.
+  bool async = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for WorkflowService.InvokeWebhookTrigger.
+message InvokeWebhookTriggerRequest {
+  // Required. Webhook trigger ID (`trg_...`).
+  string trigger_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Arbitrary JSON payload sent to the webhook endpoint.
+  google.protobuf.Struct payload = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for WorkflowService.TestFlow.
+message TestFlowRequest {
+  // Required. Saved or unsaved Flow definition to test in-memory.
+  Flow flow = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Sample raw trigger envelope payload.
+  optional google.protobuf.Struct trigger_data = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Sample normalized input payload.
+  optional google.protobuf.Struct input = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Sample inline binary artifacts for testing document extraction or AI steps.
+  repeated InlineArtifact artifacts = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for WorkflowService.GenerateFlow.
+message GenerateFlowRequest {
+  // Required. Natural-language description of the desired automation.
+  string prompt = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Model override for the Prompt-to-Flow AI architect.
+  optional ModelConfig model = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for WorkflowService.ListFlowRuns.
+message ListFlowRunsRequest {
+  // Optional. Filter runs by flow ID.
+  optional string flow_id = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter runs by terminal or active status.
+  optional string status = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Maximum number of runs to return per page.
+  int32 page_size = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Cursor token from a previous ListFlowRunsResponse.
+  string page_token = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for WorkflowService.ListFlowRuns.
+message ListFlowRunsResponse {
+  // Output only. Paginated list of workflow execution runs.
+  repeated FlowRun runs = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Cursor token for retrieving the next page.
+  string next_page_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for WorkflowService.GetFlowRun.
+message GetFlowRunRequest {
+  // Required. Flow run ID (`wfr_...`).
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for WorkflowService.GetCatalog.
+message GetCatalogRequest {}
+
+// Catalog returns all registered workflow capabilities for authoring and AI generation.
+message Catalog {
+  // TriggerTopic describes a domain event topic available for `event` triggers.
+  message TriggerTopic {
+    // Output only. Eventbus topic key (e.g. mail.message.received).
+    string topic = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Owning domain name (e.g. mail, finance, calendar).
+    string domain = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Human-readable title for the trigger topic.
+    string display_name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Description of when the event is emitted.
+    string description = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. JSON Schema describing `trigger.data` fields.
+    optional google.protobuf.Struct payload_schema = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // Step describes a registered workflow step type.
+  message Step {
+    // Output only. Registered step type identifier (e.g. llm.generate, finance.create_inbox_item).
+    string type = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Owning package or domain (e.g. platform, finance, calendar, mail).
+    string owner = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Step category ('control', 'ai', 'document', 'action').
+    string category = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Human-readable step name.
+    string display_name = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Description of what the step does.
+    string description = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. JSON Schema describing step `inputs`.
+    optional google.protobuf.Struct inputs_schema = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. JSON Schema describing the step output bound to `steps.<id>`.
+    optional google.protobuf.Struct output_schema = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // Loader describes a registered read-only data loader available in `sources`.
+  message Loader {
+    // Output only. Registered loader name (e.g. finance.accounts, mail.message).
+    string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Owning domain (e.g. finance, calendar, mail).
+    string owner = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Human-readable loader title.
+    string display_name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Description of the data returned by this loader.
+    string description = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. JSON Schema describing accepted `params`.
+    optional google.protobuf.Struct params_schema = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. JSON Schema describing the data bound to `sources.<alias>`.
+    optional google.protobuf.Struct output_schema = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // CelHelper documents a Saturn CEL helper function available in expressions.
+  message CelHelper {
+    // Output only. Helper function name (e.g. toCents, localTime).
+    string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Function signature.
+    string signature = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Description of helper behavior.
+    string description = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Example CEL expression using the helper.
+    string example = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // Output only. Registered domain event trigger topics.
+  repeated TriggerTopic trigger_topics = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Registered platform and domain workflow steps.
+  repeated Step steps = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Registered read-only data loaders.
+  repeated Loader loaders = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Documented Saturn CEL helper functions.
+  repeated CelHelper cel_helpers = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}

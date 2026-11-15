@@ -657,6 +657,26 @@ export interface RespondToEventRequest {
 }
 
 /**
+ * CalendarEventCreatedEvent is published when a calendar event is created.
+ */
+export interface CalendarEventCreatedEvent {
+  /**
+   * Output only. Created calendar event.
+   */
+  event: Event
+}
+
+/**
+ * CalendarEventUpdatedEvent is published when a calendar event is updated.
+ */
+export interface CalendarEventUpdatedEvent {
+  /**
+   * Output only. Updated calendar event.
+   */
+  event: Event
+}
+
+/**
  * CalendarService manages workspace native and external synchronized calendars,
  * events, occurrence recurrence expansion, attendee responses, and write-through operations.
  */

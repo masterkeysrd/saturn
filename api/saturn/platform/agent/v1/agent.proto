@@ -6,7 +6,6 @@ import "google/api/annotations.proto";
 import "google/api/client.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
-import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1;agentv1";
@@ -97,15 +96,6 @@ service AgentService {
   // Retrieves standard connection type templates.
   rpc GetProviderCatalog(GetProviderCatalogRequest) returns (GetProviderCatalogResponse) {
     option (google.api.http) = {get: "/v1/platform/agent/providers-catalog"};
-  }
-
-  // Analyzes signal content against a target agent purpose blueprint and returns structured suggestions.
-  rpc GetSuggestions(GetSuggestionsRequest) returns (GetSuggestionsResponse) {
-    option (google.api.http) = {
-      post: "/v1/platform/agent/suggestions"
-      body: "*"
-    };
-    option (google.api.method_signature) = "purpose,text_content";
   }
 }
 
@@ -419,37 +409,4 @@ message GetProviderCatalogRequest {}
 message GetProviderCatalogResponse {
   // Output only. The list of supported provider blueprints.
   repeated ProviderBlueprintDescriptor blueprints = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-}
-
-// File payload containing document content uploaded for analysis.
-message DocumentFilePayload {
-  // Required. The original filename of the document.
-  string filename = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. The MIME type of the document (e.g. application/pdf, text/csv).
-  string content_type = 2 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. The raw binary content of the document.
-  bytes content = 3 [(google.api.field_behavior) = REQUIRED];
-}
-
-// Request message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].
-message GetSuggestionsRequest {
-  // Required. The target agent purpose blueprint guiding analysis.
-  string purpose = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // Optional. Textual content or query prompt to analyze.
-  string text_content = 2 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Attached document files to be ingested and analyzed.
-  repeated DocumentFilePayload documents = 3 [(google.api.field_behavior) = OPTIONAL];
-}
-
-// Response message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].
-message GetSuggestionsResponse {
-  // Output only. The raw model completion text.
-  string raw_output = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // Output only. The parsed structured suggestions matching the purpose schema.
-  google.protobuf.Struct structured_suggestion = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

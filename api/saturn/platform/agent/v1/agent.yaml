@@ -51,11 +51,6 @@ authentication:
       api_key_scopes:
         - agents:read
         - agents:write
-    - selector: "saturn.platform.agent.v1.AgentService.GetSuggestions"
-      auth_required: true
-      api_key_scopes:
-        - agents:read
-        - agents:write
     - selector: "saturn.platform.agent.v1.AgentService.CreateProvider"
       auth_required: true
       api_key_scopes:

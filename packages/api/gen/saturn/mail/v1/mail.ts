@@ -770,6 +770,16 @@ export interface SendDraftRequest {
 }
 
 /**
+ * MessageReceivedEvent is published on incremental delta syncs for newly ingested inbound messages.
+ */
+export interface MessageReceivedEvent {
+  /**
+   * Output only. Received email message.
+   */
+  message: Message
+}
+
+/**
  * MailService provides email synchronization, mailbox management, thread view hydration,
  * hybrid search, drafts, and write-through operations across connected accounts.
  */

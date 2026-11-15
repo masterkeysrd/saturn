@@ -8,6 +8,7 @@ import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
+import "saturn/platform/message/v1/options.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/calendar/v1;calendarv1";
 
@@ -450,4 +451,20 @@ message RespondToEventRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
   // Required. Attendee response RSVP selection.
   AttendeeResponseStatus response = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// CalendarEventCreatedEvent is published when a calendar event is created.
+message CalendarEventCreatedEvent {
+  option (saturn.platform.message.v1.topic) = "calendar.event.created";
+
+  // Output only. Created calendar event.
+  Event event = 1;
+}
+
+// CalendarEventUpdatedEvent is published when a calendar event is updated.
+message CalendarEventUpdatedEvent {
+  option (saturn.platform.message.v1.topic) = "calendar.event.updated";
+
+  // Output only. Updated calendar event.
+  Event event = 1;
 }

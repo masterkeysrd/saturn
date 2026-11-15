@@ -468,56 +468,6 @@ export interface GetProviderCatalogResponse {
 }
 
 /**
- * File payload containing document content uploaded for analysis.
- */
-export interface DocumentFilePayload {
-  /**
-   * Required. The original filename of the document.
-   */
-  filename: string
-  /**
-   * Required. The MIME type of the document (e.g. application/pdf, text/csv).
-   */
-  contentType: string
-  /**
-   * Required. The raw binary content of the document.
-   */
-  content: string
-}
-
-/**
- * Request message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].
- */
-export interface GetSuggestionsRequest {
-  /**
-   * Required. The target agent purpose blueprint guiding analysis.
-   */
-  purpose: string
-  /**
-   * Optional. Textual content or query prompt to analyze.
-   */
-  textContent: string
-  /**
-   * Optional. Attached document files to be ingested and analyzed.
-   */
-  documents?: DocumentFilePayload[]
-}
-
-/**
- * Response message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].
- */
-export interface GetSuggestionsResponse {
-  /**
-   * Output only. The raw model completion text.
-   */
-  rawOutput?: string
-  /**
-   * Output only. The parsed structured suggestions matching the purpose schema.
-   */
-  structuredSuggestion?: Record<string, unknown>
-}
-
-/**
  * AgentService manages LLM connection providers, AI agent instances, and logs.
  */
 /**
@@ -858,32 +808,6 @@ export function useGetProviderCatalogQuery(
   return useQuery<GetProviderCatalogResponse, Error>({
     queryKey: ["/api/v1/platform/agent/providers-catalog", req],
     queryFn: () => getProviderCatalog(req),
-    ...options,
-  })
-}
-
-/**
- * Analyzes signal content against a target agent purpose blueprint and returns structured suggestions.
- */
-export async function getSuggestions(
-  req: GetSuggestionsRequest
-): Promise<GetSuggestionsResponse> {
-  return request<GetSuggestionsResponse>({
-    method: "POST",
-    url: "/api/v1/platform/agent/suggestions",
-    data: req,
-  })
-}
-
-export function useGetSuggestionsMutation(
-  options?: UseMutationOptions<
-    GetSuggestionsResponse,
-    Error,
-    GetSuggestionsRequest
-  >
-) {
-  return useMutation<GetSuggestionsResponse, Error, GetSuggestionsRequest>({
-    mutationFn: (req) => getSuggestions(req),
     ...options,
   })
 }

@@ -215,17 +215,3 @@ func (c *Client) GetProviderCatalog(ctx context.Context, req *GetProviderCatalog
 	}
 	return &resp, nil
 }
-
-// GetSuggestions executes POST /api/v1/platform/agent/suggestions.
-func (c *Client) GetSuggestions(ctx context.Context, req *GetSuggestionsRequest) (*GetSuggestionsResponse, error) {
-	var resp GetSuggestionsResponse
-	path := "/api/v1/platform/agent/suggestions"
-	var query []string
-	if len(query) > 0 {
-		path += "?" + strings.Join(query, "&")
-	}
-	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
-		return nil, err
-	}
-	return &resp, nil
-}
