@@ -165,6 +165,7 @@ func (m *mockSpaceService) RevokeSpaceAPIKeyGrant(ctx context.Context, session s
 
 type mockIdentityService struct {
 	getUserByIDFunc      func(ctx context.Context, id identity.UserID) (*identity.User, error)
+	getUsersByIDsFunc    func(ctx context.Context, ids []identity.UserID) ([]*identity.User, error)
 	listAPIKeysByIDsFunc func(ctx context.Context, ids []identity.APIKeyID) ([]*identity.APIKey, error)
 }
 
@@ -185,6 +186,20 @@ func (m *mockIdentityService) GetUserByID(ctx context.Context, id identity.UserI
 		Name:     "Alice",
 		Status:   identity.UserStatusActive,
 	}, nil
+}
+
+func (m *mockIdentityService) GetUsersByIDs(ctx context.Context, ids []identity.UserID) ([]*identity.User, error) {
+	if m.getUsersByIDsFunc != nil {
+		return m.getUsersByIDsFunc(ctx, ids)
+	}
+	users := make([]*identity.User, 0, len(ids))
+	for _, id := range ids {
+		u, err := m.GetUserByID(ctx, id)
+		if err == nil && u != nil {
+			users = append(users, u)
+		}
+	}
+	return users, nil
 }
 
 func extractErrorInfo(st *status.Status) *errdetails.ErrorInfo {

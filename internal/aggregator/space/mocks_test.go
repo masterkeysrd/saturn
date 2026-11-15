@@ -177,6 +177,9 @@ type IdentityServiceMock struct {
 	// GetUserByIDFunc mocks the GetUserByID method.
 	GetUserByIDFunc func(ctx context.Context, id identity.UserID) (*identity.User, error)
 
+	// GetUsersByIDsFunc mocks the GetUsersByIDs method.
+	GetUsersByIDsFunc func(ctx context.Context, ids []identity.UserID) ([]*identity.User, error)
+
 	// ListAPIKeysByIDsFunc mocks the ListAPIKeysByIDs method.
 	ListAPIKeysByIDsFunc func(ctx context.Context, ids []identity.APIKeyID) ([]*identity.APIKey, error)
 
@@ -186,12 +189,17 @@ type IdentityServiceMock struct {
 			Ctx context.Context
 			Id  identity.UserID
 		}
+		GetUsersByIDs []struct {
+			Ctx context.Context
+			Ids []identity.UserID
+		}
 		ListAPIKeysByIDs []struct {
 			Ctx context.Context
 			Ids []identity.APIKeyID
 		}
 	}
 	lockGetUserByID      sync.RWMutex
+	lockGetUsersByIDs    sync.RWMutex
 	lockListAPIKeysByIDs sync.RWMutex
 }
 
@@ -220,6 +228,33 @@ func (mock *IdentityServiceMock) GetUserByIDCalls() []struct {
 	mock.lockGetUserByID.RLock()
 	defer mock.lockGetUserByID.RUnlock()
 	return mock.calls.GetUserByID
+}
+
+// GetUsersByIDs calls GetUsersByIDsFunc.
+func (mock *IdentityServiceMock) GetUsersByIDs(ctx context.Context, ids []identity.UserID) ([]*identity.User, error) {
+	if mock.GetUsersByIDsFunc == nil {
+		panic("IdentityServiceMock.GetUsersByIDsFunc: method is nil but IdentityService.GetUsersByIDs was just called")
+	}
+	mock.lockGetUsersByIDs.Lock()
+	mock.calls.GetUsersByIDs = append(mock.calls.GetUsersByIDs, struct {
+		Ctx context.Context
+		Ids []identity.UserID
+	}{
+		Ctx: ctx,
+		Ids: ids,
+	})
+	mock.lockGetUsersByIDs.Unlock()
+	return mock.GetUsersByIDsFunc(ctx, ids)
+}
+
+// GetUsersByIDsCalls returns all calls made to GetUsersByIDs.
+func (mock *IdentityServiceMock) GetUsersByIDsCalls() []struct {
+	Ctx context.Context
+	Ids []identity.UserID
+} {
+	mock.lockGetUsersByIDs.RLock()
+	defer mock.lockGetUsersByIDs.RUnlock()
+	return mock.calls.GetUsersByIDs
 }
 
 // ListAPIKeysByIDs calls ListAPIKeysByIDsFunc.

@@ -136,20 +136,20 @@ func TestListSpaceMembers(t *testing.T) {
 		}
 
 		mockIdentity := &IdentityServiceMock{
-			GetUserByIDFunc: func(ctx context.Context, id identity.UserID) (*identity.User, error) {
-				if id == "usr_1" {
-					return &identity.User{
+			GetUsersByIDsFunc: func(ctx context.Context, ids []identity.UserID) ([]*identity.User, error) {
+				return []*identity.User{
+					{
 						ID:        "usr_1",
 						Name:      "Alice",
 						Username:  "alice",
 						AvatarURL: "https://example.com/alice.png",
-					}, nil
-				}
-				return &identity.User{
-					ID:        "usr_2",
-					Name:      "Bob",
-					Username:  "bob",
-					AvatarURL: "https://example.com/bob.png",
+					},
+					{
+						ID:        "usr_2",
+						Name:      "Bob",
+						Username:  "bob",
+						AvatarURL: "https://example.com/bob.png",
+					},
 				}, nil
 			},
 		}
@@ -205,11 +205,8 @@ func TestListSpaceMembers(t *testing.T) {
 		}
 
 		mockIdentity := &IdentityServiceMock{
-			GetUserByIDFunc: func(ctx context.Context, id identity.UserID) (*identity.User, error) {
-				if id == "usr_1" {
-					return nil, errors.New("user not found")
-				}
-				return nil, nil
+			GetUsersByIDsFunc: func(ctx context.Context, ids []identity.UserID) ([]*identity.User, error) {
+				return nil, errors.New("user lookup failed")
 			},
 		}
 
@@ -310,11 +307,13 @@ func TestService_ListSpaceAPIKeyGrants(t *testing.T) {
 				},
 			}, nil
 		},
-		GetUserByIDFunc: func(ctx context.Context, id identity.UserID) (*identity.User, error) {
-			return &identity.User{
-				ID:    id,
-				Name:  "Alice",
-				Email: "alice@example.com",
+		GetUsersByIDsFunc: func(ctx context.Context, ids []identity.UserID) ([]*identity.User, error) {
+			return []*identity.User{
+				{
+					ID:    "usr_owner",
+					Name:  "Alice",
+					Email: "alice@example.com",
+				},
 			}, nil
 		},
 	}

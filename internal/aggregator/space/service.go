@@ -2,12 +2,12 @@ package spaceaggregator
 
 import (
 	"context"
-	"sync"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"golang.org/x/sync/errgroup"
 )
@@ -27,6 +27,7 @@ type SpaceService interface {
 // @Mock
 type IdentityService interface {
 	GetUserByID(ctx context.Context, id identity.UserID) (*identity.User, error)
+	GetUsersByIDs(ctx context.Context, ids []identity.UserID) ([]*identity.User, error)
 	ListAPIKeysByIDs(ctx context.Context, ids []identity.APIKeyID) ([]*identity.APIKey, error)
 }
 
@@ -116,19 +117,40 @@ func (s *Service) ListSpaceMembers(ctx context.Context, spaceID space.SpaceID, u
 		return nil, errors.E(op, err)
 	}
 
+	userMap := make(map[identity.UserID]*identity.User, len(page.Items))
+	if s.identityService != nil && len(page.Items) > 0 {
+		seen := make(map[identity.UserID]struct{}, len(page.Items))
+		userIDs := make([]identity.UserID, 0, len(page.Items))
+		for _, m := range page.Items {
+			uid := identity.UserID(m.UserID)
+			if _, ok := seen[uid]; !ok {
+				seen[uid] = struct{}{}
+				userIDs = append(userIDs, uid)
+			}
+		}
+
+		users, err := s.identityService.GetUsersByIDs(ctx, userIDs)
+		if err != nil {
+			log.Warn(ctx, "failed to batch hydrate space member profiles", log.Err(err))
+		} else {
+			for _, u := range users {
+				if u != nil {
+					userMap[u.ID] = u
+				}
+			}
+		}
+	}
+
 	spaceMembers := make([]*SpaceMember, 0, len(page.Items))
 	for _, m := range page.Items {
 		sm := &SpaceMember{
 			Member: m,
 		}
-		if s.identityService != nil {
-			user, err := s.identityService.GetUserByID(ctx, identity.UserID(m.UserID))
-			if err == nil && user != nil {
-				sm.Profile = &MemberProfile{
-					Name:      user.Name,
-					Username:  user.Username,
-					AvatarURL: user.AvatarURL,
-				}
+		if user, ok := userMap[identity.UserID(m.UserID)]; ok && user != nil {
+			sm.Profile = &MemberProfile{
+				Name:      user.Name,
+				Username:  user.Username,
+				AvatarURL: user.AvatarURL,
 			}
 		}
 		spaceMembers = append(spaceMembers, sm)
@@ -178,7 +200,6 @@ func (s *Service) ListSpaceAPIKeyGrants(ctx context.Context, spaceID space.Space
 
 	keyMap := make(map[identity.APIKeyID]*identity.APIKey, len(keyIDs))
 	userMap := make(map[identity.UserID]*identity.User, len(userIDs))
-	var userMu sync.Mutex
 
 	if s.identityService != nil {
 		eg, egCtx := errgroup.WithContext(ctx)
@@ -194,17 +215,19 @@ func (s *Service) ListSpaceAPIKeyGrants(ctx context.Context, spaceID space.Space
 			return nil
 		})
 
-		for _, uid := range userIDs {
-			eg.Go(func() error {
-				u, err := s.identityService.GetUserByID(egCtx, uid)
-				if err == nil && u != nil {
-					userMu.Lock()
-					userMap[uid] = u
-					userMu.Unlock()
-				}
+		eg.Go(func() error {
+			users, err := s.identityService.GetUsersByIDs(egCtx, userIDs)
+			if err != nil {
+				log.Warn(egCtx, "failed to batch hydrate API key grant user profiles", log.Err(err))
 				return nil
-			})
-		}
+			}
+			for _, u := range users {
+				if u != nil {
+					userMap[u.ID] = u
+				}
+			}
+			return nil
+		})
 
 		if err := eg.Wait(); err != nil {
 			return nil, errors.E(op, err)
