@@ -225,6 +225,63 @@ func (s *EventStore) GetByProviderEventID(ctx context.Context, calendarID, provi
 	return rec.toModel(), nil
 }
 
+// GetByICalUID retrieves an Event by (space_id, calendar_id, ical_uid).
+func (s *EventStore) GetByICalUID(ctx context.Context, spaceID, calendarID, icalUID string) (*calendar.Event, error) {
+	const op errors.Op = "calendar/storage.GetByICalUID"
+
+	query := `
+		SELECT
+			id, space_id, calendar_id, provider_event_id, ical_uid,
+			status, visibility, transparency, title, description,
+			location, conference_url, conference_provider, is_all_day,
+			start_time, end_time, timezone, start_date, end_date,
+			rrule, exdates, exdates_all_day, recurring_master_id,
+			original_start_time, original_start_date, organizer_json,
+			attendees_json, reminders_json, source_mail_message_id,
+			etag, version, create_time, update_time
+		FROM calendar.events
+		WHERE space_id = $1 AND calendar_id = $2 AND ical_uid = $3
+	`
+
+	var rec EventRecord
+	if err := s.db.Get(ctx, &rec, query, spaceID, calendarID, icalUID); err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return nil, nil
+		}
+		return nil, errors.E(op, err)
+	}
+
+	return rec.toModel(), nil
+}
+
+// UpsertByICalUID inserts a new event or updates the existing event matching (space_id, calendar_id, ical_uid).
+func (s *EventStore) UpsertByICalUID(ctx context.Context, event *calendar.Event) (bool, error) {
+	const op errors.Op = "calendar/storage.UpsertByICalUID"
+
+	if event == nil || event.ICalUID == nil || *event.ICalUID == "" {
+		return false, errors.E(op, errors.Invalid, "ical_uid is required for UpsertByICalUID")
+	}
+
+	existing, err := s.GetByICalUID(ctx, event.SpaceID, event.CalendarID, *event.ICalUID)
+	if err != nil {
+		return false, errors.E(op, err)
+	}
+	if existing == nil {
+		if err := s.Create(ctx, event); err != nil {
+			return false, errors.E(op, err)
+		}
+		return true, nil
+	}
+
+	event.ID = existing.ID
+	event.Version = existing.Version
+	event.CreateTime = existing.CreateTime
+	if err := s.Update(ctx, event); err != nil {
+		return false, errors.E(op, err)
+	}
+	return false, nil
+}
+
 // Update modifies an existing event using optimistic concurrency control.
 func (s *EventStore) Update(ctx context.Context, event *calendar.Event) error {
 	const op errors.Op = "calendar/storage.UpdateEvent"

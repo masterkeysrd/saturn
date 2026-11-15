@@ -56,6 +56,13 @@ type EventStore interface {
 	// GetByProviderEventID retrieves an event by its external provider event ID.
 	GetByProviderEventID(ctx context.Context, calendarID, providerEventID string) (*Event, error)
 
+	// GetByICalUID retrieves an event by space ID, calendar ID, and deterministic iCalUID.
+	GetByICalUID(ctx context.Context, spaceID, calendarID, icalUID string) (*Event, error)
+
+	// UpsertByICalUID inserts or updates an event keyed by (space_id, calendar_id, ical_uid).
+	// Returns true when a new event was inserted, or false when an existing event was updated.
+	UpsertByICalUID(ctx context.Context, event *Event) (bool, error)
+
 	// Update updates mutable attributes of an existing Event.
 	Update(ctx context.Context, event *Event) error
 

@@ -336,6 +336,12 @@ type EventStoreMock struct {
 	// GetByProviderEventIDFunc mocks the GetByProviderEventID method.
 	GetByProviderEventIDFunc func(ctx context.Context, calendarID string, providerEventID string) (*Event, error)
 
+	// GetByICalUIDFunc mocks the GetByICalUID method.
+	GetByICalUIDFunc func(ctx context.Context, spaceID string, calendarID string, icalUID string) (*Event, error)
+
+	// UpsertByICalUIDFunc mocks the UpsertByICalUID method.
+	UpsertByICalUIDFunc func(ctx context.Context, event *Event) (bool, error)
+
 	// UpdateFunc mocks the Update method.
 	UpdateFunc func(ctx context.Context, event *Event) error
 
@@ -375,6 +381,16 @@ type EventStoreMock struct {
 			Ctx             context.Context
 			CalendarID      string
 			ProviderEventID string
+		}
+		GetByICalUID []struct {
+			Ctx        context.Context
+			SpaceID    string
+			CalendarID string
+			IcalUID    string
+		}
+		UpsertByICalUID []struct {
+			Ctx   context.Context
+			Event *Event
 		}
 		Update []struct {
 			Ctx   context.Context
@@ -424,6 +440,8 @@ type EventStoreMock struct {
 	lockCreate                    sync.RWMutex
 	lockGetByID                   sync.RWMutex
 	lockGetByProviderEventID      sync.RWMutex
+	lockGetByICalUID              sync.RWMutex
+	lockUpsertByICalUID           sync.RWMutex
 	lockUpdate                    sync.RWMutex
 	lockDelete                    sync.RWMutex
 	lockDeleteByCalendarID        sync.RWMutex
@@ -519,6 +537,66 @@ func (mock *EventStoreMock) GetByProviderEventIDCalls() []struct {
 	mock.lockGetByProviderEventID.RLock()
 	defer mock.lockGetByProviderEventID.RUnlock()
 	return mock.calls.GetByProviderEventID
+}
+
+// GetByICalUID calls GetByICalUIDFunc.
+func (mock *EventStoreMock) GetByICalUID(ctx context.Context, spaceID string, calendarID string, icalUID string) (*Event, error) {
+	if mock.GetByICalUIDFunc == nil {
+		panic("EventStoreMock.GetByICalUIDFunc: method is nil but EventStore.GetByICalUID was just called")
+	}
+	mock.lockGetByICalUID.Lock()
+	mock.calls.GetByICalUID = append(mock.calls.GetByICalUID, struct {
+		Ctx        context.Context
+		SpaceID    string
+		CalendarID string
+		IcalUID    string
+	}{
+		Ctx:        ctx,
+		SpaceID:    spaceID,
+		CalendarID: calendarID,
+		IcalUID:    icalUID,
+	})
+	mock.lockGetByICalUID.Unlock()
+	return mock.GetByICalUIDFunc(ctx, spaceID, calendarID, icalUID)
+}
+
+// GetByICalUIDCalls returns all calls made to GetByICalUID.
+func (mock *EventStoreMock) GetByICalUIDCalls() []struct {
+	Ctx        context.Context
+	SpaceID    string
+	CalendarID string
+	IcalUID    string
+} {
+	mock.lockGetByICalUID.RLock()
+	defer mock.lockGetByICalUID.RUnlock()
+	return mock.calls.GetByICalUID
+}
+
+// UpsertByICalUID calls UpsertByICalUIDFunc.
+func (mock *EventStoreMock) UpsertByICalUID(ctx context.Context, event *Event) (bool, error) {
+	if mock.UpsertByICalUIDFunc == nil {
+		panic("EventStoreMock.UpsertByICalUIDFunc: method is nil but EventStore.UpsertByICalUID was just called")
+	}
+	mock.lockUpsertByICalUID.Lock()
+	mock.calls.UpsertByICalUID = append(mock.calls.UpsertByICalUID, struct {
+		Ctx   context.Context
+		Event *Event
+	}{
+		Ctx:   ctx,
+		Event: event,
+	})
+	mock.lockUpsertByICalUID.Unlock()
+	return mock.UpsertByICalUIDFunc(ctx, event)
+}
+
+// UpsertByICalUIDCalls returns all calls made to UpsertByICalUID.
+func (mock *EventStoreMock) UpsertByICalUIDCalls() []struct {
+	Ctx   context.Context
+	Event *Event
+} {
+	mock.lockUpsertByICalUID.RLock()
+	defer mock.lockUpsertByICalUID.RUnlock()
+	return mock.calls.UpsertByICalUID
 }
 
 // Update calls UpdateFunc.
