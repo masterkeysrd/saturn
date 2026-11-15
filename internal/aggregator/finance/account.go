@@ -7,6 +7,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/collections"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"golang.org/x/sync/errgroup"
 )
 
 // AggregatedAccount wraps the core account with hydrated metrics.
@@ -36,15 +37,11 @@ func (s *Service) ListAccounts(ctx context.Context, rCtx finance.Context, view V
 		return nil, err
 	}
 
-	aggPage := paging.NewPage(aggregated, int(filter.PageSize), func(a *AggregatedAccount) paging.Cursor {
-		return paging.Cursor{
-			SortValue: a.GetSortValue(filter.Sort.Field),
-			ID:        string(a.ID),
-		}
-	})
-	aggPage.NextPageToken = page.NextPageToken
-
-	return aggPage, nil
+	return &paging.Page[*AggregatedAccount]{
+		Items:         aggregated,
+		NextPageToken: page.NextPageToken,
+		HasMore:       page.HasMore,
+	}, nil
 }
 
 // GetAccount retrieves a single account, optionally hydrating conversion metrics.
@@ -99,39 +96,49 @@ func (s *Service) hydrateAccounts(ctx context.Context, rCtx finance.Context, acc
 		return nil, errors.E(errors.Precondition, finance.SettingsNotFound, "workspace base currency is not configured")
 	}
 
-	// Extract unique currencies from the batch
+	// Extract unique currencies and institution IDs from the batch
 	currencySet := collections.NewSet[finance.Currency]()
-	for _, acc := range accounts {
-		currencySet.Add(acc.Currency)
-	}
-	fromCurrencies := currencySet.ToSlice()
-
-	// Fetch latest rates in a single batch query
-	rates, err := s.financeService.GetLatestRates(ctx, rCtx, fromCurrencies, baseCurrency)
-	ratesMap := make(map[string]float64)
-	if err == nil {
-		for _, rate := range rates {
-			key := string(rate.FromCurrency) + "->" + string(rate.ToCurrency)
-			ratesMap[key] = rate.Rate
-		}
-	}
-
-	// Extract unique institution IDs from the batch and hydrate Institutions
 	instIDSet := collections.NewSet[finance.InstitutionID]()
 	for _, acc := range accounts {
+		currencySet.Add(acc.Currency)
 		if acc.InstitutionID != nil && *acc.InstitutionID != "" {
 			instIDSet.Add(*acc.InstitutionID)
 		}
 	}
-	instMap := make(map[finance.InstitutionID]*finance.Institution)
+	fromCurrencies := currencySet.ToSlice()
 	instSlice := instIDSet.ToSlice()
+
+	ratesMap := make(map[string]float64)
+	instMap := make(map[finance.InstitutionID]*finance.Institution)
+
+	eg, egCtx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		rates, err := s.financeService.GetLatestRates(egCtx, rCtx, fromCurrencies, baseCurrency)
+		if err != nil {
+			return err
+		}
+		for _, rate := range rates {
+			key := string(rate.FromCurrency) + "->" + string(rate.ToCurrency)
+			ratesMap[key] = rate.Rate
+		}
+		return nil
+	})
+
 	if len(instSlice) > 0 {
-		insts, err := s.financeService.GetInstitutionsByIDs(ctx, rCtx, instSlice)
-		if err == nil {
+		eg.Go(func() error {
+			insts, err := s.financeService.GetInstitutionsByIDs(egCtx, rCtx, instSlice)
+			if err != nil {
+				return err
+			}
 			for _, inst := range insts {
 				instMap[inst.ID] = inst
 			}
-		}
+			return nil
+		})
+	}
+
+	if err := eg.Wait(); err != nil {
+		return nil, err
 	}
 
 	// Construct aggregated representations

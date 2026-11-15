@@ -89,6 +89,26 @@ func TestGetTransaction(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 	})
+
+	t.Run("Full View propagates hydration error", func(t *testing.T) {
+		mockFS := &FinanceServiceMock{
+			GetTransactionFunc: func(ctx context.Context, rCtx finance.Context, id finance.TransactionID) (*finance.Transaction, error) {
+				return txn, nil
+			},
+			GetAccountsFunc: func(ctx context.Context, rCtx finance.Context, ids []finance.AccountID) ([]*finance.Account, error) {
+				return nil, errors.New("accounts lookup failed")
+			},
+			GetBudgetsFunc: func(ctx context.Context, rCtx finance.Context, ids []finance.BudgetID) ([]*finance.Budget, error) {
+				return []*finance.Budget{{ID: budgetID}}, nil
+			},
+		}
+
+		svc := NewService(mockFS)
+		_, err := svc.GetTransaction(ctx, rCtx, ViewFull, "txn_1")
+		if err == nil {
+			t.Fatal("expected error when account hydration fails, got nil")
+		}
+	})
 }
 
 func TestListTransactions(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/collections"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"golang.org/x/sync/errgroup"
 )
 
 // AggregatedTransaction wraps the core transaction with hydrated details.
@@ -23,7 +24,10 @@ func (s *Service) GetTransaction(ctx context.Context, rCtx finance.Context, view
 	}
 
 	page, err := s.hydrateTransactions(ctx, rCtx, view, []*finance.Transaction{txn}, "")
-	if err != nil || len(page.Items) == 0 {
+	if err != nil {
+		return nil, err
+	}
+	if len(page.Items) == 0 {
 		return &AggregatedTransaction{Transaction: txn}, nil
 	}
 	return page.Items[0], nil
@@ -60,43 +64,54 @@ func (s *Service) hydrateTransactions(ctx context.Context, rCtx finance.Context,
 		}, nil
 	}
 
-	// For ViewFull, we hydrate Account and Budget
-	// 1. Fetch only the distinct accounts referenced in the loaded transactions in a single batch query
+	// For ViewFull, we hydrate Account and Budget in parallel
 	accountIDsSet := collections.NewSet[finance.AccountID]()
+	budgetIDsSet := collections.NewSet[finance.BudgetID]()
 	for _, t := range txns {
 		if t.AccountID != nil {
 			accountIDsSet.Add(*t.AccountID)
 		}
-	}
-	accountIDs := accountIDsSet.ToSlice()
-	accountsMap := make(map[finance.AccountID]*AggregatedAccount)
-	if len(accountIDs) > 0 {
-		accountsList, err := s.GetAccounts(ctx, rCtx, accountIDs, ViewFull)
-		if err == nil {
-			for _, acc := range accountsList {
-				accountsMap[acc.ID] = acc
-			}
-		}
-	}
-
-	// 2. Fetch only the distinct budgets referenced in the loaded transactions in a single batch query
-	budgetIDsSet := collections.NewSet[finance.BudgetID]()
-	for _, t := range txns {
 		if t.BudgetID != nil {
 			budgetIDsSet.Add(*t.BudgetID)
 		}
 	}
+	accountIDs := accountIDsSet.ToSlice()
 	budgetIDs := budgetIDsSet.ToSlice()
-	budgetsMap := make(map[finance.BudgetID]*AggregatedBudget)
+
+	accountsMap := make(map[finance.AccountID]*AggregatedAccount, len(accountIDs))
+	budgetsMap := make(map[finance.BudgetID]*AggregatedBudget, len(budgetIDs))
+
+	eg, egCtx := errgroup.WithContext(ctx)
+	if len(accountIDs) > 0 {
+		eg.Go(func() error {
+			accountsList, err := s.GetAccounts(egCtx, rCtx, accountIDs, ViewFull)
+			if err != nil {
+				return err
+			}
+			for _, acc := range accountsList {
+				accountsMap[acc.ID] = acc
+			}
+			return nil
+		})
+	}
+
 	if len(budgetIDs) > 0 {
-		budgetsList, err := s.financeService.GetBudgets(ctx, rCtx, budgetIDs)
-		if err == nil {
+		eg.Go(func() error {
+			budgetsList, err := s.financeService.GetBudgets(egCtx, rCtx, budgetIDs)
+			if err != nil {
+				return err
+			}
 			for _, b := range budgetsList {
 				budgetsMap[b.ID] = &AggregatedBudget{
 					Budget: b,
 				}
 			}
-		}
+			return nil
+		})
+	}
+
+	if err := eg.Wait(); err != nil {
+		return nil, err
 	}
 
 	// 3. Construct aggregated transactions

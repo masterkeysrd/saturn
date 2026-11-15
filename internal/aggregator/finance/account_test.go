@@ -37,13 +37,14 @@ func TestListAccounts(t *testing.T) {
 				return &paging.Page[*finance.Account]{
 					Items:         []*finance.Account{acc1, acc2},
 					NextPageToken: "next_token",
+					HasMore:       true,
 				}, nil
 			},
 		}
 
 		svc := NewService(mockFS)
 		page, err := svc.ListAccounts(ctx, rCtx, ViewBasic, ListAccountsFilter{
-			PageSize: 10,
+			PageSize: 2,
 			Sort:     sorting.New("id", true),
 		})
 		if err != nil {
@@ -57,6 +58,9 @@ func TestListAccounts(t *testing.T) {
 		}
 		if page.NextPageToken != "next_token" {
 			t.Errorf("expected next_token, got %s", page.NextPageToken)
+		}
+		if !page.HasMore {
+			t.Errorf("expected HasMore to be preserved as true")
 		}
 	})
 
@@ -132,6 +136,23 @@ func TestListAccounts(t *testing.T) {
 		})
 		if err == nil {
 			t.Fatal("expected error, got nil")
+		}
+	})
+
+	t.Run("Propagates GetLatestRates error instead of silently zeroing balances", func(t *testing.T) {
+		mockFS := &FinanceServiceMock{
+			ListAccountsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
+				return &paging.Page[*finance.Account]{Items: []*finance.Account{acc2}}, nil
+			},
+			GetLatestRatesFunc: func(ctx context.Context, rCtx finance.Context, from []finance.Currency, to finance.Currency) ([]*finance.ExchangeRate, error) {
+				return nil, errors.New("rates db down")
+			},
+		}
+
+		svc := NewService(mockFS)
+		_, err := svc.ListAccounts(ctx, rCtx, ViewFull, ListAccountsFilter{PageSize: 10})
+		if err == nil {
+			t.Fatal("expected error when GetLatestRates fails, got nil")
 		}
 	})
 }
