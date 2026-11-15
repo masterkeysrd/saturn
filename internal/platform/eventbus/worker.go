@@ -14,10 +14,45 @@ import (
 
 // Start starts worker pool goroutines and background polling loop.
 func (e *Engine) Start(ctx context.Context) {
-	for i := 0; i < e.workerCount; i++ {
-		go e.workerLoop(ctx)
+	workerCtx, cancel := context.WithCancel(ctx)
+	e.mu.Lock()
+	e.cancel = cancel
+	e.mu.Unlock()
+
+	for range e.workerCount {
+		e.wg.Go(func() {
+			e.workerLoop(workerCtx)
+		})
 	}
-	go e.pollerLoop(ctx)
+	e.wg.Go(func() {
+		e.pollerLoop(workerCtx)
+	})
+}
+
+// Shutdown cancels background workers and waits for all in-flight deliveries to finish
+// or until ctx expires.
+func (e *Engine) Shutdown(ctx context.Context) error {
+	e.mu.Lock()
+	cancel := e.cancel
+	e.cancel = nil
+	e.mu.Unlock()
+
+	if cancel != nil {
+		cancel()
+	}
+
+	done := make(chan struct{})
+	go func() {
+		e.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (e *Engine) pollerLoop(ctx context.Context) {

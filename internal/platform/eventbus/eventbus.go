@@ -76,6 +76,8 @@ type Engine struct {
 	notifyCh            chan struct{}
 	producerMiddlewares []ProducerMiddleware
 	consumerMiddlewares []ConsumerMiddleware
+	wg                  sync.WaitGroup
+	cancel              context.CancelFunc
 }
 
 // NewEngine instantiates a new Event Bus engine.

@@ -2,7 +2,9 @@ package eventbus
 
 import (
 	"context"
+	"database/sql"
 	"testing"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -144,5 +146,31 @@ func TestEngine_SubscribeProto(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+type noopEventBusDB struct{}
+
+func (n *noopEventBusDB) Get(context.Context, any, string, ...any) error    { return nil }
+func (n *noopEventBusDB) Select(context.Context, any, string, ...any) error { return nil }
+func (n *noopEventBusDB) Exec(context.Context, string, ...any) (sql.Result, error) {
+	return nil, nil
+}
+func (n *noopEventBusDB) ExecOne(context.Context, string, ...any) error { return nil }
+func (n *noopEventBusDB) Rebind(q string) string                        { return q }
+func (n *noopEventBusDB) WithTx(ctx context.Context, fn func(context.Context) error) error {
+	return nil
+}
+
+func TestEngine_StartAndShutdown(t *testing.T) {
+	engine := NewEngine(&noopEventBusDB{}).WithWorkerCount(2)
+	ctx := t.Context()
+
+	engine.Start(ctx)
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer shutdownCancel()
+	if err := engine.Shutdown(shutdownCtx); err != nil {
+		t.Fatalf("Shutdown returned error: %v", err)
 	}
 }
