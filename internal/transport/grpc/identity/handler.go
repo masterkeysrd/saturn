@@ -9,6 +9,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/transport/grpc/interceptors"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -849,12 +850,10 @@ func extractClientInfo(ctx context.Context) (userAgent, ipAddress string) {
 		} else if ua := md.Get("user-agent"); len(ua) > 0 {
 			userAgent = ua[0]
 		}
-		if ip := md.Get("x-forwarded-for"); len(ip) > 0 {
-			rawIP := ip[0]
-			if parts := strings.Split(rawIP, ","); len(parts) > 0 {
-				ipAddress = strings.TrimSpace(parts[0])
-			}
-		}
+	}
+	ipAddress = interceptors.ExtractClientIP(ctx, nil)
+	if ipAddress == "unknown" || ipAddress == "unix" {
+		ipAddress = ""
 	}
 	return
 }

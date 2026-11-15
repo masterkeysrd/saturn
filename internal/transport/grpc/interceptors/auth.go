@@ -45,13 +45,22 @@ type resolvedPolicy struct {
 
 // AuthInterceptor validates JWT access tokens and sat_ API keys, injecting Principal into gRPC context.
 type AuthInterceptor struct {
-	validator   token.Service
-	store       UserStoreProvider
-	apiKeyStore APIKeyStoreProvider
-	grantStore  APIKeyGrantProvider
-	rules       []api.AuthRule
-	cache       sync.Map // Cache of: string (method) -> *resolvedPolicy
+	validator        token.Service
+	store            UserStoreProvider
+	apiKeyStore      APIKeyStoreProvider
+	grantStore       APIKeyGrantProvider
+	rules            []api.AuthRule
+	cache            sync.Map // Cache of: string (method) -> *resolvedPolicy
+	authVersionCache sync.Map // Cache of: identity.UserID -> authVersionCacheEntry
+	authCacheTTL     time.Duration
 }
+
+type authVersionCacheEntry struct {
+	version   int64
+	expiresAt time.Time
+}
+
+const defaultAuthCacheTTL = 5 * time.Second
 
 // NewAuthInterceptor creates an interceptor with the given token service, user store, API key stores, and auth rules.
 func NewAuthInterceptor(
@@ -62,12 +71,18 @@ func NewAuthInterceptor(
 	rules []api.AuthRule,
 ) *AuthInterceptor {
 	return &AuthInterceptor{
-		validator:   validator,
-		store:       store,
-		apiKeyStore: apiKeyStore,
-		grantStore:  grantStore,
-		rules:       rules,
+		validator:    validator,
+		store:        store,
+		apiKeyStore:  apiKeyStore,
+		grantStore:   grantStore,
+		rules:        rules,
+		authCacheTTL: defaultAuthCacheTTL,
 	}
+}
+
+// InvalidateAuthVersion evicts a user's cached auth version so subsequent requests re-query storage.
+func (ai *AuthInterceptor) InvalidateAuthVersion(userID identity.UserID) {
+	ai.authVersionCache.Delete(userID)
 }
 
 // UnaryServerInterceptor returns a gRPC unary interceptor that authenticates requests.
@@ -122,7 +137,7 @@ func (ai *AuthInterceptor) resolvePolicy(method string) (*resolvedPolicy, bool) 
 	}
 
 	if policy == nil {
-		policy = &resolvedPolicy{AuthRequired: false}
+		policy = &resolvedPolicy{AuthRequired: true}
 	}
 
 	ai.cache.Store(method, policy)
@@ -163,7 +178,7 @@ func (ai *AuthInterceptor) authenticate(ctx context.Context, policy *resolvedPol
 		return ctx, status.Error(codes.Unauthenticated, "invalid token")
 	}
 
-	authVersion, err := ai.store.GetAuthVersion(ctx, identity.UserID(claims.Subject))
+	authVersion, err := ai.getAuthVersion(ctx, identity.UserID(claims.Subject), claims.AuthVersion)
 	if err != nil {
 		return ctx, status.Error(codes.Unauthenticated, "auth version check failed")
 	}
@@ -267,9 +282,35 @@ func matchSelector(selector, method string) bool {
 	return matched
 }
 
-func timeNow() time.Time {
-	return time.Now()
+func (ai *AuthInterceptor) getAuthVersion(ctx context.Context, userID identity.UserID, claimVersion int64) (int64, error) {
+	now := timeNow()
+	if ai.authCacheTTL > 0 {
+		if raw, ok := ai.authVersionCache.Load(userID); ok {
+			entry := raw.(authVersionCacheEntry)
+			if now.Before(entry.expiresAt) {
+				// If the incoming token has a newer auth_version than cached (e.g., right after
+				// password change), bypass the cache so freshly issued tokens are never falsely rejected.
+				if claimVersion <= entry.version {
+					return entry.version, nil
+				}
+			}
+		}
+	}
+
+	version, err := ai.store.GetAuthVersion(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+	if ai.authCacheTTL > 0 {
+		ai.authVersionCache.Store(userID, authVersionCacheEntry{
+			version:   version,
+			expiresAt: now.Add(ai.authCacheTTL),
+		})
+	}
+	return version, nil
 }
+
+var timeNow = time.Now
 
 func extractCookieValue(cookieHeader string, name string) string {
 	parts := strings.SplitSeq(cookieHeader, ";")

@@ -227,3 +227,31 @@ func TestLoadServiceConfigs_APIKeyScopes(t *testing.T) {
 		t.Errorf("expected Identity.* to have no api_key_scopes, got %+v", r)
 	}
 }
+
+func TestLoadServiceConfigs_RateLimitRules(t *testing.T) {
+	global, modules, err := LoadServiceConfigs()
+	if err != nil {
+		t.Fatalf("LoadServiceConfigs failed: %v", err)
+	}
+
+	rules := CompileAllRateLimitRules(global, modules)
+	findRule := func(selector string) *RateLimitRule {
+		var found *RateLimitRule
+		for i := range rules {
+			if rules[i].Selector == selector {
+				found = &rules[i]
+			}
+		}
+		return found
+	}
+
+	if r := findRule("*"); r == nil || r.Enabled {
+		t.Errorf("expected global fallback '*' rate limit to be disabled, got %+v", r)
+	}
+	if r := findRule("saturn.identity.v1.Identity.LoginUser"); r == nil || !r.Enabled || r.RequestsPerMinute != 30 || r.Burst != 20 || r.KeyBy != "ip" {
+		t.Errorf("unexpected LoginUser rate limit rule: %+v", r)
+	}
+	if r := findRule("saturn.identity.v1.Identity.ChangePassword"); r == nil || !r.Enabled || r.KeyBy != "principal" {
+		t.Errorf("unexpected ChangePassword rate limit rule: %+v", r)
+	}
+}

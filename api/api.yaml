@@ -37,3 +37,9 @@ space:
     # Default fallback: require space scoping for everything (secure-by-default)
     - selector: "*"
       scoped: true
+
+rate_limit:
+  rules:
+    # Default fallback: rate limiting disabled unless explicitly enabled per service/RPC
+    - selector: "*"
+      enabled: false

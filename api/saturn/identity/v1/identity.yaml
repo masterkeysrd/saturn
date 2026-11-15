@@ -32,3 +32,52 @@ space:
     # Identity service operations are global (non space-scoped)
     - selector: "saturn.identity.v1.Identity.*"
       scoped: false
+
+rate_limit:
+  rules:
+    # Public & credential-sensitive endpoints protected by per-IP / per-principal token buckets
+    - selector: "saturn.identity.v1.Identity.LoginUser"
+      enabled: true
+      requests_per_minute: 30
+      burst: 20
+      key_by: ip
+    - selector: "saturn.identity.v1.Identity.RegisterUser"
+      enabled: true
+      requests_per_minute: 20
+      burst: 10
+      key_by: ip
+    - selector: "saturn.identity.v1.Identity.RefreshSession"
+      enabled: true
+      requests_per_minute: 60
+      burst: 30
+      key_by: ip
+    - selector: "saturn.identity.v1.Identity.CreateAuthChallenge"
+      enabled: true
+      requests_per_minute: 30
+      burst: 15
+      key_by: ip
+    - selector: "saturn.identity.v1.Identity.ValidateResetToken"
+      enabled: true
+      requests_per_minute: 20
+      burst: 10
+      key_by: ip
+    - selector: "saturn.identity.v1.Identity.CompleteResetPassword"
+      enabled: true
+      requests_per_minute: 10
+      burst: 5
+      key_by: ip
+    - selector: "saturn.identity.v1.Identity.ChangePassword"
+      enabled: true
+      requests_per_minute: 10
+      burst: 5
+      key_by: principal
+    - selector: "saturn.identity.v1.Identity.ChangeEmail"
+      enabled: true
+      requests_per_minute: 10
+      burst: 5
+      key_by: principal
+    - selector: "saturn.identity.v1.Identity.DeleteAccount"
+      enabled: true
+      requests_per_minute: 5
+      burst: 3
+      key_by: principal

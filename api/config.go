@@ -41,6 +41,9 @@ type ServiceConfig struct {
 	Space struct {
 		Rules []SpaceRule `yaml:"rules"`
 	} `yaml:"space"`
+	RateLimit struct {
+		Rules []RateLimitRule `yaml:"rules"`
+	} `yaml:"rate_limit"`
 }
 
 // AuthRule defines the authentication and authorization policy for gRPC methods matching the selector.
@@ -55,6 +58,15 @@ type AuthRule struct {
 type SpaceRule struct {
 	Selector string `yaml:"selector"`
 	Scoped   bool   `yaml:"scoped"`
+}
+
+// RateLimitRule defines the rate-limiting policy for gRPC methods matching the selector.
+type RateLimitRule struct {
+	Selector          string  `yaml:"selector"`
+	Enabled           bool    `yaml:"enabled"`
+	RequestsPerMinute float64 `yaml:"requests_per_minute,omitempty"`
+	Burst             int     `yaml:"burst,omitempty"`
+	KeyBy             string  `yaml:"key_by,omitempty"`
 }
 
 // LoadServiceConfigs reads all config YAML files from the embed.FS.
@@ -125,6 +137,20 @@ func CompileAllSpaceRules(global *ServiceConfig, modules []*ServiceConfig) []Spa
 	}
 	for _, m := range modules {
 		allRules = append(allRules, m.Space.Rules...)
+	}
+	return allRules
+}
+
+// CompileAllRateLimitRules merges global and module rate-limit rules into a single list.
+// Rules are evaluated in order: global first, then modules.
+// The last matching rule wins.
+func CompileAllRateLimitRules(global *ServiceConfig, modules []*ServiceConfig) []RateLimitRule {
+	var allRules []RateLimitRule
+	if global != nil {
+		allRules = append(allRules, global.RateLimit.Rules...)
+	}
+	for _, m := range modules {
+		allRules = append(allRules, m.RateLimit.Rules...)
 	}
 	return allRules
 }

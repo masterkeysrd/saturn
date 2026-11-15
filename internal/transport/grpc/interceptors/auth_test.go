@@ -146,6 +146,14 @@ func TestResolvePolicy(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("Fail-closed fallback when no rule matches", func(t *testing.T) {
+		noRules := NewAuthInterceptor(nil, &mockUserStoreProvider{}, nil, nil, nil)
+		policy, _ := noRules.resolvePolicy("/saturn.new.v1.Service/SecretMethod")
+		if !policy.AuthRequired {
+			t.Errorf("expected unmatched RPC to fail closed (AuthRequired=true)")
+		}
+	})
 }
 
 func TestAuthInterceptor_APIKey(t *testing.T) {
@@ -314,5 +322,51 @@ func TestAuthInterceptor_APIKey(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestAuthInterceptor_AuthVersionCache(t *testing.T) {
+	origNow := timeNow
+	defer func() { timeNow = origNow }()
+
+	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+	timeNow = func() time.Time { return now }
+
+	var calls int
+	currentVersion := int64(1)
+	uStore := &mockUserStoreProvider{
+		GetAuthVersionFunc: func(ctx context.Context, id identity.UserID) (int64, error) {
+			calls++
+			return currentVersion, nil
+		},
+	}
+
+	ai := NewAuthInterceptor(nil, uStore, nil, nil, nil)
+	ctx := context.Background()
+
+	// 1. First lookup hits store
+	v, err := ai.getAuthVersion(ctx, "usr_1", 1)
+	if err != nil || v != 1 || calls != 1 {
+		t.Fatalf("first lookup: v=%d err=%v calls=%d", v, err, calls)
+	}
+
+	// 2. Second lookup within 5s TTL hits cache
+	v, err = ai.getAuthVersion(ctx, "usr_1", 1)
+	if err != nil || v != 1 || calls != 1 {
+		t.Fatalf("cached lookup: v=%d err=%v calls=%d", v, err, calls)
+	}
+
+	// 3. Newer claim version bypasses cache immediately (e.g., right after password change)
+	currentVersion = 2
+	v, err = ai.getAuthVersion(ctx, "usr_1", 2)
+	if err != nil || v != 2 || calls != 2 {
+		t.Fatalf("newer claim lookup: v=%d err=%v calls=%d", v, err, calls)
+	}
+
+	// 4. Advance past 5s TTL -> refreshes from store
+	now = now.Add(6 * time.Second)
+	v, err = ai.getAuthVersion(ctx, "usr_1", 2)
+	if err != nil || v != 2 || calls != 3 {
+		t.Fatalf("expired lookup: v=%d err=%v calls=%d", v, err, calls)
 	}
 }
