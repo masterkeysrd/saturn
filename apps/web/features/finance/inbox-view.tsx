@@ -245,6 +245,21 @@ export function InboxView() {
         id,
         req: {
           id,
+          updateMask: {
+            paths: [
+              "doc_type",
+              "amount",
+              "currency",
+              "vendor_name",
+              "account_id",
+              "budget_id",
+              "scheduled_transaction_id",
+              "transaction_id",
+              "borrowing_id",
+              ...(values.borrowingLinkType ? ["borrowing_link_type"] : []),
+              "metadata",
+            ],
+          },
           inboxItem: {
             id,
             spaceId: tx.spaceId,
