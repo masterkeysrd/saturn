@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react"
 import {
   type DateInput,
+  MS_PER_HALF_DAY,
   sanitizeTimezone,
   formatDateWithTimezone,
   getStartOfDay,
@@ -129,12 +130,16 @@ export function useTimezone(overrideTimezone?: string | null): TimezoneObject {
         if (isSameDayInTimezone(d, now, tz)) {
           return "Today"
         }
-        const yesterday = new Date(now.getTime() - 86400000)
-        if (isSameDayInTimezone(d, yesterday, tz)) {
+        const yesterdayAnchor = new Date(
+          getStartOfDay(now, tz).getTime() - MS_PER_HALF_DAY
+        )
+        if (isSameDayInTimezone(d, yesterdayAnchor, tz)) {
           return "Yesterday"
         }
-        const tomorrow = new Date(now.getTime() + 86400000)
-        if (isSameDayInTimezone(d, tomorrow, tz)) {
+        const tomorrowAnchor = new Date(
+          getEndOfDay(now, tz).getTime() + MS_PER_HALF_DAY
+        )
+        if (isSameDayInTimezone(d, tomorrowAnchor, tz)) {
           return "Tomorrow"
         }
         return formatDateWithTimezone(d, tz, {
@@ -156,12 +161,16 @@ export function useTimezone(overrideTimezone?: string | null): TimezoneObject {
         return isSameDayInTimezone(date, new Date(), tz)
       },
       isYesterday(date) {
-        const yesterday = new Date(Date.now() - 86400000)
-        return isSameDayInTimezone(date, yesterday, tz)
+        const yesterdayAnchor = new Date(
+          getStartOfDay(new Date(), tz).getTime() - MS_PER_HALF_DAY
+        )
+        return isSameDayInTimezone(date, yesterdayAnchor, tz)
       },
       isTomorrow(date) {
-        const tomorrow = new Date(Date.now() + 86400000)
-        return isSameDayInTimezone(date, tomorrow, tz)
+        const tomorrowAnchor = new Date(
+          getEndOfDay(new Date(), tz).getTime() + MS_PER_HALF_DAY
+        )
+        return isSameDayInTimezone(date, tomorrowAnchor, tz)
       },
     }
   }, [tz])
