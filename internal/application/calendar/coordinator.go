@@ -15,6 +15,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/connector"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 )
 
 // Coordinator defines application use-case operations for calendars and events.
@@ -115,6 +116,7 @@ type Dependencies struct {
 	TokenManager      *connector.TokenManager
 	AccountStore      connector.Store
 	ExternalProviders map[string]domaincalendar.ExternalCalendarProvider
+	Events            eventbus.EventPublisher
 }
 
 type coordinator struct {
@@ -124,6 +126,7 @@ type coordinator struct {
 	tokenManager      *connector.TokenManager
 	accountStore      connector.Store
 	externalProviders map[string]domaincalendar.ExternalCalendarProvider
+	events            eventbus.EventPublisher
 }
 
 // NewCoordinator creates a new calendar Coordinator.
@@ -135,6 +138,7 @@ func NewCoordinator(deps Dependencies) Coordinator {
 		tokenManager:      deps.TokenManager,
 		accountStore:      deps.AccountStore,
 		externalProviders: deps.ExternalProviders,
+		events:            deps.Events,
 	}
 }
 
@@ -328,6 +332,10 @@ func (c *coordinator) CreateEvent(ctx context.Context, req *CreateEventRequest) 
 		return nil, errors.E(op, err)
 	}
 
+	if err := c.events.Publish(ctx, domaincalendar.TopicEventCreated, &domaincalendar.EventCreatedEvent{Event: ev}); err != nil {
+		return nil, errors.E(op, err)
+	}
+
 	return ev, nil
 }
 
@@ -401,11 +409,18 @@ func (c *coordinator) UpdateEvent(ctx context.Context, req *UpdateEventRequest) 
 		if err != nil {
 			return nil, errors.E(op, err)
 		}
+		if err := c.events.Publish(ctx, domaincalendar.TopicEventUpdated, &domaincalendar.EventUpdatedEvent{Event: res}); err != nil {
+			return nil, errors.E(op, err)
+		}
 		return res, nil
 	}
 
 	updated, err := c.domainService.UpdateEvent(ctx, spaceID, req.ID, req.Event, req.UpdateMask)
 	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	if err := c.events.Publish(ctx, domaincalendar.TopicEventUpdated, &domaincalendar.EventUpdatedEvent{Event: updated}); err != nil {
 		return nil, errors.E(op, err)
 	}
 

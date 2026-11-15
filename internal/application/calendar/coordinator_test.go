@@ -9,6 +9,7 @@ import (
 	appcalendar "github.com/masterkeysrd/saturn/internal/application/calendar"
 	domaincalendar "github.com/masterkeysrd/saturn/internal/domain/calendar"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -120,6 +121,29 @@ func (m *mockEventStore) GetByProviderEventID(ctx context.Context, calendarID, p
 	return nil, errors.New("event not found")
 }
 
+func (m *mockEventStore) GetByICalUID(ctx context.Context, spaceID, calendarID, icalUID string) (*domaincalendar.Event, error) {
+	for _, ev := range m.events {
+		if ev.SpaceID == spaceID && ev.CalendarID == calendarID && ev.ICalUID != nil && *ev.ICalUID == icalUID {
+			return ev, nil
+		}
+	}
+	return nil, nil
+}
+
+func (m *mockEventStore) UpsertByICalUID(ctx context.Context, ev *domaincalendar.Event) (bool, error) {
+	if ev.ICalUID == nil {
+		return false, errors.New("ical_uid is required")
+	}
+	existing, _ := m.GetByICalUID(ctx, ev.SpaceID, ev.CalendarID, *ev.ICalUID)
+	if existing == nil {
+		m.events[ev.ID] = ev
+		return true, nil
+	}
+	ev.ID = existing.ID
+	m.events[ev.ID] = ev
+	return false, nil
+}
+
 func (m *mockEventStore) Update(ctx context.Context, ev *domaincalendar.Event) error {
 	m.events[ev.ID] = ev
 	return nil
@@ -215,6 +239,7 @@ func TestCoordinator_Permissions(t *testing.T) {
 		CalendarStore: calStore,
 		EventStore:    evStore,
 		DomainService: domainSvc,
+		Events:        eventbus.NoopPublisher{},
 	})
 
 	t.Run("viewer rejected on CreateCalendar", func(t *testing.T) {
@@ -251,6 +276,7 @@ func TestCoordinator_EnsureDefaultCalendar(t *testing.T) {
 		CalendarStore: calStore,
 		EventStore:    evStore,
 		DomainService: domainSvc,
+		Events:        eventbus.NoopPublisher{},
 	})
 
 	ctx := contextWithRole("member", "spc_100")
@@ -288,6 +314,7 @@ func TestCoordinator_WriteThrough(t *testing.T) {
 		EventStore:        evStore,
 		DomainService:     domainSvc,
 		ExternalProviders: externalProviders,
+		Events:            eventbus.NoopPublisher{},
 	})
 
 	// Setup external calendar
