@@ -67,6 +67,16 @@ Detailed guidelines live in `docs/conventions/`. Read the relevant guide before 
    - Run `go fix ./...` to verify and apply modern Go idioms before running verification gates.
    - See [Backend Architecture Conventions](docs/conventions/backend.md).
 
+10. **No Unnecessary Defensive Nil Checks**:
+    - Never add defensive `== nil` / `!= nil` checks for required collaborators, stores, services, registries, or event publishers (e.g., `if c.events != nil`, `if reg == nil { return }`, `if deps.Service == nil`).
+    - Required dependencies are always wired at startup and injected in tests (using mocks or `Noop*` implementations). Silently returning or bypassing logic on `nil` hides wiring bugs.
+    - Only check `nil` when `nil` is a valid, expected runtime value (optional request payloads, nullable fields, optional pointer return values).
+
+11. **Clean Form & Inspector Layouts (No Double-Nested Cards)**:
+    - Never nest bordered card wrappers inside drawers, sheets, or inspector panels; separate sections with subtle hairlines (`border-t`) instead.
+    - Keep narrow sidebars/inspectors (`< 520px`) single-column, render schema-driven typed controls (`Switch`, `Select`, numeric inputs) rather than raw code boxes everywhere, and hide technical plumbing behind an **Advanced** collapsible section.
+    - See [Frontend Conventions](docs/conventions/frontend.md#4-ui--form-design-rules).
+
 ---
 
 ## Verification Gates

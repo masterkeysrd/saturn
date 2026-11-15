@@ -338,6 +338,9 @@ Saturn maintains automated modernization passes (including `embedlit`, `newexpr`
 go fix ./api/... ./cmd/... ./internal/... ./tools/... ./tests/...
 ```
 
+### H. No Unnecessary Defensive Nil Checks
+Do not add defensive `== nil` / `!= nil` checks for required dependencies, stores, services, registries, or publishers (`if c.events != nil`, `if reg == nil { return }`, `if deps.FinanceService == nil`). Required collaborators must be wired at construction time and provided (via mocks or no-op implementations) in tests—silently skipping work or falling back on `nil` hides miswiring. Reserve `nil` checks strictly for genuinely optional values (optional request fields, nullable columns, optional pointer lookups).
+
 ---
 
 ## 5. Code Generation Toolchain (`tools/`, `internal/codegen/`)

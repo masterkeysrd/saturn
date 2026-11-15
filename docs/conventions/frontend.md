@@ -57,7 +57,24 @@ apps/
 
 ---
 
-## 4. Testing Conventions
+## 4. UI & Form Design Rules
+
+1. **No Double-Nested Card Containers**:
+   - **NEVER** render a bordered card or collapsible card inside another bordered card, drawer, sheet, or inspector panel.
+   - Inside drawers, sheets, and side inspectors, use flat vertical sections separated by `border-t border-border/40` hairlines instead of nested `rounded-2xl border bg-card` wrappers.
+2. **Single-Column Rhythm in Narrow Inspectors & Drawers**:
+   - Any panel narrower than `520px` (right-hand inspectors, side sheets, mobile forms) must use a **single-column vertical layout** (`space-y-4`) for fields—never squeeze 3+ inputs or 12-column horizontal grids into narrow sidebars.
+   - Use full-width stacked field items or collapsible pill rows for structured array builders (such as schema field lists or key-value mappings) instead of cramped multi-input table rows.
+3. **Schema-Driven Typed Controls**:
+   - When rendering form fields backed by a JSON Schema (`inputsSchema` / `paramsSchema`), map field types to native UI controls: `boolean` $\rightarrow$ `Switch`, `enum` $\rightarrow$ `Select`, `number` / `integer` $\rightarrow$ numeric `Input`, with an optional expression (`fx`) toggle when dynamic `{{ ... }}` bindings are needed.
+   - Do not render generic monospace code boxes for every field.
+4. **Progressive Disclosure**:
+   - Keep primary form sections focused on the core fields a user edits first (e.g., Name, Prompt, Model, Topic).
+   - Tuck low-level plumbing (internal IDs, raw CEL filters, `input_mapping`, retry/timeout knobs, `on_error` toggles) inside a collapsed **Advanced** section.
+
+---
+
+## 5. Testing Conventions
 
 Frontend and shared packages follow Vitest and React Testing Library standards:
 
@@ -73,7 +90,7 @@ Frontend and shared packages follow Vitest and React Testing Library standards:
 
 ---
 
-## 5. Verification
+## 6. Verification
 
 Always format, lint, and typecheck before considering any frontend or package change complete:
 
