@@ -629,8 +629,8 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	workflowCoordinator := workflowapp.NewLoggingCoordinator(
 		workflowapp.NewTransactionalCoordinator(
 			workflowapp.NewCoordinator(workflowapp.Dependencies{
-				Workflow:       workflowService,
-				SpaceLoader:    workflowapp.NewSpaceContextLoader(spaceStore, platformSettingsStore),
+				Workflow:     workflowService,
+				SpaceLoader:  workflowapp.NewSpaceContextLoader(spaceStore, platformSettingsStore),
 				Dispatcher:   event.NewEventBusRunDispatcher(eventBusEngine),
 				Schedules:    schedulerEngine,
 				PromptRunner: agentService,
