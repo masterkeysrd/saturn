@@ -144,9 +144,16 @@ export function LoginView() {
             : "Enter the 6-digit code from your authenticator app"
         }
       >
-        <form onSubmit={handleMfaSubmit} className="flex flex-col space-y-5">
+        <form
+          onSubmit={handleMfaSubmit}
+          noValidate
+          className="flex flex-col space-y-5"
+        >
           {error && (
-            <div className="animate-in rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive duration-300 fade-in">
+            <div
+              role="alert"
+              className="animate-in rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive duration-300 fade-in"
+            >
               {error}
             </div>
           )}
@@ -171,6 +178,7 @@ export function LoginView() {
                 onChange={(val) => {
                   setTotpCode(val)
                   if (mfaError) setMfaError(null)
+                  if (error) setError(null)
                 }}
                 onComplete={(val) => {
                   setTotpCode(val)
@@ -178,7 +186,7 @@ export function LoginView() {
                 }}
                 disabled={isSubmitting}
                 autoFocus
-                error={mfaError || undefined}
+                error={mfaError || Boolean(error)}
               />
 
               {availableFactors.length > 1 && (
@@ -213,7 +221,11 @@ export function LoginView() {
               label="Backup Recovery Code"
               placeholder="ABCD-EFGH"
               value={backupCode}
-              onChange={(e) => setBackupCode(e.target.value.toUpperCase())}
+              onChange={(e) => {
+                setBackupCode(e.target.value.toUpperCase())
+                if (mfaError) setMfaError(null)
+                if (error) setError(null)
+              }}
               error={mfaError}
               disabled={isSubmitting}
               className="text-center font-mono tracking-wider uppercase"
@@ -262,10 +274,14 @@ export function LoginView() {
     <AuthCard title="Welcome back" subtitle="Sign in to your Saturn account">
       <form
         onSubmit={handleSubmit(onPasswordSubmit)}
+        noValidate
         className="flex flex-col space-y-5"
       >
         {error && (
-          <div className="animate-in rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive duration-300 fade-in">
+          <div
+            role="alert"
+            className="animate-in rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive duration-300 fade-in"
+          >
             {error}
           </div>
         )}

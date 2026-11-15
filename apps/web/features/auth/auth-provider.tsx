@@ -3,6 +3,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   type ReactNode,
 } from "react"
 import {
@@ -33,6 +34,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return authStorage.getSession().hasSession
   })
   const [error, setError] = useState<string | null>(null)
+  const accessTokenRef = useRef<string | null>(accessToken)
+
+  useEffect(() => {
+    accessTokenRef.current = accessToken
+  }, [accessToken])
 
   // Silent refresh session initialization on boot
   useEffect(() => {
@@ -154,7 +160,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handleUnauthorized = () => {
-      logoutUser()
+      if (accessTokenRef.current || authStorage.getSession().hasSession) {
+        logoutUser()
+      }
     }
     const handleRefreshed = (e: Event) => {
       const customEvent = e as CustomEvent<{ accessToken: string }>

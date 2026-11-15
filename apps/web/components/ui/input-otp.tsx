@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import { OTPField } from "@base-ui/react/otp-field"
 import { Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -28,6 +29,36 @@ export function InputOTP({
   name,
 }: InputOTPProps) {
   const half = Math.floor(length / 2)
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const hasAutoFocusedRef = useRef(false)
+  const wasDisabledRef = useRef(disabled)
+  const valueLengthRef = useRef(value.length)
+
+  useEffect(() => {
+    valueLengthRef.current = value.length
+  }, [value.length])
+
+  useEffect(() => {
+    if (autoFocus && !disabled && !hasAutoFocusedRef.current) {
+      hasAutoFocusedRef.current = true
+      const targetIndex = Math.min(
+        valueLengthRef.current,
+        Math.max(length - 1, 0)
+      )
+      inputRefs.current[targetIndex]?.focus()
+    }
+  }, [autoFocus, disabled, length])
+
+  useEffect(() => {
+    if (wasDisabledRef.current && !disabled) {
+      const targetIndex = Math.min(
+        valueLengthRef.current,
+        Math.max(length - 1, 0)
+      )
+      inputRefs.current[targetIndex]?.focus()
+    }
+    wasDisabledRef.current = disabled
+  }, [disabled, length])
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -39,7 +70,6 @@ export function InputOTP({
         onValueChange={(val) => onChange?.(val)}
         onValueComplete={(val) => onComplete?.(val)}
         disabled={disabled}
-        autoFocus={autoFocus}
         validationType="numeric"
         className={cn(
           "flex items-center justify-center gap-2 select-none",
@@ -50,6 +80,9 @@ export function InputOTP({
           {Array.from({ length: half }, (_, i) => (
             <OTPField.Input
               key={i}
+              ref={(el) => {
+                inputRefs.current[i] = el
+              }}
               className={cn(
                 "flex h-13 w-11 items-center justify-center rounded-xl border bg-card/80 text-center font-mono text-2xl font-bold text-foreground shadow-xs transition-all sm:h-14 sm:w-12",
                 "border-border/60 hover:border-border/80",
@@ -72,6 +105,9 @@ export function InputOTP({
           {Array.from({ length: length - half }, (_, i) => (
             <OTPField.Input
               key={half + i}
+              ref={(el) => {
+                inputRefs.current[half + i] = el
+              }}
               className={cn(
                 "flex h-13 w-11 items-center justify-center rounded-xl border bg-card/80 text-center font-mono text-2xl font-bold text-foreground shadow-xs transition-all sm:h-14 sm:w-12",
                 "border-border/60 hover:border-border/80",

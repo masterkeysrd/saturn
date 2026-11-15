@@ -74,10 +74,11 @@ interface ActiveSpaceContextType {
 const ActiveSpaceContext = createContext<ActiveSpaceContextType | null>(null)
 
 export function ActiveSpaceProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth()
   const activeSpaceState = useActiveSpace()
   const { data: settings } = useGetSettingsQuery(
     { spaceId: activeSpaceState.spaceId },
-    { enabled: !!activeSpaceState.spaceId }
+    { enabled: isAuthenticated && !!activeSpaceState.spaceId }
   )
 
   const browserTz = useMemo(() => {
@@ -98,12 +99,14 @@ export function ActiveSpaceProvider({ children }: { children: ReactNode }) {
 }
 
 export function useMySpaces() {
+  const { isAuthenticated } = useAuth()
   const { data, isLoading, error } = useListSpacesQuery(
     {
       pageSize: 100,
       pageToken: "",
     },
     {
+      enabled: isAuthenticated,
       staleTime: 1000 * 60 * 30, // 30 minutes cache stale time
     }
   )
@@ -124,11 +127,11 @@ export function useActiveSpaceContext() {
   const { spaceId, spaceName, spaceRole, switchSpace, clearActiveSpace } =
     context
   const { spaces, isLoading } = useMySpaces()
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
 
   const { data: settings } = useGetSettingsQuery(
     { spaceId },
-    { enabled: !!spaceId }
+    { enabled: isAuthenticated && !!spaceId }
   )
   const timezone = settings?.timezone || "UTC"
 

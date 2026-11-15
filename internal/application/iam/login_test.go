@@ -477,3 +477,177 @@ func TestCoordinator_Login_DeviceAssertion(t *testing.T) {
 		})
 	}
 }
+
+func TestCoordinator_Login_MFAAssertion(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name              string
+		req               *LoginRequest
+		setupIdentity     func(m *IdentityServiceMock)
+		setupToken        func(m *TokenServiceMock)
+		expectedErr       bool
+		expectedErrorCode platErrors.Code
+		validate          func(t *testing.T, res *LoginResponse)
+	}{
+		{
+			name: "Invalid or expired MFA ticket",
+			req: &LoginRequest{
+				MFATicket: "bad_ticket",
+				FactorID:  "mfa_1",
+				TOTPCode:  "123456",
+			},
+			setupToken: func(m *TokenServiceMock) {
+				m.ValidateMFATicketFunc = func(raw string, now time.Time) (*token.Claims, error) {
+					return nil, errors.New("expired ticket")
+				}
+			},
+			expectedErr:       true,
+			expectedErrorCode: identity.MFAInvalidTicket,
+		},
+		{
+			name: "Incorrect TOTP code",
+			req: &LoginRequest{
+				MFATicket: "valid_ticket",
+				FactorID:  "mfa_1",
+				TOTPCode:  "000000",
+			},
+			setupToken: func(m *TokenServiceMock) {
+				m.ValidateMFATicketFunc = func(raw string, now time.Time) (*token.Claims, error) {
+					return &token.Claims{Subject: "usr_1", AuthVersion: 1}, nil
+				}
+			},
+			setupIdentity: func(m *IdentityServiceMock) {
+				m.GetUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
+					return &identity.User{
+						ID:          id,
+						Email:       "user@example.com",
+						Status:      identity.UserStatusActive,
+						AuthVersion: 1,
+					}, nil
+				}
+				m.VerifyMFAAssertionFunc = func(ctx context.Context, req identity.VerifyMFAAssertionRequest) error {
+					return platErrors.E(platErrors.Invalid, identity.MFAInvalidCode, "invalid verification code")
+				}
+			},
+			expectedErr:       true,
+			expectedErrorCode: identity.MFAInvalidCode,
+		},
+		{
+			name: "Incorrect backup code",
+			req: &LoginRequest{
+				MFATicket:  "valid_ticket",
+				FactorID:   "recovery",
+				BackupCode: "WRONG-CODE",
+			},
+			setupToken: func(m *TokenServiceMock) {
+				m.ValidateMFATicketFunc = func(raw string, now time.Time) (*token.Claims, error) {
+					return &token.Claims{Subject: "usr_1", AuthVersion: 1}, nil
+				}
+			},
+			setupIdentity: func(m *IdentityServiceMock) {
+				m.GetUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
+					return &identity.User{
+						ID:          id,
+						Email:       "user@example.com",
+						Status:      identity.UserStatusActive,
+						AuthVersion: 1,
+					}, nil
+				}
+				m.VerifyMFAAssertionFunc = func(ctx context.Context, req identity.VerifyMFAAssertionRequest) error {
+					return platErrors.E(platErrors.Invalid, identity.MFAInvalidCode, "invalid backup code")
+				}
+			},
+			expectedErr:       true,
+			expectedErrorCode: identity.MFAInvalidCode,
+		},
+		{
+			name: "Valid TOTP code completes login",
+			req: &LoginRequest{
+				MFATicket: "valid_ticket",
+				FactorID:  "mfa_1",
+				TOTPCode:  "123456",
+			},
+			setupToken: func(m *TokenServiceMock) {
+				m.ValidateMFATicketFunc = func(raw string, now time.Time) (*token.Claims, error) {
+					return &token.Claims{Subject: "usr_1", AuthVersion: 1}, nil
+				}
+				m.IssueAccessTokenFunc = func(input token.IssueInput, now time.Time) (string, time.Time, error) {
+					return "access_jwt", now.Add(15 * time.Minute), nil
+				}
+				m.IssueRefreshTokenFunc = func(input token.IssueInput, now, abs time.Time) (string, time.Time, error) {
+					return "refresh_jwt", now.Add(24 * time.Hour), nil
+				}
+			},
+			setupIdentity: func(m *IdentityServiceMock) {
+				m.GetUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
+					return &identity.User{
+						ID:          id,
+						Email:       "user@example.com",
+						Status:      identity.UserStatusActive,
+						AccessLevel: identity.AccessLevelUser,
+						AuthVersion: 1,
+					}, nil
+				}
+				m.VerifyMFAAssertionFunc = func(ctx context.Context, req identity.VerifyMFAAssertionRequest) error {
+					return nil
+				}
+				m.CreateSecurityEventFunc = func(ctx context.Context, event *identity.SecurityEvent) error {
+					return nil
+				}
+				m.GetAuthVersionFunc = func(ctx context.Context, id identity.UserID) (int64, error) {
+					return 1, nil
+				}
+				m.CreateSessionFunc = func(ctx context.Context, req *identity.CreateSessionRequest) (*identity.Session, error) {
+					return &identity.Session{ID: "ses_1"}, nil
+				}
+			},
+			expectedErr: false,
+			validate: func(t *testing.T, res *LoginResponse) {
+				if res.AccessToken != "access_jwt" {
+					t.Errorf("expected access_jwt, got %s", res.AccessToken)
+				}
+				if res.RefreshToken != "refresh_jwt" {
+					t.Errorf("expected refresh_jwt, got %s", res.RefreshToken)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			idMock := &IdentityServiceMock{}
+			if tc.setupIdentity != nil {
+				tc.setupIdentity(idMock)
+			}
+			tokenMock := &TokenServiceMock{}
+			if tc.setupToken != nil {
+				tc.setupToken(tokenMock)
+			}
+			coord := NewCoordinator(Dependencies{
+				IdentityService: idMock,
+				TokenService:    tokenMock,
+			})
+
+			res, err := coord.Login(ctx, tc.req)
+			if tc.expectedErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if tc.expectedErrorCode != "" {
+					code := platErrors.CodeOf(err)
+					if code != tc.expectedErrorCode {
+						t.Errorf("expected error code %v, got %v (%v)", tc.expectedErrorCode, code, err)
+					}
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tc.validate != nil {
+				tc.validate(t, res)
+			}
+		})
+	}
+}
