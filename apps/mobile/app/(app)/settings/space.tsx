@@ -69,6 +69,7 @@ export default function SpaceSettingsScreen() {
   const {
     activeSpace,
     activeSpaceId,
+    activeSpaceRole,
     isOwner,
     canManageMembers,
     refetchSpaces,
@@ -347,7 +348,10 @@ export default function SpaceSettingsScreen() {
               <Badge
                 variant={isOwner ? "primary" : "default"}
                 size="sm"
-                label={isOwner ? "Owner" : "Member"}
+                label={
+                  activeSpaceRole.charAt(0).toUpperCase() +
+                  activeSpaceRole.slice(1)
+                }
               />
             </View>
 

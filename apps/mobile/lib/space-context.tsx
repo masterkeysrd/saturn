@@ -13,7 +13,7 @@ import {
   useGetSettingsQuery,
   type Space,
 } from "@saturn/api/saturn/space/v1/space"
-import { TimezoneProvider } from "@saturn/hooks"
+import { TimezoneProvider, useSpaceRole } from "@saturn/hooks"
 import { useAuth } from "./auth-context"
 import { mobileStorage } from "./storage"
 import { haptics } from "./haptics"
@@ -99,13 +99,11 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
     return spaces.find((s) => s.id === activeSpaceId) || null
   }, [spaces, activeSpaceId])
 
-  const activeSpaceRole = useMemo<
-    "owner" | "admin" | "member" | "viewer"
-  >(() => {
-    if (!activeSpace || !user) return "member"
-    if (activeSpace.ownerId === user.id) return "owner"
-    return "member"
-  }, [activeSpace, user])
+  const { role: activeSpaceRole } = useSpaceRole({
+    space: activeSpace,
+    userId: user?.id,
+    enabled: isAuthenticated,
+  })
 
   const isOwner = activeSpaceRole === "owner"
   const canManageMembers =

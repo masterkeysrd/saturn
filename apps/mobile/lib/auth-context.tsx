@@ -9,7 +9,7 @@ import {
 } from "react"
 import * as LocalAuthentication from "expo-local-authentication"
 import { useQueryClient } from "@tanstack/react-query"
-import { configureClient } from "@saturn/api/client"
+import { configureClient, refreshSession } from "@saturn/api/client"
 import type { AuthSession } from "@saturn/api/storage"
 import {
   loginUser,
@@ -109,33 +109,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const [serverUrl, setServerUrl] = useState<string>(getApiBaseUrl())
 
-  // Configure API client with onRefreshed and onUnauthorized handlers
-  useEffect(() => {
-    async function initClient() {
-      const activeUrl = await loadServerUrl()
-      setServerUrl(activeUrl)
-      configureClient({
-        baseUrl: activeUrl,
-        storage: mobileStorage,
-        onRefreshed: (newAccessToken: string) => {
-          setAccessToken(newAccessToken)
-          setSession({ accessToken: newAccessToken, hasSession: true })
-        },
-        onUnauthorized: () => {
-          clearDeviceEnrollment().catch(() => {})
-          setIsDeviceEnrolled(false)
-          setIsBiometricActive(false)
-          mobileStorage.clearSession()
-          setStoredUserProfile(null)
-          setCachedUser(null)
-          setSession({ accessToken: null, hasSession: false })
-          setAccessToken(null)
-        },
-      })
-    }
-    initClient()
-  }, [])
-
   // Check hardware biometric capabilities and device enrollment
   useEffect(() => {
     async function checkBiometrics() {
@@ -157,10 +130,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkBiometrics()
   }, [])
 
-  // Cold start session restoration
+  // Configure API client (including persisted custom server URL) and restore cold-start session in sequence
   useEffect(() => {
-    async function initSession() {
+    async function initClientAndSession() {
       try {
+        const activeUrl = await loadServerUrl()
+        setServerUrl(activeUrl)
+        configureClient({
+          baseUrl: activeUrl,
+          storage: mobileStorage,
+          onRefreshed: (newAccessToken: string) => {
+            setAccessToken(newAccessToken)
+            setSession({ accessToken: newAccessToken, hasSession: true })
+          },
+          onUnauthorized: () => {
+            clearDeviceEnrollment().catch(() => {})
+            setIsDeviceEnrolled(false)
+            setIsBiometricActive(false)
+            mobileStorage.clearSession()
+            setStoredUserProfile(null)
+            setCachedUser(null)
+            setSession({ accessToken: null, hasSession: false })
+            setAccessToken(null)
+          },
+        })
+
         const [
           storedSession,
           storedSpaceId,
@@ -182,32 +176,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let validAccessToken = storedSession.accessToken
         let hasActiveSession = storedSession.hasSession
 
-        // Proactively refresh expired or nearly expired access tokens
+        // Proactively refresh expired or nearly expired access tokens via the configured API client
         if (validAccessToken && isTokenExpired(validAccessToken)) {
           if (storedRefreshToken) {
             try {
-              const refreshUrl = `${getApiBaseUrl()}/api/v1/identity/sessions:refresh`
-              const res = await fetch(refreshUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ refreshToken: storedRefreshToken }),
-              })
-
-              if (res.ok) {
-                const data = await res.json()
-                if (data.accessToken) {
-                  validAccessToken = data.accessToken
-                  hasActiveSession = true
-                  await mobileStorage.setSession(data.accessToken)
-                  if (data.refreshToken && mobileStorage.setRefreshToken) {
-                    await mobileStorage.setRefreshToken(data.refreshToken)
-                  }
-                } else {
-                  hasActiveSession = false
-                }
-              } else {
-                hasActiveSession = false
-              }
+              validAccessToken = await refreshSession()
+              hasActiveSession = true
             } catch {
               hasActiveSession = false
             }
@@ -249,7 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    initSession()
+    initClientAndSession()
   }, [])
 
   // Fetch full user profile from API when accessToken is present
