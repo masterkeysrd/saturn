@@ -34,22 +34,23 @@ import (
 	agentv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1"
 	backupv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/backup/v1"
 	connectorv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/connector/v1"
-	integrationv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/integration/v1"
 	messagev1 "github.com/masterkeysrd/saturn/apis/saturn/platform/message/v1"
 	schedulerv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/scheduler/v1"
+	workflowv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/workflow/v1"
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
 	calendaraggregator "github.com/masterkeysrd/saturn/internal/aggregator/calendar"
 	financeaggregator "github.com/masterkeysrd/saturn/internal/aggregator/finance"
 	mailaggregator "github.com/masterkeysrd/saturn/internal/aggregator/mail"
 	spaceaggregator "github.com/masterkeysrd/saturn/internal/aggregator/space"
+	workflowaggregator "github.com/masterkeysrd/saturn/internal/aggregator/workflow"
 	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	calendarapp "github.com/masterkeysrd/saturn/internal/application/calendar"
 	connectorapp "github.com/masterkeysrd/saturn/internal/application/connector"
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
-	integrationapp "github.com/masterkeysrd/saturn/internal/application/integration"
 	mailapp "github.com/masterkeysrd/saturn/internal/application/mail"
 	spaceapp "github.com/masterkeysrd/saturn/internal/application/space"
+	workflowapp "github.com/masterkeysrd/saturn/internal/application/workflow"
 	domaincalendar "github.com/masterkeysrd/saturn/internal/domain/calendar"
 	calendarstorage "github.com/masterkeysrd/saturn/internal/domain/calendar/storage"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
@@ -64,7 +65,6 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/connector"
 	googleconnector "github.com/masterkeysrd/saturn/internal/platform/connector/google"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
-	"github.com/masterkeysrd/saturn/internal/platform/integration"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/requestid"
@@ -72,6 +72,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/settings"
 	"github.com/masterkeysrd/saturn/internal/platform/shutdown"
 	"github.com/masterkeysrd/saturn/internal/platform/totp"
+	"github.com/masterkeysrd/saturn/internal/platform/workflow"
 	"github.com/masterkeysrd/saturn/internal/transport/event"
 	eventmiddleware "github.com/masterkeysrd/saturn/internal/transport/event/middleware"
 	agentgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/agent"
@@ -80,18 +81,16 @@ import (
 	connectorgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/connector"
 	financegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/finance"
 	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/identity"
-	integrationgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/integration"
 	"github.com/masterkeysrd/saturn/internal/transport/grpc/interceptors"
 	mailgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/mail"
 	messagegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/message"
 	schedulergrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/scheduler"
 	spacegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/space"
+	workflowgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/workflow"
 	connectorhttp "github.com/masterkeysrd/saturn/internal/transport/http/connector"
 	"github.com/masterkeysrd/saturn/internal/transport/http/gateway"
 	mailhttp "github.com/masterkeysrd/saturn/internal/transport/http/mail"
 	"github.com/masterkeysrd/saturn/internal/transport/http/middleware"
-	"github.com/masterkeysrd/saturn/internal/transport/http/webhook"
-	"github.com/masterkeysrd/saturn/internal/transport/integration/email"
 	transportscheduler "github.com/masterkeysrd/saturn/internal/transport/scheduler"
 )
 
@@ -100,7 +99,6 @@ type GRPCServer struct {
 	listener             net.Listener
 	grpc                 *grpc.Server
 	TokenService         token.Service
-	IntegrationRegistry  *integration.Registry
 	EventBus             *eventbus.Engine
 	Scheduler            *scheduler.Engine
 	ConnectorCoordinator connectorapp.Coordinator
@@ -281,6 +279,35 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	spaceHandler := spacegrpc.NewHandler(spaceCoordinator, spaceAggregator)
 	spacev1.RegisterSpacesServer(s.grpc, spaceHandler)
 
+	// Wire EventBus service, domain event edge publisher, and context propagation middlewares
+	eventBusEngine := eventbus.NewEngine(dbClient)
+	eventBusEngine.UseProducer(
+		eventmiddleware.RequestIDProducer(),
+		eventmiddleware.SpaceIDProducer(),
+		eventmiddleware.WorkflowChainProducer(),
+	)
+	eventBusEngine.UseConsumer(
+		eventmiddleware.RequestIDConsumer(),
+		eventmiddleware.SpaceIDConsumer(),
+		eventmiddleware.WorkflowChainConsumer(),
+	)
+	eventBusEngine.Start(ctx)
+	s.EventBus = eventBusEngine
+
+	converterRegistry := eventbus.NewConverterRegistry()
+	event.RegisterDomainEventConverters(converterRegistry)
+	edgePublisher := eventbus.NewEdgePublisher(eventBusEngine, converterRegistry)
+
+	messageHandler := messagegrpc.NewHandler(eventBusEngine)
+	messagev1.RegisterMessageAdminServer(s.grpc, messageHandler)
+
+	// Wire Scheduler service & start workers
+	schedulerEngine := scheduler.NewEngine(dbClient)
+	schedulerEngine.Start(ctx)
+	s.Scheduler = schedulerEngine
+	schedulerHandler := schedulergrpc.NewHandler(schedulerEngine)
+	schedulerv1.RegisterSchedulerAdminServer(s.grpc, schedulerHandler)
+
 	// Wire Finance service
 	budgetStore := financestorage.NewBudgetStore(dbClient)
 	periodStore := financestorage.NewPeriodStore(dbClient)
@@ -297,8 +324,9 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	institutionStore := financestorage.NewInstitutionStore(dbClient)
 	statementStore := financestorage.NewStatementStore(dbClient)
 
+	financeSettingsClient := settings.Bind(platformSettingsStore, finance.SettingsKey)
 	financeService := finance.NewService(finance.Dependencies{
-		Settings:                  settings.Bind(platformSettingsStore, finance.SettingsKey),
+		Settings:                  financeSettingsClient,
 		BudgetStore:               budgetStore,
 		PeriodStore:               periodStore,
 		ExchangeRateStore:         rateStore,
@@ -313,10 +341,8 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		InboxItemStore:            inboxItemStore,
 		InstitutionStore:          institutionStore,
 		StatementStore:            statementStore,
+		Events:                    edgePublisher,
 	})
-
-	integrationRegistry := integration.NewRegistry(dbClient)
-	s.IntegrationRegistry = integrationRegistry
 
 	rawAgentStore := agent.NewStore(dbClient)
 	agentStore, err := agent.NewEncryptedStore(rawAgentStore, cfg.Security.EncryptionKey)
@@ -324,87 +350,26 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		return fmt.Errorf("init encrypted agent store: %w", err)
 	}
 	agentClient := agent.NewClient()
+	agentService := agent.NewService(agentStore, agentClient)
 	agentCoordinator := agentapp.NewLoggingCoordinator(agentapp.NewCoordinator(agentStore, agentClient), appLogger)
-
-	classifier := financeapp.NewAgentDocumentClassifier(agentCoordinator)
-	parser := financeapp.NewAgentIngestionParser(agentCoordinator)
-	deduplicator := financeapp.NewAgentIngestionDeduplicator(agentCoordinator)
-	statementExtractor := financeapp.NewAgentStatementExtractor(agentCoordinator)
-
-	statementPipeline := financeapp.NewStatementPipeline(financeapp.StatementPipelineDependencies{
-		FinanceService: financeService,
-		Extractor:      statementExtractor,
-	})
 
 	financeCoordinator := financeapp.NewLoggingCoordinator(
 		financeapp.NewTransactionalCoordinator(
 			financeapp.NewCoordinator(financeapp.Dependencies{
-				FinanceService:    financeService,
-				SpaceService:      spaceService,
-				Classifier:        classifier,
-				Parser:            parser,
-				Deduplicator:      deduplicator,
-				StatementPipeline: statementPipeline,
+				FinanceService: financeService,
+				SpaceService:   spaceService,
 			}),
 			dbClient,
 		),
 		appLogger,
 	)
 
-	// Register email forwarding provider
-	emailSecret := cfg.Webhook.Secret
-	if emailSecret == "" {
-		emailSecret = os.Getenv("SATURN_WEBHOOK_SECRET")
-	}
-	if emailSecret == "" {
-		emailSecret = "dev_webhook_secret"
-	}
-	emailProvider := email.NewTransactionIngestionProvider(integrationRegistry, financeCoordinator, emailSecret)
-	integrationRegistry.Register(emailProvider)
-
 	financeAggregator := financeaggregator.NewService(financeService)
 	financeHandler := financegrpc.NewHandler(financeCoordinator, financeAggregator)
 	financev1.RegisterFinanceServer(s.grpc, financeHandler)
 
-	agentCoordinator.RegisterSuggestionProcessor("transaction_extractor", financeCoordinator)
 	agentHandler := agentgrpc.NewHandler(agentCoordinator)
 	agentv1.RegisterAgentServiceServer(s.grpc, agentHandler)
-
-	// Wire Integration service
-	integrationCoordinator := integrationapp.NewLoggingCoordinator(
-		integrationapp.NewCoordinator(integrationapp.Dependencies{
-			Registry: integrationRegistry,
-		}),
-		appLogger,
-	)
-
-	integrationHandler := integrationgrpc.NewHandler(integrationCoordinator)
-	integrationv1.RegisterIntegrationServiceServer(s.grpc, integrationHandler)
-
-	// Wire EventBus service & register context propagation middlewares (request_id, space_id)
-	eventBusEngine := eventbus.NewEngine(dbClient)
-	eventBusEngine.UseProducer(
-		eventmiddleware.RequestIDProducer(),
-		eventmiddleware.SpaceIDProducer(),
-	)
-	eventBusEngine.UseConsumer(
-		eventmiddleware.RequestIDConsumer(),
-		eventmiddleware.SpaceIDConsumer(),
-	)
-	eventBusEngine.Start(ctx)
-	s.EventBus = eventBusEngine
-
-	// Register webhook eventbus subscribers
-	event.RegisterWebhookSubscribers(eventBusEngine, integrationRegistry)
-	messageHandler := messagegrpc.NewHandler(eventBusEngine)
-	messagev1.RegisterMessageAdminServer(s.grpc, messageHandler)
-
-	// Wire Scheduler service & start workers
-	schedulerEngine := scheduler.NewEngine(dbClient)
-	schedulerEngine.Start(ctx)
-	s.Scheduler = schedulerEngine
-	schedulerHandler := schedulergrpc.NewHandler(schedulerEngine)
-	schedulerv1.RegisterSchedulerAdminServer(s.grpc, schedulerHandler)
 
 	// Register background task handler execution callbacks
 	transportscheduler.RegisterFinanceJobs(schedulerEngine, financeCoordinator)
@@ -451,8 +416,6 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	if err := transportscheduler.RegisterBackupSchedules(ctx, schedulerEngine); err != nil {
 		return fmt.Errorf("register backup schedules: %w", err)
 	}
-
-	s.IntegrationRegistry = integrationRegistry
 
 	// Wire Connected Accounts service
 	connectorStore := connector.NewStore(dbClient)
@@ -523,6 +486,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 				TokenManager:      tokenManager,
 				AccountStore:      connectorStore,
 				ExternalProviders: externalCalendarProviders,
+				Events:            edgePublisher,
 			}),
 			dbClient,
 		),
@@ -578,6 +542,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 				AccountStore:      connectorStore,
 				TokenManager:      tokenManager,
 				ExternalProviders: externalMailProviders,
+				Events:            edgePublisher,
 				HMACSecret:        hmacSecret,
 			}),
 			dbClient,
@@ -616,6 +581,77 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	s.MailCoordinator = mailCoordinator
 	s.AttachmentHandler = attachmentHandler
 
+	// Wire Platform Workflow Engine, domain plugins, coordinator, aggregator & transports
+	workflowRegistry := workflow.NewRegistry()
+	event.RegisterWorkflowTriggerTopics(workflowRegistry)
+	financeapp.RegisterWorkflows(workflowRegistry, financeapp.WorkflowDependencies{
+		FinanceService: financeService,
+		SpaceService:   spaceService,
+	})
+	calendarapp.RegisterWorkflows(workflowRegistry, calendarapp.WorkflowDependencies{
+		Coordinator:   calendarCoordinator,
+		CalendarStore: calendarStore,
+		EventStore:    eventStore,
+		DomainService: calendarDomainService,
+	})
+	mailapp.RegisterWorkflows(workflowRegistry, mailapp.WorkflowDependencies{
+		Coordinator:       mailCoordinator,
+		MessageStore:      mailMessageStore,
+		MailboxStore:      mailMailboxStore,
+		AccountStore:      connectorStore,
+		TokenManager:      tokenManager,
+		ExternalProviders: externalMailProviders,
+	})
+
+	workflowTriggerStore := workflow.NewTriggerStore(dbClient)
+	workflowFlowStore := workflow.NewFlowStore(dbClient, workflowTriggerStore)
+	workflowStepRunStore := workflow.NewStepRunStore(dbClient)
+	workflowFlowRunStore := workflow.NewFlowRunStore(dbClient, workflowStepRunStore)
+
+	workflowEngine, err := workflow.NewEngine(workflow.Dependencies{
+		FlowRuns:      workflowFlowRunStore,
+		StepRuns:      workflowStepRunStore,
+		Registry:      workflowRegistry,
+		AgentExecutor: workflowapp.NewAgentExecutor(agentService),
+	})
+	if err != nil {
+		return fmt.Errorf("create workflow engine: %w", err)
+	}
+
+	workflowService := workflow.NewService(workflow.ServiceDependencies{
+		Flows:    workflowFlowStore,
+		Triggers: workflowTriggerStore,
+		FlowRuns: workflowFlowRunStore,
+		StepRuns: workflowStepRunStore,
+		Engine:   workflowEngine,
+	})
+
+	workflowCoordinator := workflowapp.NewLoggingCoordinator(
+		workflowapp.NewTransactionalCoordinator(
+			workflowapp.NewCoordinator(workflowapp.Dependencies{
+				Workflow:       workflowService,
+				SpaceLoader:    workflowapp.NewSpaceContextLoader(spaceStore, platformSettingsStore),
+				Dispatcher:   event.NewEventBusRunDispatcher(eventBusEngine),
+				Schedules:    schedulerEngine,
+				PromptRunner: agentService,
+				Transactor:   dbClient,
+			}),
+			dbClient,
+		),
+		appLogger,
+	)
+
+	workflowAggregator := workflowaggregator.NewService(workflowaggregator.Dependencies{
+		Workflow:  workflowService,
+		AgentRuns: rawAgentStore,
+	})
+
+	workflowHandler := workflowgrpc.NewHandler(workflowCoordinator, workflowAggregator)
+	workflowv1.RegisterWorkflowServiceServer(s.grpc, workflowHandler)
+
+	event.RegisterWorkflowSubscribers(eventBusEngine, workflowCoordinator, workflowService, workflowService.Catalog())
+	transportscheduler.RegisterWorkflowJobs(schedulerEngine, workflowCoordinator)
+
 	return nil
 }
 
@@ -651,7 +687,6 @@ type GRPCGatewayServer struct {
 	swaggerEnabled       bool
 	swaggerPath          string
 	tokenService         token.Service
-	integrationRegistry  *integration.Registry
 	eventBus             *eventbus.Engine
 	connectorCoordinator connectorapp.Coordinator
 	connectorOAuthMgr    *connector.OAuthManager
@@ -664,7 +699,6 @@ type GRPCGatewayServer struct {
 func NewGRPCGatewayServer(
 	cfg *Config,
 	tokenService token.Service,
-	integrationRegistry *integration.Registry,
 	eventBus *eventbus.Engine,
 	connectorCoordinator connectorapp.Coordinator,
 	connectorOAuthMgr *connector.OAuthManager,
@@ -676,7 +710,6 @@ func NewGRPCGatewayServer(
 		swaggerEnabled:       cfg.Swagger.Enabled,
 		swaggerPath:          cfg.Swagger.Path,
 		tokenService:         tokenService,
-		integrationRegistry:  integrationRegistry,
 		eventBus:             eventBus,
 		connectorCoordinator: connectorCoordinator,
 		connectorOAuthMgr:    connectorOAuthMgr,
@@ -730,8 +763,8 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("register backup admin gateway handler: %w", err)
 	}
 
-	if err := integrationv1.RegisterIntegrationServiceHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
-		return fmt.Errorf("register platform integration gateway handler: %w", err)
+	if err := workflowv1.RegisterWorkflowServiceHandler(ctx, s.mux, s.grpcConn); err != nil {
+		return fmt.Errorf("register platform workflow gateway handler: %w", err)
 	}
 
 	if err := agentv1.RegisterAgentServiceHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
@@ -752,10 +785,6 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 
 	handler := http.NewServeMux()
 	handler.Handle("/api/v1/", apiV1Handler(s.mux))
-
-	// Register unified webhooks handler
-	webhookDispatcher := webhook.NewDispatcher(s.integrationRegistry, s.eventBus)
-	handler.Handle("/api/v1/webhooks/", webhookDispatcher)
 
 	// Register public OAuth callback handlers
 	if s.connectorCoordinator != nil && s.connectorOAuthMgr != nil {
@@ -878,7 +907,6 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 	gwSrv := NewGRPCGatewayServer(
 		cfg,
 		grpcSrv.TokenService,
-		grpcSrv.IntegrationRegistry,
 		grpcSrv.EventBus,
 		grpcSrv.ConnectorCoordinator,
 		grpcSrv.ConnectorOAuthMgr,

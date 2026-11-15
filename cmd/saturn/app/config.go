@@ -55,7 +55,6 @@ type Config struct {
 	Swagger   SwaggerConfig
 	Auth      AuthConfig
 	Backup    BackupConfig
-	Webhook   WebhookConfig
 	Security  SecurityConfig
 	Connector ConnectorConfig
 }
@@ -109,11 +108,6 @@ type MicrosoftConnectorConfig struct {
 // SecurityConfig holds encryption and security settings.
 type SecurityConfig struct {
 	EncryptionKey string `mapstructure:"encryption_key"`
-}
-
-// WebhookConfig holds webhook processing and secret configuration.
-type WebhookConfig struct {
-	Secret string `mapstructure:"secret"`
 }
 
 // BackupConfig holds database backup and sync configurations.
@@ -229,7 +223,6 @@ func NewViper() *viper.Viper {
 	v.SetDefault("backup.s3_region", "us-east-1")
 	v.SetDefault("backup.s3_endpoint", "")
 
-	v.SetDefault("webhook.secret", "dev_webhook_secret")
 	v.SetDefault("security.encryption_key", "")
 
 	v.SetDefault("connector.public_callback_base_url", "http://localhost:8080/v1/platform/connectors/oauth")
