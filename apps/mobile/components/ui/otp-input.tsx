@@ -4,20 +4,42 @@ import {
   Text,
   TextInput as RNTextInput,
   TouchableOpacity,
+  Keyboard,
   StyleSheet,
+  Platform,
   type StyleProp,
   type ViewStyle,
   Animated,
   useAnimatedValue,
 } from "react-native"
+import * as Clipboard from "expo-clipboard"
+import { ClipboardPaste } from "lucide-react-native"
 import {
   Controller,
   type Control,
   type FieldValues,
   type Path,
 } from "react-hook-form"
-import { theme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import { theme } from "../../lib/theme"
+import { haptics } from "../../lib/haptics"
+
+export function normalizeOtpInput(
+  raw: string,
+  length: number,
+  currentValue = ""
+): string {
+  const digits = raw.replace(/[^0-9]/g, "")
+  if (digits.length <= length) {
+    return digits
+  }
+  if (currentValue && digits.startsWith(currentValue)) {
+    const remainder = digits.slice(currentValue.length)
+    if (remainder.length >= length) {
+      return remainder.slice(0, length)
+    }
+  }
+  return digits.slice(0, length)
+}
 
 export interface OTPInputProps<TFieldValues extends FieldValues = FieldValues> {
   control: Control<TFieldValues>
@@ -61,7 +83,11 @@ const OTPSlots = React.forwardRef<OTPTextInputRef, OTPSlotsProps>(
     ref
   ) {
     const internalRef = useRef<OTPTextInputRef>(null)
+    const pasteHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const isFocusedRef = useRef(false)
+    const keyboardVisibleRef = useRef(false)
     const [isFocused, setIsFocused] = useState(false)
+    const [pasteHint, setPasteHint] = useState<string | null>(null)
     const blinkAnim = useAnimatedValue(1)
 
     const setInputRef = (instance: OTPTextInputRef | null) => {
@@ -72,6 +98,31 @@ const OTPSlots = React.forwardRef<OTPTextInputRef, OTPSlotsProps>(
         ref.current = instance
       }
     }
+
+    useEffect(() => {
+      return () => {
+        if (pasteHintTimerRef.current) {
+          clearTimeout(pasteHintTimerRef.current)
+        }
+      }
+    }, [])
+
+    useEffect(() => {
+      if (Platform.OS !== "android") return
+      const showSub = Keyboard.addListener("keyboardDidShow", () => {
+        keyboardVisibleRef.current = true
+      })
+      const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+        keyboardVisibleRef.current = false
+        if (isFocusedRef.current) {
+          internalRef.current?.blur()
+        }
+      })
+      return () => {
+        showSub.remove()
+        hideSub.remove()
+      }
+    }, [])
 
     // Delayed focus for Android & Modal transitions
     useEffect(() => {
@@ -107,19 +158,45 @@ const OTPSlots = React.forwardRef<OTPTextInputRef, OTPSlotsProps>(
       }
     }, [isFocused, blinkAnim])
 
-    const handlePress = () => {
-      if (!disabled) {
-        internalRef.current?.focus()
-      }
-    }
-
-    const handleChangeText = (text: string) => {
-      const clean = text.replace(/[^0-9]/g, "").slice(0, length)
+    const applyOtpCode = (clean: string) => {
+      setPasteHint(null)
       onChangeText(clean)
 
       if (clean.length === length) {
         haptics.success()
         onComplete?.(clean)
+      }
+    }
+
+    const handleChangeText = (text: string) => {
+      const clean = normalizeOtpInput(text, length, value || "")
+      applyOtpCode(clean)
+    }
+
+    const handlePasteFromClipboard = async () => {
+      if (disabled) return
+      try {
+        const raw = await Clipboard.getStringAsync()
+        const clean = normalizeOtpInput(raw || "", length)
+        if (!clean) {
+          haptics.warning()
+          setPasteHint("No verification code found in clipboard")
+          if (pasteHintTimerRef.current) {
+            clearTimeout(pasteHintTimerRef.current)
+          }
+          pasteHintTimerRef.current = setTimeout(() => {
+            setPasteHint(null)
+          }, 2500)
+          return
+        }
+        applyOtpCode(clean)
+        if (clean.length < length) {
+          haptics.light()
+          internalRef.current?.focus()
+        }
+      } catch {
+        haptics.warning()
+        internalRef.current?.focus()
       }
     }
 
@@ -130,29 +207,7 @@ const OTPSlots = React.forwardRef<OTPTextInputRef, OTPSlotsProps>(
       <View style={[styles.container, containerStyle]}>
         {label && <Text style={styles.label}>{label}</Text>}
 
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={handlePress}
-          style={styles.inputWrapper}
-          disabled={disabled}
-        >
-          {/* Hidden underlying text input capturing keyboard, paste, and autofill */}
-          <RNTextInput
-            ref={setInputRef}
-            value={value}
-            onChangeText={handleChangeText}
-            maxLength={length}
-            keyboardType="number-pad"
-            textContentType="oneTimeCode"
-            autoComplete="one-time-code"
-            autoFocus={autoFocus}
-            editable={!disabled}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            style={styles.hiddenInput}
-            caretHidden
-          />
-
+        <View style={styles.inputWrapper}>
           {/* Visual Segmented 6-Box Display */}
           <View style={styles.slotsRow} pointerEvents="none">
             {/* First Half */}
@@ -232,7 +287,61 @@ const OTPSlots = React.forwardRef<OTPTextInputRef, OTPSlotsProps>(
               })}
             </View>
           </View>
+
+          <RNTextInput
+            ref={setInputRef}
+            value={value}
+            onChangeText={handleChangeText}
+            keyboardType="number-pad"
+            textContentType="oneTimeCode"
+            autoComplete={
+              Platform.OS === "android" ? "2fa-app-otp" : "one-time-code"
+            }
+            importantForAutofill="yes"
+            autoCorrect={false}
+            autoFocus={autoFocus}
+            editable={!disabled}
+            onFocus={() => {
+              isFocusedRef.current = true
+              setIsFocused(true)
+            }}
+            onBlur={() => {
+              isFocusedRef.current = false
+              setIsFocused(false)
+            }}
+            onPress={() => {
+              if (
+                Platform.OS === "android" &&
+                !disabled &&
+                isFocusedRef.current &&
+                !keyboardVisibleRef.current
+              ) {
+                internalRef.current?.blur()
+                requestAnimationFrame(() => {
+                  internalRef.current?.focus()
+                })
+              }
+            }}
+            cursorColor="transparent"
+            selectionColor="transparent"
+            underlineColorAndroid="transparent"
+            style={styles.hiddenInput}
+          />
+        </View>
+
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={handlePasteFromClipboard}
+          disabled={disabled}
+          style={[styles.pasteButton, disabled && styles.pasteButtonDisabled]}
+          accessibilityRole="button"
+          accessibilityLabel="Paste verification code"
+        >
+          <ClipboardPaste size={14} color={theme.colors.primary} />
+          <Text style={styles.pasteButtonText}>Paste code</Text>
         </TouchableOpacity>
+
+        {pasteHint && <Text style={styles.pasteHintText}>{pasteHint}</Text>}
 
         {typeof error === "string" && error && (
           <Text style={styles.errorText}>{error}</Text>
@@ -316,10 +425,40 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   hiddenInput: {
-    ...StyleSheet.absoluteFill,
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 1,
     opacity: 0.01,
     color: "transparent",
     backgroundColor: "transparent",
+    fontSize: 22,
+  },
+  pasteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: theme.spacing.sm,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.primarySubtle,
+  },
+  pasteButtonDisabled: {
+    opacity: 0.5,
+  },
+  pasteButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.primary,
+  },
+  pasteHintText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginTop: theme.spacing.xs,
+    textAlign: "center",
   },
   slotsRow: {
     flexDirection: "row",
