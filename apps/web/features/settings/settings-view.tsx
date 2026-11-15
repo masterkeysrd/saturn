@@ -16,7 +16,6 @@ import {
   KeyIcon,
   ActivityIcon,
   Sliders,
-  Blocks,
   Landmark,
   Link2,
 } from "lucide-react"
@@ -31,7 +30,6 @@ import { ActivityLogSettingsView } from "./activity-log-settings-view"
 import { SpaceSettings } from "./components/space-settings"
 import { SpacePreferences } from "./components/space-preferences"
 import { FinanceSettings } from "./components/finance-settings"
-import { IntegrationSettings } from "./components/integration-settings"
 import { ConnectedAccountsView } from "./connected-accounts-view"
 import { APIKeysSettings } from "./components/api-keys-settings"
 import { SpaceAPIKeysSettings } from "./components/space-api-keys-settings"
@@ -123,11 +121,6 @@ export function SettingsView() {
               ]
             : []),
           {
-            to: "/settings/integrations",
-            label: "Integrations",
-            icon: Blocks,
-          },
-          {
             to: "/settings/connected-accounts",
             label: "Connected Accounts",
             icon: Link2,
@@ -151,8 +144,6 @@ export function SettingsView() {
         navigate("/settings/preferences", { replace: true })
       else if (tab === "finance")
         navigate("/settings/finance", { replace: true })
-      else if (tab === "integrations")
-        navigate("/settings/integrations", { replace: true })
       else if (tab === "connected-accounts")
         navigate("/settings/connected-accounts", { replace: true })
     }
@@ -289,7 +280,6 @@ export function SettingsView() {
             <Route path="preferences" element={<SpacePreferences />} />
             <Route path="finance" element={<FinanceSettings />} />
             <Route path="api-keys" element={<SpaceAPIKeysSettings />} />
-            <Route path="integrations" element={<IntegrationSettings />} />
             <Route
               path="connected-accounts"
               element={<ConnectedAccountsView />}
