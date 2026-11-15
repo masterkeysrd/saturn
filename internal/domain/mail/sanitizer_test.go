@@ -127,6 +127,13 @@ func TestSanitizeHTML(t *testing.T) {
 			expectedNotContains:  []string{`data-saturn-remote-src`},
 			expectedRemoteImages: false,
 		},
+		{
+			name:                 "strips data:image/svg+xml in img src and non-html data: URIs in links",
+			input:                `<img src="data:image/svg+xml;base64,PHN2ZyBvbmxvYWQ9YWxlcnQoMSk+PC9zdmc+" alt="Bad"><a href="data:application/xhtml+xml;base64,PHNjcmlwdD4=">BadLink</a>`,
+			expectedContains:     []string{`alt="Bad"`, `BadLink`},
+			expectedNotContains:  []string{`data:image/svg+xml`, `data:application/xhtml+xml`},
+			expectedRemoteImages: false,
+		},
 	}
 
 	for _, tt := range tests {

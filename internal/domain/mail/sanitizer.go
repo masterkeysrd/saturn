@@ -289,8 +289,8 @@ func sanitizeElement(n *html.Node, opts *SanitizeOptions, res *SanitizeResult) {
 				continue
 			}
 
-			if strings.HasPrefix(strings.ToLower(srcVal), "data:image/") {
-				// Safe data image
+			if isSafeDataImageURI(srcVal) {
+				// Safe raster data image
 				cleanAttrs = append(cleanAttrs, a)
 				continue
 			}
@@ -394,21 +394,54 @@ func isRemoteURL(u string) bool {
 		strings.HasPrefix(trimmed, "//")
 }
 
-func isDangerousURI(raw string) bool {
+func normalizeURISchemeCheck(raw string) string {
 	clean := strings.ToLower(strings.TrimSpace(raw))
-	// Strip control characters
 	var sb strings.Builder
 	for _, r := range clean {
 		if r > 32 && r < 127 {
 			sb.WriteRune(r)
 		}
 	}
-	s := sb.String()
+	return sb.String()
+}
+
+func isSafeDataImageURI(raw string) bool {
+	s := normalizeURISchemeCheck(raw)
+	for _, prefix := range []string{
+		"data:image/png;",
+		"data:image/png,",
+		"data:image/jpeg;",
+		"data:image/jpeg,",
+		"data:image/jpg;",
+		"data:image/jpg,",
+		"data:image/gif;",
+		"data:image/gif,",
+		"data:image/webp;",
+		"data:image/webp,",
+		"data:image/bmp;",
+		"data:image/bmp,",
+		"data:image/apng;",
+		"data:image/apng,",
+		"data:image/avif;",
+		"data:image/avif,",
+		"data:image/x-icon;",
+		"data:image/x-icon,",
+		"data:image/vnd.microsoft.icon;",
+		"data:image/vnd.microsoft.icon,",
+	} {
+		if strings.HasPrefix(s, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func isDangerousURI(raw string) bool {
+	s := normalizeURISchemeCheck(raw)
 
 	if strings.HasPrefix(s, "javascript:") ||
 		strings.HasPrefix(s, "vbscript:") ||
-		strings.HasPrefix(s, "data:text/html") ||
-		strings.HasPrefix(s, "data:image/svg+xml") {
+		strings.HasPrefix(s, "data:") {
 		return true
 	}
 
