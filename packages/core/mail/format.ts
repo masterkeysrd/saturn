@@ -1,3 +1,15 @@
+import {
+  findPrecedingBeginForwardedIndex,
+  findUnwrappedForwardHeaderStart,
+  linkifyEmailsInHtml,
+  sanitizeEmailHtml,
+  stripEmptyWrapperDivs,
+  stripHtmlToPlainText,
+  stripTrailingEmptyParagraphsAndBrs,
+} from "./html"
+
+export { linkifyEmailsInHtml, stripHtmlToPlainText }
+
 export interface ParticipantInput {
   email: string
   displayName?: string
@@ -274,27 +286,13 @@ function sanitizeEmailBodyForQuoting(
   attachments?: InlineAttachmentInput[],
   preserveStyles = false
 ): string {
-  let content = html.trim()
-  const extractedStyles: string[] = []
-  if (preserveStyles) {
-    content = content.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, (tag) => {
-      extractedStyles.push(tag)
-      return ""
-    })
-  }
-  const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
-  if (bodyMatch) {
-    content = bodyMatch[1]
-  }
-  content = content.replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, "")
-  if (!preserveStyles) {
-    content = content.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
-  }
-  content = content.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
-  content = content.replace(
-    /\s+on[a-z]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi,
-    ""
-  )
+  const sanitized = sanitizeEmailHtml(html.trim(), {
+    extractStyles: preserveStyles,
+    stripStyles: !preserveStyles,
+    extractBody: true,
+    stripDocumentWrappers: true,
+  })
+  let content = sanitized.html
 
   // Resolve and rewrite cid: inline attachments to download URLs so images render in composer
   content = resolveInlineAttachmentsInHtml(content, attachments)
@@ -309,8 +307,8 @@ function sanitizeEmailBodyForQuoting(
     "background-color: transparent;"
   )
 
-  if (preserveStyles && extractedStyles.length > 0) {
-    return `${extractedStyles.join("")}${content}`
+  if (preserveStyles && sanitized.extractedStyles.length > 0) {
+    return `${sanitized.extractedStyles.join("")}${content}`
   }
 
   return content
@@ -511,11 +509,7 @@ function finalizeSplitHtml(
   endIdx: number,
   rawTrailing: string
 ): { editableHtml: string; quotedHtml: string } {
-  let before = html
-    .slice(0, startIdx)
-    .replace(/(?:\s*<p>\s*(?:<br\s*\/?>)?\s*<\/p>)+$/gi, "")
-    .replace(/(?:\s*<br\s*\/?>)+$/gi, "")
-    .trim()
+  let before = stripTrailingEmptyParagraphsAndBrs(html.slice(0, startIdx))
 
   // Close any outer <div> wrappers that were closed after the extracted quoted block
   const trailingCloseCount = (rawTrailing.match(/<\/div>/gi) || []).length
@@ -537,34 +531,11 @@ function finalizeSplitHtml(
   }
 
   // Collapse empty wrapper divs (e.g., <div dir="ltr"></div>) to empty string
-  const editableStripped = before
-    .replace(/<div\b[^>]*>\s*(?:<br\s*\/?>)?\s*<\/div>/gi, "")
-    .trim()
+  const editableStripped = stripEmptyWrapperDivs(before).trim()
   const editableHtml = editableStripped === "" ? "" : before
   const quotedHtml = html.slice(startIdx, endIdx)
 
   return { editableHtml, quotedHtml }
-}
-
-/**
- * Linkifies plain-text email addresses into mailto: anchors without modifying
- * existing <a> tags, <style> blocks, or HTML tag attributes.
- */
-export function linkifyEmailsInHtml(html: string): string {
-  if (!html || !html.includes("@")) return html
-
-  const tokenRegex =
-    /(<style\b[^>]*>[\s\S]*?<\/style>|<a\b[^>]*>[\s\S]*?<\/a>|<[^>]+>)/gi
-  const emailRegex = /\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})\b/g
-
-  return html
-    .split(tokenRegex)
-    .map((part, idx) => {
-      // Odd indices are matched HTML tags, <a>...</a>, or <style>...</style>
-      if (idx % 2 === 1) return part
-      return part.replace(emailRegex, '<a href="mailto:$1">$1</a>')
-    })
-    .join("")
 }
 
 /**
@@ -580,7 +551,7 @@ export function splitQuotedEmailHtml(html: string): {
   const divQuoteRegex =
     /<div\b[^>]*class\s*=\s*(?:"[^"]*\b(?:saturn-quoted-reply|saturn-forwarded-message|gmail_quote)\b[^"]*"|'[^']*\b(?:saturn-quoted-reply|saturn-forwarded-message|gmail_quote)\b[^']*')[^>]*>/i
   const citeBlockquoteRegex =
-    /<blockquote\b[^>]*type\s*=\s*(?:"cite"|'cite'|cite)\b[^>]*>/i
+    /<blockquote\b[^>]*type\s*=\s*(?:"cite"|'cite'|cite\b)[^>]*>/i
 
   const divMatch = divQuoteRegex.exec(html)
   const citeMatch = citeBlockquoteRegex.exec(html)
@@ -610,22 +581,19 @@ export function splitQuotedEmailHtml(html: string): {
     if (endIdx !== -1) {
       // Check if anything meaningful follows the quoted block (ignoring closing outer </div> wrappers)
       const rawTrailing = html.slice(endIdx)
-      const meaningfulTrailing = rawTrailing
-        .replace(/<\/div>/gi, "")
-        .replace(/<p>\s*(?:<br\s*\/?>)?\s*<\/p>/gi, "")
-        .replace(/<br\s*\/?>/gi, "")
-        .trim()
+      const meaningfulTrailing = stripTrailingEmptyParagraphsAndBrs(
+        rawTrailing.replace(/<\/div>/gi, "")
+      )
       if (meaningfulTrailing.length > 0) {
         return { editableHtml: html, quotedHtml: "" }
       }
 
       // If Apple Mail placed "Begin forwarded message:" in an immediately preceding element, include it
-      const prefix = html.slice(0, startIdx)
-      const fwdHeaderMatch = prefix.match(
-        /(<(?:div|p)\b[^>]*>\s*Begin forwarded message:\s*(?:<br\s*\/?>)?\s*<\/(?:div|p)>\s*(?:<br\s*\/?>|\s)*)$/i
+      const precedingIdx = findPrecedingBeginForwardedIndex(
+        html.slice(0, startIdx)
       )
-      if (fwdHeaderMatch && fwdHeaderMatch.index !== undefined) {
-        startIdx = fwdHeaderMatch.index
+      if (precedingIdx !== -1) {
+        startIdx = precedingIdx
       }
 
       return finalizeSplitHtml(html, startIdx, endIdx, rawTrailing)
@@ -633,11 +601,9 @@ export function splitQuotedEmailHtml(html: string): {
   }
 
   // Fallback for unwrapped Apple Mail / Gmail forwarded blocks ("Begin forwarded message:" + headers)
-  const unwrappedFwdRegex =
-    /<(?:div|p)\b[^>]*>\s*(?:<[^>]+>\s*)*(?:Begin forwarded message:|---------- Forwarded message ---------)\s*(?:<\/[^>]+>\s*)*(?:<br\s*\/?>)?\s*<\/(?:div|p)>/i
-  const fwdMatch = unwrappedFwdRegex.exec(html)
-  if (fwdMatch) {
-    const startIdx = fwdMatch.index
+  const fwdStartIdx = findUnwrappedForwardHeaderStart(html)
+  if (fwdStartIdx !== -1) {
+    const startIdx = fwdStartIdx
     const lookahead = html.slice(startIdx, startIdx + 2000)
     if (
       /\bFrom:/i.test(lookahead) &&
@@ -713,26 +679,13 @@ export function prepareDraftContentForEditor(
     }
   }
 
-  // Extract sanitized <style> blocks before stripping document wrappers so quotedHtml keeps them
-  const extractedStyles: string[] = []
-  content = content.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, (styleTag) => {
-    extractedStyles.push(styleTag)
-    return ""
+  const sanitized = sanitizeEmailHtml(content, {
+    extractStyles: true,
+    extractBody: true,
+    stripDocumentWrappers: true,
   })
-
-  // Strip document wrappers & scripts
-  content = content.replace(/<!DOCTYPE[^>]*>/gi, "")
-  const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
-  if (bodyMatch) {
-    content = bodyMatch[1]
-  }
-  content = content.replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, "")
-  content = content.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
-  content = content.replace(
-    /\s+on[a-z]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi,
-    ""
-  )
-  content = content.replace(/<\/?html[^>]*>/gi, "").trim()
+  const extractedStyles = sanitized.extractedStyles
+  content = sanitized.html.trim()
 
   // Unwrap plain-text <pre style="white-space: pre-wrap;"> wrapper generated by connector
   const preWrapMatch = content.match(
@@ -810,25 +763,13 @@ export function prepareUnifiedDraftHtml(
     }
   }
 
-  const extractedStyles: string[] = []
-  content = content.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, (styleTag) => {
-    extractedStyles.push(styleTag)
-    return ""
+  const sanitized = sanitizeEmailHtml(content, {
+    extractStyles: true,
+    extractBody: true,
+    stripDocumentWrappers: true,
   })
-
-  content = content.replace(/<!DOCTYPE[^>]*>/gi, "")
-  const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
-  if (bodyMatch) {
-    content = bodyMatch[1]
-  }
-  content = content.replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, "")
-  content = content.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
-  content = content.replace(/<script\b[^>]*>/gi, "")
-  content = content.replace(
-    /\s+on[a-z]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi,
-    ""
-  )
-  content = content.replace(/<\/?html[^>]*>/gi, "").trim()
+  const extractedStyles = sanitized.extractedStyles
+  content = sanitized.html.trim()
 
   const preWrapMatch = content.match(
     /^<pre\b[^>]*style\s*=\s*(?:"[^"]*white-space:\s*pre-wrap[^"]*"|'[^']*white-space:\s*pre-wrap[^']*')[^>]*>([\s\S]*?)<\/pre>$/i
@@ -875,23 +816,4 @@ export function combineDraftBodyHtml(
   const trimmedEditable = editableHtml?.trim() || ""
   if (!trimmedEditable) return `<p><br></p>${trimmedQuote}`
   return `${trimmedEditable}${trimmedQuote}`
-}
-
-/**
- * Strips HTML tags into readable plain text for draft bodyText fallback.
- */
-export function stripHtmlToPlainText(html: string): string {
-  if (!html) return ""
-  return html
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(?:p|div|li|tr|h[1-6]|blockquote)>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#0?39;/gi, "'")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
 }

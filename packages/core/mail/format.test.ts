@@ -12,6 +12,7 @@ import {
   splitQuotedEmailHtml,
   combineDraftBodyHtml,
   stripHtmlToPlainText,
+  linkifyEmailsInHtml,
   prepareUnifiedDraftHtml,
 } from "./format"
 
@@ -481,5 +482,40 @@ describe("prepareUnifiedDraftHtml", () => {
     expect(res.stylesHtml).toBe("")
     expect(res.isRichHtml).toBe(false)
     expect(res.bodyHtml).toBe("<p>Line A</p><p>Line B</p>")
+  })
+
+  it("strips malformed script tags and event handlers without leaving reconstructable script tags", () => {
+    const res = prepareUnifiedDraftHtml({
+      bodyHtml:
+        '<scr<script>alert(1)</script>ipt><script >alert(2)</script ><img/onload=alert(3) src="x.png"><p onclick="bad()">Safe</p>',
+    })
+
+    expect(res.bodyHtml).not.toMatch(/<script/i)
+    expect(res.bodyHtml).not.toMatch(/\bonload\b/i)
+    expect(res.bodyHtml).not.toMatch(/\bonclick\b/i)
+    expect(res.bodyHtml).toContain('<img src="x.png">')
+    expect(res.bodyHtml).toContain("<p>Safe</p>")
+  })
+
+  it("does not double-unescape HTML entities in stripHtmlToPlainText", () => {
+    expect(
+      stripHtmlToPlainText(
+        "<p>&amp;lt;script&amp;gt;alert(1)&amp;lt;/script&amp;gt;</p>"
+      )
+    ).toBe("&lt;script&gt;alert(1)&lt;/script&gt;")
+  })
+
+  it("handles pathological inputs in linear time without backtracking", () => {
+    const manyEmptyParagraphs = "<p> </p>".repeat(5000)
+    const splitRes = splitQuotedEmailHtml(
+      `${manyEmptyParagraphs}<div class="gmail_quote"><p>Quote</p></div>`
+    )
+    expect(splitRes.editableHtml).toBe("")
+    expect(splitRes.quotedHtml).toContain("Quote")
+
+    const manyLt = "<".repeat(5000) + "user@example.com"
+    expect(linkifyEmailsInHtml(manyLt)).toContain(
+      '<a href="mailto:user@example.com">user@example.com</a>'
+    )
   })
 })
