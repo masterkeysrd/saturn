@@ -35,6 +35,11 @@
       "types": "./calendar/index.ts",
       "import": "./calendar/index.ts",
       "default": "./calendar/index.ts"
+    },
+    "./space": {
+      "types": "./space/index.ts",
+      "import": "./space/index.ts",
+      "default": "./space/index.ts"
     }
   },
   "scripts": {
