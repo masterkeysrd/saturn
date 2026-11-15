@@ -8,7 +8,6 @@ import {
   useUpdateConnectedAccount,
   useDeleteConnectedAccount,
   useSyncConnectedAccount,
-  useContactSuggestions,
 } from "./use-connected-accounts"
 import * as api from "@saturn/api/saturn/platform/connector/v1/connector"
 

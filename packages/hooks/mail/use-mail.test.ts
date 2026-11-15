@@ -73,7 +73,7 @@ describe("useMail hooks", () => {
         messages: [],
       })
 
-      const { result } = renderHook(() => useMailThread("mth_1"), {
+      renderHook(() => useMailThread("mth_1"), {
         wrapper: createWrapper(),
       })
 
