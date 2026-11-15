@@ -22,4 +22,5 @@ exclude:
   - "*_log.go"         # Generated logging wrappers (loggen)
   - "tools/**"         # CLI code generators and developer tools
   - "apps/web/**"      # Web application node_modules and frontend assets
+  - "node_modules/**"  # Node workspace packages
   - "migrations/**"    # SQL migration files
