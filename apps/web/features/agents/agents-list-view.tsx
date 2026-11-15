@@ -69,7 +69,7 @@ export function AgentsListView() {
     name: "",
     description: "",
     llmProviderId: "",
-    modelName: "gemini-2.5-flash",
+    modelName: "",
     systemInstruction: "",
     temperature: 0.0,
     isEnabled: true,
@@ -99,7 +99,7 @@ export function AgentsListView() {
         name: blueprint ? `${blueprint.displayName} Agent` : `${purpose} Agent`,
         description: blueprint?.description || "",
         llmProviderId: "",
-        modelName: "gemini-2.5-flash",
+        modelName: "",
         systemInstruction: blueprint?.defaultSystemInstruction || "",
         temperature: 0.0,
         isEnabled: true,
@@ -215,9 +215,7 @@ export function AgentsListView() {
                   <div className="border-t border-border/10 pt-3">
                     <div>
                       Model:{" "}
-                      {customAgent
-                        ? customAgent.modelName
-                        : "gemini-2.5-flash (default)"}
+                      {customAgent ? customAgent.modelName : "Not configured"}
                     </div>
                     <div>
                       Config:{" "}
@@ -369,10 +367,11 @@ export function AgentsListView() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="a-model">Model Name</Label>
+              <Label htmlFor="a-model">Model Name *</Label>
               <Input
                 id="a-model"
-                placeholder="e.g. gemini-2.5-flash, llama3"
+                required
+                placeholder="e.g. gpt-4o, gemini-2.5-flash, llama3"
                 className="h-11 rounded-xl border-border/60 bg-background/50"
                 value={agentForm.modelName}
                 onChange={(e) =>
@@ -449,6 +448,7 @@ export function AgentsListView() {
             <div className="border-t border-border/10 pt-6">
               <Button
                 onClick={handleSaveAgent}
+                disabled={!agentForm.name.trim() || !agentForm.modelName.trim()}
                 className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.01] hover:opacity-95"
               >
                 Save Configuration
