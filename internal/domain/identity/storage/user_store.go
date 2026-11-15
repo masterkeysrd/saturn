@@ -126,6 +126,39 @@ func (s *UserStore) GetByID(ctx context.Context, id identity.UserID) (*identity.
 	return toDomainUser(&u), nil
 }
 
+// GetByIDs retrieves multiple users by their unique IDs in a single query.
+func (s *UserStore) GetByIDs(ctx context.Context, ids []identity.UserID) ([]*identity.User, error) {
+	const op errors.Op = "domain/identity/storage.GetByIDs"
+
+	if len(ids) == 0 {
+		return []*identity.User{}, nil
+	}
+
+	rawIDs := make([]string, len(ids))
+	for i, id := range ids {
+		rawIDs[i] = string(id)
+	}
+
+	q, args, err := pgDialect.From(goqu.T("user").Schema("identity")).
+		Where(goqu.C("id").In(rawIDs)).
+		Prepared(true).
+		ToSQL()
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	var rows []userDB
+	if err := s.db.Select(ctx, &rows, q, args...); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	users := make([]*identity.User, len(rows))
+	for i := range rows {
+		users[i] = toDomainUser(&rows[i])
+	}
+	return users, nil
+}
+
 // GetByEmail retrieves a user by their email address.
 func (s *UserStore) GetByEmail(ctx context.Context, email string) (*identity.User, error) {
 	const op errors.Op = "domain/identity/storage.GetByEmail"

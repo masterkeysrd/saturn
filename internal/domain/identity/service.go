@@ -19,6 +19,7 @@ import (
 type UserStoreProvider interface {
 	Create(ctx context.Context, user *User) error
 	GetByID(ctx context.Context, id UserID) (*User, error)
+	GetByIDs(ctx context.Context, ids []UserID) ([]*User, error)
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	GetByUsername(ctx context.Context, username string) (*User, error)
 	Update(ctx context.Context, user *User) error
@@ -155,6 +156,21 @@ func (s *Service) GetUserByID(ctx context.Context, id UserID) (*User, error) {
 		return nil, errors.E(op, err)
 	}
 	return user, nil
+}
+
+// GetUsersByIDs retrieves multiple users by their IDs in a single batch query.
+func (s *Service) GetUsersByIDs(ctx context.Context, ids []UserID) ([]*User, error) {
+	const op errors.Op = "domain/identity.GetUsersByIDs"
+
+	if len(ids) == 0 {
+		return []*User{}, nil
+	}
+
+	users, err := s.deps.UserStore.GetByIDs(ctx, ids)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return users, nil
 }
 
 // UpdateUser updates an existing user with optimistic locking. Returns VersionMismatch if the version doesn't match.

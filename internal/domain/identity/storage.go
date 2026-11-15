@@ -13,6 +13,9 @@ type UserStore interface {
 	// GetByID retrieves a user by their unique ID.
 	GetByID(ctx context.Context, id UserID) (*User, error)
 
+	// GetByIDs retrieves multiple users by their unique IDs in a single batch query.
+	GetByIDs(ctx context.Context, ids []UserID) ([]*User, error)
+
 	// GetByEmail retrieves a user by their email address.
 	GetByEmail(ctx context.Context, email string) (*User, error)
 

@@ -16,6 +16,7 @@ import (
 type mockUserStore struct {
 	createFn               func(ctx context.Context, user *User) error
 	getByIDFn              func(ctx context.Context, id UserID) (*User, error)
+	getByIDsFn             func(ctx context.Context, ids []UserID) ([]*User, error)
 	getByEmailFn           func(ctx context.Context, email string) (*User, error)
 	getByUsernameFn        func(ctx context.Context, username string) (*User, error)
 	updateFn               func(ctx context.Context, user *User) error
@@ -38,6 +39,13 @@ func (m *mockUserStore) GetByID(ctx context.Context, id UserID) (*User, error) {
 		return m.getByIDFn(ctx, id)
 	}
 	return nil, nil
+}
+
+func (m *mockUserStore) GetByIDs(ctx context.Context, ids []UserID) ([]*User, error) {
+	if m.getByIDsFn != nil {
+		return m.getByIDsFn(ctx, ids)
+	}
+	return []*User{}, nil
 }
 
 func (m *mockUserStore) GetByEmail(ctx context.Context, email string) (*User, error) {

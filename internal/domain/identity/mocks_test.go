@@ -102,6 +102,9 @@ type UserStoreProviderMock struct {
 	// GetByIDFunc mocks the GetByID method.
 	GetByIDFunc func(ctx context.Context, id UserID) (*User, error)
 
+	// GetByIDsFunc mocks the GetByIDs method.
+	GetByIDsFunc func(ctx context.Context, ids []UserID) ([]*User, error)
+
 	// GetByEmailFunc mocks the GetByEmail method.
 	GetByEmailFunc func(ctx context.Context, email string) (*User, error)
 
@@ -135,6 +138,10 @@ type UserStoreProviderMock struct {
 		GetByID []struct {
 			Ctx context.Context
 			Id  UserID
+		}
+		GetByIDs []struct {
+			Ctx context.Context
+			Ids []UserID
 		}
 		GetByEmail []struct {
 			Ctx   context.Context
@@ -171,6 +178,7 @@ type UserStoreProviderMock struct {
 	}
 	lockCreate               sync.RWMutex
 	lockGetByID              sync.RWMutex
+	lockGetByIDs             sync.RWMutex
 	lockGetByEmail           sync.RWMutex
 	lockGetByUsername        sync.RWMutex
 	lockUpdate               sync.RWMutex
@@ -233,6 +241,33 @@ func (mock *UserStoreProviderMock) GetByIDCalls() []struct {
 	mock.lockGetByID.RLock()
 	defer mock.lockGetByID.RUnlock()
 	return mock.calls.GetByID
+}
+
+// GetByIDs calls GetByIDsFunc.
+func (mock *UserStoreProviderMock) GetByIDs(ctx context.Context, ids []UserID) ([]*User, error) {
+	if mock.GetByIDsFunc == nil {
+		panic("UserStoreProviderMock.GetByIDsFunc: method is nil but UserStoreProvider.GetByIDs was just called")
+	}
+	mock.lockGetByIDs.Lock()
+	mock.calls.GetByIDs = append(mock.calls.GetByIDs, struct {
+		Ctx context.Context
+		Ids []UserID
+	}{
+		Ctx: ctx,
+		Ids: ids,
+	})
+	mock.lockGetByIDs.Unlock()
+	return mock.GetByIDsFunc(ctx, ids)
+}
+
+// GetByIDsCalls returns all calls made to GetByIDs.
+func (mock *UserStoreProviderMock) GetByIDsCalls() []struct {
+	Ctx context.Context
+	Ids []UserID
+} {
+	mock.lockGetByIDs.RLock()
+	defer mock.lockGetByIDs.RUnlock()
+	return mock.calls.GetByIDs
 }
 
 // GetByEmail calls GetByEmailFunc.
