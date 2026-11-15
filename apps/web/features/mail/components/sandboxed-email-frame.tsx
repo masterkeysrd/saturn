@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { ShieldAlert, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Attachment } from "@saturn/api/saturn/mail/v1/mail"
-import { sanitizeEmailHtml } from "@saturn/core"
+import { restoreRemoteImageSrc, sanitizeEmailHtml } from "@saturn/core"
 import { cn } from "@/lib/utils"
 
 export interface SandboxedEmailFrameProps {
@@ -112,10 +112,7 @@ export function SandboxedEmailFrame({
 
     // 2. Swap remote tracker images when opted-in or auto-load enabled
     if (shouldLoadImages) {
-      source = source.replace(
-        /data-saturn-remote-src=(["'])(.*?)\1/gi,
-        'src="$2"'
-      )
+      source = restoreRemoteImageSrc(source)
     }
 
     return source

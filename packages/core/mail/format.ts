@@ -1,7 +1,9 @@
 import {
   findPrecedingBeginForwardedIndex,
+  findQuotedBlockStart,
   findUnwrappedForwardHeaderStart,
   linkifyEmailsInHtml,
+  restoreRemoteImageSrc,
   sanitizeEmailHtml,
   stripEmptyWrapperDivs,
   stripHtmlToPlainText,
@@ -548,36 +550,10 @@ export function splitQuotedEmailHtml(html: string): {
 } {
   if (!html) return { editableHtml: "", quotedHtml: "" }
 
-  const divQuoteRegex =
-    /<div\b[^>]*class\s*=\s*(?:"[^"]*\b(?:saturn-quoted-reply|saturn-forwarded-message|gmail_quote)\b[^"]*"|'[^']*\b(?:saturn-quoted-reply|saturn-forwarded-message|gmail_quote)\b[^']*')[^>]*>/i
-  const citeBlockquoteRegex =
-    /<blockquote\b[^>]*type\s*=\s*(?:"cite"|'cite'|cite\b)[^>]*>/i
-
-  const divMatch = divQuoteRegex.exec(html)
-  const citeMatch = citeBlockquoteRegex.exec(html)
-
-  let chosenKind: "div" | "blockquote" | null = null
-  let chosenMatch: RegExpExecArray | null = null
-
-  if (divMatch && citeMatch) {
-    if (divMatch.index <= citeMatch.index) {
-      chosenKind = "div"
-      chosenMatch = divMatch
-    } else {
-      chosenKind = "blockquote"
-      chosenMatch = citeMatch
-    }
-  } else if (divMatch) {
-    chosenKind = "div"
-    chosenMatch = divMatch
-  } else if (citeMatch) {
-    chosenKind = "blockquote"
-    chosenMatch = citeMatch
-  }
-
-  if (chosenMatch && chosenKind) {
-    let startIdx = chosenMatch.index
-    const endIdx = findBalancedTagEnd(html, startIdx, chosenKind)
+  const quotedBlock = findQuotedBlockStart(html)
+  if (quotedBlock) {
+    let startIdx = quotedBlock.index
+    const endIdx = findBalancedTagEnd(html, startIdx, quotedBlock.kind)
     if (endIdx !== -1) {
       // Check if anything meaningful follows the quoted block (ignoring closing outer </div> wrappers)
       const rawTrailing = html.slice(endIdx)
@@ -705,10 +681,7 @@ export function prepareDraftContentForEditor(
 
   let editableHtml = rawEditable
   if (loadRemoteImages && editableHtml) {
-    editableHtml = editableHtml.replace(
-      /data-saturn-remote-src=(["'])(.*?)\1/gi,
-      'src="$2"'
-    )
+    editableHtml = restoreRemoteImageSrc(editableHtml)
   }
 
   const linkifiedQuote = rawQuoted ? linkifyEmailsInHtml(rawQuoted) : ""
@@ -782,10 +755,7 @@ export function prepareUnifiedDraftHtml(
 
   const hasRemoteImages = /data-saturn-remote-src\s*=/i.test(content)
   if (loadRemoteImages) {
-    content = content.replace(
-      /data-saturn-remote-src=(["'])(.*?)\1/gi,
-      'src="$2"'
-    )
+    content = restoreRemoteImageSrc(content)
   }
 
   content = linkifyEmailsInHtml(content)

@@ -765,3 +765,198 @@ export function findPrecedingBeginForwardedIndex(prefix: string): number {
 
   return -1
 }
+
+interface ParsedTagAttr {
+  nameLower: string
+  value: string
+  raw: string
+}
+
+function parseTagAttributes(
+  html: string,
+  ltIdx: number,
+  header: ParsedTagHeader
+): { attrs: ParsedTagAttr[]; selfClosing: boolean } {
+  const gtIdx = header.tagEnd
+  const afterNameIdx =
+    ltIdx + 1 + (header.isClosing ? 1 : 0) + header.tagName.length
+  const inner = html.slice(afterNameIdx, gtIdx)
+
+  const attrs: ParsedTagAttr[] = []
+  let i = 0
+  const len = inner.length
+  let selfClosing = false
+
+  while (i < len) {
+    while (i < len && (isWhitespace(inner[i]) || inner[i] === "/")) {
+      if (inner[i] === "/" && inner.slice(i + 1).trim() === "") {
+        selfClosing = true
+      }
+      i += 1
+    }
+    if (i >= len) break
+
+    const nameStart = i
+    while (
+      i < len &&
+      !isWhitespace(inner[i]) &&
+      inner[i] !== "=" &&
+      inner[i] !== "/"
+    ) {
+      i += 1
+    }
+    const attrName = inner.slice(nameStart, i)
+    if (!attrName) break
+
+    let j = i
+    while (j < len && isWhitespace(inner[j])) {
+      j += 1
+    }
+
+    let attrEnd = i
+    let value = ""
+    if (j < len && inner[j] === "=") {
+      j += 1
+      while (j < len && isWhitespace(inner[j])) {
+        j += 1
+      }
+      if (j < len && (inner[j] === '"' || inner[j] === "'")) {
+        const quote = inner[j]
+        j += 1
+        const valStart = j
+        while (j < len && inner[j] !== quote) {
+          j += 1
+        }
+        value = inner.slice(valStart, j)
+        if (j < len && inner[j] === quote) {
+          j += 1
+        }
+        attrEnd = j
+      } else {
+        const valStart = j
+        while (j < len && !isWhitespace(inner[j])) {
+          j += 1
+        }
+        value = inner.slice(valStart, j)
+        attrEnd = j
+      }
+    }
+
+    attrs.push({
+      nameLower: attrName.toLowerCase(),
+      value,
+      raw: inner.slice(nameStart, attrEnd),
+    })
+    i = attrEnd
+  }
+
+  return { attrs, selfClosing }
+}
+
+const QUOTED_DIV_CLASSES = new Set([
+  "saturn-quoted-reply",
+  "saturn-forwarded-message",
+  "gmail_quote",
+])
+
+/**
+ * Finds the first quoted reply/forward container (`<div class="saturn-quoted-reply|saturn-forwarded-message|gmail_quote">`
+ * or `<blockquote type="cite">`) in linear time without regex backtracking.
+ */
+export function findQuotedBlockStart(
+  html: string
+): { kind: "div" | "blockquote"; index: number } | null {
+  let pos = 0
+  while (pos < html.length) {
+    const lt = html.indexOf("<", pos)
+    if (lt === -1) return null
+
+    const header = parseTagHeader(html, lt)
+    if (!header) {
+      pos = lt + 1
+      continue
+    }
+
+    if (!header.isClosing) {
+      if (header.tagNameLower === "div") {
+        const { attrs } = parseTagAttributes(html, lt, header)
+        for (const attr of attrs) {
+          if (attr.nameLower === "class") {
+            const tokens = attr.value.toLowerCase().split(/\s+/)
+            if (tokens.some((t) => QUOTED_DIV_CLASSES.has(t))) {
+              return { kind: "div", index: lt }
+            }
+          }
+        }
+      } else if (header.tagNameLower === "blockquote") {
+        const { attrs } = parseTagAttributes(html, lt, header)
+        for (const attr of attrs) {
+          if (
+            attr.nameLower === "type" &&
+            attr.value.trim().toLowerCase() === "cite"
+          ) {
+            return { kind: "blockquote", index: lt }
+          }
+        }
+      }
+    }
+
+    pos = header.tagEnd + 1
+  }
+  return null
+}
+
+/**
+ * Rewrites `data-saturn-remote-src="..."` attributes on HTML tags to `src="..."`
+ * in linear time without regex backtracking.
+ */
+export function restoreRemoteImageSrc(html: string): string {
+  if (!html || !html.toLowerCase().includes("data-saturn-remote-src")) {
+    return html
+  }
+
+  const out: string[] = []
+  let pos = 0
+
+  while (pos < html.length) {
+    const lt = html.indexOf("<", pos)
+    if (lt === -1) {
+      out.push(html.slice(pos))
+      break
+    }
+
+    if (lt > pos) {
+      out.push(html.slice(pos, lt))
+    }
+
+    const header = parseTagHeader(html, lt)
+    if (!header) {
+      out.push("<")
+      pos = lt + 1
+      continue
+    }
+
+    if (!header.isClosing) {
+      const rawTag = html.slice(lt, header.tagEnd + 1)
+      if (rawTag.toLowerCase().includes("data-saturn-remote-src")) {
+        const { attrs, selfClosing } = parseTagAttributes(html, lt, header)
+        const rebuiltAttrs = attrs.map((attr) =>
+          attr.nameLower === "data-saturn-remote-src"
+            ? `src="${attr.value}"`
+            : attr.raw
+        )
+        const attrsStr =
+          rebuiltAttrs.length > 0 ? ` ${rebuiltAttrs.join(" ")}` : ""
+        const slashStr = selfClosing ? " /" : ""
+        out.push(`<${header.tagName}${attrsStr}${slashStr}>`)
+        pos = header.tagEnd + 1
+        continue
+      }
+    }
+
+    out.push(html.slice(lt, header.tagEnd + 1))
+    pos = header.tagEnd + 1
+  }
+
+  return out.join("")
+}
