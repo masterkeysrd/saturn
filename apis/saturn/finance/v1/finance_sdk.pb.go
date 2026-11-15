@@ -232,11 +232,16 @@ func (c *Client) GetExchangeRate(ctx context.Context, req *GetExchangeRateReques
 	return &resp, nil
 }
 
-// UpdateExchangeRate executes PUT /api/v1/finance/exchange-rates/{id}.
+// UpdateExchangeRate executes PATCH /api/v1/finance/exchange-rates/{id}.
 func (c *Client) UpdateExchangeRate(ctx context.Context, req *UpdateExchangeRateRequest) (*ExchangeRate, error) {
 	var resp ExchangeRate
 	path := fmt.Sprintf("/api/v1/finance/exchange-rates/%s", req.GetId())
 	var query []string
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -244,7 +249,7 @@ func (c *Client) UpdateExchangeRate(ctx context.Context, req *UpdateExchangeRate
 	if payload == nil {
 		return nil, fmt.Errorf("exchange_rate payload is required")
 	}
-	if err := c.base.Do(ctx, "PUT", path, payload, &resp); err != nil {
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
@@ -1128,11 +1133,16 @@ func (c *Client) ListInboxItems(ctx context.Context, req *ListInboxItemsRequest)
 	return &resp, nil
 }
 
-// UpdateInboxItem executes PUT /api/v1/finance/inbox-items/{id}.
+// UpdateInboxItem executes PATCH /api/v1/finance/inbox-items/{id}.
 func (c *Client) UpdateInboxItem(ctx context.Context, req *UpdateInboxItemRequest) (*InboxItem, error) {
 	var resp InboxItem
 	path := fmt.Sprintf("/api/v1/finance/inbox-items/%s", req.GetId())
 	var query []string
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -1140,7 +1150,7 @@ func (c *Client) UpdateInboxItem(ctx context.Context, req *UpdateInboxItemReques
 	if payload == nil {
 		return nil, fmt.Errorf("inbox_item payload is required")
 	}
-	if err := c.base.Do(ctx, "PUT", path, payload, &resp); err != nil {
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil

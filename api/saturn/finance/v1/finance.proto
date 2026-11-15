@@ -91,7 +91,7 @@ service Finance {
   // Updates an existing daily exchange rate conversion coefficient.
   rpc UpdateExchangeRate(UpdateExchangeRateRequest) returns (ExchangeRate) {
     option (google.api.http) = {
-      put: "/v1/finance/exchange-rates/{id}"
+      patch: "/v1/finance/exchange-rates/{id}"
       body: "exchange_rate"
     };
   }
@@ -379,7 +379,7 @@ service Finance {
   // Updates a staged inbox item's draft properties.
   rpc UpdateInboxItem(UpdateInboxItemRequest) returns (InboxItem) {
     option (google.api.http) = {
-      put: "/v1/finance/inbox-items/{id}"
+      patch: "/v1/finance/inbox-items/{id}"
       body: "inbox_item"
     };
   }
@@ -812,6 +812,9 @@ message UpdateExchangeRateRequest {
 
   // Required. The exchange rate details to update.
   ExchangeRate exchange_rate = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask defining which fields to update (e.g. `rate`).
+  optional google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The request for
@@ -2676,6 +2679,9 @@ message UpdateInboxItemRequest {
 
   // Required. Updated staging inbox item parameters.
   InboxItem inbox_item = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask defining which draft fields to update.
+  optional google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The request for

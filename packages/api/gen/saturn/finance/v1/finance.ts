@@ -954,6 +954,10 @@ export interface UpdateExchangeRateRequest {
    * Required. The exchange rate details to update.
    */
   exchangeRate: ExchangeRate
+  /**
+   * Optional. Field mask defining which fields to update (e.g. `rate`).
+   */
+  updateMask?: { paths?: string[] }
 }
 
 /**
@@ -3232,6 +3236,10 @@ export interface UpdateInboxItemRequest {
    * Required. Updated staging inbox item parameters.
    */
   inboxItem: InboxItem
+  /**
+   * Optional. Field mask defining which draft fields to update.
+   */
+  updateMask?: { paths?: string[] }
 }
 
 /**
@@ -4128,9 +4136,13 @@ export async function updateExchangeRate(
   id: string,
   req: UpdateExchangeRateRequest
 ): Promise<ExchangeRate> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  delete (params as Record<string, unknown>).exchangeRate
   return request<ExchangeRate>({
-    method: "PUT",
+    method: "PATCH",
     url: `/api/v1/finance/exchange-rates/${id}`,
+    params: params,
     data: req.exchangeRate,
   })
 }
@@ -5447,9 +5459,13 @@ export async function updateInboxItem(
   id: string,
   req: UpdateInboxItemRequest
 ): Promise<InboxItem> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  delete (params as Record<string, unknown>).inboxItem
   return request<InboxItem>({
-    method: "PUT",
+    method: "PATCH",
     url: `/api/v1/finance/inbox-items/${id}`,
+    params: params,
     data: req.inboxItem,
   })
 }
