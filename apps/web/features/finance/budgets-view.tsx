@@ -1,5 +1,8 @@
 import { useState, useMemo } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { useSpacePermissions } from "@/features/space/use-space"
+import { convertCentsToBase } from "@saturn/core"
+import { invalidateFinanceQueries } from "@saturn/hooks"
 import {
   type Budget,
   type Budget_Status,
@@ -7,6 +10,7 @@ import {
   useGetSettingsQuery,
   useListAccountsQuery,
   useListBudgetsQuery,
+  useListExchangeRatesQuery,
   useUpdateBudgetMutation,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
@@ -32,10 +36,21 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export function BudgetsView() {
+  const queryClient = useQueryClient()
   const { spaceId, isWritable } = useSpacePermissions()
 
   // 1. Fetch settings
   const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
+  const baseCurrency = settings?.baseCurrency || "USD"
+
+  const { data: ratesData } = useListExchangeRatesQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!spaceId }
+  )
+  const exchangeRates = useMemo(
+    () => ratesData?.exchangeRates || [],
+    [ratesData?.exchangeRates]
+  )
 
   const [statusFilter, setStatusFilter] = useState<
     "ACTIVE" | "PAUSED" | "CLOSED" | "ALL"
@@ -47,7 +62,7 @@ export function BudgetsView() {
   }, [statusFilter])
 
   // 2. Fetch budgets with FULL view and statuses filter
-  const { data: budgetsData, refetch: refetchBudgets } = useListBudgetsQuery(
+  const { data: budgetsData } = useListBudgetsQuery(
     { pageSize: 100, pageToken: "", view: "FULL", statuses: statusesParam },
     { enabled: !!settings }
   )
@@ -92,12 +107,22 @@ export function BudgetsView() {
     const budgets = budgetsData?.budgets || []
     return budgets.reduce((acc, b) => {
       if (!isStatusActive(b.status)) return acc
-      if (b.currentPeriod) {
-        return acc + formatCents(b.currentPeriod.limitInBase || "0")
+      if (b.currentPeriod?.limitInBase) {
+        return acc + formatCents(b.currentPeriod.limitInBase)
       }
-      return acc + formatCents(b.limitAmount)
+      return (
+        acc +
+        formatCents(
+          convertCentsToBase(
+            b.limitAmount,
+            b.currency,
+            baseCurrency,
+            exchangeRates
+          )
+        )
+      )
     }, 0)
-  }, [budgetsData])
+  }, [budgetsData, baseCurrency, exchangeRates])
 
   const handlePeriodLoaded = () => {}
 
@@ -127,7 +152,7 @@ export function BudgetsView() {
         description: `Budget template "${deleteTarget.name}" has been deleted.`,
       })
       setDeleteTarget(null)
-      refetchBudgets()
+      await invalidateFinanceQueries(queryClient)
     } catch (err) {
       toast.add({
         type: "error",
@@ -167,7 +192,7 @@ export function BudgetsView() {
         title: `Budget ${actionLabel}`,
         description: `Budget "${budget.name}" is now ${newStatus.toLowerCase()}.`,
       })
-      refetchBudgets()
+      await invalidateFinanceQueries(queryClient)
     } catch (err) {
       toast.add({
         type: "error",
@@ -329,7 +354,6 @@ export function BudgetsView() {
           spaceId={spaceId}
           baseCurrency={settings?.baseCurrency || "USD"}
           accounts={accounts}
-          refetchBudgets={refetchBudgets}
         />
 
         {/* Modal Sheet triggers */}
@@ -339,7 +363,6 @@ export function BudgetsView() {
           activeBudget={activeBudget}
           spaceId={spaceId}
           accounts={accounts}
-          refetchBudgets={refetchBudgets}
           baseCurrency={settings?.baseCurrency || "USD"}
         />
 
@@ -352,8 +375,6 @@ export function BudgetsView() {
           budgets={budgetsData?.budgets || []}
           accounts={accounts}
           preselectedBudgetId={selectedBudgetId}
-          refetchTransactions={() => {}} // No transactions list on this view to refetch
-          refetchBudgets={refetchBudgets}
         />
 
         {/* Budget History Ledger Sheet */}

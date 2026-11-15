@@ -1,7 +1,7 @@
 import { useState, useEffect, createElement } from "react"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { useUrlState } from "@/lib/use-url-state"
-import { useDebounce } from "@/lib/use-debounce"
+import { useDebounce, useTimezone } from "@saturn/hooks"
 import {
   useSpacePermissions,
   resolveSpacePath,
@@ -16,7 +16,6 @@ import {
   useGetSettingsQuery,
   useListBudgetsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
-import { useTimezone } from "@saturn/hooks"
 import { Inbox } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {

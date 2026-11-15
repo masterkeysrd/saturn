@@ -1,4 +1,6 @@
 import { useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
+import { invalidateFinanceQueries } from "@saturn/hooks"
 import { FormDrawer } from "@/components/ui/form-drawer"
 import {
   ArrowDownLeft,
@@ -51,6 +53,7 @@ export function CreateTransactionSheet({
   refetchBudgets,
   refetchData,
 }: CreateTransactionSheetProps) {
+  const queryClient = useQueryClient()
   const [prevOpen, setPrevOpen] = useState(open)
   const [prevEditTransaction, setPrevEditTransaction] =
     useState(editTransaction)
@@ -117,6 +120,7 @@ export function CreateTransactionSheet({
     accounts.length > 0 ? accounts : accountsData?.accounts || []
 
   const handleRefetch = () => {
+    void invalidateFinanceQueries(queryClient)
     refetchTransactions?.()
     refetchBudgets?.()
     refetchData?.()

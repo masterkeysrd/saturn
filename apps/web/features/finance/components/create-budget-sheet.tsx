@@ -1,4 +1,6 @@
 import { createElement, useMemo } from "react"
+import { useQueryClient } from "@tanstack/react-query"
+import { invalidateFinanceQueries } from "@saturn/hooks"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
@@ -47,6 +49,7 @@ export function CreateBudgetSheet({
   accounts = [],
   refetchBudgets,
 }: CreateBudgetSheetProps) {
+  const queryClient = useQueryClient()
   const { data: accountsData } = useListAccountsQuery(
     {},
     { enabled: open && !!spaceId && accounts.length === 0 }
@@ -122,6 +125,7 @@ export function CreateBudgetSheet({
     })
     reset()
     onOpenChange(false)
+    await invalidateFinanceQueries(queryClient)
     refetchBudgets?.()
   }
 

@@ -1,4 +1,6 @@
 import { useState, useMemo, createElement } from "react"
+import { useQueryClient } from "@tanstack/react-query"
+import { invalidateFinanceQueries } from "@saturn/hooks"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
@@ -68,6 +70,7 @@ export function EditBudgetSheet({
   accounts = [],
   refetchBudgets,
 }: EditBudgetSheetProps) {
+  const queryClient = useQueryClient()
   const { data: accountsData } = useListAccountsQuery(
     {},
     { enabled: open && !!spaceId && accounts.length === 0 }
@@ -191,6 +194,7 @@ export function EditBudgetSheet({
         dirtyFields,
       })
       onOpenChange(false)
+      await invalidateFinanceQueries(queryClient)
       refetchBudgets?.()
     } catch {
       // Handled by patchMutation / toast

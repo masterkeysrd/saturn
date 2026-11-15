@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import type { InboxReviewFormValues } from "@saturn/schemas"
 import { InboxItemReviewPanel } from "./components/inbox-item-review-panel"
 import { useUrlState } from "@/lib/use-url-state"
-import { useDebounce } from "@/lib/use-debounce"
+import { useDebounce } from "@saturn/hooks"
 import {
   useListInboxItemsQuery,
   useApproveInboxItemMutation,

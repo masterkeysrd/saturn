@@ -4,7 +4,7 @@ import {
   useSpacePermissions,
   resolveSpacePath,
 } from "@/features/space/use-space"
-import { useTimezone } from "@saturn/hooks"
+import { useDebounce, useTimezone } from "@saturn/hooks"
 import {
   type Account,
   type Account_Type,
@@ -16,7 +16,6 @@ import {
   useListInstitutionsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
-import { useDebounce } from "@/lib/use-debounce"
 import { useUrlState } from "@/lib/use-url-state"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import { cn } from "@/lib/utils"

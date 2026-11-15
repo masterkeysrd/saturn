@@ -29,8 +29,8 @@ export function SecurityActivityLogSettings() {
     isLoading: isLoadingEvents,
     refetch: refetchEvents,
   } = useListMySecurityEventsQuery({
-    limit: PAGE_SIZE,
-    nextPageToken: pageToken,
+    pageSize: PAGE_SIZE,
+    pageToken,
   })
 
   const handleNextPage = () => {

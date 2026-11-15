@@ -17,14 +17,16 @@ import type {
   RegisterUserRequest,
   RefreshSessionResponse,
 } from "@saturn/api/gen/saturn/identity/v1/identity"
+import { useQueryClient } from "@tanstack/react-query"
 import { AuthContext, type AuthUser } from "./auth-context"
 import { authStorage } from "@saturn/api/storage"
-import { decodeJwt } from "@/lib/jwt"
+import { decodeJwt } from "@saturn/core"
 
 // Global promise cache to deduplicate silent refresh calls on mount (e.g. under React Strict Mode)
 let initialRefreshPromise: Promise<RefreshSessionResponse> | null = null
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(() => {
     if (typeof window === "undefined") return false
@@ -146,8 +148,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authStorage.clearSession()
       setAccessToken(null)
       setError(null)
+      queryClient.clear()
     }
-  }, [])
+  }, [queryClient])
 
   useEffect(() => {
     const handleUnauthorized = () => {

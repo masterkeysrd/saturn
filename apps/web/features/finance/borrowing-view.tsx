@@ -1,12 +1,17 @@
 import { useState, useEffect } from "react"
 import { useUrlState } from "@/lib/use-url-state"
-import { useDebounce } from "@/lib/use-debounce"
 import { useSpacePermissions } from "@/features/space/use-space"
-import { useTimezone } from "@saturn/hooks"
+import {
+  invalidateFinanceQueries,
+  useDebounce,
+  useTimezone,
+} from "@saturn/hooks"
+import { convertCentsToBase } from "@saturn/core"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   useListBorrowingsQuery,
   useDeleteBorrowingMutation,
+  useListExchangeRatesQuery,
   type Borrowing,
   type Borrowing_Status,
   type Borrowing_Direction,
@@ -60,6 +65,12 @@ export function BorrowingView() {
 
   const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
   const baseCurrency = settings?.baseCurrency || "USD"
+
+  const { data: ratesData } = useListExchangeRatesQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!spaceId }
+  )
+  const exchangeRates = ratesData?.exchangeRates || []
 
   const [urlState, setUrlState] = useUrlState(BORROWING_FILTER_DEFAULTS)
   const [searchQuery, setSearchQuery] = useState(urlState.q)
@@ -119,15 +130,7 @@ export function BorrowingView() {
           id: b.id || "",
         },
       })
-      await queryClient.invalidateQueries({
-        queryKey: ["/api/v1/finance/transactions"],
-      })
-      await queryClient.invalidateQueries({
-        queryKey: ["/api/v1/finance/accounts"],
-      })
-      await queryClient.invalidateQueries({
-        queryKey: ["/api/v1/finance/borrowings"],
-      })
+      await invalidateFinanceQueries(queryClient)
       refetchBorrowings()
     } catch (err) {
       console.error("Failed to delete borrowing", err)
@@ -139,14 +142,34 @@ export function BorrowingView() {
     b.counterparty.toLowerCase().includes(urlState.q.toLowerCase())
   )
 
-  // Calculate totals for active borrowings
+  // Calculate totals for active borrowings (converted to workspace base currency)
   const activeBorrowings = borrowings.filter((b) => b.status === "ACTIVE")
   const totalLent = activeBorrowings
     .filter((b) => b.direction === "LENT")
-    .reduce((sum, b) => sum + parseFloat(b.remainingAmount || "0"), 0)
+    .reduce(
+      (sum, b) =>
+        sum +
+        convertCentsToBase(
+          b.remainingAmount,
+          b.currency,
+          baseCurrency,
+          exchangeRates
+        ),
+      0
+    )
   const totalBorrowed = activeBorrowings
     .filter((b) => b.direction === "BORROWED")
-    .reduce((sum, b) => sum + parseFloat(b.remainingAmount || "0"), 0)
+    .reduce(
+      (sum, b) =>
+        sum +
+        convertCentsToBase(
+          b.remainingAmount,
+          b.currency,
+          baseCurrency,
+          exchangeRates
+        ),
+      0
+    )
 
   const handleOpenCreate = () => {
     setEditBorrowing(null)
