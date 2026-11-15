@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -132,6 +133,7 @@ type DBConfig struct {
 	User            string        `mapstructure:"user"`
 	Password        string        `mapstructure:"password"`
 	Name            string        `mapstructure:"name"`
+	SSLMode         string        `mapstructure:"ssl_mode"`
 	MaxOpenConns    int           `mapstructure:"max_open_conns"`
 	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
 	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
@@ -140,7 +142,21 @@ type DBConfig struct {
 
 // DSN returns the PostgreSQL data source name for connecting to the database.
 func (c DBConfig) DSN() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable&application_name=saturn", c.User, c.Password, c.Host, c.Port, c.Name)
+	sslMode := strings.TrimSpace(c.SSLMode)
+	if sslMode == "" {
+		sslMode = "require"
+	}
+	q := url.Values{}
+	q.Set("sslmode", sslMode)
+	q.Set("application_name", "saturn")
+	u := url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(c.User, c.Password),
+		Host:     fmt.Sprintf("%s:%d", c.Host, c.Port),
+		Path:     "/" + c.Name,
+		RawQuery: q.Encode(),
+	}
+	return u.String()
 }
 
 // GRPCConfig holds gRPC server settings.
@@ -150,9 +166,10 @@ type GRPCConfig struct {
 
 // GatewayConfig holds the HTTP gateway server settings.
 type GatewayConfig struct {
-	Addr         string `mapstructure:"addr"`
-	RoutePrefix  string `mapstructure:"route_prefix"`
-	CookieSecure bool   `mapstructure:"cookie_secure"`
+	Addr           string   `mapstructure:"addr"`
+	RoutePrefix    string   `mapstructure:"route_prefix"`
+	CookieSecure   bool     `mapstructure:"cookie_secure"`
+	TrustedProxies []string `mapstructure:"trusted_proxies"`
 }
 
 // ShutdownConfig holds shutdown behavior settings.
@@ -166,6 +183,13 @@ type LogConfig struct {
 	Format string `mapstructure:"format"`
 }
 
+// RateLimitConfig holds token-bucket rate limiting settings for public auth RPCs.
+type RateLimitConfig struct {
+	Enabled           bool    `mapstructure:"enabled"`
+	RequestsPerMinute float64 `mapstructure:"requests_per_minute"`
+	Burst             int     `mapstructure:"burst"`
+}
+
 // AuthConfig holds JWT and authentication settings.
 type AuthConfig struct {
 	Issuer         string            `mapstructure:"issuer"`
@@ -175,6 +199,7 @@ type AuthConfig struct {
 	ActiveKeyID    string            `mapstructure:"active_key_id"`
 	PrivateKeyPath string            `mapstructure:"private_key_path"`
 	PublicKeys     map[string]string `mapstructure:"public_keys"`
+	RateLimit      RateLimitConfig   `mapstructure:"rate_limit"`
 }
 
 // NewViper creates and configures a Viper instance with config file search
@@ -194,6 +219,7 @@ func NewViper() *viper.Viper {
 	v.SetDefault("db.user", defaultDBUser)
 	v.SetDefault("db.password", defaultDBPassword)
 	v.SetDefault("db.name", defaultDBName)
+	v.SetDefault("db.ssl_mode", "require")
 	v.SetDefault("db.max_open_conns", 25)
 	v.SetDefault("db.max_idle_conns", 10)
 	v.SetDefault("db.conn_max_lifetime", 15*time.Minute)
@@ -203,6 +229,7 @@ func NewViper() *viper.Viper {
 	v.SetDefault("gateway.addr", defaultGatewayAddr)
 	v.SetDefault("gateway.route_prefix", defaultRoutePrefix)
 	v.SetDefault("gateway.cookie_secure", true)
+	v.SetDefault("gateway.trusted_proxies", []string{})
 	v.SetDefault("shutdown.timeout", defaultShutdownTime)
 	v.SetDefault("log.level", defaultLogLevel)
 	v.SetDefault("log.format", "text")
@@ -216,6 +243,9 @@ func NewViper() *viper.Viper {
 	v.SetDefault("auth.active_key_id", defaultJWTActiveKeyID)
 	v.SetDefault("auth.private_key_path", defaultJWTKeyDir+"/private.pem")
 	v.SetDefault("auth.public_keys", map[string]string{})
+	v.SetDefault("auth.rate_limit.enabled", true)
+	v.SetDefault("auth.rate_limit.requests_per_minute", 30.0)
+	v.SetDefault("auth.rate_limit.burst", 20)
 
 	v.SetDefault("backup.driver", "local")
 	v.SetDefault("backup.local_dir", "./backups")

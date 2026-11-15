@@ -25,7 +25,7 @@ func TestDBConfig_DSN(t *testing.T) {
 		want string
 	}{
 		{
-			name: "includes application_name=saturn and sslmode=disable",
+			name: "defaults sslmode=require and includes application_name=saturn",
 			cfg: DBConfig{
 				Host:     "saturn-db",
 				Port:     5432,
@@ -33,7 +33,19 @@ func TestDBConfig_DSN(t *testing.T) {
 				Password: "secret",
 				Name:     "saturn_prod",
 			},
-			want: "postgres://saturn_prod:secret@saturn-db:5432/saturn_prod?sslmode=disable&application_name=saturn",
+			want: "postgres://saturn_prod:secret@saturn-db:5432/saturn_prod?application_name=saturn&sslmode=require",
+		},
+		{
+			name: "honors explicit sslmode=disable and URL-encodes special password characters",
+			cfg: DBConfig{
+				Host:     "localhost",
+				Port:     5432,
+				User:     "saturn",
+				Password: "p@ss/w:rd#1",
+				Name:     "saturn",
+				SSLMode:  "disable",
+			},
+			want: "postgres://saturn:p%40ss%2Fw%3Ard%231@localhost:5432/saturn?application_name=saturn&sslmode=disable",
 		},
 	}
 

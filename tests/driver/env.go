@@ -176,6 +176,7 @@ func StartTestEnv() (*TestEnv, error) {
 			User:     dbUser,
 			Password: dbPass,
 			Name:     dbName,
+			SSLMode:  "disable",
 		},
 		GRPC: app.GRPCConfig{
 			Socket: sockPath,

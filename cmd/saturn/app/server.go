@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"strconv"
 	"strings"
@@ -234,6 +235,16 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	}
 	rules := api.CompileAllRules(global, modules)
 	spaceRules := api.CompileAllSpaceRules(global, modules)
+	rateLimitRules := api.CompileAllRateLimitRules(global, modules)
+
+	// Wire rate limit interceptor from declarative YAML rules
+	rateLimitInterceptor := interceptors.NewRateLimitInterceptor(interceptors.RateLimitConfig{
+		Enabled:           cfg.Auth.RateLimit.Enabled,
+		Rules:             rateLimitRules,
+		RequestsPerMinute: cfg.Auth.RateLimit.RequestsPerMinute,
+		Burst:             cfg.Auth.RateLimit.Burst,
+		TrustedProxies:    cfg.Gateway.TrustedProxies,
+	})
 
 	// Wire auth interceptor with loaded rules
 	authInterceptor := interceptors.NewAuthInterceptor(tokenService, userStore, apiKeyStore, apiKeyGrantStore, rules)
@@ -248,6 +259,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 			interceptors.LoggingUnaryServerInterceptor(),
 			interceptors.ErrorUnaryInterceptor(),
 			authInterceptor.UnaryServerInterceptor(),
+			rateLimitInterceptor.UnaryServerInterceptor(),
 			spaceInterceptor.UnaryServerInterceptor(),
 		),
 		grpc.ChainStreamInterceptor(
@@ -667,14 +679,24 @@ func (s *GRPCServer) ServeListener() error {
 	return err
 }
 
-// Shutdown gracefully stops the gRPC server.
+// Shutdown gracefully stops the gRPC server and background worker engines.
 func (s *GRPCServer) Shutdown(ctx context.Context) error {
-	if s.grpc == nil {
-		return nil
+	if s.grpc != nil {
+		s.grpc.GracefulStop()
+		log.Info(ctx, "gRPC server stopped")
 	}
-	s.grpc.GracefulStop()
-	log.Info(ctx, "gRPC server stopped")
-	return nil
+	var firstErr error
+	if s.Scheduler != nil {
+		if err := s.Scheduler.Shutdown(ctx); err != nil {
+			firstErr = err
+		}
+	}
+	if s.EventBus != nil {
+		if err := s.EventBus.Shutdown(ctx); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
 }
 
 // GRPCGatewayServer manages the gRPC-Gateway HTTP server that proxies
@@ -693,6 +715,7 @@ type GRPCGatewayServer struct {
 	scheduler            *scheduler.Engine
 	config               *Config
 	attachmentHandler    *mailhttp.AttachmentHandler
+	DB                   *sql.DB
 }
 
 // NewGRPCGatewayServer creates a new GRPCGatewayServer instance.
@@ -735,31 +758,30 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		runtime.WithForwardResponseOption(gateway.CookieResponseForwarder(s.config.Gateway.CookieSecure)),
 	)
 
-	// TODO: Update to use RegisterHandler instead of this methods.
-	if err := identityv1.RegisterIdentityHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+	if err := identityv1.RegisterIdentityHandler(ctx, s.mux, s.grpcConn); err != nil {
 		return fmt.Errorf("register gateway handler: %w", err)
 	}
 
-	if err := admingrpc.RegisterAdminIdentityHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+	if err := admingrpc.RegisterAdminIdentityHandler(ctx, s.mux, s.grpcConn); err != nil {
 		return fmt.Errorf("register admin gateway handler: %w", err)
 	}
 
-	if err := spacev1.RegisterSpacesHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+	if err := spacev1.RegisterSpacesHandler(ctx, s.mux, s.grpcConn); err != nil {
 		return fmt.Errorf("register space gateway handler: %w", err)
 	}
 
-	if err := financev1.RegisterFinanceHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+	if err := financev1.RegisterFinanceHandler(ctx, s.mux, s.grpcConn); err != nil {
 		return fmt.Errorf("register finance gateway handler: %w", err)
 	}
 
-	if err := schedulerv1.RegisterSchedulerAdminHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+	if err := schedulerv1.RegisterSchedulerAdminHandler(ctx, s.mux, s.grpcConn); err != nil {
 		return fmt.Errorf("register scheduler admin gateway handler: %w", err)
 	}
-	if err := messagev1.RegisterMessageAdminHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+	if err := messagev1.RegisterMessageAdminHandler(ctx, s.mux, s.grpcConn); err != nil {
 		return fmt.Errorf("register message admin gateway handler: %w", err)
 	}
 
-	if err := backupv1.RegisterBackupAdminHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+	if err := backupv1.RegisterBackupAdminHandler(ctx, s.mux, s.grpcConn); err != nil {
 		return fmt.Errorf("register backup admin gateway handler: %w", err)
 	}
 
@@ -767,7 +789,7 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("register platform workflow gateway handler: %w", err)
 	}
 
-	if err := agentv1.RegisterAgentServiceHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+	if err := agentv1.RegisterAgentServiceHandler(ctx, s.mux, s.grpcConn); err != nil {
 		return fmt.Errorf("register platform agent gateway handler: %w", err)
 	}
 
@@ -817,11 +839,30 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		handler.Handle(swaggerPath, SwaggerHandler(swaggerJSONPath))
 	}
 
-	// Liveness and readiness probe endpoint
+	// Liveness probe endpoint
 	handler.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	// Readiness probe endpoint (verifies database connectivity)
+	handler.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if s.DB == nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(`{"status":"unavailable"}`))
+			return
+		}
+		pingCtx, pingCancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer pingCancel()
+		if err := s.DB.PingContext(pingCtx); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(`{"status":"unavailable"}`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ready"}`))
 	})
 
 	// Serve static files from embedded React UI assets with client-routing fallback
@@ -854,8 +895,32 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(indexContent))
 	}))
 
-	s.server = &http.Server{Addr: s.addr, Handler: requestid.Middleware(middleware.LoggingMiddleware(middleware.RecoveryMiddleware(handler)))}
+	trustedProxies := interceptors.ParseTrustedProxies(s.config.Gateway.TrustedProxies)
+	s.server = &http.Server{
+		Addr:              s.addr,
+		Handler:           trustedProxyIPMiddleware(trustedProxies, requestid.Middleware(middleware.LoggingMiddleware(middleware.RecoveryMiddleware(handler)))),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 	return nil
+}
+
+func trustedProxyIPMiddleware(trusted []netip.Prefix, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			host = r.RemoteAddr
+		}
+		if addr, parseErr := netip.ParseAddr(host); parseErr == nil {
+			if !interceptors.IsTrustedProxy(addr, trusted) {
+				r.Header.Del("X-Forwarded-For")
+				r.Header.Del("X-Real-IP")
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // ServeHTTP starts listening and serving HTTP gateway requests.
@@ -913,6 +978,7 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 		grpcSrv.Scheduler,
 		grpcSrv.AttachmentHandler,
 	)
+	gwSrv.DB = db
 
 	// Register shutdown callbacks (LIFO order: gateway first, then gRPC).
 	mgr.Register(grpcSrv.Shutdown)
@@ -942,6 +1008,20 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 	if err := g.Wait(); err != nil {
 		log.Error(ctx, "server stopped", log.Err(err))
 	}
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.Shutdown.Timeout)
+	defer shutdownCancel()
+	if grpcSrv.Scheduler != nil {
+		if err := grpcSrv.Scheduler.Shutdown(shutdownCtx); err != nil {
+			log.Error(shutdownCtx, "scheduler shutdown error", log.Err(err))
+		}
+	}
+	if grpcSrv.EventBus != nil {
+		if err := grpcSrv.EventBus.Shutdown(shutdownCtx); err != nil {
+			log.Error(shutdownCtx, "eventbus shutdown error", log.Err(err))
+		}
+	}
+
 	log.Info(ctx, "all servers stopped")
 	return nil
 }
