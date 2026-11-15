@@ -4646,7 +4646,7 @@ export async function confirmScheduledTransaction(
 ): Promise<Transaction> {
   return request<Transaction>({
     method: "POST",
-    url: `/api/v1/finance/scheduled-transactions/${transaction_id}/confirm`,
+    url: `/api/v1/finance/scheduled-transactions/${transaction_id}:confirm`,
     data: req,
   })
 }
@@ -4678,7 +4678,7 @@ export async function matchScheduledTransaction(
 ): Promise<Transaction> {
   return request<Transaction>({
     method: "POST",
-    url: `/api/v1/finance/scheduled-transactions/${transaction_id}/match`,
+    url: `/api/v1/finance/scheduled-transactions/${transaction_id}:match`,
     data: req,
   })
 }
@@ -4993,7 +4993,7 @@ export async function adjustBorrowingBalance(
 ): Promise<Borrowing> {
   return request<Borrowing>({
     method: "POST",
-    url: `/api/v1/finance/borrowings/${borrowing_id}/adjust`,
+    url: `/api/v1/finance/borrowings/${borrowing_id}:adjust`,
     data: req,
   })
 }

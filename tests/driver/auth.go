@@ -253,12 +253,12 @@ func (a *AuthDriver) AdminRevokeAllSessions(tb testing.TB, userID string) (*admi
 }
 
 // ListMySecurityEvents retrieves security audit events for the current user.
-func (a *AuthDriver) ListMySecurityEvents(tb testing.TB, limit int32, pageToken string) (*identityv1.ListMySecurityEventsResponse, error) {
+func (a *AuthDriver) ListMySecurityEvents(tb testing.TB, pageSize int32, pageToken string) (*identityv1.ListMySecurityEventsResponse, error) {
 	tb.Helper()
 	client := a.getClient()
 	return client.ListMySecurityEvents(tb.Context(), &identityv1.ListMySecurityEventsRequest{
-		Limit:         limit,
-		NextPageToken: pageToken,
+		PageSize:  pageSize,
+		PageToken: pageToken,
 	})
 }
 

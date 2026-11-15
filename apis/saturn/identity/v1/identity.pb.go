@@ -1171,10 +1171,10 @@ func (x *SecurityEvent) GetCreatedAt() *timestamppb.Timestamp {
 type ListMySecurityEventsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Optional. The maximum number of security events to return.
-	Limit int32 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// Optional. A page token, received from a previous `ListMySecurityEvents` call.
 	// Provide this to retrieve the subsequent page.
-	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PageToken     string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1209,16 +1209,16 @@ func (*ListMySecurityEventsRequest) Descriptor() ([]byte, []int) {
 	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{18}
 }
 
-func (x *ListMySecurityEventsRequest) GetLimit() int32 {
+func (x *ListMySecurityEventsRequest) GetPageSize() int32 {
 	if x != nil {
-		return x.Limit
+		return x.PageSize
 	}
 	return 0
 }
 
-func (x *ListMySecurityEventsRequest) GetNextPageToken() string {
+func (x *ListMySecurityEventsRequest) GetPageToken() string {
 	if x != nil {
-		return x.NextPageToken
+		return x.PageToken
 	}
 	return ""
 }
@@ -3459,10 +3459,11 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
 	"user_agent\x18\x05 \x01(\tB\x03\xe0A\x03R\tuserAgent\x12>\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\"e\n" +
-	"\x1bListMySecurityEventsRequest\x12\x19\n" +
-	"\x05limit\x18\x01 \x01(\x05B\x03\xe0A\x01R\x05limit\x12+\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x01R\rnextPageToken\"\x8b\x01\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\"c\n" +
+	"\x1bListMySecurityEventsRequest\x12 \n" +
+	"\tpage_size\x18\x01 \x01(\x05B\x03\xe0A\x01R\bpageSize\x12\"\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tB\x03\xe0A\x01R\tpageToken\"\x8b\x01\n" +
 	"\x1cListMySecurityEventsResponse\x12>\n" +
 	"\x06events\x18\x01 \x03(\v2!.saturn.identity.v1.SecurityEventB\x03\xe0A\x03R\x06events\x12+\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x03R\rnextPageToken\"\x17\n" +

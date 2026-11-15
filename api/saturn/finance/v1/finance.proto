@@ -202,7 +202,7 @@ service Finance {
   // Clears a scheduled transaction instance, converting it into a permanent, reconciled ledger transaction.
   rpc ConfirmScheduledTransaction(ConfirmScheduledTransactionRequest) returns (Transaction) {
     option (google.api.http) = {
-      post: "/v1/finance/scheduled-transactions/{transaction_id}/confirm"
+      post: "/v1/finance/scheduled-transactions/{transaction_id}:confirm"
       body: "*"
     };
   }
@@ -210,7 +210,7 @@ service Finance {
   // Links an existing transaction with a pending scheduled transaction, marking it cleared.
   rpc MatchScheduledTransaction(MatchScheduledTransactionRequest) returns (Transaction) {
     option (google.api.http) = {
-      post: "/v1/finance/scheduled-transactions/{transaction_id}/match"
+      post: "/v1/finance/scheduled-transactions/{transaction_id}:match"
       body: "*"
     };
   }
@@ -278,7 +278,7 @@ service Finance {
   // Adjusts the remaining balance of a borrowing record directly and logs an adjustment transaction.
   rpc AdjustBorrowingBalance(AdjustBorrowingBalanceRequest) returns (Borrowing) {
     option (google.api.http) = {
-      post: "/v1/finance/borrowings/{borrowing_id}/adjust"
+      post: "/v1/finance/borrowings/{borrowing_id}:adjust"
       body: "*"
     };
   }

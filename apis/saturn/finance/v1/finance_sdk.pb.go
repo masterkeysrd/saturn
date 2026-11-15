@@ -613,10 +613,10 @@ func (c *Client) GetScheduledTransaction(ctx context.Context, req *GetScheduledT
 	return &resp, nil
 }
 
-// ConfirmScheduledTransaction executes POST /api/v1/finance/scheduled-transactions/{transaction_id}/confirm.
+// ConfirmScheduledTransaction executes POST /api/v1/finance/scheduled-transactions/{transaction_id}:confirm.
 func (c *Client) ConfirmScheduledTransaction(ctx context.Context, req *ConfirmScheduledTransactionRequest) (*Transaction, error) {
 	var resp Transaction
-	path := fmt.Sprintf("/api/v1/finance/scheduled-transactions/%s/confirm", req.GetTransactionId())
+	path := fmt.Sprintf("/api/v1/finance/scheduled-transactions/%s:confirm", req.GetTransactionId())
 	var query []string
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
@@ -627,10 +627,10 @@ func (c *Client) ConfirmScheduledTransaction(ctx context.Context, req *ConfirmSc
 	return &resp, nil
 }
 
-// MatchScheduledTransaction executes POST /api/v1/finance/scheduled-transactions/{transaction_id}/match.
+// MatchScheduledTransaction executes POST /api/v1/finance/scheduled-transactions/{transaction_id}:match.
 func (c *Client) MatchScheduledTransaction(ctx context.Context, req *MatchScheduledTransactionRequest) (*Transaction, error) {
 	var resp Transaction
-	path := fmt.Sprintf("/api/v1/finance/scheduled-transactions/%s/match", req.GetTransactionId())
+	path := fmt.Sprintf("/api/v1/finance/scheduled-transactions/%s:match", req.GetTransactionId())
 	var query []string
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
@@ -806,10 +806,10 @@ func (c *Client) DeleteBorrowingTransaction(ctx context.Context, req *DeleteBorr
 	return &resp, nil
 }
 
-// AdjustBorrowingBalance executes POST /api/v1/finance/borrowings/{borrowing_id}/adjust.
+// AdjustBorrowingBalance executes POST /api/v1/finance/borrowings/{borrowing_id}:adjust.
 func (c *Client) AdjustBorrowingBalance(ctx context.Context, req *AdjustBorrowingBalanceRequest) (*Borrowing, error) {
 	var resp Borrowing
-	path := fmt.Sprintf("/api/v1/finance/borrowings/%s/adjust", req.GetBorrowingId())
+	path := fmt.Sprintf("/api/v1/finance/borrowings/%s:adjust", req.GetBorrowingId())
 	var query []string
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")

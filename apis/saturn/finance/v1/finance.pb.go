@@ -13257,8 +13257,8 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x19ListRecurringTransactions\x123.saturn.finance.v1.ListRecurringTransactionsRequest\x1a4.saturn.finance.v1.ListRecurringTransactionsResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/v1/finance/recurring-transactions\x12\xb2\x01\n" +
 	"\x19ListScheduledTransactions\x123.saturn.finance.v1.ListScheduledTransactionsRequest\x1a4.saturn.finance.v1.ListScheduledTransactionsResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/v1/finance/scheduled-transactions\x12\xa6\x01\n" +
 	"\x17GetScheduledTransaction\x121.saturn.finance.v1.GetScheduledTransactionRequest\x1a'.saturn.finance.v1.ScheduledTransaction\"/\x82\xd3\xe4\x93\x02)\x12'/v1/finance/scheduled-transactions/{id}\x12\xbc\x01\n" +
-	"\x1bConfirmScheduledTransaction\x125.saturn.finance.v1.ConfirmScheduledTransactionRequest\x1a\x1e.saturn.finance.v1.Transaction\"F\x82\xd3\xe4\x93\x02@:\x01*\";/v1/finance/scheduled-transactions/{transaction_id}/confirm\x12\xb6\x01\n" +
-	"\x19MatchScheduledTransaction\x123.saturn.finance.v1.MatchScheduledTransactionRequest\x1a\x1e.saturn.finance.v1.Transaction\"D\x82\xd3\xe4\x93\x02>:\x01*\"9/v1/finance/scheduled-transactions/{transaction_id}/match\x12\xb0\x01\n" +
+	"\x1bConfirmScheduledTransaction\x125.saturn.finance.v1.ConfirmScheduledTransactionRequest\x1a\x1e.saturn.finance.v1.Transaction\"F\x82\xd3\xe4\x93\x02@:\x01*\";/v1/finance/scheduled-transactions/{transaction_id}:confirm\x12\xb6\x01\n" +
+	"\x19MatchScheduledTransaction\x123.saturn.finance.v1.MatchScheduledTransactionRequest\x1a\x1e.saturn.finance.v1.Transaction\"D\x82\xd3\xe4\x93\x02>:\x01*\"9/v1/finance/scheduled-transactions/{transaction_id}:match\x12\xb0\x01\n" +
 	"\x18SkipScheduledTransaction\x122.saturn.finance.v1.SkipScheduledTransactionRequest\x1a'.saturn.finance.v1.ScheduledTransaction\"7\x82\xd3\xe4\x93\x021:\x01*\",/v1/finance/scheduled-transactions/{id}:skip\x12\x85\x01\n" +
 	"\x0fCreateBorrowing\x12).saturn.finance.v1.CreateBorrowingRequest\x1a\x1c.saturn.finance.v1.Borrowing\")\x82\xd3\xe4\x93\x02#:\tborrowing\"\x16/v1/finance/borrowings\x12y\n" +
 	"\fGetBorrowing\x12&.saturn.finance.v1.GetBorrowingRequest\x1a\x1c.saturn.finance.v1.Borrowing\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/finance/borrowings/{id}\x12\x85\x01\n" +
@@ -13268,7 +13268,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x17LogBorrowingTransaction\x121.saturn.finance.v1.LogBorrowingTransactionRequest\x1a\x1e.saturn.finance.v1.Transaction\"G\x82\xd3\xe4\x93\x02A:\vtransaction\"2/v1/finance/borrowings/{borrowing_id}/transactions\x12\xcc\x01\n" +
 	"\x1aUpdateBorrowingTransaction\x124.saturn.finance.v1.UpdateBorrowingTransactionRequest\x1a\x1e.saturn.finance.v1.Transaction\"X\x82\xd3\xe4\x93\x02R:\vtransaction\x1aC/v1/finance/borrowings/{borrowing_id}/transactions/{transaction_id}\x12\xb7\x01\n" +
 	"\x1aDeleteBorrowingTransaction\x124.saturn.finance.v1.DeleteBorrowingTransactionRequest\x1a\x16.google.protobuf.Empty\"K\x82\xd3\xe4\x93\x02E*C/v1/finance/borrowings/{borrowing_id}/transactions/{transaction_id}\x12\xa1\x01\n" +
-	"\x16AdjustBorrowingBalance\x120.saturn.finance.v1.AdjustBorrowingBalanceRequest\x1a\x1c.saturn.finance.v1.Borrowing\"7\x82\xd3\xe4\x93\x021:\x01*\",/v1/finance/borrowings/{borrowing_id}/adjust\x12{\n" +
+	"\x16AdjustBorrowingBalance\x120.saturn.finance.v1.AdjustBorrowingBalanceRequest\x1a\x1c.saturn.finance.v1.Borrowing\"7\x82\xd3\xe4\x93\x021:\x01*\",/v1/finance/borrowings/{borrowing_id}:adjust\x12{\n" +
 	"\rCreateAccount\x12'.saturn.finance.v1.CreateAccountRequest\x1a\x1a.saturn.finance.v1.Account\"%\x82\xd3\xe4\x93\x02\x1f:\aaccount\"\x14/v1/finance/accounts\x12q\n" +
 	"\n" +
 	"GetAccount\x12$.saturn.finance.v1.GetAccountRequest\x1a\x1a.saturn.finance.v1.Account\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/finance/accounts/{id}\x12\x80\x01\n" +

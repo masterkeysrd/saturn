@@ -3623,7 +3623,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfirmScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{transaction_id}/confirm"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfirmScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{transaction_id}:confirm"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3643,7 +3643,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/MatchScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{transaction_id}/match"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/MatchScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{transaction_id}:match"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -3843,7 +3843,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/AdjustBorrowingBalance", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/adjust"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/AdjustBorrowingBalance", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}:adjust"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -4934,7 +4934,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfirmScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{transaction_id}/confirm"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfirmScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{transaction_id}:confirm"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -4951,7 +4951,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/MatchScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{transaction_id}/match"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/MatchScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{transaction_id}:match"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -5121,7 +5121,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/AdjustBorrowingBalance", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/adjust"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/AdjustBorrowingBalance", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}:adjust"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -5626,8 +5626,8 @@ var (
 	pattern_Finance_ListRecurringTransactions_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "recurring-transactions"}, ""))
 	pattern_Finance_ListScheduledTransactions_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "scheduled-transactions"}, ""))
 	pattern_Finance_GetScheduledTransaction_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "scheduled-transactions", "id"}, ""))
-	pattern_Finance_ConfirmScheduledTransaction_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "scheduled-transactions", "transaction_id", "confirm"}, ""))
-	pattern_Finance_MatchScheduledTransaction_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "scheduled-transactions", "transaction_id", "match"}, ""))
+	pattern_Finance_ConfirmScheduledTransaction_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "scheduled-transactions", "transaction_id"}, "confirm"))
+	pattern_Finance_MatchScheduledTransaction_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "scheduled-transactions", "transaction_id"}, "match"))
 	pattern_Finance_SkipScheduledTransaction_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "scheduled-transactions", "id"}, "skip"))
 	pattern_Finance_CreateBorrowing_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "borrowings"}, ""))
 	pattern_Finance_GetBorrowing_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
@@ -5637,7 +5637,7 @@ var (
 	pattern_Finance_LogBorrowingTransaction_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "borrowings", "borrowing_id", "transactions"}, ""))
 	pattern_Finance_UpdateBorrowingTransaction_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "finance", "borrowings", "borrowing_id", "transactions", "transaction_id"}, ""))
 	pattern_Finance_DeleteBorrowingTransaction_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "finance", "borrowings", "borrowing_id", "transactions", "transaction_id"}, ""))
-	pattern_Finance_AdjustBorrowingBalance_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "borrowings", "borrowing_id", "adjust"}, ""))
+	pattern_Finance_AdjustBorrowingBalance_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "borrowing_id"}, "adjust"))
 	pattern_Finance_CreateAccount_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "accounts"}, ""))
 	pattern_Finance_GetAccount_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
 	pattern_Finance_UpdateAccount_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))

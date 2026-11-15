@@ -289,8 +289,8 @@ func (h *Handler) ListMySecurityEvents(ctx context.Context, req *identityv1.List
 	userID := identity.UserID(principal.Subject)
 	page, err := h.IAM.Coordinator.ListSecurityEvents(ctx, identity.SecurityEventFilter{
 		UserID:        &userID,
-		Limit:         int(req.GetLimit()),
-		NextPageToken: req.GetNextPageToken(),
+		Limit:         int(req.GetPageSize()),
+		NextPageToken: req.GetPageToken(),
 	})
 	if err != nil {
 		return nil, err

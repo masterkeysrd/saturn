@@ -382,12 +382,12 @@ export interface ListMySecurityEventsRequest {
   /**
    * Optional. The maximum number of security events to return.
    */
-  limit: number
+  pageSize: number
   /**
    * Optional. A page token, received from a previous `ListMySecurityEvents` call.
    * Provide this to retrieve the subsequent page.
    */
-  nextPageToken: string
+  pageToken: string
 }
 
 /**
