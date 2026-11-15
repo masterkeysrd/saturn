@@ -230,7 +230,6 @@ func StartTestEnv() (*TestEnv, error) {
 	gwSrv := app.NewGRPCGatewayServer(
 		cfg,
 		grpcSrv.TokenService,
-		grpcSrv.IntegrationRegistry,
 		grpcSrv.EventBus,
 		grpcSrv.ConnectorCoordinator,
 		grpcSrv.ConnectorOAuthMgr,

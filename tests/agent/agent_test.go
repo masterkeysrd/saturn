@@ -7,7 +7,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/masterkeysrd/saturn/apis/saturn"
+	workflowv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/workflow/v1"
 	"github.com/masterkeysrd/saturn/tests/driver"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func TestAgentCRUD(t *testing.T) {
@@ -140,31 +144,27 @@ func TestAgentCatalog(t *testing.T) {
 
 	d.Space().Ensure(t, "Agent Catalog Space")
 
-	catalogResp, err := d.Agent().GetAgentCatalog(t)
-	if err != nil {
+	if _, err := d.Agent().GetAgentCatalog(t); err != nil {
 		t.Fatalf("failed to get agent catalog: %v", err)
 	}
 
-	if len(catalogResp.GetBlueprints()) == 0 {
-		t.Fatal("expected agent blueprints in catalog, got empty")
+	provCatalog, err := d.Agent().GetProviderCatalog(t)
+	if err != nil {
+		t.Fatalf("failed to get provider catalog: %v", err)
+	}
+	if len(provCatalog.GetBlueprints()) == 0 {
+		t.Fatal("expected provider blueprints in catalog, got empty")
 	}
 
-	var foundInboxParser bool
-	for _, bp := range catalogResp.GetBlueprints() {
-		if bp.GetPurpose() == "INBOX_PARSER" {
-			foundInboxParser = true
-			if bp.GetDisplayName() != "Hyperion" {
-				t.Errorf("expected display name %q for INBOX_PARSER, got %q", "Hyperion", bp.GetDisplayName())
-			}
-			if len(bp.GetDefaultTags()) == 0 {
-				t.Error("expected default tags on INBOX_PARSER blueprint")
-			}
+	var foundOpenAI bool
+	for _, p := range provCatalog.GetBlueprints() {
+		if p.GetId() == "openai" {
+			foundOpenAI = true
 			break
 		}
 	}
-
-	if !foundInboxParser {
-		t.Error("expected INBOX_PARSER blueprint in agent catalog")
+	if !foundOpenAI {
+		t.Error("expected openai provider in provider catalog")
 	}
 }
 
@@ -185,23 +185,24 @@ func TestAgentExecutionAndSuggestionsWithMockLLM(t *testing.T) {
 		bodyBytes, _ := json.Marshal(body)
 		bodyStr := string(bodyBytes)
 
-		// Hyperion pipeline node 1: classification
-		if strings.Contains(bodyStr, "classification") || strings.Contains(bodyStr, "classify") {
-			return `{"classification": "BANK_NOTIFICATION"}`
+		// Hyperion workflow node 1: classification
+		if strings.Contains(bodyStr, "Classify this document:") {
+			return `{"category": "bank_notification", "confidence": 0.99, "reason": "bank authorization"}`
 		}
 
-		// Hyperion pipeline node 2: extraction
+		// Hyperion workflow node 3: deduplication
+		if strings.Contains(bodyStr, "Extracted transaction:") {
+			return `{"is_duplicate": false, "reason": "no matching transaction"}`
+		}
+
+		// Hyperion workflow node 2: extraction
 		return `{
-			"reference_number": "TXN-MOCK-8899",
 			"transaction_type": "EXPENSE",
-			"date": "2026-09-10T14:30:00Z",
+			"vendor": "Acme Supermarket",
 			"amount": 78.50,
 			"currency": "USD",
-			"counterparty": "Acme Supermarket",
-			"source_account": {
-				"last_four": "7788"
-			},
-			"suggested_budget": "Groceries"
+			"date": "2026-09-10",
+			"card_last_four": "7788"
 		}`
 	})
 
@@ -229,35 +230,63 @@ func TestAgentExecutionAndSuggestionsWithMockLLM(t *testing.T) {
 		t.Fatalf("failed to create agent: %v", err)
 	}
 
-	// 4. Request transaction suggestions via Agent Service
-	textContent := "You authorized a transaction of $78.50 at Acme Supermarket on card ending in 7788."
-	sugResp, err := d.Agent().GetSuggestions(t, driver.GetSuggestionsOptions{
-		Purpose:     "transaction_extractor",
-		TextContent: textContent,
+	// 4. Bind agent as default_model on system.finance.transaction_suggestions & execute synchronously
+	wfClient := workflowv1.NewClient(saturn.Config{
+		BaseURL:     d.Env().ServerURL,
+		AccessToken: d.State().AccessToken,
+		SpaceID:     d.State().SpaceID,
+		HTTPClient:  d.HTTPClient(),
+	})
+	flow, err := wfClient.GetFlow(t.Context(), &workflowv1.GetFlowRequest{
+		Id: "system.finance.transaction_suggestions",
 	})
 	if err != nil {
-		t.Fatalf("GetSuggestions failed: %v", err)
+		t.Fatalf("GetFlow failed: %v", err)
+	}
+	flow.Config = &workflowv1.Flow_Config{
+		DefaultModel: &workflowv1.ModelConfig{
+			AgentId: new(agentInstance.GetId()),
+		},
+	}
+	if _, err := wfClient.UpdateFlow(t.Context(), &workflowv1.UpdateFlowRequest{
+		Id:         flow.GetId(),
+		Flow:       flow,
+		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"config"}},
+	}); err != nil {
+		t.Fatalf("UpdateFlow failed: %v", err)
+	}
+
+	textContent := "You authorized a transaction of $78.50 at Acme Supermarket on card ending in 7788."
+	inStruct, err := structpb.NewStruct(map[string]any{"text": textContent})
+	if err != nil {
+		t.Fatalf("NewStruct failed: %v", err)
+	}
+	runResp, err := wfClient.ExecuteFlow(t.Context(), &workflowv1.ExecuteFlowRequest{
+		Id:    "system.finance.transaction_suggestions",
+		Input: inStruct,
+	})
+	if err != nil {
+		t.Fatalf("ExecuteFlow failed: %v", err)
 	}
 
 	// 5. Verify the structured suggestions parsed from the Mock LLM SSE stream
-	st := sugResp.GetStructuredSuggestion()
+	st := runResp.GetOutput()
 	if st == nil {
-		t.Fatal("expected structured suggestion in response, got nil")
+		t.Fatal("expected output struct in FlowRun response, got nil")
 	}
 
 	fields := st.GetFields()
 	if vendor := fields["vendor"].GetStringValue(); vendor != "Acme Supermarket" {
 		t.Errorf("expected vendor %q, got %q", "Acme Supermarket", vendor)
 	}
-	// Amount in cents (78.50 * 100 = 7850)
-	if amount := fields["amount"].GetNumberValue(); amount != 7850 {
-		t.Errorf("expected amount 7850, got %v", amount)
+	if amount := fields["amount_cents"].GetNumberValue(); amount != 7850 {
+		t.Errorf("expected amount_cents 7850, got %v", amount)
 	}
 	if currency := fields["currency"].GetStringValue(); currency != "USD" {
 		t.Errorf("expected currency %q, got %q", "USD", currency)
 	}
-	if card := fields["cardLastFour"].GetStringValue(); card != "7788" {
-		t.Errorf("expected cardLastFour %q, got %q", "7788", card)
+	if card := fields["card_last_four"].GetStringValue(); card != "7788" {
+		t.Errorf("expected card_last_four %q, got %q", "7788", card)
 	}
 
 	// 6. Verify Mock Server received requests and authenticated via HTTP header

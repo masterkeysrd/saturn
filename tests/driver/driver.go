@@ -17,13 +17,13 @@ type Driver struct {
 	state      *State
 	httpClient *http.Client
 
-	authSubdriver        *AuthDriver
-	spaceSubdriver       *SpaceDriver
-	financeSubdriver     *FinanceDriver
-	platformSubdriver    *PlatformDriver
-	agentSubdriver       *AgentDriver
-	integrationSubdriver *IntegrationDriver
-	backupSubdriver      *BackupDriver
+	authSubdriver     *AuthDriver
+	spaceSubdriver    *SpaceDriver
+	financeSubdriver  *FinanceDriver
+	platformSubdriver *PlatformDriver
+	agentSubdriver    *AgentDriver
+	workflowSubdriver *WorkflowDriver
+	backupSubdriver   *BackupDriver
 }
 
 // New creates a fresh Driver instance for a test run and automatically resets the database.
@@ -40,7 +40,7 @@ func New(t *testing.T, env *TestEnv) *Driver {
 	d.financeSubdriver = &FinanceDriver{driver: d}
 	d.platformSubdriver = &PlatformDriver{driver: d}
 	d.agentSubdriver = &AgentDriver{driver: d}
-	d.integrationSubdriver = &IntegrationDriver{driver: d}
+	d.workflowSubdriver = &WorkflowDriver{driver: d}
 	d.backupSubdriver = &BackupDriver{driver: d}
 
 	// Auto-reset database & state before each test
@@ -78,9 +78,9 @@ func (d *Driver) Agent() *AgentDriver {
 	return d.agentSubdriver
 }
 
-// Integration returns the Integration domain sub-driver.
-func (d *Driver) Integration() *IntegrationDriver {
-	return d.integrationSubdriver
+// Workflow returns the Workflow platform sub-driver.
+func (d *Driver) Workflow() *WorkflowDriver {
+	return d.workflowSubdriver
 }
 
 // Backup returns the Backup domain sub-driver.
@@ -110,6 +110,12 @@ func (d *Driver) MockGoogle() *MockGoogleServer {
 
 const truncateSQL = `
 TRUNCATE TABLE 
+    mail.drafts,
+    mail.message_bodies,
+    mail.messages,
+    mail.threads,
+    mail.mailboxes,
+    mail.sync_states,
     calendar.events,
     calendar.calendars,
     platform.account_contacts_cache,
@@ -117,11 +123,13 @@ TRUNCATE TABLE
     platform.connected_accounts,
     platform.message_deliveries,
     platform.messages,
+    platform.step_runs,
+    platform.flow_runs,
+    platform.flow_triggers,
+    platform.flows,
     platform.agent_runs,
     platform.agents,
     platform.llm_providers,
-    platform.integration_token,
-    platform.integration,
     platform.job,
     platform.schedule,
     finance.statement_line,

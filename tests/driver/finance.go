@@ -1658,11 +1658,6 @@ func (f *FinanceDriver) StageInboxItem(tb testing.TB, opts StageInboxItemOptions
 		tb.Fatalf("StageInboxItem called without active space context")
 	}
 
-	integrationID := f.driver.state.LastIntegrationID
-	if integrationID == "" {
-		tb.Fatalf("StageInboxItem called, but no platform integration channel has been ensured in driver state")
-	}
-
 	currency := opts.Currency
 	if currency == "" {
 		currency = "USD"
@@ -1709,8 +1704,6 @@ func (f *FinanceDriver) StageInboxItem(tb testing.TB, opts StageInboxItemOptions
 		docTypeStr = "receipt"
 	case financev1.InboxItem_BANK_NOTIFICATION:
 		docTypeStr = "bank_notification"
-	case financev1.InboxItem_SYSTEM_VERIFICATION:
-		docTypeStr = "system_verification"
 	}
 
 	inboxID, _ := id.Generate("ibx_")
@@ -1718,9 +1711,9 @@ func (f *FinanceDriver) StageInboxItem(tb testing.TB, opts StageInboxItemOptions
 
 	_, err := f.driver.env.DB.Exec(`
 		INSERT INTO finance.inbox_item 
-		(id, space_id, integration_id, status, doc_type, amount, currency, vendor_name, transaction_date, account_id, budget_id, raw_payload, metadata, create_time)
-		VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7, $8, $9, $10, '', '{}', $11)
-	`, inboxID, spaceID, integrationID, docTypeStr, opts.Amount, currency, opts.Vendor, txDate, accountID, budgetID, txDate)
+		(id, space_id, status, doc_type, amount, currency, vendor_name, transaction_date, account_id, budget_id, raw_payload, metadata, create_time)
+		VALUES ($1, $2, 'pending', $3, $4, $5, $6, $7, $8, $9, '', '{}', $10)
+	`, inboxID, spaceID, docTypeStr, opts.Amount, currency, opts.Vendor, txDate, accountID, budgetID, txDate)
 	if err != nil {
 		tb.Fatalf("StageInboxItem: failed to insert inbox item into database: %v", err)
 	}

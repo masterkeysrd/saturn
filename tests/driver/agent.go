@@ -90,15 +90,6 @@ type ListAgentRunsOptions struct {
 	Assert    func(tb testing.TB, resp *agentv1.ListAgentRunsResponse)
 }
 
-// GetSuggestionsOptions encapsulates options for requesting AI suggestions.
-type GetSuggestionsOptions struct {
-	Purpose     string
-	TextContent string
-	Documents   []*agentv1.DocumentFilePayload
-	ExpectErr   string
-	Assert      func(tb testing.TB, resp *agentv1.GetSuggestionsResponse)
-}
-
 // CreateProvider registers a new LLM provider connection in the active space.
 func (a *AgentDriver) CreateProvider(tb testing.TB, opts CreateProviderOptions) (*agentv1.LLMProvider, error) {
 	tb.Helper()
@@ -317,31 +308,4 @@ func (a *AgentDriver) GetProviderCatalog(tb testing.TB) (*agentv1.GetProviderCat
 	tb.Helper()
 	client := a.getClient()
 	return client.GetProviderCatalog(tb.Context(), &agentv1.GetProviderCatalogRequest{})
-}
-
-// GetSuggestions dispatches a suggestion request to the registered processor for the given purpose.
-func (a *AgentDriver) GetSuggestions(tb testing.TB, opts GetSuggestionsOptions) (*agentv1.GetSuggestionsResponse, error) {
-	tb.Helper()
-	client := a.getClient()
-	resp, err := client.GetSuggestions(tb.Context(), &agentv1.GetSuggestionsRequest{
-		Purpose:     opts.Purpose,
-		TextContent: opts.TextContent,
-		Documents:   opts.Documents,
-	})
-	if opts.ExpectErr != "" {
-		if err == nil {
-			tb.Fatalf("GetSuggestions succeeded, but expected error containing %q", opts.ExpectErr)
-		}
-		if !strings.Contains(err.Error(), opts.ExpectErr) {
-			tb.Fatalf("GetSuggestions error = %v, want error containing %q", err, opts.ExpectErr)
-		}
-		return nil, err
-	}
-	if err != nil {
-		return nil, err
-	}
-	if opts.Assert != nil {
-		opts.Assert(tb, resp)
-	}
-	return resp, nil
 }

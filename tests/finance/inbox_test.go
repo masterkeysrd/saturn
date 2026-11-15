@@ -21,10 +21,6 @@ func TestInboxItem_ReceiptApprovalJourney(t *testing.T) {
 	d.Space().
 		Ensure(t, "Personal Space")
 
-	d.Platform().EnsureIntegration(t, driver.IntegrationOptions{
-		Kind:     "transaction_ingestion",
-		Provider: "email",
-	})
 	d.Finance().
 		InitSettings(t, "USD").
 		CreateAccount(t, driver.AccountOptions{
@@ -99,10 +95,6 @@ func TestInboxItem_DiscardJourney(t *testing.T) {
 	d.Space().
 		Ensure(t, "Personal Space")
 
-	d.Platform().EnsureIntegration(t, driver.IntegrationOptions{
-		Kind:     "transaction_ingestion",
-		Provider: "email",
-	})
 	d.Finance().
 		InitSettings(t, "USD").
 		CreateAccount(t, driver.AccountOptions{
@@ -137,10 +129,6 @@ func TestInboxItem_CardLastFourCurrencyPriority(t *testing.T) {
 	d.Space().
 		Ensure(t, "Multi-Currency Space")
 
-	d.Platform().EnsureIntegration(t, driver.IntegrationOptions{
-		Kind:     "transaction_ingestion",
-		Provider: "email",
-	})
 	d.Finance().
 		InitSettings(t, "USD").
 		CreateAccount(t, driver.AccountOptions{
@@ -191,56 +179,6 @@ func TestInboxItem_CardLastFourCurrencyPriority(t *testing.T) {
 		})
 }
 
-// TestInboxItem_SystemVerificationJourney tests end-to-end handling of system verification signals,
-// verifying that approving a SYSTEM_VERIFICATION item marks it RESOLVED without mutating account balances
-// or generating ledger transactions.
-func TestInboxItem_SystemVerificationJourney(t *testing.T) {
-	d := driver.New(t, testEnv)
-
-	d.Auth().
-		CreateApprovedUser(t).
-		Login(t)
-
-	d.Space().
-		Ensure(t, "Verification Space")
-
-	d.Platform().EnsureIntegration(t, driver.IntegrationOptions{
-		Kind:     "transaction_ingestion",
-		Provider: "email",
-	})
-	d.Finance().
-		InitSettings(t, "USD").
-		CreateAccount(t, driver.AccountOptions{
-			Name:           "Checking Account",
-			Type:           financev1.Account_BANK,
-			Currency:       "USD",
-			InitialBalance: 100000,
-		}).
-		StageInboxItem(t, driver.StageInboxItemOptions{
-			Key:      "verify_email",
-			DocType:  financev1.InboxItem_SYSTEM_VERIFICATION,
-			Vendor:   "Auth Provider",
-			Amount:   0,
-			Currency: "USD",
-		}).
-		AssertInboxItem(t, "verify_email", func(item *financev1.InboxItem) {
-			if item.GetStatus() != financev1.InboxItem_PENDING {
-				t.Errorf("expected PENDING status, got %s", item.GetStatus())
-			}
-			if item.GetDocType() != financev1.InboxItem_SYSTEM_VERIFICATION {
-				t.Errorf("expected SYSTEM_VERIFICATION docType, got %s", item.GetDocType())
-			}
-		}).
-		ApproveInboxItem(t, "verify_email").
-		AssertInboxItem(t, "verify_email", func(item *financev1.InboxItem) {
-			if item.GetStatus() != financev1.InboxItem_RESOLVED {
-				t.Errorf("expected RESOLVED status after approval, got %s", item.GetStatus())
-			}
-		}).
-		AssertAccountBalance(t, "Checking Account", 100000). // Account balance unchanged
-		AssertTransactionCount(t, 0)                         // 0 side-effect transactions created
-}
-
 // TestInboxItem_InvoiceJourney tests the complete sequential life cycle of invoices:
 // 1. Unlinked invoice staging & approval (creates a new scheduled payment bill).
 // 2. Linked invoice to unpaid bill (updates estimated bill figures).
@@ -256,10 +194,6 @@ func TestInboxItem_InvoiceJourney(t *testing.T) {
 	d.Space().
 		Ensure(t, "Invoice Journey Space")
 
-	d.Platform().EnsureIntegration(t, driver.IntegrationOptions{
-		Kind:     "transaction_ingestion",
-		Provider: "email",
-	})
 	d.Finance().
 		InitSettings(t, "USD").
 		CreateAccount(t, driver.AccountOptions{
@@ -379,10 +313,6 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 		d := driver.New(t, testEnv)
 		d.Auth().CreateApprovedUser(t).Login(t)
 		d.Space().Ensure(t, spaceName)
-		d.Platform().EnsureIntegration(t, driver.IntegrationOptions{
-			Kind:     "transaction_ingestion",
-			Provider: "email",
-		})
 		fin := d.Finance().
 			InitSettings(t, "USD").
 			CreateAccount(t, driver.AccountOptions{
@@ -1021,10 +951,6 @@ func setupBankTest(t *testing.T, spaceName string) (*driver.Driver, *driver.Fina
 	d := driver.New(t, testEnv)
 	d.Auth().CreateApprovedUser(t).Login(t)
 	d.Space().Ensure(t, spaceName)
-	d.Platform().EnsureIntegration(t, driver.IntegrationOptions{
-		Kind:     "transaction_ingestion",
-		Provider: "bank_feed",
-	})
 	fin := d.Finance()
 	fin.InitSettings(t, "USD").
 		CreateAccount(t, driver.AccountOptions{

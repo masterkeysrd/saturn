@@ -122,7 +122,6 @@ type State struct {
 	LastTransfer                        *financev1.Transfer
 	LastInboxItem                       *InboxItemInfo
 	LastStatement                       *StatementInfo
-	LastIntegrationID                   string
 	LastTransactionID                   string
 	LastRecurringTransactionID          string
 	LastScheduledTransactionID          string
@@ -130,8 +129,6 @@ type State struct {
 	LastProviderID                      string
 	LastAgentID                         string
 	LastAgentRunID                      string
-	LastIntegrationTokenID              string
-	LastIntegrationRawToken             string
 }
 
 func newState(t *testing.T) *State {
@@ -186,6 +183,4 @@ func (s *State) ClearRegistries() {
 	s.LastProviderID = ""
 	s.LastAgentID = ""
 	s.LastAgentRunID = ""
-	s.LastIntegrationTokenID = ""
-	s.LastIntegrationRawToken = ""
 }
