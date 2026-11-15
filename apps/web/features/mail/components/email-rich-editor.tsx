@@ -171,6 +171,21 @@ function buildEditorDocumentHtml(params: {
 </html>`
 }
 
+function sanitizeRemoteImageUrl(raw: string): string | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  try {
+    const normalized = trimmed.startsWith("//") ? `https:${trimmed}` : trimmed
+    const parsed = new URL(normalized)
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.href
+    }
+  } catch {
+    return null
+  }
+  return null
+}
+
 function readActiveFormats(doc: Document): EmailEditorActiveFormats {
   try {
     const block = (doc.queryCommandValue("formatBlock") || "").toLowerCase()
@@ -433,8 +448,9 @@ export const EmailRichEditor = forwardRef<
         const imgs = doc.body.querySelectorAll("img[data-saturn-remote-src]")
         imgs.forEach((img) => {
           const remoteSrc = img.getAttribute("data-saturn-remote-src")
-          if (remoteSrc) {
-            img.setAttribute("src", remoteSrc)
+          const safeSrc = remoteSrc ? sanitizeRemoteImageUrl(remoteSrc) : null
+          if (safeSrc) {
+            img.setAttribute("src", safeSrc)
             img.removeAttribute("data-saturn-remote-src")
           }
         })

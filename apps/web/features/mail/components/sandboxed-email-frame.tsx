@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { ShieldAlert, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Attachment } from "@saturn/api/saturn/mail/v1/mail"
+import { sanitizeEmailHtml } from "@saturn/core"
 import { cn } from "@/lib/utils"
 
 export interface SandboxedEmailFrameProps {
@@ -90,12 +91,7 @@ export function SandboxedEmailFrame({
     if (!source) return "<div></div>"
 
     // Strip any <script> tags or inline event handlers to guarantee clean sandbox execution
-    source = source.replace(/<script\b[\s\S]*?<\/script>/gi, "")
-    source = source.replace(/<script\b[^>]*>/gi, "")
-    source = source.replace(
-      /\s+on[a-z]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi,
-      ""
-    )
+    source = sanitizeEmailHtml(source).html
 
     // 1. Resolve and rewrite cid: inline attachments to authenticated download URLs
     if (attachments && attachments.length > 0) {
