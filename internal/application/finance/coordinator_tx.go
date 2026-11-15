@@ -5,7 +5,6 @@ package financeapp
 import (
 	"context"
 
-	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/settings"
@@ -198,14 +197,6 @@ func (t *TransactionalCoordinator) InvertStatementSigns(ctx context.Context, id 
 	}
 
 	return res1, res2, nil
-}
-
-func (t *TransactionalCoordinator) IngestStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*IngestStatementResult, error) {
-	return t.next.IngestStatementDocument(ctx, req)
-}
-
-func (t *TransactionalCoordinator) AnalyzeStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*StatementIngestionState, error) {
-	return t.next.AnalyzeStatementDocument(ctx, req)
 }
 
 // CreateAccount executes next.CreateAccount inside a database transaction.
@@ -914,10 +905,6 @@ func (t *TransactionalCoordinator) ListTransfers(ctx context.Context, req *ListT
 	return t.next.ListTransfers(ctx, req)
 }
 
-func (t *TransactionalCoordinator) IngestEmail(ctx context.Context, spaceID string, integrationID string, sender string, subject string, body string) (*finance.InboxItem, error) {
-	return t.next.IngestEmail(ctx, spaceID, integrationID, sender, subject, body)
-}
-
 // DiscardInboxItem executes next.DiscardInboxItem inside a database transaction.
 func (t *TransactionalCoordinator) DiscardInboxItem(ctx context.Context, id string) error {
 	ctx, tx, err := t.txr.Begin(ctx)
@@ -935,14 +922,6 @@ func (t *TransactionalCoordinator) DiscardInboxItem(ctx context.Context, id stri
 	}
 
 	return nil
-}
-
-func (t *TransactionalCoordinator) GetTransactionSuggestions(ctx context.Context, req *IngestionRequest) (*SignalSuggestion, error) {
-	return t.next.GetTransactionSuggestions(ctx, req)
-}
-
-func (t *TransactionalCoordinator) ProcessSuggestions(ctx context.Context, spaceID string, req *agentapp.SuggestionRequest) (map[string]any, error) {
-	return t.next.ProcessSuggestions(ctx, spaceID, req)
 }
 
 // UpdateInboxItem executes next.UpdateInboxItem inside a database transaction.
@@ -983,12 +962,4 @@ func (t *TransactionalCoordinator) ApproveInboxItem(ctx context.Context, id stri
 	}
 
 	return res, nil
-}
-
-func (t *TransactionalCoordinator) ProcessSignalPipeline(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*IngestionState, error) {
-	return t.next.ProcessSignalPipeline(ctx, fCtx, req)
-}
-
-func (t *TransactionalCoordinator) GetSignalSuggestions(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*SignalSuggestion, error) {
-	return t.next.GetSignalSuggestions(ctx, fCtx, req)
 }

@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
@@ -2969,161 +2968,6 @@ func (mock *FinanceServiceMock) InvertStatementSignsCalls() []struct {
 }
 
 // Compile-time interface assertion.
-var _ DocumentClassifier = (*DocumentClassifierMock)(nil)
-
-// DocumentClassifierMock is a mock implementation of DocumentClassifier.
-type DocumentClassifierMock struct {
-	// ClassifyFunc mocks the Classify method.
-	ClassifyFunc func(ctx context.Context, fCtx finance.Context, doc string) (string, error)
-
-	// calls tracks calls to the methods.
-	calls struct {
-		Classify []struct {
-			Ctx  context.Context
-			FCtx finance.Context
-			Doc  string
-		}
-	}
-	lockClassify sync.RWMutex
-}
-
-// Classify calls ClassifyFunc.
-func (mock *DocumentClassifierMock) Classify(ctx context.Context, fCtx finance.Context, doc string) (string, error) {
-	if mock.ClassifyFunc == nil {
-		panic("DocumentClassifierMock.ClassifyFunc: method is nil but DocumentClassifier.Classify was just called")
-	}
-	mock.lockClassify.Lock()
-	mock.calls.Classify = append(mock.calls.Classify, struct {
-		Ctx  context.Context
-		FCtx finance.Context
-		Doc  string
-	}{
-		Ctx:  ctx,
-		FCtx: fCtx,
-		Doc:  doc,
-	})
-	mock.lockClassify.Unlock()
-	return mock.ClassifyFunc(ctx, fCtx, doc)
-}
-
-// ClassifyCalls returns all calls made to Classify.
-func (mock *DocumentClassifierMock) ClassifyCalls() []struct {
-	Ctx  context.Context
-	FCtx finance.Context
-	Doc  string
-} {
-	mock.lockClassify.RLock()
-	defer mock.lockClassify.RUnlock()
-	return mock.calls.Classify
-}
-
-// Compile-time interface assertion.
-var _ IngestionParser = (*IngestionParserMock)(nil)
-
-// IngestionParserMock is a mock implementation of IngestionParser.
-type IngestionParserMock struct {
-	// ParseFunc mocks the Parse method.
-	ParseFunc func(ctx context.Context, fCtx finance.Context, doc string, ingCtx IngestionContext) (*ParsedTransaction, error)
-
-	// calls tracks calls to the methods.
-	calls struct {
-		Parse []struct {
-			Ctx    context.Context
-			FCtx   finance.Context
-			Doc    string
-			IngCtx IngestionContext
-		}
-	}
-	lockParse sync.RWMutex
-}
-
-// Parse calls ParseFunc.
-func (mock *IngestionParserMock) Parse(ctx context.Context, fCtx finance.Context, doc string, ingCtx IngestionContext) (*ParsedTransaction, error) {
-	if mock.ParseFunc == nil {
-		panic("IngestionParserMock.ParseFunc: method is nil but IngestionParser.Parse was just called")
-	}
-	mock.lockParse.Lock()
-	mock.calls.Parse = append(mock.calls.Parse, struct {
-		Ctx    context.Context
-		FCtx   finance.Context
-		Doc    string
-		IngCtx IngestionContext
-	}{
-		Ctx:    ctx,
-		FCtx:   fCtx,
-		Doc:    doc,
-		IngCtx: ingCtx,
-	})
-	mock.lockParse.Unlock()
-	return mock.ParseFunc(ctx, fCtx, doc, ingCtx)
-}
-
-// ParseCalls returns all calls made to Parse.
-func (mock *IngestionParserMock) ParseCalls() []struct {
-	Ctx    context.Context
-	FCtx   finance.Context
-	Doc    string
-	IngCtx IngestionContext
-} {
-	mock.lockParse.RLock()
-	defer mock.lockParse.RUnlock()
-	return mock.calls.Parse
-}
-
-// Compile-time interface assertion.
-var _ IngestionDeduplicator = (*IngestionDeduplicatorMock)(nil)
-
-// IngestionDeduplicatorMock is a mock implementation of IngestionDeduplicator.
-type IngestionDeduplicatorMock struct {
-	// DeduplicateFunc mocks the Deduplicate method.
-	DeduplicateFunc func(ctx context.Context, fCtx finance.Context, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error)
-
-	// calls tracks calls to the methods.
-	calls struct {
-		Deduplicate []struct {
-			Ctx    context.Context
-			FCtx   finance.Context
-			Tx     *ParsedTransaction
-			Recent []*finance.Transaction
-		}
-	}
-	lockDeduplicate sync.RWMutex
-}
-
-// Deduplicate calls DeduplicateFunc.
-func (mock *IngestionDeduplicatorMock) Deduplicate(ctx context.Context, fCtx finance.Context, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error) {
-	if mock.DeduplicateFunc == nil {
-		panic("IngestionDeduplicatorMock.DeduplicateFunc: method is nil but IngestionDeduplicator.Deduplicate was just called")
-	}
-	mock.lockDeduplicate.Lock()
-	mock.calls.Deduplicate = append(mock.calls.Deduplicate, struct {
-		Ctx    context.Context
-		FCtx   finance.Context
-		Tx     *ParsedTransaction
-		Recent []*finance.Transaction
-	}{
-		Ctx:    ctx,
-		FCtx:   fCtx,
-		Tx:     tx,
-		Recent: recent,
-	})
-	mock.lockDeduplicate.Unlock()
-	return mock.DeduplicateFunc(ctx, fCtx, tx, recent)
-}
-
-// DeduplicateCalls returns all calls made to Deduplicate.
-func (mock *IngestionDeduplicatorMock) DeduplicateCalls() []struct {
-	Ctx    context.Context
-	FCtx   finance.Context
-	Tx     *ParsedTransaction
-	Recent []*finance.Transaction
-} {
-	mock.lockDeduplicate.RLock()
-	defer mock.lockDeduplicate.RUnlock()
-	return mock.calls.Deduplicate
-}
-
-// Compile-time interface assertion.
 var _ Coordinator = (*CoordinatorMock)(nil)
 
 // CoordinatorMock is a mock implementation of Coordinator.
@@ -3160,12 +3004,6 @@ type CoordinatorMock struct {
 
 	// InvertStatementSignsFunc mocks the InvertStatementSigns method.
 	InvertStatementSignsFunc func(ctx context.Context, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error)
-
-	// IngestStatementDocumentFunc mocks the IngestStatementDocument method.
-	IngestStatementDocumentFunc func(ctx context.Context, req *StatementDocumentRequest) (*IngestStatementResult, error)
-
-	// AnalyzeStatementDocumentFunc mocks the AnalyzeStatementDocument method.
-	AnalyzeStatementDocumentFunc func(ctx context.Context, req *StatementDocumentRequest) (*StatementIngestionState, error)
 
 	// CreateAccountFunc mocks the CreateAccount method.
 	CreateAccountFunc func(ctx context.Context, req *CreateAccountRequest) (*finance.Account, error)
@@ -3296,29 +3134,14 @@ type CoordinatorMock struct {
 	// ListTransfersFunc mocks the ListTransfers method.
 	ListTransfersFunc func(ctx context.Context, req *ListTransfersRequest) ([]*finance.Transfer, string, error)
 
-	// IngestEmailFunc mocks the IngestEmail method.
-	IngestEmailFunc func(ctx context.Context, spaceID string, integrationID string, sender string, subject string, body string) (*finance.InboxItem, error)
-
 	// DiscardInboxItemFunc mocks the DiscardInboxItem method.
 	DiscardInboxItemFunc func(ctx context.Context, id string) error
-
-	// GetTransactionSuggestionsFunc mocks the GetTransactionSuggestions method.
-	GetTransactionSuggestionsFunc func(ctx context.Context, req *IngestionRequest) (*SignalSuggestion, error)
-
-	// ProcessSuggestionsFunc mocks the ProcessSuggestions method.
-	ProcessSuggestionsFunc func(ctx context.Context, spaceID string, req *agentapp.SuggestionRequest) (map[string]any, error)
 
 	// UpdateInboxItemFunc mocks the UpdateInboxItem method.
 	UpdateInboxItemFunc func(ctx context.Context, item *finance.InboxItem) (*finance.InboxItem, error)
 
 	// ApproveInboxItemFunc mocks the ApproveInboxItem method.
 	ApproveInboxItemFunc func(ctx context.Context, id string) (*finance.InboxItem, error)
-
-	// ProcessSignalPipelineFunc mocks the ProcessSignalPipeline method.
-	ProcessSignalPipelineFunc func(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*IngestionState, error)
-
-	// GetSignalSuggestionsFunc mocks the GetSignalSuggestions method.
-	GetSignalSuggestionsFunc func(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*SignalSuggestion, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -3366,14 +3189,6 @@ type CoordinatorMock struct {
 		InvertStatementSigns []struct {
 			Ctx context.Context
 			Id  finance.StatementID
-		}
-		IngestStatementDocument []struct {
-			Ctx context.Context
-			Req *StatementDocumentRequest
-		}
-		AnalyzeStatementDocument []struct {
-			Ctx context.Context
-			Req *StatementDocumentRequest
 		}
 		CreateAccount []struct {
 			Ctx context.Context
@@ -3550,26 +3365,9 @@ type CoordinatorMock struct {
 			Ctx context.Context
 			Req *ListTransfersRequest
 		}
-		IngestEmail []struct {
-			Ctx           context.Context
-			SpaceID       string
-			IntegrationID string
-			Sender        string
-			Subject       string
-			Body          string
-		}
 		DiscardInboxItem []struct {
 			Ctx context.Context
 			Id  string
-		}
-		GetTransactionSuggestions []struct {
-			Ctx context.Context
-			Req *IngestionRequest
-		}
-		ProcessSuggestions []struct {
-			Ctx     context.Context
-			SpaceID string
-			Req     *agentapp.SuggestionRequest
 		}
 		UpdateInboxItem []struct {
 			Ctx  context.Context
@@ -3578,16 +3376,6 @@ type CoordinatorMock struct {
 		ApproveInboxItem []struct {
 			Ctx context.Context
 			Id  string
-		}
-		ProcessSignalPipeline []struct {
-			Ctx  context.Context
-			FCtx finance.Context
-			Req  *IngestionRequest
-		}
-		GetSignalSuggestions []struct {
-			Ctx  context.Context
-			FCtx finance.Context
-			Req  *IngestionRequest
 		}
 	}
 	lockResolveContext                sync.RWMutex
@@ -3601,8 +3389,6 @@ type CoordinatorMock struct {
 	lockUpdateStatementLine           sync.RWMutex
 	lockCompleteStatement             sync.RWMutex
 	lockInvertStatementSigns          sync.RWMutex
-	lockIngestStatementDocument       sync.RWMutex
-	lockAnalyzeStatementDocument      sync.RWMutex
 	lockCreateAccount                 sync.RWMutex
 	lockUpdateAccount                 sync.RWMutex
 	lockDeleteAccount                 sync.RWMutex
@@ -3646,14 +3432,9 @@ type CoordinatorMock struct {
 	lockGetTransfer                   sync.RWMutex
 	lockDeleteTransfer                sync.RWMutex
 	lockListTransfers                 sync.RWMutex
-	lockIngestEmail                   sync.RWMutex
 	lockDiscardInboxItem              sync.RWMutex
-	lockGetTransactionSuggestions     sync.RWMutex
-	lockProcessSuggestions            sync.RWMutex
 	lockUpdateInboxItem               sync.RWMutex
 	lockApproveInboxItem              sync.RWMutex
-	lockProcessSignalPipeline         sync.RWMutex
-	lockGetSignalSuggestions          sync.RWMutex
 }
 
 // ResolveContext calls ResolveContextFunc.
@@ -3954,60 +3735,6 @@ func (mock *CoordinatorMock) InvertStatementSignsCalls() []struct {
 	mock.lockInvertStatementSigns.RLock()
 	defer mock.lockInvertStatementSigns.RUnlock()
 	return mock.calls.InvertStatementSigns
-}
-
-// IngestStatementDocument calls IngestStatementDocumentFunc.
-func (mock *CoordinatorMock) IngestStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*IngestStatementResult, error) {
-	if mock.IngestStatementDocumentFunc == nil {
-		panic("CoordinatorMock.IngestStatementDocumentFunc: method is nil but Coordinator.IngestStatementDocument was just called")
-	}
-	mock.lockIngestStatementDocument.Lock()
-	mock.calls.IngestStatementDocument = append(mock.calls.IngestStatementDocument, struct {
-		Ctx context.Context
-		Req *StatementDocumentRequest
-	}{
-		Ctx: ctx,
-		Req: req,
-	})
-	mock.lockIngestStatementDocument.Unlock()
-	return mock.IngestStatementDocumentFunc(ctx, req)
-}
-
-// IngestStatementDocumentCalls returns all calls made to IngestStatementDocument.
-func (mock *CoordinatorMock) IngestStatementDocumentCalls() []struct {
-	Ctx context.Context
-	Req *StatementDocumentRequest
-} {
-	mock.lockIngestStatementDocument.RLock()
-	defer mock.lockIngestStatementDocument.RUnlock()
-	return mock.calls.IngestStatementDocument
-}
-
-// AnalyzeStatementDocument calls AnalyzeStatementDocumentFunc.
-func (mock *CoordinatorMock) AnalyzeStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*StatementIngestionState, error) {
-	if mock.AnalyzeStatementDocumentFunc == nil {
-		panic("CoordinatorMock.AnalyzeStatementDocumentFunc: method is nil but Coordinator.AnalyzeStatementDocument was just called")
-	}
-	mock.lockAnalyzeStatementDocument.Lock()
-	mock.calls.AnalyzeStatementDocument = append(mock.calls.AnalyzeStatementDocument, struct {
-		Ctx context.Context
-		Req *StatementDocumentRequest
-	}{
-		Ctx: ctx,
-		Req: req,
-	})
-	mock.lockAnalyzeStatementDocument.Unlock()
-	return mock.AnalyzeStatementDocumentFunc(ctx, req)
-}
-
-// AnalyzeStatementDocumentCalls returns all calls made to AnalyzeStatementDocument.
-func (mock *CoordinatorMock) AnalyzeStatementDocumentCalls() []struct {
-	Ctx context.Context
-	Req *StatementDocumentRequest
-} {
-	mock.lockAnalyzeStatementDocument.RLock()
-	defer mock.lockAnalyzeStatementDocument.RUnlock()
-	return mock.calls.AnalyzeStatementDocument
 }
 
 // CreateAccount calls CreateAccountFunc.
@@ -5180,45 +4907,6 @@ func (mock *CoordinatorMock) ListTransfersCalls() []struct {
 	return mock.calls.ListTransfers
 }
 
-// IngestEmail calls IngestEmailFunc.
-func (mock *CoordinatorMock) IngestEmail(ctx context.Context, spaceID string, integrationID string, sender string, subject string, body string) (*finance.InboxItem, error) {
-	if mock.IngestEmailFunc == nil {
-		panic("CoordinatorMock.IngestEmailFunc: method is nil but Coordinator.IngestEmail was just called")
-	}
-	mock.lockIngestEmail.Lock()
-	mock.calls.IngestEmail = append(mock.calls.IngestEmail, struct {
-		Ctx           context.Context
-		SpaceID       string
-		IntegrationID string
-		Sender        string
-		Subject       string
-		Body          string
-	}{
-		Ctx:           ctx,
-		SpaceID:       spaceID,
-		IntegrationID: integrationID,
-		Sender:        sender,
-		Subject:       subject,
-		Body:          body,
-	})
-	mock.lockIngestEmail.Unlock()
-	return mock.IngestEmailFunc(ctx, spaceID, integrationID, sender, subject, body)
-}
-
-// IngestEmailCalls returns all calls made to IngestEmail.
-func (mock *CoordinatorMock) IngestEmailCalls() []struct {
-	Ctx           context.Context
-	SpaceID       string
-	IntegrationID string
-	Sender        string
-	Subject       string
-	Body          string
-} {
-	mock.lockIngestEmail.RLock()
-	defer mock.lockIngestEmail.RUnlock()
-	return mock.calls.IngestEmail
-}
-
 // DiscardInboxItem calls DiscardInboxItemFunc.
 func (mock *CoordinatorMock) DiscardInboxItem(ctx context.Context, id string) error {
 	if mock.DiscardInboxItemFunc == nil {
@@ -5244,63 +4932,6 @@ func (mock *CoordinatorMock) DiscardInboxItemCalls() []struct {
 	mock.lockDiscardInboxItem.RLock()
 	defer mock.lockDiscardInboxItem.RUnlock()
 	return mock.calls.DiscardInboxItem
-}
-
-// GetTransactionSuggestions calls GetTransactionSuggestionsFunc.
-func (mock *CoordinatorMock) GetTransactionSuggestions(ctx context.Context, req *IngestionRequest) (*SignalSuggestion, error) {
-	if mock.GetTransactionSuggestionsFunc == nil {
-		panic("CoordinatorMock.GetTransactionSuggestionsFunc: method is nil but Coordinator.GetTransactionSuggestions was just called")
-	}
-	mock.lockGetTransactionSuggestions.Lock()
-	mock.calls.GetTransactionSuggestions = append(mock.calls.GetTransactionSuggestions, struct {
-		Ctx context.Context
-		Req *IngestionRequest
-	}{
-		Ctx: ctx,
-		Req: req,
-	})
-	mock.lockGetTransactionSuggestions.Unlock()
-	return mock.GetTransactionSuggestionsFunc(ctx, req)
-}
-
-// GetTransactionSuggestionsCalls returns all calls made to GetTransactionSuggestions.
-func (mock *CoordinatorMock) GetTransactionSuggestionsCalls() []struct {
-	Ctx context.Context
-	Req *IngestionRequest
-} {
-	mock.lockGetTransactionSuggestions.RLock()
-	defer mock.lockGetTransactionSuggestions.RUnlock()
-	return mock.calls.GetTransactionSuggestions
-}
-
-// ProcessSuggestions calls ProcessSuggestionsFunc.
-func (mock *CoordinatorMock) ProcessSuggestions(ctx context.Context, spaceID string, req *agentapp.SuggestionRequest) (map[string]any, error) {
-	if mock.ProcessSuggestionsFunc == nil {
-		panic("CoordinatorMock.ProcessSuggestionsFunc: method is nil but Coordinator.ProcessSuggestions was just called")
-	}
-	mock.lockProcessSuggestions.Lock()
-	mock.calls.ProcessSuggestions = append(mock.calls.ProcessSuggestions, struct {
-		Ctx     context.Context
-		SpaceID string
-		Req     *agentapp.SuggestionRequest
-	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Req:     req,
-	})
-	mock.lockProcessSuggestions.Unlock()
-	return mock.ProcessSuggestionsFunc(ctx, spaceID, req)
-}
-
-// ProcessSuggestionsCalls returns all calls made to ProcessSuggestions.
-func (mock *CoordinatorMock) ProcessSuggestionsCalls() []struct {
-	Ctx     context.Context
-	SpaceID string
-	Req     *agentapp.SuggestionRequest
-} {
-	mock.lockProcessSuggestions.RLock()
-	defer mock.lockProcessSuggestions.RUnlock()
-	return mock.calls.ProcessSuggestions
 }
 
 // UpdateInboxItem calls UpdateInboxItemFunc.
@@ -5355,117 +4986,4 @@ func (mock *CoordinatorMock) ApproveInboxItemCalls() []struct {
 	mock.lockApproveInboxItem.RLock()
 	defer mock.lockApproveInboxItem.RUnlock()
 	return mock.calls.ApproveInboxItem
-}
-
-// ProcessSignalPipeline calls ProcessSignalPipelineFunc.
-func (mock *CoordinatorMock) ProcessSignalPipeline(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*IngestionState, error) {
-	if mock.ProcessSignalPipelineFunc == nil {
-		panic("CoordinatorMock.ProcessSignalPipelineFunc: method is nil but Coordinator.ProcessSignalPipeline was just called")
-	}
-	mock.lockProcessSignalPipeline.Lock()
-	mock.calls.ProcessSignalPipeline = append(mock.calls.ProcessSignalPipeline, struct {
-		Ctx  context.Context
-		FCtx finance.Context
-		Req  *IngestionRequest
-	}{
-		Ctx:  ctx,
-		FCtx: fCtx,
-		Req:  req,
-	})
-	mock.lockProcessSignalPipeline.Unlock()
-	return mock.ProcessSignalPipelineFunc(ctx, fCtx, req)
-}
-
-// ProcessSignalPipelineCalls returns all calls made to ProcessSignalPipeline.
-func (mock *CoordinatorMock) ProcessSignalPipelineCalls() []struct {
-	Ctx  context.Context
-	FCtx finance.Context
-	Req  *IngestionRequest
-} {
-	mock.lockProcessSignalPipeline.RLock()
-	defer mock.lockProcessSignalPipeline.RUnlock()
-	return mock.calls.ProcessSignalPipeline
-}
-
-// GetSignalSuggestions calls GetSignalSuggestionsFunc.
-func (mock *CoordinatorMock) GetSignalSuggestions(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*SignalSuggestion, error) {
-	if mock.GetSignalSuggestionsFunc == nil {
-		panic("CoordinatorMock.GetSignalSuggestionsFunc: method is nil but Coordinator.GetSignalSuggestions was just called")
-	}
-	mock.lockGetSignalSuggestions.Lock()
-	mock.calls.GetSignalSuggestions = append(mock.calls.GetSignalSuggestions, struct {
-		Ctx  context.Context
-		FCtx finance.Context
-		Req  *IngestionRequest
-	}{
-		Ctx:  ctx,
-		FCtx: fCtx,
-		Req:  req,
-	})
-	mock.lockGetSignalSuggestions.Unlock()
-	return mock.GetSignalSuggestionsFunc(ctx, fCtx, req)
-}
-
-// GetSignalSuggestionsCalls returns all calls made to GetSignalSuggestions.
-func (mock *CoordinatorMock) GetSignalSuggestionsCalls() []struct {
-	Ctx  context.Context
-	FCtx finance.Context
-	Req  *IngestionRequest
-} {
-	mock.lockGetSignalSuggestions.RLock()
-	defer mock.lockGetSignalSuggestions.RUnlock()
-	return mock.calls.GetSignalSuggestions
-}
-
-// Compile-time interface assertion.
-var _ StatementExtractor = (*StatementExtractorMock)(nil)
-
-// StatementExtractorMock is a mock implementation of StatementExtractor.
-type StatementExtractorMock struct {
-	// ExtractFunc mocks the Extract method.
-	ExtractFunc func(ctx context.Context, fCtx finance.Context, docText string, accounts []*finance.Account) (*ParsedStatementDocument, error)
-
-	// calls tracks calls to the methods.
-	calls struct {
-		Extract []struct {
-			Ctx      context.Context
-			FCtx     finance.Context
-			DocText  string
-			Accounts []*finance.Account
-		}
-	}
-	lockExtract sync.RWMutex
-}
-
-// Extract calls ExtractFunc.
-func (mock *StatementExtractorMock) Extract(ctx context.Context, fCtx finance.Context, docText string, accounts []*finance.Account) (*ParsedStatementDocument, error) {
-	if mock.ExtractFunc == nil {
-		panic("StatementExtractorMock.ExtractFunc: method is nil but StatementExtractor.Extract was just called")
-	}
-	mock.lockExtract.Lock()
-	mock.calls.Extract = append(mock.calls.Extract, struct {
-		Ctx      context.Context
-		FCtx     finance.Context
-		DocText  string
-		Accounts []*finance.Account
-	}{
-		Ctx:      ctx,
-		FCtx:     fCtx,
-		DocText:  docText,
-		Accounts: accounts,
-	})
-	mock.lockExtract.Unlock()
-	return mock.ExtractFunc(ctx, fCtx, docText, accounts)
-}
-
-// ExtractCalls returns all calls made to Extract.
-func (mock *StatementExtractorMock) ExtractCalls() []struct {
-	Ctx      context.Context
-	FCtx     finance.Context
-	DocText  string
-	Accounts []*finance.Account
-} {
-	mock.lockExtract.RLock()
-	defer mock.lockExtract.RUnlock()
-	return mock.calls.Extract
 }

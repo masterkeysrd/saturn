@@ -5,12 +5,10 @@ import (
 	"testing"
 	"time"
 
-	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
-	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
 
@@ -632,49 +630,6 @@ func TestCoordinator_Institutions(t *testing.T) {
 	})
 }
 
-func TestCleanJSON(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "Raw JSON",
-			input:    `{"vendor": "Starbucks"}`,
-			expected: `{"vendor": "Starbucks"}`,
-		},
-		{
-			name:     "Markdown JSON block with newline",
-			input:    "```json\n{\"vendor\": \"Starbucks\"}\n```",
-			expected: `{"vendor": "Starbucks"}`,
-		},
-		{
-			name:     "Markdown block without language tag",
-			input:    "```\n{\"vendor\": \"Starbucks\"}\n```",
-			expected: `{"vendor": "Starbucks"}`,
-		},
-		{
-			name:     "Markdown inline without newline",
-			input:    "```json {\"a\": 1}```",
-			expected: `{"a": 1}`,
-		},
-		{
-			name:     "Prefixed with json word",
-			input:    "json {\"amount\": 100}",
-			expected: `{"amount": 100}`,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			got := cleanJSON(tc.input)
-			if got != tc.expected {
-				t.Errorf("cleanJSON(%q) = %q, expected %q", tc.input, got, tc.expected)
-			}
-		})
-	}
-}
-
 func TestCoordinator_Integrations(t *testing.T) {
 	t.Run("DiscardInboxItem", func(t *testing.T) {
 		tests := []struct {
@@ -846,137 +801,6 @@ func TestCoordinator_Integrations(t *testing.T) {
 	})
 }
 
-func TestCoordinator_ProcessSuggestions(t *testing.T) {
-	accID := "acc_1"
-	bgtID := "bgt_1"
-	dupID := "tx_dup_1"
-
-	tests := []struct {
-		name          string
-		req           *agentapp.SuggestionRequest
-		classifierFn  func(ctx context.Context, fCtx finance.Context, doc string) (string, error)
-		parserFn      func(ctx context.Context, fCtx finance.Context, doc string, ingCtx IngestionContext) (*ParsedTransaction, error)
-		expectCard    bool
-		expectBudget  bool
-		expectAccount bool
-		expectDup     bool
-		expectedError bool
-	}{
-		{
-			name: "All suggestion fields populated",
-			req: &agentapp.SuggestionRequest{
-				TextContent: "Receipt from Starbucks",
-				Documents: []agentapp.DocumentFile{
-					{Filename: "starbucks.png", ContentType: "image/png", Content: []byte("img")},
-				},
-			},
-			classifierFn: func(ctx context.Context, fCtx finance.Context, doc string) (string, error) {
-				return "RECEIPT", nil
-			},
-			parserFn: func(ctx context.Context, fCtx finance.Context, doc string, ingCtx IngestionContext) (*ParsedTransaction, error) {
-				return &ParsedTransaction{
-					Counterparty:         "Starbucks",
-					Amount:               550,
-					Currency:             "USD",
-					Date:                 "2026-09-15",
-					CardLastFour:         "1234",
-					SuggestedBudget:      "Coffee",
-					SourceAccountID:      accID,
-					SuggestedTransferLeg: "",
-				}, nil
-			},
-			expectCard:    true,
-			expectBudget:  true,
-			expectAccount: true,
-			expectDup:     false,
-			expectedError: false,
-		},
-		{
-			name: "Classifier error returns error",
-			req:  &agentapp.SuggestionRequest{TextContent: "Garbage data"},
-			classifierFn: func(ctx context.Context, fCtx finance.Context, doc string) (string, error) {
-				return "", errors.New("classify failed")
-			},
-			expectedError: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			deps := Dependencies{
-				FinanceService: &FinanceServiceMock{
-					ListBudgetsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
-						return &paging.Page[*finance.Budget]{}, nil
-					},
-					ListAccountsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
-						return &paging.Page[*finance.Account]{}, nil
-					},
-					ListInstitutionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListInstitutionsFilter) (*paging.Page[*finance.Institution], error) {
-						return &paging.Page[*finance.Institution]{}, nil
-					},
-					ListScheduledTransactionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error) {
-						return &paging.Page[*finance.ScheduledTransaction]{}, nil
-					},
-					ListRecurringTransactionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error) {
-						return &paging.Page[*finance.RecurringTransaction]{}, nil
-					},
-					ListBorrowingsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error) {
-						return nil, "", nil
-					},
-					ListTransactionsFunc: func(ctx context.Context, rCtx finance.Context, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
-						return &paging.Page[*finance.Transaction]{}, nil
-					},
-					ResolveAccountFunc: func(ctx context.Context, rCtx finance.Context, opts finance.ResolveAccountOpts) (*finance.Account, error) {
-						return &finance.Account{ID: "acc_1"}, nil
-					},
-					GetBudgetFunc: func(ctx context.Context, rCtx finance.Context, id finance.BudgetID) (*finance.Budget, error) {
-						return &finance.Budget{ID: id}, nil
-					},
-				},
-				Classifier: &DocumentClassifierMock{ClassifyFunc: tc.classifierFn},
-				Parser:     &IngestionParserMock{ParseFunc: tc.parserFn},
-				Deduplicator: &IngestionDeduplicatorMock{
-					DeduplicateFunc: func(ctx context.Context, fCtx finance.Context, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error) {
-						return &DeduplicationResult{IsDuplicate: false}, nil
-					},
-				},
-			}
-			coord := NewCoordinator(deps)
-			res, err := coord.ProcessSuggestions(context.Background(), "spc_1", tc.req)
-			if tc.expectedError {
-				if err == nil {
-					t.Fatal("expected error, got nil")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if res["classification"] != "RECEIPT" || res["vendor"] != "Starbucks" {
-				t.Errorf("unexpected suggestion result: %+v", res)
-			}
-			if tc.expectCard && res["cardLastFour"] != "1234" {
-				t.Errorf("expected cardLastFour 1234, got %v", res["cardLastFour"])
-			}
-			if tc.expectBudget && res["suggestedBudget"] != "Coffee" {
-				t.Errorf("expected suggestedBudget Coffee, got %v", res["suggestedBudget"])
-			}
-		})
-	}
-
-	// Verify unauthenticated GetTransactionSuggestions
-	t.Run("GetTransactionSuggestions unauthenticated", func(t *testing.T) {
-		coord := NewCoordinator(Dependencies{})
-		_, err := coord.GetTransactionSuggestions(context.Background(), &IngestionRequest{})
-		if err == nil {
-			t.Fatal("expected unauthenticated error")
-		}
-	})
-
-	_ = bgtID
-	_ = dupID
-}
-
 func TestLoggingCoordinator_Delegation(t *testing.T) {
 	ctx := context.Background()
 	logger := log.New()
@@ -994,9 +818,7 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 	var createExpCalled, createIncCalled, updateExpCalled, updateIncCalled, deleteTxCalled, listTxEventsCalled bool
 	var createTrfCalled, getTrfCalled, deleteTrfCalled, listTrfsCalled bool
 	var importStmtCalled, deleteStmtCalled, updateStmtCalled, updateStmtLineCalled, completeStmtCalled, invertStmtCalled bool
-	var ingestStmtCalled, analyzeStmtCalled bool
-	var ingestEmailCalled, discardInboxCalled, updateInboxCalled, approveInboxCalled bool
-	var getTxSugCalled, processSugCalled, processSignalCalled, getSignalSugCalled bool
+	var discardInboxCalled, updateInboxCalled, approveInboxCalled bool
 
 	coordMock := &CoordinatorMock{
 		SetupFunc: func(ctx context.Context, req *SetupRequest) (*settings.Entry[finance.Settings], error) {
@@ -1207,18 +1029,6 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 			invertStmtCalled = true
 			return &finance.Statement{ID: id}, []*finance.StatementLine{}, nil
 		},
-		IngestStatementDocumentFunc: func(ctx context.Context, req *StatementDocumentRequest) (*IngestStatementResult, error) {
-			ingestStmtCalled = true
-			return &IngestStatementResult{}, nil
-		},
-		AnalyzeStatementDocumentFunc: func(ctx context.Context, req *StatementDocumentRequest) (*StatementIngestionState, error) {
-			analyzeStmtCalled = true
-			return &StatementIngestionState{}, nil
-		},
-		IngestEmailFunc: func(ctx context.Context, spaceID string, integrationID string, sender string, subject string, body string) (*finance.InboxItem, error) {
-			ingestEmailCalled = true
-			return &finance.InboxItem{ID: "inbox_1"}, nil
-		},
 		DiscardInboxItemFunc: func(ctx context.Context, id string) error {
 			discardInboxCalled = true
 			return nil
@@ -1230,22 +1040,6 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 		ApproveInboxItemFunc: func(ctx context.Context, id string) (*finance.InboxItem, error) {
 			approveInboxCalled = true
 			return &finance.InboxItem{ID: "inbox_1"}, nil
-		},
-		GetTransactionSuggestionsFunc: func(ctx context.Context, req *IngestionRequest) (*SignalSuggestion, error) {
-			getTxSugCalled = true
-			return &SignalSuggestion{}, nil
-		},
-		ProcessSuggestionsFunc: func(ctx context.Context, spaceID string, req *agentapp.SuggestionRequest) (map[string]any, error) {
-			processSugCalled = true
-			return map[string]any{}, nil
-		},
-		ProcessSignalPipelineFunc: func(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*IngestionState, error) {
-			processSignalCalled = true
-			return &IngestionState{}, nil
-		},
-		GetSignalSuggestionsFunc: func(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*SignalSuggestion, error) {
-			getSignalSugCalled = true
-			return &SignalSuggestion{}, nil
 		},
 	}
 
@@ -1304,17 +1098,9 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 	_, _ = logged.UpdateStatementLine(ctx, &finance.StatementLine{}, nil)
 	_, _ = logged.CompleteStatement(ctx, "stmt_1")
 	_, _, _ = logged.InvertStatementSigns(ctx, "stmt_1")
-	_, _ = logged.IngestStatementDocument(ctx, &StatementDocumentRequest{})
-	_, _ = logged.AnalyzeStatementDocument(ctx, &StatementDocumentRequest{})
-	_, _ = logged.IngestEmail(ctx, "spc_1", "int_1", "sender", "subject", "body")
 	_ = logged.DiscardInboxItem(ctx, "inbox_1")
 	_, _ = logged.UpdateInboxItem(ctx, &finance.InboxItem{})
 	_, _ = logged.ApproveInboxItem(ctx, "inbox_1")
-	_, _ = logged.GetTransactionSuggestions(ctx, &IngestionRequest{})
-	_, _ = logged.ProcessSuggestions(ctx, "spc_1", &agentapp.SuggestionRequest{})
-	fCtx := finance.NewContext("spc_1", "usr_1", time.UTC, "USD")
-	_, _ = logged.ProcessSignalPipeline(ctx, fCtx, &IngestionRequest{})
-	_, _ = logged.GetSignalSuggestions(ctx, fCtx, &IngestionRequest{})
 
 	if !configureCalled || !getSettingsCalled || !listCurrenciesCalled ||
 		!createAccountCalled || !updateAccountCalled || !deleteAccountCalled || !adjustAccountCalled ||
@@ -1328,9 +1114,7 @@ func TestLoggingCoordinator_Delegation(t *testing.T) {
 		!createExpCalled || !createIncCalled || !updateExpCalled || !updateIncCalled || !deleteTxCalled || !listTxEventsCalled ||
 		!createTrfCalled || !getTrfCalled || !deleteTrfCalled || !listTrfsCalled ||
 		!importStmtCalled || !deleteStmtCalled || !updateStmtCalled || !updateStmtLineCalled || !completeStmtCalled || !invertStmtCalled ||
-		!ingestStmtCalled || !analyzeStmtCalled ||
-		!ingestEmailCalled || !discardInboxCalled || !updateInboxCalled || !approveInboxCalled ||
-		!getTxSugCalled || !processSugCalled || !processSignalCalled || !getSignalSugCalled {
+		!discardInboxCalled || !updateInboxCalled || !approveInboxCalled {
 		t.Error("expected all methods to be delegated by LoggingCoordinator")
 	}
 }
@@ -1497,15 +1281,6 @@ func TestLoggingCoordinator_Errors(t *testing.T) {
 		InvertStatementSignsFunc: func(ctx context.Context, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error) {
 			return nil, nil, expectedErr
 		},
-		IngestStatementDocumentFunc: func(ctx context.Context, req *StatementDocumentRequest) (*IngestStatementResult, error) {
-			return nil, expectedErr
-		},
-		AnalyzeStatementDocumentFunc: func(ctx context.Context, req *StatementDocumentRequest) (*StatementIngestionState, error) {
-			return nil, expectedErr
-		},
-		IngestEmailFunc: func(ctx context.Context, spaceID string, integrationID string, sender string, subject string, body string) (*finance.InboxItem, error) {
-			return nil, expectedErr
-		},
 		DiscardInboxItemFunc: func(ctx context.Context, id string) error {
 			return expectedErr
 		},
@@ -1513,18 +1288,6 @@ func TestLoggingCoordinator_Errors(t *testing.T) {
 			return nil, expectedErr
 		},
 		ApproveInboxItemFunc: func(ctx context.Context, id string) (*finance.InboxItem, error) {
-			return nil, expectedErr
-		},
-		GetTransactionSuggestionsFunc: func(ctx context.Context, req *IngestionRequest) (*SignalSuggestion, error) {
-			return nil, expectedErr
-		},
-		ProcessSuggestionsFunc: func(ctx context.Context, spaceID string, req *agentapp.SuggestionRequest) (map[string]any, error) {
-			return nil, expectedErr
-		},
-		ProcessSignalPipelineFunc: func(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*IngestionState, error) {
-			return nil, expectedErr
-		},
-		GetSignalSuggestionsFunc: func(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*SignalSuggestion, error) {
 			return nil, expectedErr
 		},
 	}
@@ -1687,15 +1450,6 @@ func TestLoggingCoordinator_Errors(t *testing.T) {
 	if _, _, err := logged.InvertStatementSigns(ctx, "stmt_1"); err != expectedErr {
 		t.Errorf("expected %v, got %v", expectedErr, err)
 	}
-	if _, err := logged.IngestStatementDocument(ctx, &StatementDocumentRequest{}); err != expectedErr {
-		t.Errorf("expected %v, got %v", expectedErr, err)
-	}
-	if _, err := logged.AnalyzeStatementDocument(ctx, &StatementDocumentRequest{}); err != expectedErr {
-		t.Errorf("expected %v, got %v", expectedErr, err)
-	}
-	if _, err := logged.IngestEmail(ctx, "spc_1", "int_1", "sender", "subject", "body"); err != expectedErr {
-		t.Errorf("expected %v, got %v", expectedErr, err)
-	}
 	if err := logged.DiscardInboxItem(ctx, "inbox_1"); err != expectedErr {
 		t.Errorf("expected %v, got %v", expectedErr, err)
 	}
@@ -1703,19 +1457,6 @@ func TestLoggingCoordinator_Errors(t *testing.T) {
 		t.Errorf("expected %v, got %v", expectedErr, err)
 	}
 	if _, err := logged.ApproveInboxItem(ctx, "inbox_1"); err != expectedErr {
-		t.Errorf("expected %v, got %v", expectedErr, err)
-	}
-	if _, err := logged.GetTransactionSuggestions(ctx, &IngestionRequest{}); err != expectedErr {
-		t.Errorf("expected %v, got %v", expectedErr, err)
-	}
-	if _, err := logged.ProcessSuggestions(ctx, "spc_1", &agentapp.SuggestionRequest{}); err != expectedErr {
-		t.Errorf("expected %v, got %v", expectedErr, err)
-	}
-	fCtx := finance.NewContext("spc_1", "usr_1", time.UTC, "USD")
-	if _, err := logged.ProcessSignalPipeline(ctx, fCtx, &IngestionRequest{}); err != expectedErr {
-		t.Errorf("expected %v, got %v", expectedErr, err)
-	}
-	if _, err := logged.GetSignalSuggestions(ctx, fCtx, &IngestionRequest{}); err != expectedErr {
 		t.Errorf("expected %v, got %v", expectedErr, err)
 	}
 }

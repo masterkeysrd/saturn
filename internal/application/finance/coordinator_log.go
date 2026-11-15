@@ -6,7 +6,6 @@ import (
 	"context"
 	"time"
 
-	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/settings"
@@ -271,54 +270,6 @@ func (l *LoggingCoordinator) InvertStatementSigns(ctx context.Context, id financ
 		log.Duration("duration", duration),
 	)
 	return res1, res2, nil
-}
-
-// IngestStatementDocument executes next.IngestStatementDocument and logs execution duration and errors.
-func (l *LoggingCoordinator) IngestStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*IngestStatementResult, error) {
-	start := time.Now()
-	res, err := l.next.IngestStatementDocument(ctx, req)
-	duration := time.Since(start)
-
-	if err != nil {
-		l.logger.Error(ctx, "finance.IngestStatementDocument failed",
-			log.String("component", "finance"),
-			log.String("operation", "IngestStatementDocument"),
-			log.Duration("duration", duration),
-			log.Err(err),
-		)
-		return nil, err
-	}
-
-	l.logger.Info(ctx, "finance.IngestStatementDocument completed",
-		log.String("component", "finance"),
-		log.String("operation", "IngestStatementDocument"),
-		log.Duration("duration", duration),
-	)
-	return res, nil
-}
-
-// AnalyzeStatementDocument executes next.AnalyzeStatementDocument and logs execution duration and errors.
-func (l *LoggingCoordinator) AnalyzeStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*StatementIngestionState, error) {
-	start := time.Now()
-	res, err := l.next.AnalyzeStatementDocument(ctx, req)
-	duration := time.Since(start)
-
-	if err != nil {
-		l.logger.Error(ctx, "finance.AnalyzeStatementDocument failed",
-			log.String("component", "finance"),
-			log.String("operation", "AnalyzeStatementDocument"),
-			log.Duration("duration", duration),
-			log.Err(err),
-		)
-		return nil, err
-	}
-
-	l.logger.Info(ctx, "finance.AnalyzeStatementDocument completed",
-		log.String("component", "finance"),
-		log.String("operation", "AnalyzeStatementDocument"),
-		log.Duration("duration", duration),
-	)
-	return res, nil
 }
 
 // CreateAccount executes next.CreateAccount and logs execution duration and errors.
@@ -1353,30 +1304,6 @@ func (l *LoggingCoordinator) ListTransfers(ctx context.Context, req *ListTransfe
 	return res1, res2, nil
 }
 
-// IngestEmail executes next.IngestEmail and logs execution duration and errors.
-func (l *LoggingCoordinator) IngestEmail(ctx context.Context, spaceID string, integrationID string, sender string, subject string, body string) (*finance.InboxItem, error) {
-	start := time.Now()
-	res, err := l.next.IngestEmail(ctx, spaceID, integrationID, sender, subject, body)
-	duration := time.Since(start)
-
-	if err != nil {
-		l.logger.Error(ctx, "finance.IngestEmail failed",
-			log.String("component", "finance"),
-			log.String("operation", "IngestEmail"),
-			log.Duration("duration", duration),
-			log.Err(err),
-		)
-		return nil, err
-	}
-
-	l.logger.Info(ctx, "finance.IngestEmail completed",
-		log.String("component", "finance"),
-		log.String("operation", "IngestEmail"),
-		log.Duration("duration", duration),
-	)
-	return res, nil
-}
-
 // DiscardInboxItem executes next.DiscardInboxItem and logs execution duration and errors.
 func (l *LoggingCoordinator) DiscardInboxItem(ctx context.Context, id string) error {
 	start := time.Now()
@@ -1399,54 +1326,6 @@ func (l *LoggingCoordinator) DiscardInboxItem(ctx context.Context, id string) er
 		log.Duration("duration", duration),
 	)
 	return nil
-}
-
-// GetTransactionSuggestions executes next.GetTransactionSuggestions and logs execution duration and errors.
-func (l *LoggingCoordinator) GetTransactionSuggestions(ctx context.Context, req *IngestionRequest) (*SignalSuggestion, error) {
-	start := time.Now()
-	res, err := l.next.GetTransactionSuggestions(ctx, req)
-	duration := time.Since(start)
-
-	if err != nil {
-		l.logger.Error(ctx, "finance.GetTransactionSuggestions failed",
-			log.String("component", "finance"),
-			log.String("operation", "GetTransactionSuggestions"),
-			log.Duration("duration", duration),
-			log.Err(err),
-		)
-		return nil, err
-	}
-
-	l.logger.Info(ctx, "finance.GetTransactionSuggestions completed",
-		log.String("component", "finance"),
-		log.String("operation", "GetTransactionSuggestions"),
-		log.Duration("duration", duration),
-	)
-	return res, nil
-}
-
-// ProcessSuggestions executes next.ProcessSuggestions and logs execution duration and errors.
-func (l *LoggingCoordinator) ProcessSuggestions(ctx context.Context, spaceID string, req *agentapp.SuggestionRequest) (map[string]any, error) {
-	start := time.Now()
-	res, err := l.next.ProcessSuggestions(ctx, spaceID, req)
-	duration := time.Since(start)
-
-	if err != nil {
-		l.logger.Error(ctx, "finance.ProcessSuggestions failed",
-			log.String("component", "finance"),
-			log.String("operation", "ProcessSuggestions"),
-			log.Duration("duration", duration),
-			log.Err(err),
-		)
-		return nil, err
-	}
-
-	l.logger.Info(ctx, "finance.ProcessSuggestions completed",
-		log.String("component", "finance"),
-		log.String("operation", "ProcessSuggestions"),
-		log.Duration("duration", duration),
-	)
-	return res, nil
 }
 
 // UpdateInboxItem executes next.UpdateInboxItem and logs execution duration and errors.
@@ -1492,54 +1371,6 @@ func (l *LoggingCoordinator) ApproveInboxItem(ctx context.Context, id string) (*
 	l.logger.Info(ctx, "finance.ApproveInboxItem completed",
 		log.String("component", "finance"),
 		log.String("operation", "ApproveInboxItem"),
-		log.Duration("duration", duration),
-	)
-	return res, nil
-}
-
-// ProcessSignalPipeline executes next.ProcessSignalPipeline and logs execution duration and errors.
-func (l *LoggingCoordinator) ProcessSignalPipeline(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*IngestionState, error) {
-	start := time.Now()
-	res, err := l.next.ProcessSignalPipeline(ctx, fCtx, req)
-	duration := time.Since(start)
-
-	if err != nil {
-		l.logger.Error(ctx, "finance.ProcessSignalPipeline failed",
-			log.String("component", "finance"),
-			log.String("operation", "ProcessSignalPipeline"),
-			log.Duration("duration", duration),
-			log.Err(err),
-		)
-		return nil, err
-	}
-
-	l.logger.Info(ctx, "finance.ProcessSignalPipeline completed",
-		log.String("component", "finance"),
-		log.String("operation", "ProcessSignalPipeline"),
-		log.Duration("duration", duration),
-	)
-	return res, nil
-}
-
-// GetSignalSuggestions executes next.GetSignalSuggestions and logs execution duration and errors.
-func (l *LoggingCoordinator) GetSignalSuggestions(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*SignalSuggestion, error) {
-	start := time.Now()
-	res, err := l.next.GetSignalSuggestions(ctx, fCtx, req)
-	duration := time.Since(start)
-
-	if err != nil {
-		l.logger.Error(ctx, "finance.GetSignalSuggestions failed",
-			log.String("component", "finance"),
-			log.String("operation", "GetSignalSuggestions"),
-			log.Duration("duration", duration),
-			log.Err(err),
-		)
-		return nil, err
-	}
-
-	l.logger.Info(ctx, "finance.GetSignalSuggestions completed",
-		log.String("component", "finance"),
-		log.String("operation", "GetSignalSuggestions"),
 		log.Duration("duration", duration),
 	)
 	return res, nil

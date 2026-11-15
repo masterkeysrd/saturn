@@ -1641,8 +1641,6 @@ func toProtoInboxDocType(d finance.InboxItemDocType) financev1.InboxItem_DocType
 		return financev1.InboxItem_RECEIPT
 	case finance.InboxItemDocBankNotification:
 		return financev1.InboxItem_BANK_NOTIFICATION
-	case finance.InboxItemDocSystemVerification:
-		return financev1.InboxItem_SYSTEM_VERIFICATION
 	case finance.InboxItemDocUnknown:
 		return financev1.InboxItem_UNKNOWN
 	default:
@@ -1658,8 +1656,6 @@ func toDomainInboxDocType(d financev1.InboxItem_DocType) finance.InboxItemDocTyp
 		return finance.InboxItemDocReceipt
 	case financev1.InboxItem_BANK_NOTIFICATION:
 		return finance.InboxItemDocBankNotification
-	case financev1.InboxItem_SYSTEM_VERIFICATION:
-		return finance.InboxItemDocSystemVerification
 	case financev1.InboxItem_UNKNOWN:
 		return finance.InboxItemDocUnknown
 	default:
@@ -1735,7 +1731,7 @@ func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
 
 	return &financev1.InboxItem{
 		Id:                     pt.ID,
-		IntegrationId:          pt.IntegrationID,
+		FlowRunId:              pt.FlowRunID,
 		Status:                 toProtoInboxStatus(pt.Status),
 		DocType:                toProtoInboxDocType(pt.DocType),
 		Amount:                 pt.Amount,
@@ -1791,9 +1787,13 @@ func toDomainInboxItem(pb *financev1.InboxItem) *finance.InboxItem {
 		}
 	}
 
+	var flowRunID *string
+	if pb.FlowRunId != nil && *pb.FlowRunId != "" {
+		flowRunID = new(*pb.FlowRunId)
+	}
 	return &finance.InboxItem{
 		ID:                     pb.GetId(),
-		IntegrationID:          pb.GetIntegrationId(),
+		FlowRunID:              flowRunID,
 		Status:                 toDomainInboxStatus(pb.GetStatus()),
 		DocType:                toDomainInboxDocType(pb.GetDocType()),
 		Amount:                 pb.GetAmount(),
@@ -2109,101 +2109,6 @@ func (h *Handler) ImportStatement(ctx context.Context, req *financev1.ImportStat
 	}
 
 	return toProtoStatement(res), nil
-}
-
-func (h *Handler) IngestStatementDocument(ctx context.Context, req *financev1.IngestStatementDocumentRequest) (*financev1.IngestStatementDocumentResponse, error) {
-	const op errors.Op = "grpc/finance.IngestStatementDocument"
-
-	if req.Filename == "" {
-		return nil, errors.E(op, errors.Invalid, "filename is required")
-	}
-	if len(req.DocumentBytes) == 0 {
-		return nil, errors.E(op, errors.Invalid, "document_bytes is required")
-	}
-
-	appReq := &financeapp.StatementDocumentRequest{
-		Filename:        req.Filename,
-		ContentType:     req.ContentType,
-		DocumentBytes:   req.DocumentBytes,
-		Password:        req.GetPassword(),
-		TargetAccountID: req.TargetAccountId,
-	}
-
-	res, err := h.Coordinator.IngestStatementDocument(ctx, appReq)
-	if err != nil {
-		return nil, err
-	}
-
-	protoRes := &financev1.IngestStatementDocumentResponse{
-		BatchId:          res.BatchID,
-		NeedsPassword:    res.NeedsPassword,
-		UnmappedSections: res.UnmappedSections,
-		Errors:           res.Errors,
-	}
-
-	for _, stmt := range res.CreatedStatements {
-		protoRes.CreatedStatements = append(protoRes.CreatedStatements, toProtoStatement(stmt))
-	}
-
-	for _, rep := range res.SectionReports {
-		protoRes.SectionReports = append(protoRes.SectionReports, &financev1.SectionValidationReport{
-			Currency:         rep.Currency,
-			StartingBalance:  rep.StartingBalance,
-			EndingBalance:    rep.EndingBalance,
-			CalculatedEnding: rep.CalculatedEnding,
-			NetFlow:          rep.NetFlow,
-			Discrepancy:      rep.Discrepancy,
-			IsBalanced:       rep.IsBalanced,
-			LineCount:        int32(rep.LineCount),
-		})
-	}
-
-	return protoRes, nil
-}
-
-func (h *Handler) AnalyzeStatementDocument(ctx context.Context, req *financev1.AnalyzeStatementDocumentRequest) (*financev1.AnalyzeStatementDocumentResponse, error) {
-	const op errors.Op = "grpc/finance.AnalyzeStatementDocument"
-
-	if req.Filename == "" {
-		return nil, errors.E(op, errors.Invalid, "filename is required")
-	}
-	if len(req.DocumentBytes) == 0 {
-		return nil, errors.E(op, errors.Invalid, "document_bytes is required")
-	}
-
-	appReq := &financeapp.StatementDocumentRequest{
-		Filename:        req.Filename,
-		ContentType:     req.ContentType,
-		DocumentBytes:   req.DocumentBytes,
-		Password:        req.GetPassword(),
-		TargetAccountID: req.TargetAccountId,
-	}
-
-	state, err := h.Coordinator.AnalyzeStatementDocument(ctx, appReq)
-	if err != nil {
-		return nil, err
-	}
-
-	protoRes := &financev1.AnalyzeStatementDocumentResponse{
-		NeedsPassword:    state.NeedsPassword,
-		UnmappedSections: state.UnmappedSections,
-		Errors:           state.Errors,
-	}
-
-	for _, rep := range state.SectionReports {
-		protoRes.SectionReports = append(protoRes.SectionReports, &financev1.SectionValidationReport{
-			Currency:         rep.Currency,
-			StartingBalance:  rep.StartingBalance,
-			EndingBalance:    rep.EndingBalance,
-			CalculatedEnding: rep.CalculatedEnding,
-			NetFlow:          rep.NetFlow,
-			Discrepancy:      rep.Discrepancy,
-			IsBalanced:       rep.IsBalanced,
-			LineCount:        int32(rep.LineCount),
-		})
-	}
-
-	return protoRes, nil
 }
 
 func (h *Handler) GetStatement(ctx context.Context, req *financev1.GetStatementRequest) (*financev1.Statement, error) {

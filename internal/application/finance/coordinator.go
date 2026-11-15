@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
@@ -106,70 +105,10 @@ type FinanceService interface {
 	InvertStatementSigns(ctx context.Context, rCtx finance.Context, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error)
 }
 
-// ParsedTransaction represents structured transaction data parsed by an ingestion agent.
-type ParsedTransaction struct {
-	ReferenceNumber      string
-	TransactionType      string
-	Date                 string
-	Amount               int64 // In minor units
-	Currency             string
-	Counterparty         string
-	CardLastFour         string
-	SourceAccountID      string
-	SourceAccountName    string
-	DestAccountID        string
-	DestAccountName      string
-	DestAccountLastFour  string
-	SuggestedBudget      string
-	SuggestedBorrowing   string
-	SuggestedTransferLeg string
-	RawOutput            string
-}
-
-// IngestionContext provides workspace entity context to guide the polymorphic ingestion agent suggestions.
-type IngestionContext struct {
-	Budgets               []*finance.Budget
-	Accounts              []*finance.Account
-	Institutions          []*finance.Institution
-	ScheduledTransactions []*finance.ScheduledTransaction
-	RecurringTransactions []*finance.RecurringTransaction
-	Borrowings            []*finance.Borrowing
-	ReferenceDate         time.Time
-}
-
-// DocumentClassifier defines the interface for running document-type classification.
-// @Mock
-type DocumentClassifier interface {
-	Classify(ctx context.Context, fCtx finance.Context, doc string) (string, error)
-}
-
-// IngestionParser defines the interface for running transaction metadata extraction.
-// @Mock
-type IngestionParser interface {
-	Parse(ctx context.Context, fCtx finance.Context, doc string, ingCtx IngestionContext) (*ParsedTransaction, error)
-}
-
-// DeduplicationResult represents semantic duplicate checking output from the agent.
-type DeduplicationResult struct {
-	IsDuplicate            bool
-	DuplicateTransactionID string
-	Reason                 string
-}
-
-// IngestionDeduplicator defines the interface for running semantic transaction deduplication.
-// @Mock
-type IngestionDeduplicator interface {
-	Deduplicate(ctx context.Context, fCtx finance.Context, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error)
-}
-
 // Dependencies contains all parameters for Coordinator initialization.
 type Dependencies struct {
-	FinanceService    FinanceService
-	SpaceService      SpaceService
-	Classifier        DocumentClassifier
-	Parser            IngestionParser
-	Deduplicator      IngestionDeduplicator
-	StatementPipeline *StatementPipeline
+	FinanceService FinanceService
+	SpaceService   SpaceService
 }
 
 //go:generate go run github.com/masterkeysrd/saturn/tools/txgen -target=Coordinator
@@ -200,8 +139,6 @@ type Coordinator interface {
 	CompleteStatement(ctx context.Context, id finance.StatementID) (*finance.Statement, error)
 	// @transactional
 	InvertStatementSigns(ctx context.Context, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error)
-	IngestStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*IngestStatementResult, error)
-	AnalyzeStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*StatementIngestionState, error)
 
 	// @transactional
 	CreateAccount(ctx context.Context, req *CreateAccountRequest) (*finance.Account, error)
@@ -289,39 +226,25 @@ type Coordinator interface {
 	DeleteTransfer(ctx context.Context, id finance.TransferID) error
 	ListTransfers(ctx context.Context, req *ListTransfersRequest) ([]*finance.Transfer, string, error)
 
-	IngestEmail(ctx context.Context, spaceID string, integrationID string, sender, subject, body string) (*finance.InboxItem, error)
 	// @transactional
 	DiscardInboxItem(ctx context.Context, id string) error
-	GetTransactionSuggestions(ctx context.Context, req *IngestionRequest) (*SignalSuggestion, error)
-	ProcessSuggestions(ctx context.Context, spaceID string, req *agentapp.SuggestionRequest) (map[string]any, error)
 	// @transactional
 	UpdateInboxItem(ctx context.Context, item *finance.InboxItem) (*finance.InboxItem, error)
 	// @transactional
 	ApproveInboxItem(ctx context.Context, id string) (*finance.InboxItem, error)
-
-	ProcessSignalPipeline(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*IngestionState, error)
-	GetSignalSuggestions(ctx context.Context, fCtx finance.Context, req *IngestionRequest) (*SignalSuggestion, error)
 }
 
 // coordinator orchestrates requests across workspace and finance boundaries.
 type coordinator struct {
-	financeService    FinanceService
-	spaceService      SpaceService
-	classifier        DocumentClassifier
-	parser            IngestionParser
-	deduplicator      IngestionDeduplicator
-	statementPipeline *StatementPipeline
+	financeService FinanceService
+	spaceService   SpaceService
 }
 
 // NewCoordinator instantiates a new Coordinator.
 func NewCoordinator(deps Dependencies) Coordinator {
 	return &coordinator{
-		financeService:    deps.FinanceService,
-		spaceService:      deps.SpaceService,
-		classifier:        deps.Classifier,
-		parser:            deps.Parser,
-		deduplicator:      deps.Deduplicator,
-		statementPipeline: deps.StatementPipeline,
+		financeService: deps.FinanceService,
+		spaceService:   deps.SpaceService,
 	}
 }
 
@@ -495,16 +418,6 @@ func (c *coordinator) resolveContext(ctx context.Context) (*RequestContext, erro
 	}, nil
 }
 
-// systemContext creates a RequestContext for background/system operations in a space.
-func (c *coordinator) systemContext(ctx context.Context, spaceID string) *RequestContext {
-	return &RequestContext{
-		spaceID: finance.SpaceID(spaceID),
-		userID:  "system",
-		ctx:     ctx,
-		coord:   c,
-	}
-}
-
 // toLocation converts a non-zero time to loc, preserving zero times.
 func toLocation(t time.Time, loc *time.Location) time.Time {
 	if t.IsZero() {
@@ -633,30 +546,4 @@ func (c *coordinator) InvertStatementSigns(ctx context.Context, id finance.State
 		return nil, nil, err
 	}
 	return c.financeService.InvertStatementSigns(ctx, rCtx, id)
-}
-
-// IngestStatementDocument executes statement document ingestion for the session's workspace.
-func (c *coordinator) IngestStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*IngestStatementResult, error) {
-	const op errors.Op = "application/finance.IngestStatementDocument"
-	if c.statementPipeline == nil {
-		return nil, errors.E(op, errors.Internal, "statement pipeline is not configured")
-	}
-	rCtx, err := c.resolveContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return c.statementPipeline.IngestDocument(ctx, rCtx, req)
-}
-
-// AnalyzeStatementDocument analyzes statement document without persisting drafts (preview mode).
-func (c *coordinator) AnalyzeStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*StatementIngestionState, error) {
-	const op errors.Op = "application/finance.AnalyzeStatementDocument"
-	if c.statementPipeline == nil {
-		return nil, errors.E(op, errors.Internal, "statement pipeline is not configured")
-	}
-	rCtx, err := c.resolveContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return c.statementPipeline.AnalyzeDocument(ctx, rCtx, req)
 }
