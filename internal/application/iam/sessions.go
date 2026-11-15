@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/hash"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
@@ -161,6 +162,11 @@ func (c *coordinator) RefreshSession(ctx context.Context, req *RefreshSessionReq
 		ExpiresAt:        now.Add(24 * time.Hour),
 	})
 	if err != nil {
+		if errors.CodeOf(err) == identity.SessionReused {
+			if ctrl := db.TxControllerFromContext(ctx); ctrl != nil && !ctrl.IsDone() {
+				_ = ctrl.Commit()
+			}
+		}
 		return nil, errors.E(op, err)
 	}
 

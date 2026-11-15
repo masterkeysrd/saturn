@@ -52,8 +52,24 @@ func (t *TransactionalCoordinator) Logout(ctx context.Context, req *LogoutReques
 	return t.next.Logout(ctx, req)
 }
 
+// RefreshSession executes next.RefreshSession inside a database transaction.
 func (t *TransactionalCoordinator) RefreshSession(ctx context.Context, req *RefreshSessionRequest) (*RefreshSessionResponse, error) {
-	return t.next.RefreshSession(ctx, req)
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.RefreshSession(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 // Register executes next.Register inside a database transaction.
@@ -120,8 +136,24 @@ func (t *TransactionalCoordinator) RejectUser(ctx context.Context, req *RejectUs
 	return t.next.RejectUser(ctx, req)
 }
 
+// UnlockUser executes next.UnlockUser inside a database transaction.
 func (t *TransactionalCoordinator) UnlockUser(ctx context.Context, req *UnlockUserRequest) (*UnlockUserResponse, error) {
-	return t.next.UnlockUser(ctx, req)
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.UnlockUser(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (t *TransactionalCoordinator) ListUsers(ctx context.Context, filter *ListUsersFilter) (*paging.Page[*identity.User], error) {
@@ -136,8 +168,24 @@ func (t *TransactionalCoordinator) ListActiveSessions(ctx context.Context, req *
 	return t.next.ListActiveSessions(ctx, req)
 }
 
+// RevokeSession executes next.RevokeSession inside a database transaction.
 func (t *TransactionalCoordinator) RevokeSession(ctx context.Context, req *RevokeSessionRequest) (*RevokeSessionResponse, error) {
-	return t.next.RevokeSession(ctx, req)
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.RevokeSession(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 // RevokeAllSessions executes next.RevokeAllSessions inside a database transaction.
@@ -164,8 +212,23 @@ func (t *TransactionalCoordinator) ListMFAFactors(ctx context.Context, req *List
 	return t.next.ListMFAFactors(ctx, req)
 }
 
+// DeleteMFAFactor executes next.DeleteMFAFactor inside a database transaction.
 func (t *TransactionalCoordinator) DeleteMFAFactor(ctx context.Context, req *DeleteMFAFactorRequest) error {
-	return t.next.DeleteMFAFactor(ctx, req)
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := t.next.DeleteMFAFactor(ctx, req); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (t *TransactionalCoordinator) SetPrimaryMFAFactor(ctx context.Context, req *SetPrimaryMFAFactorRequest) error {
@@ -176,12 +239,44 @@ func (t *TransactionalCoordinator) SetupTOTP(ctx context.Context, req *SetupTOTP
 	return t.next.SetupTOTP(ctx, req)
 }
 
+// ConfirmTOTP executes next.ConfirmTOTP inside a database transaction.
 func (t *TransactionalCoordinator) ConfirmTOTP(ctx context.Context, req *ConfirmTOTPRequest) (*ConfirmTOTPResponse, error) {
-	return t.next.ConfirmTOTP(ctx, req)
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.ConfirmTOTP(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
+// RegenerateBackupCodes executes next.RegenerateBackupCodes inside a database transaction.
 func (t *TransactionalCoordinator) RegenerateBackupCodes(ctx context.Context, req *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error) {
-	return t.next.RegenerateBackupCodes(ctx, req)
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.RegenerateBackupCodes(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (t *TransactionalCoordinator) CreateAuthChallenge(ctx context.Context) (*CreateAuthChallengeResponse, error) {

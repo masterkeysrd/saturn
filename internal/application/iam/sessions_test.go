@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
 	platErrors "github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
 )
@@ -470,6 +471,107 @@ func TestCoordinator_Logout(t *testing.T) {
 			}
 			if res == nil {
 				t.Fatal("expected non-nil response")
+			}
+		})
+	}
+}
+
+type rootTxTransactor struct {
+	ctrl *db.TxController
+}
+
+func (r *rootTxTransactor) Begin(ctx context.Context) (context.Context, *db.TxController, error) {
+	r.ctrl = &db.TxController{}
+	return db.WithTxContext(ctx, r.ctrl), r.ctrl, nil
+}
+
+func (r *rootTxTransactor) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
+	return nil
+}
+
+func TestTransactionalCoordinator_RefreshSession(t *testing.T) {
+	now := time.Now()
+	validClaims := &token.Claims{
+		Subject:     "usr_1",
+		ExpiresAt:   jwt.NewNumericDate(now.Add(7 * 24 * time.Hour)),
+		AccessLevel: "user",
+		AuthVersion: 1,
+	}
+
+	tests := []struct {
+		name            string
+		rotateErr       error
+		wantErr         bool
+		wantErrCode     platErrors.Code
+		wantTxCommitted bool
+	}{
+		{
+			name:            "commits on success",
+			rotateErr:       nil,
+			wantErr:         false,
+			wantTxCommitted: true,
+		},
+		{
+			name:            "commits family revocation on SessionReused",
+			rotateErr:       platErrors.E(platErrors.Conflict, identity.SessionReused, "session reused"),
+			wantErr:         true,
+			wantErrCode:     identity.SessionReused,
+			wantTxCommitted: true,
+		},
+		{
+			name:            "rolls back on transient rotation error",
+			rotateErr:       errors.New("transient insert error"),
+			wantErr:         true,
+			wantTxCommitted: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tokenMock := &TokenServiceMock{
+				ValidateRefreshTokenFunc: func(raw string, now time.Time) (*token.Claims, error) {
+					return validClaims, nil
+				},
+				IssueRefreshTokenFunc: func(input token.IssueInput, now time.Time, absoluteExpiry time.Time) (string, time.Time, error) {
+					return "refresh_new", now.Add(24 * time.Hour), nil
+				},
+				IssueAccessTokenFunc: func(input token.IssueInput, now time.Time) (string, time.Time, error) {
+					return "access_new", now.Add(15 * time.Minute), nil
+				},
+			}
+			idMock := &IdentityServiceMock{
+				GetAuthVersionFunc: func(ctx context.Context, id identity.UserID) (int64, error) {
+					return 1, nil
+				},
+				RotateSessionFunc: func(ctx context.Context, req *identity.RotateSessionRequest) (*identity.Session, error) {
+					if tc.rotateErr != nil {
+						return nil, tc.rotateErr
+					}
+					return &identity.Session{ID: "sess_new"}, nil
+				},
+			}
+
+			txr := &rootTxTransactor{}
+			coord := NewTransactionalCoordinator(NewCoordinator(Dependencies{
+				TokenService:    tokenMock,
+				IdentityService: idMock,
+			}), txr)
+
+			_, err := coord.RefreshSession(context.Background(), &RefreshSessionRequest{
+				RefreshToken: "refresh_old",
+			})
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("RefreshSession error = %v, wantErr %v", err, tc.wantErr)
+			}
+			if tc.wantErrCode != "" && platErrors.CodeOf(err) != tc.wantErrCode {
+				t.Errorf("expected error code %v, got %v", tc.wantErrCode, platErrors.CodeOf(err))
+			}
+			if txr.ctrl == nil || !txr.ctrl.IsDone() {
+				t.Fatal("expected transaction controller to be completed")
+			}
+			committed := !txr.ctrl.IsAborted()
+			if committed != tc.wantTxCommitted {
+				t.Errorf("transaction committed = %v, want %v", committed, tc.wantTxCommitted)
 			}
 		})
 	}

@@ -23,6 +23,7 @@ type Coordinator interface {
 	ListSecurityEvents(ctx context.Context, filter identity.SecurityEventFilter) (*paging.Page[*identity.SecurityEvent], error)
 	Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error)
 	Logout(ctx context.Context, req *LogoutRequest) (*LogoutResponse, error)
+	// @transactional
 	RefreshSession(ctx context.Context, req *RefreshSessionRequest) (*RefreshSessionResponse, error)
 	// @transactional
 	Register(ctx context.Context, req *RegisterUserRequest) (*RegisterUserResponse, error)
@@ -31,18 +32,23 @@ type Coordinator interface {
 	// @transactional
 	ApproveUser(ctx context.Context, req *ApproveUserRequest) (*ApproveUserResponse, error)
 	RejectUser(ctx context.Context, req *RejectUserRequest) (*RejectUserResponse, error)
+	// @transactional
 	UnlockUser(ctx context.Context, req *UnlockUserRequest) (*UnlockUserResponse, error)
 	ListUsers(ctx context.Context, filter *ListUsersFilter) (*paging.Page[*identity.User], error)
 	UpdateUserRole(ctx context.Context, req *UpdateUserRoleRequest) (*UpdateUserRoleResponse, error)
 	ListActiveSessions(ctx context.Context, req *ListActiveSessionsRequest) (*ListActiveSessionsResponse, error)
+	// @transactional
 	RevokeSession(ctx context.Context, req *RevokeSessionRequest) (*RevokeSessionResponse, error)
 	// @transactional
 	RevokeAllSessions(ctx context.Context, req *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error)
 	ListMFAFactors(ctx context.Context, req *ListMFAFactorsRequest) (*ListMFAFactorsResponse, error)
+	// @transactional
 	DeleteMFAFactor(ctx context.Context, req *DeleteMFAFactorRequest) error
 	SetPrimaryMFAFactor(ctx context.Context, req *SetPrimaryMFAFactorRequest) error
 	SetupTOTP(ctx context.Context, req *SetupTOTPRequest) (*SetupTOTPResponse, error)
+	// @transactional
 	ConfirmTOTP(ctx context.Context, req *ConfirmTOTPRequest) (*ConfirmTOTPResponse, error)
+	// @transactional
 	RegenerateBackupCodes(ctx context.Context, req *RegenerateBackupCodesRequest) (*RegenerateBackupCodesResponse, error)
 	CreateAuthChallenge(ctx context.Context) (*CreateAuthChallengeResponse, error)
 	CreateDevice(ctx context.Context, req *CreateDeviceRequest) (*identity.Device, error)
