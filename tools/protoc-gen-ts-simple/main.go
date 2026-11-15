@@ -105,7 +105,7 @@ func generateEnum(g *protogen.GeneratedFile, enum *protogen.Enum) {
 
 func generateNestedEnums(g *protogen.GeneratedFile, msg *protogen.Message) {
 	for _, enum := range msg.Enums {
-		parentPrefix := getNestedPrefixForEnumParent(enum.Desc.Parent())
+		parentPrefix := nestedPrefix(enum.Desc.Parent())
 		name := parentPrefix + string(enum.Desc.Name())
 		writeComments(g, enum.Comments)
 		g.P("export type ", name, " = ")
@@ -127,7 +127,7 @@ func generateMessage(g *protogen.GeneratedFile, msg *protogen.Message) {
 		return
 	}
 
-	name := getNestedPrefix(msg) + string(msg.Desc.Name())
+	name := nestedPrefix(msg.Desc.Parent()) + string(msg.Desc.Name())
 
 	writeComments(g, msg.Comments)
 	if len(msg.Fields) == 0 {
@@ -386,24 +386,7 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 	}
 }
 
-func getNestedPrefix(msg *protogen.Message) string {
-	var parts []string
-	curr := msg.Desc.Parent()
-	for curr != nil {
-		if _, ok := curr.(protoreflect.MessageDescriptor); ok {
-			parts = append([]string{string(curr.Name())}, parts...)
-			curr = curr.Parent()
-		} else {
-			break
-		}
-	}
-	if len(parts) == 0 {
-		return ""
-	}
-	return strings.Join(parts, "_") + "_"
-}
-
-func getNestedPrefixForEnumParent(parent protoreflect.Descriptor) string {
+func nestedPrefix(parent protoreflect.Descriptor) string {
 	var parts []string
 	curr := parent
 	for curr != nil {
@@ -479,17 +462,13 @@ func mapMessageName(msg *protogen.Message) string {
 	if fullName == "google.protobuf.Struct" {
 		return "Record<string, unknown>"
 	}
-	return getNestedPrefix(msg) + string(msg.Desc.Name())
+	return nestedPrefix(msg.Desc.Parent()) + string(msg.Desc.Name())
 }
 
 func mapBaseType(field *protogen.Field) string {
 	switch field.Desc.Kind() {
 	case protoreflect.EnumKind:
-		var parentPrefix string
-		if parentDesc := field.Enum.Desc.Parent(); parentDesc != nil {
-			parentPrefix = getNestedPrefixForEnumParent(parentDesc)
-		}
-		return parentPrefix + string(field.Enum.Desc.Name())
+		return nestedPrefix(field.Enum.Desc.Parent()) + string(field.Enum.Desc.Name())
 	case protoreflect.MessageKind:
 		return mapMessageName(field.Message)
 	default:
@@ -512,13 +491,17 @@ func mapBaseTypeForKind(kind protoreflect.Kind, msg protoreflect.MessageDescript
 		return "number"
 	case protoreflect.MessageKind:
 		if msg != nil {
-			if string(msg.FullName()) == "google.protobuf.Timestamp" {
+			switch string(msg.FullName()) {
+			case "google.protobuf.Timestamp":
 				return "string"
-			}
-			if string(msg.FullName()) == "google.protobuf.FieldMask" {
+			case "google.protobuf.FieldMask":
 				return "{ paths?: string[] }"
+			case "google.protobuf.Empty":
+				return "Record<string, never>"
+			case "google.protobuf.Struct":
+				return "Record<string, unknown>"
 			}
-			return string(msg.Name())
+			return nestedPrefix(msg.Parent()) + string(msg.Name())
 		}
 		return "unknown"
 	default:

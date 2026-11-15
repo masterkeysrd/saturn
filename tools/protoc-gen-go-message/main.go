@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
+	"unicode"
 
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
@@ -61,8 +64,13 @@ func registerExtensions(types *protoregistry.Types, desc protoreflect.Descriptor
 }
 
 type topicMessage struct {
-	GoIdent protogen.GoIdent
-	Topic   string
+	Msg         *protogen.Message
+	GoIdent     protogen.GoIdent
+	Topic       string
+	Domain      string
+	DisplayName string
+	Description string
+	Schema      map[string]any
 }
 
 func generateFile(gen *protogen.Plugin, f *protogen.File, types *protoregistry.Types) {
@@ -71,9 +79,15 @@ func generateFile(gen *protogen.Plugin, f *protogen.File, types *protoregistry.T
 	for _, msg := range f.Messages {
 		topic := getTopic(msg, types)
 		if topic != "" {
+			domain, _, _ := strings.Cut(topic, ".")
 			messages = append(messages, topicMessage{
-				GoIdent: msg.GoIdent,
-				Topic:   topic,
+				Msg:         msg,
+				GoIdent:     msg.GoIdent,
+				Topic:       topic,
+				Domain:      domain,
+				DisplayName: displayNameFromIdent(msg.GoIdent.GoName),
+				Description: cleanDescription(msg.GoIdent.GoName, string(msg.Comments.Leading)),
+				Schema:      messageToJSONSchema(msg.Desc, make(map[protoreflect.FullName]bool)),
 			})
 		}
 	}
@@ -95,6 +109,7 @@ func generateFile(gen *protogen.Plugin, f *protogen.File, types *protoregistry.T
 	g.P(`	"context"`)
 	g.P()
 	g.P(`	"github.com/masterkeysrd/saturn/internal/platform/eventbus"`)
+	g.P(`	"github.com/masterkeysrd/saturn/internal/platform/workflow"`)
 	g.P(")")
 	g.P()
 
@@ -125,6 +140,30 @@ func generateFile(gen *protogen.Plugin, f *protogen.File, types *protoregistry.T
 		g.P("}")
 		g.P()
 	}
+
+	g.P("// WorkflowTriggerTopics returns workflow TriggerTopicDescriptors generated from protobuf event messages in this file.")
+	g.P("func WorkflowTriggerTopics() []workflow.TriggerTopicDescriptor {")
+	g.P("	return []workflow.TriggerTopicDescriptor{")
+	for _, msg := range messages {
+		typeName := msg.GoIdent.GoName
+		g.P("		{")
+		g.P("			Topic:         Topic", typeName, ",")
+		g.P("			Domain:        ", strconv.Quote(msg.Domain), ",")
+		g.P("			DisplayName:   ", strconv.Quote(msg.DisplayName), ",")
+		g.P("			Description:   ", strconv.Quote(msg.Description), ",")
+		g.P("			PayloadSchema: ", formatGoSchema(msg.Schema, 3), ",")
+		g.P("		},")
+	}
+	g.P("	}")
+	g.P("}")
+	g.P()
+
+	g.P("// RegisterWorkflowTriggerTopics registers all protobuf-defined event topics from this file onto reg.")
+	g.P("func RegisterWorkflowTriggerTopics(reg *workflow.Registry) {")
+	g.P("	for _, topic := range WorkflowTriggerTopics() {")
+	g.P("		reg.RegisterTriggerTopic(topic)")
+	g.P("	}")
+	g.P("}")
 }
 
 func getTopic(msg *protogen.Message, types *protoregistry.Types) string {
@@ -150,4 +189,222 @@ func getTopic(msg *protogen.Message, types *protoregistry.Types) string {
 		return true
 	})
 	return topic
+}
+
+func displayNameFromIdent(name string) string {
+	trimmed := strings.TrimSuffix(name, "Event")
+	if trimmed == "" {
+		trimmed = name
+	}
+	runes := []rune(trimmed)
+	var out strings.Builder
+	for i, r := range runes {
+		if i > 0 && unicode.IsUpper(r) {
+			prev := runes[i-1]
+			nextLower := i+1 < len(runes) && unicode.IsLower(runes[i+1])
+			if unicode.IsLower(prev) || unicode.IsDigit(prev) || (unicode.IsUpper(prev) && nextLower) {
+				out.WriteByte(' ')
+			}
+		}
+		out.WriteRune(r)
+	}
+	return out.String()
+}
+
+func cleanDescription(ident, raw string) string {
+	lines := strings.Split(strings.TrimSpace(raw), "\n")
+	parts := make([]string, 0, len(lines))
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			parts = append(parts, line)
+		}
+	}
+	text := strings.Join(parts, " ")
+	if text == "" {
+		return ""
+	}
+	if after, ok := strings.CutPrefix(text, ident+" is "); ok {
+		rest := after
+		if rest != "" {
+			return strings.ToUpper(rest[:1]) + rest[1:]
+		}
+	}
+	if after, ok := strings.CutPrefix(text, ident+" "); ok {
+		rest := after
+		if rest != "" {
+			return strings.ToUpper(rest[:1]) + rest[1:]
+		}
+	}
+	return text
+}
+
+type schemaProperty struct {
+	Name   string
+	Schema map[string]any
+}
+
+func messageToJSONSchema(md protoreflect.MessageDescriptor, visited map[protoreflect.FullName]bool) map[string]any {
+	fullName := md.FullName()
+	if visited[fullName] {
+		return map[string]any{"type": "object"}
+	}
+	visited[fullName] = true
+	defer delete(visited, fullName)
+
+	fields := md.Fields()
+	props := make([]schemaProperty, 0, fields.Len())
+	for i := 0; i < fields.Len(); i++ {
+		fd := fields.Get(i)
+		props = append(props, schemaProperty{
+			Name:   string(fd.Name()),
+			Schema: fieldToJSONSchema(fd, visited),
+		})
+	}
+	return map[string]any{
+		"type":       "object",
+		"properties": props,
+	}
+}
+
+func fieldToJSONSchema(fd protoreflect.FieldDescriptor, visited map[protoreflect.FullName]bool) map[string]any {
+	if fd.IsMap() {
+		return map[string]any{
+			"type":                 "object",
+			"additionalProperties": singularFieldToJSONSchema(fd.MapValue(), visited),
+		}
+	}
+	if fd.IsList() {
+		return map[string]any{
+			"type":  "array",
+			"items": singularFieldToJSONSchema(fd, visited),
+		}
+	}
+	return singularFieldToJSONSchema(fd, visited)
+}
+
+func singularFieldToJSONSchema(fd protoreflect.FieldDescriptor, visited map[protoreflect.FullName]bool) map[string]any {
+	switch fd.Kind() {
+	case protoreflect.BoolKind:
+		return map[string]any{"type": "boolean"}
+	case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Sfixed32Kind,
+		protoreflect.Uint32Kind, protoreflect.Fixed32Kind,
+		protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Sfixed64Kind,
+		protoreflect.Uint64Kind, protoreflect.Fixed64Kind:
+		return map[string]any{"type": "integer"}
+	case protoreflect.FloatKind, protoreflect.DoubleKind:
+		return map[string]any{"type": "number"}
+	case protoreflect.StringKind:
+		return map[string]any{"type": "string"}
+	case protoreflect.BytesKind:
+		return map[string]any{"type": "string", "format": "byte"}
+	case protoreflect.EnumKind:
+		vals := fd.Enum().Values()
+		enumNames := make([]string, 0, vals.Len())
+		for i := 0; i < vals.Len(); i++ {
+			enumNames = append(enumNames, string(vals.Get(i).Name()))
+		}
+		return map[string]any{
+			"type": "string",
+			"enum": enumNames,
+		}
+	case protoreflect.MessageKind, protoreflect.GroupKind:
+		msg := fd.Message()
+		switch msg.FullName() {
+		case "google.protobuf.Timestamp":
+			return map[string]any{"type": "string", "format": "date-time"}
+		case "google.protobuf.Duration":
+			return map[string]any{"type": "string"}
+		case "google.protobuf.Struct":
+			return map[string]any{"type": "object"}
+		case "google.protobuf.Value":
+			return map[string]any{}
+		case "google.protobuf.ListValue":
+			return map[string]any{"type": "array"}
+		case "google.protobuf.Any":
+			return map[string]any{"type": "object"}
+		case "google.protobuf.BoolValue":
+			return map[string]any{"type": "boolean"}
+		case "google.protobuf.StringValue", "google.protobuf.BytesValue":
+			return map[string]any{"type": "string"}
+		case "google.protobuf.Int32Value", "google.protobuf.UInt32Value",
+			"google.protobuf.Int64Value", "google.protobuf.UInt64Value":
+			return map[string]any{"type": "integer"}
+		case "google.protobuf.FloatValue", "google.protobuf.DoubleValue":
+			return map[string]any{"type": "number"}
+		default:
+			return messageToJSONSchema(msg, visited)
+		}
+	default:
+		return map[string]any{}
+	}
+}
+
+func formatGoSchema(m map[string]any, indent int) string {
+	if len(m) == 0 {
+		return "map[string]any{}"
+	}
+	pad := strings.Repeat("\t", indent)
+	innerPad := strings.Repeat("\t", indent+1)
+
+	keys := []string{"type", "format", "enum", "items", "additionalProperties", "properties"}
+	seen := make(map[string]bool, len(keys))
+	ordered := make([]string, 0, len(m))
+	for _, k := range keys {
+		if _, ok := m[k]; ok {
+			ordered = append(ordered, k)
+			seen[k] = true
+		}
+	}
+	for k := range m {
+		if !seen[k] {
+			ordered = append(ordered, k)
+		}
+	}
+
+	var b strings.Builder
+	b.WriteString("map[string]any{\n")
+	for _, k := range ordered {
+		v := m[k]
+		b.WriteString(innerPad)
+		b.WriteString(strconv.Quote(k))
+		b.WriteString(": ")
+		switch val := v.(type) {
+		case string:
+			b.WriteString(strconv.Quote(val))
+		case []string:
+			b.WriteString("[]string{")
+			for i, s := range val {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(strconv.Quote(s))
+			}
+			b.WriteString("}")
+		case map[string]any:
+			b.WriteString(formatGoSchema(val, indent+1))
+		case []schemaProperty:
+			if len(val) == 0 {
+				b.WriteString("map[string]any{}")
+			} else {
+				propPad := strings.Repeat("\t", indent+2)
+				b.WriteString("map[string]any{\n")
+				for _, p := range val {
+					b.WriteString(propPad)
+					b.WriteString(strconv.Quote(p.Name))
+					b.WriteString(": ")
+					b.WriteString(formatGoSchema(p.Schema, indent+2))
+					b.WriteString(",\n")
+				}
+				b.WriteString(innerPad)
+				b.WriteString("}")
+			}
+		default:
+			b.WriteString(fmt.Sprintf("%#v", val))
+		}
+		b.WriteString(",\n")
+	}
+	b.WriteString(pad)
+	b.WriteString("}")
+	return b.String()
 }
