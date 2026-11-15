@@ -938,6 +938,10 @@ func newStatementStoreMock(statements map[StatementID]*Statement, lines map[Stat
 	}
 }
 
+type noopEventPublisher struct{}
+
+func (noopEventPublisher) Publish(context.Context, string, any) error { return nil }
+
 func newInboxItemStoreMock(items map[string]*InboxItem) *InboxItemStoreMock {
 	if items == nil {
 		items = make(map[string]*InboxItem)
@@ -953,6 +957,14 @@ func newInboxItemStoreMock(items map[string]*InboxItem) *InboxItemStoreMock {
 				return nil, errors.New("inbox item not found")
 			}
 			return item, nil
+		},
+		GetByIdempotencyKeyFunc: func(ctx context.Context, rCtx Context, idempotencyKey string) (*InboxItem, error) {
+			for _, item := range items {
+				if item.IdempotencyKey != nil && *item.IdempotencyKey == idempotencyKey {
+					return item, nil
+				}
+			}
+			return nil, nil
 		},
 		ListBySpaceFunc: func(ctx context.Context, rCtx Context, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error) {
 			var list []*InboxItem

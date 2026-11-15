@@ -18,7 +18,8 @@ import (
 type InboxItemRecord struct {
 	ID                     string         `db:"id"`
 	SpaceID                string         `db:"space_id"`
-	IntegrationID          string         `db:"integration_id"`
+	FlowRunID              sql.NullString `db:"flow_run_id"`
+	IdempotencyKey         sql.NullString `db:"idempotency_key"`
 	Status                 string         `db:"status"`
 	DocType                string         `db:"doc_type"`
 	Amount                 sql.NullInt64  `db:"amount"`
@@ -38,8 +39,14 @@ type InboxItemRecord struct {
 
 // func toInboxItemDomain(db InboxItemRecord) *finance.InboxItem {
 func (ibi InboxItemRecord) toInboxItemDomain() *finance.InboxItem {
-	var accountID, budgetID, paymentID, transactionID, borrowingID *string
+	var flowRunID, idempotencyKey, accountID, budgetID, paymentID, transactionID, borrowingID *string
 	var linkType *finance.BorrowingLinkType
+	if ibi.FlowRunID.Valid {
+		flowRunID = new(ibi.FlowRunID.String)
+	}
+	if ibi.IdempotencyKey.Valid {
+		idempotencyKey = new(ibi.IdempotencyKey.String)
+	}
 	if ibi.AccountID.Valid {
 		accountID = new(ibi.AccountID.String)
 	}
@@ -74,7 +81,8 @@ func (ibi InboxItemRecord) toInboxItemDomain() *finance.InboxItem {
 
 	return &finance.InboxItem{
 		ID:                     ibi.ID,
-		IntegrationID:          ibi.IntegrationID,
+		FlowRunID:              flowRunID,
+		IdempotencyKey:         idempotencyKey,
 		Status:                 finance.InboxItemStatus(ibi.Status),
 		DocType:                finance.InboxItemDocType(ibi.DocType),
 		Amount:                 amount,
@@ -124,7 +132,8 @@ func (s *InboxItemStore) Insert(ctx context.Context, rCtx finance.Context, item 
 	ds := pgDialect.Insert(goqu.S("finance").Table("inbox_item")).Rows(goqu.Record{
 		"id":                       item.ID,
 		"space_id":                 string(rCtx.SpaceID()),
-		"integration_id":           item.IntegrationID,
+		"flow_run_id":              conv.StringPtr(item.FlowRunID),
+		"idempotency_key":          conv.StringPtr(item.IdempotencyKey),
 		"status":                   string(item.Status),
 		"doc_type":                 string(item.DocType),
 		"amount":                   conv.Ptr(item.Amount),
@@ -168,6 +177,26 @@ func (s *InboxItemStore) Get(ctx context.Context, rCtx finance.Context, id strin
 	return db.toInboxItemDomain(), nil
 }
 
+func (s *InboxItemStore) GetByIdempotencyKey(ctx context.Context, rCtx finance.Context, idempotencyKey string) (*finance.InboxItem, error) {
+	const op errors.Op = "domain/finance/storage.GetInboxItemByIdempotencyKey"
+	ds := pgDialect.From(goqu.S("finance").Table("inbox_item")).Select("*").Where(goqu.Ex{
+		"space_id":        string(rCtx.SpaceID()),
+		"idempotency_key": idempotencyKey,
+	})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	var db InboxItemRecord
+	if err := s.db.Get(ctx, &db, query, args...); err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return nil, nil
+		}
+		return nil, errors.E(op, err)
+	}
+	return db.toInboxItemDomain(), nil
+}
+
 func (s *InboxItemStore) ListBySpace(ctx context.Context, rCtx finance.Context, filter *finance.ListInboxItemsFilter) (*paging.Page[*finance.InboxItem], error) {
 	const op errors.Op = "domain/finance/storage.ListInboxItems"
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
@@ -177,7 +206,7 @@ func (s *InboxItemStore) ListBySpace(ctx context.Context, rCtx finance.Context, 
 	var ds *goqu.SelectDataset
 	if filter.ExcludePayload {
 		ds = pgDialect.From(goqu.S("finance").Table("inbox_item")).Select(
-			"id", "space_id", "integration_id", "status", "doc_type",
+			"id", "space_id", "flow_run_id", "idempotency_key", "status", "doc_type",
 			"amount", "currency", "vendor_name", "transaction_date",
 			"account_id", "budget_id", "scheduled_transaction_id", "transaction_id",
 			"create_time",

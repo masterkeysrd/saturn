@@ -341,6 +341,7 @@ type ListInboxItemsFilter struct {
 type InboxItemStore interface {
 	Insert(ctx context.Context, rCtx Context, item *InboxItem) error
 	Get(ctx context.Context, rCtx Context, id string) (*InboxItem, error)
+	GetByIdempotencyKey(ctx context.Context, rCtx Context, idempotencyKey string) (*InboxItem, error)
 	ListBySpace(ctx context.Context, rCtx Context, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error)
 	Update(ctx context.Context, rCtx Context, item *InboxItem) error
 	Delete(ctx context.Context, rCtx Context, id string) error

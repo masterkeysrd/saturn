@@ -19,11 +19,10 @@ const (
 type InboxItemDocType string
 
 const (
-	InboxItemDocInvoice            InboxItemDocType = "invoice"
-	InboxItemDocReceipt            InboxItemDocType = "receipt"
-	InboxItemDocBankNotification   InboxItemDocType = "bank_notification"
-	InboxItemDocUnknown            InboxItemDocType = "unknown"
-	InboxItemDocSystemVerification InboxItemDocType = "system_verification"
+	InboxItemDocInvoice          InboxItemDocType = "invoice"
+	InboxItemDocReceipt          InboxItemDocType = "receipt"
+	InboxItemDocBankNotification InboxItemDocType = "bank_notification"
+	InboxItemDocUnknown          InboxItemDocType = "unknown"
 )
 
 type BorrowingLinkType string
@@ -43,8 +42,6 @@ func ParseInboxItemDocType(s string) InboxItemDocType {
 		return InboxItemDocReceipt
 	case "BANK_NOTIFICATION":
 		return InboxItemDocBankNotification
-	case "SYSTEM_VERIFICATION":
-		return InboxItemDocSystemVerification
 	default:
 		return InboxItemDocUnknown
 	}
@@ -53,7 +50,8 @@ func ParseInboxItemDocType(s string) InboxItemDocType {
 // InboxItem represents a parsed inbound signal waiting in the staging queue.
 type InboxItem struct {
 	ID                     string             `json:"id"`
-	IntegrationID          string             `json:"integrationId"`
+	FlowRunID              *string            `json:"flowRunId,omitempty"`
+	IdempotencyKey         *string            `json:"idempotencyKey,omitempty"`
 	Status                 InboxItemStatus    `json:"status"`
 	DocType                InboxItemDocType   `json:"docType"`
 	Amount                 int64              `json:"amount"`
@@ -268,7 +266,8 @@ func (i *InboxItem) NewTransaction(spaceID SpaceID) (*Transaction, error) {
 
 // StageInboxItem defines parameters to draft and stage an inbox item.
 type StageInboxItem struct {
-	IntegrationID   string
+	FlowRunID       *string
+	IdempotencyKey  *string
 	DocType         InboxItemDocType
 	Vendor          string
 	Amount          int64

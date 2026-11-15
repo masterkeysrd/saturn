@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
@@ -31,6 +32,7 @@ type Dependencies struct {
 	InboxItemStore            InboxItemStore
 	InstitutionStore          InstitutionStore
 	StatementStore            StatementStore
+	Events                    EventPublisher
 }
 
 // Service implements the domain-level finance operations.
@@ -954,6 +956,16 @@ func (s *Service) ConfirmScheduledTransaction(ctx context.Context, rCtx Context,
 		return nil, fmt.Errorf("failed to update scheduled transaction status: %w", err)
 	}
 
+	if err := s.publishEvent(ctx, rCtx.SpaceID(), TopicTransactionCreated, &TransactionCreatedEvent{Transaction: txn}); err != nil {
+		return nil, fmt.Errorf("publish transaction created event: %w", err)
+	}
+	if err := s.publishEvent(ctx, rCtx.SpaceID(), TopicScheduledTransactionPaid, &ScheduledTransactionPaidEvent{
+		ScheduledTransaction: payment,
+		TransactionID:        new(string(txn.ID)),
+	}); err != nil {
+		return nil, fmt.Errorf("publish scheduled transaction paid event: %w", err)
+	}
+
 	return txn, nil
 }
 
@@ -1005,6 +1017,13 @@ func (s *Service) MatchScheduledTransaction(ctx context.Context, rCtx Context, r
 	payment.UpdateTime = time.Now().UTC()
 	if err := s.deps.ScheduledTransactionStore.Update(ctx, rCtx, payment); err != nil {
 		return nil, fmt.Errorf("failed to update scheduled transaction status: %w", err)
+	}
+
+	if err := s.publishEvent(ctx, rCtx.SpaceID(), TopicScheduledTransactionPaid, &ScheduledTransactionPaidEvent{
+		ScheduledTransaction: payment,
+		TransactionID:        new(string(txn.ID)),
+	}); err != nil {
+		return nil, fmt.Errorf("publish scheduled transaction paid event: %w", err)
 	}
 
 	return txn, nil
@@ -1076,6 +1095,12 @@ func (s *Service) GenerateScheduledTransactions(ctx context.Context) error {
 				return err
 			}
 
+			if err := s.publishEvent(ctx, item.SpaceID, TopicScheduledTransactionCreated, &ScheduledTransactionCreatedEvent{
+				ScheduledTransaction: payment,
+			}); err != nil {
+				return fmt.Errorf("publish scheduled transaction created event: %w", err)
+			}
+
 			if err := re.AdvanceNextDueDate(); err != nil {
 				return err
 			}
@@ -1142,6 +1167,10 @@ func (s *Service) createTransaction(ctx context.Context, rCtx Context, txn *Tran
 		if err := s.adjustAccountBalance(ctx, rCtx, *txn.AccountID, txn.ImpactAmount(), txn.Type, false); err != nil {
 			return fmt.Errorf("failed to adjust account balance: %w", err)
 		}
+	}
+
+	if err := s.publishEvent(ctx, rCtx.SpaceID(), TopicTransactionCreated, &TransactionCreatedEvent{Transaction: txn}); err != nil {
+		return fmt.Errorf("publish transaction created event: %w", err)
 	}
 
 	return nil
@@ -2112,6 +2141,16 @@ func (s *Service) StageInboxItem(ctx context.Context, rCtx Context, req *StageIn
 		return nil, err
 	}
 
+	if req.IdempotencyKey != nil && *req.IdempotencyKey != "" {
+		existing, err := s.deps.InboxItemStore.GetByIdempotencyKey(ctx, rCtx, *req.IdempotencyKey)
+		if err != nil {
+			return nil, fmt.Errorf("lookup inbox item idempotency: %w", err)
+		}
+		if existing != nil {
+			return existing, nil
+		}
+	}
+
 	// 1. Generate unique inbox item ID using "ibx_" prefix
 	ibxID, err := id.Generate("ibx_")
 	if err != nil {
@@ -2158,7 +2197,8 @@ func (s *Service) StageInboxItem(ctx context.Context, rCtx Context, req *StageIn
 	// 5. Create and insert InboxItem
 	item := &InboxItem{
 		ID:              ibxID,
-		IntegrationID:   req.IntegrationID,
+		FlowRunID:       req.FlowRunID,
+		IdempotencyKey:  req.IdempotencyKey,
 		Status:          InboxItemPending,
 		DocType:         req.DocType,
 		Amount:          req.Amount,
@@ -2174,6 +2214,10 @@ func (s *Service) StageInboxItem(ctx context.Context, rCtx Context, req *StageIn
 
 	if err := s.deps.InboxItemStore.Insert(ctx, rCtx, item); err != nil {
 		return nil, fmt.Errorf("insert inbox item: %w", err)
+	}
+
+	if err := s.publishEvent(ctx, rCtx.SpaceID(), TopicInboxItemCreated, &InboxItemCreatedEvent{InboxItem: item}); err != nil {
+		return nil, fmt.Errorf("publish inbox item created event: %w", err)
 	}
 
 	return item, nil
@@ -2262,26 +2306,31 @@ func (s *Service) ApproveInboxItem(ctx context.Context, rCtx Context, id string)
 		return nil, err
 	}
 
+	var resolved *InboxItem
 	switch {
-	case item.DocType == InboxItemDocSystemVerification:
-		return s.approveSystemVerification(ctx, rCtx, item)
 	case item.TransactionID != nil && *item.TransactionID != "":
-		return s.approveLinkedTransaction(ctx, rCtx, item)
+		resolved, err = s.approveLinkedTransaction(ctx, rCtx, item)
 	case item.ScheduledTransactionID != nil && *item.ScheduledTransactionID != "":
-		return s.approveScheduledTransaction(ctx, rCtx, item)
+		resolved, err = s.approveScheduledTransaction(ctx, rCtx, item)
 	case item.DocType == InboxItemDocInvoice:
-		return s.approveStagedInvoice(ctx, rCtx, item)
+		resolved, err = s.approveStagedInvoice(ctx, rCtx, item)
 	default:
-		return s.approveStandalonePromotion(ctx, rCtx, item)
+		resolved, err = s.approveStandalonePromotion(ctx, rCtx, item)
 	}
+	if err != nil {
+		return nil, err
+	}
+	if err := s.publishEvent(ctx, rCtx.SpaceID(), TopicInboxItemApproved, &InboxItemApprovedEvent{InboxItem: resolved}); err != nil {
+		return nil, fmt.Errorf("publish inbox item approved event: %w", err)
+	}
+	return resolved, nil
 }
 
-func (s *Service) approveSystemVerification(ctx context.Context, rCtx Context, item *InboxItem) (*InboxItem, error) {
-	item.MarkResolved(nil)
-	if err := s.deps.InboxItemStore.Update(ctx, rCtx, item); err != nil {
-		return nil, fmt.Errorf("resolve verification inbox item: %w", err)
+func (s *Service) publishEvent(ctx context.Context, spaceID SpaceID, topic string, event any) error {
+	if _, ok := auth.SpaceIDFromContext(ctx); !ok && spaceID != "" {
+		ctx = auth.WithSpaceID(ctx, string(spaceID))
 	}
-	return item, nil
+	return s.deps.Events.Publish(ctx, topic, event)
 }
 
 func (s *Service) approveLinkedTransaction(ctx context.Context, rCtx Context, item *InboxItem) (*InboxItem, error) {
@@ -2370,6 +2419,11 @@ func (s *Service) approveScheduledTransaction(ctx context.Context, rCtx Context,
 		if err := s.deps.ScheduledTransactionStore.Update(ctx, rCtx, payment); err != nil {
 			return nil, fmt.Errorf("update scheduled transaction: %w", err)
 		}
+		if err := s.publishEvent(ctx, rCtx.SpaceID(), TopicScheduledTransactionUpdated, &ScheduledTransactionUpdatedEvent{
+			ScheduledTransaction: payment,
+		}); err != nil {
+			return nil, fmt.Errorf("publish scheduled transaction updated event: %w", err)
+		}
 
 		item.Status = InboxItemResolved
 		if err := s.deps.InboxItemStore.Update(ctx, rCtx, item); err != nil {
@@ -2405,6 +2459,11 @@ func (s *Service) approveStagedInvoice(ctx context.Context, rCtx Context, item *
 
 	if err := s.deps.ScheduledTransactionStore.Create(ctx, rCtx, payment); err != nil {
 		return nil, fmt.Errorf("create scheduled transaction: %w", err)
+	}
+	if err := s.publishEvent(ctx, rCtx.SpaceID(), TopicScheduledTransactionCreated, &ScheduledTransactionCreatedEvent{
+		ScheduledTransaction: payment,
+	}); err != nil {
+		return nil, fmt.Errorf("publish scheduled transaction created event: %w", err)
 	}
 
 	item.Status = InboxItemResolved

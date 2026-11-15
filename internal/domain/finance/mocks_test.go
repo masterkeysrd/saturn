@@ -12,6 +12,55 @@ import (
 )
 
 // Compile-time interface assertion.
+var _ EventPublisher = (*EventPublisherMock)(nil)
+
+// EventPublisherMock is a mock implementation of EventPublisher.
+type EventPublisherMock struct {
+	// PublishFunc mocks the Publish method.
+	PublishFunc func(ctx context.Context, topic string, event any) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Publish []struct {
+			Ctx   context.Context
+			Topic string
+			Event any
+		}
+	}
+	lockPublish sync.RWMutex
+}
+
+// Publish calls PublishFunc.
+func (mock *EventPublisherMock) Publish(ctx context.Context, topic string, event any) error {
+	if mock.PublishFunc == nil {
+		panic("EventPublisherMock.PublishFunc: method is nil but EventPublisher.Publish was just called")
+	}
+	mock.lockPublish.Lock()
+	mock.calls.Publish = append(mock.calls.Publish, struct {
+		Ctx   context.Context
+		Topic string
+		Event any
+	}{
+		Ctx:   ctx,
+		Topic: topic,
+		Event: event,
+	})
+	mock.lockPublish.Unlock()
+	return mock.PublishFunc(ctx, topic, event)
+}
+
+// PublishCalls returns all calls made to Publish.
+func (mock *EventPublisherMock) PublishCalls() []struct {
+	Ctx   context.Context
+	Topic string
+	Event any
+} {
+	mock.lockPublish.RLock()
+	defer mock.lockPublish.RUnlock()
+	return mock.calls.Publish
+}
+
+// Compile-time interface assertion.
 var _ SettingsClient = (*SettingsClientMock)(nil)
 
 // SettingsClientMock is a mock implementation of SettingsClient.
@@ -3302,6 +3351,9 @@ type InboxItemStoreMock struct {
 	// GetFunc mocks the Get method.
 	GetFunc func(ctx context.Context, rCtx Context, id string) (*InboxItem, error)
 
+	// GetByIdempotencyKeyFunc mocks the GetByIdempotencyKey method.
+	GetByIdempotencyKeyFunc func(ctx context.Context, rCtx Context, idempotencyKey string) (*InboxItem, error)
+
 	// ListBySpaceFunc mocks the ListBySpace method.
 	ListBySpaceFunc func(ctx context.Context, rCtx Context, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error)
 
@@ -3323,6 +3375,11 @@ type InboxItemStoreMock struct {
 			RCtx Context
 			Id   string
 		}
+		GetByIdempotencyKey []struct {
+			Ctx            context.Context
+			RCtx           Context
+			IdempotencyKey string
+		}
 		ListBySpace []struct {
 			Ctx    context.Context
 			RCtx   Context
@@ -3339,11 +3396,12 @@ type InboxItemStoreMock struct {
 			Id   string
 		}
 	}
-	lockInsert      sync.RWMutex
-	lockGet         sync.RWMutex
-	lockListBySpace sync.RWMutex
-	lockUpdate      sync.RWMutex
-	lockDelete      sync.RWMutex
+	lockInsert              sync.RWMutex
+	lockGet                 sync.RWMutex
+	lockGetByIdempotencyKey sync.RWMutex
+	lockListBySpace         sync.RWMutex
+	lockUpdate              sync.RWMutex
+	lockDelete              sync.RWMutex
 }
 
 // Insert calls InsertFunc.
@@ -3404,6 +3462,36 @@ func (mock *InboxItemStoreMock) GetCalls() []struct {
 	mock.lockGet.RLock()
 	defer mock.lockGet.RUnlock()
 	return mock.calls.Get
+}
+
+// GetByIdempotencyKey calls GetByIdempotencyKeyFunc.
+func (mock *InboxItemStoreMock) GetByIdempotencyKey(ctx context.Context, rCtx Context, idempotencyKey string) (*InboxItem, error) {
+	if mock.GetByIdempotencyKeyFunc == nil {
+		panic("InboxItemStoreMock.GetByIdempotencyKeyFunc: method is nil but InboxItemStore.GetByIdempotencyKey was just called")
+	}
+	mock.lockGetByIdempotencyKey.Lock()
+	mock.calls.GetByIdempotencyKey = append(mock.calls.GetByIdempotencyKey, struct {
+		Ctx            context.Context
+		RCtx           Context
+		IdempotencyKey string
+	}{
+		Ctx:            ctx,
+		RCtx:           rCtx,
+		IdempotencyKey: idempotencyKey,
+	})
+	mock.lockGetByIdempotencyKey.Unlock()
+	return mock.GetByIdempotencyKeyFunc(ctx, rCtx, idempotencyKey)
+}
+
+// GetByIdempotencyKeyCalls returns all calls made to GetByIdempotencyKey.
+func (mock *InboxItemStoreMock) GetByIdempotencyKeyCalls() []struct {
+	Ctx            context.Context
+	RCtx           Context
+	IdempotencyKey string
+} {
+	mock.lockGetByIdempotencyKey.RLock()
+	defer mock.lockGetByIdempotencyKey.RUnlock()
+	return mock.calls.GetByIdempotencyKey
 }
 
 // ListBySpace calls ListBySpaceFunc.

@@ -16,7 +16,6 @@ func TestParseInboxItemDocType(t *testing.T) {
 		{"invoice", InboxItemDocInvoice},
 		{"RECEIPT", InboxItemDocReceipt},
 		{"bank_notification", InboxItemDocBankNotification},
-		{"SYSTEM_VERIFICATION", InboxItemDocSystemVerification},
 		{"unknown_type", InboxItemDocUnknown},
 		{"", InboxItemDocUnknown},
 	}
