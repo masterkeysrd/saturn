@@ -2,7 +2,7 @@
 
 **Saturn personal life operating system**
 
-Saturn is a multi-tenant personal Life Operating System (Life OS) that helps you manage finances, habits, calendar events, focus sessions (Pomodoros), tasks, and notes — all organized around the concept of **Spaces**. Whether you're managing work, personal life, or side projects, Saturn keeps everything in its place.
+Saturn is a multi-tenant personal Life Operating System (Life OS) that helps you manage finances, calendars, email, and automated AI workflows — all organized around isolated **Spaces**. Whether you're managing personal finances, household budgets, or side projects, Saturn keeps everything structured and in sync across Web and Mobile.
 
 <div align="center">
 
@@ -11,9 +11,9 @@ Saturn is a multi-tenant personal Life Operating System (Life OS) that helps you
 [![Go Reference](https://pkg.go.dev/badge/github.com/masterkeysrd/saturn.svg)](https://pkg.go.dev/github.com/masterkeysrd/saturn)
 [![Go Report Card](https://goreportcard.com/badge/github.com/masterkeysrd/saturn)](https://goreportcard.com/report/github.com/masterkeysrd/saturn)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.26%2B-blue.svg)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.27%2B-blue.svg)](https://go.dev/)
 [![gRPC](https://img.shields.io/badge/gRPC-enabled-blue.svg)](https://grpc.io/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15%2B-teal.svg)](https://www.postgresql.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2B-teal.svg)](https://www.postgresql.org/)
 
 </div>
 
@@ -23,88 +23,96 @@ Saturn is a multi-tenant personal Life Operating System (Life OS) that helps you
 
 | Feature | Description |
 | --- | --- |
-| **Spaces** | Multi-tenant architecture — organize everything into isolated workspaces (e.g., Work, Personal, Side Projects) |
-| **Personal Finances** | Track income, expenses, budgets, and financial goals |
-| **Habits** | Build and track daily/weekly habits with streaks and analytics |
-| **Calendar** | Manage events, appointments, and schedules |
-| **Pomodoro** | Focus timer with customizable intervals and session tracking |
-| **Tasks** | Create, organize, and prioritize your to-dos |
-| **Notes** | Quick note-taking with rich text support |
+| **Identity & Security** | Ed25519 JWT access/refresh rotation, TOTP MFA & recovery codes, hardware device biometrics, scoped API keys (`sat_*`), and audit logs |
+| **Spaces** | Multi-tenant workspaces with role-based access (`owner`, `admin`, `member`, `viewer`) and isolated settings |
+| **Personal Finances** | Accounts, multi-currency exchange rates, budgets & fiscal periods, expenses/incomes/transfers, PDF statement reconciliation, recurring & scheduled transactions, borrowings, and insights |
+| **Calendar** | Multi-calendar management, recurring events (RRULE), and Google Calendar OAuth sync |
+| **Mail** | Unified inbox, threads, rich-text composer, attachments, and Gmail OAuth sync |
+| **Workflows & AI Agents** | Event-driven automation pipelines triggered by domain events or cron schedules with LLM agent steps |
+| **Platform & Admin** | Postgres-backed EventBus & Scheduler, local/S3 database backups, and system administration |
 
 ## 🏗 Architecture
 
-Saturn follows a clean, modular architecture:
+Saturn follows a clean hexagonal + CQRS architecture:
 
 ```
-┌─────────────────────────────────────────────┐
-│              Clients (Web / CLI / Mobile)     │
-└────────────────────┬────────────────────────┘
-                     │  gRPC + REST (gRPC Gateway)
-┌────────────────────▼────────────────────────┐
-│            Saturn API Server (Go)            │
-│  ┌──────────┬──────────┬──────────┐         │
-│  │ Finance  │ Habits   │ Calendar │ ...      │
-│  └──────────┴──────────┴──────────┘         │
-│              │        │        │              │
-│  ┌───────────▼────────▼────────▼──────────┐  │
-│  │         Space-aware middleware          │  │
-│  └───────────────────────────────────────┘  │
-└────────────────────┬────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────┐
-│           PostgreSQL (Multi-tenant)          │
-└─────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│      Clients (Web React / Mobile Expo / Go CLI)        │
+└───────────────────────────┬────────────────────────────┘
+                            │  HTTP REST (/api/v1/*) & gRPC
+┌───────────────────────────▼────────────────────────────┐
+│             Saturn Server (Go 1.27)                    │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ Transport Interceptors (Auth, RateLimit, Space)  │  │
+│  └────────────────────────┬─────────────────────────┘  │
+│             ┌─────────────┴─────────────┐              │
+│  ┌──────────▼──────────┐     ┌──────────▼───────────┐  │
+│  │ Coordinators (App)  │     │ Aggregators (CQRS)   │  │
+│  └──────────┬──────────┘     └──────────┬───────────┘  │
+│             └─────────────┬─────────────┘              │
+│  ┌────────────────────────▼─────────────────────────┐  │
+│  │        Pure Domain Services & Storage Ports      │  │
+│  └────────────────────────┬─────────────────────────┘  │
+└───────────────────────────┼────────────────────────────┘
+                            │
+┌───────────────────────────▼────────────────────────────┐
+│               PostgreSQL (Multi-tenant)                │
+└────────────────────────────────────────────────────────┘
 ```
 
-- **Backend**: Go with gRPC for internal services and gRPC Gateway for RESTful HTTP APIs
-- **Database**: PostgreSQL with row-level isolation per Space
-- **Clients**: Web (React/Vue TBD), CLI (Go), Mobile (native / Flutter TBD)
+- **Backend**: Go 1.27 with gRPC over Unix socket and gRPC-Gateway HTTP REST API (`/api/v1/*`)
+- **Database**: PostgreSQL 16+ with Goose migrations and space-scoped isolation
+- **Web (`apps/web`)**: React 19, Vite, TypeScript, Tailwind CSS, TanStack Query
+- **Mobile (`apps/mobile`)**: React Native / Expo Router (iOS & Android)
+- **Shared Packages (`packages/*`)**: `@saturn/core`, `@saturn/hooks`, `@saturn/schemas`, `@saturn/api`
 
 ## CLI
 
 Saturn ships with a CLI built on [Cobra](https://github.com/spf13/cobra) and [Viper](https://github.com/spf13/viper).
 
-### `saturn` — Root Command
-
-The entry point for managing and running the Saturn service.
-
 ### `saturn serve` — Start the Service
 
-Starts the gRPC server and gRPC-Gateway HTTP REST API.
+Starts the gRPC server, background EventBus/Scheduler workers, and gRPC-Gateway HTTP server (with embedded Web UI).
 
 ```bash
 saturn serve [flags]
 ```
 
-#### Flags
-
-| Flag | Description | Default |
-| --- | --- | --- |
-| `--grpc-socket` | gRPC Unix socket path | `/tmp/saturn-identity.sock` |
-| `--gateway-addr` | HTTP gateway listen address | `:8080` |
-| `--shutdown-timeout` | Graceful shutdown timeout | `10s` |
-| `--log-level` | Log level (`debug`, `info`, `warn`, `error`) | `info` |
-
 #### Configuration
 
-Configuration is loaded in this priority order: **flags > env vars > config file > defaults**.
-
-**Environment Variables** (prefix: `SATURN_`):
+Configuration is loaded in priority order: **flags > env vars (`SATURN_*`) > `saturn.yaml` > defaults**.
 
 | Variable | Description | Default |
 | --- | --- | --- |
+| `SATURN_DB_HOST` | PostgreSQL host | `localhost` |
+| `SATURN_DB_PORT` | PostgreSQL port | `5432` |
+| `SATURN_DB_USER` | Database user | `saturn` |
+| `SATURN_DB_PASSWORD` | Database password | `saturn` |
+| `SATURN_DB_NAME` | Database name | `saturn` |
+| `SATURN_DB_SSL_MODE` | PostgreSQL SSL mode (`disable`, `require`, `verify-ca`, `verify-full`) | `require` |
 | `SATURN_GRPC_SOCKET` | gRPC Unix socket path | `/tmp/saturn-identity.sock` |
 | `SATURN_GATEWAY_ADDR` | HTTP gateway listen address | `:8080` |
+| `SATURN_GATEWAY_ROUTE_PREFIX` | REST API route prefix | `/api/v1` |
+| `SATURN_GATEWAY_COOKIE_SECURE` | Set `Secure` attribute on auth cookies | `true` |
+| `SATURN_GATEWAY_TRUSTED_PROXIES` | Comma-separated trusted reverse-proxy CIDRs/IPs | `""` |
+| `SATURN_AUTH_RATE_LIMIT_ENABLED` | Enable declarative YAML rate-limiting interceptor | `true` |
+| `SATURN_SECURITY_ENCRYPTION_KEY` | 32-byte key for encrypting MFA secrets and OAuth tokens | `""` |
 | `SATURN_SHUTDOWN_TIMEOUT` | Graceful shutdown timeout | `10s` |
-| `SATURN_LOG_LEVEL` | Log level | `info` |
+| `SATURN_LOG_LEVEL` | Log level (`debug`, `info`, `warn`, `error`) | `info` |
+| `SATURN_SWAGGER_ENABLED` | Serve interactive Swagger UI at `/swagger/` | `false` |
 
 **Config File**: `saturn.yaml` (current directory or `$HOME/.config/saturn/saturn.yaml`)
 
 ```yaml
+db:
+  host: localhost
+  port: 5432
+  ssl_mode: disable
 grpc:
   socket: /tmp/saturn-identity.sock
 gateway:
   addr: ":8080"
+  cookie_secure: false
 shutdown:
   timeout: 10s
 log:
@@ -113,16 +121,20 @@ log:
 
 ### Prerequisites
 
-- [Go](https://go.dev/) 1.26+
-- [PostgreSQL](https://www.postgresql.org/) 15+
-- [Docker](https://www.docker.com/) (optional, for PostgreSQL)
+- [Go](https://go.dev/) 1.27+
+- [Node.js](https://nodejs.org/) 26+
+- [PostgreSQL](https://www.postgresql.org/) 16+
+- [Docker](https://www.docker.com/) (optional, for PostgreSQL / full compose stack)
 
 ### Quick Start
 
 ```bash
 # Clone the repository
-git clone https://github.com/<you>/saturn.git
+git clone https://github.com/masterkeysrd/saturn.git
 cd saturn
+
+# Install JS workspace dependencies
+npm ci
 
 # Start PostgreSQL (via Docker)
 docker run -d \
@@ -131,21 +143,30 @@ docker run -d \
   -e POSTGRES_PASSWORD=saturn \
   -e POSTGRES_DB=saturn \
   -p 5432:5432 \
-  postgres:15
+  postgres:16-alpine
 
-# Run migrations
-go run ./cmd/saturn migrate up
+# Run migrations (local dev without TLS)
+SATURN_DB_SSL_MODE=disable go run ./cmd/saturn migrate up
 
-# Start the API server
-go run ./cmd/saturn serve
+# Build web assets and start the API server
+make web-build
+SATURN_DB_SSL_MODE=disable SATURN_GATEWAY_COOKIE_SECURE=false go run ./cmd/saturn serve
 
 # (Optional) Create an admin user
-go run ./cmd/saturn admin create-user --email admin@example.com --username admin --name Admin --role admin
+SATURN_DB_SSL_MODE=disable go run ./cmd/saturn admin create-user \
+  --email admin@example.com --username admin --name Admin --role admin
+```
+
+For frontend or mobile hot-reload development:
+
+```bash
+make web-dev     # Vite dev server (apps/web)
+make mobile-dev  # Expo Metro bundler (apps/mobile)
 ```
 
 ### Docker
 
-A multi-stage Dockerfile is provided at `build/saturn/Dockerfile`. It produces a minimal, non-root runtime image with the `saturn` CLI pre-installed.
+A multi-stage Dockerfile is provided at `build/saturn/Dockerfile`. It builds the Web UI with Node 26, compiles the static Go 1.27 binary with embedded UI assets, and runs as a non-root user.
 
 ```bash
 # Build the image
@@ -156,63 +177,52 @@ docker build -t saturn:v0.1.0 \
    --build-arg VERSION=v0.1.0 \
    -f build/saturn/Dockerfile .
 
-# Run (default: starts the service)
+# Run (or use `make compose-up` for full stack with PostgreSQL)
 docker run --name saturn -p 8080:8080 saturn
-
-# Override with a different command
-docker run saturn migrate up
-docker run saturn serve --log-level debug
 ```
 
-The image exposes port **8080** (HTTP gateway). The gRPC server uses a Unix socket inside the container.
-
-### Environment Variables
-
-| Variable | Description | Default |
-| --- | --- | --- |
-| `DB_HOST` | PostgreSQL host | `localhost` |
-| `DB_PORT` | PostgreSQL port | `5432` |
-| `DB_USER` | Database user | `saturn` |
-| `DB_PASSWORD` | Database password | `saturn` |
-| `DB_NAME` | Database name | `saturn` |
-| `SERVER_PORT` | API server port | `8080` |
-| `GRPC_PORT` | gRPC server port | `9090` |
+The image exposes port **8080** (HTTP gateway), including `/healthz` (liveness) and `/readyz` (database readiness).
 
 ## 🧱 Project Structure
 
 ```
 saturn/
-├── api/                  # Protocol Buffer definitions, service configs, and OpenAPI specs
+├── api/                  # Protocol Buffer definitions, declarative service YAMLs, and OpenAPI specs
 ├── apis/                 # Generated Go packages (Protobuf, gRPC, Gateway, SDK)
 ├── apps/                 # Application clients
-│   └── web/              # Web application frontend (React, Vite, Tailwind CSS)
-├── bin/                  # Compiled local binaries and protoc plugins
+│   ├── web/              # Web frontend (React, Vite, Tailwind CSS)
+│   └── mobile/           # Mobile app (Expo, React Native)
+├── packages/             # Shared TypeScript workspace packages
+│   ├── api/              # Generated TypeScript clients, React Query hooks & SaturnApiError
+│   ├── core/             # Zero-dependency domain math, timezone, JWT & formatting helpers
+│   ├── hooks/            # Shared React context providers & custom hooks
+│   └── schemas/          # Shared Zod validation schemas
 ├── build/                # Container and packaging definitions (Dockerfiles)
-├── cmd/                  # Application entry points
-│   └── saturn/           # Unified CLI (serve, migrate, admin, backup)
+├── cmd/saturn/           # Unified CLI (serve, migrate, admin)
 ├── deployments/          # Deployment configurations (Docker Compose)
-├── internal/             # Internal application implementation
-│   ├── aggregator/       # Cross-domain aggregation logic (finance)
-│   ├── application/      # Use cases and application services (agent, finance, iam, integration, space)
-│   ├── domain/           # Core domain models and storage (finance, identity, space)
-│   ├── foundation/       # Foundational security and authorization (auth)
-│   ├── platform/         # Reusable platform subsystems (agent, backup, scheduler, shutdown, etc.)
-│   └── transport/        # Network transport handlers (gRPC, HTTP gateway, webhooks)
-├── migrations/           # Database schema migrations (PostgreSQL)
-├── tests/                # Integration and end-to-end test suites
-└── tools/                # Protoc plugins and development tooling
+├── docs/conventions/     # Engineering conventions across backend, API, testing, web, mobile
+├── internal/             # Internal Go backend
+│   ├── aggregator/       # Read-only CQRS query projections
+│   ├── application/      # Use-case coordinators & transaction boundaries
+│   ├── domain/           # Pure domain models, services & storage ports (+ storage/ adapters)
+│   ├── foundation/       # Principal & Space context propagation (auth)
+│   ├── platform/         # EventBus, Scheduler, Workflow, Backup, Errors, Settings, etc.
+│   └── transport/        # gRPC handlers/interceptors, HTTP gateway, webhooks & scheduler runners
+├── migrations/           # PostgreSQL Goose migrations
+├── tests/                # Integration and end-to-end test suites (`//go:build integration`)
+└── tools/                # Custom codegen & analysis tools (mockgen, txgen, loggen, covercheck, protoc plugins)
 ```
 
 ## 📖 API Overview
 
-Saturn exposes both **gRPC** and **REST** endpoints. The API is organized by domain, with requests scoped to a Space via a `Space-Id` header or path parameter.
+Saturn exposes both **gRPC** and **REST** endpoints under `/api/v1/*`. Space-scoped endpoints require the `Space-Id` header (or auto-resolve for single-space scoped API keys).
 
 ### Example: Create a Space
 
 ```bash
-curl -X POST http://localhost:8080/v1/spaces \
+curl -X POST http://localhost:8080/api/v1/spaces \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <session-token>" \
+  -H "Authorization: Bearer <access-token>" \
   -d '{
     "name": "Personal",
     "description": "Personal workspace"
@@ -223,25 +233,12 @@ Interactive Swagger documentation is available by starting the server with `--sw
 
 ## 🤝 Contributing
 
-Contributions are welcome! Here's how to get started:
+Contributions are welcome! Please review [`AGENTS.md`](./AGENTS.md) and [`docs/conventions/`](./docs/conventions/) before making changes:
 
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/your-feature`)
-3. **Commit** your changes (`git commit -m 'feat: add new feature'`)
-4. **Push** to the branch (`git push origin feature/your-feature`)
-5. Open a **Pull Request**
-
-### Development Guidelines
-
-- Follow [Go Code Review Comments](https://go.dev/doc/code-review)
-- Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages
-- Write tests for new features and bug fixes
-- Update documentation as needed
-
-### Getting Help
-
-- Open an [Issue](../../issues) for bugs or feature requests
-- Reach out via the project's communication channels
+1. **Fork** the repository and create a feature branch (`git checkout -b feat/your-feature`)
+2. Run formatting, linters, typechecks, and tests (`make lint && make test-unit && make web-test`)
+3. Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages
+4. Open a **Pull Request**
 
 ## 📄 License
 
