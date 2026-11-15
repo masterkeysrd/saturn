@@ -70,8 +70,8 @@ func ToStatus(err error) *status.Status {
 		if s, ok := status.FromError(err); ok {
 			return s
 		}
-		// Otherwise default unknown status
-		return status.New(codes.Unknown, err.Error())
+		// Otherwise default unknown status (sanitized to avoid leaking internal details)
+		return status.New(codes.Unknown, "An unexpected internal error occurred. Please try again later.")
 	}
 
 	kind := errors.KindOf(err)

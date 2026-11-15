@@ -61,11 +61,19 @@ func TestToStatus_And_ToGRPC(t *testing.T) {
 		}
 	})
 
-	t.Run("plain standard error defaults to Unknown", func(t *testing.T) {
-		plain := errors.New("raw standard error")
+	t.Run("plain standard error defaults to sanitized Unknown", func(t *testing.T) {
+		plain := errors.New("pq: raw database connection error")
 		st := interceptors.ToStatus(plain)
-		if st.Code() != codes.Unknown || st.Message() != "raw standard error" {
-			t.Errorf("expected Unknown code, got: %v", st)
+		if st.Code() != codes.Unknown || st.Message() != "An unexpected internal error occurred. Please try again later." {
+			t.Errorf("expected sanitized Unknown status, got: code=%v msg=%q", st.Code(), st.Message())
+		}
+	})
+
+	t.Run("unclassified platform error (Kind Other) defaults to sanitized Unknown", func(t *testing.T) {
+		wrappedDB := errors.E(errors.Op("storage.Save"), errors.New("pq: duplicate key value violates unique constraint"))
+		st := interceptors.ToStatus(wrappedDB)
+		if st.Code() != codes.Unknown || st.Message() != "An unexpected internal error occurred. Please try again later." {
+			t.Errorf("expected sanitized Unknown status, got: code=%v msg=%q", st.Code(), st.Message())
 		}
 	})
 

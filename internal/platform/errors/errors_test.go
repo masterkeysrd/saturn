@@ -205,6 +205,32 @@ func TestUserMessage(t *testing.T) {
 			t.Errorf("expected empty string, got %q", msg)
 		}
 	})
+
+	t.Run("unclassified storage error (Kind Other) is redacted", func(t *testing.T) {
+		dbErr := fmt.Errorf("pq: relation \"finance.budget\" does not exist")
+		err := platErr.E(platErr.Op("storage.Create"), dbErr)
+
+		msg := platErr.UserMessage(err)
+		expected := "An unexpected internal error occurred. Please try again later."
+		if msg != expected {
+			t.Errorf("expected redacted message %q, got %q", expected, msg)
+		}
+	})
+
+	t.Run("non-platform leaf error under known Kind does not leak raw string", func(t *testing.T) {
+		rawErr := errors.New("sql: no rows in result set (table=identity.users)")
+		err := platErr.E(platErr.Op("storage.Get"), platErr.NotExist, platErr.Code("USER_NOT_FOUND"), rawErr)
+
+		msg := platErr.UserMessage(err)
+		if msg != "USER_NOT_FOUND" {
+			t.Errorf("expected code fallback 'USER_NOT_FOUND', got %q", msg)
+		}
+
+		errNoCode := platErr.E(platErr.Op("storage.Get"), platErr.NotExist, rawErr)
+		if msg := platErr.UserMessage(errNoCode); msg != "not_found" {
+			t.Errorf("expected kind fallback 'not_found', got %q", msg)
+		}
+	})
 }
 
 func TestMatch(t *testing.T) {
@@ -313,10 +339,19 @@ func TestKindOf_And_CodeOf_EdgeCases(t *testing.T) {
 }
 
 func TestUserMessage_Fallbacks(t *testing.T) {
-	t.Run("only code present", func(t *testing.T) {
+	const sanitized = "An unexpected internal error occurred. Please try again later."
+
+	t.Run("only code present (Kind Other) is sanitized", func(t *testing.T) {
 		err := platErr.E(platErr.Code("CODE_ONLY"))
-		if got := platErr.UserMessage(err); got != "CODE_ONLY" {
-			t.Errorf("expected 'CODE_ONLY', got %q", got)
+		if got := platErr.UserMessage(err); got != sanitized {
+			t.Errorf("expected sanitized message %q, got %q", sanitized, got)
+		}
+	})
+
+	t.Run("known kind with code and no message uses code", func(t *testing.T) {
+		err := platErr.E(platErr.Invalid, platErr.Code("BAD_INPUT"))
+		if got := platErr.UserMessage(err); got != "BAD_INPUT" {
+			t.Errorf("expected 'BAD_INPUT', got %q", got)
 		}
 	})
 
@@ -327,17 +362,17 @@ func TestUserMessage_Fallbacks(t *testing.T) {
 		}
 	})
 
-	t.Run("empty error fallback", func(t *testing.T) {
+	t.Run("empty error fallback is sanitized", func(t *testing.T) {
 		err := &platErr.Error{}
-		if got := platErr.UserMessage(err); got != "an error occurred" {
-			t.Errorf("expected 'an error occurred', got %q", got)
+		if got := platErr.UserMessage(err); got != sanitized {
+			t.Errorf("expected sanitized message %q, got %q", sanitized, got)
 		}
 	})
 
-	t.Run("standard error unwrapped", func(t *testing.T) {
+	t.Run("standard error unwrapped is sanitized", func(t *testing.T) {
 		std := errors.New("plain error")
-		if got := platErr.UserMessage(std); got != "plain error" {
-			t.Errorf("expected 'plain error', got %q", got)
+		if got := platErr.UserMessage(std); got != sanitized {
+			t.Errorf("expected sanitized message %q, got %q", sanitized, got)
 		}
 	})
 }

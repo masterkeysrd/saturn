@@ -6,6 +6,14 @@ import (
 	"maps"
 )
 
+const sanitizedErrorMessage = "An unexpected internal error occurred. Please try again later."
+
+// msgError distinguishes explicit human-readable string messages passed to E(...)
+// from arbitrary wrapped Go errors (such as database driver errors).
+type msgError string
+
+func (m msgError) Error() string { return string(m) }
+
 // Op describes an operation, typically "package.Function" or "type.Method".
 type Op string
 
@@ -159,7 +167,7 @@ func E(args ...any) error {
 		case error:
 			e.Err = arg
 		case string:
-			e.Err = errors.New(arg)
+			e.Err = msgError(arg)
 		case FieldViolation:
 			e.Details = append(e.Details, arg)
 		case FieldViolations:
@@ -296,34 +304,45 @@ func Is(arg1 any, arg2 any) bool {
 	return false
 }
 
-// UserMessage extracts a user-facing error message from err.
-// It traverses down to the root cause message, stripping operational prefixes.
-// If the error is of KindInternal, it returns a safe, sanitized generic message.
+// UserMessage extracts a safe, user-facing error message from err.
+// If the error is Internal or Other (unclassified), or wraps an opaque external error
+// without an explicit user-facing message, it returns a sanitized generic message or
+// domain code/kind instead of leaking raw internal or SQL error strings.
 func UserMessage(err error) string {
 	if err == nil {
 		return ""
 	}
-	if KindOf(err) == Internal {
-		return "An unexpected internal error occurred. Please try again later."
+	kind := KindOf(err)
+	if kind == Internal || kind == Other {
+		return sanitizedErrorMessage
 	}
 
-	var curr = err
-	for {
-		if e, ok := curr.(*Error); ok {
-			if e.Err != nil {
-				curr = e.Err
-				continue
+	var code Code
+	curr := err
+	for curr != nil {
+		e, ok := curr.(*Error)
+		if !ok {
+			if code != "" {
+				return string(code)
 			}
-			if e.Code != "" {
-				return string(e.Code)
-			}
-			if e.Kind != 0 {
-				return e.Kind.String()
-			}
-			return "an error occurred"
+			return kind.String()
 		}
-		return curr.Error()
+		if e.Code != "" && code == "" {
+			code = e.Code
+		}
+		if m, ok := e.Err.(msgError); ok {
+			return string(m)
+		}
+		if e.Err != nil {
+			curr = e.Err
+			continue
+		}
+		if code != "" {
+			return string(code)
+		}
+		return kind.String()
 	}
+	return sanitizedErrorMessage
 }
 
 // Match reports whether err matches template.
