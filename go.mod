@@ -16,7 +16,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/ledongthuc/pdf v0.0.0-20261020125853-5e46805f718e
 	github.com/lib/pq v1.12.3
-	github.com/masterkeysrd/loom v0.0.9
+	github.com/masterkeysrd/loom v0.0.10-0.20261116211846-2c9540df81e6
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/ollama/ollama v0.40.16
 	github.com/openai/openai-go/v3 v3.99.0
