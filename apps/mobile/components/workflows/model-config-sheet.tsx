@@ -1,19 +1,18 @@
 import { forwardRef, useState } from "react"
 import {
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native"
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet"
-import {
-  useListAgentsQuery,
-  useListProvidersQuery,
-} from "@saturn/api/saturn/platform/agent/v1/agent"
+import { useListModelsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import type { ModelConfig } from "@saturn/api/saturn/platform/workflow/v1/workflow"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 import { Button } from "@/components/ui/button"
+import { ProviderLogo } from "@/components/ai/provider-logo"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
@@ -24,43 +23,56 @@ interface ModelConfigSheetProps {
   onClose: () => void
 }
 
-type ModelStrategy = "default" | "agent" | "custom"
+type ModelStrategy = "default" | "role" | "model"
 
 export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
   ({ value, defaultLabel = "Workspace Default", onSave, onClose }, ref) => {
-    const { data: agentsData } = useListAgentsQuery({})
-    const { data: providersData } = useListProvidersQuery({})
-    const agents = agentsData?.agents ?? []
-    const providers = providersData?.providers ?? []
+    const { data: modelsData } = useListModelsQuery({ isEnabled: true })
+    const models = modelsData?.models ?? []
 
-    const initialStrategy: ModelStrategy = value?.agentId
-      ? "agent"
-      : value?.providerId || value?.modelName
-        ? "custom"
+    const initialStrategy: ModelStrategy = value?.modelId
+      ? "model"
+      : value?.role
+        ? "role"
         : "default"
 
     const [strategy, setStrategy] = useState<ModelStrategy>(initialStrategy)
-    const [agentId, setAgentId] = useState(value?.agentId ?? "")
-    const [providerId, setProviderId] = useState(value?.providerId ?? "")
-    const [modelName, setModelName] = useState(value?.modelName ?? "")
-    const [tempStr, setTempStr] = useState(String(value?.temperature ?? 0))
+    const [role, setRole] = useState(value?.role ?? "default")
+    const [modelId, setModelId] = useState(value?.modelId ?? "")
+    const [tempStr, setTempStr] = useState(
+      value?.generation?.temperature !== undefined
+        ? String(value.generation.temperature)
+        : ""
+    )
+    const [thinkingEnabled, setThinkingEnabled] = useState(
+      Boolean(value?.generation?.thinking?.enabled)
+    )
 
     const handleApply = () => {
-      if (strategy === "custom" && !modelName.trim()) {
-        haptics.error()
-        return
-      }
       haptics.success()
       if (strategy === "default") {
         onSave(undefined)
-      } else if (strategy === "agent") {
-        onSave({ agentId: agentId || agents[0]?.id })
+        onClose()
+        return
+      }
+
+      const parsedTemp = parseFloat(tempStr)
+      const generation =
+        !Number.isNaN(parsedTemp) || thinkingEnabled
+          ? {
+              ...(!Number.isNaN(parsedTemp) && { temperature: parsedTemp }),
+              ...(thinkingEnabled && {
+                thinking: { enabled: true },
+              }),
+            }
+          : undefined
+
+      if (strategy === "role") {
+        onSave({ role, generation })
       } else {
-        const parsedTemp = parseFloat(tempStr)
         onSave({
-          providerId: providerId || undefined,
-          modelName: modelName.trim(),
-          temperature: Number.isNaN(parsedTemp) ? 0 : parsedTemp,
+          modelId: modelId || models[0]?.id,
+          generation,
         })
       }
       onClose()
@@ -70,12 +82,12 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
       <AppBottomSheet
         ref={ref}
         title="Model Configuration"
-        snapPoints={["65%", "85%"]}
+        snapPoints={["65%", "88%"]}
         onClose={onClose}
       >
         <BottomSheetScrollView contentContainerStyle={styles.body}>
           <View style={styles.segmentRow}>
-            {(["default", "agent", "custom"] as const).map((s) => (
+            {(["default", "role", "model"] as const).map((s) => (
               <TouchableOpacity
                 key={s}
                 style={[
@@ -95,36 +107,70 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
                 >
                   {s === "default"
                     ? defaultLabel
-                    : s === "agent"
-                      ? "Named Agent"
-                      : "Custom"}
+                    : s === "role"
+                      ? "Role Slot"
+                      : "Specific Model"}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {strategy === "agent" && (
+          {strategy === "role" && (
             <View style={styles.listSection}>
-              <Text style={styles.fieldLabel}>Select Agent</Text>
-              {agents.length === 0 ? (
-                <Text style={styles.hintText}>No agents configured.</Text>
+              <Text style={styles.fieldLabel}>Workspace Role</Text>
+              {(
+                [
+                  { id: "default", label: "Default" },
+                  { id: "fast", label: "Fast (Low-latency)" },
+                  { id: "reasoning", label: "Reasoning" },
+                ] as const
+              ).map((r) => {
+                const selected = role === r.id
+                return (
+                  <TouchableOpacity
+                    key={r.id}
+                    style={[
+                      styles.optionRow,
+                      selected && styles.optionRowActive,
+                    ]}
+                    onPress={() => {
+                      haptics.selection()
+                      setRole(r.id)
+                    }}
+                  >
+                    <Text style={styles.optionTitle}>{r.label}</Text>
+                    <Text style={styles.optionSub}>{r.id}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+          )}
+
+          {strategy === "model" && (
+            <View style={styles.listSection}>
+              <Text style={styles.fieldLabel}>Registered Models</Text>
+              {models.length === 0 ? (
+                <Text style={styles.hintText}>No enabled models found.</Text>
               ) : (
-                agents.map((a) => {
-                  const selected = a.id === agentId
+                models.map((m) => {
+                  const selected = m.id === modelId
                   return (
                     <TouchableOpacity
-                      key={a.id}
+                      key={m.id}
                       style={[
                         styles.optionRow,
                         selected && styles.optionRowActive,
                       ]}
                       onPress={() => {
                         haptics.selection()
-                        setAgentId(a.id ?? "")
+                        setModelId(m.id ?? "")
                       }}
                     >
-                      <Text style={styles.optionTitle}>{a.name}</Text>
-                      <Text style={styles.optionSub}>{a.modelName}</Text>
+                      <View style={styles.modelLeft}>
+                        <ProviderLogo driver={m.providerDriver} size={15} />
+                        <Text style={styles.optionTitle}>{m.displayName}</Text>
+                      </View>
+                      <Text style={styles.optionSub}>{m.providerName}</Text>
                     </TouchableOpacity>
                   )
                 })
@@ -132,56 +178,36 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
             </View>
           )}
 
-          {strategy === "custom" && (
+          {strategy !== "default" && (
             <View style={styles.listSection}>
-              <Text style={styles.fieldLabel}>Provider Connection</Text>
-              {providers.map((p) => {
-                const selected = p.id === providerId
-                return (
-                  <TouchableOpacity
-                    key={p.id}
-                    style={[
-                      styles.optionRow,
-                      selected && styles.optionRowActive,
-                    ]}
-                    onPress={() => {
-                      haptics.selection()
-                      setProviderId(selected ? "" : (p.id ?? ""))
-                    }}
-                  >
-                    <Text style={styles.optionTitle}>{p.name}</Text>
-                    <Text style={styles.optionSub}>{p.compatibilityMode}</Text>
-                  </TouchableOpacity>
-                )
-              })}
-
-              <Text style={styles.fieldLabel}>Model Name *</Text>
-              <TextInput
-                style={styles.input}
-                value={modelName}
-                onChangeText={setModelName}
-                placeholder="e.g. gpt-4o, claude-sonnet-4, llama3"
-                placeholderTextColor={theme.colors.textMuted}
-                autoCapitalize="none"
-              />
-
               <Text style={styles.fieldLabel}>Temperature (0 - 2)</Text>
               <TextInput
                 style={styles.input}
                 value={tempStr}
                 onChangeText={setTempStr}
                 keyboardType="decimal-pad"
-                placeholder="0.0"
+                placeholder="Model default"
                 placeholderTextColor={theme.colors.textMuted}
               />
+
+              <View style={styles.switchRow}>
+                <Text style={styles.fieldLabel}>Enable Extended Thinking</Text>
+                <Switch
+                  value={thinkingEnabled}
+                  onValueChange={(v) => {
+                    haptics.selection()
+                    setThinkingEnabled(v)
+                  }}
+                  trackColor={{
+                    false: theme.colors.surfaceHighlight,
+                    true: theme.colors.primary,
+                  }}
+                />
+              </View>
             </View>
           )}
 
-          <Button
-            onPress={handleApply}
-            disabled={strategy === "custom" && !modelName.trim()}
-            style={styles.saveBtn}
-          >
+          <Button onPress={handleApply} style={styles.saveBtn}>
             Apply Model Settings
           </Button>
         </BottomSheetScrollView>
@@ -250,6 +276,12 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primarySubtle,
   },
+  modelLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
   optionTitle: {
     fontSize: 14,
     fontWeight: "600",
@@ -270,6 +302,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: theme.typography.mono,
     color: theme.colors.textPrimary,
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 4,
   },
   saveBtn: {
     marginTop: 8,

@@ -5,9 +5,13 @@ import {
   View,
   ScrollView,
   RefreshControl,
+  TouchableOpacity,
+  TextInput,
 } from "react-native"
+import { useRouter } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
 import { useTimezone } from "@saturn/hooks"
+import { Send, Sparkles } from "lucide-react-native"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
@@ -16,12 +20,33 @@ import { FinanceSummaryWidget } from "@/components/widgets/finance-summary-widge
 import { CalendarSummaryWidget } from "@/components/widgets/calendar-summary-widget"
 import { MailSummaryWidget } from "@/components/widgets/mail-summary-widget"
 
+const OVERVIEW_PROMPTS = [
+  "Today's schedule",
+  "This month's spend",
+  "Unread mail",
+]
+
 export default function OverviewScreen() {
+  const router = useRouter()
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const { refetchSpaces } = useSpace()
   const tz = useTimezone()
   const [refreshing, setRefreshing] = useState(false)
+  const [aiQuery, setAiQuery] = useState("")
+
+  const openAIWithPrompt = (promptText?: string) => {
+    haptics.light()
+    const trimmed = promptText?.trim()
+    if (trimmed) {
+      router.push({
+        pathname: "/(app)/ai",
+        params: { prompt: trimmed },
+      } as never)
+      return
+    }
+    router.push("/(app)/ai" as never)
+  }
 
   const formattedDate = useMemo(() => {
     return tz.format(tz.now(), {
@@ -86,6 +111,54 @@ export default function OverviewScreen() {
           </Text>
         </View>
 
+        {/* Quick AI Assistant Launcher */}
+        <View style={styles.aiLauncherWrap}>
+          <View style={styles.aiInputRow}>
+            <Sparkles size={16} color={theme.colors.primary} />
+            <TextInput
+              style={styles.aiInput}
+              value={aiQuery}
+              onChangeText={setAiQuery}
+              placeholder="Ask Saturn AI anything..."
+              placeholderTextColor={theme.colors.textMuted}
+              returnKeyType="send"
+              onSubmitEditing={() => {
+                const text = aiQuery
+                setAiQuery("")
+                openAIWithPrompt(text)
+              }}
+            />
+            <TouchableOpacity
+              style={styles.aiSendBtn}
+              activeOpacity={0.7}
+              onPress={() => {
+                const text = aiQuery
+                setAiQuery("")
+                openAIWithPrompt(text)
+              }}
+              accessibilityLabel="Ask Saturn AI"
+            >
+              <Send size={14} color={theme.colors.primaryForeground} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.aiChipsRow}
+          >
+            {OVERVIEW_PROMPTS.map((chip) => (
+              <TouchableOpacity
+                key={chip}
+                style={styles.aiChip}
+                activeOpacity={0.7}
+                onPress={() => openAIWithPrompt(chip)}
+              >
+                <Text style={styles.aiChipText}>{chip}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
         {/* Feature Widgets */}
         <CalendarSummaryWidget />
         <MailSummaryWidget />
@@ -130,5 +203,52 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     letterSpacing: -0.5,
     includeFontPadding: false,
+  },
+  aiLauncherWrap: {
+    gap: 8,
+  },
+  aiInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    paddingLeft: 12,
+    paddingRight: 6,
+    paddingVertical: 6,
+  },
+  aiInput: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+    paddingVertical: 4,
+  },
+  aiSendBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  aiChipsRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 2,
+  },
+  aiChip: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  aiChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
   },
 })

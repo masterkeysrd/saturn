@@ -1,5 +1,11 @@
 import { useState } from "react"
-import { StyleSheet, Text, TextInput, View } from "react-native"
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native"
 import { useRouter } from "expo-router"
 import { useGenerateFlowMutation } from "@saturn/api/saturn/platform/workflow/v1/workflow"
 import { Button } from "@/components/ui/button"
@@ -13,6 +19,7 @@ export default function GenerateWorkflowModalScreen() {
   const router = useRouter()
   const toast = useToast()
   const [prompt, setPrompt] = useState("")
+  const [role, setRole] = useState<"default" | "fast" | "reasoning">("default")
   const generateMutation = useGenerateFlowMutation()
 
   const handleGenerate = async () => {
@@ -20,7 +27,10 @@ export default function GenerateWorkflowModalScreen() {
     if (!trimmed) return
     try {
       haptics.light()
-      const flow = await generateMutation.mutateAsync({ prompt: trimmed })
+      const flow = await generateMutation.mutateAsync({
+        prompt: trimmed,
+        model: { role },
+      })
       setPendingWorkflowDraft(flow)
       haptics.success()
       router.replace("/(app)/workflows/new" as never)
@@ -53,6 +63,25 @@ export default function GenerateWorkflowModalScreen() {
         placeholder="e.g. Every weekday at 9am, check pending bills and summarize them..."
         placeholderTextColor={theme.colors.textMuted}
       />
+
+      <View style={styles.roleRow}>
+        {(["default", "fast", "reasoning"] as const).map((r) => (
+          <TouchableOpacity
+            key={r}
+            style={[styles.rolePill, role === r && styles.rolePillActive]}
+            onPress={() => {
+              haptics.selection()
+              setRole(r)
+            }}
+          >
+            <Text
+              style={[styles.roleText, role === r && styles.roleTextActive]}
+            >
+              {r}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       <Button
         onPress={handleGenerate}
@@ -98,5 +127,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.textPrimary,
     textAlignVertical: "top",
+  },
+  roleRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  rolePill: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceElevated,
+    alignItems: "center",
+  },
+  rolePillActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primarySubtle,
+  },
+  roleText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+    textTransform: "capitalize",
+  },
+  roleTextActive: {
+    color: theme.colors.primary,
   },
 })

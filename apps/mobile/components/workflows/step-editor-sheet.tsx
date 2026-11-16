@@ -20,6 +20,7 @@ import type {
   Catalog_TriggerTopic,
   Flow_StepNode,
 } from "@saturn/api/saturn/platform/workflow/v1/workflow"
+import { useListAgentsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 import { Button } from "@/components/ui/button"
 import { theme } from "@/lib/theme"
@@ -59,6 +60,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
     const [draft, setDraft] = useState<Flow_StepNode>(step)
     const sourceSheetRef = useRef<BottomSheet>(null)
     const modelSheetRef = useRef<BottomSheet>(null)
+    const { data: agentsData } = useListAgentsQuery({})
+    const agents = agentsData?.agents ?? []
 
     const stepDescMap = Object.fromEntries(
       stepDescriptors.map((d) => [
@@ -141,7 +144,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                 <Database size={14} color={theme.colors.primary} />
                 <Text style={styles.pillBtnText}>Sources ({sourceCount})</Text>
               </TouchableOpacity>
-              {draft.type === "llm.generate" && (
+              {(draft.type === "llm.generate" ||
+                draft.type === "ai.agent_run") && (
                 <TouchableOpacity
                   style={styles.pillBtn}
                   onPress={() => {
@@ -155,7 +159,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
               )}
             </View>
 
-            {draft.type === "llm.generate" && (
+            {(draft.type === "llm.generate" ||
+              draft.type === "ai.agent_run") && (
               <View style={styles.section}>
                 <View style={styles.rowBetween}>
                   <Text style={styles.label}>Continue on Error</Text>
@@ -172,13 +177,43 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   />
                 </View>
 
-                <Text style={styles.label}>System Instruction</Text>
-                <TextInput
-                  style={[styles.monoInput, styles.multiline]}
-                  multiline
-                  value={String(inputs.system ?? "")}
-                  onChangeText={(v) => updateInput("system", v)}
-                />
+                {draft.type === "ai.agent_run" && (
+                  <>
+                    <Text style={styles.label}>Target Agent</Text>
+                    <View style={styles.nestedBox}>
+                      {agents.map((ag) => {
+                        const selected = inputs.agent_id === ag.id
+                        return (
+                          <TouchableOpacity
+                            key={ag.id}
+                            style={[
+                              styles.pillBtn,
+                              selected && { borderColor: theme.colors.primary },
+                            ]}
+                            onPress={() => {
+                              haptics.selection()
+                              updateInput("agent_id", ag.id)
+                            }}
+                          >
+                            <Text style={styles.pillBtnText}>{ag.name}</Text>
+                          </TouchableOpacity>
+                        )
+                      })}
+                    </View>
+                  </>
+                )}
+
+                {draft.type === "llm.generate" && (
+                  <>
+                    <Text style={styles.label}>System Instruction</Text>
+                    <TextInput
+                      style={[styles.monoInput, styles.multiline]}
+                      multiline
+                      value={String(inputs.system ?? "")}
+                      onChangeText={(v) => updateInput("system", v)}
+                    />
+                  </>
+                )}
 
                 <Text style={styles.label}>Prompt</Text>
                 <TextInput

@@ -39,6 +39,7 @@ export default function AppLayout() {
       }}
     >
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="ai" />
       <Stack.Screen
         name="settings/index"
         options={{

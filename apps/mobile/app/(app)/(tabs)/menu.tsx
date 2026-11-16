@@ -21,6 +21,7 @@ import {
   Settings,
   ChevronRight,
   Link2,
+  Sparkles,
   Workflow,
 } from "lucide-react-native"
 import { useSpace } from "@/lib/space-context"
@@ -223,6 +224,18 @@ export default function MenuScreen() {
               <View style={styles.menuLeft}>
                 <Link2 size={18} color={theme.colors.primary} />
                 <Text style={styles.menuLabel}>Connected Accounts</Text>
+              </View>
+              <ChevronRight size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/ai")}
+            >
+              <View style={styles.menuLeft}>
+                <Sparkles size={18} color={theme.colors.primary} />
+                <Text style={styles.menuLabel}>AI Assistant</Text>
               </View>
               <ChevronRight size={16} color={theme.colors.textMuted} />
             </TouchableOpacity>

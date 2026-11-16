@@ -2,7 +2,8 @@ import React from "react"
 import { StyleSheet, View, Text, Image, TouchableOpacity } from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { ChevronDown, Bell, Settings } from "lucide-react-native"
+import { ChevronDown, Sparkles, Settings } from "lucide-react-native"
+import { useListThreadsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -10,16 +11,24 @@ import { haptics } from "@/lib/haptics"
 export function AppHeader() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
-  const { activeSpace } = useSpace()
+  const { activeSpace, activeSpaceId } = useSpace()
+
+  const { data: threadsData } = useListThreadsQuery(
+    { isArchived: false, pageSize: 20, pageToken: "" },
+    { enabled: Boolean(activeSpaceId) }
+  )
+  const hasPendingApproval = (threadsData?.threads ?? []).some(
+    (t) => t.status === "awaiting_approval"
+  )
 
   const handleSwitchSpace = () => {
     haptics.light()
     router.push("/modal/switch-space")
   }
 
-  const handleNotifications = () => {
+  const handleOpenAI = () => {
     haptics.light()
-    router.push("/(app)/(tabs)/menu")
+    router.push("/(app)/ai" as never)
   }
 
   const handleSettings = () => {
@@ -58,12 +67,14 @@ export function AppHeader() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.iconButton}
+          style={[styles.iconButton, styles.aiButton]}
           activeOpacity={0.7}
-          onPress={handleNotifications}
+          onPress={handleOpenAI}
           hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          accessibilityLabel="Open AI Assistant"
         >
-          <Bell size={17} color={theme.colors.textSecondary} />
+          <Sparkles size={16} color={theme.colors.primary} />
+          {hasPendingApproval && <View style={styles.approvalDot} />}
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -146,5 +157,20 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     alignItems: "center",
     justifyContent: "center",
+  },
+  aiButton: {
+    backgroundColor: theme.colors.primarySubtle,
+    borderColor: "rgba(56, 189, 248, 0.35)",
+  },
+  approvalDot: {
+    position: "absolute",
+    top: -1,
+    right: -1,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.warning,
+    borderWidth: 1.5,
+    borderColor: theme.colors.background,
   },
 })
