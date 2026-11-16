@@ -9,8 +9,9 @@ export const API_KEY_SCOPES = [
   "calendar:write",
   "mail:read",
   "mail:write",
-  "agents:read",
-  "agents:write",
+  "ai:read",
+  "ai:execute",
+  "ai:write",
   "workflows:read",
   "workflows:execute",
   "workflows:write",
@@ -97,19 +98,26 @@ export const API_KEY_SCOPE_GROUPS: APIKeyScopeGroup[] = [
     ],
   },
   {
-    id: "agents",
-    label: "Agents",
+    id: "ai",
+    label: "AI & Agents",
     scopes: [
       {
-        scope: "agents:read",
-        label: "Read Agents",
+        scope: "ai:read",
+        label: "Read AI",
         description:
-          "View LLM providers, agents, catalogs, and agent run history.",
+          "View AI settings, providers, models, MCP servers, agents, threads, and run traces.",
       },
       {
-        scope: "agents:write",
-        label: "Write Agents",
-        description: "Create, update, and remove LLM providers and agents.",
+        scope: "ai:execute",
+        label: "Execute AI",
+        description:
+          "Run headless AI generations, invoke agents, and chat in private threads.",
+      },
+      {
+        scope: "ai:write",
+        label: "Write AI",
+        description:
+          "Configure AI providers, models, MCP servers, agents, and workspace governance.",
       },
     ],
   },

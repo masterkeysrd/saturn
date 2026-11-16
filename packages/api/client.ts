@@ -79,7 +79,9 @@ export class SaturnApiError extends Error {
   }
 }
 
-async function buildApiError(response: Response): Promise<SaturnApiError> {
+export async function buildApiError(
+  response: Response
+): Promise<SaturnApiError> {
   const raw = (await response.json().catch(() => ({}))) as Record<
     string,
     unknown

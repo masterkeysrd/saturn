@@ -1,0 +1,163 @@
+# Platform AI service API configuration.
+#
+# All platform AI endpoints require JWT Bearer or API Key authentication.
+# Space-scoped endpoints require the Space-Id header (or a single-space API key).
+
+name: saturn.platform.ai.v1
+title: "Saturn Platform AI API"
+apis:
+  - saturn.platform.ai.v1.AIService
+
+documentation:
+  summary: "Provides workspace AI settings, LLM provider and model registry management, unified MCP server management, autonomous AI agents, private streaming chat threads, headless generation, and execution observability. Space-scoped endpoints require the 'space-id' header containing the workspace ID."
+
+authentication:
+  rules:
+    - selector: "saturn.platform.ai.v1.AIService.*"
+      auth_required: true
+      api_key_scopes:
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.GetSettings"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.ListProviderDescriptors"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.ListProviders"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.GetProvider"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.DiscoverProviderModels"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.ListModels"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:execute"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.GetModel"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:execute"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.ListMCPServers"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.GetMCPServer"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.ListAgents"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:execute"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.GetAgent"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:execute"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.ListThreads"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:execute"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.GetThread"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:execute"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.ListThreadMessages"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:execute"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.CreateThread"
+      auth_required: true
+      api_key_scopes:
+        - "ai:execute"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.CancelThreadTurn"
+      auth_required: true
+      api_key_scopes:
+        - "ai:execute"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.StreamThreadTurn"
+      auth_required: true
+      api_key_scopes:
+        - "ai:execute"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.StreamResolveToolApprovals"
+      auth_required: true
+      api_key_scopes:
+        - "ai:execute"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.ExecuteAgent"
+      auth_required: true
+      api_key_scopes:
+        - "ai:execute"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.Generate"
+      auth_required: true
+      api_key_scopes:
+        - "ai:execute"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.ListRuns"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:write"
+
+    - selector: "saturn.platform.ai.v1.AIService.GetRun"
+      auth_required: true
+      api_key_scopes:
+        - "ai:read"
+        - "ai:write"
+
+space:
+  rules:
+    - selector: "saturn.platform.ai.v1.AIService.*"
+      scoped: true

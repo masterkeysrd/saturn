@@ -25,6 +25,11 @@
       "types": "./workflow/index.ts",
       "import": "./workflow/index.ts",
       "default": "./workflow/index.ts"
+    },
+    "./ai": {
+      "types": "./ai/index.ts",
+      "import": "./ai/index.ts",
+      "default": "./ai/index.ts"
     }
   },
   "scripts": {

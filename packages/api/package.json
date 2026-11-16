@@ -21,6 +21,11 @@
       "import": "./storage.ts",
       "default": "./storage.ts"
     },
+    "./stream": {
+      "types": "./stream.ts",
+      "import": "./stream.ts",
+      "default": "./stream.ts"
+    },
     "./saturn/*": {
       "types": "./gen/saturn/*.ts",
       "import": "./gen/saturn/*.ts",

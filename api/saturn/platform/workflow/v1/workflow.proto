@@ -129,19 +129,43 @@ service WorkflowService {
   }
 }
 
-// ModelConfig configures the LLM agent or inline provider/model used for AI steps.
-message ModelConfig {
-  // Optional. Named agent ID from platform/agent to inherit instructions and model settings from.
-  optional string agent_id = 1 [(google.api.field_behavior) = OPTIONAL];
+// ThinkingConfig configures extended reasoning behavior on supported models.
+message ThinkingConfig {
+  // Optional. Whether extended thinking is enabled.
+  bool enabled = 1 [(google.api.field_behavior) = OPTIONAL];
 
-  // Optional. Explicit LLM provider ID when specifying an inline model.
-  optional string provider_id = 2 [(google.api.field_behavior) = OPTIONAL];
+  // Optional. Reasoning effort level ('low', 'medium', 'high').
+  optional string effort = 2 [(google.api.field_behavior) = OPTIONAL];
 
-  // Optional. Model identifier (e.g. gemini-2.5-flash).
-  optional string model_name = 3 [(google.api.field_behavior) = OPTIONAL];
+  // Optional. Explicit reasoning token budget.
+  optional int32 budget_tokens = 3 [(google.api.field_behavior) = OPTIONAL];
+}
 
+// GenerationConfig configures LLM sampling and reasoning parameters.
+message GenerationConfig {
   // Optional. Sampling temperature parameter.
-  optional double temperature = 4 [(google.api.field_behavior) = OPTIONAL];
+  optional double temperature = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Maximum output tokens to generate.
+  optional int32 max_tokens = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Nucleus sampling top-p parameter.
+  optional double top_p = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Extended thinking/reasoning configuration.
+  optional ThinkingConfig thinking = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// ModelConfig configures the workspace AI model or role used for AI workflow steps.
+message ModelConfig {
+  // Optional. Registered workspace model ID (`mdl_...`).
+  optional string model_id = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Workspace model role ('default', 'fast', 'reasoning').
+  optional string role = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Generation and thinking parameter overrides.
+  optional GenerationConfig generation = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // Flow represents a workflow automation definition with triggers and step graph.
@@ -379,8 +403,8 @@ message FlowRun {
     // Output only. Telemetry metadata (duration_ms, tokens_used, source loader stats).
     optional google.protobuf.Struct metadata = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 
-    // Output only. Linked platform.agent_runs ID for `llm.generate` steps.
-    optional string agent_run_id = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+    // Output only. Linked platform.ai_runs ID for AI steps (llm.generate, ai.agent_run).
+    optional string ai_run_id = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
 
     // Output only. Timestamp when the step started executing.
     google.protobuf.Timestamp start_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];

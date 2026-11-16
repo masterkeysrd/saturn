@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json/v2"
+	"slices"
 	"testing"
 )
 
@@ -225,6 +226,15 @@ func TestLoadServiceConfigs_APIKeyScopes(t *testing.T) {
 	}
 	if r := findRule("saturn.identity.v1.Identity.*"); r != nil && len(r.APIKeyScopes) > 0 {
 		t.Errorf("expected Identity.* to have no api_key_scopes, got %+v", r)
+	}
+	if r := findRule("saturn.platform.ai.v1.AIService.GetSettings"); r == nil || !slices.Equal(r.APIKeyScopes, []string{"ai:read", "ai:write"}) {
+		t.Errorf("expected AIService.GetSettings to allow ai:read and ai:write, got %+v", r)
+	}
+	if r := findRule("saturn.platform.ai.v1.AIService.ExecuteAgent"); r == nil || !slices.Equal(r.APIKeyScopes, []string{"ai:execute", "ai:write"}) {
+		t.Errorf("expected AIService.ExecuteAgent to allow ai:execute and ai:write, got %+v", r)
+	}
+	if r := findRule("saturn.platform.ai.v1.AIService.*"); r == nil || !slices.Equal(r.APIKeyScopes, []string{"ai:write"}) {
+		t.Errorf("expected AIService.* to allow ai:write, got %+v", r)
 	}
 }
 

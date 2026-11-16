@@ -26,8 +26,8 @@
       "description": "MailService provides email synchronization, mailbox management, thread view hydration,\nhybrid search, drafts, and write-through operations across connected accounts."
     },
     {
-      "name": "AgentService",
-      "description": "AgentService manages LLM connection providers, AI agent instances, and logs."
+      "name": "AIService",
+      "description": "AIService manages workspace AI settings, LLM providers, model registry,\nunified MCP servers, autonomous agents, private streaming chat threads,\nheadless text/structured generation, and execution observability."
     },
     {
       "name": "BackupAdmin",
@@ -5707,7 +5707,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ListThreadsResponse"
+              "$ref": "#/definitions/saturnMailV1ListThreadsResponse"
             }
           },
           "default": {
@@ -5799,7 +5799,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1Thread"
+              "$ref": "#/definitions/saturnMailV1Thread"
             }
           },
           "default": {
@@ -5831,7 +5831,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1Thread"
+              "$ref": "#/definitions/saturnMailV1Thread"
             }
           },
           "default": {
@@ -5898,10 +5898,10 @@
         ]
       }
     },
-    "/v1/platform/agent/agents": {
+    "/v1/platform/ai/agents": {
       "get": {
-        "summary": "Lists all active AI Agent instances in the workspace.",
-        "operationId": "AgentService_ListAgents",
+        "summary": "Lists AI agents in the workspace (lazily seeding the built-in Saturn Assistant).",
+        "operationId": "AIService_ListAgents",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5917,12 +5917,12 @@
           }
         },
         "tags": [
-          "AgentService"
+          "AIService"
         ]
       },
       "post": {
-        "summary": "Creates a new AI Agent configured with prompt instructions.",
-        "operationId": "AgentService_CreateAgent",
+        "summary": "Creates a custom AI agent with optional MCP server bindings and output schema.",
+        "operationId": "AIService_CreateAgent",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5939,52 +5939,29 @@
         },
         "parameters": [
           {
-            "name": "body",
-            "description": "Request message for creating an AI agent.",
+            "name": "agent",
+            "description": "Required. Agent definition to create.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1CreateAgentRequest"
+              "$ref": "#/definitions/v1Agent"
             }
           }
         ],
         "tags": [
-          "AgentService"
+          "AIService"
         ]
       }
     },
-    "/v1/platform/agent/agents-catalog": {
+    "/v1/platform/ai/agents/{id}": {
       "get": {
-        "summary": "Retrieves standard agent purpose blueprints (descriptors).",
-        "operationId": "AgentService_GetAgentCatalog",
+        "summary": "Retrieves a single AI agent by ID or system key.",
+        "operationId": "AIService_GetAgent",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1GetAgentCatalogResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googleRpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "AgentService"
-        ]
-      }
-    },
-    "/v1/platform/agent/agents/{agentId}/runs": {
-      "get": {
-        "summary": "Lists execution history logs for a specific agent.",
-        "operationId": "AgentService_ListAgentRuns",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListAgentRunsResponse"
+              "$ref": "#/definitions/v1Agent"
             }
           },
           "default": {
@@ -5996,15 +5973,927 @@
         },
         "parameters": [
           {
-            "name": "agentId",
-            "description": "Required. The unique identifier of the agent whose runs to list.",
+            "name": "id",
+            "description": "Required. Agent identifier (`agt_...`) or system key (`system.saturn.assistant`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      },
+      "delete": {
+        "summary": "Deletes a user-created AI agent. Built-in system agents cannot be deleted.",
+        "operationId": "AIService_DeleteAgent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Agent identifier (`agt_...`) to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      },
+      "patch": {
+        "summary": "Updates an existing AI agent configuration using a field mask.",
+        "operationId": "AIService_UpdateAgent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Agent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Agent identifier (`agt_...`) to update.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
+            "name": "agent",
+            "description": "Required. Agent payload containing updated fields.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Agent"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/agents/{id}:execute": {
+      "post": {
+        "summary": "Executes an agent headlessly in a multi-step MCP-enabled run.",
+        "operationId": "AIService_ExecuteAgent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Run"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Agent identifier (`agt_...` or `system.saturn.assistant`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AIServiceExecuteAgentBody"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/agents/{id}:reset": {
+      "post": {
+        "summary": "Resets a built-in system agent back to its factory blueprint defaults.",
+        "operationId": "AIService_ResetAgent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Agent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Built-in system agent identifier (`agt_...` or `system.saturn.assistant`) to reset.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AIServiceResetAgentBody"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/mcp-servers": {
+      "get": {
+        "summary": "Lists unified MCP servers (including the lazily seeded built-in Saturn Workspace MCP).",
+        "operationId": "AIService_ListMCPServers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListMCPServersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AIService"
+        ]
+      },
+      "post": {
+        "summary": "Registers a remote HTTP MCP server in the workspace.",
+        "operationId": "AIService_CreateMCPServer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MCPServer"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mcpServer",
+            "description": "Required. Remote HTTP MCP server configuration to register.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1MCPServer"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/mcp-servers/{id}": {
+      "get": {
+        "summary": "Retrieves a single MCP server configuration and live discovery state.",
+        "operationId": "AIService_GetMCPServer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MCPServer"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. MCP server identifier (`mcp_...`) or system key (`system.saturn.mcp`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      },
+      "delete": {
+        "summary": "Deletes a user-configured MCP server. System MCP servers cannot be deleted.",
+        "operationId": "AIService_DeleteMCPServer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. MCP server identifier (`mcp_...`) to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      },
+      "patch": {
+        "summary": "Updates an MCP server configuration or auth secret using a field mask.",
+        "operationId": "AIService_UpdateMCPServer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MCPServer"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. MCP server identifier (`mcp_...`) to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "mcpServer",
+            "description": "Required. MCP server payload containing updated fields.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1MCPServer"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/mcp-servers/{id}:sync": {
+      "post": {
+        "summary": "Synchronizes tools and server metadata from an MCP server.",
+        "operationId": "AIService_SyncMCPServer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MCPServer"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. MCP server identifier (`mcp_...`) to synchronize tools from.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AIServiceSyncMCPServerBody"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/mcp-servers/{id}:test": {
+      "post": {
+        "summary": "Tests connectivity to an MCP server and updates its discovery health status.",
+        "operationId": "AIService_TestMCPServer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MCPServer"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. MCP server identifier (`mcp_...`) to test.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AIServiceTestMCPServerBody"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/models": {
+      "get": {
+        "summary": "Lists registered AI models in the workspace.",
+        "operationId": "AIService_ListModels",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListModelsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "providerId",
+            "description": "Optional. Filter by parent provider identifier (`prv_...`).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "isEnabled",
+            "description": "Optional. Filter by enabled status.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      },
+      "post": {
+        "summary": "Registers a custom or catalog AI model under a workspace provider.",
+        "operationId": "AIService_CreateModel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Model"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "model",
+            "description": "Required. Model definition to register.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Model"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/models/{id}": {
+      "get": {
+        "summary": "Retrieves a single registered AI model.",
+        "operationId": "AIService_GetModel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Model"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Model identifier (`mdl_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      },
+      "delete": {
+        "summary": "Deletes a registered AI model from the workspace.",
+        "operationId": "AIService_DeleteModel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Model identifier (`mdl_...`) to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      },
+      "patch": {
+        "summary": "Updates a registered AI model's display name, profile, config, or enabled state.",
+        "operationId": "AIService_UpdateModel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Model"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Model identifier (`mdl_...`) to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "model",
+            "description": "Required. Model payload containing updated fields.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Model"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/provider-descriptors": {
+      "get": {
+        "summary": "Lists supported LLM provider driver descriptors and defaults.",
+        "operationId": "AIService_ListProviderDescriptors",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListProviderDescriptorsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/providers": {
+      "get": {
+        "summary": "Lists all configured LLM providers in the workspace.",
+        "operationId": "AIService_ListProviders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/platformAiV1ListProvidersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AIService"
+        ]
+      },
+      "post": {
+        "summary": "Creates a new LLM provider connection and auto-seeds curated default models.",
+        "operationId": "AIService_CreateProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Provider"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "provider",
+            "description": "Required. Provider definition to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Provider"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/providers/{id}": {
+      "get": {
+        "summary": "Retrieves a single LLM provider configuration (secrets masked).",
+        "operationId": "AIService_GetProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Provider"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Provider identifier (`prv_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      },
+      "delete": {
+        "summary": "Deletes an LLM provider connection and its associated models.",
+        "operationId": "AIService_DeleteProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Provider identifier (`prv_...`) to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      },
+      "patch": {
+        "summary": "Updates an existing LLM provider configuration or rotates its secret using a field mask.",
+        "operationId": "AIService_UpdateProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Provider"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Provider identifier (`prv_...`) to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "provider",
+            "description": "Required. Provider payload containing updated fields.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Provider"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/providers/{id}:discoverModels": {
+      "get": {
+        "summary": "Discovers available upstream models for an LLM provider.",
+        "operationId": "AIService_DiscoverProviderModels",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DiscoverProviderModelsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Provider identifier (`prv_...`) to discover models from.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/providers/{id}:syncModels": {
+      "post": {
+        "summary": "Synchronizes upstream catalog or discovered models into the workspace model registry.",
+        "operationId": "AIService_SyncProviderModels",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SyncProviderModelsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Provider identifier (`prv_...`) whose models should be synchronized.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AIServiceSyncProviderModelsBody"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/providers/{id}:test": {
+      "post": {
+        "summary": "Verifies connectivity and credentials for an LLM provider and updates its status.",
+        "operationId": "AIService_TestProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Provider"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Provider identifier (`prv_...`) to verify.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AIServiceTestProviderBody"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/runs": {
+      "get": {
+        "summary": "Lists AI execution runs across chat, workflow, API, and MCP sources.",
+        "operationId": "AIService_ListRuns",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRunsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "kind",
+            "description": "Optional. Filter runs by kind ('generate', 'agent_run', 'chat_turn').",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "Optional. Filter runs by source ('api', 'chat', 'playground', 'workflow', 'mcp').",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "agentId",
+            "description": "Optional. Filter runs by agent ID (`agt_...`).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "threadId",
+            "description": "Optional. Filter runs by thread ID (`thr_...`).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "description": "Optional. Filter runs by terminal or active status.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "pageSize",
-            "description": "Optional. The maximum number of runs to return in a single response page.",
+            "description": "Optional. Maximum number of runs to return per page.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -6012,26 +6901,26 @@
           },
           {
             "name": "pageToken",
-            "description": "Optional. A pagination token received from a previous listing call.",
+            "description": "Optional. Pagination cursor from a previous ListRunsResponse.",
             "in": "query",
             "required": false,
             "type": "string"
           }
         ],
         "tags": [
-          "AgentService"
+          "AIService"
         ]
       }
     },
-    "/v1/platform/agent/agents/{id}": {
+    "/v1/platform/ai/runs/{id}": {
       "get": {
-        "summary": "Retrieves a configured Agent's parameters.",
-        "operationId": "AgentService_GetAgent",
+        "summary": "Retrieves a single AI execution run hydrated with its ordered LLM/tool steps.",
+        "operationId": "AIService_GetRun",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1Agent"
+              "$ref": "#/definitions/v1Run"
             }
           },
           "default": {
@@ -6044,25 +6933,26 @@
         "parameters": [
           {
             "name": "id",
-            "description": "Required. The unique identifier of the agent.",
+            "description": "Required. Run identifier (`air_...`).",
             "in": "path",
             "required": true,
             "type": "string"
           }
         ],
         "tags": [
-          "AgentService"
+          "AIService"
         ]
-      },
-      "delete": {
-        "summary": "Deletes an AI Agent configuration.",
-        "operationId": "AgentService_DeleteAgent",
+      }
+    },
+    "/v1/platform/ai/settings": {
+      "get": {
+        "summary": "Retrieves workspace AI settings including model role defaults, governance, and current monthly spend.",
+        "operationId": "AIService_GetSettings",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
-              "properties": {}
+              "$ref": "#/definitions/platformAiV1Settings"
             }
           },
           "default": {
@@ -6072,27 +6962,18 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "id",
-            "description": "Required. The unique identifier of the agent to delete.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
         "tags": [
-          "AgentService"
+          "AIService"
         ]
       },
-      "put": {
-        "summary": "Updates agent prompt directives or model settings.",
-        "operationId": "AgentService_UpdateAgent",
+      "patch": {
+        "summary": "Updates workspace AI settings using a field mask.",
+        "operationId": "AIService_UpdateSettings",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1Agent"
+              "$ref": "#/definitions/platformAiV1Settings"
             }
           },
           "default": {
@@ -6104,35 +6985,29 @@
         },
         "parameters": [
           {
-            "name": "id",
-            "description": "Required. The unique identifier of the agent to update.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
+            "name": "settings",
+            "description": "Required. Updated workspace AI settings.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/AgentServiceUpdateAgentBody"
+              "$ref": "#/definitions/platformAiV1Settings"
             }
           }
         ],
         "tags": [
-          "AgentService"
+          "AIService"
         ]
       }
     },
-    "/v1/platform/agent/providers": {
+    "/v1/platform/ai/threads": {
       "get": {
-        "summary": "Lists all configured LLM providers in the workspace.",
-        "operationId": "AgentService_ListProviders",
+        "summary": "Lists private chat threads belonging to the authenticated user in the workspace.",
+        "operationId": "AIService_ListThreads",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/platformAgentV1ListProvidersResponse"
+              "$ref": "#/definitions/platformAiV1ListThreadsResponse"
             }
           },
           "default": {
@@ -6142,18 +7017,42 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "isArchived",
+            "description": "Optional. Filter by archived status (defaults to false).",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "pageSize",
+            "description": "Optional. Maximum number of threads to return per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "description": "Optional. Pagination cursor from a previous ListThreadsResponse.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
         "tags": [
-          "AgentService"
+          "AIService"
         ]
       },
       "post": {
-        "summary": "Creates a new LLM provider connection in the workspace.",
-        "operationId": "AgentService_CreateProvider",
+        "summary": "Creates a new private chat thread (lazily seeding system AI defaults if needed).",
+        "operationId": "AIService_CreateThread",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1LLMProvider"
+              "$ref": "#/definitions/platformAiV1Thread"
             }
           },
           "default": {
@@ -6165,52 +7064,29 @@
         },
         "parameters": [
           {
-            "name": "body",
-            "description": "Request message for creating an LLM provider.",
+            "name": "thread",
+            "description": "Required. Initial thread settings (agent_id, model_id, title, config).",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1CreateProviderRequest"
+              "$ref": "#/definitions/platformAiV1Thread"
             }
           }
         ],
         "tags": [
-          "AgentService"
+          "AIService"
         ]
       }
     },
-    "/v1/platform/agent/providers-catalog": {
+    "/v1/platform/ai/threads/{id}": {
       "get": {
-        "summary": "Retrieves standard connection type templates.",
-        "operationId": "AgentService_GetProviderCatalog",
+        "summary": "Retrieves a private chat thread owned by the authenticated user.",
+        "operationId": "AIService_GetThread",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1GetProviderCatalogResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googleRpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "AgentService"
-        ]
-      }
-    },
-    "/v1/platform/agent/providers/{id}": {
-      "get": {
-        "summary": "Retrieves a single LLM provider configuration.",
-        "operationId": "AgentService_GetProvider",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1LLMProvider"
+              "$ref": "#/definitions/platformAiV1Thread"
             }
           },
           "default": {
@@ -6223,19 +7099,19 @@
         "parameters": [
           {
             "name": "id",
-            "description": "Required. The unique identifier of the provider.",
+            "description": "Required. Thread identifier (`thr_...`).",
             "in": "path",
             "required": true,
             "type": "string"
           }
         ],
         "tags": [
-          "AgentService"
+          "AIService"
         ]
       },
       "delete": {
-        "summary": "Deletes an LLM provider connection.",
-        "operationId": "AgentService_DeleteProvider",
+        "summary": "Deletes a private chat thread and all of its messages.",
+        "operationId": "AIService_DeleteThread",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -6254,24 +7130,24 @@
         "parameters": [
           {
             "name": "id",
-            "description": "Required. The unique identifier of the provider to delete.",
+            "description": "Required. Thread identifier (`thr_...`) to delete.",
             "in": "path",
             "required": true,
             "type": "string"
           }
         ],
         "tags": [
-          "AgentService"
+          "AIService"
         ]
       },
-      "put": {
-        "summary": "Updates LLM provider details (rotates API keys, etc.).",
-        "operationId": "AgentService_UpdateProvider",
+      "patch": {
+        "summary": "Updates a private chat thread (title, agent, model, pin/archive, config) using a field mask.",
+        "operationId": "AIService_UpdateThread",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1LLMProvider"
+              "$ref": "#/definitions/platformAiV1Thread"
             }
           },
           "default": {
@@ -6284,7 +7160,48 @@
         "parameters": [
           {
             "name": "id",
-            "description": "Required. The unique identifier of the provider to update.",
+            "description": "Required. Thread identifier (`thr_...`) to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "thread",
+            "description": "Required. Thread payload containing updated fields.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/platformAiV1Thread"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/threads/{id}:cancel": {
+      "post": {
+        "summary": "Cancels an active streaming turn on a private chat thread.",
+        "operationId": "AIService_CancelThreadTurn",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/platformAiV1Thread"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Thread identifier (`thr_...`) with an active streaming turn.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -6294,12 +7211,93 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/AgentServiceUpdateProviderBody"
+              "$ref": "#/definitions/AIServiceCancelThreadTurnBody"
             }
           }
         ],
         "tags": [
-          "AgentService"
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai/threads/{threadId}/messages": {
+      "get": {
+        "summary": "Lists persisted messages in a private chat thread ordered by sequence number.",
+        "operationId": "AIService_ListThreadMessages",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListThreadMessagesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "threadId",
+            "description": "Required. Thread identifier (`thr_...`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "description": "Optional. Maximum number of messages to return per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "description": "Optional. Pagination cursor from a previous ListThreadMessagesResponse.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AIService"
+        ]
+      }
+    },
+    "/v1/platform/ai:generate": {
+      "post": {
+        "summary": "Executes a single-turn headless generation with optional attachments and output schema.",
+        "operationId": "AIService_Generate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Run"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Request message for AIService.Generate.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GenerateRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AIService"
         ]
       }
     },
@@ -7666,6 +8664,64 @@
     }
   },
   "definitions": {
+    "AIServiceCancelThreadTurnBody": {
+      "type": "object",
+      "description": "Request message for AIService.CancelThreadTurn."
+    },
+    "AIServiceExecuteAgentBody": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Required. Prompt input passed to the agent."
+        },
+        "modelId": {
+          "type": "string",
+          "description": "Optional. Override model ID (`mdl_...`) for this execution."
+        },
+        "input": {
+          "type": "object",
+          "description": "Optional. Optional JSON input context serialized into the prompt turn."
+        },
+        "outputSchema": {
+          "type": "object",
+          "description": "Optional. Override JSON output schema for this execution."
+        }
+      },
+      "description": "Request message for AIService.ExecuteAgent.",
+      "required": [
+        "prompt"
+      ]
+    },
+    "AIServiceResetAgentBody": {
+      "type": "object",
+      "description": "Request message for AIService.ResetAgent."
+    },
+    "AIServiceSyncMCPServerBody": {
+      "type": "object",
+      "description": "Request message for AIService.SyncMCPServer."
+    },
+    "AIServiceSyncProviderModelsBody": {
+      "type": "object",
+      "properties": {
+        "modelIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. Specific upstream model IDs to import; empty imports curated defaults or all discovered models."
+        }
+      },
+      "description": "Request message for AIService.SyncProviderModels."
+    },
+    "AIServiceTestMCPServerBody": {
+      "type": "object",
+      "description": "Request message for AIService.TestMCPServer."
+    },
+    "AIServiceTestProviderBody": {
+      "type": "object",
+      "description": "Request message for AIService.TestProvider."
+    },
     "AccountConversion": {
       "type": "object",
       "properties": {
@@ -7748,73 +8804,6 @@
       "description": "Request message for AdminIdentity.UpdateUserRole.",
       "required": [
         "accessLevel"
-      ]
-    },
-    "AgentServiceUpdateAgentBody": {
-      "type": "object",
-      "properties": {
-        "llmProviderId": {
-          "type": "string",
-          "description": "Optional. The identifier of the linked LLM provider."
-        },
-        "name": {
-          "type": "string",
-          "description": "Required. The updated display name."
-        },
-        "description": {
-          "type": "string",
-          "description": "Optional. The updated description."
-        },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Optional. The updated tags."
-        },
-        "modelName": {
-          "type": "string",
-          "description": "Required. The updated model identifier."
-        },
-        "systemInstruction": {
-          "type": "string",
-          "description": "Optional. The updated system prompt instructions."
-        },
-        "temperature": {
-          "type": "number",
-          "format": "double",
-          "description": "Optional. The updated sampling temperature."
-        },
-        "isEnabled": {
-          "type": "boolean",
-          "description": "Optional. Whether the agent is active and enabled."
-        }
-      },
-      "description": "Request message for updating an AI agent.",
-      "required": [
-        "name",
-        "modelName"
-      ]
-    },
-    "AgentServiceUpdateProviderBody": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Required. The updated name of the provider connection."
-        },
-        "apiUrl": {
-          "type": "string",
-          "description": "Optional. The updated base endpoint URL."
-        },
-        "apiKey": {
-          "type": "string",
-          "description": "Optional. The updated authentication key or bearer token."
-        }
-      },
-      "description": "Request message for updating an LLM provider.",
-      "required": [
-        "name"
       ]
     },
     "BorrowingDirection": {
@@ -8266,9 +9255,9 @@
           "description": "Output only. Telemetry metadata (duration_ms, tokens_used, source loader stats).",
           "readOnly": true
         },
-        "agentRunId": {
+        "aiRunId": {
           "type": "string",
-          "description": "Output only. Linked platform.agent_runs ID for `llm.generate` steps.",
+          "description": "Output only. Linked platform.ai_runs ID for AI steps (llm.generate, ai.agent_run).",
           "readOnly": true
         },
         "startTime": {
@@ -9343,20 +10332,234 @@
         "accessLevel"
       ]
     },
-    "platformAgentV1ListProvidersResponse": {
+    "platformAiV1GenerationConfig": {
+      "type": "object",
+      "properties": {
+        "temperature": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional. Sampling temperature parameter."
+        },
+        "maxTokens": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. Maximum output tokens to generate."
+        },
+        "topP": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional. Nucleus sampling top-p parameter."
+        },
+        "thinking": {
+          "$ref": "#/definitions/platformAiV1ThinkingConfig",
+          "description": "Optional. Extended thinking/reasoning configuration."
+        }
+      },
+      "description": "GenerationConfig configures LLM sampling and reasoning parameters."
+    },
+    "platformAiV1ListProvidersResponse": {
       "type": "object",
       "properties": {
         "providers": {
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1LLMProvider"
+            "$ref": "#/definitions/v1Provider"
           },
-          "description": "Output only. The list of configured LLM providers.",
+          "description": "Output only. Configured workspace LLM providers.",
           "readOnly": true
         }
       },
-      "description": "Response message for listing LLM providers."
+      "description": "Response message for AIService.ListProviders."
+    },
+    "platformAiV1ListThreadsResponse": {
+      "type": "object",
+      "properties": {
+        "threads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/platformAiV1Thread"
+          },
+          "description": "Output only. Private chat threads belonging to the caller.",
+          "readOnly": true
+        },
+        "nextPageToken": {
+          "type": "string",
+          "description": "Output only. Pagination cursor for the next page.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for AIService.ListThreads."
+    },
+    "platformAiV1ProviderDescriptor": {
+      "type": "object",
+      "properties": {
+        "driver": {
+          "type": "string",
+          "description": "Output only. Driver key ('gemini', 'openai', 'anthropic', 'openrouter', 'ollama', 'openai_compatible').",
+          "readOnly": true
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Output only. Human-readable display name.",
+          "readOnly": true
+        },
+        "description": {
+          "type": "string",
+          "description": "Output only. Summary of the provider driver and capabilities.",
+          "readOnly": true
+        },
+        "defaultBaseUrl": {
+          "type": "string",
+          "description": "Output only. Default base API URL for this driver.",
+          "readOnly": true
+        },
+        "apiKeyRequired": {
+          "type": "boolean",
+          "description": "Output only. Whether an API key is required for this driver.",
+          "readOnly": true
+        },
+        "supportsDiscovery": {
+          "type": "boolean",
+          "description": "Output only. Whether live upstream model discovery is supported.",
+          "readOnly": true
+        },
+        "logoIcon": {
+          "type": "string",
+          "description": "Output only. Icon identifier for UI display.",
+          "readOnly": true
+        }
+      },
+      "description": "ProviderDescriptor describes a supported LLM provider driver blueprint."
+    },
+    "platformAiV1Settings": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "$ref": "#/definitions/v1ModelRoleSettings",
+          "description": "Optional. Workspace model role defaults."
+        },
+        "governance": {
+          "$ref": "#/definitions/v1GovernanceConfig",
+          "description": "Optional. Workspace AI governance policies."
+        },
+        "currentMonthSpendUsd": {
+          "type": "number",
+          "format": "double",
+          "description": "Output only. Estimated AI spend accumulated in the current calendar month (USD).",
+          "readOnly": true
+        }
+      },
+      "description": "Settings holds workspace-level AI model defaults, governance, and spend telemetry."
+    },
+    "platformAiV1ThinkingConfig": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Optional. Whether extended thinking is enabled."
+        },
+        "effort": {
+          "type": "string",
+          "description": "Optional. Reasoning effort level ('low', 'medium', 'high')."
+        },
+        "budgetTokens": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. Explicit reasoning token budget."
+        }
+      },
+      "description": "ThinkingConfig configures extended reasoning behavior on supported models."
+    },
+    "platformAiV1Thread": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique identifier with prefix `thr_`.",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. Owning workspace identifier (`spc_...`).",
+          "readOnly": true
+        },
+        "userId": {
+          "type": "string",
+          "description": "Output only. Owning user identifier (`usr_...`).",
+          "readOnly": true
+        },
+        "agentId": {
+          "type": "string",
+          "description": "Optional. Selected agent identifier (`agt_...`); unset uses Saturn Assistant."
+        },
+        "agentName": {
+          "type": "string",
+          "description": "Output only. Hydrated agent display name.",
+          "readOnly": true
+        },
+        "modelId": {
+          "type": "string",
+          "description": "Optional. Model override identifier (`mdl_...`)."
+        },
+        "modelDisplayName": {
+          "type": "string",
+          "description": "Output only. Hydrated model display name.",
+          "readOnly": true
+        },
+        "title": {
+          "type": "string",
+          "description": "Optional. Thread title."
+        },
+        "status": {
+          "type": "string",
+          "description": "Output only. Runtime thread status ('idle', 'streaming', 'awaiting_approval').",
+          "readOnly": true
+        },
+        "config": {
+          "$ref": "#/definitions/v1ThreadConfig",
+          "description": "Optional. Thread configuration overrides."
+        },
+        "state": {
+          "$ref": "#/definitions/v1ThreadState",
+          "description": "Output only. Current runtime thread state.",
+          "readOnly": true
+        },
+        "messageCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Total number of persisted messages in the thread.",
+          "readOnly": true
+        },
+        "isPinned": {
+          "type": "boolean",
+          "description": "Optional. Whether the thread is pinned in the user's sidebar."
+        },
+        "isArchived": {
+          "type": "boolean",
+          "description": "Optional. Whether the thread is archived."
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp of the most recent message.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Last update timestamp.",
+          "readOnly": true
+        }
+      },
+      "description": "Thread represents a private multi-turn AI chat thread owned by a single user in a workspace."
     },
     "platformConnectorV1ListProvidersResponse": {
       "type": "object",
@@ -9365,13 +10568,86 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1ProviderDescriptor"
+            "$ref": "#/definitions/platformConnectorV1ProviderDescriptor"
           },
           "description": "Output only. The list of supported OAuth connector providers.",
           "readOnly": true
         }
       },
       "description": "Response message for ConnectorService.ListProviders."
+    },
+    "platformConnectorV1ProviderDescriptor": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. The unique provider identifier (e.g., google, microsoft).",
+          "readOnly": true
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Output only. The human-readable display name (e.g., Google, Microsoft 365).",
+          "readOnly": true
+        },
+        "supportedCapabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Output only. List of capabilities supported by this provider (e.g., calendar, mail, contacts).",
+          "readOnly": true
+        },
+        "iconUrl": {
+          "type": "string",
+          "description": "Output only. Optional URL for the provider brand icon.",
+          "readOnly": true
+        }
+      },
+      "description": "ProviderDescriptor describes an available OAuth provider adapter and its capabilities."
+    },
+    "platformWorkflowV1GenerationConfig": {
+      "type": "object",
+      "properties": {
+        "temperature": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional. Sampling temperature parameter."
+        },
+        "maxTokens": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. Maximum output tokens to generate."
+        },
+        "topP": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional. Nucleus sampling top-p parameter."
+        },
+        "thinking": {
+          "$ref": "#/definitions/platformWorkflowV1ThinkingConfig",
+          "description": "Optional. Extended thinking/reasoning configuration."
+        }
+      },
+      "description": "GenerationConfig configures LLM sampling and reasoning parameters."
+    },
+    "platformWorkflowV1ThinkingConfig": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Optional. Whether extended thinking is enabled."
+        },
+        "effort": {
+          "type": "string",
+          "description": "Optional. Reasoning effort level ('low', 'medium', 'high')."
+        },
+        "budgetTokens": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. Explicit reasoning token budget."
+        }
+      },
+      "description": "ThinkingConfig configures extended reasoning behavior on supported models."
     },
     "protobufAny": {
       "type": "object",
@@ -9537,6 +10813,134 @@
         "username",
         "name"
       ]
+    },
+    "saturnMailV1ListThreadsResponse": {
+      "type": "object",
+      "properties": {
+        "threads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/saturnMailV1Thread"
+          },
+          "description": "List of matching threads."
+        },
+        "nextPageToken": {
+          "type": "string",
+          "description": "Pagination token for fetching next page."
+        },
+        "totalSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Estimated total number of matching threads."
+        }
+      },
+      "description": "Response containing list of threads."
+    },
+    "saturnMailV1Thread": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique thread identifier (mth_...)."
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Space / tenant workspace identifier."
+        },
+        "connectedAccountId": {
+          "type": "string",
+          "description": "Associated connected account identifier."
+        },
+        "providerThreadId": {
+          "type": "string",
+          "description": "Upstream provider thread identifier."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject line of the thread conversation."
+        },
+        "snippet": {
+          "type": "string",
+          "description": "Short text snippet summarizing recent activity."
+        },
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Participant"
+          },
+          "description": "Distinct participants involved across messages in the thread."
+        },
+        "messageCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of messages in the thread."
+        },
+        "hasAttachments": {
+          "type": "boolean",
+          "description": "Whether any message in the thread contains attachments."
+        },
+        "isUnread": {
+          "type": "boolean",
+          "description": "Whether any message in the thread is unread."
+        },
+        "isStarred": {
+          "type": "boolean",
+          "description": "Whether any message in the thread is starred / flagged."
+        },
+        "inInbox": {
+          "type": "boolean",
+          "description": "Whether the thread resides in the Inbox bucket."
+        },
+        "inSent": {
+          "type": "boolean",
+          "description": "Whether the thread resides in the Sent bucket."
+        },
+        "inDrafts": {
+          "type": "boolean",
+          "description": "Whether the thread contains drafts."
+        },
+        "inTrash": {
+          "type": "boolean",
+          "description": "Whether the thread resides in the Trash bucket."
+        },
+        "inSpam": {
+          "type": "boolean",
+          "description": "Whether the thread resides in the Spam bucket."
+        },
+        "mailboxIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Mailbox IDs containing this thread."
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of the latest message in the thread."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the thread record was created."
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the thread record was last updated."
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Message"
+          },
+          "description": "Chronological messages in the thread (populated on GetThread)."
+        }
+      },
+      "description": "Thread models an aggregated email conversation consisting of one or more messages."
     },
     "saturnSpaceV1Settings": {
       "type": "object",
@@ -9895,165 +11299,153 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Output only. The unique identifier of the agent.",
+          "description": "Output only. Unique identifier with prefix `agt_`.",
           "readOnly": true
         },
         "spaceId": {
           "type": "string",
-          "description": "Output only. The identifier of the workspace owning this agent.",
+          "description": "Output only. Owning workspace identifier (`spc_...`).",
           "readOnly": true
         },
-        "llmProviderId": {
+        "systemKey": {
           "type": "string",
-          "description": "Optional. The identifier of the linked LLM provider connection."
+          "description": "Output only. Built-in system blueprint key (e.g. 'system.saturn.assistant').",
+          "readOnly": true
+        },
+        "isSystem": {
+          "type": "boolean",
+          "description": "Output only. Whether this is a protected built-in system agent.",
+          "readOnly": true
+        },
+        "slug": {
+          "type": "string",
+          "description": "Required. URL-safe slug (also used for external MCP `agent__\u003cslug\u003e` exposure)."
         },
         "name": {
           "type": "string",
-          "description": "Required. The display name of the agent."
+          "description": "Required. Human-readable display name."
         },
         "description": {
           "type": "string",
-          "description": "Optional. A detailed description of the agent's responsibilities."
-        },
-        "purpose": {
-          "type": "string",
-          "description": "Required. The functional purpose blueprint of the agent (e.g. INBOX_PARSER)."
+          "description": "Optional. Detailed description of the agent's role."
         },
         "tags": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Optional. Organizational tags categorized with this agent."
+          "description": "Optional. Categorization tags."
         },
-        "modelName": {
+        "modelId": {
           "type": "string",
-          "description": "Required. The model identifier (e.g. gemini-2.5-flash)."
+          "description": "Optional. Registered model ID (`mdl_...`); unset uses the workspace default model."
         },
-        "systemInstruction": {
+        "modelDisplayName": {
           "type": "string",
-          "description": "Optional. System prompt instructions guiding agent execution."
+          "description": "Output only. Hydrated display name of the assigned model.",
+          "readOnly": true
         },
-        "temperature": {
-          "type": "number",
-          "format": "double",
-          "description": "Optional. Sampling temperature parameter controlling randomness."
+        "config": {
+          "$ref": "#/definitions/v1AgentConfig",
+          "description": "Optional. Grouped agent behavior and MCP binding configuration."
         },
         "isEnabled": {
           "type": "boolean",
-          "description": "Optional. Whether the agent is active and participating in workflows."
+          "description": "Optional. Whether this agent is enabled."
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. Monotonic definition version.",
+          "readOnly": true
+        },
+        "stats": {
+          "$ref": "#/definitions/v1AgentStats",
+          "description": "Output only. Hydrated 7-day execution metrics.",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "Output only. The timestamp when the agent was created.",
+          "description": "Output only. Creation timestamp.",
           "readOnly": true
         },
         "updateTime": {
           "type": "string",
           "format": "date-time",
-          "description": "Output only. The timestamp when the agent was last updated.",
+          "description": "Output only. Last update timestamp.",
           "readOnly": true
         }
       },
-      "description": "Configuration details for an autonomous AI worker agent.",
+      "description": "Agent represents an autonomous AI agent configured with instructions and MCP bindings.",
       "required": [
-        "name",
-        "purpose",
-        "modelName"
+        "slug",
+        "name"
       ]
     },
-    "v1AgentBlueprintDescriptor": {
+    "v1AgentConfig": {
       "type": "object",
       "properties": {
-        "purpose": {
+        "icon": {
           "type": "string",
-          "description": "Output only. The unique purpose identifier of the blueprint (e.g. INBOX_PARSER).",
-          "readOnly": true
+          "description": "Optional. Icon identifier for UI display."
         },
-        "displayName": {
+        "systemInstruction": {
           "type": "string",
-          "description": "Output only. The human-readable title of the blueprint.",
-          "readOnly": true
+          "description": "Optional. System prompt instructions guiding the agent."
         },
-        "description": {
-          "type": "string",
-          "description": "Output only. Detailed description of what this agent purpose accomplishes.",
-          "readOnly": true
+        "generation": {
+          "$ref": "#/definitions/platformAiV1GenerationConfig",
+          "description": "Optional. Generation parameter overrides."
         },
-        "defaultTags": {
+        "execution": {
+          "$ref": "#/definitions/v1ExecutionConfig",
+          "description": "Optional. Runtime execution and tool approval policy."
+        },
+        "mcpBindings": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "object",
+            "$ref": "#/definitions/v1MCPBinding"
           },
-          "description": "Output only. Default categorization tags recommended for this blueprint.",
-          "readOnly": true
+          "description": "Optional. Unified MCP server bindings and tool allowlists."
         },
-        "defaultSystemInstruction": {
-          "type": "string",
-          "description": "Output only. Recommended default system prompt instructions.",
-          "readOnly": true
-        },
-        "requiredResponseSchema": {
-          "type": "string",
-          "description": "Output only. JSON schema string describing the expected structured response format.",
-          "readOnly": true
+        "outputSchema": {
+          "type": "object",
+          "description": "Optional. JSON Schema enforcing structured final output."
         }
       },
-      "description": "Specification blueprint defining a standard system agent purpose."
+      "description": "AgentConfig groups prompt, model generation, execution, MCP bindings, and output schema settings."
     },
-    "v1AgentRun": {
+    "v1AgentStats": {
       "type": "object",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Output only. The unique identifier of the run.",
-          "readOnly": true
-        },
-        "agentId": {
-          "type": "string",
-          "description": "Output only. The identifier of the agent that executed the run.",
-          "readOnly": true
-        },
-        "spaceId": {
-          "type": "string",
-          "description": "Output only. The identifier of the workspace where the run occurred.",
-          "readOnly": true
-        },
-        "status": {
-          "type": "string",
-          "description": "Output only. The terminal execution status (e.g. SUCCESS, FAILED).",
-          "readOnly": true
-        },
-        "inputRaw": {
-          "type": "string",
-          "description": "Output only. The raw input prompt or payload provided to the agent.",
-          "readOnly": true
-        },
-        "outputRaw": {
-          "type": "string",
-          "description": "Output only. The raw output text returned by the model.",
-          "readOnly": true
-        },
-        "errorMessage": {
-          "type": "string",
-          "description": "Output only. Any error message returned if the execution failed.",
-          "readOnly": true
-        },
-        "tokensUsed": {
+        "totalRuns7d": {
           "type": "integer",
           "format": "int32",
-          "description": "Output only. The total number of LLM tokens consumed during execution.",
+          "description": "Output only. Total runs in the last 7 days.",
           "readOnly": true
         },
-        "createTime": {
+        "completedRuns7d": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Completed runs in the last 7 days.",
+          "readOnly": true
+        },
+        "failedRuns7d": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Failed runs in the last 7 days.",
+          "readOnly": true
+        },
+        "lastRunAt": {
           "type": "string",
           "format": "date-time",
-          "description": "Output only. The timestamp when the run completed or was recorded.",
+          "description": "Output only. Timestamp of the most recent run.",
           "readOnly": true
         }
       },
-      "description": "Record of an individual execution run performed by an agent."
+      "description": "AgentStats summarizes 7-day execution metrics for an agent."
     },
     "v1Attachment": {
       "type": "object",
@@ -10089,6 +11481,33 @@
         }
       },
       "description": "Attachment models metadata and signed download URL for an attachment without carrying raw bytes."
+    },
+    "v1AttachmentSummary": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string",
+          "description": "Output only. Original filename.",
+          "readOnly": true
+        },
+        "contentType": {
+          "type": "string",
+          "description": "Output only. MIME content type.",
+          "readOnly": true
+        },
+        "sizeBytes": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. File size in bytes.",
+          "readOnly": true
+        },
+        "extractedText": {
+          "type": "string",
+          "description": "Output only. Extracted text fallback when applicable.",
+          "readOnly": true
+        }
+      },
+      "description": "AttachmentSummary persists lightweight attachment metadata without raw binary payloads."
     },
     "v1Attendee": {
       "type": "object",
@@ -10925,52 +12344,56 @@
       },
       "description": "ConnectedAccount represents a space-owned external identity and capability connection."
     },
-    "v1CreateAgentRequest": {
+    "v1ContentBlock": {
       "type": "object",
       "properties": {
-        "llmProviderId": {
+        "type": {
           "type": "string",
-          "description": "Optional. The identifier of the linked LLM provider."
+          "description": "Output only. Block kind ('text', 'thinking', 'tool_call', 'tool_result', 'attachment').",
+          "readOnly": true
         },
-        "name": {
+        "text": {
           "type": "string",
-          "description": "Required. The display name of the agent."
+          "description": "Output only. Text or thinking content.",
+          "readOnly": true
         },
-        "description": {
+        "toolCallId": {
           "type": "string",
-          "description": "Optional. A detailed description of the agent's role."
+          "description": "Output only. Tool call correlation ID for 'tool_call' and 'tool_result' blocks.",
+          "readOnly": true
         },
-        "purpose": {
+        "mcpServerId": {
           "type": "string",
-          "description": "Required. The functional purpose blueprint (e.g. INBOX_PARSER)."
+          "description": "Output only. Target MCP server identifier (`mcp_...`).",
+          "readOnly": true
         },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Optional. Organizational tags assigned to the agent."
-        },
-        "modelName": {
+        "toolName": {
           "type": "string",
-          "description": "Required. The model identifier to use (e.g. gemini-2.5-flash)."
+          "description": "Output only. Tool name for 'tool_call' and 'tool_result' blocks.",
+          "readOnly": true
         },
-        "systemInstruction": {
-          "type": "string",
-          "description": "Optional. System prompt instructions guiding agent behavior."
+        "arguments": {
+          "type": "object",
+          "description": "Output only. JSON arguments for 'tool_call' blocks.",
+          "readOnly": true
         },
-        "temperature": {
-          "type": "number",
-          "format": "double",
-          "description": "Optional. Sampling temperature parameter controlling randomness."
+        "result": {
+          "type": "object",
+          "description": "Output only. JSON result payload for 'tool_result' blocks.",
+          "readOnly": true
+        },
+        "isError": {
+          "type": "boolean",
+          "description": "Output only. Whether a 'tool_result' represents an error or rejection.",
+          "readOnly": true
+        },
+        "attachment": {
+          "$ref": "#/definitions/v1AttachmentSummary",
+          "description": "Output only. Lightweight metadata for 'attachment' blocks.",
+          "readOnly": true
         }
       },
-      "description": "Request message for creating an AI agent.",
-      "required": [
-        "name",
-        "purpose",
-        "modelName"
-      ]
+      "description": "ContentBlock represents a structured block within a persisted thread message."
     },
     "v1CreateAuthChallengeRequest": {
       "type": "object",
@@ -10992,32 +12415,6 @@
         }
       },
       "description": "Response message for Identity.CreateAuthChallenge."
-    },
-    "v1CreateProviderRequest": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Required. The human-readable name of the provider connection."
-        },
-        "compatibilityMode": {
-          "type": "string",
-          "description": "Required. The compatibility protocol mode (e.g. GEMINI_NATIVE, OPENAI_COMPATIBLE)."
-        },
-        "apiUrl": {
-          "type": "string",
-          "description": "Optional. The base endpoint URL of the LLM API."
-        },
-        "apiKey": {
-          "type": "string",
-          "description": "Optional. The authentication key or bearer token."
-        }
-      },
-      "description": "Request message for creating an LLM provider.",
-      "required": [
-        "name",
-        "compatibilityMode"
-      ]
     },
     "v1CreateSpaceRequest": {
       "type": "object",
@@ -11222,6 +12619,47 @@
         "signature"
       ]
     },
+    "v1DiscoverProviderModelsResponse": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DiscoveredModel"
+          },
+          "description": "Output only. Upstream models discovered or cataloged for the provider.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for AIService.DiscoverProviderModels."
+    },
+    "v1DiscoveredModel": {
+      "type": "object",
+      "properties": {
+        "modelId": {
+          "type": "string",
+          "description": "Output only. Upstream model identifier.",
+          "readOnly": true
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Output only. Human-readable display name.",
+          "readOnly": true
+        },
+        "profile": {
+          "$ref": "#/definitions/v1ModelProfile",
+          "description": "Output only. Inferred or cataloged model profile.",
+          "readOnly": true
+        },
+        "alreadyRegistered": {
+          "type": "boolean",
+          "description": "Output only. Whether this model is already registered under the provider.",
+          "readOnly": true
+        }
+      },
+      "description": "DiscoveredModel describes an upstream model discovered from a provider."
+    },
     "v1Draft": {
       "type": "object",
       "properties": {
@@ -11336,6 +12774,21 @@
     "v1EnsureDefaultCalendarRequest": {
       "type": "object",
       "description": "Request to ensure default native calendar provisioning."
+    },
+    "v1ErrorDetail": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Optional. Machine-readable error code."
+        },
+        "message": {
+          "type": "string",
+          "description": "Output only. Human-readable error message.",
+          "readOnly": true
+        }
+      },
+      "description": "ErrorDetail captures a structured machine code and message for AI failures."
     },
     "v1Event": {
       "type": "object",
@@ -11649,6 +13102,26 @@
         "rateDate"
       ]
     },
+    "v1ExecutionConfig": {
+      "type": "object",
+      "properties": {
+        "approvalPolicy": {
+          "type": "string",
+          "description": "Optional. Tool approval policy ('confirm_writes', 'auto', 'deny_writes')."
+        },
+        "maxSteps": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. Maximum ReAct tool/LLM iterations per run."
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. Execution timeout in seconds."
+        }
+      },
+      "description": "ExecutionConfig controls runtime limits and tool approval behavior for an agent."
+    },
     "v1ExpenseInput": {
       "type": "object",
       "properties": {
@@ -11953,20 +13426,46 @@
         "prompt"
       ]
     },
-    "v1GetAgentCatalogResponse": {
+    "v1GenerateRequest": {
       "type": "object",
       "properties": {
-        "blueprints": {
+        "prompt": {
+          "type": "string",
+          "description": "Required. Prompt text for single-turn generation."
+        },
+        "systemInstruction": {
+          "type": "string",
+          "description": "Optional. System instructions prepended to the generation request."
+        },
+        "modelId": {
+          "type": "string",
+          "description": "Optional. Registered model ID (`mdl_...`)."
+        },
+        "role": {
+          "type": "string",
+          "description": "Optional. Workspace model role ('default', 'fast', 'reasoning') when model_id is unset."
+        },
+        "generation": {
+          "$ref": "#/definitions/platformAiV1GenerationConfig",
+          "description": "Optional. Generation and thinking configuration overrides."
+        },
+        "outputSchema": {
+          "type": "object",
+          "description": "Optional. JSON Schema enforcing structured output."
+        },
+        "attachments": {
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1AgentBlueprintDescriptor"
+            "$ref": "#/definitions/v1TurnAttachment"
           },
-          "description": "Output only. The list of supported agent blueprints.",
-          "readOnly": true
+          "description": "Optional. Optional inline file attachments."
         }
       },
-      "description": "Response message containing available agent purpose blueprints."
+      "description": "Request message for AIService.Generate.",
+      "required": [
+        "prompt"
+      ]
     },
     "v1GetInsightsResponse": {
       "type": "object",
@@ -11981,21 +13480,6 @@
         }
       },
       "description": "The response for\n[GetInsights][saturn.finance.v1.Finance.GetInsights]."
-    },
-    "v1GetProviderCatalogResponse": {
-      "type": "object",
-      "properties": {
-        "blueprints": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1ProviderBlueprintDescriptor"
-          },
-          "description": "Output only. The list of supported provider blueprints.",
-          "readOnly": true
-        }
-      },
-      "description": "Response message containing available LLM provider blueprints."
     },
     "v1GetQueueMetricsResponse": {
       "type": "object",
@@ -12059,6 +13543,22 @@
         }
       },
       "description": "Response message containing scheduler engine configuration and status."
+    },
+    "v1GovernanceConfig": {
+      "type": "object",
+      "properties": {
+        "monthlyBudgetUsd": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional. Monthly workspace AI spend cap in USD (0 or unset disables cap)."
+        },
+        "runRetentionDays": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. Number of days to retain AI run logs (default 90; 0 disables pruning)."
+        }
+      },
+      "description": "GovernanceConfig configures workspace AI budget caps and run retention policies."
     },
     "v1InboxItem": {
       "type": "object",
@@ -12487,54 +13987,6 @@
       },
       "description": "Details of an individual queued job instance."
     },
-    "v1LLMProvider": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Output only. The unique identifier of the LLM provider.",
-          "readOnly": true
-        },
-        "spaceId": {
-          "type": "string",
-          "description": "Output only. The identifier of the workspace owning this provider.",
-          "readOnly": true
-        },
-        "name": {
-          "type": "string",
-          "description": "Required. The human-readable name of the provider connection."
-        },
-        "compatibilityMode": {
-          "type": "string",
-          "description": "Required. The compatibility protocol mode (e.g. GEMINI_NATIVE, OPENAI_COMPATIBLE)."
-        },
-        "apiUrl": {
-          "type": "string",
-          "description": "Optional. The base endpoint URL of the LLM API."
-        },
-        "apiKey": {
-          "type": "string",
-          "description": "Optional. The authentication key or bearer token used to access the provider."
-        },
-        "createTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Output only. The timestamp when the provider was registered.",
-          "readOnly": true
-        },
-        "updateTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Output only. The timestamp when the provider was last updated.",
-          "readOnly": true
-        }
-      },
-      "description": "Configuration details for an external LLM provider connection.",
-      "required": [
-        "name",
-        "compatibilityMode"
-      ]
-    },
     "v1LimitPropagation": {
       "type": "string",
       "enum": [
@@ -12591,26 +14043,6 @@
       },
       "description": "Response message for Identity.ListActiveSessions."
     },
-    "v1ListAgentRunsResponse": {
-      "type": "object",
-      "properties": {
-        "runs": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1AgentRun"
-          },
-          "description": "Output only. The list of execution runs.",
-          "readOnly": true
-        },
-        "nextPageToken": {
-          "type": "string",
-          "description": "Output only. A token that can be sent as `page_token` to retrieve the next page.",
-          "readOnly": true
-        }
-      },
-      "description": "Response message for listing agent execution runs."
-    },
     "v1ListAgentsResponse": {
       "type": "object",
       "properties": {
@@ -12620,11 +14052,11 @@
             "type": "object",
             "$ref": "#/definitions/v1Agent"
           },
-          "description": "Output only. The list of configured agents.",
+          "description": "Output only. Workspace AI agents hydrated with 7-day execution stats.",
           "readOnly": true
         }
       },
-      "description": "Response message for listing AI agents."
+      "description": "Response message for AIService.ListAgents."
     },
     "v1ListBackupsResponse": {
       "type": "object",
@@ -12902,6 +14334,21 @@
       },
       "description": "Response message for listing queued job instances."
     },
+    "v1ListMCPServersResponse": {
+      "type": "object",
+      "properties": {
+        "mcpServers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MCPServer"
+          },
+          "description": "Output only. Configured MCP servers including the built-in Saturn Workspace server.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for AIService.ListMCPServers."
+    },
     "v1ListMFAFactorsResponse": {
       "type": "object",
       "properties": {
@@ -12942,6 +14389,21 @@
       },
       "description": "Response containing list of mailboxes."
     },
+    "v1ListModelsResponse": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Model"
+          },
+          "description": "Output only. Registered workspace AI models.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for AIService.ListModels."
+    },
     "v1ListMySecurityEventsResponse": {
       "type": "object",
       "properties": {
@@ -12962,6 +14424,21 @@
       },
       "description": "Response message for Identity.ListMySecurityEvents."
     },
+    "v1ListProviderDescriptorsResponse": {
+      "type": "object",
+      "properties": {
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/platformAiV1ProviderDescriptor"
+          },
+          "description": "Output only. Supported LLM provider driver descriptors.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for AIService.ListProviderDescriptors."
+    },
     "v1ListRecurringTransactionsResponse": {
       "type": "object",
       "properties": {
@@ -12979,6 +14456,26 @@
         }
       },
       "description": "The response for\n[ListRecurringTransactions][saturn.finance.v1.Finance.ListRecurringTransactions]."
+    },
+    "v1ListRunsResponse": {
+      "type": "object",
+      "properties": {
+        "runs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Run"
+          },
+          "description": "Output only. Paginated list of AI runs.",
+          "readOnly": true
+        },
+        "nextPageToken": {
+          "type": "string",
+          "description": "Output only. Pagination cursor for the next page.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for AIService.ListRuns."
     },
     "v1ListScheduledTransactionsResponse": {
       "type": "object",
@@ -13120,28 +14617,25 @@
       },
       "description": "The response for\n[ListStatements][saturn.finance.v1.Finance.ListStatements]."
     },
-    "v1ListThreadsResponse": {
+    "v1ListThreadMessagesResponse": {
       "type": "object",
       "properties": {
-        "threads": {
+        "messages": {
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Thread"
+            "$ref": "#/definitions/v1ThreadMessage"
           },
-          "description": "List of matching threads."
+          "description": "Output only. Ordered messages in the thread.",
+          "readOnly": true
         },
         "nextPageToken": {
           "type": "string",
-          "description": "Pagination token for fetching next page."
-        },
-        "totalSize": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Estimated total number of matching threads."
+          "description": "Output only. Pagination cursor for the next page.",
+          "readOnly": true
         }
       },
-      "description": "Response containing list of threads."
+      "description": "Response message for AIService.ListThreadMessages."
     },
     "v1ListTransactionEventsResponse": {
       "type": "object",
@@ -13285,6 +14779,240 @@
     "v1LogoutResponse": {
       "type": "object",
       "description": "Response message for Identity.Logout."
+    },
+    "v1MCPAuthSecretInput": {
+      "type": "object",
+      "properties": {
+        "bearerToken": {
+          "type": "string",
+          "description": "Optional. Bearer token for 'bearer' auth_type."
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Optional. Custom HTTP headers for 'custom_headers' auth_type."
+        }
+      },
+      "description": "MCPAuthSecretInput carries write-only auth credentials for an external HTTP MCP server."
+    },
+    "v1MCPBinding": {
+      "type": "object",
+      "properties": {
+        "mcpServerId": {
+          "type": "string",
+          "description": "Required. Target MCP server identifier (`mcp_...`)."
+        },
+        "allowedTools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. Allowed tool names (e.g. `[\"*\"]` or specific tool names)."
+        }
+      },
+      "description": "MCPBinding binds an MCP server and an allowlist of tool names to an agent.",
+      "required": [
+        "mcpServerId"
+      ]
+    },
+    "v1MCPDiscoveryState": {
+      "type": "object",
+      "properties": {
+        "healthStatus": {
+          "type": "string",
+          "description": "Output only. Health status ('unknown', 'healthy', 'unhealthy').",
+          "readOnly": true
+        },
+        "serverInfo": {
+          "$ref": "#/definitions/v1MCPServerInfo",
+          "description": "Output only. Server implementation metadata.",
+          "readOnly": true
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MCPToolSummary"
+          },
+          "description": "Output only. Discovered tools exposed by this server.",
+          "readOnly": true
+        },
+        "lastSyncedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp of the last successful sync.",
+          "readOnly": true
+        },
+        "error": {
+          "$ref": "#/definitions/v1ErrorDetail",
+          "description": "Output only. Structured error from the last failed test or sync, if any.",
+          "readOnly": true
+        }
+      },
+      "description": "MCPDiscoveryState captures health and discovered tools for an MCP server."
+    },
+    "v1MCPServer": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique identifier with prefix `mcp_`.",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. Owning workspace identifier (`spc_...`).",
+          "readOnly": true
+        },
+        "systemKey": {
+          "type": "string",
+          "description": "Output only. Built-in system blueprint key (e.g. 'system.saturn.mcp').",
+          "readOnly": true
+        },
+        "isSystem": {
+          "type": "boolean",
+          "description": "Output only. Whether this is a protected built-in system server.",
+          "readOnly": true
+        },
+        "slug": {
+          "type": "string",
+          "description": "Required. URL-safe slug used for tool namespacing."
+        },
+        "name": {
+          "type": "string",
+          "description": "Required. Human-readable server name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional. Description of capabilities provided by this server."
+        },
+        "transport": {
+          "type": "string",
+          "description": "Output only. Transport protocol ('http' or 'in_memory' for system server).",
+          "readOnly": true
+        },
+        "config": {
+          "$ref": "#/definitions/v1MCPServerConfig",
+          "description": "Required. Server connection and trust configuration."
+        },
+        "hasAuthSecret": {
+          "type": "boolean",
+          "description": "Output only. Whether encrypted auth credentials are stored for this server.",
+          "readOnly": true
+        },
+        "discovery": {
+          "$ref": "#/definitions/v1MCPDiscoveryState",
+          "description": "Output only. Discovery state and available tools.",
+          "readOnly": true
+        },
+        "isEnabled": {
+          "type": "boolean",
+          "description": "Optional. Whether this MCP server is enabled."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Last update timestamp.",
+          "readOnly": true
+        },
+        "authSecret": {
+          "$ref": "#/definitions/v1MCPAuthSecretInput",
+          "description": "Input only. Write-only authentication secret encrypted at rest and never returned on reads."
+        }
+      },
+      "description": "MCPServer represents a built-in or external HTTP MCP tool server.",
+      "required": [
+        "slug",
+        "name",
+        "config"
+      ]
+    },
+    "v1MCPServerConfig": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Required. Endpoint URL ('in-memory://saturn' for system server, HTTP(S) URL for external servers)."
+        },
+        "authType": {
+          "type": "string",
+          "description": "Required. Authentication mode ('none', 'bearer', 'custom_headers')."
+        },
+        "trustReadHints": {
+          "type": "boolean",
+          "description": "Optional. Whether read-only MCP tool hints skip write-approval prompts."
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. Request timeout in seconds."
+        }
+      },
+      "description": "MCPServerConfig configures connection and tool trust behavior for an MCP server.",
+      "required": [
+        "url",
+        "authType"
+      ]
+    },
+    "v1MCPServerInfo": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Output only. Reported server name.",
+          "readOnly": true
+        },
+        "version": {
+          "type": "string",
+          "description": "Output only. Reported server version.",
+          "readOnly": true
+        }
+      },
+      "description": "MCPServerInfo captures server metadata returned by the MCP initialize handshake."
+    },
+    "v1MCPToolSummary": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Output only. Tool name.",
+          "readOnly": true
+        },
+        "title": {
+          "type": "string",
+          "description": "Output only. Optional human-readable title.",
+          "readOnly": true
+        },
+        "description": {
+          "type": "string",
+          "description": "Output only. Description of what the tool does.",
+          "readOnly": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "description": "Output only. JSON Schema describing tool arguments.",
+          "readOnly": true
+        },
+        "readOnlyHint": {
+          "type": "boolean",
+          "description": "Output only. MCP ReadOnlyHint annotation.",
+          "readOnly": true
+        },
+        "destructiveHint": {
+          "type": "boolean",
+          "description": "Output only. MCP DestructiveHint annotation.",
+          "readOnly": true
+        }
+      },
+      "description": "MCPToolSummary summarizes a discovered MCP tool and its JSON input schema."
     },
     "v1Mailbox": {
       "type": "object",
@@ -13492,6 +15220,22 @@
       },
       "description": "Message models an individual email message within a thread."
     },
+    "v1MessageMetadata": {
+      "type": "object",
+      "properties": {
+        "modelName": {
+          "type": "string",
+          "description": "Output only. Upstream model identifier used to generate the message.",
+          "readOnly": true
+        },
+        "tokens": {
+          "$ref": "#/definitions/v1TokenUsage",
+          "description": "Output only. Token accounting for the message.",
+          "readOnly": true
+        }
+      },
+      "description": "MessageMetadata stores model and token attribution on a persisted message."
+    },
     "v1MfaFactorDescriptor": {
       "type": "object",
       "properties": {
@@ -13523,28 +15267,218 @@
       },
       "description": "MfaFactorDescriptor describes an enrolled multi-factor authentication (MFA) factor."
     },
-    "v1ModelConfig": {
+    "v1Model": {
       "type": "object",
       "properties": {
-        "agentId": {
+        "id": {
           "type": "string",
-          "description": "Optional. Named agent ID from platform/agent to inherit instructions and model settings from."
+          "description": "Output only. Unique identifier with prefix `mdl_`.",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. Owning workspace identifier (`spc_...`).",
+          "readOnly": true
         },
         "providerId": {
           "type": "string",
-          "description": "Optional. Explicit LLM provider ID when specifying an inline model."
+          "description": "Required. Parent LLM provider identifier (`prv_...`)."
+        },
+        "providerName": {
+          "type": "string",
+          "description": "Output only. Hydrated parent provider display name.",
+          "readOnly": true
+        },
+        "providerDriver": {
+          "type": "string",
+          "description": "Output only. Hydrated parent provider driver.",
+          "readOnly": true
+        },
+        "modelId": {
+          "type": "string",
+          "description": "Required. Upstream model identifier (e.g. 'gemini-2.5-flash', 'gpt-4.1')."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Required. Human-readable display name."
+        },
+        "source": {
+          "type": "string",
+          "description": "Output only. Registration origin ('catalog', 'discovered', 'custom').",
+          "readOnly": true
+        },
+        "profile": {
+          "$ref": "#/definitions/v1ModelProfile",
+          "description": "Optional. Model capability, limit, and pricing profile."
+        },
+        "config": {
+          "$ref": "#/definitions/platformAiV1GenerationConfig",
+          "description": "Optional. Default generation parameter overrides for this model."
+        },
+        "isEnabled": {
+          "type": "boolean",
+          "description": "Optional. Whether this model is enabled for selection and execution."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Last update timestamp.",
+          "readOnly": true
+        }
+      },
+      "description": "Model represents a registered AI model available in the workspace.",
+      "required": [
+        "providerId",
+        "modelId",
+        "displayName"
+      ]
+    },
+    "v1ModelCapabilities": {
+      "type": "object",
+      "properties": {
+        "toolCalling": {
+          "type": "boolean",
+          "description": "Optional. Supports function/tool calling."
+        },
+        "vision": {
+          "type": "boolean",
+          "description": "Optional. Supports image/vision inputs."
+        },
+        "document": {
+          "type": "boolean",
+          "description": "Optional. Supports native document/PDF inputs."
+        },
+        "audio": {
+          "type": "boolean",
+          "description": "Optional. Supports audio inputs."
+        },
+        "reasoning": {
+          "type": "boolean",
+          "description": "Optional. Supports extended thinking/reasoning."
+        },
+        "structuredOutput": {
+          "type": "boolean",
+          "description": "Optional. Supports structured JSON schema output."
+        },
+        "streaming": {
+          "type": "boolean",
+          "description": "Optional. Supports token streaming."
+        }
+      },
+      "description": "ModelCapabilities describes supported modalities and features of a model."
+    },
+    "v1ModelConfig": {
+      "type": "object",
+      "properties": {
+        "modelId": {
+          "type": "string",
+          "description": "Optional. Registered workspace model ID (`mdl_...`)."
+        },
+        "role": {
+          "type": "string",
+          "description": "Optional. Workspace model role ('default', 'fast', 'reasoning')."
+        },
+        "generation": {
+          "$ref": "#/definitions/platformWorkflowV1GenerationConfig",
+          "description": "Optional. Generation and thinking parameter overrides."
+        }
+      },
+      "description": "ModelConfig configures the workspace AI model or role used for AI workflow steps."
+    },
+    "v1ModelLimits": {
+      "type": "object",
+      "properties": {
+        "contextWindow": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. Maximum input context window in tokens."
+        },
+        "maxOutputTokens": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. Maximum output generation tokens."
+        }
+      },
+      "description": "ModelLimits captures token context and output limits for a model."
+    },
+    "v1ModelPricing": {
+      "type": "object",
+      "properties": {
+        "inputPerMillionUsd": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional. Input token price per 1M tokens in USD."
+        },
+        "outputPerMillionUsd": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional. Output token price per 1M tokens in USD."
+        },
+        "cachedInputPerMillionUsd": {
+          "type": "number",
+          "format": "double",
+          "description": "Optional. Cached input token price per 1M tokens in USD."
+        }
+      },
+      "description": "ModelPricing captures per-million-token cost rates in USD."
+    },
+    "v1ModelProfile": {
+      "type": "object",
+      "properties": {
+        "capabilities": {
+          "$ref": "#/definitions/v1ModelCapabilities",
+          "description": "Optional. Supported capabilities of the model."
+        },
+        "limits": {
+          "$ref": "#/definitions/v1ModelLimits",
+          "description": "Optional. Context and output token limits."
+        },
+        "pricing": {
+          "$ref": "#/definitions/v1ModelPricing",
+          "description": "Optional. Per-million-token pricing rates."
+        }
+      },
+      "description": "ModelProfile groups capability flags, token limits, and pricing metadata."
+    },
+    "v1ModelRoleSettings": {
+      "type": "object",
+      "properties": {
+        "defaultModelId": {
+          "type": "string",
+          "description": "Optional. Default workspace model ID (`mdl_...`)."
+        },
+        "fastModelId": {
+          "type": "string",
+          "description": "Optional. Fast/low-latency workspace model ID (`mdl_...`)."
+        },
+        "reasoningModelId": {
+          "type": "string",
+          "description": "Optional. Reasoning-optimized workspace model ID (`mdl_...`)."
+        }
+      },
+      "description": "ModelRoleSettings maps workspace semantic roles to registered model IDs."
+    },
+    "v1ModelSnapshot": {
+      "type": "object",
+      "properties": {
+        "driver": {
+          "type": "string",
+          "description": "Output only. Provider driver used.",
+          "readOnly": true
         },
         "modelName": {
           "type": "string",
-          "description": "Optional. Model identifier (e.g. gemini-2.5-flash)."
-        },
-        "temperature": {
-          "type": "number",
-          "format": "double",
-          "description": "Optional. Sampling temperature parameter."
+          "description": "Output only. Upstream model identifier used.",
+          "readOnly": true
         }
       },
-      "description": "ModelConfig configures the LLM agent or inline provider/model used for AI steps."
+      "description": "ModelSnapshot captures the driver and upstream model ID used during a run."
     },
     "v1Organizer": {
       "type": "object",
@@ -13586,75 +15520,158 @@
       },
       "description": "Participant represents an email sender, recipient, or correspondent."
     },
-    "v1ProviderBlueprintDescriptor": {
+    "v1PendingToolApproval": {
       "type": "object",
       "properties": {
-        "id": {
+        "toolCallId": {
           "type": "string",
-          "description": "Output only. The unique identifier of the provider template.",
+          "description": "Output only. Tool call correlation ID.",
           "readOnly": true
         },
-        "displayName": {
+        "mcpServerId": {
           "type": "string",
-          "description": "Output only. The human-readable display name (e.g. Google Gemini, Ollama).",
+          "description": "Output only. Target MCP server identifier (`mcp_...`).",
           "readOnly": true
         },
-        "description": {
+        "mcpServerName": {
           "type": "string",
-          "description": "Output only. Description of the provider and protocol compatibility.",
+          "description": "Output only. Human-readable MCP server name.",
           "readOnly": true
         },
-        "compatibilityMode": {
+        "toolName": {
           "type": "string",
-          "description": "Output only. The compatibility mode constant.",
+          "description": "Output only. Tool name requested by the model.",
           "readOnly": true
         },
-        "defaultApiUrl": {
-          "type": "string",
-          "description": "Output only. The default endpoint URL for this provider type.",
+        "arguments": {
+          "type": "object",
+          "description": "Output only. JSON arguments proposed by the model.",
           "readOnly": true
         },
-        "isApiKeyRequired": {
+        "destructiveHint": {
           "type": "boolean",
-          "description": "Output only. Whether this provider requires an API key for authentication.",
-          "readOnly": true
-        },
-        "logoIcon": {
-          "type": "string",
-          "description": "Output only. Icon identifier or SVG name for UI display.",
+          "description": "Output only. Whether the tool is annotated as destructive.",
           "readOnly": true
         }
       },
-      "description": "Specification blueprint describing a supported LLM provider type."
+      "description": "PendingToolApproval describes a paused mutating MCP tool call awaiting user confirmation."
     },
-    "v1ProviderDescriptor": {
+    "v1Provider": {
       "type": "object",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Output only. The unique provider identifier (e.g., google, microsoft).",
+          "description": "Output only. Unique identifier with prefix `prv_`.",
           "readOnly": true
         },
-        "displayName": {
+        "spaceId": {
           "type": "string",
-          "description": "Output only. The human-readable display name (e.g., Google, Microsoft 365).",
+          "description": "Output only. Owning workspace identifier (`spc_...`).",
           "readOnly": true
         },
-        "supportedCapabilities": {
-          "type": "array",
-          "items": {
+        "name": {
+          "type": "string",
+          "description": "Required. Human-readable display name."
+        },
+        "driver": {
+          "type": "string",
+          "description": "Required. Provider driver ('gemini', 'openai', 'anthropic', 'openrouter', 'ollama', 'openai_compatible')."
+        },
+        "config": {
+          "$ref": "#/definitions/v1ProviderConfig",
+          "description": "Optional. Non-secret provider connection configuration."
+        },
+        "hasSecret": {
+          "type": "boolean",
+          "description": "Output only. Whether encrypted credentials are stored for this provider.",
+          "readOnly": true
+        },
+        "status": {
+          "$ref": "#/definitions/v1ProviderStatus",
+          "description": "Output only. Latest provider verification status.",
+          "readOnly": true
+        },
+        "isEnabled": {
+          "type": "boolean",
+          "description": "Optional. Whether this provider is enabled for use."
+        },
+        "modelCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Number of registered models linked to this provider.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Last update timestamp.",
+          "readOnly": true
+        },
+        "secret": {
+          "$ref": "#/definitions/v1ProviderSecretInput",
+          "description": "Input only. Write-only provider credentials encrypted at rest and never returned on reads."
+        }
+      },
+      "description": "Provider represents a configured LLM provider connection in a workspace.",
+      "required": [
+        "name",
+        "driver"
+      ]
+    },
+    "v1ProviderConfig": {
+      "type": "object",
+      "properties": {
+        "baseUrl": {
+          "type": "string",
+          "description": "Optional. Custom or override base URL for the provider API."
+        }
+      },
+      "description": "ProviderConfig stores non-secret connection configuration for an LLM provider."
+    },
+    "v1ProviderSecretInput": {
+      "type": "object",
+      "properties": {
+        "apiKey": {
+          "type": "string",
+          "description": "Optional. Provider API key."
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
             "type": "string"
           },
-          "description": "Output only. List of capabilities supported by this provider (e.g., calendar, mail, contacts).",
+          "description": "Optional. Custom HTTP headers sent with provider requests."
+        }
+      },
+      "description": "ProviderSecretInput carries write-only credentials when creating or updating a provider."
+    },
+    "v1ProviderStatus": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "description": "Output only. Verification state ('unverified', 'healthy', 'unhealthy').",
           "readOnly": true
         },
-        "iconUrl": {
+        "lastVerifiedAt": {
           "type": "string",
-          "description": "Output only. Optional URL for the provider brand icon.",
+          "format": "date-time",
+          "description": "Output only. Timestamp of the last verification attempt.",
+          "readOnly": true
+        },
+        "error": {
+          "$ref": "#/definitions/v1ErrorDetail",
+          "description": "Output only. Structured error from the last failed verification, if any.",
           "readOnly": true
         }
       },
-      "description": "ProviderDescriptor describes an available OAuth provider adapter and its capabilities."
+      "description": "ProviderStatus reflects the latest verification health of an LLM provider."
     },
     "v1RecurrenceScope": {
       "type": "string",
@@ -13973,6 +15990,253 @@
     "v1RevokeSessionResponse": {
       "type": "object",
       "description": "Response message for Identity.RevokeSession."
+    },
+    "v1Run": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique identifier with prefix `air_`.",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. Owning workspace identifier (`spc_...`).",
+          "readOnly": true
+        },
+        "kind": {
+          "type": "string",
+          "description": "Output only. Execution kind ('generate', 'agent_run', 'chat_turn').",
+          "readOnly": true
+        },
+        "source": {
+          "type": "string",
+          "description": "Output only. Origin source ('api', 'chat', 'playground', 'workflow', 'mcp').",
+          "readOnly": true
+        },
+        "threadId": {
+          "type": "string",
+          "description": "Output only. Parent thread identifier (`thr_...`), if any.",
+          "readOnly": true
+        },
+        "agentId": {
+          "type": "string",
+          "description": "Output only. Agent identifier (`agt_...`), if any.",
+          "readOnly": true
+        },
+        "agentName": {
+          "type": "string",
+          "description": "Output only. Hydrated agent display name.",
+          "readOnly": true
+        },
+        "providerId": {
+          "type": "string",
+          "description": "Output only. Provider identifier (`prv_...`), if any.",
+          "readOnly": true
+        },
+        "modelId": {
+          "type": "string",
+          "description": "Output only. Model identifier (`mdl_...`), if any.",
+          "readOnly": true
+        },
+        "flowRunId": {
+          "type": "string",
+          "description": "Output only. Linked workflow run identifier (`wfr_...`), if any.",
+          "readOnly": true
+        },
+        "status": {
+          "type": "string",
+          "description": "Output only. Run status ('running', 'awaiting_approval', 'completed', 'failed', 'cancelled', 'timed_out', 'max_steps_exceeded').",
+          "readOnly": true
+        },
+        "input": {
+          "$ref": "#/definitions/v1RunInput",
+          "description": "Output only. Captured run input and model snapshot.",
+          "readOnly": true
+        },
+        "output": {
+          "$ref": "#/definitions/v1RunOutput",
+          "description": "Output only. Terminal run output.",
+          "readOnly": true
+        },
+        "error": {
+          "$ref": "#/definitions/v1ErrorDetail",
+          "description": "Output only. Structured error detail if the run failed.",
+          "readOnly": true
+        },
+        "metrics": {
+          "$ref": "#/definitions/v1RunMetrics",
+          "description": "Output only. Aggregated token, cost, and latency metrics.",
+          "readOnly": true
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RunStep"
+          },
+          "description": "Output only. Ordered LLM and tool execution steps hydrated on GetRun.",
+          "readOnly": true
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when execution started.",
+          "readOnly": true
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when execution ended.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
+        }
+      },
+      "description": "Run records a single AI execution across generation, headless agent, or chat turn modes."
+    },
+    "v1RunInput": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Output only. Prompt input text.",
+          "readOnly": true
+        },
+        "systemInstruction": {
+          "type": "string",
+          "description": "Output only. Effective system instruction, if any.",
+          "readOnly": true
+        },
+        "modelSnapshot": {
+          "$ref": "#/definitions/v1ModelSnapshot",
+          "description": "Output only. Snapshot of driver and model used.",
+          "readOnly": true
+        }
+      },
+      "description": "RunInput records the prompt, system instructions, and model snapshot for a run."
+    },
+    "v1RunMetrics": {
+      "type": "object",
+      "properties": {
+        "tokens": {
+          "$ref": "#/definitions/v1TokenUsage",
+          "description": "Output only. Aggregated token usage.",
+          "readOnly": true
+        },
+        "estimatedCostUsd": {
+          "type": "number",
+          "format": "double",
+          "description": "Output only. Estimated cost in USD.",
+          "readOnly": true
+        },
+        "latencyMs": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. End-to-end execution latency in milliseconds.",
+          "readOnly": true
+        },
+        "stepCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Number of execution steps recorded.",
+          "readOnly": true
+        }
+      },
+      "description": "RunMetrics aggregates token usage, estimated cost, latency, and step count for a run."
+    },
+    "v1RunOutput": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Output only. Text response returned by the model.",
+          "readOnly": true
+        },
+        "data": {
+          "type": "object",
+          "description": "Output only. Structured JSON output when output_schema was enforced.",
+          "readOnly": true
+        }
+      },
+      "description": "RunOutput records the terminal text or structured JSON output of a run."
+    },
+    "v1RunStep": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique identifier with prefix `ais_`.",
+          "readOnly": true
+        },
+        "runId": {
+          "type": "string",
+          "description": "Output only. Parent run identifier (`air_...`).",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. Owning workspace identifier (`spc_...`).",
+          "readOnly": true
+        },
+        "seq": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Ordered step sequence number within the run.",
+          "readOnly": true
+        },
+        "kind": {
+          "type": "string",
+          "description": "Output only. Step kind ('llm' or 'tool').",
+          "readOnly": true
+        },
+        "mcpServerId": {
+          "type": "string",
+          "description": "Output only. MCP server identifier (`mcp_...`) for 'tool' steps.",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Output only. Model ID or MCP tool name.",
+          "readOnly": true
+        },
+        "status": {
+          "type": "string",
+          "description": "Output only. Step terminal status ('completed', 'failed', 'awaiting_approval', 'rejected').",
+          "readOnly": true
+        },
+        "input": {
+          "type": "object",
+          "description": "Output only. Structured step input payload.",
+          "readOnly": true
+        },
+        "output": {
+          "type": "object",
+          "description": "Output only. Structured step output payload.",
+          "readOnly": true
+        },
+        "error": {
+          "$ref": "#/definitions/v1ErrorDetail",
+          "description": "Output only. Structured error detail if the step failed.",
+          "readOnly": true
+        },
+        "metrics": {
+          "$ref": "#/definitions/v1StepMetrics",
+          "description": "Output only. Step telemetry metrics.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
+        }
+      },
+      "description": "RunStep represents an individual LLM call or MCP tool execution within a run."
     },
     "v1ScheduleInfo": {
       "type": "object",
@@ -14573,6 +16837,23 @@
       ],
       "description": "Status defines the lifecycle phase of the statement.\n\n - IN_PROGRESS: In progress draft statement undergoing reconciliation.\n - COMPLETED: Completed statement with all lines successfully matched or imported."
     },
+    "v1StepMetrics": {
+      "type": "object",
+      "properties": {
+        "tokens": {
+          "$ref": "#/definitions/v1TokenUsage",
+          "description": "Output only. Token usage for 'llm' steps.",
+          "readOnly": true
+        },
+        "durationMs": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. Step execution duration in milliseconds.",
+          "readOnly": true
+        }
+      },
+      "description": "StepMetrics captures token usage and duration for an individual LLM or tool step."
+    },
     "v1SuggestContactsResponse": {
       "type": "object",
       "properties": {
@@ -14598,6 +16879,27 @@
         }
       },
       "description": "Response message for ConnectorService.SyncConnectedAccount."
+    },
+    "v1SyncProviderModelsResponse": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Model"
+          },
+          "description": "Output only. Synchronized workspace models for this provider.",
+          "readOnly": true
+        },
+        "addedCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Number of newly created model records.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for AIService.SyncProviderModels."
     },
     "v1TestFlowRequest": {
       "type": "object",
@@ -14628,110 +16930,154 @@
         "flow"
       ]
     },
-    "v1Thread": {
+    "v1ThreadConfig": {
+      "type": "object",
+      "properties": {
+        "approvalPolicy": {
+          "type": "string",
+          "description": "Optional. Override approval policy ('confirm_writes', 'auto', 'deny_writes')."
+        },
+        "generation": {
+          "$ref": "#/definitions/platformAiV1GenerationConfig",
+          "description": "Optional. Override generation parameters for this thread."
+        }
+      },
+      "description": "ThreadConfig stores thread-level overrides for approval policy and generation parameters."
+    },
+    "v1ThreadMemory": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "string",
+          "description": "Output only. Summarized conversation history up to `up_to_seq`.",
+          "readOnly": true
+        },
+        "upToSeq": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Highest message sequence number included in `summary`.",
+          "readOnly": true
+        }
+      },
+      "description": "ThreadMemory stores rolling summarized context for long conversation threads."
+    },
+    "v1ThreadMessage": {
       "type": "object",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique thread identifier (mth_...)."
+          "description": "Output only. Unique identifier with prefix `aim_`.",
+          "readOnly": true
+        },
+        "threadId": {
+          "type": "string",
+          "description": "Output only. Parent thread identifier (`thr_...`).",
+          "readOnly": true
         },
         "spaceId": {
           "type": "string",
-          "description": "Space / tenant workspace identifier."
+          "description": "Output only. Owning workspace identifier (`spc_...`).",
+          "readOnly": true
         },
-        "connectedAccountId": {
+        "runId": {
           "type": "string",
-          "description": "Associated connected account identifier."
+          "description": "Output only. Associated AI run identifier (`air_...`), if any.",
+          "readOnly": true
         },
-        "providerThreadId": {
+        "seq": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Strictly increasing per-thread sequence number.",
+          "readOnly": true
+        },
+        "role": {
           "type": "string",
-          "description": "Upstream provider thread identifier."
+          "description": "Output only. Message role ('user', 'assistant', 'tool').",
+          "readOnly": true
         },
-        "subject": {
-          "type": "string",
-          "description": "Subject line of the thread conversation."
-        },
-        "snippet": {
-          "type": "string",
-          "description": "Short text snippet summarizing recent activity."
-        },
-        "participants": {
+        "blocks": {
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Participant"
+            "$ref": "#/definitions/v1ContentBlock"
           },
-          "description": "Distinct participants involved across messages in the thread."
+          "description": "Output only. Ordered content blocks.",
+          "readOnly": true
         },
-        "messageCount": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Number of messages in the thread."
-        },
-        "hasAttachments": {
-          "type": "boolean",
-          "description": "Whether any message in the thread contains attachments."
-        },
-        "isUnread": {
-          "type": "boolean",
-          "description": "Whether any message in the thread is unread."
-        },
-        "isStarred": {
-          "type": "boolean",
-          "description": "Whether any message in the thread is starred / flagged."
-        },
-        "inInbox": {
-          "type": "boolean",
-          "description": "Whether the thread resides in the Inbox bucket."
-        },
-        "inSent": {
-          "type": "boolean",
-          "description": "Whether the thread resides in the Sent bucket."
-        },
-        "inDrafts": {
-          "type": "boolean",
-          "description": "Whether the thread contains drafts."
-        },
-        "inTrash": {
-          "type": "boolean",
-          "description": "Whether the thread resides in the Trash bucket."
-        },
-        "inSpam": {
-          "type": "boolean",
-          "description": "Whether the thread resides in the Spam bucket."
-        },
-        "mailboxIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Mailbox IDs containing this thread."
-        },
-        "lastMessageAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp of the latest message in the thread."
+        "metadata": {
+          "$ref": "#/definitions/v1MessageMetadata",
+          "description": "Output only. Attribution and token metadata.",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "Timestamp when the thread record was created."
-        },
-        "updateTime": {
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
+        }
+      },
+      "description": "ThreadMessage represents a single persisted turn message inside a chat thread."
+    },
+    "v1ThreadState": {
+      "type": "object",
+      "properties": {
+        "activeRunId": {
           "type": "string",
-          "format": "date-time",
-          "description": "Timestamp when the thread record was last updated."
+          "description": "Output only. Active streaming run ID (`air_...`), if any.",
+          "readOnly": true
         },
-        "messages": {
+        "pendingApprovals": {
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Message"
+            "$ref": "#/definitions/v1PendingToolApproval"
           },
-          "description": "Chronological messages in the thread (populated on GetThread)."
+          "description": "Output only. Mutating tool calls awaiting user approval.",
+          "readOnly": true
+        },
+        "memory": {
+          "$ref": "#/definitions/v1ThreadMemory",
+          "description": "Output only. Rolling conversation memory state.",
+          "readOnly": true
         }
       },
-      "description": "Thread models an aggregated email conversation consisting of one or more messages."
+      "description": "ThreadState stores runtime state for a thread (active run, pending approvals, memory)."
+    },
+    "v1TokenUsage": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Prompt/input tokens consumed.",
+          "readOnly": true
+        },
+        "output": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Completion/output tokens generated.",
+          "readOnly": true
+        },
+        "reasoning": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Reasoning/thinking tokens generated.",
+          "readOnly": true
+        },
+        "cached": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Prompt-cached input tokens served.",
+          "readOnly": true
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Total tokens consumed.",
+          "readOnly": true
+        }
+      },
+      "description": "TokenUsage breaks down LLM token accounting across a step, message, or run."
     },
     "v1TopicMetrics": {
       "type": "object",
@@ -15021,6 +17367,30 @@
         }
       },
       "description": "Response message for BackupAdmin.TriggerBackup."
+    },
+    "v1TurnAttachment": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string",
+          "description": "Required. Original filename."
+        },
+        "contentType": {
+          "type": "string",
+          "description": "Required. MIME content type ('image/png', 'image/jpeg', 'image/webp', 'application/pdf', 'text/csv', 'text/plain')."
+        },
+        "data": {
+          "type": "string",
+          "format": "byte",
+          "description": "Required. Raw binary file bytes (\u003c= 10 MB)."
+        }
+      },
+      "description": "TurnAttachment carries an inline file uploaded for a single turn or generation call.",
+      "required": [
+        "filename",
+        "contentType",
+        "data"
+      ]
     },
     "v1UpdateProfileRequest": {
       "type": "object",

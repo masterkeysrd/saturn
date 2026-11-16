@@ -10,25 +10,61 @@ import {
 } from "@tanstack/react-query"
 
 /**
- * ModelConfig configures the LLM agent or inline provider/model used for AI steps.
+ * ThinkingConfig configures extended reasoning behavior on supported models.
  */
-export interface ModelConfig {
+export interface ThinkingConfig {
   /**
-   * Optional. Named agent ID from platform/agent to inherit instructions and model settings from.
+   * Optional. Whether extended thinking is enabled.
    */
-  agentId?: string
+  enabled: boolean
   /**
-   * Optional. Explicit LLM provider ID when specifying an inline model.
+   * Optional. Reasoning effort level ('low', 'medium', 'high').
    */
-  providerId?: string
+  effort?: string
   /**
-   * Optional. Model identifier (e.g. gemini-2.5-flash).
+   * Optional. Explicit reasoning token budget.
    */
-  modelName?: string
+  budgetTokens?: number
+}
+
+/**
+ * GenerationConfig configures LLM sampling and reasoning parameters.
+ */
+export interface GenerationConfig {
   /**
    * Optional. Sampling temperature parameter.
    */
   temperature?: number
+  /**
+   * Optional. Maximum output tokens to generate.
+   */
+  maxTokens?: number
+  /**
+   * Optional. Nucleus sampling top-p parameter.
+   */
+  topP?: number
+  /**
+   * Optional. Extended thinking/reasoning configuration.
+   */
+  thinking?: ThinkingConfig
+}
+
+/**
+ * ModelConfig configures the workspace AI model or role used for AI workflow steps.
+ */
+export interface ModelConfig {
+  /**
+   * Optional. Registered workspace model ID (`mdl_...`).
+   */
+  modelId?: string
+  /**
+   * Optional. Workspace model role ('default', 'fast', 'reasoning').
+   */
+  role?: string
+  /**
+   * Optional. Generation and thinking parameter overrides.
+   */
+  generation?: GenerationConfig
 }
 
 /**
@@ -448,9 +484,9 @@ export interface FlowRun_StepRun {
    */
   metadata?: Record<string, unknown>
   /**
-   * Output only. Linked platform.agent_runs ID for `llm.generate` steps.
+   * Output only. Linked platform.ai_runs ID for AI steps (llm.generate, ai.agent_run).
    */
-  agentRunId?: string
+  aiRunId?: string
   /**
    * Output only. Timestamp when the step started executing.
    */

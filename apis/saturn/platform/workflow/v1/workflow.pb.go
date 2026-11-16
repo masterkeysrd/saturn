@@ -26,24 +26,159 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// ModelConfig configures the LLM agent or inline provider/model used for AI steps.
+// ThinkingConfig configures extended reasoning behavior on supported models.
+type ThinkingConfig struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional. Whether extended thinking is enabled.
+	Enabled bool `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	// Optional. Reasoning effort level ('low', 'medium', 'high').
+	Effort *string `protobuf:"bytes,2,opt,name=effort,proto3,oneof" json:"effort,omitempty"`
+	// Optional. Explicit reasoning token budget.
+	BudgetTokens  *int32 `protobuf:"varint,3,opt,name=budget_tokens,json=budgetTokens,proto3,oneof" json:"budget_tokens,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ThinkingConfig) Reset() {
+	*x = ThinkingConfig{}
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ThinkingConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ThinkingConfig) ProtoMessage() {}
+
+func (x *ThinkingConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ThinkingConfig.ProtoReflect.Descriptor instead.
+func (*ThinkingConfig) Descriptor() ([]byte, []int) {
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ThinkingConfig) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *ThinkingConfig) GetEffort() string {
+	if x != nil && x.Effort != nil {
+		return *x.Effort
+	}
+	return ""
+}
+
+func (x *ThinkingConfig) GetBudgetTokens() int32 {
+	if x != nil && x.BudgetTokens != nil {
+		return *x.BudgetTokens
+	}
+	return 0
+}
+
+// GenerationConfig configures LLM sampling and reasoning parameters.
+type GenerationConfig struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional. Sampling temperature parameter.
+	Temperature *float64 `protobuf:"fixed64,1,opt,name=temperature,proto3,oneof" json:"temperature,omitempty"`
+	// Optional. Maximum output tokens to generate.
+	MaxTokens *int32 `protobuf:"varint,2,opt,name=max_tokens,json=maxTokens,proto3,oneof" json:"max_tokens,omitempty"`
+	// Optional. Nucleus sampling top-p parameter.
+	TopP *float64 `protobuf:"fixed64,3,opt,name=top_p,json=topP,proto3,oneof" json:"top_p,omitempty"`
+	// Optional. Extended thinking/reasoning configuration.
+	Thinking      *ThinkingConfig `protobuf:"bytes,4,opt,name=thinking,proto3,oneof" json:"thinking,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GenerationConfig) Reset() {
+	*x = GenerationConfig{}
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GenerationConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GenerationConfig) ProtoMessage() {}
+
+func (x *GenerationConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GenerationConfig.ProtoReflect.Descriptor instead.
+func (*GenerationConfig) Descriptor() ([]byte, []int) {
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *GenerationConfig) GetTemperature() float64 {
+	if x != nil && x.Temperature != nil {
+		return *x.Temperature
+	}
+	return 0
+}
+
+func (x *GenerationConfig) GetMaxTokens() int32 {
+	if x != nil && x.MaxTokens != nil {
+		return *x.MaxTokens
+	}
+	return 0
+}
+
+func (x *GenerationConfig) GetTopP() float64 {
+	if x != nil && x.TopP != nil {
+		return *x.TopP
+	}
+	return 0
+}
+
+func (x *GenerationConfig) GetThinking() *ThinkingConfig {
+	if x != nil {
+		return x.Thinking
+	}
+	return nil
+}
+
+// ModelConfig configures the workspace AI model or role used for AI workflow steps.
 type ModelConfig struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Optional. Named agent ID from platform/agent to inherit instructions and model settings from.
-	AgentId *string `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3,oneof" json:"agent_id,omitempty"`
-	// Optional. Explicit LLM provider ID when specifying an inline model.
-	ProviderId *string `protobuf:"bytes,2,opt,name=provider_id,json=providerId,proto3,oneof" json:"provider_id,omitempty"`
-	// Optional. Model identifier (e.g. gemini-2.5-flash).
-	ModelName *string `protobuf:"bytes,3,opt,name=model_name,json=modelName,proto3,oneof" json:"model_name,omitempty"`
-	// Optional. Sampling temperature parameter.
-	Temperature   *float64 `protobuf:"fixed64,4,opt,name=temperature,proto3,oneof" json:"temperature,omitempty"`
+	// Optional. Registered workspace model ID (`mdl_...`).
+	ModelId *string `protobuf:"bytes,1,opt,name=model_id,json=modelId,proto3,oneof" json:"model_id,omitempty"`
+	// Optional. Workspace model role ('default', 'fast', 'reasoning').
+	Role *string `protobuf:"bytes,2,opt,name=role,proto3,oneof" json:"role,omitempty"`
+	// Optional. Generation and thinking parameter overrides.
+	Generation    *GenerationConfig `protobuf:"bytes,3,opt,name=generation,proto3,oneof" json:"generation,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ModelConfig) Reset() {
 	*x = ModelConfig{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[0]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -55,7 +190,7 @@ func (x *ModelConfig) String() string {
 func (*ModelConfig) ProtoMessage() {}
 
 func (x *ModelConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[0]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -68,35 +203,28 @@ func (x *ModelConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModelConfig.ProtoReflect.Descriptor instead.
 func (*ModelConfig) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{0}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ModelConfig) GetAgentId() string {
-	if x != nil && x.AgentId != nil {
-		return *x.AgentId
+func (x *ModelConfig) GetModelId() string {
+	if x != nil && x.ModelId != nil {
+		return *x.ModelId
 	}
 	return ""
 }
 
-func (x *ModelConfig) GetProviderId() string {
-	if x != nil && x.ProviderId != nil {
-		return *x.ProviderId
+func (x *ModelConfig) GetRole() string {
+	if x != nil && x.Role != nil {
+		return *x.Role
 	}
 	return ""
 }
 
-func (x *ModelConfig) GetModelName() string {
-	if x != nil && x.ModelName != nil {
-		return *x.ModelName
+func (x *ModelConfig) GetGeneration() *GenerationConfig {
+	if x != nil {
+		return x.Generation
 	}
-	return ""
-}
-
-func (x *ModelConfig) GetTemperature() float64 {
-	if x != nil && x.Temperature != nil {
-		return *x.Temperature
-	}
-	return 0
+	return nil
 }
 
 // Flow represents a workflow automation definition with triggers and step graph.
@@ -138,7 +266,7 @@ type Flow struct {
 
 func (x *Flow) Reset() {
 	*x = Flow{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[1]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -150,7 +278,7 @@ func (x *Flow) String() string {
 func (*Flow) ProtoMessage() {}
 
 func (x *Flow) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[1]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -163,7 +291,7 @@ func (x *Flow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Flow.ProtoReflect.Descriptor instead.
 func (*Flow) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{1}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Flow) GetId() string {
@@ -286,7 +414,7 @@ type FlowError struct {
 
 func (x *FlowError) Reset() {
 	*x = FlowError{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[2]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -298,7 +426,7 @@ func (x *FlowError) String() string {
 func (*FlowError) ProtoMessage() {}
 
 func (x *FlowError) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[2]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -311,7 +439,7 @@ func (x *FlowError) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FlowError.ProtoReflect.Descriptor instead.
 func (*FlowError) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{2}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *FlowError) GetStepId() string {
@@ -384,7 +512,7 @@ type FlowRun struct {
 
 func (x *FlowRun) Reset() {
 	*x = FlowRun{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[3]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -396,7 +524,7 @@ func (x *FlowRun) String() string {
 func (*FlowRun) ProtoMessage() {}
 
 func (x *FlowRun) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[3]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -409,7 +537,7 @@ func (x *FlowRun) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FlowRun.ProtoReflect.Descriptor instead.
 func (*FlowRun) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{3}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *FlowRun) GetId() string {
@@ -569,7 +697,7 @@ type InlineArtifact struct {
 
 func (x *InlineArtifact) Reset() {
 	*x = InlineArtifact{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[4]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -581,7 +709,7 @@ func (x *InlineArtifact) String() string {
 func (*InlineArtifact) ProtoMessage() {}
 
 func (x *InlineArtifact) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[4]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -594,7 +722,7 @@ func (x *InlineArtifact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InlineArtifact.ProtoReflect.Descriptor instead.
 func (*InlineArtifact) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{4}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *InlineArtifact) GetFilename() string {
@@ -638,7 +766,7 @@ type ListFlowsRequest struct {
 
 func (x *ListFlowsRequest) Reset() {
 	*x = ListFlowsRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[5]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -650,7 +778,7 @@ func (x *ListFlowsRequest) String() string {
 func (*ListFlowsRequest) ProtoMessage() {}
 
 func (x *ListFlowsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[5]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -663,7 +791,7 @@ func (x *ListFlowsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFlowsRequest.ProtoReflect.Descriptor instead.
 func (*ListFlowsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{5}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListFlowsRequest) GetIsSystem() bool {
@@ -691,7 +819,7 @@ type ListFlowsResponse struct {
 
 func (x *ListFlowsResponse) Reset() {
 	*x = ListFlowsResponse{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[6]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -703,7 +831,7 @@ func (x *ListFlowsResponse) String() string {
 func (*ListFlowsResponse) ProtoMessage() {}
 
 func (x *ListFlowsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[6]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -716,7 +844,7 @@ func (x *ListFlowsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFlowsResponse.ProtoReflect.Descriptor instead.
 func (*ListFlowsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{6}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListFlowsResponse) GetFlows() []*Flow {
@@ -737,7 +865,7 @@ type GetFlowRequest struct {
 
 func (x *GetFlowRequest) Reset() {
 	*x = GetFlowRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[7]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -749,7 +877,7 @@ func (x *GetFlowRequest) String() string {
 func (*GetFlowRequest) ProtoMessage() {}
 
 func (x *GetFlowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[7]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -762,7 +890,7 @@ func (x *GetFlowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFlowRequest.ProtoReflect.Descriptor instead.
 func (*GetFlowRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{7}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetFlowRequest) GetId() string {
@@ -783,7 +911,7 @@ type CreateFlowRequest struct {
 
 func (x *CreateFlowRequest) Reset() {
 	*x = CreateFlowRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[8]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -795,7 +923,7 @@ func (x *CreateFlowRequest) String() string {
 func (*CreateFlowRequest) ProtoMessage() {}
 
 func (x *CreateFlowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[8]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -808,7 +936,7 @@ func (x *CreateFlowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateFlowRequest.ProtoReflect.Descriptor instead.
 func (*CreateFlowRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{8}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CreateFlowRequest) GetFlow() *Flow {
@@ -833,7 +961,7 @@ type UpdateFlowRequest struct {
 
 func (x *UpdateFlowRequest) Reset() {
 	*x = UpdateFlowRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[9]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -845,7 +973,7 @@ func (x *UpdateFlowRequest) String() string {
 func (*UpdateFlowRequest) ProtoMessage() {}
 
 func (x *UpdateFlowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[9]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -858,7 +986,7 @@ func (x *UpdateFlowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateFlowRequest.ProtoReflect.Descriptor instead.
 func (*UpdateFlowRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{9}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UpdateFlowRequest) GetId() string {
@@ -893,7 +1021,7 @@ type DeleteFlowRequest struct {
 
 func (x *DeleteFlowRequest) Reset() {
 	*x = DeleteFlowRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[10]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -905,7 +1033,7 @@ func (x *DeleteFlowRequest) String() string {
 func (*DeleteFlowRequest) ProtoMessage() {}
 
 func (x *DeleteFlowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[10]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -918,7 +1046,7 @@ func (x *DeleteFlowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFlowRequest.ProtoReflect.Descriptor instead.
 func (*DeleteFlowRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{10}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DeleteFlowRequest) GetId() string {
@@ -939,7 +1067,7 @@ type EnableFlowRequest struct {
 
 func (x *EnableFlowRequest) Reset() {
 	*x = EnableFlowRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[11]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -951,7 +1079,7 @@ func (x *EnableFlowRequest) String() string {
 func (*EnableFlowRequest) ProtoMessage() {}
 
 func (x *EnableFlowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[11]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -964,7 +1092,7 @@ func (x *EnableFlowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnableFlowRequest.ProtoReflect.Descriptor instead.
 func (*EnableFlowRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{11}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *EnableFlowRequest) GetId() string {
@@ -985,7 +1113,7 @@ type DisableFlowRequest struct {
 
 func (x *DisableFlowRequest) Reset() {
 	*x = DisableFlowRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[12]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -997,7 +1125,7 @@ func (x *DisableFlowRequest) String() string {
 func (*DisableFlowRequest) ProtoMessage() {}
 
 func (x *DisableFlowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[12]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1010,7 +1138,7 @@ func (x *DisableFlowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DisableFlowRequest.ProtoReflect.Descriptor instead.
 func (*DisableFlowRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{12}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DisableFlowRequest) GetId() string {
@@ -1031,7 +1159,7 @@ type ResetFlowRequest struct {
 
 func (x *ResetFlowRequest) Reset() {
 	*x = ResetFlowRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[13]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1043,7 +1171,7 @@ func (x *ResetFlowRequest) String() string {
 func (*ResetFlowRequest) ProtoMessage() {}
 
 func (x *ResetFlowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[13]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1056,7 +1184,7 @@ func (x *ResetFlowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResetFlowRequest.ProtoReflect.Descriptor instead.
 func (*ResetFlowRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{13}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ResetFlowRequest) GetId() string {
@@ -1083,7 +1211,7 @@ type ExecuteFlowRequest struct {
 
 func (x *ExecuteFlowRequest) Reset() {
 	*x = ExecuteFlowRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[14]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1095,7 +1223,7 @@ func (x *ExecuteFlowRequest) String() string {
 func (*ExecuteFlowRequest) ProtoMessage() {}
 
 func (x *ExecuteFlowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[14]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1108,7 +1236,7 @@ func (x *ExecuteFlowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecuteFlowRequest.ProtoReflect.Descriptor instead.
 func (*ExecuteFlowRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{14}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ExecuteFlowRequest) GetId() string {
@@ -1152,7 +1280,7 @@ type InvokeWebhookTriggerRequest struct {
 
 func (x *InvokeWebhookTriggerRequest) Reset() {
 	*x = InvokeWebhookTriggerRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[15]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1164,7 +1292,7 @@ func (x *InvokeWebhookTriggerRequest) String() string {
 func (*InvokeWebhookTriggerRequest) ProtoMessage() {}
 
 func (x *InvokeWebhookTriggerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[15]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1177,7 +1305,7 @@ func (x *InvokeWebhookTriggerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InvokeWebhookTriggerRequest.ProtoReflect.Descriptor instead.
 func (*InvokeWebhookTriggerRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{15}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *InvokeWebhookTriggerRequest) GetTriggerId() string {
@@ -1211,7 +1339,7 @@ type TestFlowRequest struct {
 
 func (x *TestFlowRequest) Reset() {
 	*x = TestFlowRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[16]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1223,7 +1351,7 @@ func (x *TestFlowRequest) String() string {
 func (*TestFlowRequest) ProtoMessage() {}
 
 func (x *TestFlowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[16]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1236,7 +1364,7 @@ func (x *TestFlowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestFlowRequest.ProtoReflect.Descriptor instead.
 func (*TestFlowRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{16}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *TestFlowRequest) GetFlow() *Flow {
@@ -1280,7 +1408,7 @@ type GenerateFlowRequest struct {
 
 func (x *GenerateFlowRequest) Reset() {
 	*x = GenerateFlowRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[17]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1292,7 +1420,7 @@ func (x *GenerateFlowRequest) String() string {
 func (*GenerateFlowRequest) ProtoMessage() {}
 
 func (x *GenerateFlowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[17]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1305,7 +1433,7 @@ func (x *GenerateFlowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateFlowRequest.ProtoReflect.Descriptor instead.
 func (*GenerateFlowRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{17}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GenerateFlowRequest) GetPrompt() string {
@@ -1339,7 +1467,7 @@ type ListFlowRunsRequest struct {
 
 func (x *ListFlowRunsRequest) Reset() {
 	*x = ListFlowRunsRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[18]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1351,7 +1479,7 @@ func (x *ListFlowRunsRequest) String() string {
 func (*ListFlowRunsRequest) ProtoMessage() {}
 
 func (x *ListFlowRunsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[18]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1364,7 +1492,7 @@ func (x *ListFlowRunsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFlowRunsRequest.ProtoReflect.Descriptor instead.
 func (*ListFlowRunsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{18}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListFlowRunsRequest) GetFlowId() string {
@@ -1408,7 +1536,7 @@ type ListFlowRunsResponse struct {
 
 func (x *ListFlowRunsResponse) Reset() {
 	*x = ListFlowRunsResponse{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[19]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1420,7 +1548,7 @@ func (x *ListFlowRunsResponse) String() string {
 func (*ListFlowRunsResponse) ProtoMessage() {}
 
 func (x *ListFlowRunsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[19]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1433,7 +1561,7 @@ func (x *ListFlowRunsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFlowRunsResponse.ProtoReflect.Descriptor instead.
 func (*ListFlowRunsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{19}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ListFlowRunsResponse) GetRuns() []*FlowRun {
@@ -1461,7 +1589,7 @@ type GetFlowRunRequest struct {
 
 func (x *GetFlowRunRequest) Reset() {
 	*x = GetFlowRunRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[20]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1473,7 +1601,7 @@ func (x *GetFlowRunRequest) String() string {
 func (*GetFlowRunRequest) ProtoMessage() {}
 
 func (x *GetFlowRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[20]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1486,7 +1614,7 @@ func (x *GetFlowRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFlowRunRequest.ProtoReflect.Descriptor instead.
 func (*GetFlowRunRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{20}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *GetFlowRunRequest) GetId() string {
@@ -1505,7 +1633,7 @@ type GetCatalogRequest struct {
 
 func (x *GetCatalogRequest) Reset() {
 	*x = GetCatalogRequest{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[21]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1517,7 +1645,7 @@ func (x *GetCatalogRequest) String() string {
 func (*GetCatalogRequest) ProtoMessage() {}
 
 func (x *GetCatalogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[21]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1530,7 +1658,7 @@ func (x *GetCatalogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCatalogRequest.ProtoReflect.Descriptor instead.
 func (*GetCatalogRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{21}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{23}
 }
 
 // Catalog returns all registered workflow capabilities for authoring and AI generation.
@@ -1550,7 +1678,7 @@ type Catalog struct {
 
 func (x *Catalog) Reset() {
 	*x = Catalog{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[22]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1562,7 +1690,7 @@ func (x *Catalog) String() string {
 func (*Catalog) ProtoMessage() {}
 
 func (x *Catalog) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[22]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1575,7 +1703,7 @@ func (x *Catalog) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Catalog.ProtoReflect.Descriptor instead.
 func (*Catalog) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{22}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *Catalog) GetTriggerTopics() []*Catalog_TriggerTopic {
@@ -1621,7 +1749,7 @@ type Flow_Config struct {
 
 func (x *Flow_Config) Reset() {
 	*x = Flow_Config{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[23]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1633,7 +1761,7 @@ func (x *Flow_Config) String() string {
 func (*Flow_Config) ProtoMessage() {}
 
 func (x *Flow_Config) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[23]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1646,7 +1774,7 @@ func (x *Flow_Config) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Flow_Config.ProtoReflect.Descriptor instead.
 func (*Flow_Config) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{1, 0}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{3, 0}
 }
 
 func (x *Flow_Config) GetDefaultModel() *ModelConfig {
@@ -1697,7 +1825,7 @@ type Flow_Trigger struct {
 
 func (x *Flow_Trigger) Reset() {
 	*x = Flow_Trigger{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[24]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1709,7 +1837,7 @@ func (x *Flow_Trigger) String() string {
 func (*Flow_Trigger) ProtoMessage() {}
 
 func (x *Flow_Trigger) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[24]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1722,7 +1850,7 @@ func (x *Flow_Trigger) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Flow_Trigger.ProtoReflect.Descriptor instead.
 func (*Flow_Trigger) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{1, 1}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{3, 1}
 }
 
 func (x *Flow_Trigger) GetId() string {
@@ -1803,7 +1931,7 @@ type Flow_SourceBinding struct {
 
 func (x *Flow_SourceBinding) Reset() {
 	*x = Flow_SourceBinding{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[25]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1815,7 +1943,7 @@ func (x *Flow_SourceBinding) String() string {
 func (*Flow_SourceBinding) ProtoMessage() {}
 
 func (x *Flow_SourceBinding) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[25]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1828,7 +1956,7 @@ func (x *Flow_SourceBinding) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Flow_SourceBinding.ProtoReflect.Descriptor instead.
 func (*Flow_SourceBinding) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{1, 2}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{3, 2}
 }
 
 func (x *Flow_SourceBinding) GetLoader() string {
@@ -1867,7 +1995,7 @@ type Flow_SwitchCase struct {
 
 func (x *Flow_SwitchCase) Reset() {
 	*x = Flow_SwitchCase{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[26]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1879,7 +2007,7 @@ func (x *Flow_SwitchCase) String() string {
 func (*Flow_SwitchCase) ProtoMessage() {}
 
 func (x *Flow_SwitchCase) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[26]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1892,7 +2020,7 @@ func (x *Flow_SwitchCase) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Flow_SwitchCase.ProtoReflect.Descriptor instead.
 func (*Flow_SwitchCase) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{1, 3}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{3, 3}
 }
 
 func (x *Flow_SwitchCase) GetName() string {
@@ -1945,7 +2073,7 @@ type Flow_StepNode struct {
 
 func (x *Flow_StepNode) Reset() {
 	*x = Flow_StepNode{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[27]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1957,7 +2085,7 @@ func (x *Flow_StepNode) String() string {
 func (*Flow_StepNode) ProtoMessage() {}
 
 func (x *Flow_StepNode) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[27]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1970,7 +2098,7 @@ func (x *Flow_StepNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Flow_StepNode.ProtoReflect.Descriptor instead.
 func (*Flow_StepNode) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{1, 4}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{3, 4}
 }
 
 func (x *Flow_StepNode) GetId() string {
@@ -2066,7 +2194,7 @@ type Flow_Stats struct {
 
 func (x *Flow_Stats) Reset() {
 	*x = Flow_Stats{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[28]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2078,7 +2206,7 @@ func (x *Flow_Stats) String() string {
 func (*Flow_Stats) ProtoMessage() {}
 
 func (x *Flow_Stats) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[28]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2091,7 +2219,7 @@ func (x *Flow_Stats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Flow_Stats.ProtoReflect.Descriptor instead.
 func (*Flow_Stats) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{1, 5}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{3, 5}
 }
 
 func (x *Flow_Stats) GetTotalRuns_7D() int32 {
@@ -2162,7 +2290,7 @@ type Flow_Trigger_Config struct {
 
 func (x *Flow_Trigger_Config) Reset() {
 	*x = Flow_Trigger_Config{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[29]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2174,7 +2302,7 @@ func (x *Flow_Trigger_Config) String() string {
 func (*Flow_Trigger_Config) ProtoMessage() {}
 
 func (x *Flow_Trigger_Config) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[29]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2187,7 +2315,7 @@ func (x *Flow_Trigger_Config) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Flow_Trigger_Config.ProtoReflect.Descriptor instead.
 func (*Flow_Trigger_Config) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{1, 1, 0}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{3, 1, 0}
 }
 
 func (x *Flow_Trigger_Config) GetTopic() string {
@@ -2248,8 +2376,8 @@ type FlowRun_StepRun struct {
 	Error *FlowError `protobuf:"bytes,9,opt,name=error,proto3,oneof" json:"error,omitempty"`
 	// Output only. Telemetry metadata (duration_ms, tokens_used, source loader stats).
 	Metadata *structpb.Struct `protobuf:"bytes,10,opt,name=metadata,proto3,oneof" json:"metadata,omitempty"`
-	// Output only. Linked platform.agent_runs ID for `llm.generate` steps.
-	AgentRunId *string `protobuf:"bytes,11,opt,name=agent_run_id,json=agentRunId,proto3,oneof" json:"agent_run_id,omitempty"`
+	// Output only. Linked platform.ai_runs ID for AI steps (llm.generate, ai.agent_run).
+	AiRunId *string `protobuf:"bytes,11,opt,name=ai_run_id,json=aiRunId,proto3,oneof" json:"ai_run_id,omitempty"`
 	// Output only. Timestamp when the step started executing.
 	StartTime *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
 	// Output only. Timestamp when the step finished executing.
@@ -2264,7 +2392,7 @@ type FlowRun_StepRun struct {
 
 func (x *FlowRun_StepRun) Reset() {
 	*x = FlowRun_StepRun{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[31]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2276,7 +2404,7 @@ func (x *FlowRun_StepRun) String() string {
 func (*FlowRun_StepRun) ProtoMessage() {}
 
 func (x *FlowRun_StepRun) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[31]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2289,7 +2417,7 @@ func (x *FlowRun_StepRun) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FlowRun_StepRun.ProtoReflect.Descriptor instead.
 func (*FlowRun_StepRun) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{3, 0}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{5, 0}
 }
 
 func (x *FlowRun_StepRun) GetId() string {
@@ -2362,9 +2490,9 @@ func (x *FlowRun_StepRun) GetMetadata() *structpb.Struct {
 	return nil
 }
 
-func (x *FlowRun_StepRun) GetAgentRunId() string {
-	if x != nil && x.AgentRunId != nil {
-		return *x.AgentRunId
+func (x *FlowRun_StepRun) GetAiRunId() string {
+	if x != nil && x.AiRunId != nil {
+		return *x.AiRunId
 	}
 	return ""
 }
@@ -2416,7 +2544,7 @@ type Catalog_TriggerTopic struct {
 
 func (x *Catalog_TriggerTopic) Reset() {
 	*x = Catalog_TriggerTopic{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[32]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2428,7 +2556,7 @@ func (x *Catalog_TriggerTopic) String() string {
 func (*Catalog_TriggerTopic) ProtoMessage() {}
 
 func (x *Catalog_TriggerTopic) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[32]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2441,7 +2569,7 @@ func (x *Catalog_TriggerTopic) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Catalog_TriggerTopic.ProtoReflect.Descriptor instead.
 func (*Catalog_TriggerTopic) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{22, 0}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{24, 0}
 }
 
 func (x *Catalog_TriggerTopic) GetTopic() string {
@@ -2502,7 +2630,7 @@ type Catalog_Step struct {
 
 func (x *Catalog_Step) Reset() {
 	*x = Catalog_Step{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[33]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2514,7 +2642,7 @@ func (x *Catalog_Step) String() string {
 func (*Catalog_Step) ProtoMessage() {}
 
 func (x *Catalog_Step) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[33]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2527,7 +2655,7 @@ func (x *Catalog_Step) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Catalog_Step.ProtoReflect.Descriptor instead.
 func (*Catalog_Step) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{22, 1}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{24, 1}
 }
 
 func (x *Catalog_Step) GetType() string {
@@ -2600,7 +2728,7 @@ type Catalog_Loader struct {
 
 func (x *Catalog_Loader) Reset() {
 	*x = Catalog_Loader{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[34]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2612,7 +2740,7 @@ func (x *Catalog_Loader) String() string {
 func (*Catalog_Loader) ProtoMessage() {}
 
 func (x *Catalog_Loader) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[34]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2625,7 +2753,7 @@ func (x *Catalog_Loader) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Catalog_Loader.ProtoReflect.Descriptor instead.
 func (*Catalog_Loader) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{22, 2}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{24, 2}
 }
 
 func (x *Catalog_Loader) GetName() string {
@@ -2687,7 +2815,7 @@ type Catalog_CelHelper struct {
 
 func (x *Catalog_CelHelper) Reset() {
 	*x = Catalog_CelHelper{}
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[35]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2699,7 +2827,7 @@ func (x *Catalog_CelHelper) String() string {
 func (*Catalog_CelHelper) ProtoMessage() {}
 
 func (x *Catalog_CelHelper) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[35]
+	mi := &file_saturn_platform_workflow_v1_workflow_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2712,7 +2840,7 @@ func (x *Catalog_CelHelper) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Catalog_CelHelper.ProtoReflect.Descriptor instead.
 func (*Catalog_CelHelper) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{22, 3}
+	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{24, 3}
 }
 
 func (x *Catalog_CelHelper) GetName() string {
@@ -2747,18 +2875,32 @@ var File_saturn_platform_workflow_v1_workflow_proto protoreflect.FileDescriptor
 
 const file_saturn_platform_workflow_v1_workflow_proto_rawDesc = "" +
 	"\n" +
-	"*saturn/platform/workflow/v1/workflow.proto\x12\x1bsaturn.platform.workflow.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xee\x01\n" +
-	"\vModelConfig\x12#\n" +
-	"\bagent_id\x18\x01 \x01(\tB\x03\xe0A\x01H\x00R\aagentId\x88\x01\x01\x12)\n" +
-	"\vprovider_id\x18\x02 \x01(\tB\x03\xe0A\x01H\x01R\n" +
-	"providerId\x88\x01\x01\x12'\n" +
+	"*saturn/platform/workflow/v1/workflow.proto\x12\x1bsaturn.platform.workflow.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9d\x01\n" +
+	"\x0eThinkingConfig\x12\x1d\n" +
+	"\aenabled\x18\x01 \x01(\bB\x03\xe0A\x01R\aenabled\x12 \n" +
+	"\x06effort\x18\x02 \x01(\tB\x03\xe0A\x01H\x00R\x06effort\x88\x01\x01\x12-\n" +
+	"\rbudget_tokens\x18\x03 \x01(\x05B\x03\xe0A\x01H\x01R\fbudgetTokens\x88\x01\x01B\t\n" +
+	"\a_effortB\x10\n" +
+	"\x0e_budget_tokens\"\x8f\x02\n" +
+	"\x10GenerationConfig\x12*\n" +
+	"\vtemperature\x18\x01 \x01(\x01B\x03\xe0A\x01H\x00R\vtemperature\x88\x01\x01\x12'\n" +
 	"\n" +
-	"model_name\x18\x03 \x01(\tB\x03\xe0A\x01H\x02R\tmodelName\x88\x01\x01\x12*\n" +
-	"\vtemperature\x18\x04 \x01(\x01B\x03\xe0A\x01H\x03R\vtemperature\x88\x01\x01B\v\n" +
-	"\t_agent_idB\x0e\n" +
-	"\f_provider_idB\r\n" +
-	"\v_model_nameB\x0e\n" +
-	"\f_temperature\"\xed\x18\n" +
+	"max_tokens\x18\x02 \x01(\x05B\x03\xe0A\x01H\x01R\tmaxTokens\x88\x01\x01\x12\x1d\n" +
+	"\x05top_p\x18\x03 \x01(\x01B\x03\xe0A\x01H\x02R\x04topP\x88\x01\x01\x12Q\n" +
+	"\bthinking\x18\x04 \x01(\v2+.saturn.platform.workflow.v1.ThinkingConfigB\x03\xe0A\x01H\x03R\bthinking\x88\x01\x01B\x0e\n" +
+	"\f_temperatureB\r\n" +
+	"\v_max_tokensB\b\n" +
+	"\x06_top_pB\v\n" +
+	"\t_thinking\"\xce\x01\n" +
+	"\vModelConfig\x12#\n" +
+	"\bmodel_id\x18\x01 \x01(\tB\x03\xe0A\x01H\x00R\amodelId\x88\x01\x01\x12\x1c\n" +
+	"\x04role\x18\x02 \x01(\tB\x03\xe0A\x01H\x01R\x04role\x88\x01\x01\x12W\n" +
+	"\n" +
+	"generation\x18\x03 \x01(\v2-.saturn.platform.workflow.v1.GenerationConfigB\x03\xe0A\x01H\x02R\n" +
+	"generation\x88\x01\x01B\v\n" +
+	"\t_model_idB\a\n" +
+	"\x05_roleB\r\n" +
+	"\v_generation\"\xed\x18\n" +
 	"\x04Flow\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
 	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aspaceId\x12'\n" +
@@ -2864,7 +3006,7 @@ const file_saturn_platform_workflow_v1_workflow_proto_rawDesc = "" +
 	"\amessage\x18\x03 \x01(\tB\x03\xe0A\x03R\amessageB\n" +
 	"\n" +
 	"\b_step_idB\a\n" +
-	"\x05_code\"\xe1\x0f\n" +
+	"\x05_code\"\xd8\x0f\n" +
 	"\aFlowRun\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
 	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aspaceId\x12\x1c\n" +
@@ -2892,7 +3034,7 @@ const file_saturn_platform_workflow_v1_workflow_proto_rawDesc = "" +
 	"\vcreate_time\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime\x12@\n" +
 	"\vupdate_time\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
-	"updateTime\x1a\x9d\x06\n" +
+	"updateTime\x1a\x94\x06\n" +
 	"\aStepRun\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12#\n" +
 	"\vflow_run_id\x18\x02 \x01(\tB\x03\xe0A\x03R\tflowRunId\x12\x1e\n" +
@@ -2904,9 +3046,8 @@ const file_saturn_platform_workflow_v1_workflow_proto_rawDesc = "" +
 	"\x06output\x18\b \x01(\v2\x17.google.protobuf.StructB\x03\xe0A\x03H\x00R\x06output\x88\x01\x01\x12F\n" +
 	"\x05error\x18\t \x01(\v2&.saturn.platform.workflow.v1.FlowErrorB\x03\xe0A\x03H\x01R\x05error\x88\x01\x01\x12=\n" +
 	"\bmetadata\x18\n" +
-	" \x01(\v2\x17.google.protobuf.StructB\x03\xe0A\x03H\x02R\bmetadata\x88\x01\x01\x12*\n" +
-	"\fagent_run_id\x18\v \x01(\tB\x03\xe0A\x03H\x03R\n" +
-	"agentRunId\x88\x01\x01\x12>\n" +
+	" \x01(\v2\x17.google.protobuf.StructB\x03\xe0A\x03H\x02R\bmetadata\x88\x01\x01\x12$\n" +
+	"\tai_run_id\x18\v \x01(\tB\x03\xe0A\x03H\x03R\aaiRunId\x88\x01\x01\x12>\n" +
 	"\n" +
 	"start_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tstartTime\x12?\n" +
 	"\bend_time\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03H\x04R\aendTime\x88\x01\x01\x12@\n" +
@@ -2916,8 +3057,9 @@ const file_saturn_platform_workflow_v1_workflow_proto_rawDesc = "" +
 	"updateTimeB\t\n" +
 	"\a_outputB\b\n" +
 	"\x06_errorB\v\n" +
-	"\t_metadataB\x0f\n" +
-	"\r_agent_run_idB\v\n" +
+	"\t_metadataB\f\n" +
+	"\n" +
+	"_ai_run_idB\v\n" +
 	"\t_end_timeB\f\n" +
 	"\n" +
 	"_flow_nameB\r\n" +
@@ -3073,147 +3215,151 @@ func file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP() []byte {
 	return file_saturn_platform_workflow_v1_workflow_proto_rawDescData
 }
 
-var file_saturn_platform_workflow_v1_workflow_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_saturn_platform_workflow_v1_workflow_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_saturn_platform_workflow_v1_workflow_proto_goTypes = []any{
-	(*ModelConfig)(nil),                 // 0: saturn.platform.workflow.v1.ModelConfig
-	(*Flow)(nil),                        // 1: saturn.platform.workflow.v1.Flow
-	(*FlowError)(nil),                   // 2: saturn.platform.workflow.v1.FlowError
-	(*FlowRun)(nil),                     // 3: saturn.platform.workflow.v1.FlowRun
-	(*InlineArtifact)(nil),              // 4: saturn.platform.workflow.v1.InlineArtifact
-	(*ListFlowsRequest)(nil),            // 5: saturn.platform.workflow.v1.ListFlowsRequest
-	(*ListFlowsResponse)(nil),           // 6: saturn.platform.workflow.v1.ListFlowsResponse
-	(*GetFlowRequest)(nil),              // 7: saturn.platform.workflow.v1.GetFlowRequest
-	(*CreateFlowRequest)(nil),           // 8: saturn.platform.workflow.v1.CreateFlowRequest
-	(*UpdateFlowRequest)(nil),           // 9: saturn.platform.workflow.v1.UpdateFlowRequest
-	(*DeleteFlowRequest)(nil),           // 10: saturn.platform.workflow.v1.DeleteFlowRequest
-	(*EnableFlowRequest)(nil),           // 11: saturn.platform.workflow.v1.EnableFlowRequest
-	(*DisableFlowRequest)(nil),          // 12: saturn.platform.workflow.v1.DisableFlowRequest
-	(*ResetFlowRequest)(nil),            // 13: saturn.platform.workflow.v1.ResetFlowRequest
-	(*ExecuteFlowRequest)(nil),          // 14: saturn.platform.workflow.v1.ExecuteFlowRequest
-	(*InvokeWebhookTriggerRequest)(nil), // 15: saturn.platform.workflow.v1.InvokeWebhookTriggerRequest
-	(*TestFlowRequest)(nil),             // 16: saturn.platform.workflow.v1.TestFlowRequest
-	(*GenerateFlowRequest)(nil),         // 17: saturn.platform.workflow.v1.GenerateFlowRequest
-	(*ListFlowRunsRequest)(nil),         // 18: saturn.platform.workflow.v1.ListFlowRunsRequest
-	(*ListFlowRunsResponse)(nil),        // 19: saturn.platform.workflow.v1.ListFlowRunsResponse
-	(*GetFlowRunRequest)(nil),           // 20: saturn.platform.workflow.v1.GetFlowRunRequest
-	(*GetCatalogRequest)(nil),           // 21: saturn.platform.workflow.v1.GetCatalogRequest
-	(*Catalog)(nil),                     // 22: saturn.platform.workflow.v1.Catalog
-	(*Flow_Config)(nil),                 // 23: saturn.platform.workflow.v1.Flow.Config
-	(*Flow_Trigger)(nil),                // 24: saturn.platform.workflow.v1.Flow.Trigger
-	(*Flow_SourceBinding)(nil),          // 25: saturn.platform.workflow.v1.Flow.SourceBinding
-	(*Flow_SwitchCase)(nil),             // 26: saturn.platform.workflow.v1.Flow.SwitchCase
-	(*Flow_StepNode)(nil),               // 27: saturn.platform.workflow.v1.Flow.StepNode
-	(*Flow_Stats)(nil),                  // 28: saturn.platform.workflow.v1.Flow.Stats
-	(*Flow_Trigger_Config)(nil),         // 29: saturn.platform.workflow.v1.Flow.Trigger.Config
-	nil,                                 // 30: saturn.platform.workflow.v1.Flow.StepNode.SourcesEntry
-	(*FlowRun_StepRun)(nil),             // 31: saturn.platform.workflow.v1.FlowRun.StepRun
-	(*Catalog_TriggerTopic)(nil),        // 32: saturn.platform.workflow.v1.Catalog.TriggerTopic
-	(*Catalog_Step)(nil),                // 33: saturn.platform.workflow.v1.Catalog.Step
-	(*Catalog_Loader)(nil),              // 34: saturn.platform.workflow.v1.Catalog.Loader
-	(*Catalog_CelHelper)(nil),           // 35: saturn.platform.workflow.v1.Catalog.CelHelper
-	(*structpb.Struct)(nil),             // 36: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil),       // 37: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),       // 38: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),               // 39: google.protobuf.Empty
+	(*ThinkingConfig)(nil),              // 0: saturn.platform.workflow.v1.ThinkingConfig
+	(*GenerationConfig)(nil),            // 1: saturn.platform.workflow.v1.GenerationConfig
+	(*ModelConfig)(nil),                 // 2: saturn.platform.workflow.v1.ModelConfig
+	(*Flow)(nil),                        // 3: saturn.platform.workflow.v1.Flow
+	(*FlowError)(nil),                   // 4: saturn.platform.workflow.v1.FlowError
+	(*FlowRun)(nil),                     // 5: saturn.platform.workflow.v1.FlowRun
+	(*InlineArtifact)(nil),              // 6: saturn.platform.workflow.v1.InlineArtifact
+	(*ListFlowsRequest)(nil),            // 7: saturn.platform.workflow.v1.ListFlowsRequest
+	(*ListFlowsResponse)(nil),           // 8: saturn.platform.workflow.v1.ListFlowsResponse
+	(*GetFlowRequest)(nil),              // 9: saturn.platform.workflow.v1.GetFlowRequest
+	(*CreateFlowRequest)(nil),           // 10: saturn.platform.workflow.v1.CreateFlowRequest
+	(*UpdateFlowRequest)(nil),           // 11: saturn.platform.workflow.v1.UpdateFlowRequest
+	(*DeleteFlowRequest)(nil),           // 12: saturn.platform.workflow.v1.DeleteFlowRequest
+	(*EnableFlowRequest)(nil),           // 13: saturn.platform.workflow.v1.EnableFlowRequest
+	(*DisableFlowRequest)(nil),          // 14: saturn.platform.workflow.v1.DisableFlowRequest
+	(*ResetFlowRequest)(nil),            // 15: saturn.platform.workflow.v1.ResetFlowRequest
+	(*ExecuteFlowRequest)(nil),          // 16: saturn.platform.workflow.v1.ExecuteFlowRequest
+	(*InvokeWebhookTriggerRequest)(nil), // 17: saturn.platform.workflow.v1.InvokeWebhookTriggerRequest
+	(*TestFlowRequest)(nil),             // 18: saturn.platform.workflow.v1.TestFlowRequest
+	(*GenerateFlowRequest)(nil),         // 19: saturn.platform.workflow.v1.GenerateFlowRequest
+	(*ListFlowRunsRequest)(nil),         // 20: saturn.platform.workflow.v1.ListFlowRunsRequest
+	(*ListFlowRunsResponse)(nil),        // 21: saturn.platform.workflow.v1.ListFlowRunsResponse
+	(*GetFlowRunRequest)(nil),           // 22: saturn.platform.workflow.v1.GetFlowRunRequest
+	(*GetCatalogRequest)(nil),           // 23: saturn.platform.workflow.v1.GetCatalogRequest
+	(*Catalog)(nil),                     // 24: saturn.platform.workflow.v1.Catalog
+	(*Flow_Config)(nil),                 // 25: saturn.platform.workflow.v1.Flow.Config
+	(*Flow_Trigger)(nil),                // 26: saturn.platform.workflow.v1.Flow.Trigger
+	(*Flow_SourceBinding)(nil),          // 27: saturn.platform.workflow.v1.Flow.SourceBinding
+	(*Flow_SwitchCase)(nil),             // 28: saturn.platform.workflow.v1.Flow.SwitchCase
+	(*Flow_StepNode)(nil),               // 29: saturn.platform.workflow.v1.Flow.StepNode
+	(*Flow_Stats)(nil),                  // 30: saturn.platform.workflow.v1.Flow.Stats
+	(*Flow_Trigger_Config)(nil),         // 31: saturn.platform.workflow.v1.Flow.Trigger.Config
+	nil,                                 // 32: saturn.platform.workflow.v1.Flow.StepNode.SourcesEntry
+	(*FlowRun_StepRun)(nil),             // 33: saturn.platform.workflow.v1.FlowRun.StepRun
+	(*Catalog_TriggerTopic)(nil),        // 34: saturn.platform.workflow.v1.Catalog.TriggerTopic
+	(*Catalog_Step)(nil),                // 35: saturn.platform.workflow.v1.Catalog.Step
+	(*Catalog_Loader)(nil),              // 36: saturn.platform.workflow.v1.Catalog.Loader
+	(*Catalog_CelHelper)(nil),           // 37: saturn.platform.workflow.v1.Catalog.CelHelper
+	(*structpb.Struct)(nil),             // 38: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil),       // 39: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),       // 40: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),               // 41: google.protobuf.Empty
 }
 var file_saturn_platform_workflow_v1_workflow_proto_depIdxs = []int32{
-	23, // 0: saturn.platform.workflow.v1.Flow.config:type_name -> saturn.platform.workflow.v1.Flow.Config
-	36, // 1: saturn.platform.workflow.v1.Flow.input_schema:type_name -> google.protobuf.Struct
-	27, // 2: saturn.platform.workflow.v1.Flow.steps:type_name -> saturn.platform.workflow.v1.Flow.StepNode
-	24, // 3: saturn.platform.workflow.v1.Flow.triggers:type_name -> saturn.platform.workflow.v1.Flow.Trigger
-	28, // 4: saturn.platform.workflow.v1.Flow.stats:type_name -> saturn.platform.workflow.v1.Flow.Stats
-	37, // 5: saturn.platform.workflow.v1.Flow.create_time:type_name -> google.protobuf.Timestamp
-	37, // 6: saturn.platform.workflow.v1.Flow.update_time:type_name -> google.protobuf.Timestamp
-	36, // 7: saturn.platform.workflow.v1.FlowRun.trigger_data:type_name -> google.protobuf.Struct
-	36, // 8: saturn.platform.workflow.v1.FlowRun.input:type_name -> google.protobuf.Struct
-	36, // 9: saturn.platform.workflow.v1.FlowRun.output:type_name -> google.protobuf.Struct
-	2,  // 10: saturn.platform.workflow.v1.FlowRun.error:type_name -> saturn.platform.workflow.v1.FlowError
-	36, // 11: saturn.platform.workflow.v1.FlowRun.metadata:type_name -> google.protobuf.Struct
-	31, // 12: saturn.platform.workflow.v1.FlowRun.step_runs:type_name -> saturn.platform.workflow.v1.FlowRun.StepRun
-	37, // 13: saturn.platform.workflow.v1.FlowRun.resume_time:type_name -> google.protobuf.Timestamp
-	37, // 14: saturn.platform.workflow.v1.FlowRun.start_time:type_name -> google.protobuf.Timestamp
-	37, // 15: saturn.platform.workflow.v1.FlowRun.end_time:type_name -> google.protobuf.Timestamp
-	37, // 16: saturn.platform.workflow.v1.FlowRun.create_time:type_name -> google.protobuf.Timestamp
-	37, // 17: saturn.platform.workflow.v1.FlowRun.update_time:type_name -> google.protobuf.Timestamp
-	1,  // 18: saturn.platform.workflow.v1.ListFlowsResponse.flows:type_name -> saturn.platform.workflow.v1.Flow
-	1,  // 19: saturn.platform.workflow.v1.CreateFlowRequest.flow:type_name -> saturn.platform.workflow.v1.Flow
-	1,  // 20: saturn.platform.workflow.v1.UpdateFlowRequest.flow:type_name -> saturn.platform.workflow.v1.Flow
-	38, // 21: saturn.platform.workflow.v1.UpdateFlowRequest.update_mask:type_name -> google.protobuf.FieldMask
-	36, // 22: saturn.platform.workflow.v1.ExecuteFlowRequest.input:type_name -> google.protobuf.Struct
-	4,  // 23: saturn.platform.workflow.v1.ExecuteFlowRequest.artifacts:type_name -> saturn.platform.workflow.v1.InlineArtifact
-	36, // 24: saturn.platform.workflow.v1.InvokeWebhookTriggerRequest.payload:type_name -> google.protobuf.Struct
-	1,  // 25: saturn.platform.workflow.v1.TestFlowRequest.flow:type_name -> saturn.platform.workflow.v1.Flow
-	36, // 26: saturn.platform.workflow.v1.TestFlowRequest.trigger_data:type_name -> google.protobuf.Struct
-	36, // 27: saturn.platform.workflow.v1.TestFlowRequest.input:type_name -> google.protobuf.Struct
-	4,  // 28: saturn.platform.workflow.v1.TestFlowRequest.artifacts:type_name -> saturn.platform.workflow.v1.InlineArtifact
-	0,  // 29: saturn.platform.workflow.v1.GenerateFlowRequest.model:type_name -> saturn.platform.workflow.v1.ModelConfig
-	3,  // 30: saturn.platform.workflow.v1.ListFlowRunsResponse.runs:type_name -> saturn.platform.workflow.v1.FlowRun
-	32, // 31: saturn.platform.workflow.v1.Catalog.trigger_topics:type_name -> saturn.platform.workflow.v1.Catalog.TriggerTopic
-	33, // 32: saturn.platform.workflow.v1.Catalog.steps:type_name -> saturn.platform.workflow.v1.Catalog.Step
-	34, // 33: saturn.platform.workflow.v1.Catalog.loaders:type_name -> saturn.platform.workflow.v1.Catalog.Loader
-	35, // 34: saturn.platform.workflow.v1.Catalog.cel_helpers:type_name -> saturn.platform.workflow.v1.Catalog.CelHelper
-	0,  // 35: saturn.platform.workflow.v1.Flow.Config.default_model:type_name -> saturn.platform.workflow.v1.ModelConfig
-	29, // 36: saturn.platform.workflow.v1.Flow.Trigger.config:type_name -> saturn.platform.workflow.v1.Flow.Trigger.Config
-	37, // 37: saturn.platform.workflow.v1.Flow.Trigger.create_time:type_name -> google.protobuf.Timestamp
-	37, // 38: saturn.platform.workflow.v1.Flow.Trigger.update_time:type_name -> google.protobuf.Timestamp
-	36, // 39: saturn.platform.workflow.v1.Flow.SourceBinding.params:type_name -> google.protobuf.Struct
-	27, // 40: saturn.platform.workflow.v1.Flow.SwitchCase.steps:type_name -> saturn.platform.workflow.v1.Flow.StepNode
-	0,  // 41: saturn.platform.workflow.v1.Flow.StepNode.model:type_name -> saturn.platform.workflow.v1.ModelConfig
-	30, // 42: saturn.platform.workflow.v1.Flow.StepNode.sources:type_name -> saturn.platform.workflow.v1.Flow.StepNode.SourcesEntry
-	36, // 43: saturn.platform.workflow.v1.Flow.StepNode.inputs:type_name -> google.protobuf.Struct
-	26, // 44: saturn.platform.workflow.v1.Flow.StepNode.cases:type_name -> saturn.platform.workflow.v1.Flow.SwitchCase
-	27, // 45: saturn.platform.workflow.v1.Flow.StepNode.default:type_name -> saturn.platform.workflow.v1.Flow.StepNode
-	27, // 46: saturn.platform.workflow.v1.Flow.StepNode.steps:type_name -> saturn.platform.workflow.v1.Flow.StepNode
-	37, // 47: saturn.platform.workflow.v1.Flow.Stats.last_run_at:type_name -> google.protobuf.Timestamp
-	36, // 48: saturn.platform.workflow.v1.Flow.Trigger.Config.input_mapping:type_name -> google.protobuf.Struct
-	25, // 49: saturn.platform.workflow.v1.Flow.StepNode.SourcesEntry.value:type_name -> saturn.platform.workflow.v1.Flow.SourceBinding
-	36, // 50: saturn.platform.workflow.v1.FlowRun.StepRun.output:type_name -> google.protobuf.Struct
-	2,  // 51: saturn.platform.workflow.v1.FlowRun.StepRun.error:type_name -> saturn.platform.workflow.v1.FlowError
-	36, // 52: saturn.platform.workflow.v1.FlowRun.StepRun.metadata:type_name -> google.protobuf.Struct
-	37, // 53: saturn.platform.workflow.v1.FlowRun.StepRun.start_time:type_name -> google.protobuf.Timestamp
-	37, // 54: saturn.platform.workflow.v1.FlowRun.StepRun.end_time:type_name -> google.protobuf.Timestamp
-	37, // 55: saturn.platform.workflow.v1.FlowRun.StepRun.create_time:type_name -> google.protobuf.Timestamp
-	37, // 56: saturn.platform.workflow.v1.FlowRun.StepRun.update_time:type_name -> google.protobuf.Timestamp
-	36, // 57: saturn.platform.workflow.v1.Catalog.TriggerTopic.payload_schema:type_name -> google.protobuf.Struct
-	36, // 58: saturn.platform.workflow.v1.Catalog.Step.inputs_schema:type_name -> google.protobuf.Struct
-	36, // 59: saturn.platform.workflow.v1.Catalog.Step.output_schema:type_name -> google.protobuf.Struct
-	36, // 60: saturn.platform.workflow.v1.Catalog.Loader.params_schema:type_name -> google.protobuf.Struct
-	36, // 61: saturn.platform.workflow.v1.Catalog.Loader.output_schema:type_name -> google.protobuf.Struct
-	5,  // 62: saturn.platform.workflow.v1.WorkflowService.ListFlows:input_type -> saturn.platform.workflow.v1.ListFlowsRequest
-	7,  // 63: saturn.platform.workflow.v1.WorkflowService.GetFlow:input_type -> saturn.platform.workflow.v1.GetFlowRequest
-	8,  // 64: saturn.platform.workflow.v1.WorkflowService.CreateFlow:input_type -> saturn.platform.workflow.v1.CreateFlowRequest
-	9,  // 65: saturn.platform.workflow.v1.WorkflowService.UpdateFlow:input_type -> saturn.platform.workflow.v1.UpdateFlowRequest
-	10, // 66: saturn.platform.workflow.v1.WorkflowService.DeleteFlow:input_type -> saturn.platform.workflow.v1.DeleteFlowRequest
-	11, // 67: saturn.platform.workflow.v1.WorkflowService.EnableFlow:input_type -> saturn.platform.workflow.v1.EnableFlowRequest
-	12, // 68: saturn.platform.workflow.v1.WorkflowService.DisableFlow:input_type -> saturn.platform.workflow.v1.DisableFlowRequest
-	13, // 69: saturn.platform.workflow.v1.WorkflowService.ResetFlow:input_type -> saturn.platform.workflow.v1.ResetFlowRequest
-	14, // 70: saturn.platform.workflow.v1.WorkflowService.ExecuteFlow:input_type -> saturn.platform.workflow.v1.ExecuteFlowRequest
-	15, // 71: saturn.platform.workflow.v1.WorkflowService.InvokeWebhookTrigger:input_type -> saturn.platform.workflow.v1.InvokeWebhookTriggerRequest
-	16, // 72: saturn.platform.workflow.v1.WorkflowService.TestFlow:input_type -> saturn.platform.workflow.v1.TestFlowRequest
-	17, // 73: saturn.platform.workflow.v1.WorkflowService.GenerateFlow:input_type -> saturn.platform.workflow.v1.GenerateFlowRequest
-	18, // 74: saturn.platform.workflow.v1.WorkflowService.ListFlowRuns:input_type -> saturn.platform.workflow.v1.ListFlowRunsRequest
-	20, // 75: saturn.platform.workflow.v1.WorkflowService.GetFlowRun:input_type -> saturn.platform.workflow.v1.GetFlowRunRequest
-	21, // 76: saturn.platform.workflow.v1.WorkflowService.GetCatalog:input_type -> saturn.platform.workflow.v1.GetCatalogRequest
-	6,  // 77: saturn.platform.workflow.v1.WorkflowService.ListFlows:output_type -> saturn.platform.workflow.v1.ListFlowsResponse
-	1,  // 78: saturn.platform.workflow.v1.WorkflowService.GetFlow:output_type -> saturn.platform.workflow.v1.Flow
-	1,  // 79: saturn.platform.workflow.v1.WorkflowService.CreateFlow:output_type -> saturn.platform.workflow.v1.Flow
-	1,  // 80: saturn.platform.workflow.v1.WorkflowService.UpdateFlow:output_type -> saturn.platform.workflow.v1.Flow
-	39, // 81: saturn.platform.workflow.v1.WorkflowService.DeleteFlow:output_type -> google.protobuf.Empty
-	1,  // 82: saturn.platform.workflow.v1.WorkflowService.EnableFlow:output_type -> saturn.platform.workflow.v1.Flow
-	1,  // 83: saturn.platform.workflow.v1.WorkflowService.DisableFlow:output_type -> saturn.platform.workflow.v1.Flow
-	1,  // 84: saturn.platform.workflow.v1.WorkflowService.ResetFlow:output_type -> saturn.platform.workflow.v1.Flow
-	3,  // 85: saturn.platform.workflow.v1.WorkflowService.ExecuteFlow:output_type -> saturn.platform.workflow.v1.FlowRun
-	3,  // 86: saturn.platform.workflow.v1.WorkflowService.InvokeWebhookTrigger:output_type -> saturn.platform.workflow.v1.FlowRun
-	3,  // 87: saturn.platform.workflow.v1.WorkflowService.TestFlow:output_type -> saturn.platform.workflow.v1.FlowRun
-	1,  // 88: saturn.platform.workflow.v1.WorkflowService.GenerateFlow:output_type -> saturn.platform.workflow.v1.Flow
-	19, // 89: saturn.platform.workflow.v1.WorkflowService.ListFlowRuns:output_type -> saturn.platform.workflow.v1.ListFlowRunsResponse
-	3,  // 90: saturn.platform.workflow.v1.WorkflowService.GetFlowRun:output_type -> saturn.platform.workflow.v1.FlowRun
-	22, // 91: saturn.platform.workflow.v1.WorkflowService.GetCatalog:output_type -> saturn.platform.workflow.v1.Catalog
-	77, // [77:92] is the sub-list for method output_type
-	62, // [62:77] is the sub-list for method input_type
-	62, // [62:62] is the sub-list for extension type_name
-	62, // [62:62] is the sub-list for extension extendee
-	0,  // [0:62] is the sub-list for field type_name
+	0,  // 0: saturn.platform.workflow.v1.GenerationConfig.thinking:type_name -> saturn.platform.workflow.v1.ThinkingConfig
+	1,  // 1: saturn.platform.workflow.v1.ModelConfig.generation:type_name -> saturn.platform.workflow.v1.GenerationConfig
+	25, // 2: saturn.platform.workflow.v1.Flow.config:type_name -> saturn.platform.workflow.v1.Flow.Config
+	38, // 3: saturn.platform.workflow.v1.Flow.input_schema:type_name -> google.protobuf.Struct
+	29, // 4: saturn.platform.workflow.v1.Flow.steps:type_name -> saturn.platform.workflow.v1.Flow.StepNode
+	26, // 5: saturn.platform.workflow.v1.Flow.triggers:type_name -> saturn.platform.workflow.v1.Flow.Trigger
+	30, // 6: saturn.platform.workflow.v1.Flow.stats:type_name -> saturn.platform.workflow.v1.Flow.Stats
+	39, // 7: saturn.platform.workflow.v1.Flow.create_time:type_name -> google.protobuf.Timestamp
+	39, // 8: saturn.platform.workflow.v1.Flow.update_time:type_name -> google.protobuf.Timestamp
+	38, // 9: saturn.platform.workflow.v1.FlowRun.trigger_data:type_name -> google.protobuf.Struct
+	38, // 10: saturn.platform.workflow.v1.FlowRun.input:type_name -> google.protobuf.Struct
+	38, // 11: saturn.platform.workflow.v1.FlowRun.output:type_name -> google.protobuf.Struct
+	4,  // 12: saturn.platform.workflow.v1.FlowRun.error:type_name -> saturn.platform.workflow.v1.FlowError
+	38, // 13: saturn.platform.workflow.v1.FlowRun.metadata:type_name -> google.protobuf.Struct
+	33, // 14: saturn.platform.workflow.v1.FlowRun.step_runs:type_name -> saturn.platform.workflow.v1.FlowRun.StepRun
+	39, // 15: saturn.platform.workflow.v1.FlowRun.resume_time:type_name -> google.protobuf.Timestamp
+	39, // 16: saturn.platform.workflow.v1.FlowRun.start_time:type_name -> google.protobuf.Timestamp
+	39, // 17: saturn.platform.workflow.v1.FlowRun.end_time:type_name -> google.protobuf.Timestamp
+	39, // 18: saturn.platform.workflow.v1.FlowRun.create_time:type_name -> google.protobuf.Timestamp
+	39, // 19: saturn.platform.workflow.v1.FlowRun.update_time:type_name -> google.protobuf.Timestamp
+	3,  // 20: saturn.platform.workflow.v1.ListFlowsResponse.flows:type_name -> saturn.platform.workflow.v1.Flow
+	3,  // 21: saturn.platform.workflow.v1.CreateFlowRequest.flow:type_name -> saturn.platform.workflow.v1.Flow
+	3,  // 22: saturn.platform.workflow.v1.UpdateFlowRequest.flow:type_name -> saturn.platform.workflow.v1.Flow
+	40, // 23: saturn.platform.workflow.v1.UpdateFlowRequest.update_mask:type_name -> google.protobuf.FieldMask
+	38, // 24: saturn.platform.workflow.v1.ExecuteFlowRequest.input:type_name -> google.protobuf.Struct
+	6,  // 25: saturn.platform.workflow.v1.ExecuteFlowRequest.artifacts:type_name -> saturn.platform.workflow.v1.InlineArtifact
+	38, // 26: saturn.platform.workflow.v1.InvokeWebhookTriggerRequest.payload:type_name -> google.protobuf.Struct
+	3,  // 27: saturn.platform.workflow.v1.TestFlowRequest.flow:type_name -> saturn.platform.workflow.v1.Flow
+	38, // 28: saturn.platform.workflow.v1.TestFlowRequest.trigger_data:type_name -> google.protobuf.Struct
+	38, // 29: saturn.platform.workflow.v1.TestFlowRequest.input:type_name -> google.protobuf.Struct
+	6,  // 30: saturn.platform.workflow.v1.TestFlowRequest.artifacts:type_name -> saturn.platform.workflow.v1.InlineArtifact
+	2,  // 31: saturn.platform.workflow.v1.GenerateFlowRequest.model:type_name -> saturn.platform.workflow.v1.ModelConfig
+	5,  // 32: saturn.platform.workflow.v1.ListFlowRunsResponse.runs:type_name -> saturn.platform.workflow.v1.FlowRun
+	34, // 33: saturn.platform.workflow.v1.Catalog.trigger_topics:type_name -> saturn.platform.workflow.v1.Catalog.TriggerTopic
+	35, // 34: saturn.platform.workflow.v1.Catalog.steps:type_name -> saturn.platform.workflow.v1.Catalog.Step
+	36, // 35: saturn.platform.workflow.v1.Catalog.loaders:type_name -> saturn.platform.workflow.v1.Catalog.Loader
+	37, // 36: saturn.platform.workflow.v1.Catalog.cel_helpers:type_name -> saturn.platform.workflow.v1.Catalog.CelHelper
+	2,  // 37: saturn.platform.workflow.v1.Flow.Config.default_model:type_name -> saturn.platform.workflow.v1.ModelConfig
+	31, // 38: saturn.platform.workflow.v1.Flow.Trigger.config:type_name -> saturn.platform.workflow.v1.Flow.Trigger.Config
+	39, // 39: saturn.platform.workflow.v1.Flow.Trigger.create_time:type_name -> google.protobuf.Timestamp
+	39, // 40: saturn.platform.workflow.v1.Flow.Trigger.update_time:type_name -> google.protobuf.Timestamp
+	38, // 41: saturn.platform.workflow.v1.Flow.SourceBinding.params:type_name -> google.protobuf.Struct
+	29, // 42: saturn.platform.workflow.v1.Flow.SwitchCase.steps:type_name -> saturn.platform.workflow.v1.Flow.StepNode
+	2,  // 43: saturn.platform.workflow.v1.Flow.StepNode.model:type_name -> saturn.platform.workflow.v1.ModelConfig
+	32, // 44: saturn.platform.workflow.v1.Flow.StepNode.sources:type_name -> saturn.platform.workflow.v1.Flow.StepNode.SourcesEntry
+	38, // 45: saturn.platform.workflow.v1.Flow.StepNode.inputs:type_name -> google.protobuf.Struct
+	28, // 46: saturn.platform.workflow.v1.Flow.StepNode.cases:type_name -> saturn.platform.workflow.v1.Flow.SwitchCase
+	29, // 47: saturn.platform.workflow.v1.Flow.StepNode.default:type_name -> saturn.platform.workflow.v1.Flow.StepNode
+	29, // 48: saturn.platform.workflow.v1.Flow.StepNode.steps:type_name -> saturn.platform.workflow.v1.Flow.StepNode
+	39, // 49: saturn.platform.workflow.v1.Flow.Stats.last_run_at:type_name -> google.protobuf.Timestamp
+	38, // 50: saturn.platform.workflow.v1.Flow.Trigger.Config.input_mapping:type_name -> google.protobuf.Struct
+	27, // 51: saturn.platform.workflow.v1.Flow.StepNode.SourcesEntry.value:type_name -> saturn.platform.workflow.v1.Flow.SourceBinding
+	38, // 52: saturn.platform.workflow.v1.FlowRun.StepRun.output:type_name -> google.protobuf.Struct
+	4,  // 53: saturn.platform.workflow.v1.FlowRun.StepRun.error:type_name -> saturn.platform.workflow.v1.FlowError
+	38, // 54: saturn.platform.workflow.v1.FlowRun.StepRun.metadata:type_name -> google.protobuf.Struct
+	39, // 55: saturn.platform.workflow.v1.FlowRun.StepRun.start_time:type_name -> google.protobuf.Timestamp
+	39, // 56: saturn.platform.workflow.v1.FlowRun.StepRun.end_time:type_name -> google.protobuf.Timestamp
+	39, // 57: saturn.platform.workflow.v1.FlowRun.StepRun.create_time:type_name -> google.protobuf.Timestamp
+	39, // 58: saturn.platform.workflow.v1.FlowRun.StepRun.update_time:type_name -> google.protobuf.Timestamp
+	38, // 59: saturn.platform.workflow.v1.Catalog.TriggerTopic.payload_schema:type_name -> google.protobuf.Struct
+	38, // 60: saturn.platform.workflow.v1.Catalog.Step.inputs_schema:type_name -> google.protobuf.Struct
+	38, // 61: saturn.platform.workflow.v1.Catalog.Step.output_schema:type_name -> google.protobuf.Struct
+	38, // 62: saturn.platform.workflow.v1.Catalog.Loader.params_schema:type_name -> google.protobuf.Struct
+	38, // 63: saturn.platform.workflow.v1.Catalog.Loader.output_schema:type_name -> google.protobuf.Struct
+	7,  // 64: saturn.platform.workflow.v1.WorkflowService.ListFlows:input_type -> saturn.platform.workflow.v1.ListFlowsRequest
+	9,  // 65: saturn.platform.workflow.v1.WorkflowService.GetFlow:input_type -> saturn.platform.workflow.v1.GetFlowRequest
+	10, // 66: saturn.platform.workflow.v1.WorkflowService.CreateFlow:input_type -> saturn.platform.workflow.v1.CreateFlowRequest
+	11, // 67: saturn.platform.workflow.v1.WorkflowService.UpdateFlow:input_type -> saturn.platform.workflow.v1.UpdateFlowRequest
+	12, // 68: saturn.platform.workflow.v1.WorkflowService.DeleteFlow:input_type -> saturn.platform.workflow.v1.DeleteFlowRequest
+	13, // 69: saturn.platform.workflow.v1.WorkflowService.EnableFlow:input_type -> saturn.platform.workflow.v1.EnableFlowRequest
+	14, // 70: saturn.platform.workflow.v1.WorkflowService.DisableFlow:input_type -> saturn.platform.workflow.v1.DisableFlowRequest
+	15, // 71: saturn.platform.workflow.v1.WorkflowService.ResetFlow:input_type -> saturn.platform.workflow.v1.ResetFlowRequest
+	16, // 72: saturn.platform.workflow.v1.WorkflowService.ExecuteFlow:input_type -> saturn.platform.workflow.v1.ExecuteFlowRequest
+	17, // 73: saturn.platform.workflow.v1.WorkflowService.InvokeWebhookTrigger:input_type -> saturn.platform.workflow.v1.InvokeWebhookTriggerRequest
+	18, // 74: saturn.platform.workflow.v1.WorkflowService.TestFlow:input_type -> saturn.platform.workflow.v1.TestFlowRequest
+	19, // 75: saturn.platform.workflow.v1.WorkflowService.GenerateFlow:input_type -> saturn.platform.workflow.v1.GenerateFlowRequest
+	20, // 76: saturn.platform.workflow.v1.WorkflowService.ListFlowRuns:input_type -> saturn.platform.workflow.v1.ListFlowRunsRequest
+	22, // 77: saturn.platform.workflow.v1.WorkflowService.GetFlowRun:input_type -> saturn.platform.workflow.v1.GetFlowRunRequest
+	23, // 78: saturn.platform.workflow.v1.WorkflowService.GetCatalog:input_type -> saturn.platform.workflow.v1.GetCatalogRequest
+	8,  // 79: saturn.platform.workflow.v1.WorkflowService.ListFlows:output_type -> saturn.platform.workflow.v1.ListFlowsResponse
+	3,  // 80: saturn.platform.workflow.v1.WorkflowService.GetFlow:output_type -> saturn.platform.workflow.v1.Flow
+	3,  // 81: saturn.platform.workflow.v1.WorkflowService.CreateFlow:output_type -> saturn.platform.workflow.v1.Flow
+	3,  // 82: saturn.platform.workflow.v1.WorkflowService.UpdateFlow:output_type -> saturn.platform.workflow.v1.Flow
+	41, // 83: saturn.platform.workflow.v1.WorkflowService.DeleteFlow:output_type -> google.protobuf.Empty
+	3,  // 84: saturn.platform.workflow.v1.WorkflowService.EnableFlow:output_type -> saturn.platform.workflow.v1.Flow
+	3,  // 85: saturn.platform.workflow.v1.WorkflowService.DisableFlow:output_type -> saturn.platform.workflow.v1.Flow
+	3,  // 86: saturn.platform.workflow.v1.WorkflowService.ResetFlow:output_type -> saturn.platform.workflow.v1.Flow
+	5,  // 87: saturn.platform.workflow.v1.WorkflowService.ExecuteFlow:output_type -> saturn.platform.workflow.v1.FlowRun
+	5,  // 88: saturn.platform.workflow.v1.WorkflowService.InvokeWebhookTrigger:output_type -> saturn.platform.workflow.v1.FlowRun
+	5,  // 89: saturn.platform.workflow.v1.WorkflowService.TestFlow:output_type -> saturn.platform.workflow.v1.FlowRun
+	3,  // 90: saturn.platform.workflow.v1.WorkflowService.GenerateFlow:output_type -> saturn.platform.workflow.v1.Flow
+	21, // 91: saturn.platform.workflow.v1.WorkflowService.ListFlowRuns:output_type -> saturn.platform.workflow.v1.ListFlowRunsResponse
+	5,  // 92: saturn.platform.workflow.v1.WorkflowService.GetFlowRun:output_type -> saturn.platform.workflow.v1.FlowRun
+	24, // 93: saturn.platform.workflow.v1.WorkflowService.GetCatalog:output_type -> saturn.platform.workflow.v1.Catalog
+	79, // [79:94] is the sub-list for method output_type
+	64, // [64:79] is the sub-list for method input_type
+	64, // [64:64] is the sub-list for extension type_name
+	64, // [64:64] is the sub-list for extension extendee
+	0,  // [0:64] is the sub-list for field type_name
 }
 
 func init() { file_saturn_platform_workflow_v1_workflow_proto_init() }
@@ -3227,27 +3373,29 @@ func file_saturn_platform_workflow_v1_workflow_proto_init() {
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[3].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[4].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[5].OneofWrappers = []any{}
-	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[14].OneofWrappers = []any{}
+	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[6].OneofWrappers = []any{}
+	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[7].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[16].OneofWrappers = []any{}
-	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[17].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[18].OneofWrappers = []any{}
-	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[23].OneofWrappers = []any{}
-	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[24].OneofWrappers = []any{}
+	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[19].OneofWrappers = []any{}
+	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[20].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[25].OneofWrappers = []any{}
+	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[26].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[27].OneofWrappers = []any{}
-	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[28].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[29].OneofWrappers = []any{}
+	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[30].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[31].OneofWrappers = []any{}
-	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[32].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[33].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[34].OneofWrappers = []any{}
+	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[35].OneofWrappers = []any{}
+	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[36].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_platform_workflow_v1_workflow_proto_rawDesc), len(file_saturn_platform_workflow_v1_workflow_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   36,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

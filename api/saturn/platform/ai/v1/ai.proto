@@ -1,0 +1,1676 @@
+syntax = "proto3";
+
+package saturn.platform.ai.v1;
+
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/platform/ai/v1;aiv1";
+
+// AIService manages workspace AI settings, LLM providers, model registry,
+// unified MCP servers, autonomous agents, private streaming chat threads,
+// headless text/structured generation, and execution observability.
+service AIService {
+  // Retrieves workspace AI settings including model role defaults, governance, and current monthly spend.
+  rpc GetSettings(GetSettingsRequest) returns (Settings) {
+    option (google.api.http) = {get: "/v1/platform/ai/settings"};
+  }
+
+  // Updates workspace AI settings using a field mask.
+  rpc UpdateSettings(UpdateSettingsRequest) returns (Settings) {
+    option (google.api.http) = {
+      patch: "/v1/platform/ai/settings"
+      body: "settings"
+    };
+    option (google.api.method_signature) = "settings,update_mask";
+  }
+
+  // Lists supported LLM provider driver descriptors and defaults.
+  rpc ListProviderDescriptors(ListProviderDescriptorsRequest) returns (ListProviderDescriptorsResponse) {
+    option (google.api.http) = {get: "/v1/platform/ai/provider-descriptors"};
+  }
+
+  // Lists all configured LLM providers in the workspace.
+  rpc ListProviders(ListProvidersRequest) returns (ListProvidersResponse) {
+    option (google.api.http) = {get: "/v1/platform/ai/providers"};
+  }
+
+  // Retrieves a single LLM provider configuration (secrets masked).
+  rpc GetProvider(GetProviderRequest) returns (Provider) {
+    option (google.api.http) = {get: "/v1/platform/ai/providers/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Creates a new LLM provider connection and auto-seeds curated default models.
+  rpc CreateProvider(CreateProviderRequest) returns (Provider) {
+    option (google.api.http) = {
+      post: "/v1/platform/ai/providers"
+      body: "provider"
+    };
+    option (google.api.method_signature) = "provider";
+  }
+
+  // Updates an existing LLM provider configuration or rotates its secret using a field mask.
+  rpc UpdateProvider(UpdateProviderRequest) returns (Provider) {
+    option (google.api.http) = {
+      patch: "/v1/platform/ai/providers/{id}"
+      body: "provider"
+    };
+    option (google.api.method_signature) = "id,provider,update_mask";
+  }
+
+  // Deletes an LLM provider connection and its associated models.
+  rpc DeleteProvider(DeleteProviderRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/platform/ai/providers/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Verifies connectivity and credentials for an LLM provider and updates its status.
+  rpc TestProvider(TestProviderRequest) returns (Provider) {
+    option (google.api.http) = {
+      post: "/v1/platform/ai/providers/{id}:test"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
+  // Discovers available upstream models for an LLM provider.
+  rpc DiscoverProviderModels(DiscoverProviderModelsRequest) returns (DiscoverProviderModelsResponse) {
+    option (google.api.http) = {get: "/v1/platform/ai/providers/{id}:discoverModels"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Synchronizes upstream catalog or discovered models into the workspace model registry.
+  rpc SyncProviderModels(SyncProviderModelsRequest) returns (SyncProviderModelsResponse) {
+    option (google.api.http) = {
+      post: "/v1/platform/ai/providers/{id}:syncModels"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
+  // Lists registered AI models in the workspace.
+  rpc ListModels(ListModelsRequest) returns (ListModelsResponse) {
+    option (google.api.http) = {get: "/v1/platform/ai/models"};
+  }
+
+  // Retrieves a single registered AI model.
+  rpc GetModel(GetModelRequest) returns (Model) {
+    option (google.api.http) = {get: "/v1/platform/ai/models/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Registers a custom or catalog AI model under a workspace provider.
+  rpc CreateModel(CreateModelRequest) returns (Model) {
+    option (google.api.http) = {
+      post: "/v1/platform/ai/models"
+      body: "model"
+    };
+    option (google.api.method_signature) = "model";
+  }
+
+  // Updates a registered AI model's display name, profile, config, or enabled state.
+  rpc UpdateModel(UpdateModelRequest) returns (Model) {
+    option (google.api.http) = {
+      patch: "/v1/platform/ai/models/{id}"
+      body: "model"
+    };
+    option (google.api.method_signature) = "id,model,update_mask";
+  }
+
+  // Deletes a registered AI model from the workspace.
+  rpc DeleteModel(DeleteModelRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/platform/ai/models/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Lists unified MCP servers (including the lazily seeded built-in Saturn Workspace MCP).
+  rpc ListMCPServers(ListMCPServersRequest) returns (ListMCPServersResponse) {
+    option (google.api.http) = {get: "/v1/platform/ai/mcp-servers"};
+  }
+
+  // Retrieves a single MCP server configuration and live discovery state.
+  rpc GetMCPServer(GetMCPServerRequest) returns (MCPServer) {
+    option (google.api.http) = {get: "/v1/platform/ai/mcp-servers/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Registers a remote HTTP MCP server in the workspace.
+  rpc CreateMCPServer(CreateMCPServerRequest) returns (MCPServer) {
+    option (google.api.http) = {
+      post: "/v1/platform/ai/mcp-servers"
+      body: "mcp_server"
+    };
+    option (google.api.method_signature) = "mcp_server";
+  }
+
+  // Updates an MCP server configuration or auth secret using a field mask.
+  rpc UpdateMCPServer(UpdateMCPServerRequest) returns (MCPServer) {
+    option (google.api.http) = {
+      patch: "/v1/platform/ai/mcp-servers/{id}"
+      body: "mcp_server"
+    };
+    option (google.api.method_signature) = "id,mcp_server,update_mask";
+  }
+
+  // Deletes a user-configured MCP server. System MCP servers cannot be deleted.
+  rpc DeleteMCPServer(DeleteMCPServerRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/platform/ai/mcp-servers/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Tests connectivity to an MCP server and updates its discovery health status.
+  rpc TestMCPServer(TestMCPServerRequest) returns (MCPServer) {
+    option (google.api.http) = {
+      post: "/v1/platform/ai/mcp-servers/{id}:test"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
+  // Synchronizes tools and server metadata from an MCP server.
+  rpc SyncMCPServer(SyncMCPServerRequest) returns (MCPServer) {
+    option (google.api.http) = {
+      post: "/v1/platform/ai/mcp-servers/{id}:sync"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
+  // Lists AI agents in the workspace (lazily seeding the built-in Saturn Assistant).
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse) {
+    option (google.api.http) = {get: "/v1/platform/ai/agents"};
+  }
+
+  // Retrieves a single AI agent by ID or system key.
+  rpc GetAgent(GetAgentRequest) returns (Agent) {
+    option (google.api.http) = {get: "/v1/platform/ai/agents/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Creates a custom AI agent with optional MCP server bindings and output schema.
+  rpc CreateAgent(CreateAgentRequest) returns (Agent) {
+    option (google.api.http) = {
+      post: "/v1/platform/ai/agents"
+      body: "agent"
+    };
+    option (google.api.method_signature) = "agent";
+  }
+
+  // Updates an existing AI agent configuration using a field mask.
+  rpc UpdateAgent(UpdateAgentRequest) returns (Agent) {
+    option (google.api.http) = {
+      patch: "/v1/platform/ai/agents/{id}"
+      body: "agent"
+    };
+    option (google.api.method_signature) = "id,agent,update_mask";
+  }
+
+  // Deletes a user-created AI agent. Built-in system agents cannot be deleted.
+  rpc DeleteAgent(DeleteAgentRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/platform/ai/agents/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Resets a built-in system agent back to its factory blueprint defaults.
+  rpc ResetAgent(ResetAgentRequest) returns (Agent) {
+    option (google.api.http) = {
+      post: "/v1/platform/ai/agents/{id}:reset"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
+  // Executes an agent headlessly in a multi-step MCP-enabled run.
+  rpc ExecuteAgent(ExecuteAgentRequest) returns (Run) {
+    option (google.api.http) = {
+      post: "/v1/platform/ai/agents/{id}:execute"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id,prompt";
+  }
+
+  // Lists private chat threads belonging to the authenticated user in the workspace.
+  rpc ListThreads(ListThreadsRequest) returns (ListThreadsResponse) {
+    option (google.api.http) = {get: "/v1/platform/ai/threads"};
+  }
+
+  // Retrieves a private chat thread owned by the authenticated user.
+  rpc GetThread(GetThreadRequest) returns (Thread) {
+    option (google.api.http) = {get: "/v1/platform/ai/threads/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Creates a new private chat thread (lazily seeding system AI defaults if needed).
+  rpc CreateThread(CreateThreadRequest) returns (Thread) {
+    option (google.api.http) = {
+      post: "/v1/platform/ai/threads"
+      body: "thread"
+    };
+    option (google.api.method_signature) = "thread";
+  }
+
+  // Updates a private chat thread (title, agent, model, pin/archive, config) using a field mask.
+  rpc UpdateThread(UpdateThreadRequest) returns (Thread) {
+    option (google.api.http) = {
+      patch: "/v1/platform/ai/threads/{id}"
+      body: "thread"
+    };
+    option (google.api.method_signature) = "id,thread,update_mask";
+  }
+
+  // Deletes a private chat thread and all of its messages.
+  rpc DeleteThread(DeleteThreadRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/platform/ai/threads/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Lists persisted messages in a private chat thread ordered by sequence number.
+  rpc ListThreadMessages(ListThreadMessagesRequest) returns (ListThreadMessagesResponse) {
+    option (google.api.http) = {get: "/v1/platform/ai/threads/{thread_id}/messages"};
+    option (google.api.method_signature) = "thread_id";
+  }
+
+  // Cancels an active streaming turn on a private chat thread.
+  rpc CancelThreadTurn(CancelThreadTurnRequest) returns (Thread) {
+    option (google.api.http) = {
+      post: "/v1/platform/ai/threads/{id}:cancel"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
+  // Streams a new conversational turn on a private thread over gRPC server streaming.
+  rpc StreamThreadTurn(StreamThreadTurnRequest) returns (stream ThreadStreamEvent);
+
+  // Resolves pending write-tool approval requests and resumes streaming the thread turn.
+  rpc StreamResolveToolApprovals(StreamResolveToolApprovalsRequest) returns (stream ThreadStreamEvent);
+
+  // Executes a single-turn headless generation with optional attachments and output schema.
+  rpc Generate(GenerateRequest) returns (Run) {
+    option (google.api.http) = {
+      post: "/v1/platform/ai:generate"
+      body: "*"
+    };
+    option (google.api.method_signature) = "prompt";
+  }
+
+  // Lists AI execution runs across chat, workflow, API, and MCP sources.
+  rpc ListRuns(ListRunsRequest) returns (ListRunsResponse) {
+    option (google.api.http) = {get: "/v1/platform/ai/runs"};
+  }
+
+  // Retrieves a single AI execution run hydrated with its ordered LLM/tool steps.
+  rpc GetRun(GetRunRequest) returns (Run) {
+    option (google.api.http) = {get: "/v1/platform/ai/runs/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+}
+
+// ThinkingConfig configures extended reasoning behavior on supported models.
+message ThinkingConfig {
+  // Optional. Whether extended thinking is enabled.
+  bool enabled = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Reasoning effort level ('low', 'medium', 'high').
+  optional string effort = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Explicit reasoning token budget.
+  optional int32 budget_tokens = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// GenerationConfig configures LLM sampling and reasoning parameters.
+message GenerationConfig {
+  // Optional. Sampling temperature parameter.
+  optional double temperature = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Maximum output tokens to generate.
+  optional int32 max_tokens = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Nucleus sampling top-p parameter.
+  optional double top_p = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Extended thinking/reasoning configuration.
+  optional ThinkingConfig thinking = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// ErrorDetail captures a structured machine code and message for AI failures.
+message ErrorDetail {
+  // Optional. Machine-readable error code.
+  optional string code = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Human-readable error message.
+  string message = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// TokenUsage breaks down LLM token accounting across a step, message, or run.
+message TokenUsage {
+  // Output only. Prompt/input tokens consumed.
+  int32 input = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Completion/output tokens generated.
+  int32 output = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Reasoning/thinking tokens generated.
+  int32 reasoning = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Prompt-cached input tokens served.
+  int32 cached = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Total tokens consumed.
+  int32 total = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// ModelRoleSettings maps workspace semantic roles to registered model IDs.
+message ModelRoleSettings {
+  // Optional. Default workspace model ID (`mdl_...`).
+  optional string default_model_id = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Fast/low-latency workspace model ID (`mdl_...`).
+  optional string fast_model_id = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Reasoning-optimized workspace model ID (`mdl_...`).
+  optional string reasoning_model_id = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// GovernanceConfig configures workspace AI budget caps and run retention policies.
+message GovernanceConfig {
+  // Optional. Monthly workspace AI spend cap in USD (0 or unset disables cap).
+  optional double monthly_budget_usd = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Number of days to retain AI run logs (default 90; 0 disables pruning).
+  int32 run_retention_days = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Settings holds workspace-level AI model defaults, governance, and spend telemetry.
+message Settings {
+  // Optional. Workspace model role defaults.
+  ModelRoleSettings models = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Workspace AI governance policies.
+  GovernanceConfig governance = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Estimated AI spend accumulated in the current calendar month (USD).
+  double current_month_spend_usd = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// ProviderDescriptor describes a supported LLM provider driver blueprint.
+message ProviderDescriptor {
+  // Output only. Driver key ('gemini', 'openai', 'anthropic', 'openrouter', 'ollama', 'openai_compatible').
+  string driver = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Human-readable display name.
+  string display_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Summary of the provider driver and capabilities.
+  string description = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Default base API URL for this driver.
+  string default_base_url = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Whether an API key is required for this driver.
+  bool api_key_required = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Whether live upstream model discovery is supported.
+  bool supports_discovery = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Icon identifier for UI display.
+  string logo_icon = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// ProviderConfig stores non-secret connection configuration for an LLM provider.
+message ProviderConfig {
+  // Optional. Custom or override base URL for the provider API.
+  optional string base_url = 1 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// ProviderSecretInput carries write-only credentials when creating or updating a provider.
+message ProviderSecretInput {
+  // Optional. Provider API key.
+  optional string api_key = 1 [(google.api.field_behavior) = INPUT_ONLY];
+
+  // Optional. Custom HTTP headers sent with provider requests.
+  map<string, string> headers = 2 [(google.api.field_behavior) = INPUT_ONLY];
+}
+
+// ProviderStatus reflects the latest verification health of an LLM provider.
+message ProviderStatus {
+  // Output only. Verification state ('unverified', 'healthy', 'unhealthy').
+  string state = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp of the last verification attempt.
+  optional google.protobuf.Timestamp last_verified_at = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Structured error from the last failed verification, if any.
+  optional ErrorDetail error = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Provider represents a configured LLM provider connection in a workspace.
+message Provider {
+  // Output only. Unique identifier with prefix `prv_`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Owning workspace identifier (`spc_...`).
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Human-readable display name.
+  string name = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Provider driver ('gemini', 'openai', 'anthropic', 'openrouter', 'ollama', 'openai_compatible').
+  string driver = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Non-secret provider connection configuration.
+  optional ProviderConfig config = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Whether encrypted credentials are stored for this provider.
+  bool has_secret = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Latest provider verification status.
+  optional ProviderStatus status = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Whether this provider is enabled for use.
+  bool is_enabled = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Number of registered models linked to this provider.
+  int32 model_count = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
+  google.protobuf.Timestamp update_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Input only. Write-only provider credentials encrypted at rest and never returned on reads.
+  optional ProviderSecretInput secret = 12 [(google.api.field_behavior) = INPUT_ONLY];
+}
+
+// ModelCapabilities describes supported modalities and features of a model.
+message ModelCapabilities {
+  // Optional. Supports function/tool calling.
+  bool tool_calling = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Supports image/vision inputs.
+  bool vision = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Supports native document/PDF inputs.
+  bool document = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Supports audio inputs.
+  bool audio = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Supports extended thinking/reasoning.
+  bool reasoning = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Supports structured JSON schema output.
+  bool structured_output = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Supports token streaming.
+  bool streaming = 7 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// ModelLimits captures token context and output limits for a model.
+message ModelLimits {
+  // Optional. Maximum input context window in tokens.
+  int32 context_window = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Maximum output generation tokens.
+  int32 max_output_tokens = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// ModelPricing captures per-million-token cost rates in USD.
+message ModelPricing {
+  // Optional. Input token price per 1M tokens in USD.
+  double input_per_million_usd = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Output token price per 1M tokens in USD.
+  double output_per_million_usd = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Cached input token price per 1M tokens in USD.
+  double cached_input_per_million_usd = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// ModelProfile groups capability flags, token limits, and pricing metadata.
+message ModelProfile {
+  // Optional. Supported capabilities of the model.
+  optional ModelCapabilities capabilities = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Context and output token limits.
+  optional ModelLimits limits = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Per-million-token pricing rates.
+  optional ModelPricing pricing = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Model represents a registered AI model available in the workspace.
+message Model {
+  // Output only. Unique identifier with prefix `mdl_`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Owning workspace identifier (`spc_...`).
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Parent LLM provider identifier (`prv_...`).
+  string provider_id = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. Hydrated parent provider display name.
+  string provider_name = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Hydrated parent provider driver.
+  string provider_driver = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Upstream model identifier (e.g. 'gemini-2.5-flash', 'gpt-4.1').
+  string model_id = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Human-readable display name.
+  string display_name = 7 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. Registration origin ('catalog', 'discovered', 'custom').
+  string source = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Model capability, limit, and pricing profile.
+  optional ModelProfile profile = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Default generation parameter overrides for this model.
+  optional GenerationConfig config = 10 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Whether this model is enabled for selection and execution.
+  bool is_enabled = 11 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
+  google.protobuf.Timestamp update_time = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// DiscoveredModel describes an upstream model discovered from a provider.
+message DiscoveredModel {
+  // Output only. Upstream model identifier.
+  string model_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Human-readable display name.
+  string display_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Inferred or cataloged model profile.
+  optional ModelProfile profile = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Whether this model is already registered under the provider.
+  bool already_registered = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// MCPServerConfig configures connection and tool trust behavior for an MCP server.
+message MCPServerConfig {
+  // Required. Endpoint URL ('in-memory://saturn' for system server, HTTP(S) URL for external servers).
+  string url = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Authentication mode ('none', 'bearer', 'custom_headers').
+  string auth_type = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Whether read-only MCP tool hints skip write-approval prompts.
+  bool trust_read_hints = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Request timeout in seconds.
+  int32 timeout_seconds = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// MCPAuthSecretInput carries write-only auth credentials for an external HTTP MCP server.
+message MCPAuthSecretInput {
+  // Optional. Bearer token for 'bearer' auth_type.
+  optional string bearer_token = 1 [(google.api.field_behavior) = INPUT_ONLY];
+
+  // Optional. Custom HTTP headers for 'custom_headers' auth_type.
+  map<string, string> headers = 2 [(google.api.field_behavior) = INPUT_ONLY];
+}
+
+// MCPServerInfo captures server metadata returned by the MCP initialize handshake.
+message MCPServerInfo {
+  // Output only. Reported server name.
+  string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Reported server version.
+  string version = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// MCPToolSummary summarizes a discovered MCP tool and its JSON input schema.
+message MCPToolSummary {
+  // Output only. Tool name.
+  string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Optional human-readable title.
+  optional string title = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Description of what the tool does.
+  string description = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. JSON Schema describing tool arguments.
+  optional google.protobuf.Struct input_schema = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. MCP ReadOnlyHint annotation.
+  bool read_only_hint = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. MCP DestructiveHint annotation.
+  bool destructive_hint = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// MCPDiscoveryState captures health and discovered tools for an MCP server.
+message MCPDiscoveryState {
+  // Output only. Health status ('unknown', 'healthy', 'unhealthy').
+  string health_status = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Server implementation metadata.
+  optional MCPServerInfo server_info = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Discovered tools exposed by this server.
+  repeated MCPToolSummary tools = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp of the last successful sync.
+  optional google.protobuf.Timestamp last_synced_at = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Structured error from the last failed test or sync, if any.
+  optional ErrorDetail error = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// MCPServer represents a built-in or external HTTP MCP tool server.
+message MCPServer {
+  // Output only. Unique identifier with prefix `mcp_`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Owning workspace identifier (`spc_...`).
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Built-in system blueprint key (e.g. 'system.saturn.mcp').
+  optional string system_key = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Whether this is a protected built-in system server.
+  bool is_system = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. URL-safe slug used for tool namespacing.
+  string slug = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Human-readable server name.
+  string name = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Description of capabilities provided by this server.
+  string description = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Transport protocol ('http' or 'in_memory' for system server).
+  string transport = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Server connection and trust configuration.
+  optional MCPServerConfig config = 9 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. Whether encrypted auth credentials are stored for this server.
+  bool has_auth_secret = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Discovery state and available tools.
+  optional MCPDiscoveryState discovery = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Whether this MCP server is enabled.
+  bool is_enabled = 12 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
+  google.protobuf.Timestamp update_time = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Input only. Write-only authentication secret encrypted at rest and never returned on reads.
+  optional MCPAuthSecretInput auth_secret = 15 [(google.api.field_behavior) = INPUT_ONLY];
+}
+
+// ExecutionConfig controls runtime limits and tool approval behavior for an agent.
+message ExecutionConfig {
+  // Optional. Tool approval policy ('confirm_writes', 'auto', 'deny_writes').
+  string approval_policy = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Maximum ReAct tool/LLM iterations per run.
+  int32 max_steps = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Execution timeout in seconds.
+  int32 timeout_seconds = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// MCPBinding binds an MCP server and an allowlist of tool names to an agent.
+message MCPBinding {
+  // Required. Target MCP server identifier (`mcp_...`).
+  string mcp_server_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Allowed tool names (e.g. `["*"]` or specific tool names).
+  repeated string allowed_tools = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// AgentConfig groups prompt, model generation, execution, MCP bindings, and output schema settings.
+message AgentConfig {
+  // Optional. Icon identifier for UI display.
+  string icon = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. System prompt instructions guiding the agent.
+  optional string system_instruction = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Generation parameter overrides.
+  optional GenerationConfig generation = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Runtime execution and tool approval policy.
+  optional ExecutionConfig execution = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Unified MCP server bindings and tool allowlists.
+  repeated MCPBinding mcp_bindings = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. JSON Schema enforcing structured final output.
+  optional google.protobuf.Struct output_schema = 6 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// AgentStats summarizes 7-day execution metrics for an agent.
+message AgentStats {
+  // Output only. Total runs in the last 7 days.
+  int32 total_runs_7d = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Completed runs in the last 7 days.
+  int32 completed_runs_7d = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Failed runs in the last 7 days.
+  int32 failed_runs_7d = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp of the most recent run.
+  optional google.protobuf.Timestamp last_run_at = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Agent represents an autonomous AI agent configured with instructions and MCP bindings.
+message Agent {
+  // Output only. Unique identifier with prefix `agt_`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Owning workspace identifier (`spc_...`).
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Built-in system blueprint key (e.g. 'system.saturn.assistant').
+  optional string system_key = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Whether this is a protected built-in system agent.
+  bool is_system = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. URL-safe slug (also used for external MCP `agent__<slug>` exposure).
+  string slug = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Human-readable display name.
+  string name = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Detailed description of the agent's role.
+  string description = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Categorization tags.
+  repeated string tags = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Registered model ID (`mdl_...`); unset uses the workspace default model.
+  optional string model_id = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Hydrated display name of the assigned model.
+  optional string model_display_name = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Grouped agent behavior and MCP binding configuration.
+  optional AgentConfig config = 11 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Whether this agent is enabled.
+  bool is_enabled = 12 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Monotonic definition version.
+  int64 version = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Hydrated 7-day execution metrics.
+  optional AgentStats stats = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
+  google.protobuf.Timestamp update_time = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// PendingToolApproval describes a paused mutating MCP tool call awaiting user confirmation.
+message PendingToolApproval {
+  // Output only. Tool call correlation ID.
+  string tool_call_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Target MCP server identifier (`mcp_...`).
+  string mcp_server_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Human-readable MCP server name.
+  string mcp_server_name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Tool name requested by the model.
+  string tool_name = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. JSON arguments proposed by the model.
+  optional google.protobuf.Struct arguments = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Whether the tool is annotated as destructive.
+  bool destructive_hint = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// ThreadMemory stores rolling summarized context for long conversation threads.
+message ThreadMemory {
+  // Output only. Summarized conversation history up to `up_to_seq`.
+  string summary = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Highest message sequence number included in `summary`.
+  int32 up_to_seq = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// ThreadConfig stores thread-level overrides for approval policy and generation parameters.
+message ThreadConfig {
+  // Optional. Override approval policy ('confirm_writes', 'auto', 'deny_writes').
+  optional string approval_policy = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Override generation parameters for this thread.
+  optional GenerationConfig generation = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// ThreadState stores runtime state for a thread (active run, pending approvals, memory).
+message ThreadState {
+  // Output only. Active streaming run ID (`air_...`), if any.
+  optional string active_run_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Mutating tool calls awaiting user approval.
+  repeated PendingToolApproval pending_approvals = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Rolling conversation memory state.
+  optional ThreadMemory memory = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Thread represents a private multi-turn AI chat thread owned by a single user in a workspace.
+message Thread {
+  // Output only. Unique identifier with prefix `thr_`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Owning workspace identifier (`spc_...`).
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Owning user identifier (`usr_...`).
+  string user_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Selected agent identifier (`agt_...`); unset uses Saturn Assistant.
+  optional string agent_id = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Hydrated agent display name.
+  optional string agent_name = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Model override identifier (`mdl_...`).
+  optional string model_id = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Hydrated model display name.
+  optional string model_display_name = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Thread title.
+  string title = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Runtime thread status ('idle', 'streaming', 'awaiting_approval').
+  string status = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Thread configuration overrides.
+  optional ThreadConfig config = 10 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Current runtime thread state.
+  optional ThreadState state = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Total number of persisted messages in the thread.
+  int32 message_count = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Whether the thread is pinned in the user's sidebar.
+  bool is_pinned = 13 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Whether the thread is archived.
+  bool is_archived = 14 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Timestamp of the most recent message.
+  google.protobuf.Timestamp last_message_at = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
+  google.protobuf.Timestamp update_time = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// AttachmentSummary persists lightweight attachment metadata without raw binary payloads.
+message AttachmentSummary {
+  // Output only. Original filename.
+  string filename = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. MIME content type.
+  string content_type = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. File size in bytes.
+  int64 size_bytes = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Extracted text fallback when applicable.
+  optional string extracted_text = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// ContentBlock represents a structured block within a persisted thread message.
+message ContentBlock {
+  // Output only. Block kind ('text', 'thinking', 'tool_call', 'tool_result', 'attachment').
+  string type = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Text or thinking content.
+  optional string text = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Tool call correlation ID for 'tool_call' and 'tool_result' blocks.
+  optional string tool_call_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Target MCP server identifier (`mcp_...`).
+  optional string mcp_server_id = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Tool name for 'tool_call' and 'tool_result' blocks.
+  optional string tool_name = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. JSON arguments for 'tool_call' blocks.
+  optional google.protobuf.Struct arguments = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. JSON result payload for 'tool_result' blocks.
+  optional google.protobuf.Struct result = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Whether a 'tool_result' represents an error or rejection.
+  optional bool is_error = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Lightweight metadata for 'attachment' blocks.
+  optional AttachmentSummary attachment = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// MessageMetadata stores model and token attribution on a persisted message.
+message MessageMetadata {
+  // Output only. Upstream model identifier used to generate the message.
+  optional string model_name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Token accounting for the message.
+  optional TokenUsage tokens = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// ThreadMessage represents a single persisted turn message inside a chat thread.
+message ThreadMessage {
+  // Output only. Unique identifier with prefix `aim_`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Parent thread identifier (`thr_...`).
+  string thread_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Owning workspace identifier (`spc_...`).
+  string space_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Associated AI run identifier (`air_...`), if any.
+  optional string run_id = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Strictly increasing per-thread sequence number.
+  int32 seq = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Message role ('user', 'assistant', 'tool').
+  string role = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Ordered content blocks.
+  repeated ContentBlock blocks = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Attribution and token metadata.
+  optional MessageMetadata metadata = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// TurnAttachment carries an inline file uploaded for a single turn or generation call.
+message TurnAttachment {
+  // Required. Original filename.
+  string filename = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. MIME content type ('image/png', 'image/jpeg', 'image/webp', 'application/pdf', 'text/csv', 'text/plain').
+  string content_type = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Raw binary file bytes (<= 10 MB).
+  bytes data = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// ToolApprovalDecision records the user's approve/reject choice for a pending tool call.
+message ToolApprovalDecision {
+  // Required. Tool call correlation ID to resolve.
+  string tool_call_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Whether execution of the tool call is approved.
+  bool approved = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// ThreadStreamEvent represents a real-time event emitted during a streaming thread turn.
+message ThreadStreamEvent {
+  // Output only. Event kind ('run.started', 'thinking.delta', 'message.delta', 'tool.call.started',
+  // 'tool.call.completed', 'tool.approval.required', 'message.completed', 'thread.updated', 'run.completed', 'run.error').
+  string type = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Thread identifier (`thr_...`).
+  optional string thread_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Active run identifier (`air_...`).
+  optional string run_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Message identifier (`aim_...`) when applicable.
+  optional string message_id = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Incremental text or thinking delta string.
+  optional string delta = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Tool call correlation ID for tool lifecycle events.
+  optional string tool_call_id = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Tool name for tool lifecycle events.
+  optional string tool_name = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. MCP server identifier (`mcp_...`) for tool lifecycle events.
+  optional string mcp_server_id = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Tool call input arguments.
+  optional google.protobuf.Struct arguments = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Tool call output payload.
+  optional google.protobuf.Struct result = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Whether a completed tool call resulted in an error.
+  optional bool is_error = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Pending tool calls requiring approval on 'tool.approval.required'.
+  repeated PendingToolApproval approvals = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Completed persisted message on 'message.completed'.
+  optional ThreadMessage message = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Updated thread snapshot on 'thread.updated'.
+  optional Thread thread = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Completed run snapshot on 'run.completed'.
+  optional Run run = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Structured error detail on 'run.error'.
+  optional ErrorDetail error = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// ModelSnapshot captures the driver and upstream model ID used during a run.
+message ModelSnapshot {
+  // Output only. Provider driver used.
+  string driver = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Upstream model identifier used.
+  string model_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// RunInput records the prompt, system instructions, and model snapshot for a run.
+message RunInput {
+  // Output only. Prompt input text.
+  string prompt = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Effective system instruction, if any.
+  optional string system_instruction = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Snapshot of driver and model used.
+  optional ModelSnapshot model_snapshot = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// RunOutput records the terminal text or structured JSON output of a run.
+message RunOutput {
+  // Output only. Text response returned by the model.
+  optional string text = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Structured JSON output when output_schema was enforced.
+  optional google.protobuf.Struct data = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// RunMetrics aggregates token usage, estimated cost, latency, and step count for a run.
+message RunMetrics {
+  // Output only. Aggregated token usage.
+  optional TokenUsage tokens = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Estimated cost in USD.
+  double estimated_cost_usd = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. End-to-end execution latency in milliseconds.
+  int64 latency_ms = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Number of execution steps recorded.
+  int32 step_count = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// StepMetrics captures token usage and duration for an individual LLM or tool step.
+message StepMetrics {
+  // Output only. Token usage for 'llm' steps.
+  optional TokenUsage tokens = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Step execution duration in milliseconds.
+  int64 duration_ms = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// RunStep represents an individual LLM call or MCP tool execution within a run.
+message RunStep {
+  // Output only. Unique identifier with prefix `ais_`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Parent run identifier (`air_...`).
+  string run_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Owning workspace identifier (`spc_...`).
+  string space_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Ordered step sequence number within the run.
+  int32 seq = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Step kind ('llm' or 'tool').
+  string kind = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. MCP server identifier (`mcp_...`) for 'tool' steps.
+  optional string mcp_server_id = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Model ID or MCP tool name.
+  string name = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Step terminal status ('completed', 'failed', 'awaiting_approval', 'rejected').
+  string status = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Structured step input payload.
+  optional google.protobuf.Struct input = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Structured step output payload.
+  optional google.protobuf.Struct output = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Structured error detail if the step failed.
+  optional ErrorDetail error = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Step telemetry metrics.
+  optional StepMetrics metrics = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Run records a single AI execution across generation, headless agent, or chat turn modes.
+message Run {
+  // Output only. Unique identifier with prefix `air_`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Owning workspace identifier (`spc_...`).
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Execution kind ('generate', 'agent_run', 'chat_turn').
+  string kind = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Origin source ('api', 'chat', 'playground', 'workflow', 'mcp').
+  string source = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Parent thread identifier (`thr_...`), if any.
+  optional string thread_id = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Agent identifier (`agt_...`), if any.
+  optional string agent_id = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Hydrated agent display name.
+  optional string agent_name = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Provider identifier (`prv_...`), if any.
+  optional string provider_id = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Model identifier (`mdl_...`), if any.
+  optional string model_id = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Linked workflow run identifier (`wfr_...`), if any.
+  optional string flow_run_id = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Run status ('running', 'awaiting_approval', 'completed', 'failed', 'cancelled', 'timed_out', 'max_steps_exceeded').
+  string status = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Captured run input and model snapshot.
+  optional RunInput input = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Terminal run output.
+  optional RunOutput output = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Structured error detail if the run failed.
+  optional ErrorDetail error = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Aggregated token, cost, and latency metrics.
+  optional RunMetrics metrics = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Ordered LLM and tool execution steps hydrated on GetRun.
+  repeated RunStep steps = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when execution started.
+  google.protobuf.Timestamp start_time = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when execution ended.
+  optional google.protobuf.Timestamp end_time = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 19 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AIService.GetSettings.
+message GetSettingsRequest {}
+
+// Request message for AIService.UpdateSettings.
+message UpdateSettingsRequest {
+  // Required. Updated workspace AI settings.
+  Settings settings = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask specifying which settings fields to update.
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for AIService.ListProviderDescriptors.
+message ListProviderDescriptorsRequest {}
+
+// Response message for AIService.ListProviderDescriptors.
+message ListProviderDescriptorsResponse {
+  // Output only. Supported LLM provider driver descriptors.
+  repeated ProviderDescriptor providers = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AIService.ListProviders.
+message ListProvidersRequest {}
+
+// Response message for AIService.ListProviders.
+message ListProvidersResponse {
+  // Output only. Configured workspace LLM providers.
+  repeated Provider providers = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AIService.GetProvider.
+message GetProviderRequest {
+  // Required. Provider identifier (`prv_...`).
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.CreateProvider.
+message CreateProviderRequest {
+  // Required. Provider definition to create.
+  Provider provider = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.UpdateProvider.
+message UpdateProviderRequest {
+  // Required. Provider identifier (`prv_...`) to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Provider payload containing updated fields.
+  Provider provider = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask specifying which provider fields to update.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for AIService.DeleteProvider.
+message DeleteProviderRequest {
+  // Required. Provider identifier (`prv_...`) to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.TestProvider.
+message TestProviderRequest {
+  // Required. Provider identifier (`prv_...`) to verify.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.DiscoverProviderModels.
+message DiscoverProviderModelsRequest {
+  // Required. Provider identifier (`prv_...`) to discover models from.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Response message for AIService.DiscoverProviderModels.
+message DiscoverProviderModelsResponse {
+  // Output only. Upstream models discovered or cataloged for the provider.
+  repeated DiscoveredModel models = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AIService.SyncProviderModels.
+message SyncProviderModelsRequest {
+  // Required. Provider identifier (`prv_...`) whose models should be synchronized.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Specific upstream model IDs to import; empty imports curated defaults or all discovered models.
+  repeated string model_ids = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for AIService.SyncProviderModels.
+message SyncProviderModelsResponse {
+  // Output only. Synchronized workspace models for this provider.
+  repeated Model models = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Number of newly created model records.
+  int32 added_count = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AIService.ListModels.
+message ListModelsRequest {
+  // Optional. Filter by parent provider identifier (`prv_...`).
+  optional string provider_id = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter by enabled status.
+  optional bool is_enabled = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for AIService.ListModels.
+message ListModelsResponse {
+  // Output only. Registered workspace AI models.
+  repeated Model models = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AIService.GetModel.
+message GetModelRequest {
+  // Required. Model identifier (`mdl_...`).
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.CreateModel.
+message CreateModelRequest {
+  // Required. Model definition to register.
+  Model model = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.UpdateModel.
+message UpdateModelRequest {
+  // Required. Model identifier (`mdl_...`) to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Model payload containing updated fields.
+  Model model = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask specifying which model fields to update.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for AIService.DeleteModel.
+message DeleteModelRequest {
+  // Required. Model identifier (`mdl_...`) to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.ListMCPServers.
+message ListMCPServersRequest {}
+
+// Response message for AIService.ListMCPServers.
+message ListMCPServersResponse {
+  // Output only. Configured MCP servers including the built-in Saturn Workspace server.
+  repeated MCPServer mcp_servers = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AIService.GetMCPServer.
+message GetMCPServerRequest {
+  // Required. MCP server identifier (`mcp_...`) or system key (`system.saturn.mcp`).
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.CreateMCPServer.
+message CreateMCPServerRequest {
+  // Required. Remote HTTP MCP server configuration to register.
+  MCPServer mcp_server = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.UpdateMCPServer.
+message UpdateMCPServerRequest {
+  // Required. MCP server identifier (`mcp_...`) to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. MCP server payload containing updated fields.
+  MCPServer mcp_server = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask specifying which MCP server fields to update.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for AIService.DeleteMCPServer.
+message DeleteMCPServerRequest {
+  // Required. MCP server identifier (`mcp_...`) to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.TestMCPServer.
+message TestMCPServerRequest {
+  // Required. MCP server identifier (`mcp_...`) to test.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.SyncMCPServer.
+message SyncMCPServerRequest {
+  // Required. MCP server identifier (`mcp_...`) to synchronize tools from.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.ListAgents.
+message ListAgentsRequest {}
+
+// Response message for AIService.ListAgents.
+message ListAgentsResponse {
+  // Output only. Workspace AI agents hydrated with 7-day execution stats.
+  repeated Agent agents = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AIService.GetAgent.
+message GetAgentRequest {
+  // Required. Agent identifier (`agt_...`) or system key (`system.saturn.assistant`).
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.CreateAgent.
+message CreateAgentRequest {
+  // Required. Agent definition to create.
+  Agent agent = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.UpdateAgent.
+message UpdateAgentRequest {
+  // Required. Agent identifier (`agt_...`) to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Agent payload containing updated fields.
+  Agent agent = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask specifying which agent fields to update.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for AIService.DeleteAgent.
+message DeleteAgentRequest {
+  // Required. Agent identifier (`agt_...`) to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.ResetAgent.
+message ResetAgentRequest {
+  // Required. Built-in system agent identifier (`agt_...` or `system.saturn.assistant`) to reset.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.ExecuteAgent.
+message ExecuteAgentRequest {
+  // Required. Agent identifier (`agt_...` or `system.saturn.assistant`).
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Prompt input passed to the agent.
+  string prompt = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Override model ID (`mdl_...`) for this execution.
+  optional string model_id = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Optional JSON input context serialized into the prompt turn.
+  optional google.protobuf.Struct input = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Override JSON output schema for this execution.
+  optional google.protobuf.Struct output_schema = 5 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for AIService.ListThreads.
+message ListThreadsRequest {
+  // Optional. Filter by archived status (defaults to false).
+  optional bool is_archived = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Maximum number of threads to return per page.
+  int32 page_size = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Pagination cursor from a previous ListThreadsResponse.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for AIService.ListThreads.
+message ListThreadsResponse {
+  // Output only. Private chat threads belonging to the caller.
+  repeated Thread threads = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Pagination cursor for the next page.
+  string next_page_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AIService.GetThread.
+message GetThreadRequest {
+  // Required. Thread identifier (`thr_...`).
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.CreateThread.
+message CreateThreadRequest {
+  // Required. Initial thread settings (agent_id, model_id, title, config).
+  Thread thread = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.UpdateThread.
+message UpdateThreadRequest {
+  // Required. Thread identifier (`thr_...`) to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Thread payload containing updated fields.
+  Thread thread = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask specifying which thread fields to update.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for AIService.DeleteThread.
+message DeleteThreadRequest {
+  // Required. Thread identifier (`thr_...`) to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.ListThreadMessages.
+message ListThreadMessagesRequest {
+  // Required. Thread identifier (`thr_...`).
+  string thread_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Maximum number of messages to return per page.
+  int32 page_size = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Pagination cursor from a previous ListThreadMessagesResponse.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for AIService.ListThreadMessages.
+message ListThreadMessagesResponse {
+  // Output only. Ordered messages in the thread.
+  repeated ThreadMessage messages = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Pagination cursor for the next page.
+  string next_page_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AIService.CancelThreadTurn.
+message CancelThreadTurnRequest {
+  // Required. Thread identifier (`thr_...`) with an active streaming turn.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.StreamThreadTurn.
+message StreamThreadTurnRequest {
+  // Required. Target thread identifier (`thr_...`).
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. User message text for this turn.
+  string content = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Optional inline file attachments (max 5 files, <= 10 MB each).
+  repeated TurnAttachment attachments = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Per-turn agent override (`agt_...`).
+  optional string agent_id = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Per-turn model override (`mdl_...`).
+  optional string model_id = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Active UI route or contextual hint passed by the caller (e.g. Global Cmd+J Drawer).
+  optional string context_hint = 6 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for AIService.StreamResolveToolApprovals.
+message StreamResolveToolApprovalsRequest {
+  // Required. Target thread identifier (`thr_...`) awaiting approval.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Decisions for pending write-tool calls.
+  repeated ToolApprovalDecision decisions = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for AIService.Generate.
+message GenerateRequest {
+  // Required. Prompt text for single-turn generation.
+  string prompt = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. System instructions prepended to the generation request.
+  optional string system_instruction = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Registered model ID (`mdl_...`).
+  optional string model_id = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Workspace model role ('default', 'fast', 'reasoning') when model_id is unset.
+  optional string role = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Generation and thinking configuration overrides.
+  optional GenerationConfig generation = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. JSON Schema enforcing structured output.
+  optional google.protobuf.Struct output_schema = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Optional inline file attachments.
+  repeated TurnAttachment attachments = 7 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for AIService.ListRuns.
+message ListRunsRequest {
+  // Optional. Filter runs by kind ('generate', 'agent_run', 'chat_turn').
+  optional string kind = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter runs by source ('api', 'chat', 'playground', 'workflow', 'mcp').
+  optional string source = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter runs by agent ID (`agt_...`).
+  optional string agent_id = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter runs by thread ID (`thr_...`).
+  optional string thread_id = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter runs by terminal or active status.
+  optional string status = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Maximum number of runs to return per page.
+  int32 page_size = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Pagination cursor from a previous ListRunsResponse.
+  string page_token = 7 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for AIService.ListRuns.
+message ListRunsResponse {
+  // Output only. Paginated list of AI runs.
+  repeated Run runs = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Pagination cursor for the next page.
+  string next_page_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AIService.GetRun.
+message GetRunRequest {
+  // Required. Run identifier (`air_...`).
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}

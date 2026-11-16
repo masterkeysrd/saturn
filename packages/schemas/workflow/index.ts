@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { isValidCronExpression } from "@saturn/core"
 import { nonEmptyString } from "../common"
+import { AI_MODEL_ROLES, GenerationConfigSchema } from "../ai"
 
 export const TRIGGER_TYPES = ["event", "webhook", "schedule", "manual"] as const
 export type WorkflowTriggerType = (typeof TRIGGER_TYPES)[number]
@@ -20,29 +21,11 @@ export const JSON_SCHEMA_FIELD_TYPES = [
 ] as const
 export type JsonSchemaFieldType = (typeof JSON_SCHEMA_FIELD_TYPES)[number]
 
-export const ModelConfigSchema = z
-  .object({
-    agentId: z.string().trim().optional(),
-    providerId: z.string().trim().optional(),
-    modelName: z.string().trim().optional(),
-    temperature: z
-      .number()
-      .min(0, { error: "Temperature must be >= 0" })
-      .max(2, { error: "Temperature must be <= 2" })
-      .optional(),
-  })
-  .superRefine((val, ctx) => {
-    const hasAgent = Boolean(val.agentId && val.agentId.trim())
-    const hasProvider = Boolean(val.providerId && val.providerId.trim())
-    const hasModel = Boolean(val.modelName && val.modelName.trim())
-    if (!hasAgent && hasProvider && !hasModel) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Model name is required when specifying a provider",
-        path: ["modelName"],
-      })
-    }
-  })
+export const ModelConfigSchema = z.object({
+  modelId: z.string().trim().optional(),
+  role: z.enum(AI_MODEL_ROLES).optional(),
+  generation: GenerationConfigSchema.optional(),
+})
 
 export type ModelConfigValues = z.infer<typeof ModelConfigSchema>
 

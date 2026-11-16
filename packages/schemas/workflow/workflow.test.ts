@@ -11,30 +11,29 @@ import {
 } from "./index"
 
 describe("workflow Zod schemas", () => {
-  it("validates ModelConfig temperature bounds", () => {
+  it("validates ModelConfig role and generation bounds", () => {
     expect(
       ModelConfigSchema.safeParse({
-        modelName: "gpt-4o",
-        temperature: 0.2,
+        modelId: "mdl_1",
+        generation: { temperature: 0.2 },
       }).success
     ).toBe(true)
     expect(
       ModelConfigSchema.safeParse({
-        providerId: "prv_1",
+        role: "fast",
+      }).success
+    ).toBe(true)
+    expect(
+      ModelConfigSchema.safeParse({
+        role: "turbo",
       }).success
     ).toBe(false)
     expect(
-      ModelConfigSchema.safeParse({
-        providerId: "prv_1",
-        modelName: "gpt-4o",
-      }).success
-    ).toBe(true)
-    expect(ModelConfigSchema.safeParse({ temperature: 2.5 }).success).toBe(
-      false
-    )
-    expect(ModelConfigSchema.safeParse({ temperature: -0.1 }).success).toBe(
-      false
-    )
+      ModelConfigSchema.safeParse({ generation: { temperature: 2.5 } }).success
+    ).toBe(false)
+    expect(
+      ModelConfigSchema.safeParse({ generation: { temperature: -0.1 } }).success
+    ).toBe(false)
   })
 
   it("validates Trigger rules by type (event topic and schedule cron)", () => {
