@@ -52,8 +52,9 @@ const (
 	ScopeCalendarWrite    APIKeyScope = "calendar:write"
 	ScopeMailRead         APIKeyScope = "mail:read"
 	ScopeMailWrite        APIKeyScope = "mail:write"
-	ScopeAgentsRead       APIKeyScope = "agents:read"
-	ScopeAgentsWrite      APIKeyScope = "agents:write"
+	ScopeAIRead           APIKeyScope = "ai:read"
+	ScopeAIExecute        APIKeyScope = "ai:execute"
+	ScopeAIWrite          APIKeyScope = "ai:write"
 	ScopeWorkflowsRead    APIKeyScope = "workflows:read"
 	ScopeWorkflowsExecute APIKeyScope = "workflows:execute"
 	ScopeWorkflowsWrite   APIKeyScope = "workflows:write"
@@ -68,8 +69,9 @@ var AllAPIKeyScopes = []APIKeyScope{
 	ScopeCalendarWrite,
 	ScopeMailRead,
 	ScopeMailWrite,
-	ScopeAgentsRead,
-	ScopeAgentsWrite,
+	ScopeAIRead,
+	ScopeAIExecute,
+	ScopeAIWrite,
 	ScopeWorkflowsRead,
 	ScopeWorkflowsExecute,
 	ScopeWorkflowsWrite,

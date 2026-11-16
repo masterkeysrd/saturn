@@ -2460,13 +2460,13 @@ func (s *Service) approveLinkedTransaction(ctx context.Context, rCtx Context, it
 			linkType = *item.BorrowingLinkType
 		}
 		if err := s.handleBorrowingLinkForTransaction(ctx, rCtx, txn, *item.BorrowingID, linkType); err != nil {
-			return nil, fmt.Errorf("link borrowing to existing transaction: %w", err)
+			return nil, errors.E(errors.Op("domain/finance.approveLinkedTransaction"), err)
 		}
 	}
 
 	if item.ScheduledTransactionID != nil && *item.ScheduledTransactionID != "" {
 		if err := s.handleScheduledTransactionLinkForTransaction(ctx, rCtx, txn, *item.ScheduledTransactionID); err != nil {
-			return nil, fmt.Errorf("link scheduled transaction to existing transaction: %w", err)
+			return nil, errors.E(errors.Op("domain/finance.approveLinkedTransaction"), err)
 		}
 		item.ScheduledTransactionID = nil
 	}
@@ -2563,11 +2563,11 @@ func (s *Service) approveStandalonePromotion(ctx context.Context, rCtx Context, 
 
 	if transactionType == "TRANSFER" {
 		if destinationAccountID == "" {
-			return nil, errors.New("missing destination account for transfer")
+			return nil, errors.E(errors.Invalid, "missing destination account for transfer")
 		}
 		destAccID, err := ParseAccountID(destinationAccountID)
 		if err != nil {
-			return nil, fmt.Errorf("invalid destination account: %w", err)
+			return nil, errors.E(errors.Invalid, fmt.Sprintf("invalid destination account: %v", err))
 		}
 
 		transfer, err := item.NewTransfer(rCtx.SpaceID(), destAccID)
@@ -2614,13 +2614,13 @@ func (s *Service) approveStandalonePromotion(ctx context.Context, rCtx Context, 
 			linkType = *item.BorrowingLinkType
 		}
 		if err := s.handleBorrowingLinkForTransaction(ctx, rCtx, txn, *item.BorrowingID, linkType); err != nil {
-			return nil, fmt.Errorf("link borrowing to new transaction: %w", err)
+			return nil, errors.E(errors.Op("domain/finance.approveStandalonePromotion"), err)
 		}
 	}
 
 	if item.ScheduledTransactionID != nil && *item.ScheduledTransactionID != "" {
 		if err := s.handleScheduledTransactionLinkForTransaction(ctx, rCtx, txn, *item.ScheduledTransactionID); err != nil {
-			return nil, fmt.Errorf("link scheduled transaction to new transaction: %w", err)
+			return nil, errors.E(errors.Op("domain/finance.approveStandalonePromotion"), err)
 		}
 		item.ScheduledTransactionID = nil
 	}

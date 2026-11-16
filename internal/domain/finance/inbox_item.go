@@ -1,11 +1,11 @@
 package finance
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/patch"
 )
 
@@ -92,7 +92,7 @@ func (i *InboxItem) MetadataString(key string) string {
 // EnsurePending checks if the inbox item is in pending status.
 func (i *InboxItem) EnsurePending() error {
 	if i.Status != InboxItemPending {
-		return fmt.Errorf("inbox item is already processed: status = %s", i.Status)
+		return errors.E(errors.Precondition, fmt.Sprintf("inbox item is already processed: status = %s", i.Status))
 	}
 	return nil
 }
@@ -182,14 +182,14 @@ func (i *InboxItem) NewScheduledTransactionFromInvoice(spaceID SpaceID) (*Schedu
 // NewTransfer constructs a Transfer entity from this inbox item.
 func (i *InboxItem) NewTransfer(spaceID SpaceID, destAccountID AccountID) (*Transfer, error) {
 	if i.AccountID == nil || *i.AccountID == "" {
-		return nil, errors.New("missing source account for transfer")
+		return nil, errors.E(errors.Invalid, "missing source account for transfer")
 	}
 	srcAccID, err := ParseAccountID(*i.AccountID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid source account: %w", err)
+		return nil, errors.E(errors.Invalid, fmt.Sprintf("invalid source account: %v", err))
 	}
 	if err := destAccountID.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid destination account: %w", err)
+		return nil, errors.E(errors.Invalid, fmt.Sprintf("invalid destination account: %v", err))
 	}
 	tDate := i.TransactionDate
 	if tDate.IsZero() {

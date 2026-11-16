@@ -173,14 +173,14 @@ func TestParser_ParseDir_And_ParseTarget(t *testing.T) {
 
 import (
 	"context"
-	agentv1 "apis/saturn/platform/agent/v1"
+	aiv1 "apis/saturn/platform/ai/v1"
 )
 
 // Greeter provides greetings.
 // @Mock
 type Greeter interface {
 	// Greet generates a greeting.
-	Greet(ctx context.Context, name string, opts ...string) (*agentv1.Agent, error)
+	Greet(ctx context.Context, name string, opts ...string) (*aiv1.Agent, error)
 	// Ping sends a ping.
 	Ping(context.Context) error
 }
@@ -209,7 +209,7 @@ type PlainWorker interface {
 	assert.Equal(t, "Greeter", greeter.Name)
 	assert.Equal(t, "sample", greeter.PkgName)
 	assert.True(t, greeter.HasAnnotation("@Mock"))
-	assert.Equal(t, "apis/saturn/platform/agent/v1", greeter.Imports["agentv1"])
+	assert.Equal(t, "apis/saturn/platform/ai/v1", greeter.Imports["aiv1"])
 	require.Len(t, greeter.Methods, 2)
 
 	greetMethod := greeter.Methods[0]
@@ -220,7 +220,7 @@ type PlainWorker interface {
 	assert.Equal(t, "opts", greetMethod.Params[2].Name)
 	assert.True(t, greetMethod.Params[2].IsVariadic)
 	require.Len(t, greetMethod.Results, 2)
-	assert.Equal(t, "*agentv1.Agent", greetMethod.Results[0].Type)
+	assert.Equal(t, "*aiv1.Agent", greetMethod.Results[0].Type)
 	assert.Equal(t, "error", greetMethod.Results[1].Type)
 
 	pingMethod := greeter.Methods[1]

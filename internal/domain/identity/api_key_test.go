@@ -62,8 +62,13 @@ func TestValidateAPIKeyScopes(t *testing.T) {
 		},
 		{
 			name:  "all v1 scopes",
-			input: []string{"spaces:read", "finance:read", "finance:write", "calendar:read", "calendar:write", "mail:read", "mail:write", "agents:read", "agents:write", "workflows:read", "workflows:execute", "workflows:write"},
-			want:  []string{"spaces:read", "finance:read", "finance:write", "calendar:read", "calendar:write", "mail:read", "mail:write", "agents:read", "agents:write", "workflows:read", "workflows:execute", "workflows:write"},
+			input: []string{"spaces:read", "finance:read", "finance:write", "calendar:read", "calendar:write", "mail:read", "mail:write", "ai:read", "ai:execute", "ai:write", "workflows:read", "workflows:execute", "workflows:write"},
+			want:  []string{"spaces:read", "finance:read", "finance:write", "calendar:read", "calendar:write", "mail:read", "mail:write", "ai:read", "ai:execute", "ai:write", "workflows:read", "workflows:execute", "workflows:write"},
+		},
+		{
+			name:      "legacy agents scope rejected",
+			input:     []string{"agents:read"},
+			wantError: true,
 		},
 		{
 			name:      "empty scopes",
