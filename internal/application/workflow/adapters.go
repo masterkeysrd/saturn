@@ -2,84 +2,138 @@ package workflowapp
 
 import (
 	"context"
-	"encoding/json/v2"
-	"fmt"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
-	"github.com/masterkeysrd/saturn/internal/platform/agent"
-	"github.com/masterkeysrd/saturn/internal/platform/pdf"
+	"github.com/masterkeysrd/saturn/internal/platform/ai"
 	"github.com/masterkeysrd/saturn/internal/platform/settings"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
 )
 
 type agentExecutorAdapter struct {
-	runner AgentPromptRunner
+	runner AIRunner
 }
 
-// NewAgentExecutor adapts platform/agent.Service to workflow.AgentExecutor,
-// formatting structured output schemas and extracting attachment text.
-func NewAgentExecutor(runner AgentPromptRunner) workflow.AgentExecutor {
+// NewAgentExecutor adapts platform/ai.Runtime to workflow.AgentExecutor,
+// supporting both `llm.generate` (with inline attachments) and `ai.agent_run`.
+func NewAgentExecutor(runner AIRunner) workflow.AgentExecutor {
 	return &agentExecutorAdapter{runner: runner}
 }
 
 func (a *agentExecutorAdapter) Execute(ctx context.Context, req workflow.LLMRequest) (*workflow.LLMResponse, error) {
-	var responseSchema string
-	if len(req.OutputSchema) > 0 {
-		raw, err := json.Marshal(req.OutputSchema, json.Deterministic(true))
-		if err != nil {
-			return nil, fmt.Errorf("marshal output_schema: %w", err)
+	atts := make([]ai.TurnAttachment, 0, len(req.Documents))
+	for _, doc := range req.Documents {
+		ct := strings.TrimSpace(doc.ContentType)
+		if ct == "" {
+			ct = "text/plain"
 		}
-		responseSchema = string(raw)
+		atts = append(atts, ai.TurnAttachment{
+			Filename:    doc.Filename,
+			ContentType: ct,
+			Data:        doc.Data,
+		})
 	}
 
-	prompt := req.Prompt
-	if len(req.Documents) > 0 {
-		var docBuilder strings.Builder
-		for _, doc := range req.Documents {
-			docText := ""
-			if strings.EqualFold(doc.ContentType, "application/pdf") || strings.HasSuffix(strings.ToLower(doc.Filename), ".pdf") {
-				if extracted, err := pdf.ExtractText(doc.Data); err == nil {
-					docText = extracted
-				}
-			} else if utf8.Valid(doc.Data) {
-				docText = string(doc.Data)
-			}
-			if strings.TrimSpace(docText) != "" {
-				fmt.Fprintf(&docBuilder, "\n\n--- Attachment: %s ---\n%s", doc.Filename, docText)
-			}
-		}
-		if docBuilder.Len() > 0 {
-			prompt += docBuilder.String()
-		}
+	var sysPtr *string
+	if strings.TrimSpace(req.SystemInstruction) != "" {
+		sysPtr = new(req.SystemInstruction)
+	}
+	var flowRunIDPtr *string
+	if strings.TrimSpace(req.FlowRunID) != "" {
+		flowRunIDPtr = new(req.FlowRunID)
 	}
 
-	pReq := agent.ExecutePromptRequest{
+	modelID, role, genCfg := convertWorkflowModelConfig(req.Model)
+	run, err := a.runner.Generate(ctx, ai.GenerateRequest{
 		SpaceID:           req.SpaceID,
-		SystemInstruction: req.SystemInstruction,
-		Prompt:            prompt,
-		ResponseSchema:    responseSchema,
-	}
-	if req.Model != nil {
-		pReq.AgentID = req.Model.AgentID
-		pReq.ProviderID = req.Model.ProviderID
-		pReq.ModelName = req.Model.ModelName
-		pReq.Temperature = req.Model.Temperature
-	}
-
-	res, err := a.runner.ExecutePrompt(ctx, pReq)
+		Source:            ai.RunSourceWorkflow,
+		Prompt:            req.Prompt,
+		SystemInstruction: sysPtr,
+		ModelID:           modelID,
+		Role:              role,
+		Generation:        genCfg,
+		OutputSchema:      req.OutputSchema,
+		Attachments:       atts,
+		FlowRunID:         flowRunIDPtr,
+	})
+	resp := runToWorkflowLLMResponse(run)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
+	return resp, nil
+}
 
-	return &workflow.LLMResponse{
-		Text:       res.Text,
-		TokensUsed: res.TokensUsed,
-		AgentRunID: res.AgentRunID,
-		ModelName:  res.ModelName,
-	}, nil
+func (a *agentExecutorAdapter) ExecuteAgent(ctx context.Context, req workflow.AgentRunRequest) (*workflow.LLMResponse, error) {
+	var flowRunIDPtr *string
+	if strings.TrimSpace(req.FlowRunID) != "" {
+		flowRunIDPtr = new(req.FlowRunID)
+	}
+	modelID, _, genCfg := convertWorkflowModelConfig(req.Model)
+	run, err := a.runner.RunAgent(ctx, ai.RunAgentRequest{
+		SpaceID:      req.SpaceID,
+		AgentID:      req.AgentID,
+		Source:       ai.RunSourceWorkflow,
+		Prompt:       req.Prompt,
+		Input:        req.Input,
+		ModelID:      modelID,
+		Generation:   genCfg,
+		OutputSchema: req.OutputSchema,
+		FlowRunID:    flowRunIDPtr,
+	})
+	resp := runToWorkflowLLMResponse(run)
+	if err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
+func convertWorkflowModelConfig(mc *workflow.ModelConfig) (modelID *string, role *ai.ModelRole, gen *ai.GenerationConfig) {
+	if mc == nil {
+		return nil, nil, nil
+	}
+	if mc.ModelID != nil && strings.TrimSpace(*mc.ModelID) != "" {
+		modelID = new(strings.TrimSpace(*mc.ModelID))
+	}
+	if mc.Role != nil && strings.TrimSpace(*mc.Role) != "" {
+		role = new(ai.ModelRole(strings.TrimSpace(*mc.Role)))
+	}
+	if mc.Generation != nil {
+		cfg := ai.GenerationConfig{
+			Temperature: mc.Generation.Temperature,
+			MaxTokens:   mc.Generation.MaxTokens,
+			TopP:        mc.Generation.TopP,
+		}
+		if mc.Generation.Thinking != nil {
+			cfg.Thinking = ai.ThinkingConfig{
+				Enabled:      mc.Generation.Thinking.Enabled,
+				Effort:       mc.Generation.Thinking.Effort,
+				BudgetTokens: mc.Generation.Thinking.BudgetTokens,
+			}
+		}
+		gen = &cfg
+	}
+	return modelID, role, gen
+}
+
+func runToWorkflowLLMResponse(run *ai.Run) *workflow.LLMResponse {
+	if run == nil {
+		return nil
+	}
+	resp := &workflow.LLMResponse{
+		TokensUsed: int(run.Metrics.Tokens.Total),
+		AIRunID:    run.ID,
+	}
+	if run.Input.ModelSnapshot != nil {
+		resp.ModelName = run.Input.ModelSnapshot.ModelName
+	}
+	if run.Output != nil {
+		if run.Output.Text != nil {
+			resp.Text = *run.Output.Text
+		}
+		resp.ParsedJSON = run.Output.Data
+	}
+	return resp
 }
 
 // SpaceReader retrieves workspace metadata for SpaceContextLoader.

@@ -156,7 +156,7 @@ func (r *Registry) registerBuiltinDescriptors() {
 			Owner:       "platform",
 			Category:    "ai",
 			DisplayName: "LLM Generate",
-			Description: "Prompts a configured agent or model with optional structured JSON output schema and document attachments.",
+			Description: "Prompts a configured model or semantic role with optional structured JSON output schema and document attachments.",
 			InputsSchema: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -166,6 +166,23 @@ func (r *Registry) registerBuiltinDescriptors() {
 					"documents":     map[string]any{"type": "array"},
 				},
 				"required": []string{"prompt"},
+			},
+		},
+		{
+			Type:        StepAIAgentRun,
+			Owner:       "platform",
+			Category:    "ai",
+			DisplayName: "AI Agent Run",
+			Description: "Executes a workspace AI agent headlessly in a multi-step MCP-enabled run.",
+			InputsSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"agent_id":      map[string]any{"type": "string"},
+					"prompt":        map[string]any{"type": "string"},
+					"input":         map[string]any{"type": "object"},
+					"output_schema": map[string]any{"type": "object"},
+				},
+				"required": []string{"agent_id"},
 			},
 		},
 		{

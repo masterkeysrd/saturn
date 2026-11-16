@@ -882,14 +882,22 @@ type AgentExecutorMock struct {
 	// ExecuteFunc mocks the Execute method.
 	ExecuteFunc func(ctx context.Context, req LLMRequest) (*LLMResponse, error)
 
+	// ExecuteAgentFunc mocks the ExecuteAgent method.
+	ExecuteAgentFunc func(ctx context.Context, req AgentRunRequest) (*LLMResponse, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		Execute []struct {
 			Ctx context.Context
 			Req LLMRequest
 		}
+		ExecuteAgent []struct {
+			Ctx context.Context
+			Req AgentRunRequest
+		}
 	}
-	lockExecute sync.RWMutex
+	lockExecute      sync.RWMutex
+	lockExecuteAgent sync.RWMutex
 }
 
 // Execute calls ExecuteFunc.
@@ -917,4 +925,31 @@ func (mock *AgentExecutorMock) ExecuteCalls() []struct {
 	mock.lockExecute.RLock()
 	defer mock.lockExecute.RUnlock()
 	return mock.calls.Execute
+}
+
+// ExecuteAgent calls ExecuteAgentFunc.
+func (mock *AgentExecutorMock) ExecuteAgent(ctx context.Context, req AgentRunRequest) (*LLMResponse, error) {
+	if mock.ExecuteAgentFunc == nil {
+		panic("AgentExecutorMock.ExecuteAgentFunc: method is nil but AgentExecutor.ExecuteAgent was just called")
+	}
+	mock.lockExecuteAgent.Lock()
+	mock.calls.ExecuteAgent = append(mock.calls.ExecuteAgent, struct {
+		Ctx context.Context
+		Req AgentRunRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockExecuteAgent.Unlock()
+	return mock.ExecuteAgentFunc(ctx, req)
+}
+
+// ExecuteAgentCalls returns all calls made to ExecuteAgent.
+func (mock *AgentExecutorMock) ExecuteAgentCalls() []struct {
+	Ctx context.Context
+	Req AgentRunRequest
+} {
+	mock.lockExecuteAgent.RLock()
+	defer mock.lockExecuteAgent.RUnlock()
+	return mock.calls.ExecuteAgent
 }

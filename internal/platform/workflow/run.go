@@ -107,7 +107,7 @@ type StepRun struct {
 	Output       map[string]any `json:"output,omitempty"`
 	Error        *FlowError     `json:"error,omitempty"`
 	Metadata     map[string]any `json:"metadata,omitempty"`
-	AgentRunID   *string        `db:"agent_run_id" json:"agent_run_id,omitempty"`
+	AIRunID      *string        `db:"ai_run_id" json:"ai_run_id,omitempty"`
 	StartTime    time.Time      `db:"start_time" json:"start_time"`
 	EndTime      *time.Time     `db:"end_time" json:"end_time,omitempty"`
 	CreateTime   time.Time      `db:"create_time" json:"create_time"`

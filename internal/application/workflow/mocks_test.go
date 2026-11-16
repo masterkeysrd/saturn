@@ -6,7 +6,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/masterkeysrd/saturn/internal/platform/agent"
+	"github.com/masterkeysrd/saturn/internal/platform/ai"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
 )
@@ -792,48 +792,83 @@ func (mock *ScheduleSyncerMock) PauseScheduleCalls() []struct {
 }
 
 // Compile-time interface assertion.
-var _ AgentPromptRunner = (*AgentPromptRunnerMock)(nil)
+var _ AIRunner = (*AIRunnerMock)(nil)
 
-// AgentPromptRunnerMock is a mock implementation of AgentPromptRunner.
-type AgentPromptRunnerMock struct {
-	// ExecutePromptFunc mocks the ExecutePrompt method.
-	ExecutePromptFunc func(ctx context.Context, req agent.ExecutePromptRequest) (*agent.ExecutePromptResult, error)
+// AIRunnerMock is a mock implementation of AIRunner.
+type AIRunnerMock struct {
+	// GenerateFunc mocks the Generate method.
+	GenerateFunc func(ctx context.Context, req ai.GenerateRequest) (*ai.Run, error)
+
+	// RunAgentFunc mocks the RunAgent method.
+	RunAgentFunc func(ctx context.Context, req ai.RunAgentRequest) (*ai.Run, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
-		ExecutePrompt []struct {
+		Generate []struct {
 			Ctx context.Context
-			Req agent.ExecutePromptRequest
+			Req ai.GenerateRequest
+		}
+		RunAgent []struct {
+			Ctx context.Context
+			Req ai.RunAgentRequest
 		}
 	}
-	lockExecutePrompt sync.RWMutex
+	lockGenerate sync.RWMutex
+	lockRunAgent sync.RWMutex
 }
 
-// ExecutePrompt calls ExecutePromptFunc.
-func (mock *AgentPromptRunnerMock) ExecutePrompt(ctx context.Context, req agent.ExecutePromptRequest) (*agent.ExecutePromptResult, error) {
-	if mock.ExecutePromptFunc == nil {
-		panic("AgentPromptRunnerMock.ExecutePromptFunc: method is nil but AgentPromptRunner.ExecutePrompt was just called")
+// Generate calls GenerateFunc.
+func (mock *AIRunnerMock) Generate(ctx context.Context, req ai.GenerateRequest) (*ai.Run, error) {
+	if mock.GenerateFunc == nil {
+		panic("AIRunnerMock.GenerateFunc: method is nil but AIRunner.Generate was just called")
 	}
-	mock.lockExecutePrompt.Lock()
-	mock.calls.ExecutePrompt = append(mock.calls.ExecutePrompt, struct {
+	mock.lockGenerate.Lock()
+	mock.calls.Generate = append(mock.calls.Generate, struct {
 		Ctx context.Context
-		Req agent.ExecutePromptRequest
+		Req ai.GenerateRequest
 	}{
 		Ctx: ctx,
 		Req: req,
 	})
-	mock.lockExecutePrompt.Unlock()
-	return mock.ExecutePromptFunc(ctx, req)
+	mock.lockGenerate.Unlock()
+	return mock.GenerateFunc(ctx, req)
 }
 
-// ExecutePromptCalls returns all calls made to ExecutePrompt.
-func (mock *AgentPromptRunnerMock) ExecutePromptCalls() []struct {
+// GenerateCalls returns all calls made to Generate.
+func (mock *AIRunnerMock) GenerateCalls() []struct {
 	Ctx context.Context
-	Req agent.ExecutePromptRequest
+	Req ai.GenerateRequest
 } {
-	mock.lockExecutePrompt.RLock()
-	defer mock.lockExecutePrompt.RUnlock()
-	return mock.calls.ExecutePrompt
+	mock.lockGenerate.RLock()
+	defer mock.lockGenerate.RUnlock()
+	return mock.calls.Generate
+}
+
+// RunAgent calls RunAgentFunc.
+func (mock *AIRunnerMock) RunAgent(ctx context.Context, req ai.RunAgentRequest) (*ai.Run, error) {
+	if mock.RunAgentFunc == nil {
+		panic("AIRunnerMock.RunAgentFunc: method is nil but AIRunner.RunAgent was just called")
+	}
+	mock.lockRunAgent.Lock()
+	mock.calls.RunAgent = append(mock.calls.RunAgent, struct {
+		Ctx context.Context
+		Req ai.RunAgentRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockRunAgent.Unlock()
+	return mock.RunAgentFunc(ctx, req)
+}
+
+// RunAgentCalls returns all calls made to RunAgent.
+func (mock *AIRunnerMock) RunAgentCalls() []struct {
+	Ctx context.Context
+	Req ai.RunAgentRequest
+} {
+	mock.lockRunAgent.RLock()
+	defer mock.lockRunAgent.RUnlock()
+	return mock.calls.RunAgent
 }
 
 // Compile-time interface assertion.

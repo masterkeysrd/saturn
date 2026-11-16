@@ -2,22 +2,26 @@ package workflowapp
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/masterkeysrd/saturn/internal/domain/space"
-	"github.com/masterkeysrd/saturn/internal/platform/agent"
+	"github.com/masterkeysrd/saturn/internal/platform/ai"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/settings"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
 )
 
-type stubAgentRunner struct {
-	fn func(ctx context.Context, req agent.ExecutePromptRequest) (*agent.ExecutePromptResult, error)
+type stubAIRunner struct {
+	genFn   func(ctx context.Context, req ai.GenerateRequest) (*ai.Run, error)
+	agentFn func(ctx context.Context, req ai.RunAgentRequest) (*ai.Run, error)
 }
 
-func (s *stubAgentRunner) ExecutePrompt(ctx context.Context, req agent.ExecutePromptRequest) (*agent.ExecutePromptResult, error) {
-	return s.fn(ctx, req)
+func (s *stubAIRunner) Generate(ctx context.Context, req ai.GenerateRequest) (*ai.Run, error) {
+	return s.genFn(ctx, req)
+}
+
+func (s *stubAIRunner) RunAgent(ctx context.Context, req ai.RunAgentRequest) (*ai.Run, error) {
+	return s.agentFn(ctx, req)
 }
 
 type stubSpaceReader struct {
@@ -52,28 +56,40 @@ func (s *stubSettingsStore) DeleteRaw(_ context.Context, _ settings.ScopeType, _
 }
 
 func TestWorkflowAdapters(t *testing.T) {
-	t.Run("NewAgentExecutor", func(t *testing.T) {
-		exec := NewAgentExecutor(&stubAgentRunner{
-			fn: func(_ context.Context, req agent.ExecutePromptRequest) (*agent.ExecutePromptResult, error) {
-				if !strings.Contains(req.Prompt, "receipt.txt") || !strings.Contains(req.Prompt, "Coffee $4.50") {
-					t.Errorf("expected text attachment in prompt, got %q", req.Prompt)
+	t.Run("NewAgentExecutor_LLMGenerate", func(t *testing.T) {
+		exec := NewAgentExecutor(&stubAIRunner{
+			genFn: func(_ context.Context, req ai.GenerateRequest) (*ai.Run, error) {
+				if req.Source != ai.RunSourceWorkflow || req.FlowRunID == nil || *req.FlowRunID != "wfr_1" {
+					t.Errorf("expected workflow source & flow_run_id, got %+v", req)
 				}
-				if !strings.Contains(req.ResponseSchema, `"vendor"`) {
-					t.Errorf("expected serialized output_schema, got %q", req.ResponseSchema)
+				if len(req.Attachments) != 1 || req.Attachments[0].Filename != "receipt.txt" {
+					t.Errorf("expected 1 attachment forwarded, got %+v", req.Attachments)
 				}
-				return &agent.ExecutePromptResult{
-					Text:       `{"vendor":"Coffee"}`,
-					TokensUsed: 55,
-					AgentRunID: "run_1",
-					ModelName:  "gemini-2.5-flash",
+				if req.Role == nil || *req.Role != ai.ModelRoleFast {
+					t.Errorf("expected fast role, got %v", req.Role)
+				}
+				return &ai.Run{
+					ID:     "air_1",
+					Status: ai.RunCompleted,
+					Input: ai.RunInput{
+						ModelSnapshot: &ai.ModelSnapshot{ModelName: "gemini-2.5-flash"},
+					},
+					Output: &ai.RunOutput{
+						Text: new(`{"vendor":"Coffee"}`),
+						Data: map[string]any{"vendor": "Coffee"},
+					},
+					Metrics: ai.RunMetrics{
+						Tokens: ai.TokenUsage{Total: 55},
+					},
 				}, nil
 			},
 		})
 
 		res, err := exec.Execute(t.Context(), workflow.LLMRequest{
 			SpaceID:      "spc_1",
+			FlowRunID:    "wfr_1",
 			Prompt:       "Extract",
-			Model:        &workflow.ModelConfig{AgentID: new("agt_1")},
+			Model:        &workflow.ModelConfig{Role: new("fast")},
 			OutputSchema: map[string]any{"type": "object", "properties": map[string]any{"vendor": map[string]any{"type": "string"}}},
 			Documents: []workflow.ResolvedArtifact{
 				{Ref: "mail://m1/a1", Filename: "receipt.txt", ContentType: "text/plain", Data: []byte("Coffee $4.50")},
@@ -82,7 +98,36 @@ func TestWorkflowAdapters(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Execute() error = %v", err)
 		}
-		if res.AgentRunID != "run_1" || res.TokensUsed != 55 {
+		if res.AIRunID != "air_1" || res.TokensUsed != 55 || res.ParsedJSON["vendor"] != "Coffee" {
+			t.Errorf("unexpected LLMResponse: %+v", res)
+		}
+	})
+
+	t.Run("NewAgentExecutor_AIAgentRun", func(t *testing.T) {
+		exec := NewAgentExecutor(&stubAIRunner{
+			agentFn: func(_ context.Context, req ai.RunAgentRequest) (*ai.Run, error) {
+				if req.AgentID != "system.saturn.assistant" || req.Source != ai.RunSourceWorkflow {
+					t.Errorf("unexpected RunAgentRequest: %+v", req)
+				}
+				return &ai.Run{
+					ID:      "air_agt_1",
+					Status:  ai.RunCompleted,
+					Output:  &ai.RunOutput{Text: new("Done")},
+					Metrics: ai.RunMetrics{Tokens: ai.TokenUsage{Total: 90}},
+				}, nil
+			},
+		})
+
+		res, err := exec.ExecuteAgent(t.Context(), workflow.AgentRunRequest{
+			SpaceID:   "spc_1",
+			FlowRunID: "wfr_1",
+			AgentID:   "system.saturn.assistant",
+			Prompt:    "Check budget",
+		})
+		if err != nil {
+			t.Fatalf("ExecuteAgent() error = %v", err)
+		}
+		if res.AIRunID != "air_agt_1" || res.TokensUsed != 90 || res.Text != "Done" {
 			t.Errorf("unexpected LLMResponse: %+v", res)
 		}
 	})

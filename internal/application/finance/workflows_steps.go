@@ -237,7 +237,7 @@ func executeImportStatementDraft(
 			cardLastFour = docCardLastFour
 		}
 
-		// 1. Suggested account ID matched by Janus AI
+		// 1. Suggested account ID matched by AI statement extraction
 		if sec.SuggestedAccountID != "" {
 			if suggestedID, parseErr := finance.ParseAccountID(sec.SuggestedAccountID); parseErr == nil {
 				if acc, accErr := financeSvc.GetAccount(ctx, fCtx, suggestedID); accErr == nil && acc != nil && strings.EqualFold(string(acc.Currency), sec.Currency) {

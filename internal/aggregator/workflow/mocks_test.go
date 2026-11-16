@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/masterkeysrd/saturn/internal/platform/agent"
+	"github.com/masterkeysrd/saturn/internal/platform/ai"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
 )
@@ -315,31 +315,31 @@ func (mock *WorkflowReaderMock) GetStats7dCalls() []struct {
 }
 
 // Compile-time interface assertion.
-var _ AgentRunReader = (*AgentRunReaderMock)(nil)
+var _ AIRunReader = (*AIRunReaderMock)(nil)
 
-// AgentRunReaderMock is a mock implementation of AgentRunReader.
-type AgentRunReaderMock struct {
-	// GetRunsByIDsFunc mocks the GetRunsByIDs method.
-	GetRunsByIDsFunc func(ctx context.Context, spaceID string, ids []string) ([]*agent.AgentRun, error)
+// AIRunReaderMock is a mock implementation of AIRunReader.
+type AIRunReaderMock struct {
+	// GetByIDsFunc mocks the GetByIDs method.
+	GetByIDsFunc func(ctx context.Context, spaceID string, ids []string) ([]*ai.Run, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
-		GetRunsByIDs []struct {
+		GetByIDs []struct {
 			Ctx     context.Context
 			SpaceID string
 			Ids     []string
 		}
 	}
-	lockGetRunsByIDs sync.RWMutex
+	lockGetByIDs sync.RWMutex
 }
 
-// GetRunsByIDs calls GetRunsByIDsFunc.
-func (mock *AgentRunReaderMock) GetRunsByIDs(ctx context.Context, spaceID string, ids []string) ([]*agent.AgentRun, error) {
-	if mock.GetRunsByIDsFunc == nil {
-		panic("AgentRunReaderMock.GetRunsByIDsFunc: method is nil but AgentRunReader.GetRunsByIDs was just called")
+// GetByIDs calls GetByIDsFunc.
+func (mock *AIRunReaderMock) GetByIDs(ctx context.Context, spaceID string, ids []string) ([]*ai.Run, error) {
+	if mock.GetByIDsFunc == nil {
+		panic("AIRunReaderMock.GetByIDsFunc: method is nil but AIRunReader.GetByIDs was just called")
 	}
-	mock.lockGetRunsByIDs.Lock()
-	mock.calls.GetRunsByIDs = append(mock.calls.GetRunsByIDs, struct {
+	mock.lockGetByIDs.Lock()
+	mock.calls.GetByIDs = append(mock.calls.GetByIDs, struct {
 		Ctx     context.Context
 		SpaceID string
 		Ids     []string
@@ -348,17 +348,17 @@ func (mock *AgentRunReaderMock) GetRunsByIDs(ctx context.Context, spaceID string
 		SpaceID: spaceID,
 		Ids:     ids,
 	})
-	mock.lockGetRunsByIDs.Unlock()
-	return mock.GetRunsByIDsFunc(ctx, spaceID, ids)
+	mock.lockGetByIDs.Unlock()
+	return mock.GetByIDsFunc(ctx, spaceID, ids)
 }
 
-// GetRunsByIDsCalls returns all calls made to GetRunsByIDs.
-func (mock *AgentRunReaderMock) GetRunsByIDsCalls() []struct {
+// GetByIDsCalls returns all calls made to GetByIDs.
+func (mock *AIRunReaderMock) GetByIDsCalls() []struct {
 	Ctx     context.Context
 	SpaceID string
 	Ids     []string
 } {
-	mock.lockGetRunsByIDs.RLock()
-	defer mock.lockGetRunsByIDs.RUnlock()
-	return mock.calls.GetRunsByIDs
+	mock.lockGetByIDs.RLock()
+	defer mock.lockGetByIDs.RUnlock()
+	return mock.calls.GetByIDs
 }

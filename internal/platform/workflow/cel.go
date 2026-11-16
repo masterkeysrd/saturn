@@ -620,7 +620,7 @@ func (c *CELEvaluator) inferStepOutputSchema(
 	scope validationScope,
 ) map[string]any {
 	switch step.Type {
-	case StepLLMGenerate:
+	case StepLLMGenerate, StepAIAgentRun:
 		if outSchema, ok := step.Inputs["output_schema"].(map[string]any); ok && len(outSchema) > 0 {
 			return outSchema
 		}

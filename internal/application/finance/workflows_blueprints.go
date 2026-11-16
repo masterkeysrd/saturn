@@ -49,13 +49,13 @@ type statementIngestionInput struct {
 	DryRun          bool   `json:"dry_run,omitempty"`
 }
 
-type hyperionClassification struct {
+type signalClassification struct {
 	Category   string  `json:"category" jsonschema:"One of: invoice, receipt, bank_notification, ignore"`
 	Confidence float64 `json:"confidence"`
 	Reason     string  `json:"reason"`
 }
 
-type hyperionExtraction struct {
+type signalExtraction struct {
 	TransactionType      string  `json:"transaction_type"`
 	Vendor               string  `json:"vendor"`
 	Amount               float64 `json:"amount"`
@@ -71,35 +71,35 @@ type hyperionExtraction struct {
 	TransferLeg          string  `json:"transfer_leg,omitempty"`
 }
 
-type hyperionDedupResult struct {
+type signalDedupResult struct {
 	IsDuplicate            bool   `json:"is_duplicate"`
 	DuplicateTransactionID string `json:"duplicate_transaction_id,omitempty"`
 	Reason                 string `json:"reason"`
 }
 
-type janusParsedLine struct {
+type statementLineDraft struct {
 	DateStr     string  `json:"date_str"`
 	Description string  `json:"description"`
 	Amount      float64 `json:"amount"`
 	Reference   string  `json:"reference,omitempty"`
 }
 
-type janusParsedSection struct {
-	Currency           string            `json:"currency"`
-	CardLastFour       string            `json:"card_last_four,omitempty"`
-	SuggestedAccountID string            `json:"suggested_account_id,omitempty"`
-	StartingBalance    float64           `json:"starting_balance"`
-	EndingBalance      float64           `json:"ending_balance"`
-	TotalCredits       float64           `json:"total_credits,omitempty"`
-	TotalDebits        float64           `json:"total_debits,omitempty"`
-	Lines              []janusParsedLine `json:"lines"`
+type statementSectionDraft struct {
+	Currency           string               `json:"currency"`
+	CardLastFour       string               `json:"card_last_four,omitempty"`
+	SuggestedAccountID string               `json:"suggested_account_id,omitempty"`
+	StartingBalance    float64              `json:"starting_balance"`
+	EndingBalance      float64              `json:"ending_balance"`
+	TotalCredits       float64              `json:"total_credits,omitempty"`
+	TotalDebits        float64              `json:"total_debits,omitempty"`
+	Lines              []statementLineDraft `json:"lines"`
 }
 
-type janusParsedStatement struct {
-	InstitutionName string               `json:"institution_name,omitempty"`
-	CardLastFour    string               `json:"card_last_four,omitempty"`
-	StatementDate   string               `json:"statement_date"`
-	Sections        []janusParsedSection `json:"sections"`
+type statementExtraction struct {
+	InstitutionName string                  `json:"institution_name,omitempty"`
+	CardLastFour    string                  `json:"card_last_four,omitempty"`
+	StatementDate   string                  `json:"statement_date"`
+	Sections        []statementSectionDraft `json:"sections"`
 }
 
 type resolvedSignalTemplate struct {
@@ -187,13 +187,14 @@ func sharedClassificationAndExtractionSteps() []workflow.StepNode {
 		workflow.LLMStep(workflow.LLMStepConfig{
 			ID:   "classify",
 			Name: "Classify Financial Signal",
-			System: `You are Hyperion, the Saturn Ledger Ingestion Agent. Classify the incoming email, receipt, or alert into:
-- "invoice": An outstanding bill, invoice, or request for future payment (if balance is $0 or already paid/charged, classify as "receipt" or "bank_notification").
-- "receipt": A purchase confirmation or receipt issued by a merchant/vendor.
-- "bank_notification": A swipe confirmation, transfer alert, deposit receipt, or bank notice.
-- "ignore": Verification codes, spam, marketing, or non-financial content.`,
+			System: `You are Saturn's financial ledger ingestion classifier. Analyze the incoming email, receipt, or alert text and attached documents, then classify into one of:
+- "invoice": An outstanding bill, invoice, or request for future payment.
+  * Note: If the document indicates the balance is $0, or is marked as "PAID", "CONFIRMED", or shows a card/account was already charged, classify it as "receipt" or "bank_notification".
+- "receipt": A transaction confirmation, purchase confirmation, or receipt issued directly by a merchant or vendor (e.g. Apple Store, Amazon, Uber, restaurants, utility receipts).
+- "bank_notification": An alert, swipe confirmation, transfer confirmation, deposit receipt, or bank notice issued directly by a bank or financial institution (e.g. Banco BHD alerts, credit card swipes, wire transfers).
+- "ignore": Verification codes, OTPs, spam, marketing, or non-financial content.`,
 			Prompt:       "Classify this document:\n\n{{ input.text }}",
-			OutputSchema: workflow.SchemaFor[hyperionClassification](),
+			OutputSchema: workflow.SchemaFor[signalClassification](),
 			Documents:    "{{ input.?documents.orValue([]) }}",
 		}),
 		workflow.FilterStep(workflow.FilterStepConfig{
@@ -212,14 +213,32 @@ func sharedClassificationAndExtractionSteps() []workflow.StepNode {
 				"recurring_templates": workflow.Source(workflow.SourceConfig[ListRecurringTemplatesParams]{Loader: "finance.recurring_templates", Params: ListRecurringTemplatesParams{Status: "active"}}),
 				"borrowings":          workflow.Source(workflow.SourceConfig[ListBorrowingsParams]{Loader: "finance.borrowings", Params: ListBorrowingsParams{Status: "active"}}),
 			},
-			System: `You are Hyperion, the Saturn Ledger Ingestion Agent. Extract structured transaction details:
-- transaction_type: "EXPENSE", "INCOME", "TRANSFER", or "REFUND".
-- currency: ISO-4217 code (e.g. USD, DOP, EUR).
-- amount: Positive decimal amount.
-- date: ISO-8601 date (YYYY-MM-DD).
-- Match source_account_id / destination_account_id from accounts (preferring currency match when card_last_four collides), budget_id from budgets, and borrowing_id from borrowings when applicable.`,
+			System: `You are Saturn's financial transaction extractor. Analyze unstructured bank alerts, receipt notifications, invoices, and attached documents to extract structured transaction details.
+
+EXTRACTION RULES:
+1. transaction_type:
+   - "EXPENSE": Cash out, card charge, online purchase, debit, or payable bill/invoice.
+   - "INCOME": Deposit, salary, or transfer received from a third party.
+   - "TRANSFER": Movement between owned accounts (e.g. checking to credit card payment, savings transfer).
+   - "REFUND": Card reversals, chargebacks, or merchant returns.
+2. currency: Normalize symbols into standard ISO-4217 codes (e.g. $ -> USD, RD$ -> DOP, € -> EUR).
+3. amount: Positive decimal amount (never negative).
+4. date: ISO-8601 date (YYYY-MM-DD), resolving relative dates against Reference time (UTC).
+5. budget_id / budget_name: Match a category ONLY from the active budgets list based on semantic meaning and return its exact "id" (e.g. "bgt_..."). If there is no clear semantic match, leave budget_id empty/null.
+6. Account matching (source_account_id / destination_account_id / card_last_four):
+   - Match accounts ONLY from the active accounts list (by id, name, last_four, or currency). When multiple accounts share the same name or card last_four (e.g. dual-currency credit cards), prioritize the account whose currency matches the transaction currency.
+   - source_account_id: The card or account that initiated an outflow/charge.
+   - destination_account_id: The account that received an inflow (especially for TRANSFER or INCOME).
+7. borrowing_id: Match ONLY from active borrowings (direction BORROWED = payable liability, LENT = receivable asset) when the transaction represents a loan repayment or disbursement with that counterparty; otherwise leave empty/null.
+8. transfer_leg (CRITICAL for TRANSFER transactions):
+   - "SOURCE": The document is a debit confirmation, withdrawal alert, or card charge from the sending account.
+   - "DESTINATION": The document is a deposit confirmation, credit alert, or incoming wire receipt on the receiving account.
+   - Leave empty/null when transaction_type is not "TRANSFER".
+
+Context notes:
+- scheduled_payments are concrete pending instances generated from recurring_templates (cadence rules).`,
 			Prompt:       "Reference time (UTC): {{ string(run.now) }}\nAccounts: {{ toJSON(sources.accounts) }}\nBudgets: {{ toJSON(sources.budgets) }}\nScheduled Payments: {{ toJSON(sources.scheduled_payments) }}\nRecurring Templates: {{ toJSON(sources.recurring_templates) }}\nBorrowings: {{ toJSON(sources.borrowings) }}\n\nDocument:\n{{ input.text }}",
-			OutputSchema: workflow.SchemaFor[hyperionExtraction](),
+			OutputSchema: workflow.SchemaFor[signalExtraction](),
 			Documents:    "{{ input.?documents.orValue([]) }}",
 		}),
 		workflow.TransformStep(workflow.TransformStepConfig{
@@ -281,9 +300,13 @@ func sharedClassificationAndExtractionSteps() []workflow.StepNode {
 					},
 				}),
 			},
-			System:       "You are Hyperion performing semantic deduplication. Compare the extracted transaction against recent_transactions and identify any duplicate transaction ID.",
+			System: `You are Saturn's semantic deduplication checker. Compare the newly extracted transaction against recent_transactions to determine whether this document represents a duplicate entry (for example, a credit card alert matching a merchant receipt, or an invoice already recorded).
+
+CRITICAL:
+- If a duplicate is found, set is_duplicate to true and you MUST populate duplicate_transaction_id with the exact transaction "id" (e.g. "txn_...") from recent_transactions — never only mention the ID in reason.
+- If no duplicate is found, set is_duplicate to false and leave duplicate_transaction_id empty/null.`,
 			Prompt:       "Extracted transaction: {{ toJSON(steps.resolve) }}\nRecent transactions: {{ toJSON(sources.recent_transactions) }}",
-			OutputSchema: workflow.SchemaFor[hyperionDedupResult](),
+			OutputSchema: workflow.SchemaFor[signalDedupResult](),
 		}),
 	}
 }
@@ -430,13 +453,29 @@ func buildStatementIngestionFlow(spaceID string) (*workflow.Flow, []workflow.Tri
 			Sources: map[string]workflow.SourceBinding{
 				"accounts": workflow.Source(workflow.SourceConfig[ListAccountsParams]{Loader: "finance.accounts"}),
 			},
-			System: `You are Janus, the Saturn Statement & Reconciliation Audit Agent.
-Analyze bank and credit card statement text and extract structured multi-currency ledger sections, balances, and lines:
-1. Multi-Currency Ledgers: Separate distinct currencies into independent entries in sections; never combine currencies; ignore empty boilerplate sections with 0 lines and 0 balances.
-2. Transaction Lines: date_str as YYYY-MM-DD; negative (-) for charges/purchases/debits/fees, positive (+) for payments/credits/deposits/refunds (normalize credit card purchases to negative and payments to positive).
-3. Match each section to an account from accounts using last_four and currency into suggested_account_id.`,
+			System: `You are Saturn's Statement & Reconciliation Audit Parser. Analyze bank and credit card statement text and extract structured metadata, multi-currency ledger sections, balances, and transaction lines.
+
+CORE EXTRACTION RULES:
+1. Multi-Currency Ledgers (CRITICAL):
+   - Many banks (e.g., in the Dominican Republic, Mexico, and internationally) issue credit cards or accounts with independent currency sections (e.g. DOP or MXN plus USD).
+   - Separate distinct currencies into independent entries in sections; NEVER combine transactions or balances from different currencies into one section.
+   - Each section must extract its own currency, card_last_four, starting_balance, ending_balance, total_credits, total_debits, and lines.
+   - IGNORE EMPTY BOILERPLATE SECTIONS: Do not create a section for informational or installment tables (e.g. "Installment Credit Line DOP 0.00 0.00 0.00") that have 0 transactions and 0 balances.
+2. Balances & Summaries:
+   - starting_balance: Previous balance / Saldo anterior (decimal number, e.g. 1500.00).
+   - ending_balance: Current statement balance / Saldo al corte / New balance (decimal number, e.g. 2350.00).
+   - Extract total_credits and total_debits if listed in the summary.
+3. Transaction Lines:
+   - date_str: ISO-8601 YYYY-MM-DD. If the year is omitted on a line, infer it from statement_date.
+   - description: Clean merchant name or narrative from the line.
+   - amount: Signed decimal number — negative (-) for debits, purchases, charges, withdrawals, and bank fees; positive (+) for credits, payments toward the card, deposits, and refunds.
+   - CRITICAL CREDIT CARD SIGN RULE: Even if the statement prints credit card charges as positive numbers (or in a 'Debits'/'Charges' column without minus signs) and payments/credits as negative or suffixed with 'CR', you MUST normalize them: all purchases/charges MUST be negative (-), and all card payments/credits MUST be positive (+).
+   - reference: Optional reference number, check number, auth code, or bank transaction ID.
+4. Institution & Account Matching:
+   - Extract institution_name, card_last_four (primary 4 digits), and statement_date (YYYY-MM-DD).
+   - Match each section to an account from accounts using last_four and currency into suggested_account_id; leave empty/null if no match.`,
 			Prompt:       "Accounts:\n{{ toJSON(sources.accounts) }}\n\nStatement Text:\n{{ steps.extract_doc.text }}",
-			OutputSchema: workflow.SchemaFor[janusParsedStatement](),
+			OutputSchema: workflow.SchemaFor[statementExtraction](),
 		}),
 		workflow.ActionStep(workflow.ActionStepConfig[importStatementDraftTemplate]{
 			ID:   "stage_statements",

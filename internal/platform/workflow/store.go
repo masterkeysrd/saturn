@@ -69,17 +69,30 @@ type LLMRequest struct {
 	Documents         []ResolvedArtifact
 }
 
-// LLMResponse captures the output and telemetry returned by the LLM execution port.
+// LLMResponse captures the output and telemetry returned by AI step execution ports.
 type LLMResponse struct {
 	Text       string
 	ParsedJSON map[string]any
 	TokensUsed int
-	AgentRunID string
+	AIRunID    string
 	ModelName  string
 }
 
-// AgentExecutor abstracts LLM prompt execution and `platform.agent_runs` auditing.
+// AgentRunRequest captures parameters passed from an `ai.agent_run` step to the AI execution port.
+type AgentRunRequest struct {
+	SpaceID      string
+	FlowRunID    string
+	StepRunID    string
+	AgentID      string
+	Model        *ModelConfig
+	Prompt       string
+	Input        map[string]any
+	OutputSchema map[string]any
+}
+
+// AgentExecutor abstracts LLM prompt execution, autonomous agent runs, and `platform.ai_runs` auditing.
 // @Mock
 type AgentExecutor interface {
 	Execute(ctx context.Context, req LLMRequest) (*LLMResponse, error)
+	ExecuteAgent(ctx context.Context, req AgentRunRequest) (*LLMResponse, error)
 }

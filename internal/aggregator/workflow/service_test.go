@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
-	"github.com/masterkeysrd/saturn/internal/platform/agent"
+	"github.com/masterkeysrd/saturn/internal/platform/ai"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
@@ -185,7 +185,7 @@ func TestService_FlowRunsAndCatalog(t *testing.T) {
 		}
 	})
 
-	t.Run("GetFlowRun_HydratesStepRunsAndAgentRunMetrics", func(t *testing.T) {
+	t.Run("GetFlowRun_HydratesStepRunsAndAIRunMetrics", func(t *testing.T) {
 		svc := NewService(Dependencies{
 			Workflow: &WorkflowReaderMock{
 				GetFlowFunc: func(_ context.Context, _, _ string) (*workflow.Flow, error) {
@@ -196,17 +196,21 @@ func TestService_FlowRunsAndCatalog(t *testing.T) {
 				},
 				ListStepRunsFunc: func(_ context.Context, _, _ string) ([]workflow.StepRun, error) {
 					return []workflow.StepRun{
-						{ID: "wsr_1", StepID: "classify", StepType: workflow.StepLLMGenerate, AgentRunID: new("run_ai_1")},
+						{ID: "wsr_1", StepID: "classify", StepType: workflow.StepLLMGenerate, AIRunID: new("air_1")},
 					}, nil
 				},
 			},
-			AgentRuns: &AgentRunReaderMock{
-				GetRunsByIDsFunc: func(_ context.Context, _ string, ids []string) ([]*agent.AgentRun, error) {
-					if len(ids) != 1 || ids[0] != "run_ai_1" {
-						t.Errorf("unexpected agent run ids: %v", ids)
+			AIRuns: &AIRunReaderMock{
+				GetByIDsFunc: func(_ context.Context, _ string, ids []string) ([]*ai.Run, error) {
+					if len(ids) != 1 || ids[0] != "air_1" {
+						t.Errorf("unexpected ai run ids: %v", ids)
 					}
-					return []*agent.AgentRun{
-						{ID: "run_ai_1", Status: agent.RunSuccess, TokensUsed: 420},
+					return []*ai.Run{
+						{
+							ID:      "air_1",
+							Status:  ai.RunCompleted,
+							Metrics: ai.RunMetrics{Tokens: ai.TokenUsage{Total: 420}},
+						},
 					}, nil
 				},
 			},
@@ -226,8 +230,8 @@ func TestService_FlowRunsAndCatalog(t *testing.T) {
 		if *view.FlowName != "Inbox Ingestion" || len(view.StepRuns) != 1 {
 			t.Fatalf("unexpected GetFlowRun view: %+v", view)
 		}
-		if view.StepRuns[0].Metadata["agent_run_tokens_used"] != 420 || view.AgentRuns["run_ai_1"].TokensUsed != 420 {
-			t.Errorf("expected agent_run token metrics hydrated, got %+v", view.StepRuns[0].Metadata)
+		if view.StepRuns[0].Metadata["ai_run_tokens_used"] != 420 || view.AIRuns["air_1"].Metrics.Tokens.Total != 420 {
+			t.Errorf("expected ai_run token metrics hydrated, got %+v", view.StepRuns[0].Metadata)
 		}
 	})
 

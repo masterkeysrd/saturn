@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
-	"github.com/masterkeysrd/saturn/internal/platform/agent"
+	"github.com/masterkeysrd/saturn/internal/platform/ai"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
@@ -29,17 +29,17 @@ type WorkflowReader interface {
 	GetStats7d(ctx context.Context, spaceID string, flowIDs []string, now time.Time) (map[string]workflow.FlowStats, error)
 }
 
-// AgentRunReader defines read-only batch retrieval of AI audit rows for token metrics hydration.
+// AIRunReader defines read-only batch retrieval of AI audit rows for token metrics hydration.
 // @Mock
-type AgentRunReader interface {
-	GetRunsByIDs(ctx context.Context, spaceID string, ids []string) ([]*agent.AgentRun, error)
+type AIRunReader interface {
+	GetByIDs(ctx context.Context, spaceID string, ids []string) ([]*ai.Run, error)
 }
 
-// FlowRunView wraps a workflow.FlowRun with hydrated FlowName and AgentRun token telemetry.
+// FlowRunView wraps a workflow.FlowRun with hydrated FlowName and AIRun token telemetry.
 type FlowRunView struct {
 	*workflow.FlowRun
-	FlowName  *string
-	AgentRuns map[string]*agent.AgentRun
+	FlowName *string
+	AIRuns   map[string]*ai.Run
 }
 
 // FlowRunListResult is a paginated list of hydrated FlowRunView items.
@@ -50,16 +50,16 @@ type FlowRunListResult struct {
 
 // Dependencies groups read-only services required by the workflow aggregator Service.
 type Dependencies struct {
-	Workflow  WorkflowReader
-	AgentRuns AgentRunReader
-	NowFunc   func() time.Time
+	Workflow WorkflowReader
+	AIRuns   AIRunReader
+	NowFunc  func() time.Time
 }
 
 // Service provides read-only CQRS hydration for workflows, triggers, stats, runs, and step traces.
 type Service struct {
-	workflow  WorkflowReader
-	agentRuns AgentRunReader
-	nowFn     func() time.Time
+	workflow WorkflowReader
+	aiRuns   AIRunReader
+	nowFn    func() time.Time
 }
 
 // NewService constructs a new workflow aggregator Service.
@@ -69,9 +69,9 @@ func NewService(deps Dependencies) *Service {
 		nowFn = func() time.Time { return time.Now().UTC() }
 	}
 	return &Service{
-		workflow:  deps.Workflow,
-		agentRuns: deps.AgentRuns,
-		nowFn:     nowFn,
+		workflow: deps.Workflow,
+		aiRuns:   deps.AIRuns,
+		nowFn:    nowFn,
 	}
 }
 
@@ -256,14 +256,14 @@ func (s *Service) GetFlowRun(ctx context.Context, id string) (*FlowRunView, erro
 	run.StepRuns = stepRuns
 	view := &FlowRunView{FlowRun: run}
 
-	var agentRunIDs []string
-	seenAgentIDs := make(map[string]struct{})
+	var aiRunIDs []string
+	seenAIIDs := make(map[string]struct{})
 	for i := range stepRuns {
-		if stepRuns[i].AgentRunID != nil && *stepRuns[i].AgentRunID != "" {
-			aid := *stepRuns[i].AgentRunID
-			if _, seen := seenAgentIDs[aid]; !seen {
-				seenAgentIDs[aid] = struct{}{}
-				agentRunIDs = append(agentRunIDs, aid)
+		if stepRuns[i].AIRunID != nil && *stepRuns[i].AIRunID != "" {
+			aid := *stepRuns[i].AIRunID
+			if _, seen := seenAIIDs[aid]; !seen {
+				seenAIIDs[aid] = struct{}{}
+				aiRunIDs = append(aiRunIDs, aid)
 			}
 		}
 	}
@@ -278,29 +278,29 @@ func (s *Service) GetFlowRun(ctx context.Context, id string) (*FlowRunView, erro
 		}
 		return nil
 	})
-	if len(agentRunIDs) > 0 {
+	if len(aiRunIDs) > 0 {
 		g2.Go(func() error {
-			runs, aErr := s.agentRuns.GetRunsByIDs(g2Ctx, spaceID, agentRunIDs)
+			runs, aErr := s.aiRuns.GetByIDs(g2Ctx, spaceID, aiRunIDs)
 			if aErr != nil {
 				return aErr
 			}
-			byID := make(map[string]*agent.AgentRun, len(runs))
+			byID := make(map[string]*ai.Run, len(runs))
 			for _, ar := range runs {
 				byID[ar.ID] = ar
 			}
-			view.AgentRuns = byID
+			view.AIRuns = byID
 			for i := range run.StepRuns {
 				sr := &run.StepRuns[i]
-				if sr.AgentRunID == nil {
+				if sr.AIRunID == nil {
 					continue
 				}
-				if ar, ok := byID[*sr.AgentRunID]; ok {
+				if ar, ok := byID[*sr.AIRunID]; ok {
 					meta := maps.Clone(sr.Metadata)
 					if meta == nil {
 						meta = make(map[string]any)
 					}
-					meta["agent_run_tokens_used"] = ar.TokensUsed
-					meta["agent_run_status"] = string(ar.Status)
+					meta["ai_run_tokens_used"] = int(ar.Metrics.Tokens.Total)
+					meta["ai_run_status"] = string(ar.Status)
 					sr.Metadata = meta
 				}
 			}

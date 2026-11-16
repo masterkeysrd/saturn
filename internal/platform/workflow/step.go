@@ -8,6 +8,7 @@ import (
 // Core built-in platform step types.
 const (
 	StepLLMGenerate         = "llm.generate"
+	StepAIAgentRun          = "ai.agent_run"
 	StepFilter              = "filter"
 	StepSwitch              = "switch"
 	StepForEach             = "for_each"

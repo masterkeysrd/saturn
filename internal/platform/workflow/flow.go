@@ -24,26 +24,76 @@ func ValidateFlowID(idStr string) error {
 	return FlowIDGenerator.Validate(idStr)
 }
 
-// ModelConfig configures an LLM agent or inline provider/model for AI steps.
-type ModelConfig struct {
-	AgentID     *string  `json:"agent_id,omitempty"`
-	ProviderID  *string  `json:"provider_id,omitempty"`
-	ModelName   *string  `json:"model_name,omitempty"`
-	Temperature *float64 `json:"temperature,omitempty"`
+// ThinkingConfig configures extended reasoning parameters for workflow AI steps.
+type ThinkingConfig struct {
+	Enabled      bool    `json:"enabled"`
+	Effort       *string `json:"effort,omitempty"`
+	BudgetTokens *int32  `json:"budget_tokens,omitempty"`
 }
 
-// Validate checks that inline ModelConfig entries specifying a provider also specify model_name.
+// Validate checks ThinkingConfig bounds.
+func (t *ThinkingConfig) Validate() error {
+	if t == nil {
+		return nil
+	}
+	if t.Effort != nil && strings.TrimSpace(*t.Effort) != "" {
+		switch strings.TrimSpace(*t.Effort) {
+		case "low", "medium", "high":
+		default:
+			return errors.E(errors.Invalid, "thinking.effort must be one of 'low', 'medium', 'high'")
+		}
+	}
+	if t.BudgetTokens != nil && *t.BudgetTokens < 0 {
+		return errors.E(errors.Invalid, "thinking.budget_tokens must be >= 0")
+	}
+	return nil
+}
+
+// GenerationConfig configures sampling and thinking parameters for workflow AI steps.
+type GenerationConfig struct {
+	Temperature *float64        `json:"temperature,omitempty"`
+	MaxTokens   *int32          `json:"max_tokens,omitempty"`
+	TopP        *float64        `json:"top_p,omitempty"`
+	Thinking    *ThinkingConfig `json:"thinking,omitempty"`
+}
+
+// Validate checks GenerationConfig bounds.
+func (g *GenerationConfig) Validate() error {
+	if g == nil {
+		return nil
+	}
+	if g.Temperature != nil && (*g.Temperature < 0 || *g.Temperature > 2) {
+		return errors.E(errors.Invalid, "generation.temperature must be between 0 and 2")
+	}
+	if g.MaxTokens != nil && *g.MaxTokens <= 0 {
+		return errors.E(errors.Invalid, "generation.max_tokens must be > 0")
+	}
+	if g.TopP != nil && (*g.TopP < 0 || *g.TopP > 1) {
+		return errors.E(errors.Invalid, "generation.top_p must be between 0 and 1")
+	}
+	return g.Thinking.Validate()
+}
+
+// ModelConfig configures the workspace AI model, semantic role, and generation overrides for AI steps.
+type ModelConfig struct {
+	ModelID    *string           `json:"model_id,omitempty"`
+	Role       *string           `json:"role,omitempty"`
+	Generation *GenerationConfig `json:"generation,omitempty"`
+}
+
+// Validate checks ModelConfig semantic roles and generation parameter bounds.
 func (m *ModelConfig) Validate() error {
 	if m == nil {
 		return nil
 	}
-	hasAgent := m.AgentID != nil && strings.TrimSpace(*m.AgentID) != ""
-	hasProvider := m.ProviderID != nil && strings.TrimSpace(*m.ProviderID) != ""
-	hasModel := m.ModelName != nil && strings.TrimSpace(*m.ModelName) != ""
-	if !hasAgent && hasProvider && !hasModel {
-		return errors.E(errors.Invalid, "model_name is required when provider_id is specified without agent_id")
+	if m.Role != nil && strings.TrimSpace(*m.Role) != "" {
+		switch strings.TrimSpace(*m.Role) {
+		case "default", "fast", "reasoning":
+		default:
+			return errors.E(errors.Invalid, "model role must be one of 'default', 'fast', 'reasoning'")
+		}
 	}
-	return nil
+	return m.Generation.Validate()
 }
 
 // FlowConfig stores extensible execution settings on a Flow.

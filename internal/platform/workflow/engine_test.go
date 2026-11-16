@@ -382,7 +382,7 @@ func TestEngine_LLMGenerateAndDocuments(t *testing.T) {
 				return &LLMResponse{
 					Text:       "```json\n{\"vendor\":\"Starbucks\",\"amount_cents\":550}\n```",
 					TokensUsed: 120,
-					AgentRunID: "agr_1",
+					AIRunID:    "air_1",
 					ModelName:  "gemini-2.5-flash",
 				}, nil
 			},
@@ -398,13 +398,16 @@ func TestEngine_LLMGenerateAndDocuments(t *testing.T) {
 			Name:    "LLM Flow",
 			Version: 1,
 			Config: FlowConfig{
-				DefaultModel: &ModelConfig{ModelName: new("gemini-2.5-flash")},
+				DefaultModel: &ModelConfig{Role: new("fast")},
 			},
 			Steps: []StepNode{
 				{
-					ID:    "extract",
-					Type:  StepLLMGenerate,
-					Model: &ModelConfig{ModelName: new("gemini-2.5-pro"), Temperature: new(0.2)},
+					ID:   "extract",
+					Type: StepLLMGenerate,
+					Model: &ModelConfig{
+						ModelID:    new("mdl_pro"),
+						Generation: &GenerationConfig{Temperature: new(0.2)},
+					},
 					Inputs: map[string]any{
 						"system": "Extract receipt",
 						"prompt": "Analyze {{ input.text }}",
@@ -433,8 +436,8 @@ func TestEngine_LLMGenerateAndDocuments(t *testing.T) {
 		if run.Status != RunCompleted {
 			t.Fatalf("expected completed, got %s", run.Status)
 		}
-		if captured.Model == nil || *captured.Model.ModelName != "gemini-2.5-pro" {
-			t.Fatalf("expected step model override gemini-2.5-pro, got %+v", captured.Model)
+		if captured.Model == nil || captured.Model.ModelID == nil || *captured.Model.ModelID != "mdl_pro" {
+			t.Fatalf("expected step model override mdl_pro, got %+v", captured.Model)
 		}
 		if len(captured.Documents) != 1 || string(captured.Documents[0].Data) != "Starbucks $5.50" {
 			t.Fatalf("expected resolved mail:// document, got %+v", captured.Documents)
@@ -442,11 +445,73 @@ func TestEngine_LLMGenerateAndDocuments(t *testing.T) {
 		if run.Metadata["tokens_used"] != 120 {
 			t.Fatalf("expected 120 tokens_used, got %#v", run.Metadata["tokens_used"])
 		}
-		if run.StepRuns[0].AgentRunID == nil || *run.StepRuns[0].AgentRunID != "agr_1" {
-			t.Fatalf("expected AgentRunID agr_1, got %v", run.StepRuns[0].AgentRunID)
+		if run.StepRuns[0].AIRunID == nil || *run.StepRuns[0].AIRunID != "air_1" {
+			t.Fatalf("expected AIRunID air_1, got %v", run.StepRuns[0].AIRunID)
 		}
 		if run.Output["vendor"] != "Starbucks" {
 			t.Fatalf("expected parsed vendor Starbucks, got %#v", run.Output)
+		}
+	})
+
+	t.Run("ai.agent_run executes agent step with structured output", func(t *testing.T) {
+		var captured AgentRunRequest
+		agentMock := &AgentExecutorMock{
+			ExecuteAgentFunc: func(_ context.Context, req AgentRunRequest) (*LLMResponse, error) {
+				captured = req
+				return &LLMResponse{
+					ParsedJSON: map[string]any{"summary": "All good"},
+					TokensUsed: 80,
+					AIRunID:    "air_agent_1",
+					ModelName:  "gemini-2.5-flash",
+				}, nil
+			},
+		}
+		reg := NewRegistry()
+		engine, err := NewEngine(Dependencies{Registry: reg, CEL: celEval, AgentExecutor: agentMock})
+		if err != nil {
+			t.Fatalf("NewEngine failed: %v", err)
+		}
+
+		flow := &Flow{
+			ID:      "flw_agt",
+			Name:    "Agent Flow",
+			Version: 1,
+			Steps: []StepNode{
+				{
+					ID:   "run_bot",
+					Type: StepAIAgentRun,
+					Inputs: map[string]any{
+						"agent_id": "system.saturn.assistant",
+						"prompt":   "Summarize {{ input.topic }}",
+						"output_schema": map[string]any{
+							"type": "object",
+						},
+					},
+				},
+				{
+					ID:     "out",
+					Type:   StepOutput,
+					Inputs: map[string]any{"value": "{{ steps.run_bot }}"},
+				},
+			},
+		}
+
+		run, err := engine.Execute(t.Context(), ExecuteOptions{
+			Flow:  flow,
+			Space: space,
+			Input: map[string]any{"topic": "budget"},
+		})
+		if err != nil {
+			t.Fatalf("Execute failed: %v", err)
+		}
+		if captured.AgentID != "system.saturn.assistant" || captured.Prompt != "Summarize budget" {
+			t.Fatalf("unexpected AgentRunRequest: %+v", captured)
+		}
+		if run.StepRuns[0].AIRunID == nil || *run.StepRuns[0].AIRunID != "air_agent_1" {
+			t.Fatalf("expected AIRunID air_agent_1, got %v", run.StepRuns[0].AIRunID)
+		}
+		if run.Output["summary"] != "All good" {
+			t.Fatalf("expected structured summary output, got %#v", run.Output)
 		}
 	})
 

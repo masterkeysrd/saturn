@@ -33,11 +33,19 @@ func genBudgetID(t *testing.T) finance.BudgetID {
 }
 
 type stubAgentExecutor struct {
-	fn func(ctx context.Context, req workflow.LLMRequest) (*workflow.LLMResponse, error)
+	fn      func(ctx context.Context, req workflow.LLMRequest) (*workflow.LLMResponse, error)
+	agentFn func(ctx context.Context, req workflow.AgentRunRequest) (*workflow.LLMResponse, error)
 }
 
 func (s *stubAgentExecutor) Execute(ctx context.Context, req workflow.LLMRequest) (*workflow.LLMResponse, error) {
 	return s.fn(ctx, req)
+}
+
+func (s *stubAgentExecutor) ExecuteAgent(ctx context.Context, req workflow.AgentRunRequest) (*workflow.LLMResponse, error) {
+	if s.agentFn != nil {
+		return s.agentFn(ctx, req)
+	}
+	return &workflow.LLMResponse{}, nil
 }
 
 func newWorkflowTestEngine(t *testing.T, deps WorkflowDependencies, agentExec workflow.AgentExecutor) (*workflow.Engine, *workflow.Registry) {
@@ -1141,4 +1149,79 @@ func TestFinanceSystemFlows(t *testing.T) {
 			t.Errorf("unexpected output: %+v", run.Output)
 		}
 	})
+}
+
+func TestFinanceSystemBlueprints_RestoredRules(t *testing.T) {
+	reg := workflow.NewRegistry()
+	RegisterWorkflows(reg, WorkflowDependencies{})
+
+	tests := []struct {
+		name         string
+		systemKey    string
+		stepID       string
+		wantSnippets []string
+		denyLegacy   []string
+	}{
+		{
+			name:         "inbox ingestion classify includes PAID/0-balance rule without Hyperion persona",
+			systemKey:    SystemFlowInboxIngestion,
+			stepID:       "classify",
+			wantSnippets: []string{"PAID", "CONFIRMED", "Banco BHD"},
+			denyLegacy:   []string{"Hyperion", "Janus"},
+		},
+		{
+			name:         "inbox ingestion extract_tx includes transfer_leg, currency, and borrowing rules",
+			systemKey:    SystemFlowInboxIngestion,
+			stepID:       "extract_tx",
+			wantSnippets: []string{"transfer_leg", "SOURCE", "DESTINATION", "RD$ -> DOP", "BORROWED"},
+			denyLegacy:   []string{"Hyperion", "Janus"},
+		},
+		{
+			name:         "inbox ingestion dedup_check enforces duplicate_transaction_id",
+			systemKey:    SystemFlowInboxIngestion,
+			stepID:       "dedup_check",
+			wantSnippets: []string{"duplicate_transaction_id", "txn_..."},
+			denyLegacy:   []string{"Hyperion", "Janus"},
+		},
+		{
+			name:         "statement ingestion parse_sections includes multi-currency, Saldo anterior, and credit card sign rules",
+			systemKey:    SystemFlowStatementIngestion,
+			stepID:       "parse_sections",
+			wantSnippets: []string{"CRITICAL CREDIT CARD SIGN RULE", "Saldo anterior", "infer it from statement_date"},
+			denyLegacy:   []string{"Hyperion", "Janus"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp, ok := reg.GetSystemFlow(tt.systemKey)
+			if !ok {
+				t.Fatalf("missing system flow %q", tt.systemKey)
+			}
+			flow, _ := bp.Build("spc_test")
+
+			var target *workflow.StepNode
+			for i := range flow.Steps {
+				if flow.Steps[i].ID == tt.stepID {
+					target = &flow.Steps[i]
+					break
+				}
+			}
+			if target == nil {
+				t.Fatalf("step %q not found in %s", tt.stepID, tt.systemKey)
+			}
+
+			sys, _ := target.Inputs["system"].(string)
+			for _, snippet := range tt.wantSnippets {
+				if !strings.Contains(sys, snippet) {
+					t.Errorf("step %q system prompt missing %q", tt.stepID, snippet)
+				}
+			}
+			for _, legacy := range tt.denyLegacy {
+				if strings.Contains(sys, legacy) {
+					t.Errorf("step %q system prompt still references legacy agent name %q", tt.stepID, legacy)
+				}
+			}
+		})
+	}
 }

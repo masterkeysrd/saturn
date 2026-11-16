@@ -846,7 +846,7 @@ func (e *Engine) makeActionOrBuiltinNode(
 		}
 
 		var out map[string]any
-		var agentRunID string
+		var aiRunID string
 		var tokensUsed int
 		var modelName string
 
@@ -858,7 +858,10 @@ func (e *Engine) makeActionOrBuiltinNode(
 			out, err = executeDocumentExtractText(ctx, state.Space.ID, resolvedInputs, artifacts)
 
 		case StepLLMGenerate:
-			out, agentRunID, tokensUsed, modelName, err = e.executeLLMGenerate(ctx, flow, step, state, stepRunID, resolvedInputs, artifacts)
+			out, aiRunID, tokensUsed, modelName, err = e.executeLLMGenerate(ctx, flow, step, state, stepRunID, resolvedInputs, artifacts)
+
+		case StepAIAgentRun:
+			out, aiRunID, tokensUsed, modelName, err = e.executeAIAgentRun(ctx, flow, step, state, stepRunID, resolvedInputs)
 
 		default:
 			desc, handler, ok := e.registry.GetStep(step.Type)
@@ -890,13 +893,13 @@ func (e *Engine) makeActionOrBuiltinNode(
 		}
 
 		if err != nil {
-			return e.handleStepFailure(ctx, state, step, execKey, start, srcMeta, agentRunID, tokensUsed, err, collector)
+			return e.handleStepFailure(ctx, state, step, execKey, start, srcMeta, aiRunID, tokensUsed, err, collector)
 		}
 
 		if out == nil {
 			out = map[string]any{}
 		}
-		if err := recordStepRunWithID(ctx, collector, stepRunID, step, execKey, StepCompleted, out, start, srcMeta, tokensUsed, modelName, agentRunID); err != nil {
+		if err := recordStepRunWithID(ctx, collector, stepRunID, step, execKey, StepCompleted, out, start, srcMeta, tokensUsed, modelName, aiRunID); err != nil {
 			return nil, err
 		}
 
@@ -929,7 +932,7 @@ func (e *Engine) handleStepFailure(
 	execKey string,
 	start time.Time,
 	srcMeta map[string]any,
-	agentRunID string,
+	aiRunID string,
 	tokensUsed int,
 	stepErr error,
 	collector *stepRunCollector,
@@ -948,8 +951,8 @@ func (e *Engine) handleStepFailure(
 		StartTime:    start,
 		EndTime:      new(end),
 	}
-	if agentRunID != "" {
-		sr.AgentRunID = new(agentRunID)
+	if aiRunID != "" {
+		sr.AIRunID = new(aiRunID)
 	}
 
 	if step.EffectiveOnError() == OnErrorContinue {
@@ -1015,30 +1018,99 @@ func (e *Engine) executeLLMGenerate(
 		Documents:         docs,
 	})
 	if err != nil {
-		var agentRunID string
+		var aiRunID string
 		var tokens int
 		var modelName string
 		if resp != nil {
-			agentRunID = resp.AgentRunID
+			aiRunID = resp.AIRunID
 			tokens = resp.TokensUsed
 			modelName = resp.ModelName
 		}
-		return nil, agentRunID, tokens, modelName, err
+		return nil, aiRunID, tokens, modelName, err
 	}
 
 	if outputSchema != nil {
 		if resp.ParsedJSON != nil {
-			return resp.ParsedJSON, resp.AgentRunID, resp.TokensUsed, resp.ModelName, nil
+			return resp.ParsedJSON, resp.AIRunID, resp.TokensUsed, resp.ModelName, nil
 		}
 		var parsed map[string]any
 		cleanText := StripMarkdownCodeFence(resp.Text)
 		if err := json.Unmarshal([]byte(cleanText), &parsed); err != nil {
-			return nil, resp.AgentRunID, resp.TokensUsed, resp.ModelName, fmt.Errorf("parse llm structured output: %w", err)
+			return nil, resp.AIRunID, resp.TokensUsed, resp.ModelName, fmt.Errorf("parse llm structured output: %w", err)
 		}
-		return parsed, resp.AgentRunID, resp.TokensUsed, resp.ModelName, nil
+		return parsed, resp.AIRunID, resp.TokensUsed, resp.ModelName, nil
 	}
 
-	return map[string]any{"text": resp.Text}, resp.AgentRunID, resp.TokensUsed, resp.ModelName, nil
+	return map[string]any{"text": resp.Text}, resp.AIRunID, resp.TokensUsed, resp.ModelName, nil
+}
+
+func (e *Engine) executeAIAgentRun(
+	ctx context.Context,
+	flow *Flow,
+	step StepNode,
+	state *FlowState,
+	stepRunID string,
+	inputs map[string]any,
+) (map[string]any, string, int, string, error) {
+	if e.agentExec == nil {
+		return nil, "", 0, "", fmt.Errorf("agent executor is not configured for ai.agent_run")
+	}
+
+	agentID := stringifyValue(inputs["agent_id"])
+	if strings.TrimSpace(agentID) == "" {
+		return nil, "", 0, "", fmt.Errorf("ai.agent_run step %q requires non-empty agent_id", step.ID)
+	}
+	prompt := stringifyValue(inputs["prompt"])
+
+	var inputMap map[string]any
+	if rawIn, ok := inputs["input"].(map[string]any); ok {
+		inputMap = rawIn
+	}
+	if strings.TrimSpace(prompt) == "" && len(inputMap) == 0 {
+		return nil, "", 0, "", fmt.Errorf("ai.agent_run step %q requires prompt or input", step.ID)
+	}
+
+	var outputSchema map[string]any
+	if rawSchema, ok := inputs["output_schema"].(map[string]any); ok {
+		outputSchema = rawSchema
+	}
+
+	modelCfg := resolveEffectiveModel(step.Model, flow.Config.DefaultModel)
+	resp, err := e.agentExec.ExecuteAgent(ctx, AgentRunRequest{
+		SpaceID:      state.Space.ID,
+		FlowRunID:    state.Run.ID,
+		StepRunID:    stepRunID,
+		AgentID:      agentID,
+		Model:        modelCfg,
+		Prompt:       prompt,
+		Input:        inputMap,
+		OutputSchema: outputSchema,
+	})
+	if err != nil {
+		var aiRunID string
+		var tokens int
+		var modelName string
+		if resp != nil {
+			aiRunID = resp.AIRunID
+			tokens = resp.TokensUsed
+			modelName = resp.ModelName
+		}
+		return nil, aiRunID, tokens, modelName, err
+	}
+
+	if outputSchema != nil {
+		if resp.ParsedJSON != nil {
+			return resp.ParsedJSON, resp.AIRunID, resp.TokensUsed, resp.ModelName, nil
+		}
+		var parsed map[string]any
+		cleanText := StripMarkdownCodeFence(resp.Text)
+		if err := json.Unmarshal([]byte(cleanText), &parsed); err != nil {
+			return nil, resp.AIRunID, resp.TokensUsed, resp.ModelName, fmt.Errorf("parse agent structured output: %w", err)
+		}
+		return parsed, resp.AIRunID, resp.TokensUsed, resp.ModelName, nil
+	}
+
+	return map[string]any{"text": resp.Text}, resp.AIRunID, resp.TokensUsed, resp.ModelName, nil
 }
 
 func resolveEffectiveModel(stepModel, flowDefault *ModelConfig) *ModelConfig {
@@ -1233,9 +1305,9 @@ func recordStepRun(
 	srcMeta map[string]any,
 	tokensUsed int,
 	modelName string,
-	agentRunID string,
+	aiRunID string,
 ) error {
-	return recordStepRunWithID(ctx, collector, "", step, execKey, status, out, start, srcMeta, tokensUsed, modelName, agentRunID)
+	return recordStepRunWithID(ctx, collector, "", step, execKey, status, out, start, srcMeta, tokensUsed, modelName, aiRunID)
 }
 
 func recordStepRunWithID(
@@ -1250,7 +1322,7 @@ func recordStepRunWithID(
 	srcMeta map[string]any,
 	tokensUsed int,
 	modelName string,
-	agentRunID string,
+	aiRunID string,
 ) error {
 	end := time.Now().UTC()
 	sr := StepRun{
@@ -1264,8 +1336,8 @@ func recordStepRunWithID(
 		StartTime:    start,
 		EndTime:      new(end),
 	}
-	if agentRunID != "" {
-		sr.AgentRunID = new(agentRunID)
+	if aiRunID != "" {
+		sr.AIRunID = new(aiRunID)
 	}
 	_, err := collector.Record(ctx, sr)
 	return err

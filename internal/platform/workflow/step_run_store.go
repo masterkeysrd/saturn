@@ -32,7 +32,7 @@ type stepRunRow struct {
 	Output       []byte         `db:"output"`
 	Error        []byte         `db:"error"`
 	Metadata     []byte         `db:"metadata"`
-	AgentRunID   sql.NullString `db:"agent_run_id"`
+	AIRunID      sql.NullString `db:"ai_run_id"`
 	StartTime    time.Time      `db:"start_time"`
 	EndTime      sql.NullTime   `db:"end_time"`
 	CreateTime   time.Time      `db:"create_time"`
@@ -52,8 +52,8 @@ func (r *stepRunRow) toDomain() (StepRun, error) {
 		CreateTime:   r.CreateTime,
 		UpdateTime:   r.UpdateTime,
 	}
-	if r.AgentRunID.Valid {
-		sr.AgentRunID = new(r.AgentRunID.String)
+	if r.AIRunID.Valid {
+		sr.AIRunID = new(r.AIRunID.String)
 	}
 	if r.EndTime.Valid {
 		sr.EndTime = new(r.EndTime.Time)
@@ -112,7 +112,7 @@ func (s *PostgresStepRunStore) Upsert(ctx context.Context, sr *StepRun) error {
 	const query = `
 		INSERT INTO platform.step_runs (
 			id, flow_run_id, space_id, step_id, step_type, execution_key,
-			status, output, error, metadata, agent_run_id, start_time, end_time,
+			status, output, error, metadata, ai_run_id, start_time, end_time,
 			create_time, update_time
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
 		ON CONFLICT (flow_run_id, execution_key) DO UPDATE SET
@@ -120,7 +120,7 @@ func (s *PostgresStepRunStore) Upsert(ctx context.Context, sr *StepRun) error {
 			output = EXCLUDED.output,
 			error = EXCLUDED.error,
 			metadata = EXCLUDED.metadata,
-			agent_run_id = EXCLUDED.agent_run_id,
+			ai_run_id = EXCLUDED.ai_run_id,
 			end_time = EXCLUDED.end_time,
 			update_time = NOW()
 		RETURNING id, create_time, update_time
@@ -145,7 +145,7 @@ func (s *PostgresStepRunStore) Upsert(ctx context.Context, sr *StepRun) error {
 		nullableBytes(outBytes),
 		nullableBytes(errBytes),
 		metaBytes,
-		strPtrToNullStr(sr.AgentRunID),
+		strPtrToNullStr(sr.AIRunID),
 		sr.StartTime,
 		timePtrToNullTime(sr.EndTime),
 	); err != nil {
@@ -164,7 +164,7 @@ func (s *PostgresStepRunStore) ListByFlowRun(ctx context.Context, spaceID string
 
 	const query = `
 		SELECT id, flow_run_id, space_id, step_id, step_type, execution_key,
-		       status, output, error, metadata, agent_run_id, start_time, end_time,
+		       status, output, error, metadata, ai_run_id, start_time, end_time,
 		       create_time, update_time
 		FROM platform.step_runs
 		WHERE space_id = $1 AND flow_run_id = $2

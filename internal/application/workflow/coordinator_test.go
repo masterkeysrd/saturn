@@ -9,7 +9,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
-	"github.com/masterkeysrd/saturn/internal/platform/agent"
+	"github.com/masterkeysrd/saturn/internal/platform/ai"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
@@ -654,8 +654,8 @@ func TestCoordinator_ExecutionAndTriggers(t *testing.T) {
 }
 
 func TestCoordinator_GenerateFlow(t *testing.T) {
-	if generatedFlowResponseSchema == "" {
-		t.Fatal("expected generatedFlowResponseSchema to be non-empty")
+	if len(generatedFlowOutputSchema) == 0 {
+		t.Fatal("expected generatedFlowOutputSchema to be non-empty")
 	}
 
 	t.Run("AutoRepairsInvalidDraftAndValidates", func(t *testing.T) {
@@ -667,10 +667,10 @@ func TestCoordinator_GenerateFlow(t *testing.T) {
 			CatalogFunc:      func() workflow.Catalog { return eng.Registry().Catalog() },
 			ValidateFlowFunc: eng.ValidateFlow,
 		}
-		promptExec := &AgentPromptRunnerMock{
-			ExecutePromptFunc: func(_ context.Context, req agent.ExecutePromptRequest) (*agent.ExecutePromptResult, error) {
+		promptExec := &AIRunnerMock{
+			GenerateFunc: func(_ context.Context, req ai.GenerateRequest) (*ai.Run, error) {
 				attempts++
-				if !strings.Contains(req.SystemInstruction, "Catalog:") {
+				if req.SystemInstruction == nil || !strings.Contains(*req.SystemInstruction, "Catalog:") {
 					t.Errorf("expected Catalog in system prompt")
 				}
 				if attempts == 1 {
@@ -681,7 +681,7 @@ func TestCoordinator_GenerateFlow(t *testing.T) {
 							{ID: "s1", Type: workflow.StepTransform, Inputs: map[string]any{"x": "{{ steps.missing.val }}"}},
 						},
 					})
-					return &agent.ExecutePromptResult{Text: string(bad)}, nil
+					return &ai.Run{Output: &ai.RunOutput{Text: new(string(bad))}}, nil
 				}
 				good, _ := json.Marshal(generatedFlowDraft{
 					Name:        "Weekly Digest",
@@ -693,13 +693,13 @@ func TestCoordinator_GenerateFlow(t *testing.T) {
 						workflow.OutputStep(workflow.OutputStepConfig{ID: "out", Value: map[string]any{"space": "{{ space.name }}"}}),
 					},
 				})
-				return &agent.ExecutePromptResult{Text: string(good)}, nil
+				return &ai.Run{Output: &ai.RunOutput{Text: new(string(good))}}, nil
 			},
 		}
 
 		coord := NewCoordinator(Dependencies{
-			Workflow:     ws,
-			PromptRunner: promptExec,
+			Workflow: ws,
+			AIRunner: promptExec,
 		})
 
 		flow, err := coord.GenerateFlow(ctx, &GenerateFlowRequest{
@@ -720,9 +720,9 @@ func TestCoordinator_GenerateFlow(t *testing.T) {
 				CatalogFunc:      func() workflow.Catalog { return eng.Registry().Catalog() },
 				ValidateFlowFunc: eng.ValidateFlow,
 			},
-			PromptRunner: &AgentPromptRunnerMock{
-				ExecutePromptFunc: func(_ context.Context, _ agent.ExecutePromptRequest) (*agent.ExecutePromptResult, error) {
-					return &agent.ExecutePromptResult{Text: `{"name":"Bad","steps":[{"id":"bad-id","type":"transform"}]}`}, nil
+			AIRunner: &AIRunnerMock{
+				GenerateFunc: func(_ context.Context, _ ai.GenerateRequest) (*ai.Run, error) {
+					return &ai.Run{Output: &ai.RunOutput{Text: new(`{"name":"Bad","steps":[{"id":"bad-id","type":"transform"}]}`)}}, nil
 				},
 			},
 		})

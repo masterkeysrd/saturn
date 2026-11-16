@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/masterkeysrd/saturn/internal/platform/agent"
+	"github.com/masterkeysrd/saturn/internal/platform/ai"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
 )
@@ -70,14 +70,7 @@ type generatedFlowSchema struct {
 	Steps       []generatedStepSchema    `json:"steps"`
 }
 
-var generatedFlowResponseSchema = func() string {
-	schema := workflow.SchemaFor[generatedFlowSchema]()
-	data, err := json.Marshal(schema, json.Deterministic(true))
-	if err != nil {
-		return ""
-	}
-	return string(data)
-}()
+var generatedFlowOutputSchema = workflow.SchemaFor[generatedFlowSchema]()
 
 // GenerateFlow translates a natural-language prompt into a validated, unsaved Flow draft using the Catalog.
 func (c *coordinator) GenerateFlow(ctx context.Context, req *GenerateFlowRequest) (*workflow.Flow, error) {
@@ -99,6 +92,7 @@ func (c *coordinator) GenerateFlow(ctx context.Context, req *GenerateFlowRequest
 
 	systemPrompt := buildGenerateSystemPrompt(string(catalogBytes))
 	userPrompt := strings.TrimSpace(req.Prompt)
+	modelID, role, genCfg := convertWorkflowModelConfig(req.Model)
 
 	var lastValidationErr error
 	for attempt := range 2 {
@@ -107,25 +101,32 @@ func (c *coordinator) GenerateFlow(ctx context.Context, req *GenerateFlowRequest
 			prompt = fmt.Sprintf("%s\n\nPrevious draft failed validation with error: %v\nFix the JSON definition so all CEL expressions, step IDs, sources, and schemas are valid.", userPrompt, lastValidationErr)
 		}
 
-		pReq := agent.ExecutePromptRequest{
+		run, err := c.aiRunner.Generate(ctx, ai.GenerateRequest{
 			SpaceID:           spaceID,
-			SystemInstruction: systemPrompt,
+			Source:            ai.RunSourceWorkflow,
+			SystemInstruction: new(systemPrompt),
 			Prompt:            prompt,
-			ResponseSchema:    generatedFlowResponseSchema,
-		}
-		if req.Model != nil {
-			pReq.AgentID = req.Model.AgentID
-			pReq.ProviderID = req.Model.ProviderID
-			pReq.ModelName = req.Model.ModelName
-			pReq.Temperature = req.Model.Temperature
-		}
-
-		res, err := c.promptRunner.ExecutePrompt(ctx, pReq)
+			ModelID:           modelID,
+			Role:              role,
+			Generation:        genCfg,
+			OutputSchema:      generatedFlowOutputSchema,
+		})
 		if err != nil {
 			return nil, errors.E(op, err)
 		}
 
-		draft, err := parseGeneratedFlowDraft(res.Text)
+		var rawText string
+		if run != nil && run.Output != nil {
+			if run.Output.Text != nil {
+				rawText = *run.Output.Text
+			} else if len(run.Output.Data) > 0 {
+				if dataBytes, mErr := json.Marshal(run.Output.Data); mErr == nil {
+					rawText = string(dataBytes)
+				}
+			}
+		}
+
+		draft, err := parseGeneratedFlowDraft(rawText)
 		if err != nil {
 			lastValidationErr = err
 			continue
@@ -166,7 +167,7 @@ Rules:
 1. Only use registered trigger topics, step types, data loaders, and CEL helpers from the catalog below.
 2. Each StepNode id must match [a-zA-Z_][a-zA-Z0-9_]* and be unique across the flow.
 3. Use "{{ ... }}" CEL templates for dynamic bindings. Only reference upstream steps.<id> and step-local sources.<alias> declared in that step's sources map.
-4. For llm.generate steps returning structured data, always provide standard JSON Schema in inputs.output_schema (never use custom x-saturn-* extensions).
+4. For llm.generate and ai.agent_run steps returning structured data, always provide standard JSON Schema in inputs.output_schema (never use custom x-saturn-* extensions).
 5. Trigger types are: "event" (requires config.topic), "schedule" (requires config.cron), "webhook", or "manual".
 
 Catalog:

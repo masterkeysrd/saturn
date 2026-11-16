@@ -187,6 +187,29 @@ func TestFlowAndTriggerValidation(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "Invalid model role",
+			flow: &Flow{
+				Name:   "Bad Model",
+				Config: FlowConfig{DefaultModel: &ModelConfig{Role: new("turbo")}},
+				Steps:  []StepNode{{ID: "s1", Type: StepTransform}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid model role and generation config",
+			flow: &Flow{
+				Name: "Good Model",
+				Config: FlowConfig{
+					DefaultModel: &ModelConfig{
+						Role:       new("reasoning"),
+						Generation: &GenerationConfig{Temperature: new(0.3), Thinking: &ThinkingConfig{Enabled: true, Effort: new("medium")}},
+					},
+				},
+				Steps: []StepNode{{ID: "s1", Type: StepTransform}},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tc := range tests {

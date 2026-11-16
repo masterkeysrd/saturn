@@ -13,7 +13,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
-	"github.com/masterkeysrd/saturn/internal/platform/agent"
+	"github.com/masterkeysrd/saturn/internal/platform/ai"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
@@ -72,10 +72,11 @@ type ScheduleSyncer interface {
 	PauseSchedule(ctx context.Context, scheduleID string) error
 }
 
-// AgentPromptRunner abstracts platform/agent.Service for workflow LLM execution and Prompt-to-Flow generation.
+// AIRunner abstracts platform/ai.Runtime for workflow LLM generation, agent steps, and Prompt-to-Flow generation.
 // @Mock
-type AgentPromptRunner interface {
-	ExecutePrompt(ctx context.Context, req agent.ExecutePromptRequest) (*agent.ExecutePromptResult, error)
+type AIRunner interface {
+	Generate(ctx context.Context, req ai.GenerateRequest) (*ai.Run, error)
+	RunAgent(ctx context.Context, req ai.RunAgentRequest) (*ai.Run, error)
 }
 
 // UpdateFlowRequest encapsulates partial or full updates to a workflow definition.
@@ -175,32 +176,32 @@ type Coordinator interface {
 
 // Dependencies groups cross-platform collaborators required to construct a workflow Coordinator.
 type Dependencies struct {
-	Workflow     WorkflowService
-	SpaceLoader  SpaceContextLoader
-	Dispatcher   RunDispatcher
-	Schedules    ScheduleSyncer
-	PromptRunner AgentPromptRunner
-	Transactor   db.Transactor
+	Workflow    WorkflowService
+	SpaceLoader SpaceContextLoader
+	Dispatcher  RunDispatcher
+	Schedules   ScheduleSyncer
+	AIRunner    AIRunner
+	Transactor  db.Transactor
 }
 
 type coordinator struct {
-	workflow     WorkflowService
-	spaceLoader  SpaceContextLoader
-	dispatcher   RunDispatcher
-	schedules    ScheduleSyncer
-	promptRunner AgentPromptRunner
-	txr          db.Transactor
+	workflow    WorkflowService
+	spaceLoader SpaceContextLoader
+	dispatcher  RunDispatcher
+	schedules   ScheduleSyncer
+	aiRunner    AIRunner
+	txr         db.Transactor
 }
 
 // NewCoordinator constructs a new workflow application Coordinator.
 func NewCoordinator(deps Dependencies) Coordinator {
 	return &coordinator{
-		workflow:     deps.Workflow,
-		spaceLoader:  deps.SpaceLoader,
-		dispatcher:   deps.Dispatcher,
-		schedules:    deps.Schedules,
-		promptRunner: deps.PromptRunner,
-		txr:          deps.Transactor,
+		workflow:    deps.Workflow,
+		spaceLoader: deps.SpaceLoader,
+		dispatcher:  deps.Dispatcher,
+		schedules:   deps.Schedules,
+		aiRunner:    deps.AIRunner,
+		txr:         deps.Transactor,
 	}
 }
 
