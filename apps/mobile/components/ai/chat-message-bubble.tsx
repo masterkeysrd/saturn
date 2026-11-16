@@ -1,11 +1,6 @@
 import { useState } from "react"
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native"
+import { Share, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import * as Clipboard from "expo-clipboard"
 import {
   describeToolCall,
   formatToolDuration,
@@ -20,17 +15,24 @@ import {
   Brain,
   Building2,
   Calendar,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Copy,
+  FileText,
   GitBranch,
   Mail,
   Plug,
+  Share2,
   Wallet,
   Wrench,
   XCircle,
 } from "lucide-react-native"
 import { theme } from "@/lib/theme"
+import { haptics } from "@/lib/haptics"
+import { MarkdownText } from "./markdown-text"
+import { StreamingDots } from "./streaming-dots"
 
 export interface ToolResultEntry {
   result?: Record<string, unknown>
@@ -94,11 +96,14 @@ export function ChatMessageBubble({
   toolResultsByCallId,
 }: ChatMessageBubbleProps) {
   const [thinkingOpen, setThinkingOpen] = useState(false)
+  const [groupOpen, setGroupOpen] = useState(false)
   const [expandedToolIds, setExpandedToolIds] = useState<
     Record<string, boolean>
   >({})
+  const [copied, setCopied] = useState(false)
 
   const toggleTool = (id: string) => {
+    haptics.selection()
     setExpandedToolIds((prev) => ({ ...prev, [id]: !prev[id] }))
   }
 
@@ -110,13 +115,24 @@ export function ChatMessageBubble({
       }) || "Thinking…"
     const trimmedThinking = streamingDraft.thinking.trim()
     const trimmedText = streamingDraft.text.trimStart()
+    const hasText = trimmedText.trim().length > 0
+    const runningTools = streamingDraft.toolCalls.filter(
+      (tc) => tc.status === "running"
+    )
+    const allCompleted =
+      streamingDraft.toolCalls.length > 1 &&
+      runningTools.length === 0 &&
+      hasText
 
     return (
-      <View style={[styles.bubble, styles.assistantBubble]}>
+      <View style={styles.assistantTurn}>
         {trimmedThinking ? (
           <TouchableOpacity
             style={styles.pill}
-            onPress={() => setThinkingOpen(!thinkingOpen)}
+            onPress={() => {
+              haptics.selection()
+              setThinkingOpen(!thinkingOpen)
+            }}
           >
             <Brain size={12} color={theme.colors.primary} />
             <Text style={styles.pillText}>
@@ -136,69 +152,77 @@ export function ChatMessageBubble({
 
         {streamingDraft.toolCalls.length > 0 && (
           <View style={styles.toolsWrap}>
-            {streamingDraft.toolCalls.map((tc) => {
-              const desc = describeToolCall({
-                toolName: tc.toolName,
-                arguments: tc.arguments,
-                result: tc.result,
-              })
-              const durationText = formatToolDuration(tc.durationMs)
-              const label =
-                tc.status === "running"
-                  ? desc.activeLabel
-                  : tc.status === "completed"
-                    ? desc.completedLabel
-                    : desc.label
-              return (
-                <View
-                  key={tc.toolCallId}
-                  style={[
-                    styles.toolPill,
-                    tc.status === "running" && styles.toolPillActive,
-                    tc.status === "error" && styles.toolPillError,
-                  ]}
-                >
-                  <DomainIcon domain={desc.domain} />
-                  <Text style={styles.toolDomainText}>{desc.domainLabel}</Text>
-                  <Text style={styles.pillText} numberOfLines={1}>
-                    {label}
-                  </Text>
-                  {desc.summary ? (
-                    <Text style={styles.toolSummaryText} numberOfLines={1}>
-                      · {desc.summary}
+            {allCompleted && !groupOpen ? (
+              <TouchableOpacity
+                style={styles.pill}
+                onPress={() => {
+                  haptics.selection()
+                  setGroupOpen(true)
+                }}
+              >
+                <CheckCircle2 size={12} color={theme.colors.success} />
+                <Text style={styles.pillText}>
+                  {streamingDraft.toolCalls.length} tool steps completed
+                </Text>
+                <ChevronRight size={12} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+            ) : (
+              streamingDraft.toolCalls.map((tc) => {
+                const desc = describeToolCall({
+                  toolName: tc.toolName,
+                  arguments: tc.arguments,
+                  result: tc.result,
+                })
+                const durationText = formatToolDuration(tc.durationMs)
+                const label =
+                  tc.status === "running"
+                    ? desc.activeLabel
+                    : tc.status === "completed"
+                      ? desc.completedLabel
+                      : desc.label
+                return (
+                  <View
+                    key={tc.toolCallId}
+                    style={[
+                      styles.toolPill,
+                      tc.status === "running" && styles.toolPillActive,
+                      tc.status === "error" && styles.toolPillError,
+                    ]}
+                  >
+                    <DomainIcon domain={desc.domain} />
+                    <Text style={styles.toolDomainText}>
+                      {desc.domainLabel}
                     </Text>
-                  ) : null}
-                  {durationText ? (
-                    <Text style={styles.pillMono}>{durationText}</Text>
-                  ) : null}
-                  {tc.status === "running" ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={theme.colors.primary}
-                      style={styles.miniSpinner}
-                    />
-                  ) : tc.status === "completed" ? (
-                    <CheckCircle2 size={12} color={theme.colors.success} />
-                  ) : (
-                    <XCircle size={12} color={theme.colors.destructive} />
-                  )}
-                </View>
-              )
-            })}
+                    <Text style={styles.pillText} numberOfLines={1}>
+                      {label}
+                    </Text>
+                    {desc.summary ? (
+                      <Text style={styles.toolSummaryText} numberOfLines={1}>
+                        · {desc.summary}
+                      </Text>
+                    ) : null}
+                    {durationText ? (
+                      <Text style={styles.pillMono}>{durationText}</Text>
+                    ) : null}
+                    {tc.status === "running" ? (
+                      <StreamingDots />
+                    ) : tc.status === "completed" ? (
+                      <CheckCircle2 size={12} color={theme.colors.success} />
+                    ) : (
+                      <XCircle size={12} color={theme.colors.destructive} />
+                    )}
+                  </View>
+                )
+              })
+            )}
           </View>
         )}
 
-        {trimmedText.trim() ? (
-          <Text style={styles.assistantText}>{trimmedText}</Text>
-        ) : null}
+        {hasText ? <MarkdownText text={trimmedText} /> : null}
 
         {isStreaming && (
           <View style={styles.statusRow} accessibilityRole="text">
-            <ActivityIndicator
-              size="small"
-              color={theme.colors.primary}
-              style={styles.miniSpinner}
-            />
+            <StreamingDots />
             <Text style={styles.statusText}>{phaseLabel}</Text>
           </View>
         )}
@@ -209,6 +233,10 @@ export function ChatMessageBubble({
   if (!message) return null
   const isUser = message.role === "user"
   const blocks = message.blocks ?? []
+
+  const attachments = blocks.filter(
+    (b) => b.type === "attachment" && b.attachment
+  )
 
   const thinkingText = blocks
     .filter((b) => b.type === "thinking" && b.text)
@@ -224,17 +252,62 @@ export function ChatMessageBubble({
 
   const toolBlocks = blocks.filter((b) => b.type === "tool_call")
 
+  if (isUser) {
+    return (
+      <View style={styles.userBubble}>
+        {attachments.length > 0 && (
+          <View style={styles.attachmentsRow}>
+            {attachments.map((b, i) => (
+              <View key={i} style={styles.userAttachmentChip}>
+                <FileText size={11} color={theme.colors.primaryForeground} />
+                <Text style={styles.userAttachmentText} numberOfLines={1}>
+                  {b.attachment?.filename}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+        {textBody ? (
+          <Text style={styles.userText} selectable>
+            {textBody}
+          </Text>
+        ) : null}
+      </View>
+    )
+  }
+
+  const hasToolErrors = toolBlocks.some((tc) => {
+    const res = tc.toolCallId
+      ? toolResultsByCallId?.get(tc.toolCallId)
+      : undefined
+    return Boolean(res?.isError)
+  })
+  const collapseGroupByDefault = toolBlocks.length > 1 && !hasToolErrors
+  const showToolsExpanded = !collapseGroupByDefault || groupOpen
+
+  const handleCopyResponse = async () => {
+    if (!textBody) return
+    haptics.selection()
+    await Clipboard.setStringAsync(textBody)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1600)
+  }
+
+  const handleShareResponse = async () => {
+    if (!textBody) return
+    haptics.light()
+    await Share.share({ message: textBody }).catch(() => undefined)
+  }
+
   return (
-    <View
-      style={[
-        styles.bubble,
-        isUser ? styles.userBubble : styles.assistantBubble,
-      ]}
-    >
+    <View style={styles.assistantTurn}>
       {thinkingText ? (
         <TouchableOpacity
           style={styles.pill}
-          onPress={() => setThinkingOpen(!thinkingOpen)}
+          onPress={() => {
+            haptics.selection()
+            setThinkingOpen(!thinkingOpen)
+          }}
         >
           <Brain size={12} color={theme.colors.textMuted} />
           <Text style={styles.pillText}>Thought process</Text>
@@ -252,107 +325,172 @@ export function ChatMessageBubble({
 
       {toolBlocks.length > 0 && (
         <View style={styles.toolsWrap}>
-          {toolBlocks.map((tc, i) => {
-            const callId = tc.toolCallId ?? `tc_${i}`
-            const res = tc.toolCallId
-              ? toolResultsByCallId?.get(tc.toolCallId)
-              : undefined
-            const desc = describeToolCall({
-              toolName: tc.toolName ?? "tool",
-              arguments: tc.arguments,
-              result: res?.result,
-            })
-            const isExpanded = Boolean(expandedToolIds[callId])
-            return (
-              <View key={callId} style={styles.toolBlock}>
-                <TouchableOpacity
-                  style={[
-                    styles.toolPill,
-                    res?.isError && styles.toolPillError,
-                  ]}
-                  onPress={() => toggleTool(callId)}
-                >
-                  <DomainIcon domain={desc.domain} />
-                  <Text style={styles.toolDomainText}>{desc.domainLabel}</Text>
-                  <Text style={styles.pillText} numberOfLines={1}>
-                    {res && !res.isError ? desc.completedLabel : desc.label}
-                  </Text>
-                  {desc.summary ? (
-                    <Text style={styles.toolSummaryText} numberOfLines={1}>
-                      · {desc.summary}
-                    </Text>
-                  ) : null}
-                  {res ? (
-                    res.isError ? (
-                      <XCircle size={12} color={theme.colors.destructive} />
-                    ) : (
-                      <CheckCircle2 size={12} color={theme.colors.success} />
-                    )
-                  ) : null}
-                  {isExpanded ? (
-                    <ChevronDown size={12} color={theme.colors.textMuted} />
-                  ) : (
-                    <ChevronRight size={12} color={theme.colors.textMuted} />
-                  )}
-                </TouchableOpacity>
+          {collapseGroupByDefault && (
+            <TouchableOpacity
+              style={styles.pill}
+              onPress={() => {
+                haptics.selection()
+                setGroupOpen(!groupOpen)
+              }}
+            >
+              <CheckCircle2 size={12} color={theme.colors.success} />
+              <Text style={styles.pillText}>
+                {toolBlocks.length} tool steps
+              </Text>
+              {groupOpen ? (
+                <ChevronDown size={12} color={theme.colors.textMuted} />
+              ) : (
+                <ChevronRight size={12} color={theme.colors.textMuted} />
+              )}
+            </TouchableOpacity>
+          )}
 
-                {isExpanded && (
-                  <Text style={styles.thinkingBody}>
-                    {tc.toolName}({JSON.stringify(tc.arguments ?? {})})
-                  </Text>
-                )}
-              </View>
-            )
-          })}
+          {showToolsExpanded &&
+            toolBlocks.map((tc, i) => {
+              const callId = tc.toolCallId ?? `tc_${i}`
+              const res = tc.toolCallId
+                ? toolResultsByCallId?.get(tc.toolCallId)
+                : undefined
+              const desc = describeToolCall({
+                toolName: tc.toolName ?? "tool",
+                arguments: tc.arguments,
+                result: res?.result,
+              })
+              const isExpanded = Boolean(expandedToolIds[callId])
+              return (
+                <View key={callId} style={styles.toolBlock}>
+                  <TouchableOpacity
+                    style={[
+                      styles.toolPill,
+                      res?.isError && styles.toolPillError,
+                    ]}
+                    onPress={() => toggleTool(callId)}
+                  >
+                    <DomainIcon domain={desc.domain} />
+                    <Text style={styles.toolDomainText}>
+                      {desc.domainLabel}
+                    </Text>
+                    <Text style={styles.pillText} numberOfLines={1}>
+                      {res && !res.isError ? desc.completedLabel : desc.label}
+                    </Text>
+                    {desc.summary ? (
+                      <Text style={styles.toolSummaryText} numberOfLines={1}>
+                        · {desc.summary}
+                      </Text>
+                    ) : null}
+                    {res ? (
+                      res.isError ? (
+                        <XCircle size={12} color={theme.colors.destructive} />
+                      ) : (
+                        <CheckCircle2 size={12} color={theme.colors.success} />
+                      )
+                    ) : null}
+                    {isExpanded ? (
+                      <ChevronDown size={12} color={theme.colors.textMuted} />
+                    ) : (
+                      <ChevronRight size={12} color={theme.colors.textMuted} />
+                    )}
+                  </TouchableOpacity>
+
+                  {isExpanded && (
+                    <Text style={styles.thinkingBody}>
+                      {tc.toolName}({JSON.stringify(tc.arguments ?? {})})
+                    </Text>
+                  )}
+                </View>
+              )
+            })}
         </View>
       )}
 
+      {textBody ? <MarkdownText text={textBody} /> : null}
+
       {textBody ? (
-        <Text style={isUser ? styles.userText : styles.assistantText}>
-          {textBody}
-        </Text>
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => void handleCopyResponse()}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessibilityLabel="Copy response"
+          >
+            {copied ? (
+              <Check size={13} color={theme.colors.success} />
+            ) : (
+              <Copy size={13} color={theme.colors.textMuted} />
+            )}
+            <Text style={[styles.actionText, copied && styles.copiedText]}>
+              {copied ? "Copied" : "Copy"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => void handleShareResponse()}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessibilityLabel="Share response"
+          >
+            <Share2 size={13} color={theme.colors.textMuted} />
+            <Text style={styles.actionText}>Share</Text>
+          </TouchableOpacity>
+        </View>
       ) : null}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  bubble: {
-    borderRadius: theme.radius.lg,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 5,
-    maxWidth: "92%",
-  },
   userBubble: {
     alignSelf: "flex-end",
     backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.lg,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    gap: 5,
+    maxWidth: "85%",
   },
-  assistantBubble: {
-    alignSelf: "flex-start",
-    backgroundColor: theme.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+  assistantTurn: {
+    alignSelf: "stretch",
+    paddingHorizontal: 2,
+    paddingVertical: 2,
+    gap: 6,
   },
   userText: {
     fontSize: 15,
     lineHeight: 21,
     color: theme.colors.primaryForeground,
   },
-  assistantText: {
-    fontSize: 15,
-    lineHeight: 21,
-    color: theme.colors.textPrimary,
+  attachmentsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  userAttachmentChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(9, 13, 22, 0.16)",
+    borderRadius: theme.radius.full,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    maxWidth: "100%",
+  },
+  userAttachmentText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.primaryForeground,
+    flexShrink: 1,
   },
   pill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
     alignSelf: "flex-start",
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   toolBlock: {
     gap: 3,
@@ -360,12 +498,12 @@ const styles = StyleSheet.create({
   toolPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
     alignSelf: "flex-start",
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.surfaceElevated,
     borderWidth: 1,
     borderColor: theme.colors.border,
     maxWidth: "100%",
@@ -406,10 +544,7 @@ const styles = StyleSheet.create({
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-  },
-  miniSpinner: {
-    transform: [{ scale: 0.72 }],
+    gap: 7,
   },
   statusText: {
     fontSize: 12,
@@ -423,5 +558,24 @@ const styles = StyleSheet.create({
     borderLeftWidth: 2,
     borderLeftColor: theme.colors.border,
     paddingLeft: 8,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingTop: 2,
+  },
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  actionText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.textMuted,
+  },
+  copiedText: {
+    color: theme.colors.success,
   },
 })

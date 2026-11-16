@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
 import {
+  Alert,
   KeyboardAvoidingView,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Platform,
   ScrollView,
   StyleSheet,
@@ -9,10 +12,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native"
+import * as DocumentPicker from "expo-document-picker"
+import * as FileSystem from "expo-file-system/legacy"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import type BottomSheet from "@gorhom/bottom-sheet"
-import { useThreadStream } from "@saturn/hooks/ai"
+import { useThreadStream, type StreamAttachmentInput } from "@saturn/hooks/ai"
 import {
   useListAgentsQuery,
   useListModelsQuery,
@@ -23,7 +28,32 @@ import { ChatMessageBubble, type ToolResultEntry } from "./chat-message-bubble"
 import { ToolApprovalCard } from "./tool-approval-card"
 import { ThreadSwitcherSheet } from "./thread-switcher-sheet"
 import { AgentModelSheet } from "./agent-model-sheet"
-import { Bot, History, List, Send, Sparkles, Square } from "lucide-react-native"
+import {
+  ArrowDown,
+  Bot,
+  FileText,
+  History,
+  List,
+  Paperclip,
+  Send,
+  Sparkles,
+  Square,
+  X,
+} from "lucide-react-native"
+
+const STARTER_PROMPTS = [
+  "Summarize my spending this month vs budget",
+  "What events are on my calendar this week?",
+  "Check unread emails for action items",
+  "List active workflows and recent runs",
+]
+
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+const MAX_ATTACHMENTS = 5
+
+interface LocalAttachment extends StreamAttachmentInput {
+  id: string
+}
 
 interface MobileChatScreenProps {
   threadId?: string | null
@@ -43,6 +73,8 @@ export function MobileChatScreen({
 
   const [activeThreadId, setActiveThreadId] = useState<string | null>(threadId)
   const [input, setInput] = useState("")
+  const [attachments, setAttachments] = useState<LocalAttachment[]>([])
+  const [isNearBottom, setIsNearBottom] = useState(true)
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>()
   const [selectedModelId, setSelectedModelId] = useState<string | undefined>()
 
@@ -97,15 +129,23 @@ export function MobileChatScreen({
   }, [messages])
 
   useEffect(() => {
-    if (isStreaming || messages.length > 0) {
+    if (isNearBottom && (isStreaming || messages.length > 0)) {
       scrollRef.current?.scrollToEnd({ animated: true })
     }
   }, [
+    isNearBottom,
     isStreaming,
     messages.length,
     streamingMessage?.text,
     streamingMessage?.toolCalls.length,
   ])
+
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent
+    const distanceFromBottom =
+      contentSize.height - (contentOffset.y + layoutMeasurement.height)
+    setIsNearBottom(distanceFromBottom < 80)
+  }
 
   const effectiveAgentId = selectedAgentId ?? thread?.agentId ?? agents[0]?.id
   const effectiveModelId = selectedModelId ?? thread?.modelId
@@ -124,13 +164,77 @@ export function MobileChatScreen({
     })
   }, [effectiveAgentId, effectiveModelId, initialPrompt, sendMessage])
 
-  const handleSend = async () => {
-    const trimmed = input.trim()
-    if (!trimmed || isStreaming) return
+  const handlePickAttachments = async () => {
+    if (isStreaming || attachments.length >= MAX_ATTACHMENTS) return
+    haptics.selection()
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          "application/pdf",
+          "text/csv",
+          "text/plain",
+          "image/png",
+          "image/jpeg",
+          "image/webp",
+        ],
+        multiple: true,
+        copyToCacheDirectory: true,
+      })
+      if (result.canceled || !result.assets) return
+
+      const next: LocalAttachment[] = []
+      for (const asset of result.assets.slice(
+        0,
+        MAX_ATTACHMENTS - attachments.length
+      )) {
+        const sizeBytes = asset.size ?? 0
+        if (sizeBytes > MAX_ATTACHMENT_BYTES) {
+          Alert.alert(
+            "File Too Large",
+            `${asset.name} exceeds the 10 MB attachment limit.`
+          )
+          continue
+        }
+        const item: LocalAttachment = {
+          id: `${asset.name}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          filename: asset.name || "attachment",
+          contentType: asset.mimeType || "application/octet-stream",
+        }
+        if (Platform.OS === "web" && asset.file) {
+          item.file = asset.file
+        } else if (asset.uri) {
+          item.base64Data = await FileSystem.readAsStringAsync(asset.uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          })
+        }
+        next.push(item)
+      }
+      if (next.length > 0) {
+        setAttachments((prev) => [...prev, ...next].slice(0, MAX_ATTACHMENTS))
+      }
+    } catch {
+      // Cancelled or unreadable attachment
+    }
+  }
+
+  const handleSend = async (overrideText?: string) => {
+    const trimmed = (overrideText ?? input).trim()
+    if ((!trimmed && attachments.length === 0) || isStreaming) return
     haptics.light()
-    setInput("")
+    const currentAttachments = overrideText ? [] : attachments
+    if (!overrideText) {
+      setInput("")
+      setAttachments([])
+    }
+    setIsNearBottom(true)
     await sendMessage({
       content: trimmed,
+      attachments: currentAttachments.map((a) => ({
+        filename: a.filename,
+        contentType: a.contentType,
+        file: a.file,
+        base64Data: a.base64Data,
+      })),
       agentId: effectiveAgentId,
       modelId: effectiveModelId,
       contextHint: "mobile/ai",
@@ -183,69 +287,104 @@ export function MobileChatScreen({
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        ref={scrollRef}
-        style={styles.messagesScroll}
-        contentContainerStyle={styles.messagesContent}
-        contentInsetAdjustmentBehavior="never"
-      >
-        {messages.length === 0 && !streamingMessage && !isStreaming ? (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Sparkles size={24} color={theme.colors.primary} />
-            </View>
-            <Text style={styles.emptyTitle}>
-              {activeAgent?.name || "Saturn Assistant"}
-            </Text>
-            <Text style={styles.emptySub}>
-              Ask about your budgets, calendar, mail, or workflows. Mutating
-              actions prompt for your approval before executing.
-            </Text>
-          </View>
-        ) : (
-          <>
-            {visibleMessages.map((msg, i) => (
-              <ChatMessageBubble
-                key={msg.id ?? i}
-                message={msg}
-                toolResultsByCallId={toolResultsByCallId}
-              />
-            ))}
-
-            {(streamingMessage || isStreaming) && (
-              <ChatMessageBubble
-                streamingDraft={
-                  streamingMessage ?? { thinking: "", text: "", toolCalls: [] }
-                }
-                isStreaming={isStreaming}
-                streamPhase={streamPhase}
-                activeToolName={activeToolCall?.toolName}
-              />
-            )}
-
-            {pendingApprovals.map((pa) => (
-              <ToolApprovalCard
-                key={pa.toolCallId}
-                approval={pa}
-                onApprove={(id) =>
-                  void resolveApprovals([{ toolCallId: id, approved: true }])
-                }
-                onReject={(id) =>
-                  void resolveApprovals([{ toolCallId: id, approved: false }])
-                }
-              />
-            ))}
-
-            {error && (
-              <View style={styles.errorBanner}>
-                <Text style={styles.errorText}>
-                  {error.message || "AI execution failed"}
-                </Text>
+      <View style={styles.messagesWrap}>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.messagesScroll}
+          contentContainerStyle={styles.messagesContent}
+          contentInsetAdjustmentBehavior="never"
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
+          {messages.length === 0 && !streamingMessage && !isStreaming ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Sparkles size={24} color={theme.colors.primary} />
               </View>
-            )}
-          </>
+              <Text style={styles.emptyTitle}>
+                {activeAgent?.name || "Saturn Assistant"}
+              </Text>
+              <Text style={styles.emptySub}>
+                Ask about your budgets, calendar, mail, or workflows. Mutating
+                actions prompt for your approval before executing.
+              </Text>
+              <View style={styles.starterChips}>
+                {STARTER_PROMPTS.map((prompt) => (
+                  <TouchableOpacity
+                    key={prompt}
+                    style={styles.starterChip}
+                    activeOpacity={0.7}
+                    onPress={() => void handleSend(prompt)}
+                  >
+                    <Text style={styles.starterChipText}>{prompt}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ) : (
+            <>
+              {visibleMessages.map((msg, i) => (
+                <ChatMessageBubble
+                  key={msg.id ?? i}
+                  message={msg}
+                  toolResultsByCallId={toolResultsByCallId}
+                />
+              ))}
+
+              {(streamingMessage || isStreaming) && (
+                <ChatMessageBubble
+                  streamingDraft={
+                    streamingMessage ?? {
+                      thinking: "",
+                      text: "",
+                      toolCalls: [],
+                    }
+                  }
+                  isStreaming={isStreaming}
+                  streamPhase={streamPhase}
+                  activeToolName={activeToolCall?.toolName}
+                />
+              )}
+
+              {pendingApprovals.map((pa) => (
+                <ToolApprovalCard
+                  key={pa.toolCallId}
+                  approval={pa}
+                  onApprove={(id) =>
+                    void resolveApprovals([{ toolCallId: id, approved: true }])
+                  }
+                  onReject={(id) =>
+                    void resolveApprovals([{ toolCallId: id, approved: false }])
+                  }
+                />
+              ))}
+
+              {error && (
+                <View style={styles.errorBanner}>
+                  <Text style={styles.errorText}>
+                    {error.message || "AI execution failed"}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </ScrollView>
+
+        {!isNearBottom && visibleMessages.length > 0 && (
+          <TouchableOpacity
+            style={styles.scrollBottomBtn}
+            activeOpacity={0.8}
+            onPress={() => {
+              haptics.light()
+              setIsNearBottom(true)
+              scrollRef.current?.scrollToEnd({ animated: true })
+            }}
+            accessibilityLabel="Scroll to bottom"
+          >
+            <ArrowDown size={16} color={theme.colors.textPrimary} />
+          </TouchableOpacity>
         )}
-      </ScrollView>
+      </View>
 
       <View
         style={[
@@ -253,7 +392,52 @@ export function MobileChatScreen({
           { paddingBottom: Math.max(insets.bottom, 12) },
         ]}
       >
+        {attachments.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.attachmentsStrip}
+          >
+            {attachments.map((att) => (
+              <View key={att.id} style={styles.attachmentChip}>
+                <FileText size={12} color={theme.colors.primary} />
+                <Text style={styles.attachmentChipText} numberOfLines={1}>
+                  {att.filename}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    haptics.selection()
+                    setAttachments((prev) =>
+                      prev.filter((item) => item.id !== att.id)
+                    )
+                  }}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  accessibilityLabel={`Remove ${att.filename}`}
+                >
+                  <X size={12} color={theme.colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+
         <View style={styles.composerRow}>
+          <TouchableOpacity
+            style={styles.attachBtn}
+            onPress={() => void handlePickAttachments()}
+            disabled={isStreaming || attachments.length >= MAX_ATTACHMENTS}
+            accessibilityLabel="Attach file"
+          >
+            <Paperclip
+              size={18}
+              color={
+                isStreaming || attachments.length >= MAX_ATTACHMENTS
+                  ? theme.colors.textMuted
+                  : theme.colors.textSecondary
+              }
+            />
+          </TouchableOpacity>
+
           <TextInput
             style={styles.input}
             value={input}
@@ -275,9 +459,14 @@ export function MobileChatScreen({
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
+              style={[
+                styles.sendBtn,
+                !input.trim() &&
+                  attachments.length === 0 &&
+                  styles.sendBtnDisabled,
+              ]}
               onPress={() => void handleSend()}
-              disabled={!input.trim()}
+              disabled={!input.trim() && attachments.length === 0}
               accessibilityLabel="Send message"
             >
               <Send size={16} color={theme.colors.primaryForeground} />
@@ -349,15 +538,82 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
+  messagesWrap: {
+    flex: 1,
+    position: "relative",
+  },
   messagesScroll: {
     flex: 1,
   },
   messagesContent: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingTop: 8,
-    paddingBottom: 12,
-    gap: 8,
+    paddingBottom: 14,
+    gap: 12,
     flexGrow: 1,
+  },
+  scrollBottomBtn: {
+    position: "absolute",
+    right: 14,
+    bottom: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.borderStrong,
+    alignItems: "center",
+    justifyContent: "center",
+    ...theme.shadows.sm,
+  },
+  starterChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 6,
+  },
+  starterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  starterChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
+  attachmentsStrip: {
+    flexDirection: "row",
+    gap: 6,
+    paddingBottom: 8,
+  },
+  attachmentChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.full,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    maxWidth: 180,
+  },
+  attachmentChipText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+    flexShrink: 1,
+  },
+  attachBtn: {
+    width: 34,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyState: {
     flex: 1,

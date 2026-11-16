@@ -7,6 +7,7 @@ import {
   SendThreadTurnSchema,
 } from "@saturn/schemas"
 import { haptics } from "../lib/haptics"
+import { parseMarkdownBlocks } from "../components/ai/markdown-parser"
 
 vi.mock("../lib/haptics", () => ({
   haptics: {
@@ -89,5 +90,60 @@ describe("Mobile AI assistant, approval haptics, and schemas", () => {
         activeToolName: "calendar_list_events",
       })
     ).toBe("Checking calendar events…")
+  })
+
+  it("parses headings, lists, quotes, and streaming/closed code blocks cleanly", () => {
+    const blocks = parseMarkdownBlocks(
+      [
+        "## Budget Summary",
+        "",
+        "- Groceries: **$120**",
+        "- Coffee: `$15`",
+        "",
+        "> On track for April",
+        "",
+        "```json",
+        '{"remaining": 380}',
+      ].join("\n")
+    )
+
+    expect(blocks).toEqual([
+      { type: "heading", level: 2, text: "Budget Summary" },
+      {
+        type: "list",
+        ordered: false,
+        items: ["Groceries: **$120**", "Coffee: `$15`"],
+      },
+      { type: "blockquote", text: "On track for April" },
+      { type: "code", language: "json", code: '{"remaining": 380}' },
+    ])
+    expect(parseMarkdownBlocks("\n\n\n")).toEqual([])
+  })
+
+  it("parses GFM markdown tables and horizontal rules", () => {
+    const blocks = parseMarkdownBlocks(
+      [
+        "| Account | Balance | Currency |",
+        "| :--- | ---: | :---: |",
+        "| Checking | **$1,250.00** | USD |",
+        "| Savings | $400.00 |",
+        "---",
+        "Done.",
+      ].join("\n")
+    )
+
+    expect(blocks).toEqual([
+      {
+        type: "table",
+        headers: ["Account", "Balance", "Currency"],
+        alignments: ["left", "right", "center"],
+        rows: [
+          ["Checking", "**$1,250.00**", "USD"],
+          ["Savings", "$400.00", ""],
+        ],
+      },
+      { type: "hr" },
+      { type: "paragraph", text: "Done." },
+    ])
   })
 })
