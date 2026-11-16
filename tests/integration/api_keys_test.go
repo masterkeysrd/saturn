@@ -8,6 +8,7 @@ import (
 
 	financev1 "github.com/masterkeysrd/saturn/apis/saturn/finance/v1"
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
+	aiv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/ai/v1"
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
 	"github.com/masterkeysrd/saturn/tests/driver"
 	"github.com/stretchr/testify/assert"
@@ -61,6 +62,7 @@ func TestAPIKeys_EndToEnd(t *testing.T) {
 	identClient := identityv1.NewIdentityClient(conn)
 	spaceClient := spacev1.NewSpacesClient(conn)
 	financeClient := financev1.NewFinanceClient(conn)
+	aiClient := aiv1.NewAIServiceClient(conn)
 
 	bearerCtx := func(tok string, spaceID string) context.Context {
 		pairs := map[string]string{"authorization": "Bearer " + tok}
@@ -235,5 +237,62 @@ func TestAPIKeys_EndToEnd(t *testing.T) {
 		_, err = financeClient.ListBudgets(bearerCtx(rawKey, ""), &financev1.ListBudgetsRequest{})
 		require.Error(t, err)
 		assert.Equal(t, codes.Unauthenticated, status.Code(err))
+	})
+
+	t.Run("AI scopes enforce ai:read vs ai:execute vs ai:write", func(t *testing.T) {
+		readKey, err := identClient.CreateAPIKey(bearerCtx(user1Token, ""), &identityv1.CreateAPIKeyRequest{
+			ApiKey: &identityv1.APIKey{
+				Name:     "AI Read Only Key",
+				Scopes:   []string{"ai:read"},
+				SpaceIds: []string{spaceA},
+			},
+		})
+		require.NoError(t, err)
+
+		// ai:read allows listing agents and reading settings
+		_, err = aiClient.ListAgents(bearerCtx(readKey.GetRawKey(), ""), &aiv1.ListAgentsRequest{})
+		require.NoError(t, err)
+		_, err = aiClient.GetSettings(bearerCtx(readKey.GetRawKey(), ""), &aiv1.GetSettingsRequest{})
+		require.NoError(t, err)
+
+		// ai:read rejects ai:execute (CreateThread) and ai:write (CreateProvider)
+		_, err = aiClient.CreateThread(bearerCtx(readKey.GetRawKey(), ""), &aiv1.CreateThreadRequest{
+			Thread: &aiv1.Thread{Title: "Denied"},
+		})
+		require.Error(t, err)
+		assert.Equal(t, codes.PermissionDenied, status.Code(err))
+
+		_, err = aiClient.CreateProvider(bearerCtx(readKey.GetRawKey(), ""), &aiv1.CreateProviderRequest{
+			Provider: &aiv1.Provider{Name: "Denied", Driver: "openai"},
+		})
+		require.Error(t, err)
+		assert.Equal(t, codes.PermissionDenied, status.Code(err))
+
+		execKey, err := identClient.CreateAPIKey(bearerCtx(user1Token, ""), &identityv1.CreateAPIKeyRequest{
+			ApiKey: &identityv1.APIKey{
+				Name:     "AI Execute Key",
+				Scopes:   []string{"ai:execute"},
+				SpaceIds: []string{spaceA},
+			},
+		})
+		require.NoError(t, err)
+
+		// ai:execute allows CreateThread and rejects ai:write (CreateProvider)
+		th, err := aiClient.CreateThread(bearerCtx(execKey.GetRawKey(), ""), &aiv1.CreateThreadRequest{
+			Thread: &aiv1.Thread{Title: "Allowed By Execute"},
+		})
+		require.NoError(t, err)
+		assert.NotEmpty(t, th.GetId())
+
+		_, err = aiClient.CreateProvider(bearerCtx(execKey.GetRawKey(), ""), &aiv1.CreateProviderRequest{
+			Provider: &aiv1.Provider{Name: "Denied", Driver: "openai"},
+		})
+		require.Error(t, err)
+		assert.Equal(t, codes.PermissionDenied, status.Code(err))
+
+		_, err = identClient.DeleteAPIKey(bearerCtx(user1Token, ""), &identityv1.DeleteAPIKeyRequest{Id: readKey.GetId()})
+		require.NoError(t, err)
+		_, err = identClient.DeleteAPIKey(bearerCtx(user1Token, ""), &identityv1.DeleteAPIKeyRequest{Id: execKey.GetId()})
+		require.NoError(t, err)
 	})
 }

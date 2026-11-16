@@ -1,6 +1,6 @@
 //go:build integration
 
-package agent_test
+package ai_test
 
 import (
 	"log"
@@ -16,7 +16,7 @@ func TestMain(m *testing.M) {
 	var err error
 	testEnv, err = driver.StartTestEnv()
 	if err != nil {
-		log.Fatalf("failed to start agent integration test environment: %v", err)
+		log.Fatalf("failed to start ai integration test environment: %v", err)
 	}
 	defer testEnv.Stop()
 

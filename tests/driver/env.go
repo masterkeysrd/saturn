@@ -198,6 +198,11 @@ func StartTestEnv() (*TestEnv, error) {
 		Backup: app.BackupConfig{
 			LocalDir: backupDir,
 		},
+		AI: app.AIConfig{
+			MCP: app.AIMCPConfig{
+				AllowPrivateNetworks: true,
+			},
+		},
 		Connector: app.ConnectorConfig{
 			PublicCallbackBaseURL: fmt.Sprintf("http://127.0.0.1:%d/v1/platform/connectors/oauth", port),
 			Google: app.GoogleConnectorConfig{
@@ -237,6 +242,9 @@ func StartTestEnv() (*TestEnv, error) {
 		grpcSrv.Scheduler,
 		grpcSrv.AttachmentHandler,
 	)
+	gwSrv.DB = sqlDB
+	gwSrv.AIStreamHandler = grpcSrv.AIStreamHandler
+	gwSrv.MCPServer = grpcSrv.MCPServer
 	if err := gwSrv.Start(ctx, cfg); err != nil {
 		if cleanupPGDump != nil {
 			cleanupPGDump()

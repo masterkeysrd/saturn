@@ -243,13 +243,7 @@ func TestWorkflow_MailReceivedToFinanceInboxAndIdempotency(t *testing.T) {
 		}`
 	})
 
-	_, err := d.Agent().CreateProvider(t, driver.CreateProviderOptions{
-		Name:              "Mock OpenAI",
-		CompatibilityMode: "OPENAI_COMPATIBLE",
-		APIUrl:            mock.URL,
-		APIKey:            "sk-test-mail-wf",
-	})
-	require.NoError(t, err)
+	_, model := d.AI().SetupMockOpenAIProvider(t, "Mock OpenAI", mock.URL, "gpt-4o")
 
 	// Lazily seed system.finance.inbox_ingestion and set an explicit default_model
 	flows := d.Workflow().ListFlows(t, nil)
@@ -268,10 +262,10 @@ func TestWorkflow_MailReceivedToFinanceInboxAndIdempotency(t *testing.T) {
 	ctx := authSpaceCtx(d.State().AccessToken, spaceID)
 	inboxFlow.Config = &workflowv1.Flow_Config{
 		DefaultModel: &workflowv1.ModelConfig{
-			ModelName: new("gpt-4o"),
+			ModelId: new(model.GetId()),
 		},
 	}
-	_, err = wfGRPC.UpdateFlow(ctx, &workflowv1.UpdateFlowRequest{
+	_, err := wfGRPC.UpdateFlow(ctx, &workflowv1.UpdateFlowRequest{
 		Id:         inboxFlowID,
 		Flow:       inboxFlow,
 		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"config"}},
@@ -662,13 +656,7 @@ func TestWorkflow_StepRunCheckpointReplayAndLoopGuards(t *testing.T) {
 		return `{"stage": "two"}`
 	})
 
-	_, err := d.Agent().CreateProvider(t, driver.CreateProviderOptions{
-		Name:              "Mock Replay OpenAI",
-		CompatibilityMode: "OPENAI_COMPATIBLE",
-		APIUrl:            mock.URL,
-		APIKey:            "sk-test-replay",
-	})
-	require.NoError(t, err)
+	_, model := d.AI().SetupMockOpenAIProvider(t, "Mock Replay OpenAI", mock.URL, "gpt-4o")
 
 	wfGRPC, _, _ := dialWorkflowGRPC(t, d)
 	ctx := authSpaceCtx(token, spaceID)
@@ -687,7 +675,7 @@ func TestWorkflow_StepRunCheckpointReplayAndLoopGuards(t *testing.T) {
 			IsEnabled: true,
 			Config: &workflowv1.Flow_Config{
 				DefaultModel: &workflowv1.ModelConfig{
-					ModelName: new("gpt-4o"),
+					ModelId: new(model.GetId()),
 				},
 			},
 			Triggers: []*workflowv1.Flow_Trigger{
@@ -864,13 +852,7 @@ func TestWorkflow_StatementIngestionEncryptedPDF(t *testing.T) {
 		}`, chaseAccID)
 	})
 
-	_, err := d.Agent().CreateProvider(t, driver.CreateProviderOptions{
-		Name:              "Mock Janus OpenAI",
-		CompatibilityMode: "OPENAI_COMPATIBLE",
-		APIUrl:            mock.URL,
-		APIKey:            "sk-test-janus",
-	})
-	require.NoError(t, err)
+	_, aiModel := d.AI().SetupMockOpenAIProvider(t, "Mock Statement OpenAI", mock.URL, "gpt-4o")
 
 	// Build & encrypt a minimal readable PDF
 	rawPDF := buildMinimalTextPDF("2026-08-10 Coffee Shop -25.00")
@@ -886,7 +868,7 @@ func TestWorkflow_StatementIngestionEncryptedPDF(t *testing.T) {
 	require.NoError(t, err)
 	stmtFlow.Config = &workflowv1.Flow_Config{
 		DefaultModel: &workflowv1.ModelConfig{
-			ModelName: new("gpt-4o"),
+			ModelId: new(aiModel.GetId()),
 		},
 	}
 	_, err = wfGRPC.UpdateFlow(ctx, &workflowv1.UpdateFlowRequest{

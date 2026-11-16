@@ -21,7 +21,7 @@ type Driver struct {
 	spaceSubdriver    *SpaceDriver
 	financeSubdriver  *FinanceDriver
 	platformSubdriver *PlatformDriver
-	agentSubdriver    *AgentDriver
+	aiSubdriver       *AIDriver
 	workflowSubdriver *WorkflowDriver
 	backupSubdriver   *BackupDriver
 }
@@ -39,7 +39,7 @@ func New(t *testing.T, env *TestEnv) *Driver {
 	d.spaceSubdriver = &SpaceDriver{driver: d}
 	d.financeSubdriver = &FinanceDriver{driver: d}
 	d.platformSubdriver = &PlatformDriver{driver: d}
-	d.agentSubdriver = &AgentDriver{driver: d}
+	d.aiSubdriver = &AIDriver{driver: d}
 	d.workflowSubdriver = &WorkflowDriver{driver: d}
 	d.backupSubdriver = &BackupDriver{driver: d}
 
@@ -73,9 +73,9 @@ func (d *Driver) Platform() *PlatformDriver {
 	return d.platformSubdriver
 }
 
-// Agent returns the Agent domain sub-driver.
-func (d *Driver) Agent() *AgentDriver {
-	return d.agentSubdriver
+// AI returns the AI platform sub-driver.
+func (d *Driver) AI() *AIDriver {
+	return d.aiSubdriver
 }
 
 // Workflow returns the Workflow platform sub-driver.
@@ -127,9 +127,14 @@ TRUNCATE TABLE
     platform.flow_runs,
     platform.flow_triggers,
     platform.flows,
-    platform.agent_runs,
-    platform.agents,
-    platform.llm_providers,
+    platform.ai_run_steps,
+    platform.ai_runs,
+    platform.ai_messages,
+    platform.ai_threads,
+    platform.ai_agents,
+    platform.ai_mcp_servers,
+    platform.ai_models,
+    platform.ai_providers,
     platform.job,
     platform.schedule,
     finance.statement_line,

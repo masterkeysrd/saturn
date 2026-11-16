@@ -127,8 +127,9 @@ type State struct {
 	LastScheduledTransactionID          string
 	LastConfirmedScheduledTransactionID string
 	LastProviderID                      string
+	LastModelID                         string
 	LastAgentID                         string
-	LastAgentRunID                      string
+	LastAIRunID                         string
 }
 
 func newState(t *testing.T) *State {
@@ -181,6 +182,7 @@ func (s *State) ClearRegistries() {
 	s.LastRecurringTransactionID = ""
 	s.LastConfirmedScheduledTransactionID = ""
 	s.LastProviderID = ""
+	s.LastModelID = ""
 	s.LastAgentID = ""
-	s.LastAgentRunID = ""
+	s.LastAIRunID = ""
 }
