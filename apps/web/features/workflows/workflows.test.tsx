@@ -9,7 +9,7 @@ import {
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import * as workflowApi from "@saturn/api/gen/saturn/platform/workflow/v1/workflow"
-import * as agentApi from "@saturn/api/gen/saturn/platform/agent/v1/agent"
+import * as aiApi from "@saturn/api/gen/saturn/platform/ai/v1/ai"
 import * as identityApi from "@saturn/api/gen/saturn/identity/v1/identity"
 import { WorkflowsListView } from "./workflows-list-view"
 import { WorkflowEditorView } from "./workflow-editor-view"
@@ -32,9 +32,9 @@ vi.mock("@saturn/api/gen/saturn/platform/workflow/v1/workflow", () => ({
   useGetCatalogQuery: vi.fn(),
 }))
 
-vi.mock("@saturn/api/gen/saturn/platform/agent/v1/agent", () => ({
+vi.mock("@saturn/api/gen/saturn/platform/ai/v1/ai", () => ({
   useListAgentsQuery: vi.fn(),
-  useListProvidersQuery: vi.fn(),
+  useListModelsQuery: vi.fn(),
 }))
 
 vi.mock("@saturn/api/gen/saturn/identity/v1/identity", () => ({
@@ -264,12 +264,13 @@ describe("Web Workflows Studio", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof workflowApi.useGetFlowRunQuery>)
 
-    vi.mocked(agentApi.useListAgentsQuery).mockReturnValue({
+    vi.mocked(aiApi.useListAgentsQuery).mockReturnValue({
       data: { agents: [] },
-    } as unknown as ReturnType<typeof agentApi.useListAgentsQuery>)
-    vi.mocked(agentApi.useListProvidersQuery).mockReturnValue({
-      data: { providers: [] },
-    } as unknown as ReturnType<typeof agentApi.useListProvidersQuery>)
+    } as unknown as ReturnType<typeof aiApi.useListAgentsQuery>)
+
+    vi.mocked(aiApi.useListModelsQuery).mockReturnValue({
+      data: { models: [] },
+    } as unknown as ReturnType<typeof aiApi.useListModelsQuery>)
     vi.mocked(identityApi.useCreateAPIKeyMutation).mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,

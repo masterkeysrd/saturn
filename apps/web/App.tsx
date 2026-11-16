@@ -22,6 +22,7 @@ import type { SaturnRouteObject } from "@/lib/navigation"
 import { useActiveSpaceContext, useMySpaces } from "@/features/space/use-space"
 import { useAuth } from "@/features/auth/use-auth"
 import { NoSpaceActiveScreen } from "@/components/no-space-active"
+import { GlobalAIDrawer } from "@/features/ai/components/global-ai-drawer"
 
 function SpaceGuard({ children }: { children: ReactNode }) {
   const { spaceId: spaceIdParam } = useParams<{ spaceId: string }>()
@@ -155,7 +156,10 @@ export function App() {
                 <main className="flex flex-1 flex-col overflow-hidden">
                   <div className="flex h-14 shrink-0 items-center justify-between border-b border-border/40 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                     <SidebarTrigger />
-                    <ThemeToggle />
+                    <div className="flex items-center gap-2">
+                      <GlobalAIDrawer />
+                      <ThemeToggle />
+                    </div>
                   </div>
                   <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
                     <Outlet />

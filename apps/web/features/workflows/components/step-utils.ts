@@ -154,7 +154,7 @@ export function getStepVisualTheme(
   type: string,
   owner?: string
 ): StepVisualTheme {
-  if (type === "llm.generate") {
+  if (type === "llm.generate" || type === "ai.agent_run") {
     return {
       badgeClass: "bg-violet-500/15 text-violet-500 border-violet-500/30",
       borderClass: "border-violet-500/30",
@@ -214,16 +214,24 @@ export function summarizeStep(step: Flow_StepNode): string {
   const inputs = step.inputs ?? {}
   switch (step.type) {
     case "llm.generate": {
-      const model = step.model?.modelName
-        ? `Model: ${step.model.modelName}`
-        : step.model?.agentId
-          ? `Agent: ${step.model.agentId}`
+      const model = step.model?.modelId
+        ? `Model: ${step.model.modelId}`
+        : step.model?.role
+          ? `Role: ${step.model.role}`
           : null
       const prompt =
         typeof inputs.prompt === "string" ? inputs.prompt.trim() : ""
       if (model && prompt) return `${model} • ${prompt.slice(0, 48)}`
       if (prompt) return prompt.slice(0, 72)
       return model || "Generate structured or freeform AI output"
+    }
+    case "ai.agent_run": {
+      const agent = inputs.agent_id ? `Agent: ${String(inputs.agent_id)}` : null
+      const prompt =
+        typeof inputs.prompt === "string" ? inputs.prompt.trim() : ""
+      if (agent && prompt) return `${agent} • ${prompt.slice(0, 48)}`
+      if (prompt) return prompt.slice(0, 72)
+      return agent || "Run autonomous MCP-backed AI agent"
     }
     case "filter":
       return typeof inputs.condition === "string" && inputs.condition.trim()

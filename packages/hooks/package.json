@@ -40,6 +40,11 @@
       "types": "./space/index.ts",
       "import": "./space/index.ts",
       "default": "./space/index.ts"
+    },
+    "./ai": {
+      "types": "./ai/index.ts",
+      "import": "./ai/index.ts",
+      "default": "./ai/index.ts"
     }
   },
   "scripts": {

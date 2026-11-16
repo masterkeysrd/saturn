@@ -750,7 +750,7 @@ export function ImportStatementModal({
                                 </span>
                               ) : (
                                 <span className="font-semibold text-primary">
-                                  Janus Statement Extraction
+                                  AI Statement Extraction
                                 </span>
                               )}
                             </p>
@@ -864,7 +864,7 @@ export function ImportStatementModal({
                         <div className="space-y-2 rounded-xl border border-border/40 bg-muted/20 p-3 text-xs text-muted-foreground">
                           <div className="flex items-center gap-1.5 font-bold text-foreground">
                             <Sparkles className="h-3.5 w-3.5 text-primary" />
-                            Autonomous Extractor
+                            AI Statement Parser
                           </div>
                           <p className="text-[11px] leading-relaxed">
                             Saturn AI will extract all currency ledgers (DOP,
@@ -1417,8 +1417,8 @@ export function ImportStatementModal({
                     : isValidatingPassword
                       ? "Verifying Password..."
                       : executeFlowMutation.isPending
-                        ? "Extracting with Janus..."
-                        : "Extract & Reconcile with Janus"}
+                        ? "Extracting Statement..."
+                        : "Extract & Reconcile with AI"}
                 </Button>
               </>
             ) : (

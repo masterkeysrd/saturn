@@ -25,7 +25,9 @@ import {
   Loader2,
   Filter,
   OctagonX,
+  Sparkles,
 } from "lucide-react"
+import { openAIDrawer } from "@/features/ai/lib/drawer-events"
 
 const STATUS_OPTIONS = [
   "all",
@@ -317,13 +319,30 @@ export function WorkflowRunsView() {
               </div>
 
               {detailRun.error?.message && (
-                <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 font-mono text-xs text-destructive">
-                  <strong>
-                    {detailRun.error.stepId
-                      ? `Step "${detailRun.error.stepId}" failed: `
-                      : "Run failed: "}
-                  </strong>
-                  {detailRun.error.message}
+                <div className="space-y-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+                  <div className="font-mono">
+                    <strong>
+                      {detailRun.error.stepId
+                        ? `Step "${detailRun.error.stepId}" failed: `
+                        : "Run failed: "}
+                    </strong>
+                    {detailRun.error.message}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      openAIDrawer({
+                        prompt: `Explain why workflow run ${detailRun.id} (${detailRun.flowName || detailRun.flowId}) failed and suggest how to fix it. Error: ${detailRun.error?.message ?? ""}`,
+                        autoSend: true,
+                      })
+                    }
+                    className="h-7 cursor-pointer gap-1.5 rounded-full border-destructive/40 bg-background/80 text-[11px] text-foreground hover:bg-background"
+                  >
+                    <Sparkles className="h-3 w-3 text-primary" />
+                    Explain with AI
+                  </Button>
                 </div>
               )}
 

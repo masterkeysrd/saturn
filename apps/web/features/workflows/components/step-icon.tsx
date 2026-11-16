@@ -1,4 +1,5 @@
 import {
+  Bot,
   Sparkles,
   Filter,
   GitBranch,
@@ -23,6 +24,8 @@ export function StepIcon({
   switch (type) {
     case "llm.generate":
       return <Sparkles className={className} />
+    case "ai.agent_run":
+      return <Bot className={className} />
     case "filter":
       return <Filter className={className} />
     case "switch":

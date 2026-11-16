@@ -18,7 +18,9 @@ import {
   RefreshCw,
   AlertCircle,
   Image as ImageIcon,
+  Sparkles,
 } from "lucide-react"
+import { openAIDrawer } from "@/features/ai/lib/drawer-events"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
 import {
@@ -429,6 +431,21 @@ export function ThreadReader({
 
         {/* Action Buttons */}
         <div className="flex shrink-0 items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              openAIDrawer({
+                prompt: `Summarize the email thread "${thread.subject || "(no subject)"}" (thread ID: ${thread.id}) and list any action items.`,
+                autoSend: true,
+              })
+            }
+            title="Summarize thread with AI"
+            className="h-8 cursor-pointer gap-1.5 rounded-full px-2.5 text-xs text-primary hover:bg-primary/10"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span className="hidden md:inline">Summarize</span>
+          </Button>
           <Button
             variant="ghost"
             size="icon-sm"

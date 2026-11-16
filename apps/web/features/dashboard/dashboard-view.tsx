@@ -1,13 +1,23 @@
+import { useState, type FormEvent } from "react"
 import { useAuth } from "@/features/auth/use-auth"
 import { PageLayout } from "@/components/ui/page-layout"
-import { Home, Sparkles, ArrowRight } from "lucide-react"
+import { Home, Sparkles, ArrowRight, SendHorizontal } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { useActiveSpaceContext } from "@/features/space/use-space"
+import { openAIDrawer } from "@/features/ai/lib/drawer-events"
+
+const QUICK_PROMPTS = [
+  "Summarize my spending this month",
+  "What is on my schedule this week?",
+  "Check unread emails for action items",
+]
 
 export function DashboardView() {
   const { user } = useAuth()
   const { spaceId } = useActiveSpaceContext()
+  const [prompt, setPrompt] = useState("")
 
   // Format today's date: e.g. "Saturday, July 18, 2026"
   const formattedDate = new Date().toLocaleDateString("en-US", {
@@ -27,6 +37,17 @@ export function DashboardView() {
 
   const firstName = user?.name?.split(" ")[0] || "User"
 
+  const handleAskSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    const trimmed = prompt.trim()
+    if (!trimmed) {
+      openAIDrawer()
+      return
+    }
+    setPrompt("")
+    openAIDrawer({ prompt: trimmed, autoSend: true })
+  }
+
   return (
     <PageLayout
       title="Dashboard"
@@ -35,9 +56,9 @@ export function DashboardView() {
       hideHeader={true}
     >
       <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
-        <div className="max-w-md animate-in duration-500 select-none zoom-in-95 fade-in">
+        <div className="w-full max-w-lg animate-in duration-500 zoom-in-95 fade-in">
           {/* Branding badge */}
-          <div className="mb-8 flex animate-in justify-center duration-700 zoom-in-75">
+          <div className="mb-8 flex animate-in justify-center duration-700 select-none zoom-in-75">
             <img
               src="/saturn_logo.jpg"
               alt="Saturn Logo"
@@ -54,10 +75,44 @@ export function DashboardView() {
           </p>
 
           {spaceId ? (
-            <p className="mx-auto mt-8 max-w-xs text-sm text-muted-foreground/60">
-              Navigate features from the sidebar menu to manage your finances,
-              schedules, and spaces.
-            </p>
+            <div className="mt-8 space-y-3 text-left">
+              <form
+                onSubmit={handleAskSubmit}
+                className="flex items-center gap-2 rounded-2xl border border-border/70 bg-card/80 p-1.5 shadow-sm focus-within:border-primary/60"
+              >
+                <Sparkles className="ml-2.5 size-4 shrink-0 text-primary" />
+                <Input
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Ask Saturn AI anything across Finance, Calendar & Mail..."
+                  aria-label="Ask Saturn AI"
+                  className="h-9 border-0 bg-transparent px-1 text-sm shadow-none focus-visible:ring-0"
+                />
+                <Button
+                  type="submit"
+                  size="icon-sm"
+                  aria-label="Ask AI"
+                  className="size-8 shrink-0 cursor-pointer rounded-xl"
+                >
+                  <SendHorizontal className="size-4" />
+                </Button>
+              </form>
+
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                {QUICK_PROMPTS.map((q) => (
+                  <Button
+                    key={q}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openAIDrawer({ prompt: q, autoSend: true })}
+                    className="h-7 cursor-pointer rounded-full border-border/60 px-3 text-[11px] text-muted-foreground hover:text-foreground"
+                  >
+                    {q}
+                  </Button>
+                ))}
+              </div>
+            </div>
           ) : (
             <div className="mt-8 animate-in rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-6 text-center duration-500 select-none fade-in slide-in-from-bottom-4">
               <Sparkles className="mx-auto h-8 w-8 animate-pulse text-primary" />

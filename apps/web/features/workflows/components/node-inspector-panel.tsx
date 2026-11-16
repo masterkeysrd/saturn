@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useListAgentsQuery } from "@saturn/api/gen/saturn/platform/ai/v1/ai"
 import {
   discoverVariablesAtStep,
   type WorkflowStepRef,
@@ -253,6 +254,8 @@ export function NodeInspectorPanel({
 }: NodeInspectorPanelProps) {
   const [stepAdvancedOpen, setStepAdvancedOpen] = useState(false)
   const [flowAdvancedOpen, setFlowAdvancedOpen] = useState(false)
+  const { data: agentsData } = useListAgentsQuery({})
+  const agents = agentsData?.agents ?? []
 
   if (selectedNode.kind === "trigger") {
     const trig = (draft.triggers ?? [])[selectedNode.index]
@@ -405,8 +408,40 @@ export function NodeInspectorPanel({
               />
             </div>
 
-            {step.type === "llm.generate" && (
+            {(step.type === "llm.generate" || step.type === "ai.agent_run") && (
               <div className="space-y-4 border-t border-border/40 pt-4">
+                {step.type === "ai.agent_run" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-muted-foreground">
+                      Target Agent
+                    </Label>
+                    <Select
+                      value={String(inputs.agent_id ?? "")}
+                      onValueChange={(val) =>
+                        updateInput("agent_id", val ?? "")
+                      }
+                    >
+                      <SelectTrigger className="h-9 rounded-xl text-xs">
+                        <SelectValue placeholder="Choose an agent">
+                          {agents.find((a) => a.id === inputs.agent_id)?.name ||
+                            String(inputs.agent_id || "Choose an agent")}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        {agents.map((a) => (
+                          <SelectItem
+                            key={a.id}
+                            value={a.id ?? ""}
+                            className="text-xs"
+                          >
+                            {a.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground">
                     Prompt Template
