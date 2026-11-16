@@ -38,11 +38,25 @@ func toProtoModelConfig(mc *workflow.ModelConfig) *workflowv1.ModelConfig {
 	if mc == nil {
 		return nil
 	}
+	var genPB *workflowv1.GenerationConfig
+	if mc.Generation != nil {
+		genPB = &workflowv1.GenerationConfig{
+			Temperature: mc.Generation.Temperature,
+			MaxTokens:   mc.Generation.MaxTokens,
+			TopP:        mc.Generation.TopP,
+		}
+		if mc.Generation.Thinking != nil {
+			genPB.Thinking = &workflowv1.ThinkingConfig{
+				Enabled:      mc.Generation.Thinking.Enabled,
+				Effort:       mc.Generation.Thinking.Effort,
+				BudgetTokens: mc.Generation.Thinking.BudgetTokens,
+			}
+		}
+	}
 	return &workflowv1.ModelConfig{
-		AgentId:     mc.AgentID,
-		ProviderId:  mc.ProviderID,
-		ModelName:   mc.ModelName,
-		Temperature: mc.Temperature,
+		ModelId:    mc.ModelID,
+		Role:       mc.Role,
+		Generation: genPB,
 	}
 }
 
@@ -50,11 +64,25 @@ func fromProtoModelConfig(mc *workflowv1.ModelConfig) *workflow.ModelConfig {
 	if mc == nil {
 		return nil
 	}
+	var gen *workflow.GenerationConfig
+	if mc.Generation != nil {
+		gen = &workflow.GenerationConfig{
+			Temperature: mc.Generation.Temperature,
+			MaxTokens:   mc.Generation.MaxTokens,
+			TopP:        mc.Generation.TopP,
+		}
+		if mc.Generation.Thinking != nil {
+			gen.Thinking = &workflow.ThinkingConfig{
+				Enabled:      mc.Generation.Thinking.Enabled,
+				Effort:       mc.Generation.Thinking.Effort,
+				BudgetTokens: mc.Generation.Thinking.BudgetTokens,
+			}
+		}
+	}
 	return &workflow.ModelConfig{
-		AgentID:     mc.AgentId,
-		ProviderID:  mc.ProviderId,
-		ModelName:   mc.ModelName,
-		Temperature: mc.Temperature,
+		ModelID:    mc.ModelId,
+		Role:       mc.Role,
+		Generation: gen,
 	}
 }
 
@@ -384,7 +412,7 @@ func toProtoStepRun(sr workflow.StepRun) (*workflowv1.FlowRun_StepRun, error) {
 		Output:       outPB,
 		Error:        toProtoFlowError(sr.Error),
 		Metadata:     metaPB,
-		AgentRunId:   sr.AgentRunID,
+		AiRunId:      sr.AIRunID,
 		StartTime:    timestamppb.New(sr.StartTime),
 		CreateTime:   timestamppb.New(sr.CreateTime),
 		UpdateTime:   timestamppb.New(sr.UpdateTime),

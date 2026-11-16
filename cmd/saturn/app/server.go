@@ -19,10 +19,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/apps/web"
-	"github.com/masterkeysrd/saturn/internal/platform/backup"
-	"github.com/masterkeysrd/saturn/internal/platform/crypto"
-	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
-	"github.com/masterkeysrd/saturn/internal/platform/token"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -32,19 +28,20 @@ import (
 	admingrpc "github.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1"
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
 	mailv1 "github.com/masterkeysrd/saturn/apis/saturn/mail/v1"
-	agentv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1"
+	aiv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/ai/v1"
 	backupv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/backup/v1"
 	connectorv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/connector/v1"
 	messagev1 "github.com/masterkeysrd/saturn/apis/saturn/platform/message/v1"
 	schedulerv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/scheduler/v1"
 	workflowv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/workflow/v1"
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
+	aiaggregator "github.com/masterkeysrd/saturn/internal/aggregator/ai"
 	calendaraggregator "github.com/masterkeysrd/saturn/internal/aggregator/calendar"
 	financeaggregator "github.com/masterkeysrd/saturn/internal/aggregator/finance"
 	mailaggregator "github.com/masterkeysrd/saturn/internal/aggregator/mail"
 	spaceaggregator "github.com/masterkeysrd/saturn/internal/aggregator/space"
 	workflowaggregator "github.com/masterkeysrd/saturn/internal/aggregator/workflow"
-	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
+	aiapp "github.com/masterkeysrd/saturn/internal/application/ai"
 	calendarapp "github.com/masterkeysrd/saturn/internal/application/calendar"
 	connectorapp "github.com/masterkeysrd/saturn/internal/application/connector"
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
@@ -62,21 +59,26 @@ import (
 	mailstorage "github.com/masterkeysrd/saturn/internal/domain/mail/storage"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	spacestorage "github.com/masterkeysrd/saturn/internal/domain/space/storage"
-	"github.com/masterkeysrd/saturn/internal/platform/agent"
+	"github.com/masterkeysrd/saturn/internal/platform/ai"
+	"github.com/masterkeysrd/saturn/internal/platform/backup"
 	"github.com/masterkeysrd/saturn/internal/platform/connector"
 	googleconnector "github.com/masterkeysrd/saturn/internal/platform/connector/google"
+	"github.com/masterkeysrd/saturn/internal/platform/crypto"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/requestid"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
 	"github.com/masterkeysrd/saturn/internal/platform/settings"
 	"github.com/masterkeysrd/saturn/internal/platform/shutdown"
+	"github.com/masterkeysrd/saturn/internal/platform/token"
 	"github.com/masterkeysrd/saturn/internal/platform/totp"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
+	transportauth "github.com/masterkeysrd/saturn/internal/transport/auth"
 	"github.com/masterkeysrd/saturn/internal/transport/event"
 	eventmiddleware "github.com/masterkeysrd/saturn/internal/transport/event/middleware"
-	agentgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/agent"
+	aigrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/ai"
 	backupgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/backup"
 	calendargrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/calendar"
 	connectorgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/connector"
@@ -88,10 +90,19 @@ import (
 	schedulergrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/scheduler"
 	spacegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/space"
 	workflowgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/workflow"
+	aihttp "github.com/masterkeysrd/saturn/internal/transport/http/ai"
 	connectorhttp "github.com/masterkeysrd/saturn/internal/transport/http/connector"
 	"github.com/masterkeysrd/saturn/internal/transport/http/gateway"
 	mailhttp "github.com/masterkeysrd/saturn/internal/transport/http/mail"
 	"github.com/masterkeysrd/saturn/internal/transport/http/middleware"
+	mcptransport "github.com/masterkeysrd/saturn/internal/transport/mcp"
+	mcpai "github.com/masterkeysrd/saturn/internal/transport/mcp/ai"
+	mcpcalendar "github.com/masterkeysrd/saturn/internal/transport/mcp/calendar"
+	mcpfinance "github.com/masterkeysrd/saturn/internal/transport/mcp/finance"
+	mcpmail "github.com/masterkeysrd/saturn/internal/transport/mcp/mail"
+	mcpmiddleware "github.com/masterkeysrd/saturn/internal/transport/mcp/middleware"
+	mcpspace "github.com/masterkeysrd/saturn/internal/transport/mcp/space"
+	mcpworkflow "github.com/masterkeysrd/saturn/internal/transport/mcp/workflow"
 	transportscheduler "github.com/masterkeysrd/saturn/internal/transport/scheduler"
 )
 
@@ -107,6 +118,8 @@ type GRPCServer struct {
 	CalendarCoordinator  calendarapp.Coordinator
 	MailCoordinator      mailapp.Coordinator
 	AttachmentHandler    *mailhttp.AttachmentHandler
+	AIStreamHandler      *aihttp.StreamHandler
+	MCPServer            *mcptransport.Server
 }
 
 // NewGRPCServer creates a new GRPCServer instance.
@@ -291,6 +304,28 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	spaceHandler := spacegrpc.NewHandler(spaceCoordinator, spaceAggregator)
 	spacev1.RegisterSpacesServer(s.grpc, spaceHandler)
 
+	// Wire shared transport authenticator & unified Saturn MCP Server
+	sharedAuthenticator := transportauth.NewAuthenticator(transportauth.Config{
+		TokenValidator: tokenService,
+		UserStore:      userStore,
+		APIKeyStore:    apiKeyStore,
+		GrantStore:     apiKeyGrantStore,
+		MemberStore:    memberStore,
+	})
+	mcpServer := mcptransport.NewServer(mcptransport.ServerConfig{
+		Name:    "saturn-mcp",
+		Version: "1.0.0",
+		AuthMiddleware: mcpmiddleware.AuthMiddleware(mcpmiddleware.AuthConfig{
+			Authenticator: sharedAuthenticator,
+		}),
+	})
+	s.MCPServer = mcpServer
+
+	mcpspace.NewHandler(mcpspace.Dependencies{
+		Aggregator:  spaceAggregator,
+		Coordinator: spaceCoordinator,
+	}).Register(mcpServer.Registry())
+
 	// Wire EventBus service, domain event edge publisher, and context propagation middlewares
 	eventBusEngine := eventbus.NewEngine(dbClient)
 	eventBusEngine.UseProducer(
@@ -356,15 +391,6 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		Events:                    edgePublisher,
 	})
 
-	rawAgentStore := agent.NewStore(dbClient)
-	agentStore, err := agent.NewEncryptedStore(rawAgentStore, cfg.Security.EncryptionKey)
-	if err != nil {
-		return fmt.Errorf("init encrypted agent store: %w", err)
-	}
-	agentClient := agent.NewClient()
-	agentService := agent.NewService(agentStore, agentClient)
-	agentCoordinator := agentapp.NewLoggingCoordinator(agentapp.NewCoordinator(agentStore, agentClient), appLogger)
-
 	financeCoordinator := financeapp.NewLoggingCoordinator(
 		financeapp.NewTransactionalCoordinator(
 			financeapp.NewCoordinator(financeapp.Dependencies{
@@ -380,8 +406,68 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	financeHandler := financegrpc.NewHandler(financeCoordinator, financeAggregator)
 	financev1.RegisterFinanceServer(s.grpc, financeHandler)
 
-	agentHandler := agentgrpc.NewHandler(agentCoordinator)
-	agentv1.RegisterAgentServiceServer(s.grpc, agentHandler)
+	mcpfinance.NewHandler(mcpfinance.Dependencies{
+		Aggregator:  financeAggregator,
+		Coordinator: financeCoordinator,
+		InboxStager: financeService,
+	}).Register(mcpServer.Registry())
+
+	// Wire Platform AI service (Providers, Models, Unified MCP, Agents, Private Threads, Runs)
+	rawAIStore := ai.NewStore(dbClient)
+	aiStore, err := ai.NewEncryptedStore(rawAIStore, cfg.Security.EncryptionKey)
+	if err != nil {
+		return fmt.Errorf("init encrypted ai store: %w", err)
+	}
+	aiSettingsClient := settings.Bind(platformSettingsStore, ai.SettingsKey)
+	aiInvoker := ai.NewLoomClient(nil)
+	mcpConnector := ai.NewUnifiedMCPConnector(mcpServer.ConnectInMemory, cfg.AI.MCP.AllowPrivateNetworks)
+	aiRuntime := ai.NewRuntime(ai.RuntimeDependencies{
+		Store:    aiStore,
+		Invoker:  aiInvoker,
+		MCP:      mcpConnector,
+		Settings: aiSettingsClient,
+	})
+	aiThreadRuntime := ai.NewThreadRuntime(aiRuntime)
+
+	aiCoordinator := aiapp.NewLoggingCoordinator(
+		aiapp.NewTransactionalCoordinator(
+			aiapp.NewCoordinator(aiapp.Dependencies{
+				Store:                aiStore,
+				Settings:             aiSettingsClient,
+				Invoker:              aiInvoker,
+				MCP:                  mcpConnector,
+				Runtime:              aiRuntime,
+				ThreadRuntime:        aiThreadRuntime,
+				AllowPrivateNetworks: cfg.AI.MCP.AllowPrivateNetworks,
+			}),
+			dbClient,
+		),
+		appLogger,
+	)
+	aiAggregator := aiaggregator.NewService(aiaggregator.Dependencies{
+		Providers:  aiStore.Providers(),
+		Models:     aiStore.Models(),
+		MCPServers: aiStore.MCPServers(),
+		Agents:     aiStore.Agents(),
+		Threads:    aiStore.Threads(),
+		Runs:       aiStore.Runs(),
+		Settings:   aiSettingsClient,
+		MCP:        mcpConnector,
+	})
+	aiHandler := aigrpc.NewHandler(aiCoordinator, aiAggregator)
+	aiv1.RegisterAIServiceServer(s.grpc, aiHandler)
+
+	s.AIStreamHandler = aihttp.NewStreamHandler(aiCoordinator, sharedAuthenticator)
+
+	mcpai.NewHandler(mcpai.Dependencies{
+		Aggregator:  aiAggregator,
+		Coordinator: aiCoordinator,
+	}).Register(mcpServer.Registry())
+
+	transportscheduler.RegisterAIJobs(schedulerEngine, aiCoordinator)
+	if err := transportscheduler.RegisterAISchedules(ctx, schedulerEngine); err != nil {
+		return fmt.Errorf("register ai schedules: %w", err)
+	}
 
 	// Register background task handler execution callbacks
 	transportscheduler.RegisterFinanceJobs(schedulerEngine, financeCoordinator)
@@ -512,6 +598,12 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	calendarHandler := calendargrpc.NewHandler(calendarCoordinator, calendarAggregator)
 	calendarv1.RegisterCalendarServiceServer(s.grpc, calendarHandler)
 
+	mcpcalendar.NewHandler(mcpcalendar.Dependencies{
+		Aggregator:    calendarAggregator,
+		Coordinator:   calendarCoordinator,
+		SpaceSettings: spaceCoordinator,
+	}).Register(mcpServer.Registry())
+
 	transportscheduler.RegisterCalendarJobs(schedulerEngine, calendarCoordinator)
 
 	s.ConnectorCoordinator = connectorCoordinator
@@ -576,6 +668,12 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	mailHandler := mailgrpc.NewHandler(mailCoordinator, mailAggregator)
 	mailv1.RegisterMailServiceServer(s.grpc, mailHandler)
 
+	mcpmail.NewHandler(mcpmail.Dependencies{
+		Aggregator:    mailAggregator,
+		Coordinator:   mailCoordinator,
+		SpaceSettings: spaceCoordinator,
+	}).Register(mcpServer.Registry())
+
 	attachmentHandler := mailhttp.NewAttachmentHandler(
 		mailMessageStore,
 		connectorStore,
@@ -624,7 +722,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		FlowRuns:      workflowFlowRunStore,
 		StepRuns:      workflowStepRunStore,
 		Registry:      workflowRegistry,
-		AgentExecutor: workflowapp.NewAgentExecutor(agentService),
+		AgentExecutor: workflowapp.NewAgentExecutor(aiRuntime),
 	})
 	if err != nil {
 		return fmt.Errorf("create workflow engine: %w", err)
@@ -641,12 +739,12 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	workflowCoordinator := workflowapp.NewLoggingCoordinator(
 		workflowapp.NewTransactionalCoordinator(
 			workflowapp.NewCoordinator(workflowapp.Dependencies{
-				Workflow:     workflowService,
-				SpaceLoader:  workflowapp.NewSpaceContextLoader(spaceStore, platformSettingsStore),
-				Dispatcher:   event.NewEventBusRunDispatcher(eventBusEngine),
-				Schedules:    schedulerEngine,
-				PromptRunner: agentService,
-				Transactor:   dbClient,
+				Workflow:    workflowService,
+				SpaceLoader: workflowapp.NewSpaceContextLoader(spaceStore, platformSettingsStore),
+				Dispatcher:  event.NewEventBusRunDispatcher(eventBusEngine),
+				Schedules:   schedulerEngine,
+				AIRunner:    aiRuntime,
+				Transactor:  dbClient,
 			}),
 			dbClient,
 		),
@@ -654,12 +752,18 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	)
 
 	workflowAggregator := workflowaggregator.NewService(workflowaggregator.Dependencies{
-		Workflow:  workflowService,
-		AgentRuns: rawAgentStore,
+		Workflow: workflowService,
+		AIRuns:   rawAIStore.Runs(),
 	})
 
 	workflowHandler := workflowgrpc.NewHandler(workflowCoordinator, workflowAggregator)
 	workflowv1.RegisterWorkflowServiceServer(s.grpc, workflowHandler)
+
+	mcpworkflow.NewHandler(mcpworkflow.Dependencies{
+		Aggregator:    workflowAggregator,
+		Coordinator:   workflowCoordinator,
+		SpaceSettings: spaceCoordinator,
+	}).Register(mcpServer.Registry())
 
 	event.RegisterWorkflowSubscribers(eventBusEngine, workflowCoordinator, workflowService, workflowService.Catalog())
 	transportscheduler.RegisterWorkflowJobs(schedulerEngine, workflowCoordinator)
@@ -715,6 +819,8 @@ type GRPCGatewayServer struct {
 	scheduler            *scheduler.Engine
 	config               *Config
 	attachmentHandler    *mailhttp.AttachmentHandler
+	AIStreamHandler      *aihttp.StreamHandler
+	MCPServer            *mcptransport.Server
 	DB                   *sql.DB
 }
 
@@ -789,8 +895,8 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("register platform workflow gateway handler: %w", err)
 	}
 
-	if err := agentv1.RegisterAgentServiceHandler(ctx, s.mux, s.grpcConn); err != nil {
-		return fmt.Errorf("register platform agent gateway handler: %w", err)
+	if err := aiv1.RegisterAIServiceHandler(ctx, s.mux, s.grpcConn); err != nil {
+		return fmt.Errorf("register platform ai gateway handler: %w", err)
 	}
 
 	if err := connectorv1.RegisterConnectorServiceHandler(ctx, s.mux, s.grpcConn); err != nil {
@@ -806,6 +912,26 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 	}
 
 	handler := http.NewServeMux()
+	// Register AI HTTP SSE thread streaming handlers (mounted on both /api/v1/... via s.mux and /v1/... directly)
+	if s.AIStreamHandler != nil {
+		_ = s.mux.HandlePath(http.MethodPost, "/v1/platform/ai/threads/{id}:stream", func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
+			s.AIStreamHandler.ServeStreamTurn(w, r, pathParams["id"])
+		})
+		_ = s.mux.HandlePath(http.MethodPost, "/v1/platform/ai/threads/{id}:resolveApprovals", func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
+			s.AIStreamHandler.ServeResolveApprovals(w, r, pathParams["id"])
+		})
+		handler.Handle("POST /v1/platform/ai/threads/", s.AIStreamHandler)
+	}
+
+	// Register unified Streamable HTTP MCP endpoints
+	if s.MCPServer != nil {
+		mcpHandler := s.MCPServer.HTTPHandler()
+		handler.Handle("/mcp", mcpHandler)
+		handler.Handle("/api/mcp", mcpHandler)
+		handler.Handle("/spaces/{space_id}/mcp", mcpHandler)
+		handler.Handle("/api/spaces/{space_id}/mcp", mcpHandler)
+	}
+
 	handler.Handle("/api/v1/", apiV1Handler(s.mux))
 
 	// Register public OAuth callback handlers
@@ -979,6 +1105,8 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 		grpcSrv.AttachmentHandler,
 	)
 	gwSrv.DB = db
+	gwSrv.AIStreamHandler = grpcSrv.AIStreamHandler
+	gwSrv.MCPServer = grpcSrv.MCPServer
 
 	// Register shutdown callbacks (LIFO order: gateway first, then gRPC).
 	mgr.Register(grpcSrv.Shutdown)

@@ -114,3 +114,18 @@ func TestConfig_DBPoolEnvBindings(t *testing.T) {
 		})
 	}
 }
+
+func TestConfig_AIMCPAllowPrivateNetworks(t *testing.T) {
+	v := NewViper()
+	cfg := LoadConfig(v)
+	if cfg.AI.MCP.AllowPrivateNetworks {
+		t.Fatalf("expected AI.MCP.AllowPrivateNetworks default to be false")
+	}
+
+	t.Setenv("SATURN_AI_MCP_ALLOW_PRIVATE_NETWORKS", "true")
+	v2 := NewViper()
+	cfg2 := LoadConfig(v2)
+	if !cfg2.AI.MCP.AllowPrivateNetworks {
+		t.Fatalf("expected AI.MCP.AllowPrivateNetworks=true from env override")
+	}
+}

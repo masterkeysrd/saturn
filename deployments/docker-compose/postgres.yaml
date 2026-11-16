@@ -45,6 +45,7 @@ services:
       SATURN_DB_USER: saturn
       SATURN_DB_PASSWORD: saturn
       SATURN_DB_NAME: saturn
+      SATURN_DB_SSL_MODE: disable
 
 volumes:
   db-data:

@@ -58,6 +58,17 @@ type Config struct {
 	Backup    BackupConfig
 	Security  SecurityConfig
 	Connector ConnectorConfig
+	AI        AIConfig
+}
+
+// AIConfig holds platform AI and MCP client settings.
+type AIConfig struct {
+	MCP AIMCPConfig `mapstructure:"mcp"`
+}
+
+// AIMCPConfig configures outbound HTTP MCP client behavior.
+type AIMCPConfig struct {
+	AllowPrivateNetworks bool `mapstructure:"allow_private_networks"`
 }
 
 // ConnectorConfig holds instance-level OAuth connector configurations.
@@ -261,6 +272,8 @@ func NewViper() *viper.Viper {
 	v.SetDefault("connector.microsoft.client_id", "")
 	v.SetDefault("connector.microsoft.client_secret", "")
 	v.SetDefault("connector.microsoft.tenant_id", "common")
+
+	v.SetDefault("ai.mcp.allow_private_networks", false)
 
 	return v
 }
