@@ -56,7 +56,7 @@ import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
 import { Icon } from "@expo/ui"
-import { MenuView } from "@expo/ui/community/menu"
+import { ActionMenu } from "@/components/ui/action-menu"
 import { MonoAmount, Caption } from "@/components/ui/typography"
 import { Badge } from "@/components/ui/badge"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
@@ -1048,7 +1048,7 @@ export default function FinanceHubScreen() {
                         </MonoAmount>
                       </TouchableOpacity>
 
-                      <MenuView
+                      <ActionMenu
                         title={getScheduledDisplayName(st, recurringTemplates)}
                         colorScheme="dark"
                         style={styles.menuTriggerWrapper}
@@ -1090,7 +1090,7 @@ export default function FinanceHubScreen() {
                             color={theme.colors.textMuted}
                           />
                         </View>
-                      </MenuView>
+                      </ActionMenu>
                     </View>
                   )
                 })}
@@ -1214,7 +1214,7 @@ export default function FinanceHubScreen() {
                       </MonoAmount>
                     </TouchableOpacity>
 
-                    <MenuView
+                    <ActionMenu
                       title={b.counterparty || "Borrowing"}
                       colorScheme="dark"
                       style={styles.menuTriggerWrapper}
@@ -1257,7 +1257,7 @@ export default function FinanceHubScreen() {
                           color={theme.colors.textMuted}
                         />
                       </View>
-                    </MenuView>
+                    </ActionMenu>
                   </View>
                 )
               })}

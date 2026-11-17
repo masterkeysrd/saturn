@@ -23,6 +23,7 @@ export default function TabsLayout() {
   return (
     <View style={styles.container}>
       <Tabs
+        backBehavior="initialRoute"
         screenOptions={{
           headerShown: true,
           header: () => <AppHeader />,
