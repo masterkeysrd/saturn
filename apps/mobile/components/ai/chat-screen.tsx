@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
 import {
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -66,17 +67,100 @@ export function MobileChatScreen({
 }: MobileChatScreenProps) {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const containerRef = useRef<ComponentRef<typeof View>>(null)
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null)
   const threadSheetRef = useRef<BottomSheet>(null)
   const agentModelSheetRef = useRef<BottomSheet>(null)
   const sentInitialPromptRef = useRef<string | null>(null)
+  const unshrunkBottomRef = useRef<number>(0)
+  const lastAndroidKbHeightRef = useRef<number>(0)
+  const isNearBottomRef = useRef<boolean>(true)
 
   const [activeThreadId, setActiveThreadId] = useState<string | null>(threadId)
   const [input, setInput] = useState("")
   const [attachments, setAttachments] = useState<LocalAttachment[]>([])
   const [isNearBottom, setIsNearBottom] = useState(true)
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>()
+
+  useEffect(() => {
+    isNearBottomRef.current = isNearBottom
+  }, [isNearBottom])
   const [selectedModelId, setSelectedModelId] = useState<string | undefined>()
+  const [verticalOffset, setVerticalOffset] = useState(
+    Platform.OS === "ios" ? 96 : 0
+  )
+  const [keyboardVisible, setKeyboardVisible] = useState(false)
+  const [androidKeyboardPadding, setAndroidKeyboardPadding] = useState(0)
+
+  const syncAndroidKeyboardPadding = (
+    kbHeight: number,
+    y: number,
+    h: number
+  ) => {
+    const currentBottom = y + h
+    const baselineBottom =
+      unshrunkBottomRef.current > 0 ? unshrunkBottomRef.current : currentBottom
+    const alreadyShrunk = Math.max(0, baselineBottom - currentBottom)
+    setAndroidKeyboardPadding(Math.max(0, kbHeight - alreadyShrunk))
+  }
+
+  const measureContainerOffset = () => {
+    containerRef.current?.measureInWindow((_x, y, _w, h) => {
+      if (y > 0) {
+        setVerticalOffset((prev) => (Math.abs(prev - y) > 1 ? y : prev))
+      }
+      if (!Keyboard.isVisible() && h > 0) {
+        unshrunkBottomRef.current = y + h
+      } else if (
+        Platform.OS === "android" &&
+        lastAndroidKbHeightRef.current > 0 &&
+        h > 0
+      ) {
+        syncAndroidKeyboardPadding(lastAndroidKbHeightRef.current, y, h)
+      }
+    })
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(measureContainerOffset, 350)
+    return () => clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow"
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide"
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardVisible(true)
+      if (Platform.OS === "android") {
+        const kbHeight = e.endCoordinates.height
+        lastAndroidKbHeightRef.current = kbHeight
+        containerRef.current?.measureInWindow((_x, y, _w, h) => {
+          syncAndroidKeyboardPadding(kbHeight, y, h)
+        })
+      }
+      if (isNearBottomRef.current) {
+        requestAnimationFrame(() => {
+          scrollRef.current?.scrollToEnd({ animated: true })
+        })
+      }
+    })
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardVisible(false)
+      if (Platform.OS === "android") {
+        lastAndroidKbHeightRef.current = 0
+        setAndroidKeyboardPadding(0)
+      }
+    })
+
+    return () => {
+      showSub.remove()
+      hideSub.remove()
+    }
+  }, [])
 
   useEffect(() => {
     setActiveThreadId(threadId)
@@ -242,238 +326,264 @@ export function MobileChatScreen({
   }
 
   return (
-    <KeyboardAvoidingView
+    <View
+      ref={containerRef}
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={90}
+      onLayout={measureContainerOffset}
     >
-      <View style={styles.toolbar}>
-        <TouchableOpacity
-          style={styles.toolbarPill}
-          onPress={() => {
-            haptics.light()
-            threadSheetRef.current?.expand()
-          }}
-        >
-          <List size={14} color={theme.colors.textSecondary} />
-          <Text style={styles.toolbarText} numberOfLines={1}>
-            {thread?.title || "New Chat"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.toolbarPill}
-          onPress={() => {
-            haptics.light()
-            agentModelSheetRef.current?.expand()
-          }}
-        >
-          <Bot size={14} color={theme.colors.primary} />
-          <Text style={styles.toolbarText} numberOfLines={1}>
-            {activeAgent?.name || "Assistant"}
-            {activeModel ? ` · ${activeModel.displayName}` : ""}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.iconBtn}
-          onPress={() => {
-            haptics.light()
-            router.push("/(app)/ai/agents" as never)
-          }}
-          accessibilityLabel="Manage AI Agents"
-        >
-          <History size={16} color={theme.colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.messagesWrap}>
-        <ScrollView
-          ref={scrollRef}
-          style={styles.messagesScroll}
-          contentContainerStyle={styles.messagesContent}
-          contentInsetAdjustmentBehavior="never"
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-        >
-          {messages.length === 0 && !streamingMessage && !isStreaming ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
-                <Sparkles size={24} color={theme.colors.primary} />
-              </View>
-              <Text style={styles.emptyTitle}>
-                {activeAgent?.name || "Saturn Assistant"}
-              </Text>
-              <Text style={styles.emptySub}>
-                Ask about your budgets, calendar, mail, or workflows. Mutating
-                actions prompt for your approval before executing.
-              </Text>
-              <View style={styles.starterChips}>
-                {STARTER_PROMPTS.map((prompt) => (
-                  <TouchableOpacity
-                    key={prompt}
-                    style={styles.starterChip}
-                    activeOpacity={0.7}
-                    onPress={() => void handleSend(prompt)}
-                  >
-                    <Text style={styles.starterChipText}>{prompt}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          ) : (
-            <>
-              {visibleMessages.map((msg, i) => (
-                <ChatMessageBubble
-                  key={msg.id ?? i}
-                  message={msg}
-                  toolResultsByCallId={toolResultsByCallId}
-                />
-              ))}
-
-              {(streamingMessage || isStreaming) && (
-                <ChatMessageBubble
-                  streamingDraft={
-                    streamingMessage ?? {
-                      thinking: "",
-                      text: "",
-                      toolCalls: [],
-                    }
-                  }
-                  isStreaming={isStreaming}
-                  streamPhase={streamPhase}
-                  activeToolName={activeToolCall?.toolName}
-                />
-              )}
-
-              {pendingApprovals.map((pa) => (
-                <ToolApprovalCard
-                  key={pa.toolCallId}
-                  approval={pa}
-                  onApprove={(id) =>
-                    void resolveApprovals([{ toolCallId: id, approved: true }])
-                  }
-                  onReject={(id) =>
-                    void resolveApprovals([{ toolCallId: id, approved: false }])
-                  }
-                />
-              ))}
-
-              {error && (
-                <View style={styles.errorBanner}>
-                  <Text style={styles.errorText}>
-                    {error.message || "AI execution failed"}
-                  </Text>
-                </View>
-              )}
-            </>
-          )}
-        </ScrollView>
-
-        {!isNearBottom && visibleMessages.length > 0 && (
+      <KeyboardAvoidingView
+        style={[
+          styles.container,
+          Platform.OS === "android" &&
+            androidKeyboardPadding > 0 && {
+              paddingBottom: androidKeyboardPadding,
+            },
+        ]}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={verticalOffset}
+      >
+        <View style={styles.toolbar}>
           <TouchableOpacity
-            style={styles.scrollBottomBtn}
-            activeOpacity={0.8}
+            style={styles.toolbarPill}
             onPress={() => {
               haptics.light()
-              setIsNearBottom(true)
-              scrollRef.current?.scrollToEnd({ animated: true })
+              threadSheetRef.current?.expand()
             }}
-            accessibilityLabel="Scroll to bottom"
           >
-            <ArrowDown size={16} color={theme.colors.textPrimary} />
+            <List size={14} color={theme.colors.textSecondary} />
+            <Text style={styles.toolbarText} numberOfLines={1}>
+              {thread?.title || "New Chat"}
+            </Text>
           </TouchableOpacity>
-        )}
-      </View>
 
-      <View
-        style={[
-          styles.composerWrap,
-          { paddingBottom: Math.max(insets.bottom, 12) },
-        ]}
-      >
-        {attachments.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.attachmentsStrip}
-          >
-            {attachments.map((att) => (
-              <View key={att.id} style={styles.attachmentChip}>
-                <FileText size={12} color={theme.colors.primary} />
-                <Text style={styles.attachmentChipText} numberOfLines={1}>
-                  {att.filename}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    haptics.selection()
-                    setAttachments((prev) =>
-                      prev.filter((item) => item.id !== att.id)
-                    )
-                  }}
-                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                  accessibilityLabel={`Remove ${att.filename}`}
-                >
-                  <X size={12} color={theme.colors.textMuted} />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
-        )}
-
-        <View style={styles.composerRow}>
           <TouchableOpacity
-            style={styles.attachBtn}
-            onPress={() => void handlePickAttachments()}
-            disabled={isStreaming || attachments.length >= MAX_ATTACHMENTS}
-            accessibilityLabel="Attach file"
+            style={styles.toolbarPill}
+            onPress={() => {
+              haptics.light()
+              agentModelSheetRef.current?.expand()
+            }}
           >
-            <Paperclip
-              size={18}
-              color={
-                isStreaming || attachments.length >= MAX_ATTACHMENTS
-                  ? theme.colors.textMuted
-                  : theme.colors.textSecondary
-              }
-            />
+            <Bot size={14} color={theme.colors.primary} />
+            <Text style={styles.toolbarText} numberOfLines={1}>
+              {activeAgent?.name || "Assistant"}
+              {activeModel ? ` · ${activeModel.displayName}` : ""}
+            </Text>
           </TouchableOpacity>
 
-          <TextInput
-            style={styles.input}
-            value={input}
-            onChangeText={setInput}
-            placeholder="Message Saturn AI..."
-            placeholderTextColor={theme.colors.textMuted}
-            multiline
-          />
-          {isStreaming ? (
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => {
+              haptics.light()
+              router.push("/(app)/ai/agents" as never)
+            }}
+            accessibilityLabel="Manage AI Agents"
+          >
+            <History size={16} color={theme.colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.messagesWrap}>
+          <ScrollView
+            ref={scrollRef}
+            style={styles.messagesScroll}
+            contentContainerStyle={styles.messagesContent}
+            contentInsetAdjustmentBehavior="never"
+            keyboardDismissMode={
+              Platform.OS === "ios" ? "interactive" : "on-drag"
+            }
+            keyboardShouldPersistTaps="handled"
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+          >
+            {messages.length === 0 && !streamingMessage && !isStreaming ? (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIcon}>
+                  <Sparkles size={24} color={theme.colors.primary} />
+                </View>
+                <Text style={styles.emptyTitle}>
+                  {activeAgent?.name || "Saturn Assistant"}
+                </Text>
+                <Text style={styles.emptySub}>
+                  Ask about your budgets, calendar, mail, or workflows. Mutating
+                  actions prompt for your approval before executing.
+                </Text>
+                <View style={styles.starterChips}>
+                  {STARTER_PROMPTS.map((prompt) => (
+                    <TouchableOpacity
+                      key={prompt}
+                      style={styles.starterChip}
+                      activeOpacity={0.7}
+                      onPress={() => void handleSend(prompt)}
+                    >
+                      <Text style={styles.starterChipText}>{prompt}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <>
+                {visibleMessages.map((msg, i) => (
+                  <ChatMessageBubble
+                    key={msg.id ?? i}
+                    message={msg}
+                    toolResultsByCallId={toolResultsByCallId}
+                  />
+                ))}
+
+                {(streamingMessage || isStreaming) && (
+                  <ChatMessageBubble
+                    streamingDraft={
+                      streamingMessage ?? {
+                        thinking: "",
+                        text: "",
+                        toolCalls: [],
+                      }
+                    }
+                    isStreaming={isStreaming}
+                    streamPhase={streamPhase}
+                    activeToolName={activeToolCall?.toolName}
+                  />
+                )}
+
+                {pendingApprovals.map((pa) => (
+                  <ToolApprovalCard
+                    key={pa.toolCallId}
+                    approval={pa}
+                    onApprove={(id) =>
+                      void resolveApprovals([
+                        { toolCallId: id, approved: true },
+                      ])
+                    }
+                    onReject={(id) =>
+                      void resolveApprovals([
+                        { toolCallId: id, approved: false },
+                      ])
+                    }
+                  />
+                ))}
+
+                {error && (
+                  <View style={styles.errorBanner}>
+                    <Text style={styles.errorText}>
+                      {error.message || "AI execution failed"}
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
+          </ScrollView>
+
+          {!isNearBottom && visibleMessages.length > 0 && (
             <TouchableOpacity
-              style={[styles.sendBtn, styles.stopBtn]}
+              style={styles.scrollBottomBtn}
+              activeOpacity={0.8}
               onPress={() => {
-                haptics.medium()
-                void stop()
+                haptics.light()
+                setIsNearBottom(true)
+                scrollRef.current?.scrollToEnd({ animated: true })
               }}
-              accessibilityLabel="Stop streaming"
+              accessibilityLabel="Scroll to bottom"
             >
-              <Square size={16} color={theme.colors.textPrimary} />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={[
-                styles.sendBtn,
-                !input.trim() &&
-                  attachments.length === 0 &&
-                  styles.sendBtnDisabled,
-              ]}
-              onPress={() => void handleSend()}
-              disabled={!input.trim() && attachments.length === 0}
-              accessibilityLabel="Send message"
-            >
-              <Send size={16} color={theme.colors.primaryForeground} />
+              <ArrowDown size={16} color={theme.colors.textPrimary} />
             </TouchableOpacity>
           )}
         </View>
-      </View>
+
+        <View
+          style={[
+            styles.composerWrap,
+            {
+              paddingBottom: keyboardVisible
+                ? Platform.OS === "ios"
+                  ? 18
+                  : insets.bottom + 18
+                : Math.max(insets.bottom, 12),
+            },
+          ]}
+        >
+          {attachments.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.attachmentsStrip}
+            >
+              {attachments.map((att) => (
+                <View key={att.id} style={styles.attachmentChip}>
+                  <FileText size={12} color={theme.colors.primary} />
+                  <Text style={styles.attachmentChipText} numberOfLines={1}>
+                    {att.filename}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      haptics.selection()
+                      setAttachments((prev) =>
+                        prev.filter((item) => item.id !== att.id)
+                      )
+                    }}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    accessibilityLabel={`Remove ${att.filename}`}
+                  >
+                    <X size={12} color={theme.colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+
+          <View style={styles.composerRow}>
+            <TouchableOpacity
+              style={styles.attachBtn}
+              onPress={() => void handlePickAttachments()}
+              disabled={isStreaming || attachments.length >= MAX_ATTACHMENTS}
+              accessibilityLabel="Attach file"
+            >
+              <Paperclip
+                size={18}
+                color={
+                  isStreaming || attachments.length >= MAX_ATTACHMENTS
+                    ? theme.colors.textMuted
+                    : theme.colors.textSecondary
+                }
+              />
+            </TouchableOpacity>
+
+            <TextInput
+              style={styles.input}
+              value={input}
+              onChangeText={setInput}
+              placeholder="Message Saturn AI..."
+              placeholderTextColor={theme.colors.textMuted}
+              multiline
+            />
+            {isStreaming ? (
+              <TouchableOpacity
+                style={[styles.sendBtn, styles.stopBtn]}
+                onPress={() => {
+                  haptics.medium()
+                  void stop()
+                }}
+                accessibilityLabel="Stop streaming"
+              >
+                <Square size={16} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.sendBtn,
+                  !input.trim() &&
+                    attachments.length === 0 &&
+                    styles.sendBtnDisabled,
+                ]}
+                onPress={() => void handleSend()}
+                disabled={!input.trim() && attachments.length === 0}
+                accessibilityLabel="Send message"
+              >
+                <Send size={16} color={theme.colors.primaryForeground} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </KeyboardAvoidingView>
 
       <ThreadSwitcherSheet
         ref={threadSheetRef}
@@ -495,7 +605,7 @@ export function MobileChatScreen({
         onSelectModel={setSelectedModelId}
         onClose={() => agentModelSheetRef.current?.close()}
       />
-    </KeyboardAvoidingView>
+    </View>
   )
 }
 
