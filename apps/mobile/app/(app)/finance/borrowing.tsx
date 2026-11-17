@@ -7,6 +7,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   Alert,
+  Platform,
 } from "react-native"
 import { useRouter, Stack } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
@@ -21,7 +22,7 @@ import {
   Scale,
 } from "lucide-react-native"
 import { Icon } from "@expo/ui"
-import { MenuView } from "@expo/ui/community/menu"
+import { ActionMenu } from "@/components/ui/action-menu"
 import {
   useListBorrowingsQuery,
   useDeleteBorrowingMutation,
@@ -249,18 +250,35 @@ export default function BorrowingScreen() {
       <Stack.Screen
         options={{
           headerTitle: "Debts & Loans",
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={() => {
-                haptics.light()
-                router.push("/modal/manage-borrowing")
-              }}
-              style={styles.headerAddBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Plus size={20} color={theme.colors.primary} />
-            </TouchableOpacity>
-          ),
+          ...(Platform.OS === "ios"
+            ? {
+                unstable_headerRightItems: () => [
+                  {
+                    type: "button",
+                    label: "New Agreement",
+                    icon: { type: "sfSymbol", name: "plus" },
+                    tintColor: theme.colors.primary,
+                    onPress: () => {
+                      haptics.light()
+                      router.push("/modal/manage-borrowing")
+                    },
+                  },
+                ],
+              }
+            : {
+                headerRight: () => (
+                  <TouchableOpacity
+                    onPress={() => {
+                      haptics.light()
+                      router.push("/modal/manage-borrowing")
+                    }}
+                    style={styles.headerAddBtn}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Plus size={20} color={theme.colors.primary} />
+                  </TouchableOpacity>
+                ),
+              }),
         }}
       />
 
@@ -600,7 +618,7 @@ export default function BorrowingScreen() {
                     </TouchableOpacity>
 
                     {/* 3-dots native popup menu */}
-                    <MenuView
+                    <ActionMenu
                       title={b.counterparty || "Agreement"}
                       colorScheme="dark"
                       style={styles.menuTriggerWrapper}
@@ -675,7 +693,7 @@ export default function BorrowingScreen() {
                           color={theme.colors.textMuted}
                         />
                       </View>
-                    </MenuView>
+                    </ActionMenu>
                   </View>
 
                   {/* Financial Stats Row */}

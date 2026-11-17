@@ -1,4 +1,5 @@
 import { Redirect, Stack } from "expo-router"
+import { Platform } from "react-native"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
 
@@ -13,8 +14,12 @@ export default function AuthLayout() {
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: theme.colors.background,
+          backgroundColor:
+            Platform.OS === "ios" ? "transparent" : theme.colors.background,
         },
+        headerUserInterfaceStyle: "dark",
+        headerShadowVisible: false,
+        headerBackButtonDisplayMode: "minimal",
         headerTintColor: theme.colors.textPrimary,
         headerTitleStyle: {
           fontWeight: "600",

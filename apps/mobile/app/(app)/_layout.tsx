@@ -1,4 +1,4 @@
-import { ActivityIndicator, View, StyleSheet } from "react-native"
+import { ActivityIndicator, Platform, View, StyleSheet } from "react-native"
 import { Redirect, Stack } from "expo-router"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
@@ -27,8 +27,12 @@ export default function AppLayout() {
       screenOptions={{
         headerShown: false,
         headerStyle: {
-          backgroundColor: theme.colors.background,
+          backgroundColor:
+            Platform.OS === "ios" ? "transparent" : theme.colors.background,
         },
+        headerUserInterfaceStyle: "dark",
+        headerShadowVisible: false,
+        headerBackButtonDisplayMode: "minimal",
         headerTintColor: theme.colors.textPrimary,
         headerTitleStyle: {
           fontWeight: "600",
@@ -45,10 +49,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Settings",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Back",
         }}
       />
@@ -57,10 +57,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Workspace Settings",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Settings",
         }}
       />
@@ -69,10 +65,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Active Sessions & Security",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Settings",
         }}
       />
@@ -81,10 +73,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "API Keys",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Security",
         }}
       />
@@ -93,10 +81,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Connected Accounts",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Settings",
         }}
       />
@@ -105,10 +89,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Transactions",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Finance",
         }}
       />
@@ -117,10 +97,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Transaction Details",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Transactions",
         }}
       />
@@ -129,10 +105,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Budgets",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Finance",
         }}
       />
@@ -141,10 +113,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Budget Details",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Budgets",
         }}
       />
@@ -153,10 +121,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Accounts",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Finance",
         }}
       />
@@ -165,10 +129,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Account Details",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Accounts",
         }}
       />
@@ -177,10 +137,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Recurring & Bills",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Finance",
         }}
       />
@@ -189,10 +145,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Debts & Loans",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Finance",
         }}
       />
@@ -201,10 +153,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Agreement Details",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Debts & Loans",
         }}
       />
@@ -213,10 +161,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Conversation",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Mail",
         }}
       />
@@ -225,10 +169,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Workflows",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Back",
         }}
       />
@@ -237,10 +177,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Workflow Editor",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Workflows",
         }}
       />
@@ -249,10 +185,6 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Run Trace",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Workflows",
         }}
       />

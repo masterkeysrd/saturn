@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { useRouter, useLocalSearchParams, Stack } from "expo-router"
@@ -166,9 +167,11 @@ export default function AddTransactionModal() {
                 ? "Edit Income"
                 : "Edit Expense"
               : "New Transaction",
-            headerStyle: {
-              backgroundColor: theme.colors.background,
-            },
+            ...(Platform.OS !== "ios" && {
+              headerStyle: {
+                backgroundColor: theme.colors.background,
+              },
+            }),
             headerTintColor: theme.colors.textPrimary,
           }}
         />

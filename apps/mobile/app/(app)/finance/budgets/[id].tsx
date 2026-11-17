@@ -29,7 +29,7 @@ import {
   MoreVertical,
 } from "lucide-react-native"
 import { Icon } from "@expo/ui"
-import { MenuView } from "@expo/ui/community/menu"
+import { ActionMenu } from "@/components/ui/action-menu"
 import {
   useGetBudgetQuery,
   useGetBudgetPeriodQuery,
@@ -856,101 +856,217 @@ export default function BudgetDetailScreen() {
       <Stack.Screen
         options={{
           headerTitle: budget.name,
-          headerRight: () => (
-            <MenuView
-              title={budget.name}
-              colorScheme="dark"
-              onPressAction={({ nativeEvent }) => {
-                if (nativeEvent.event === "expense") {
-                  haptics.light()
-                  router.push({
-                    pathname: "/modal/add-transaction",
-                    params: {
-                      type: "EXPENSE",
-                      budgetId: budget.id,
-                      ...(budget.defaultAccountId
-                        ? { accountId: budget.defaultAccountId }
-                        : {}),
-                    },
-                  })
-                } else if (nativeEvent.event === "pause") {
-                  handleUpdateStatus("PAUSED", "paused")
-                } else if (nativeEvent.event === "resume") {
-                  handleUpdateStatus("ACTIVE", "resumed")
-                } else if (nativeEvent.event === "close") {
-                  handleUpdateStatus("CLOSED", "closed")
-                } else if (nativeEvent.event === "reopen") {
-                  handleUpdateStatus("ACTIVE", "reopened")
-                } else if (nativeEvent.event === "edit") {
-                  haptics.light()
-                  router.push({
-                    pathname: "/modal/manage-budget",
-                    params: { id: budget.id },
-                  })
-                } else if (nativeEvent.event === "delete") {
-                  handleDeleteBudget()
-                }
-              }}
-              actions={[
-                ...(budget.status === "ACTIVE" || !budget.status
-                  ? [
-                      {
-                        id: "expense",
-                        title: "Record Expense",
-                        image: addExpenseIcon,
-                      },
-                    ]
-                  : []),
-                ...(budget.status === "PAUSED"
-                  ? [
-                      {
-                        id: "resume",
-                        title: "Resume Budget",
-                        image: resumeIcon,
-                      },
-                    ]
-                  : budget.status === "CLOSED"
-                    ? []
-                    : [
+          ...(Platform.OS === "ios"
+            ? {
+                unstable_headerRightItems: () => [
+                  {
+                    type: "menu",
+                    label: "Actions",
+                    icon: { type: "sfSymbol", name: "ellipsis" },
+                    menu: {
+                      title: budget.name,
+                      items: [
+                        ...(budget.status === "ACTIVE" || !budget.status
+                          ? [
+                              {
+                                type: "action" as const,
+                                label: "Record Expense",
+                                icon: {
+                                  type: "sfSymbol" as const,
+                                  name: "plus.circle" as const,
+                                },
+                                onPress: () => {
+                                  haptics.light()
+                                  router.push({
+                                    pathname: "/modal/add-transaction",
+                                    params: {
+                                      type: "EXPENSE",
+                                      budgetId: budget.id,
+                                      ...(budget.defaultAccountId
+                                        ? { accountId: budget.defaultAccountId }
+                                        : {}),
+                                    },
+                                  })
+                                },
+                              },
+                            ]
+                          : []),
+                        ...(budget.status === "PAUSED"
+                          ? [
+                              {
+                                type: "action" as const,
+                                label: "Resume Budget",
+                                icon: {
+                                  type: "sfSymbol" as const,
+                                  name: "play.circle" as const,
+                                },
+                                onPress: () =>
+                                  handleUpdateStatus("ACTIVE", "resumed"),
+                              },
+                            ]
+                          : budget.status === "CLOSED"
+                            ? []
+                            : [
+                                {
+                                  type: "action" as const,
+                                  label: "Pause Budget",
+                                  icon: {
+                                    type: "sfSymbol" as const,
+                                    name: "pause.circle" as const,
+                                  },
+                                  onPress: () =>
+                                    handleUpdateStatus("PAUSED", "paused"),
+                                },
+                              ]),
+                        ...(budget.status === "CLOSED"
+                          ? [
+                              {
+                                type: "action" as const,
+                                label: "Reopen Budget",
+                                icon: {
+                                  type: "sfSymbol" as const,
+                                  name: "arrow.uturn.backward.circle" as const,
+                                },
+                                onPress: () =>
+                                  handleUpdateStatus("ACTIVE", "reopened"),
+                              },
+                            ]
+                          : [
+                              {
+                                type: "action" as const,
+                                label: "Close Budget",
+                                icon: {
+                                  type: "sfSymbol" as const,
+                                  name: "xmark.circle" as const,
+                                },
+                                onPress: () =>
+                                  handleUpdateStatus("CLOSED", "closed"),
+                              },
+                            ]),
                         {
-                          id: "pause",
-                          title: "Pause Budget",
-                          image: pauseIcon,
+                          type: "action",
+                          label: "Edit Budget",
+                          icon: { type: "sfSymbol", name: "pencil" } as const,
+                          onPress: () => {
+                            haptics.light()
+                            router.push({
+                              pathname: "/modal/manage-budget",
+                              params: { id: budget.id },
+                            })
+                          },
                         },
-                      ]),
-                ...(budget.status === "CLOSED"
-                  ? [
+                        {
+                          type: "action",
+                          label: "Delete Budget",
+                          icon: { type: "sfSymbol", name: "trash" } as const,
+                          destructive: true,
+                          onPress: handleDeleteBudget,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              }
+            : {
+                headerRight: () => (
+                  <ActionMenu
+                    title={budget.name}
+                    colorScheme="dark"
+                    onPressAction={({ nativeEvent }) => {
+                      if (nativeEvent.event === "expense") {
+                        haptics.light()
+                        router.push({
+                          pathname: "/modal/add-transaction",
+                          params: {
+                            type: "EXPENSE",
+                            budgetId: budget.id,
+                            ...(budget.defaultAccountId
+                              ? { accountId: budget.defaultAccountId }
+                              : {}),
+                          },
+                        })
+                      } else if (nativeEvent.event === "pause") {
+                        handleUpdateStatus("PAUSED", "paused")
+                      } else if (nativeEvent.event === "resume") {
+                        handleUpdateStatus("ACTIVE", "resumed")
+                      } else if (nativeEvent.event === "close") {
+                        handleUpdateStatus("CLOSED", "closed")
+                      } else if (nativeEvent.event === "reopen") {
+                        handleUpdateStatus("ACTIVE", "reopened")
+                      } else if (nativeEvent.event === "edit") {
+                        haptics.light()
+                        router.push({
+                          pathname: "/modal/manage-budget",
+                          params: { id: budget.id },
+                        })
+                      } else if (nativeEvent.event === "delete") {
+                        handleDeleteBudget()
+                      }
+                    }}
+                    actions={[
+                      ...(budget.status === "ACTIVE" || !budget.status
+                        ? [
+                            {
+                              id: "expense",
+                              title: "Record Expense",
+                              image: addExpenseIcon,
+                            },
+                          ]
+                        : []),
+                      ...(budget.status === "PAUSED"
+                        ? [
+                            {
+                              id: "resume",
+                              title: "Resume Budget",
+                              image: resumeIcon,
+                            },
+                          ]
+                        : budget.status === "CLOSED"
+                          ? []
+                          : [
+                              {
+                                id: "pause",
+                                title: "Pause Budget",
+                                image: pauseIcon,
+                              },
+                            ]),
+                      ...(budget.status === "CLOSED"
+                        ? [
+                            {
+                              id: "reopen",
+                              title: "Reopen Budget",
+                              image: reopenIcon,
+                            },
+                          ]
+                        : [
+                            {
+                              id: "close",
+                              title: "Close Budget",
+                              image: closeIcon,
+                            },
+                          ]),
                       {
-                        id: "reopen",
-                        title: "Reopen Budget",
-                        image: reopenIcon,
+                        id: "edit",
+                        title: "Edit Budget",
+                        image: editIcon,
                       },
-                    ]
-                  : [
                       {
-                        id: "close",
-                        title: "Close Budget",
-                        image: closeIcon,
+                        id: "delete",
+                        title: "Delete Budget",
+                        image: deleteIcon,
+                        attributes: { destructive: true },
                       },
-                    ]),
-                {
-                  id: "edit",
-                  title: "Edit Budget",
-                  image: editIcon,
-                },
-                {
-                  id: "delete",
-                  title: "Delete Budget",
-                  image: deleteIcon,
-                  attributes: { destructive: true },
-                },
-              ]}
-            >
-              <View style={styles.headerDotsBtn}>
-                <MoreVertical size={20} color={theme.colors.textPrimary} />
-              </View>
-            </MenuView>
-          ),
+                    ]}
+                  >
+                    <View style={styles.headerDotsBtn}>
+                      <MoreVertical
+                        size={20}
+                        color={theme.colors.textPrimary}
+                      />
+                    </View>
+                  </ActionMenu>
+                ),
+              }),
         }}
       />
 

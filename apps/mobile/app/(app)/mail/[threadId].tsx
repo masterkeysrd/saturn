@@ -276,50 +276,92 @@ export default function MobileThreadReaderScreen() {
         options={{
           headerShown: true,
           headerTitle: "",
-          headerRight: () => (
-            <View style={styles.headerRightActions}>
-              <Pressable
-                testID="mobile-thread-action-star"
-                hitSlop={8}
-                onPress={handleToggleStar}
-                style={styles.headerBtn}
-              >
-                <Star
-                  size={19}
-                  color={thread.isStarred ? "#eab308" : theme.colors.textMuted}
-                  fill={thread.isStarred ? "#eab308" : "transparent"}
-                />
-              </Pressable>
+          ...(Platform.OS === "ios"
+            ? {
+                unstable_headerRightItems: () => [
+                  {
+                    type: "button",
+                    label: thread.isStarred ? "Unstar" : "Star",
+                    icon: {
+                      type: "sfSymbol",
+                      name: thread.isStarred ? "star.fill" : "star",
+                    },
+                    tintColor: thread.isStarred
+                      ? "#eab308"
+                      : theme.colors.textPrimary,
+                    onPress: handleToggleStar,
+                  },
+                  {
+                    type: "button",
+                    label: "Archive",
+                    icon: { type: "sfSymbol", name: "archivebox" },
+                    onPress: handleArchive,
+                  },
+                  {
+                    type: "button",
+                    label: "Delete",
+                    icon: { type: "sfSymbol", name: "trash" },
+                    tintColor: theme.colors.destructive,
+                    onPress: handleTrash,
+                  },
+                  {
+                    type: "button",
+                    label: "Create Event",
+                    icon: { type: "sfSymbol", name: "calendar.badge.plus" },
+                    tintColor: theme.colors.primary,
+                    sharesBackground: false,
+                    onPress: handleCreateEvent,
+                  },
+                ],
+              }
+            : {
+                headerRight: () => (
+                  <View style={styles.headerRightActions}>
+                    <Pressable
+                      testID="mobile-thread-action-star"
+                      hitSlop={8}
+                      onPress={handleToggleStar}
+                      style={styles.headerBtn}
+                    >
+                      <Star
+                        size={19}
+                        color={
+                          thread.isStarred ? "#eab308" : theme.colors.textMuted
+                        }
+                        fill={thread.isStarred ? "#eab308" : "transparent"}
+                      />
+                    </Pressable>
 
-              <Pressable
-                testID="mobile-thread-action-archive"
-                hitSlop={8}
-                onPress={handleArchive}
-                style={styles.headerBtn}
-              >
-                <Archive size={19} color={theme.colors.textMuted} />
-              </Pressable>
+                    <Pressable
+                      testID="mobile-thread-action-archive"
+                      hitSlop={8}
+                      onPress={handleArchive}
+                      style={styles.headerBtn}
+                    >
+                      <Archive size={19} color={theme.colors.textMuted} />
+                    </Pressable>
 
-              <Pressable
-                testID="mobile-thread-action-trash"
-                hitSlop={8}
-                onPress={handleTrash}
-                style={styles.headerBtn}
-              >
-                <Trash2 size={19} color={theme.colors.textMuted} />
-              </Pressable>
+                    <Pressable
+                      testID="mobile-thread-action-trash"
+                      hitSlop={8}
+                      onPress={handleTrash}
+                      style={styles.headerBtn}
+                    >
+                      <Trash2 size={19} color={theme.colors.textMuted} />
+                    </Pressable>
 
-              {/* Create Calendar Event from Email Button */}
-              <Pressable
-                testID="mobile-thread-action-create-event"
-                hitSlop={8}
-                onPress={handleCreateEvent}
-                style={[styles.headerBtn, styles.createEventBtn]}
-              >
-                <CalendarPlus size={18} color={theme.colors.primary} />
-              </Pressable>
-            </View>
-          ),
+                    {/* Create Calendar Event from Email Button */}
+                    <Pressable
+                      testID="mobile-thread-action-create-event"
+                      hitSlop={8}
+                      onPress={handleCreateEvent}
+                      style={[styles.headerBtn, styles.createEventBtn]}
+                    >
+                      <CalendarPlus size={18} color={theme.colors.primary} />
+                    </Pressable>
+                  </View>
+                ),
+              }),
         }}
       />
 

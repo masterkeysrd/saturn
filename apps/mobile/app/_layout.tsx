@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { Platform } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import {
   configureReanimatedLogger,
@@ -72,8 +73,14 @@ export default function RootLayout() {
                   <Stack
                     screenOptions={{
                       headerStyle: {
-                        backgroundColor: theme.colors.background,
+                        backgroundColor:
+                          Platform.OS === "ios"
+                            ? "transparent"
+                            : theme.colors.background,
                       },
+                      headerUserInterfaceStyle: "dark",
+                      headerShadowVisible: false,
+                      headerBackButtonDisplayMode: "minimal",
                       headerTintColor: theme.colors.textPrimary,
                       headerTitleStyle: {
                         fontWeight: "600",
@@ -96,9 +103,11 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "New Transaction",
-                        headerStyle: {
-                          backgroundColor: theme.colors.surface,
-                        },
+                        ...(Platform.OS !== "ios" && {
+                          headerStyle: {
+                            backgroundColor: theme.colors.surface,
+                          },
+                        }),
                       }}
                     />
                     <Stack.Screen
@@ -106,18 +115,22 @@ export default function RootLayout() {
                       options={{
                         presentation: "formSheet",
                         headerTitle: "Switch Workspace",
-                        headerStyle: {
-                          backgroundColor: theme.colors.surface,
-                        },
+                        ...(Platform.OS !== "ios" && {
+                          headerStyle: {
+                            backgroundColor: theme.colors.surface,
+                          },
+                        }),
                       }}
                     />
                     <Stack.Screen
                       name="server-settings"
                       options={{
                         headerTitle: "Settings",
-                        headerStyle: {
-                          backgroundColor: theme.colors.surface,
-                        },
+                        ...(Platform.OS !== "ios" && {
+                          headerStyle: {
+                            backgroundColor: theme.colors.surface,
+                          },
+                        }),
                       }}
                     />
                     <Stack.Screen
@@ -125,9 +138,11 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "Create Workspace",
-                        headerStyle: {
-                          backgroundColor: theme.colors.surface,
-                        },
+                        ...(Platform.OS !== "ios" && {
+                          headerStyle: {
+                            backgroundColor: theme.colors.surface,
+                          },
+                        }),
                       }}
                     />
                     <Stack.Screen
@@ -135,9 +150,11 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "Manage Budget",
-                        headerStyle: {
-                          backgroundColor: theme.colors.surface,
-                        },
+                        ...(Platform.OS !== "ios" && {
+                          headerStyle: {
+                            backgroundColor: theme.colors.surface,
+                          },
+                        }),
                       }}
                     />
                     <Stack.Screen
@@ -145,9 +162,11 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "Manage Account",
-                        headerStyle: {
-                          backgroundColor: theme.colors.surface,
-                        },
+                        ...(Platform.OS !== "ios" && {
+                          headerStyle: {
+                            backgroundColor: theme.colors.surface,
+                          },
+                        }),
                       }}
                     />
                     <Stack.Screen
@@ -155,9 +174,11 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "Recurring Template",
-                        headerStyle: {
-                          backgroundColor: theme.colors.surface,
-                        },
+                        ...(Platform.OS !== "ios" && {
+                          headerStyle: {
+                            backgroundColor: theme.colors.surface,
+                          },
+                        }),
                       }}
                     />
                     <Stack.Screen
@@ -165,9 +186,11 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "Manage Debt / Loan",
-                        headerStyle: {
-                          backgroundColor: theme.colors.surface,
-                        },
+                        ...(Platform.OS !== "ios" && {
+                          headerStyle: {
+                            backgroundColor: theme.colors.surface,
+                          },
+                        }),
                       }}
                     />
                     <Stack.Screen
@@ -175,9 +198,11 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "Adjust Balance",
-                        headerStyle: {
-                          backgroundColor: theme.colors.surface,
-                        },
+                        ...(Platform.OS !== "ios" && {
+                          headerStyle: {
+                            backgroundColor: theme.colors.surface,
+                          },
+                        }),
                       }}
                     />
                     <Stack.Screen
@@ -185,9 +210,11 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "Adjust Debt Balance",
-                        headerStyle: {
-                          backgroundColor: theme.colors.surface,
-                        },
+                        ...(Platform.OS !== "ios" && {
+                          headerStyle: {
+                            backgroundColor: theme.colors.surface,
+                          },
+                        }),
                       }}
                     />
                     <Stack.Screen
@@ -195,9 +222,11 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "Manage Event",
-                        headerStyle: {
-                          backgroundColor: theme.colors.surface,
-                        },
+                        ...(Platform.OS !== "ios" && {
+                          headerStyle: {
+                            backgroundColor: theme.colors.surface,
+                          },
+                        }),
                       }}
                     />
                     <Stack.Screen
@@ -205,9 +234,11 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "New Message",
-                        headerStyle: {
-                          backgroundColor: theme.colors.surface,
-                        },
+                        ...(Platform.OS !== "ios" && {
+                          headerStyle: {
+                            backgroundColor: theme.colors.surface,
+                          },
+                        }),
                       }}
                     />
                     <Stack.Screen
@@ -215,9 +246,11 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "API Key",
-                        headerStyle: {
-                          backgroundColor: theme.colors.surface,
-                        },
+                        ...(Platform.OS !== "ios" && {
+                          headerStyle: {
+                            backgroundColor: theme.colors.surface,
+                          },
+                        }),
                       }}
                     />
                     <Stack.Screen
@@ -225,9 +258,11 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "Generate Workflow",
-                        headerStyle: {
-                          backgroundColor: theme.colors.surface,
-                        },
+                        ...(Platform.OS !== "ios" && {
+                          headerStyle: {
+                            backgroundColor: theme.colors.surface,
+                          },
+                        }),
                       }}
                     />
                     <Stack.Screen

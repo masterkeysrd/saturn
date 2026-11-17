@@ -545,32 +545,70 @@ export default function ManageEventModal() {
       <Stack.Screen
         options={{
           headerTitle: isEditMode ? "Edit Event" : "New Event",
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => {
-                haptics.light()
-                router.back()
-              }}
-              style={styles.headerBtn}
-              testID="manage-event-close-btn"
-            >
-              <X size={20} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={handleSaveAttempt}
-              disabled={isSaving}
-              style={[styles.headerSaveBtn, isSaving && { opacity: 0.6 }]}
-              testID="manage-event-save-btn"
-            >
-              {isSaving ? (
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-              ) : (
-                <Text style={styles.headerSaveBtnText}>Save</Text>
-              )}
-            </TouchableOpacity>
-          ),
+          ...(Platform.OS === "ios"
+            ? {
+                unstable_headerLeftItems: () => [
+                  {
+                    type: "button",
+                    label: "Close",
+                    icon: { type: "sfSymbol", name: "xmark" },
+                    onPress: () => {
+                      haptics.light()
+                      router.back()
+                    },
+                  },
+                ],
+                unstable_headerRightItems: () => [
+                  isSaving
+                    ? {
+                        type: "custom",
+                        hidesSharedBackground: true,
+                        element: (
+                          <ActivityIndicator
+                            size="small"
+                            color={theme.colors.primary}
+                          />
+                        ),
+                      }
+                    : {
+                        type: "button",
+                        label: "Save",
+                        variant: "done",
+                        onPress: handleSaveAttempt,
+                      },
+                ],
+              }
+            : {
+                headerLeft: () => (
+                  <TouchableOpacity
+                    onPress={() => {
+                      haptics.light()
+                      router.back()
+                    }}
+                    style={styles.headerBtn}
+                    testID="manage-event-close-btn"
+                  >
+                    <X size={20} color={theme.colors.textMuted} />
+                  </TouchableOpacity>
+                ),
+                headerRight: () => (
+                  <TouchableOpacity
+                    onPress={handleSaveAttempt}
+                    disabled={isSaving}
+                    style={[styles.headerSaveBtn, isSaving && { opacity: 0.6 }]}
+                    testID="manage-event-save-btn"
+                  >
+                    {isSaving ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={theme.colors.primary}
+                      />
+                    ) : (
+                      <Text style={styles.headerSaveBtnText}>Save</Text>
+                    )}
+                  </TouchableOpacity>
+                ),
+              }),
         }}
       />
 

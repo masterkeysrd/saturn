@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Platform,
 } from "react-native"
 import { useRouter, useLocalSearchParams, Stack } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
@@ -27,7 +28,7 @@ import {
   Phone,
 } from "lucide-react-native"
 import { Icon } from "@expo/ui"
-import { MenuView } from "@expo/ui/community/menu"
+import { ActionMenu } from "@/components/ui/action-menu"
 import {
   useGetBorrowingQuery,
   useListBorrowingsQuery,
@@ -636,71 +637,149 @@ export default function BorrowingDetailScreen() {
       <Stack.Screen
         options={{
           headerTitle: borrowing.counterparty || "Agreement Details",
-          headerRight: () => (
-            <MenuView
-              title={borrowing.counterparty || "Agreement"}
-              colorScheme="dark"
-              onPressAction={({ nativeEvent }) => {
-                if (nativeEvent.event === "pay") {
-                  haptics.light()
-                  router.push({
-                    pathname: "/modal/add-transaction",
-                    params: {
-                      type: "BORROWING",
-                      borrowingId: borrowing.id,
+          ...(Platform.OS === "ios"
+            ? {
+                unstable_headerRightItems: () => [
+                  {
+                    type: "menu",
+                    label: "Actions",
+                    icon: { type: "sfSymbol", name: "ellipsis" },
+                    menu: {
+                      title: borrowing.counterparty || "Agreement",
+                      items: [
+                        ...(!isPaid
+                          ? [
+                              {
+                                type: "action" as const,
+                                label: isLent
+                                  ? "Record Payment Received"
+                                  : "Log Repayment",
+                                icon: {
+                                  type: "sfSymbol" as const,
+                                  name: "dollarsign.circle" as const,
+                                },
+                                onPress: () => {
+                                  haptics.light()
+                                  router.push({
+                                    pathname: "/modal/add-transaction",
+                                    params: {
+                                      type: "BORROWING",
+                                      borrowingId: borrowing.id,
+                                    },
+                                  })
+                                },
+                              },
+                            ]
+                          : []),
+                        {
+                          type: "action",
+                          label: "Adjust Balance",
+                          icon: {
+                            type: "sfSymbol",
+                            name: "scalemass",
+                          } as const,
+                          onPress: () => {
+                            haptics.light()
+                            router.push({
+                              pathname: "/modal/adjust-borrowing",
+                              params: { borrowingId: borrowing.id },
+                            })
+                          },
+                        },
+                        {
+                          type: "action",
+                          label: "Edit Agreement",
+                          icon: { type: "sfSymbol", name: "pencil" } as const,
+                          onPress: () => {
+                            haptics.light()
+                            router.push({
+                              pathname: "/modal/manage-borrowing",
+                              params: { id: borrowing.id },
+                            })
+                          },
+                        },
+                        {
+                          type: "action",
+                          label: "Delete Agreement",
+                          icon: { type: "sfSymbol", name: "trash" } as const,
+                          destructive: true,
+                          onPress: handleDeleteBorrowing,
+                        },
+                      ],
                     },
-                  })
-                } else if (nativeEvent.event === "adjust") {
-                  haptics.light()
-                  router.push({
-                    pathname: "/modal/adjust-borrowing",
-                    params: { borrowingId: borrowing.id },
-                  })
-                } else if (nativeEvent.event === "edit") {
-                  haptics.light()
-                  router.push({
-                    pathname: "/modal/manage-borrowing",
-                    params: { id: borrowing.id },
-                  })
-                } else if (nativeEvent.event === "delete") {
-                  handleDeleteBorrowing()
-                }
-              }}
-              actions={[
-                ...(!isPaid
-                  ? [
+                  },
+                ],
+              }
+            : {
+                headerRight: () => (
+                  <ActionMenu
+                    title={borrowing.counterparty || "Agreement"}
+                    colorScheme="dark"
+                    onPressAction={({ nativeEvent }) => {
+                      if (nativeEvent.event === "pay") {
+                        haptics.light()
+                        router.push({
+                          pathname: "/modal/add-transaction",
+                          params: {
+                            type: "BORROWING",
+                            borrowingId: borrowing.id,
+                          },
+                        })
+                      } else if (nativeEvent.event === "adjust") {
+                        haptics.light()
+                        router.push({
+                          pathname: "/modal/adjust-borrowing",
+                          params: { borrowingId: borrowing.id },
+                        })
+                      } else if (nativeEvent.event === "edit") {
+                        haptics.light()
+                        router.push({
+                          pathname: "/modal/manage-borrowing",
+                          params: { id: borrowing.id },
+                        })
+                      } else if (nativeEvent.event === "delete") {
+                        handleDeleteBorrowing()
+                      }
+                    }}
+                    actions={[
+                      ...(!isPaid
+                        ? [
+                            {
+                              id: "pay",
+                              title: isLent
+                                ? "Record Payment Received"
+                                : "Log Repayment",
+                              image: paymentIcon,
+                            },
+                          ]
+                        : []),
                       {
-                        id: "pay",
-                        title: isLent
-                          ? "Record Payment Received"
-                          : "Log Repayment",
-                        image: paymentIcon,
+                        id: "adjust",
+                        title: "Adjust Balance",
+                        image: adjustIcon,
                       },
-                    ]
-                  : []),
-                {
-                  id: "adjust",
-                  title: "Adjust Balance",
-                  image: adjustIcon,
-                },
-                {
-                  id: "edit",
-                  title: "Edit Agreement",
-                  image: editIcon,
-                },
-                {
-                  id: "delete",
-                  title: "Delete Agreement",
-                  image: deleteIcon,
-                  attributes: { destructive: true },
-                },
-              ]}
-            >
-              <View style={styles.headerDotsBtn}>
-                <MoreVertical size={20} color={theme.colors.textPrimary} />
-              </View>
-            </MenuView>
-          ),
+                      {
+                        id: "edit",
+                        title: "Edit Agreement",
+                        image: editIcon,
+                      },
+                      {
+                        id: "delete",
+                        title: "Delete Agreement",
+                        image: deleteIcon,
+                        attributes: { destructive: true },
+                      },
+                    ]}
+                  >
+                    <View style={styles.headerDotsBtn}>
+                      <MoreVertical
+                        size={20}
+                        color={theme.colors.textPrimary}
+                      />
+                    </View>
+                  </ActionMenu>
+                ),
+              }),
         }}
       />
 

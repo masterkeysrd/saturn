@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Platform,
 } from "react-native"
 import { useRouter, useLocalSearchParams, Stack } from "expo-router"
 import {
@@ -279,21 +280,39 @@ export default function AccountDetailScreen() {
       <Stack.Screen
         options={{
           headerTitle: account.name,
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={() => {
-                haptics.light()
-                router.push({
-                  pathname: "/modal/manage-account",
-                  params: { id: account.id },
-                })
-              }}
-              style={styles.headerEditBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text style={styles.headerEditBtnText}>Edit</Text>
-            </TouchableOpacity>
-          ),
+          ...(Platform.OS === "ios"
+            ? {
+                unstable_headerRightItems: () => [
+                  {
+                    type: "button",
+                    label: "Edit",
+                    onPress: () => {
+                      haptics.light()
+                      router.push({
+                        pathname: "/modal/manage-account",
+                        params: { id: account.id },
+                      })
+                    },
+                  },
+                ],
+              }
+            : {
+                headerRight: () => (
+                  <TouchableOpacity
+                    onPress={() => {
+                      haptics.light()
+                      router.push({
+                        pathname: "/modal/manage-account",
+                        params: { id: account.id },
+                      })
+                    }}
+                    style={styles.headerEditBtn}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={styles.headerEditBtnText}>Edit</Text>
+                  </TouchableOpacity>
+                ),
+              }),
         }}
       />
 

@@ -160,15 +160,28 @@ export default function AdjustBalanceModal() {
       <Stack.Screen
         options={{
           headerTitle: "Adjust Balance",
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.headerBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <X size={20} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          ),
+          ...(Platform.OS === "ios"
+            ? {
+                unstable_headerLeftItems: () => [
+                  {
+                    type: "button",
+                    label: "Close",
+                    icon: { type: "sfSymbol", name: "xmark" },
+                    onPress: () => router.back(),
+                  },
+                ],
+              }
+            : {
+                headerLeft: () => (
+                  <TouchableOpacity
+                    onPress={() => router.back()}
+                    style={styles.headerBtn}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <X size={20} color={theme.colors.textMuted} />
+                  </TouchableOpacity>
+                ),
+              }),
         }}
       />
 

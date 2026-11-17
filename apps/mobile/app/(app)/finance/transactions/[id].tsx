@@ -5,6 +5,7 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
+  Platform,
 } from "react-native"
 import { useLocalSearchParams, useRouter, Stack } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -267,26 +268,47 @@ export default function TransactionDetailScreen() {
       <Stack.Screen
         options={{
           headerTitle: "",
-          headerRight: () => (
-            <View style={styles.navActionsRow}>
-              <TouchableOpacity
-                onPress={handleEdit}
-                style={styles.navActionBtn}
-                hitSlop={8}
-                activeOpacity={0.7}
-              >
-                <Edit3 size={18} color={theme.colors.textPrimary} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleDeletePrompt}
-                style={[styles.navActionBtn, styles.navDeleteBtn]}
-                hitSlop={8}
-                activeOpacity={0.7}
-              >
-                <Trash2 size={18} color={theme.colors.destructive} />
-              </TouchableOpacity>
-            </View>
-          ),
+          ...(Platform.OS === "ios"
+            ? {
+                unstable_headerRightItems: () => [
+                  {
+                    type: "button",
+                    label: "Edit",
+                    icon: { type: "sfSymbol", name: "pencil" },
+                    onPress: handleEdit,
+                  },
+                  {
+                    type: "button",
+                    label: "Delete",
+                    icon: { type: "sfSymbol", name: "trash" },
+                    tintColor: theme.colors.destructive,
+                    sharesBackground: false,
+                    onPress: handleDeletePrompt,
+                  },
+                ],
+              }
+            : {
+                headerRight: () => (
+                  <View style={styles.navActionsRow}>
+                    <TouchableOpacity
+                      onPress={handleEdit}
+                      style={styles.navActionBtn}
+                      hitSlop={8}
+                      activeOpacity={0.7}
+                    >
+                      <Edit3 size={18} color={theme.colors.textPrimary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handleDeletePrompt}
+                      style={[styles.navActionBtn, styles.navDeleteBtn]}
+                      hitSlop={8}
+                      activeOpacity={0.7}
+                    >
+                      <Trash2 size={18} color={theme.colors.destructive} />
+                    </TouchableOpacity>
+                  </View>
+                ),
+              }),
         }}
       />
 

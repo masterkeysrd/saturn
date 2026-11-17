@@ -5,6 +5,7 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Platform,
 } from "react-native"
 import { useRouter, Stack } from "expo-router"
 import { Landmark, Plus, ArrowRightLeft } from "lucide-react-native"
@@ -151,33 +152,63 @@ export default function AccountsScreen() {
       <Stack.Screen
         options={{
           headerTitle: "Accounts",
-          headerRight: () => (
-            <View style={styles.headerRightActions}>
-              <TouchableOpacity
-                onPress={() => {
-                  haptics.light()
-                  router.push({
-                    pathname: "/modal/add-transaction",
-                    params: { type: "TRANSFER" },
-                  })
-                }}
-                style={styles.headerIconBtn}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <ArrowRightLeft size={18} color={theme.colors.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  haptics.light()
-                  router.push("/modal/manage-account")
-                }}
-                style={styles.headerIconBtn}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Plus size={20} color={theme.colors.primary} />
-              </TouchableOpacity>
-            </View>
-          ),
+          ...(Platform.OS === "ios"
+            ? {
+                unstable_headerRightItems: () => [
+                  {
+                    type: "button",
+                    label: "Transfer",
+                    icon: { type: "sfSymbol", name: "arrow.left.arrow.right" },
+                    tintColor: theme.colors.primary,
+                    onPress: () => {
+                      haptics.light()
+                      router.push({
+                        pathname: "/modal/add-transaction",
+                        params: { type: "TRANSFER" },
+                      })
+                    },
+                  },
+                  {
+                    type: "button",
+                    label: "New Account",
+                    icon: { type: "sfSymbol", name: "plus" },
+                    tintColor: theme.colors.primary,
+                    onPress: () => {
+                      haptics.light()
+                      router.push("/modal/manage-account")
+                    },
+                  },
+                ],
+              }
+            : {
+                headerRight: () => (
+                  <View style={styles.headerRightActions}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        haptics.light()
+                        router.push({
+                          pathname: "/modal/add-transaction",
+                          params: { type: "TRANSFER" },
+                        })
+                      }}
+                      style={styles.headerIconBtn}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <ArrowRightLeft size={18} color={theme.colors.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        haptics.light()
+                        router.push("/modal/manage-account")
+                      }}
+                      style={styles.headerIconBtn}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Plus size={20} color={theme.colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                ),
+              }),
         }}
       />
 

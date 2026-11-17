@@ -7,6 +7,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   Alert,
+  Platform,
 } from "react-native"
 import { useRouter, Stack } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
@@ -22,7 +23,7 @@ import {
   Calendar,
 } from "lucide-react-native"
 import { Icon } from "@expo/ui"
-import { MenuView } from "@expo/ui/community/menu"
+import { ActionMenu } from "@/components/ui/action-menu"
 import {
   useListRecurringTransactionsQuery,
   useListScheduledTransactionsQuery,
@@ -436,18 +437,35 @@ export default function RecurringScreen() {
       <Stack.Screen
         options={{
           headerTitle: "Recurring & Bills",
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={() => {
-                haptics.light()
-                router.push("/modal/manage-recurring")
-              }}
-              style={styles.headerAddBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Plus size={20} color={theme.colors.primary} />
-            </TouchableOpacity>
-          ),
+          ...(Platform.OS === "ios"
+            ? {
+                unstable_headerRightItems: () => [
+                  {
+                    type: "button",
+                    label: "New Recurring",
+                    icon: { type: "sfSymbol", name: "plus" },
+                    tintColor: theme.colors.primary,
+                    onPress: () => {
+                      haptics.light()
+                      router.push("/modal/manage-recurring")
+                    },
+                  },
+                ],
+              }
+            : {
+                headerRight: () => (
+                  <TouchableOpacity
+                    onPress={() => {
+                      haptics.light()
+                      router.push("/modal/manage-recurring")
+                    }}
+                    style={styles.headerAddBtn}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Plus size={20} color={theme.colors.primary} />
+                  </TouchableOpacity>
+                ),
+              }),
         }}
       />
 
@@ -771,7 +789,7 @@ export default function RecurringScreen() {
                       </MonoAmount>
                     </TouchableOpacity>
 
-                    <MenuView
+                    <ActionMenu
                       title={title}
                       colorScheme="dark"
                       style={styles.menuTriggerWrapper}
@@ -811,7 +829,7 @@ export default function RecurringScreen() {
                           color={theme.colors.textMuted}
                         />
                       </View>
-                    </MenuView>
+                    </ActionMenu>
                   </View>
                 )
               })}
@@ -930,7 +948,7 @@ export default function RecurringScreen() {
                     </MonoAmount>
                   </TouchableOpacity>
 
-                  <MenuView
+                  <ActionMenu
                     title={rt.name}
                     colorScheme="dark"
                     style={styles.menuTriggerWrapper}
@@ -971,7 +989,7 @@ export default function RecurringScreen() {
                     <View style={styles.dotsBtn}>
                       <MoreVertical size={18} color={theme.colors.textMuted} />
                     </View>
-                  </MenuView>
+                  </ActionMenu>
                 </View>
               )
             })}

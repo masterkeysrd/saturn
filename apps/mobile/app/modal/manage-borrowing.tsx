@@ -321,17 +321,32 @@ export default function ManageBorrowingModal() {
       <Stack.Screen
         options={{
           headerTitle: isEditMode ? "Edit Debt / Loan" : "Record Debt / Loan",
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => router.back()}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <X size={20} color={theme.colors.textPrimary} />
-            </TouchableOpacity>
-          ),
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
+          ...(Platform.OS === "ios"
+            ? {
+                unstable_headerLeftItems: () => [
+                  {
+                    type: "button",
+                    label: "Close",
+                    icon: { type: "sfSymbol", name: "xmark" },
+                    onPress: () => router.back(),
+                  },
+                ],
+              }
+            : {
+                headerLeft: () => (
+                  <TouchableOpacity
+                    onPress={() => router.back()}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <X size={20} color={theme.colors.textPrimary} />
+                  </TouchableOpacity>
+                ),
+              }),
+          ...(Platform.OS !== "ios" && {
+            headerStyle: {
+              backgroundColor: theme.colors.background,
+            },
+          }),
           headerTintColor: theme.colors.textPrimary,
         }}
       />

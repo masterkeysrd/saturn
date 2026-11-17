@@ -88,34 +88,75 @@ export default function ServerSettingsScreen() {
           headerTitle: "Settings",
           headerTitleAlign: "center",
           headerBackVisible: false,
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => {
-                haptics.light()
-                router.back()
-              }}
-              style={styles.headerBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel="Close"
-            >
-              <X size={20} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={() => handleSubmit(onValid)()}
-              disabled={isPending}
-              style={[styles.headerSaveBtn, isPending && { opacity: 0.6 }]}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel="Save Server Settings"
-            >
-              {isPending ? (
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-              ) : (
-                <Text style={styles.headerSaveBtnText}>Save</Text>
-              )}
-            </TouchableOpacity>
-          ),
+          ...(Platform.OS === "ios"
+            ? {
+                unstable_headerLeftItems: () => [
+                  {
+                    type: "button",
+                    label: "Close",
+                    icon: { type: "sfSymbol", name: "xmark" },
+                    onPress: () => {
+                      haptics.light()
+                      router.back()
+                    },
+                  },
+                ],
+                unstable_headerRightItems: () => [
+                  isPending
+                    ? {
+                        type: "custom",
+                        hidesSharedBackground: true,
+                        element: (
+                          <ActivityIndicator
+                            size="small"
+                            color={theme.colors.primary}
+                          />
+                        ),
+                      }
+                    : {
+                        type: "button",
+                        label: "Save",
+                        variant: "done",
+                        onPress: () => handleSubmit(onValid)(),
+                      },
+                ],
+              }
+            : {
+                headerLeft: () => (
+                  <TouchableOpacity
+                    onPress={() => {
+                      haptics.light()
+                      router.back()
+                    }}
+                    style={styles.headerBtn}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityLabel="Close"
+                  >
+                    <X size={20} color={theme.colors.textMuted} />
+                  </TouchableOpacity>
+                ),
+                headerRight: () => (
+                  <TouchableOpacity
+                    onPress={() => handleSubmit(onValid)()}
+                    disabled={isPending}
+                    style={[
+                      styles.headerSaveBtn,
+                      isPending && { opacity: 0.6 },
+                    ]}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityLabel="Save Server Settings"
+                  >
+                    {isPending ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={theme.colors.primary}
+                      />
+                    ) : (
+                      <Text style={styles.headerSaveBtnText}>Save</Text>
+                    )}
+                  </TouchableOpacity>
+                ),
+              }),
         }}
       />
 

@@ -25,7 +25,7 @@ import {
   MoreVertical,
 } from "lucide-react-native"
 import { Icon } from "@expo/ui"
-import { MenuView } from "@expo/ui/community/menu"
+import { ActionMenu } from "@/components/ui/action-menu"
 import { formatAmount, formatInterval } from "@saturn/core"
 import {
   useListBudgetsQuery,
@@ -300,18 +300,35 @@ export default function BudgetsScreen() {
       <Stack.Screen
         options={{
           headerTitle: "Budgets",
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={() => {
-                haptics.light()
-                router.push("/modal/manage-budget")
-              }}
-              style={styles.headerAddBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Plus size={20} color={theme.colors.primary} />
-            </TouchableOpacity>
-          ),
+          ...(Platform.OS === "ios"
+            ? {
+                unstable_headerRightItems: () => [
+                  {
+                    type: "button",
+                    label: "New Budget",
+                    icon: { type: "sfSymbol", name: "plus" },
+                    tintColor: theme.colors.primary,
+                    onPress: () => {
+                      haptics.light()
+                      router.push("/modal/manage-budget")
+                    },
+                  },
+                ],
+              }
+            : {
+                headerRight: () => (
+                  <TouchableOpacity
+                    onPress={() => {
+                      haptics.light()
+                      router.push("/modal/manage-budget")
+                    }}
+                    style={styles.headerAddBtn}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Plus size={20} color={theme.colors.primary} />
+                  </TouchableOpacity>
+                ),
+              }),
         }}
       />
       <ScrollView
@@ -699,7 +716,7 @@ export default function BudgetsScreen() {
                     </TouchableOpacity>
 
                     {/* Native 3-Dots Quick Action Menu (sibling of TouchableOpacity) */}
-                    <MenuView
+                    <ActionMenu
                       title={b.name}
                       colorScheme="dark"
                       style={styles.menuTriggerWrapper}
@@ -803,7 +820,7 @@ export default function BudgetsScreen() {
                           color={theme.colors.textMuted}
                         />
                       </View>
-                    </MenuView>
+                    </ActionMenu>
                   </View>
 
                   <TouchableOpacity

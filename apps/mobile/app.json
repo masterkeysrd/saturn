@@ -9,7 +9,10 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "dev.masterkeys.saturn"
+      "bundleIdentifier": "dev.masterkeys.saturn",
+      "infoPlist": {
+        "UIUserInterfaceStyle": "Dark"
+      }
     },
     "android": {
       "package": "dev.masterkeys.saturn",
