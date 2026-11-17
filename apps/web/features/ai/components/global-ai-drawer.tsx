@@ -44,7 +44,7 @@ export function GlobalAIDrawer() {
 
   const { data: threadsData } = useListThreadsQuery(
     { isArchived: false, pageSize: 15, pageToken: "" },
-    { enabled: Boolean(spaceId) }
+    { enabled: Boolean(spaceId) && open }
   )
 
   const recentThreads = threadsData?.threads ?? []

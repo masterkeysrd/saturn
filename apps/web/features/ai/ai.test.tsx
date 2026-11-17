@@ -525,9 +525,18 @@ describe("Web AI Studio", () => {
   it("opens GlobalAIDrawer via openAIDrawer event, auto-sends prompt, and exposes recent threads switcher", async () => {
     renderWithProviders(<GlobalAIDrawer />)
 
+    expect(aiApi.useListThreadsQuery).toHaveBeenCalledWith(
+      { isArchived: false, pageSize: 15, pageToken: "" },
+      { enabled: false }
+    )
+
     openAIDrawer({ prompt: "Summarize unread mail", autoSend: true })
 
     expect(await screen.findByText("Saturn Copilot")).toBeTruthy()
+    expect(aiApi.useListThreadsQuery).toHaveBeenLastCalledWith(
+      { isArchived: false, pageSize: 15, pageToken: "" },
+      { enabled: true }
+    )
     await waitFor(() => {
       expect(sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({ content: "Summarize unread mail" })
