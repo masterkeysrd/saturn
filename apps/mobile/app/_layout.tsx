@@ -1,18 +1,29 @@
+import { useCallback, useEffect, useRef, useState } from "react"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
 } from "react-native-reanimated"
+import { isRunningInExpoGo } from "expo"
 import { Stack } from "expo-router"
+import * as SplashScreen from "expo-splash-screen"
 import { StatusBar } from "expo-status-bar"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet"
-import { AuthProvider } from "@/lib/auth-context"
+import { AuthProvider, useAuth } from "@/lib/auth-context"
 import { SpaceProvider } from "@/lib/space-context"
 import { ToastProvider } from "@/components/ui/toast"
 import { queryClient, persistOptions } from "@/lib/query-persister"
 import { theme } from "@/lib/theme"
+
+void SplashScreen.preventAutoHideAsync().catch(() => {})
+if (!isRunningInExpoGo()) {
+  SplashScreen.setOptions({
+    duration: 250,
+    fade: true,
+  })
+}
 
 // Suppress Reanimated 4.7+ warnings triggered by @gorhom/bottom-sheet passing
 // explicit dependency arrays to worklet hooks on native.
@@ -21,10 +32,31 @@ configureReanimatedLogger({
   strict: false,
 })
 
+function SplashScreenController({ isLayoutReady }: { isLayoutReady: boolean }) {
+  const { isLoading } = useAuth()
+  const hiddenRef = useRef(false)
+
+  useEffect(() => {
+    if (!isLoading && isLayoutReady && !hiddenRef.current) {
+      hiddenRef.current = true
+      void SplashScreen.hideAsync()
+    }
+  }, [isLoading, isLayoutReady])
+
+  return null
+}
+
 export default function RootLayout() {
+  const [isLayoutReady, setIsLayoutReady] = useState(false)
+
+  const handleRootLayout = useCallback(() => {
+    setIsLayoutReady(true)
+  }, [])
+
   return (
     <GestureHandlerRootView
       style={{ flex: 1, backgroundColor: theme.colors.background }}
+      onLayout={handleRootLayout}
     >
       <SafeAreaProvider>
         <PersistQueryClientProvider
@@ -32,6 +64,7 @@ export default function RootLayout() {
           persistOptions={persistOptions}
         >
           <AuthProvider>
+            <SplashScreenController isLayoutReady={isLayoutReady} />
             <SpaceProvider>
               <BottomSheetModalProvider>
                 <ToastProvider>
