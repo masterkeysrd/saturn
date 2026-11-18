@@ -44,9 +44,17 @@ export function SpaceAPIKeysSettings() {
           apiKeyId: grantToRevoke.apiKeyId,
         },
       })
-      await queryClient.invalidateQueries({
-        queryKey: [`/api/v1/spaces/${spaceId}/api-keys`],
-      })
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: [`/api/v1/spaces/${spaceId}/api-keys`],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["/api/v1/identity/api-keys"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["/api/v1/spaces"],
+        }),
+      ])
       setGrantToRevoke(null)
       toast.add({
         type: "success",

@@ -162,7 +162,7 @@ function AccountAvatar({
 export function ConnectedAccountsView() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { spaceId, isWritable } = useSpacePermissions()
+  const { spaceId, canManageSpace } = useSpacePermissions()
   const tz = useTimezone()
 
   const { data: providersData, isLoading: providersLoading } =
@@ -243,7 +243,7 @@ export function ConnectedAccountsView() {
     account: ConnectedAccount,
     capability: ConnectorCapability
   ) => {
-    if (!isWritable || !account.id) return
+    if (!canManageSpace || !account.id) return
 
     const currentCaps = account.enabledCapabilities || []
     const isEnabling = !currentCaps.includes(capability)
@@ -305,7 +305,7 @@ export function ConnectedAccountsView() {
     account: ConnectedAccount,
     color: string
   ) => {
-    if (!isWritable || !account.id) return
+    if (!canManageSpace || !account.id) return
 
     try {
       await updateAccountMutation.mutateAsync({
@@ -389,7 +389,7 @@ export function ConnectedAccountsView() {
   return (
     <div className="space-y-8">
       {/* Read-only banner for viewers / members */}
-      {!isWritable && (
+      {!canManageSpace && (
         <div className="flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-600 dark:text-amber-400">
           <Lock className="h-4 w-4 shrink-0" />
           <span>
@@ -448,7 +448,7 @@ export function ConnectedAccountsView() {
                   Contacts
                 </span>
               </div>
-              {isWritable ? (
+              {canManageSpace ? (
                 <Button
                   size="sm"
                   variant="outline"
@@ -617,7 +617,7 @@ export function ConnectedAccountsView() {
                               {account.displayName || account.email}
                             </span>
                             {/* Accent color picker */}
-                            {isWritable && (
+                            {canManageSpace && (
                               <Popover>
                                 <PopoverTrigger
                                   type="button"
@@ -713,7 +713,7 @@ export function ConnectedAccountsView() {
                             Please reconnect to resume synchronization.
                           </span>
                         </div>
-                        {isWritable && (
+                        {canManageSpace && (
                           <Button
                             size="sm"
                             variant="default"
@@ -774,7 +774,7 @@ export function ConnectedAccountsView() {
                                   <Switch
                                     id={switchId}
                                     checked={isEnabled}
-                                    disabled={!isWritable}
+                                    disabled={!canManageSpace}
                                     onCheckedChange={() =>
                                       handleToggleCapability(account, cap)
                                     }
@@ -819,7 +819,7 @@ export function ConnectedAccountsView() {
                                   </div>
                                   <Switch
                                     checked={cal.isEnabled}
-                                    disabled={!isWritable}
+                                    disabled={!canManageSpace}
                                     onCheckedChange={() =>
                                       updateCalendarMutation.mutate({
                                         id: cal.id,
@@ -841,7 +841,7 @@ export function ConnectedAccountsView() {
                         size="sm"
                         variant="ghost"
                         className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                        disabled={isSyncingThis || !isWritable}
+                        disabled={isSyncingThis || !canManageSpace}
                         onClick={() => handleSyncNow(account)}
                       >
                         <RefreshCw
@@ -853,7 +853,7 @@ export function ConnectedAccountsView() {
                         <span>{isSyncingThis ? "Syncing..." : "Sync Now"}</span>
                       </Button>
 
-                      {isWritable && (
+                      {canManageSpace && (
                         <Button
                           size="sm"
                           variant="ghost"

@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { useAuth } from "@/features/auth/use-auth"
-import { useTimezone } from "@saturn/hooks"
+import { useTimezone, invalidateFinanceQueries } from "@saturn/hooks"
 import { FISCAL_YEAR_MONTHS, getFiscalYearBounds } from "@saturn/core"
 import {
   useGetSettingsQuery,
@@ -48,9 +48,7 @@ export function FinanceSettings() {
 
   const updateMutation = useUpdateSettingsMutation({
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["/api/v1/finance/settings"],
-      })
+      await invalidateFinanceQueries(queryClient)
       setSelectedMonth(null)
       const monthOption = FISCAL_YEAR_MONTHS.find(
         (m) => m.month === activeMonth

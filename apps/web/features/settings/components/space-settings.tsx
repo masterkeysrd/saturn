@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CreateSpaceSchema, type CreateSpaceFormValues } from "@saturn/schemas"
 import { useMySpaces, useActiveSpaceContext } from "@/features/space/use-space"
+import { useAuth } from "@/features/auth/use-auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -28,6 +29,7 @@ import { toast } from "@/components/ui/toast"
 import { ManageSpaceSheet } from "./manage-space-sheet"
 
 export function SpaceSettings() {
+  const { user } = useAuth()
   const { spaces, isLoading: isSpacesLoading } = useMySpaces()
   const { spaceId, spaceName, switchSpace, clearActiveSpace } =
     useActiveSpaceContext()
@@ -204,7 +206,8 @@ export function SpaceSettings() {
                           switchSpace({
                             spaceId: space.id || "",
                             spaceName: space.name,
-                            spaceRole: "owner",
+                            spaceRole:
+                              user && space.ownerId === user.id ? "owner" : "",
                           })
                         }
                       >
@@ -218,14 +221,16 @@ export function SpaceSettings() {
                     >
                       Manage
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => setDeleteTarget(space.id || null)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    {user?.id === space.ownerId && (
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setDeleteTarget(space.id || null)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

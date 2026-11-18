@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTimezone } from "@saturn/hooks"
 import {
   useListActiveSessionsQuery,
   useRevokeSessionMutation,
@@ -29,6 +30,7 @@ import {
 import { toast } from "@/components/ui/toast"
 
 export function ActiveSessionsSettings() {
+  const tz = useTimezone()
   const { data, isLoading, refetch } = useListActiveSessionsQuery({})
   const revokeSessionMutation = useRevokeSessionMutation({
     onSuccess: () => {
@@ -126,7 +128,7 @@ export function ActiveSessionsSettings() {
               className="cursor-pointer text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
               <LogOutIcon className="mr-1.5 h-3.5 w-3.5" />
-              Sign Out Other Devices
+              Sign Out All Devices
             </Button>
           )}
 
@@ -169,7 +171,7 @@ export function ActiveSessionsSettings() {
               const isCurrent = Boolean(session.isCurrent ?? idx === 0)
               const parsed = parseUserAgent(session.userAgent || "")
               const lastActive = session.lastUsedAt
-                ? new Date(session.lastUsedAt).toLocaleString()
+                ? tz.formatDateTime(session.lastUsedAt)
                 : "Active now"
 
               return (
@@ -300,13 +302,13 @@ export function ActiveSessionsSettings() {
         </DialogContent>
       </Dialog>
 
-      {/* Revoke All Other Sessions Dialog */}
+      {/* Revoke All Sessions Dialog */}
       <Dialog open={revokeAllOpen} onOpenChange={setRevokeAllOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <LogOutIcon className="h-5 w-5" />
-              Sign Out of All Devices
+              Sign Out All Devices
             </DialogTitle>
             <DialogDescription>
               This will immediately invalidate all active sessions across all

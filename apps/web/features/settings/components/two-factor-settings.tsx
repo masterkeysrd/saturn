@@ -32,6 +32,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
+import { toast } from "@/components/ui/toast"
 
 export function TwoFactorSettings() {
   const { data, isLoading, refetch } = useListMFAFactorsQuery({})
@@ -144,11 +145,13 @@ export function TwoFactorSettings() {
   const handleDownloadCodes = (codes: string[]) => {
     const element = document.createElement("a")
     const file = new Blob([codes.join("\n")], { type: "text/plain" })
-    element.href = URL.createObjectURL(file)
+    const url = URL.createObjectURL(file)
+    element.href = url
     element.download = "saturn-recovery-codes.txt"
     document.body.appendChild(element)
     element.click()
     document.body.removeChild(element)
+    URL.revokeObjectURL(url)
   }
 
   const handleDeleteFactor = async () => {
@@ -161,7 +164,12 @@ export function TwoFactorSettings() {
       setFactorToDelete(null)
       refetch()
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete factor")
+      toast.add({
+        type: "error",
+        title: "Failed to Remove Authenticator",
+        description:
+          err instanceof Error ? err.message : "Failed to delete factor",
+      })
     }
   }
 
@@ -173,7 +181,12 @@ export function TwoFactorSettings() {
       })
       refetch()
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to set primary factor")
+      toast.add({
+        type: "error",
+        title: "Failed to Update Primary Authenticator",
+        description:
+          err instanceof Error ? err.message : "Failed to set primary factor",
+      })
     }
   }
 
@@ -419,10 +432,13 @@ export function TwoFactorSettings() {
 
               <div className="flex flex-col items-center justify-center space-y-4 py-2">
                 {stagedQrSvg ? (
-                  <div
-                    className="flex h-44 w-44 items-center justify-center rounded-2xl bg-white p-3 shadow-md [&>svg]:h-full [&>svg]:w-full"
-                    dangerouslySetInnerHTML={{ __html: stagedQrSvg }}
-                  />
+                  <div className="flex h-44 w-44 items-center justify-center rounded-2xl bg-white p-3 shadow-md">
+                    <img
+                      src={`data:image/svg+xml;utf8,${encodeURIComponent(stagedQrSvg)}`}
+                      alt="Two-factor authentication QR code"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
                 ) : (
                   <div className="flex h-44 w-44 items-center justify-center rounded-2xl bg-muted/40 text-xs text-muted-foreground">
                     Loading barcode...

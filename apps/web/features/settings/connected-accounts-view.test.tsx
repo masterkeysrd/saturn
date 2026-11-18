@@ -110,6 +110,7 @@ describe("ConnectedAccountsView", () => {
       spaceId: "spc_1",
       spaceRole: "admin",
       isWritable: true,
+      canManageSpace: true,
     })
 
     vi.mocked(hooks.useConnectedAccounts).mockReturnValue({
@@ -143,6 +144,7 @@ describe("ConnectedAccountsView", () => {
       spaceId: "spc_1",
       spaceRole: "admin",
       isWritable: true,
+      canManageSpace: true,
     })
 
     vi.mocked(hooks.useConnectedAccounts).mockReturnValue({
@@ -175,6 +177,7 @@ describe("ConnectedAccountsView", () => {
       spaceId: "spc_1",
       spaceRole: "viewer",
       isWritable: false,
+      canManageSpace: false,
     })
 
     vi.mocked(hooks.useConnectedAccounts).mockReturnValue({
@@ -221,6 +224,7 @@ describe("ConnectedAccountsView", () => {
       spaceId: "spc_1",
       spaceRole: "admin",
       isWritable: true,
+      canManageSpace: true,
     })
 
     vi.mocked(hooks.useConnectedAccounts).mockReturnValue({
@@ -278,6 +282,7 @@ describe("ConnectedAccountsView", () => {
       spaceId: "spc_1",
       spaceRole: "admin",
       isWritable: true,
+      canManageSpace: true,
     })
 
     vi.mocked(hooks.useConnectedAccounts).mockReturnValue({

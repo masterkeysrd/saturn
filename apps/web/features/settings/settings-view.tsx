@@ -88,7 +88,7 @@ export function SettingsView() {
           },
           {
             to: "/settings/security/api-keys",
-            label: "API Keys",
+            label: "Personal API Keys",
             icon: KeyIcon,
           },
         ],
@@ -115,7 +115,7 @@ export function SettingsView() {
                 },
                 {
                   to: "/settings/api-keys",
-                  label: "API Keys",
+                  label: "Workspace API Keys",
                   icon: KeyIcon,
                 },
               ]

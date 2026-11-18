@@ -46,6 +46,7 @@ import {
   type UpdateSpaceRequest,
 } from "@saturn/api/gen/saturn/space/v1/space"
 import { SPACE_ROLE_LABELS, SPACE_ROLE_OPTIONS } from "@saturn/core"
+import { useActiveSpaceContext } from "@/features/space/use-space"
 import { toast } from "@/components/ui/toast"
 
 interface ManageSpaceSheetProps {
@@ -55,6 +56,11 @@ interface ManageSpaceSheetProps {
 
 export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
   const queryClient = useQueryClient()
+  const {
+    spaceId: activeSpaceId,
+    spaceRole: activeSpaceRole,
+    switchSpace,
+  } = useActiveSpaceContext()
 
   const [generalError, setGeneralError] = useState("")
   const [memberError, setMemberError] = useState("")
@@ -129,7 +135,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
     if (!space?.id) return
     setGeneralError("")
     try {
-      await patchMutation.mutateAsync({
+      const updated = await patchMutation.mutateAsync({
         id: space.id,
         expectedVersion: space.version ? String(space.version) : undefined,
         payload: {
@@ -138,6 +144,14 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
         },
         dirtyFields,
       })
+      queryClient.invalidateQueries({ queryKey: ["/api/v1/spaces"] })
+      if (space.id === activeSpaceId) {
+        switchSpace({
+          spaceId: activeSpaceId,
+          spaceName: updated?.name || data.name.trim(),
+          spaceRole: activeSpaceRole,
+        })
+      }
       toast.add({
         type: "success",
         title: "Space Updated",
@@ -366,7 +380,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="max-h-64 space-y-2 divide-y divide-border/40 overflow-y-auto rounded-2xl border border-border/40 bg-muted/20 select-none">
+              <div className="max-h-64 divide-y divide-border/40 overflow-y-auto border-t border-border/40 select-none">
                 {members.length === 0 ? (
                   <p className="p-4 text-center text-xs text-muted-foreground">
                     No members found.

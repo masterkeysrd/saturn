@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTimezone } from "@saturn/hooks"
 import {
   useListDevicesQuery,
   useRevokeDeviceMutation,
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/dialog"
 
 export function TrustedDevicesSettings() {
+  const tz = useTimezone()
   const { data, isLoading, refetch } = useListDevicesQuery({})
   const revokeMutation = useRevokeDeviceMutation()
 
@@ -58,13 +60,7 @@ export function TrustedDevicesSettings() {
           ? Math.floor(new Date(ts).getTime() / 1000)
           : 0
     if (!secs) return "Never"
-    return new Date(secs * 1000).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    })
+    return tz.formatDateTime(new Date(secs * 1000))
   }
 
   const devices = data?.devices || []

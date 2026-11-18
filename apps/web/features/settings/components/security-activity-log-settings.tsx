@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTimezone } from "@saturn/hooks"
 import { useListMySecurityEventsQuery } from "@saturn/api/gen/saturn/identity/v1/identity"
 import {
   ShieldCheckIcon,
@@ -21,6 +22,7 @@ import { parseUserAgent } from "@/lib/utils"
 const PAGE_SIZE = 10
 
 export function SecurityActivityLogSettings() {
+  const tz = useTimezone()
   const [pageToken, setPageToken] = useState("")
   const [tokenHistory, setTokenHistory] = useState<string[]>([])
 
@@ -160,7 +162,7 @@ export function SecurityActivityLogSettings() {
                 const meta = getEventMeta(ev.eventType || "")
                 const parsedDevice = parseUserAgent(ev.userAgent || "")
                 const dateStr = ev.createdAt
-                  ? new Date(ev.createdAt).toLocaleString()
+                  ? tz.formatDateTime(ev.createdAt)
                   : "Unknown time"
 
                 return (

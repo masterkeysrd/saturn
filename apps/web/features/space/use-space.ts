@@ -1,5 +1,6 @@
 import {
   useState,
+  useEffect,
   useCallback,
   useMemo,
   createContext,
@@ -11,11 +12,19 @@ import {
   useListSpacesQuery,
   useGetSettingsQuery,
 } from "@saturn/api/gen/saturn/space/v1/space"
-import { TimezoneProvider } from "@saturn/hooks"
+import { TimezoneProvider, useSpaceRole } from "@saturn/hooks"
 import { useAuth } from "@/features/auth/use-auth"
 
 const ACTIVE_SPACE_KEY = "active_space_id"
 const SPACE_META_KEY = "space_meta"
+
+function getBrowserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+  } catch {
+    return "UTC"
+  }
+}
 
 export interface SpaceMeta {
   spaceId: string
@@ -74,21 +83,22 @@ interface ActiveSpaceContextType {
 const ActiveSpaceContext = createContext<ActiveSpaceContextType | null>(null)
 
 export function ActiveSpaceProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth()
   const activeSpaceState = useActiveSpace()
+  const { spaceId, clearActiveSpace } = activeSpaceState
+
+  useEffect(() => {
+    if (!isAuthLoading && !isAuthenticated && spaceId) {
+      clearActiveSpace()
+    }
+  }, [isAuthLoading, isAuthenticated, spaceId, clearActiveSpace])
+
   const { data: settings } = useGetSettingsQuery(
-    { spaceId: activeSpaceState.spaceId },
-    { enabled: isAuthenticated && !!activeSpaceState.spaceId }
+    { spaceId },
+    { enabled: isAuthenticated && !!spaceId }
   )
 
-  const browserTz = useMemo(() => {
-    try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
-    } catch {
-      return "UTC"
-    }
-  }, [])
-
+  const browserTz = useMemo(() => getBrowserTimezone(), [])
   const timezone = settings?.timezone || browserTz
 
   return createElement(
@@ -133,18 +143,31 @@ export function useActiveSpaceContext() {
     { spaceId },
     { enabled: isAuthenticated && !!spaceId }
   )
-  const timezone = settings?.timezone || "UTC"
+  const browserTz = useMemo(() => getBrowserTimezone(), [])
+  const timezone = settings?.timezone || browserTz
 
   const activeSpace = useMemo(() => {
     return spaces.find((s) => s.id === spaceId) ?? null
   }, [spaces, spaceId])
 
+  const { role: resolvedRole, isLoading: isRoleLoading } = useSpaceRole({
+    space: activeSpace,
+    userId: user?.id,
+    enabled: isAuthenticated && !!activeSpace && !!user?.id,
+  })
+
   const currentRole = useMemo(() => {
-    if (activeSpace && user && activeSpace.ownerId === user.id) {
-      return "owner"
+    if (!spaceId) return ""
+    if (activeSpace && user?.id) {
+      if (activeSpace.ownerId === user.id) {
+        return "owner"
+      }
+      if (!isRoleLoading) {
+        return resolvedRole
+      }
     }
-    return spaceRole || "member"
-  }, [spaceRole, activeSpace, user])
+    return spaceRole || ""
+  }, [spaceId, activeSpace, user?.id, isRoleLoading, resolvedRole, spaceRole])
 
   return {
     activeSpace,
@@ -160,8 +183,10 @@ export function useActiveSpaceContext() {
 
 export function useSpacePermissions() {
   const { spaceId, spaceRole } = useActiveSpaceContext()
-  const isWritable = spaceRole === "owner" || spaceRole === "admin"
-  return { spaceId, spaceRole, isWritable }
+  const isWritable =
+    spaceRole === "owner" || spaceRole === "admin" || spaceRole === "member"
+  const canManageSpace = spaceRole === "owner" || spaceRole === "admin"
+  return { spaceId, spaceRole, isWritable, canManageSpace }
 }
 
 export function resolveSpacePath(

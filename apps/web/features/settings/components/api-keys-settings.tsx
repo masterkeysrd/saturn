@@ -62,17 +62,17 @@ import {
 function computeExpirationISO(
   preset: APIKeyExpirationPreset,
   customDate: string,
-  now: Date
+  tz: ReturnType<typeof useTimezone>
 ): string | undefined {
   if (preset === "none") return undefined
   if (preset === "custom") {
     if (!customDate) return undefined
-    const parsed = new Date(`${customDate}T23:59:59.000Z`)
+    const parsed = tz.endOfDay(customDate)
     return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString()
   }
   const match = API_KEY_EXPIRATION_PRESETS.find((p) => p.id === preset)
   if (!match?.days) return undefined
-  const target = new Date(now.getTime() + match.days * 24 * 60 * 60 * 1000)
+  const target = new Date(tz.now().getTime() + match.days * 24 * 60 * 60 * 1000)
   return target.toISOString()
 }
 
@@ -166,6 +166,27 @@ export function APIKeysSettings() {
     }
   }
 
+  const invalidateAPIKeyQueries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["/api/v1/identity/api-keys"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["/api/v1/spaces"],
+      }),
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]
+          return (
+            typeof key === "string" &&
+            key.startsWith("/api/v1/spaces/") &&
+            key.endsWith("/api-keys")
+          )
+        },
+      }),
+    ])
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError(null)
@@ -199,9 +220,7 @@ export function APIKeysSettings() {
             },
           },
         })
-        await queryClient.invalidateQueries({
-          queryKey: ["/api/v1/identity/api-keys"],
-        })
+        await invalidateAPIKeyQueries()
         setSheetOpen(false)
         toast.add({
           type: "success",
@@ -216,11 +235,7 @@ export function APIKeysSettings() {
       return
     }
 
-    const expiresAt = computeExpirationISO(
-      expirationPreset,
-      customDate,
-      tz.now()
-    )
+    const expiresAt = computeExpirationISO(expirationPreset, customDate, tz)
     if (expirationPreset === "custom" && !expiresAt) {
       setFormError("Please select a valid custom expiration date.")
       return
@@ -252,9 +267,7 @@ export function APIKeysSettings() {
             : {}),
         },
       })
-      await queryClient.invalidateQueries({
-        queryKey: ["/api/v1/identity/api-keys"],
-      })
+      await invalidateAPIKeyQueries()
       setSheetOpen(false)
       setCopied(false)
       setRevealedKey(created)
@@ -272,9 +285,7 @@ export function APIKeysSettings() {
         id: keyToDelete.id,
         req: { id: keyToDelete.id },
       })
-      await queryClient.invalidateQueries({
-        queryKey: ["/api/v1/identity/api-keys"],
-      })
+      await invalidateAPIKeyQueries()
       setKeyToDelete(null)
       toast.add({
         type: "success",
@@ -539,7 +550,7 @@ export function APIKeysSettings() {
                 </div>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-2 border-t border-border/40 pt-4">
                 <div className="flex items-center justify-between">
                   <Label>Workspace Grants ({selectedSpaceIds.length})</Label>
                   {spaces.length > 1 && (
@@ -563,7 +574,7 @@ export function APIKeysSettings() {
                     </Button>
                   )}
                 </div>
-                <div className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-3">
+                <div className="space-y-2 pt-1">
                   {spaces.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
                       No workspaces available.
@@ -591,7 +602,7 @@ export function APIKeysSettings() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 border-t border-border/40 pt-4">
                 <div className="flex items-center justify-between">
                   <Label>Permission Scopes ({selectedScopes.length})</Label>
                   <Button
@@ -603,7 +614,7 @@ export function APIKeysSettings() {
                     {allScopesSelected ? "Deselect All" : "Select All"}
                   </Button>
                 </div>
-                <div className="space-y-3 rounded-xl border border-border/50 bg-muted/20 p-3">
+                <div className="space-y-3 pt-1">
                   {API_KEY_SCOPE_GROUPS.map((group) => (
                     <div key={group.id} className="space-y-1.5">
                       <div className="text-xs font-semibold text-foreground">
