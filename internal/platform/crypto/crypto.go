@@ -17,8 +17,6 @@ import (
 // Prefix identifies AES-256-GCM encrypted strings in Saturn storage.
 const Prefix = "enc:v1:"
 
-const defaultDevSecret = "saturn-dev-master-encryption-key-fallback"
-
 const (
 	saltSize   = 16
 	infoString = "saturn-aes-256-gcm-key"
@@ -29,14 +27,29 @@ type Cipher struct {
 	secretKey string
 }
 
-// NewCipher creates a Cipher using secretKey. If secretKey is empty,
-// it falls back to a default dev seed for local development.
+// NewCipher creates a Cipher using secretKey. Returns an error if secretKey is empty.
 func NewCipher(secretKey string) (*Cipher, error) {
-	if secretKey == "" {
-		secretKey = defaultDevSecret
+	if strings.TrimSpace(secretKey) == "" {
+		return nil, errors.New("encryption key must not be empty")
 	}
 
 	return &Cipher{secretKey: secretKey}, nil
+}
+
+// DeriveSubkey derives a domain-separated key of length size bytes from secretKey and info using HKDF-SHA256.
+func DeriveSubkey(secretKey, info string, size int) ([]byte, error) {
+	if strings.TrimSpace(secretKey) == "" {
+		return nil, errors.New("encryption key must not be empty")
+	}
+	if size <= 0 {
+		return nil, errors.New("derived key size must be positive")
+	}
+	hkdfReader := hkdf.New(sha256.New, []byte(secretKey), nil, []byte(info))
+	key := make([]byte, size)
+	if _, err := io.ReadFull(hkdfReader, key); err != nil {
+		return nil, fmt.Errorf("derive subkey via hkdf: %w", err)
+	}
+	return key, nil
 }
 
 func (c *Cipher) deriveKey(salt []byte) ([]byte, error) {

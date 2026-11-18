@@ -104,3 +104,41 @@ func TestCipher_InvalidCiphertextFormat(t *testing.T) {
 		t.Errorf("expected error when decrypting payload without salt:payload delimiter, got nil")
 	}
 }
+
+func TestNewCipher_RejectsEmptyKey(t *testing.T) {
+	for _, key := range []string{"", "   "} {
+		if _, err := crypto.NewCipher(key); err == nil {
+			t.Fatalf("expected NewCipher(%q) to return an error", key)
+		}
+	}
+}
+
+func TestDeriveSubkey(t *testing.T) {
+	if _, err := crypto.DeriveSubkey("", "ctx", 32); err == nil {
+		t.Fatal("expected error for empty secret key")
+	}
+	if _, err := crypto.DeriveSubkey("master-key", "ctx", 0); err == nil {
+		t.Fatal("expected error for non-positive size")
+	}
+	k1, err := crypto.DeriveSubkey("master-key", "saturn-mail-attachment-hmac-v1", 32)
+	if err != nil {
+		t.Fatalf("DeriveSubkey() error = %v", err)
+	}
+	k2, err := crypto.DeriveSubkey("master-key", "saturn-mail-attachment-hmac-v1", 32)
+	if err != nil {
+		t.Fatalf("DeriveSubkey() error = %v", err)
+	}
+	k3, err := crypto.DeriveSubkey("master-key", "other-context", 32)
+	if err != nil {
+		t.Fatalf("DeriveSubkey() error = %v", err)
+	}
+	if len(k1) != 32 {
+		t.Fatalf("len(k1) = %d, want 32", len(k1))
+	}
+	if string(k1) != string(k2) {
+		t.Fatal("expected DeriveSubkey to be deterministic for identical inputs")
+	}
+	if string(k1) == string(k3) {
+		t.Fatal("expected distinct subkeys for different info contexts")
+	}
+}
