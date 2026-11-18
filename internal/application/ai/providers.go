@@ -351,7 +351,12 @@ func (c *coordinator) SyncProviderModels(ctx context.Context, req *SyncProviderM
 			DisplayName: cand.DisplayName,
 			Source:      source,
 			Profile:     cand.Profile,
-			IsEnabled:   true,
+			Config: ai.GenerationConfig{
+				Thinking: ai.ThinkingConfig{
+					Enabled: cand.Profile.Capabilities.Reasoning || ai.InferReasoningCapability(cand.ModelID),
+				},
+			},
+			IsEnabled: true,
 		}
 		if err := m.Validate(); err != nil {
 			return nil, errors.E(op, err)
@@ -424,7 +429,12 @@ func (c *coordinator) autoSeedProviderModels(ctx context.Context, spaceID string
 						DisplayName: d.DisplayName,
 						Source:      ai.ModelSourceDiscovered,
 						Profile:     d.Profile,
-						IsEnabled:   true,
+						Config: ai.GenerationConfig{
+							Thinking: ai.ThinkingConfig{
+								Enabled: d.Profile.Capabilities.Reasoning || ai.InferReasoningCapability(d.ModelID),
+							},
+						},
+						IsEnabled: true,
 					}
 					if err := m.Validate(); err != nil {
 						return nil, err
@@ -454,7 +464,12 @@ func (c *coordinator) autoSeedProviderModels(ctx context.Context, spaceID string
 			DisplayName: sp.DisplayName,
 			Source:      ai.ModelSourceCatalog,
 			Profile:     sp.Profile,
-			IsEnabled:   true,
+			Config: ai.GenerationConfig{
+				Thinking: ai.ThinkingConfig{
+					Enabled: sp.Profile.Capabilities.Reasoning || ai.InferReasoningCapability(sp.ModelID),
+				},
+			},
+			IsEnabled: true,
 		}
 		if err := m.Validate(); err != nil {
 			return nil, err

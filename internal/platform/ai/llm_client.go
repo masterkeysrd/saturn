@@ -217,22 +217,31 @@ func (c *LoomClient) buildLoomModel(ctx context.Context, req InvokeRequest) (*ll
 	}
 
 	gen := req.Generation
-	if gen.Temperature != nil {
+	anthropicThinking := req.Provider.Driver == DriverAnthropic && gen.Thinking.Enabled
+	if gen.Temperature != nil && (!anthropicThinking || *gen.Temperature == 1.0) {
 		model = model.WithTemperature(float32(*gen.Temperature))
 	}
 	if gen.MaxTokens != nil && *gen.MaxTokens > 0 {
 		model = model.WithMaxTokens(int(*gen.MaxTokens))
 	}
-	if gen.TopP != nil {
+	if gen.TopP != nil && !anthropicThinking {
 		model = model.WithTopP(float32(*gen.TopP))
 	}
-	if gen.Thinking.Enabled {
-		model = model.WithThinkingEnabled(true)
+	if gen.Thinking.Enabled && (req.Provider.Driver != DriverOllama || req.ResponseSchema == nil) {
+		if req.Provider.Driver == DriverAnthropic {
+			if gen.Thinking.BudgetTokens != nil && *gen.Thinking.BudgetTokens >= 1024 {
+				model = model.WithThinking(int(*gen.Thinking.BudgetTokens))
+			} else {
+				model = model.WithAdaptiveThinking()
+			}
+		} else {
+			model = model.WithThinkingEnabled(true)
+			if gen.Thinking.BudgetTokens != nil && *gen.Thinking.BudgetTokens > 0 {
+				model = model.WithThinking(int(*gen.Thinking.BudgetTokens))
+			}
+		}
 		if gen.Thinking.Effort != nil && *gen.Thinking.Effort != "" {
 			model = model.WithThinkingEffort(*gen.Thinking.Effort)
-		}
-		if gen.Thinking.BudgetTokens != nil && *gen.Thinking.BudgetTokens > 0 {
-			model = model.WithThinking(int(*gen.Thinking.BudgetTokens))
 		}
 	}
 

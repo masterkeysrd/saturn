@@ -90,6 +90,39 @@ type CatalogModelSpec struct {
 	DefaultRole ModelRole
 }
 
+// InferReasoningCapability reports whether a model ID belongs to a known reasoning-capable model family
+// when upstream discovery metadata omits explicit capability flags (such as custom or local Ollama tags).
+func InferReasoningCapability(modelID string) bool {
+	lower := strings.ToLower(strings.TrimSpace(modelID))
+	if lower == "" {
+		return false
+	}
+	for _, token := range []string{
+		"qwen3",
+		"deepseek-r1",
+		"deepseek-reasoner",
+		"qwq",
+		"gemini-2.5",
+		"gemini-3",
+		"gemini-4",
+		"claude-3-7",
+		"claude-sonnet-4",
+		"claude-opus-4",
+		"magistral",
+		"gpt-oss",
+		"thinking",
+	} {
+		if strings.Contains(lower, token) {
+			return true
+		}
+	}
+	base := lower
+	if idx := strings.LastIndex(base, "/"); idx >= 0 {
+		base = base[idx+1:]
+	}
+	return strings.HasPrefix(base, "o1") || strings.HasPrefix(base, "o3") || strings.HasPrefix(base, "o4")
+}
+
 // FromLoomProfile maps a loom/profile.Profile to Saturn's ModelProfile.
 func FromLoomProfile(lp profile.Profile) ModelProfile {
 	return ModelProfile{
@@ -98,7 +131,7 @@ func FromLoomProfile(lp profile.Profile) ModelProfile {
 			Vision:           slices.Contains(lp.Modalities.Inputs, profile.ModalityImage),
 			Document:         slices.Contains(lp.Modalities.Inputs, profile.ModalityPDF),
 			Audio:            slices.Contains(lp.Modalities.Inputs, profile.ModalityAudio),
-			Reasoning:        lp.Capabilities.Reasoning,
+			Reasoning:        lp.Capabilities.Reasoning || InferReasoningCapability(lp.ID),
 			StructuredOutput: lp.Capabilities.ToolCall,
 			Streaming:        true,
 		},

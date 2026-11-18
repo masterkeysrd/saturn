@@ -536,7 +536,7 @@ func (tr *ThreadRuntime) runStreamingLoop(
 	}
 	defer boundSet.closeAll()
 
-	genCfg := mergeGenerationConfig(rm.model.Config, &agent.Config.Generation)
+	genCfg := mergeGenerationConfig(effectiveModelGeneration(rm.model), &agent.Config.Generation)
 	genCfg = mergeGenerationConfig(genCfg, &th.Config.Generation)
 
 	sc, _ := auth.SpaceContextFromContext(ctx)

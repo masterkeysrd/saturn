@@ -135,7 +135,7 @@ func (r *Runtime) Generate(ctx context.Context, req GenerateRequest) (*Run, erro
 	}
 	msgs = append(msgs, message.NewUser(userBlocks...))
 
-	genCfg := mergeGenerationConfig(rm.model.Config, req.Generation)
+	genCfg := mergeGenerationConfig(effectiveModelGeneration(rm.model), req.Generation)
 
 	startTime := r.nowFn()
 	run := &Run{
@@ -336,7 +336,7 @@ func (r *Runtime) RunAgent(ctx context.Context, req RunAgentRequest) (*Run, erro
 	}
 	messages = append(messages, message.NewUserText(promptText))
 
-	genCfg := mergeGenerationConfig(rm.model.Config, &agent.Config.Generation)
+	genCfg := mergeGenerationConfig(effectiveModelGeneration(rm.model), &agent.Config.Generation)
 	genCfg = mergeGenerationConfig(genCfg, req.Generation)
 
 	maxSteps := int(agent.Config.Execution.MaxSteps)
@@ -883,6 +883,17 @@ func clipRunes(s string, maxLen int) string {
 		return s
 	}
 	return string(runes[:maxLen])
+}
+
+func effectiveModelGeneration(m *Model) GenerationConfig {
+	if m == nil {
+		return GenerationConfig{}
+	}
+	cfg := m.Config
+	if m.Profile.Capabilities.Reasoning || InferReasoningCapability(m.ModelID) {
+		cfg.Thinking.Enabled = true
+	}
+	return cfg
 }
 
 func mergeGenerationConfig(base GenerationConfig, override *GenerationConfig) GenerationConfig {
