@@ -169,6 +169,72 @@ func TestCalendarHandler(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "respond to event normalizes status and succeeds",
+			ctx: auth.WithSpaceScope(
+				auth.WithPrincipal(context.Background(), auth.Principal{
+					Subject:  "usr_1",
+					APIKeyID: "apk_1",
+					Scopes:   []string{string(identity.ScopeCalendarWrite)},
+				}),
+				"spc_1",
+				string(space.RoleMember),
+			),
+			toolName: "calendar_respond_to_event",
+			args: map[string]any{
+				"id":              "cev_1",
+				"response_status": "ACCEPTED",
+			},
+			setupMocks: func(_ *CalendarAggregatorMock, coord *CalendarCoordinatorMock, _ *SpaceSettingsReaderMock) {
+				coord.RespondToEventFunc = func(_ context.Context, req *calendarapp.RespondToEventRequest) (*domaincalendar.Event, error) {
+					if req.ID != "cev_1" || req.ResponseStatus != "accepted" {
+						t.Errorf("unexpected respond request: %+v", req)
+					}
+					return &domaincalendar.Event{
+						ID:    req.ID,
+						Title: "Design Review",
+					}, nil
+				}
+			},
+			assertOut: func(t *testing.T, out map[string]any) {
+				if out["id"] != "cev_1" || out["title"] != "Design Review" || out["response_status"] != "accepted" {
+					t.Errorf("unexpected respond output: %+v", out)
+				}
+			},
+		},
+		{
+			name: "respond to event rejects invalid status",
+			ctx: auth.WithSpaceScope(
+				auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_1"}),
+				"spc_1",
+				string(space.RoleMember),
+			),
+			toolName: "calendar_respond_to_event",
+			args: map[string]any{
+				"id":              "cev_1",
+				"response_status": "maybe",
+			},
+			wantErr: true,
+		},
+		{
+			name: "respond to event propagates coordinator error",
+			ctx: auth.WithSpaceScope(
+				auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_1"}),
+				"spc_1",
+				string(space.RoleMember),
+			),
+			toolName: "calendar_respond_to_event",
+			args: map[string]any{
+				"id":              "cev_missing",
+				"response_status": "declined",
+			},
+			setupMocks: func(_ *CalendarAggregatorMock, coord *CalendarCoordinatorMock, _ *SpaceSettingsReaderMock) {
+				coord.RespondToEventFunc = func(_ context.Context, _ *calendarapp.RespondToEventRequest) (*domaincalendar.Event, error) {
+					return nil, errors.E(errors.NotExist, "event not found")
+				}
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -211,5 +277,35 @@ func TestCalendarHandler(t *testing.T) {
 			}
 			tc.assertOut(t, res.StructuredContent.(map[string]any))
 		})
+	}
+}
+
+func TestCalendarHandler_ViewerReadOnlyTools(t *testing.T) {
+	srv := mcptransport.NewServer(mcptransport.ServerConfig{})
+	NewHandler(Dependencies{
+		Aggregator:    &CalendarAggregatorMock{},
+		Coordinator:   &CalendarCoordinatorMock{},
+		SpaceSettings: &SpaceSettingsReaderMock{},
+	}).Register(srv.Registry())
+
+	ctx := auth.WithSpaceScope(
+		auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_1"}),
+		"spc_1",
+		string(space.RoleViewer),
+	)
+	session, err := srv.ConnectInMemory(ctx)
+	if err != nil {
+		t.Fatalf("ConnectInMemory failed: %v", err)
+	}
+	defer func() { _ = session.Close() }()
+
+	toolsRes, err := session.ListTools(context.Background(), &sdkmcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools failed: %v", err)
+	}
+	for _, tool := range toolsRes.Tools {
+		if !tool.Annotations.ReadOnlyHint {
+			t.Errorf("unexpected non-readonly tool %q exposed to viewer", tool.Name)
+		}
 	}
 }

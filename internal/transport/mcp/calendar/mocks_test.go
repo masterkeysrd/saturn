@@ -125,6 +125,9 @@ type CalendarCoordinatorMock struct {
 	// DeleteEventFunc mocks the DeleteEvent method.
 	DeleteEventFunc func(ctx context.Context, req *calendarapp.DeleteEventRequest) error
 
+	// RespondToEventFunc mocks the RespondToEvent method.
+	RespondToEventFunc func(ctx context.Context, req *calendarapp.RespondToEventRequest) (*domaincalendar.Event, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		CreateEvent []struct {
@@ -139,10 +142,15 @@ type CalendarCoordinatorMock struct {
 			Ctx context.Context
 			Req *calendarapp.DeleteEventRequest
 		}
+		RespondToEvent []struct {
+			Ctx context.Context
+			Req *calendarapp.RespondToEventRequest
+		}
 	}
-	lockCreateEvent sync.RWMutex
-	lockUpdateEvent sync.RWMutex
-	lockDeleteEvent sync.RWMutex
+	lockCreateEvent    sync.RWMutex
+	lockUpdateEvent    sync.RWMutex
+	lockDeleteEvent    sync.RWMutex
+	lockRespondToEvent sync.RWMutex
 }
 
 // CreateEvent calls CreateEventFunc.
@@ -224,6 +232,33 @@ func (mock *CalendarCoordinatorMock) DeleteEventCalls() []struct {
 	mock.lockDeleteEvent.RLock()
 	defer mock.lockDeleteEvent.RUnlock()
 	return mock.calls.DeleteEvent
+}
+
+// RespondToEvent calls RespondToEventFunc.
+func (mock *CalendarCoordinatorMock) RespondToEvent(ctx context.Context, req *calendarapp.RespondToEventRequest) (*domaincalendar.Event, error) {
+	if mock.RespondToEventFunc == nil {
+		panic("CalendarCoordinatorMock.RespondToEventFunc: method is nil but CalendarCoordinator.RespondToEvent was just called")
+	}
+	mock.lockRespondToEvent.Lock()
+	mock.calls.RespondToEvent = append(mock.calls.RespondToEvent, struct {
+		Ctx context.Context
+		Req *calendarapp.RespondToEventRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockRespondToEvent.Unlock()
+	return mock.RespondToEventFunc(ctx, req)
+}
+
+// RespondToEventCalls returns all calls made to RespondToEvent.
+func (mock *CalendarCoordinatorMock) RespondToEventCalls() []struct {
+	Ctx context.Context
+	Req *calendarapp.RespondToEventRequest
+} {
+	mock.lockRespondToEvent.RLock()
+	defer mock.lockRespondToEvent.RUnlock()
+	return mock.calls.RespondToEvent
 }
 
 // Compile-time interface assertion.

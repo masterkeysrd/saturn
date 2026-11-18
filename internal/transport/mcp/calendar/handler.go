@@ -36,6 +36,7 @@ type CalendarCoordinator interface {
 	CreateEvent(ctx context.Context, req *calendarapp.CreateEventRequest) (*domaincalendar.Event, error)
 	UpdateEvent(ctx context.Context, req *calendarapp.UpdateEventRequest) (*domaincalendar.Event, error)
 	DeleteEvent(ctx context.Context, req *calendarapp.DeleteEventRequest) error
+	RespondToEvent(ctx context.Context, req *calendarapp.RespondToEventRequest) (*domaincalendar.Event, error)
 }
 
 // SpaceSettingsReader retrieves the workspace IANA timezone.
@@ -116,6 +117,16 @@ func (h *Handler) Register(reg *mcptransport.Registry) {
 		ReadOnly:      false,
 		Destructive:   true,
 	}, h.deleteEvent)
+
+	reg.RegisterTool(mcptransport.ToolSpec{
+		Name:          "calendar_respond_to_event",
+		Domain:        "calendar",
+		Title:         "Respond to Calendar Event",
+		Description:   "Updates the caller's RSVP response status ('accepted', 'tentative', or 'declined') for a calendar event.",
+		RequiredScope: identity.ScopeCalendarWrite,
+		ReadOnly:      false,
+		Destructive:   false,
+	}, h.respondToEvent)
 }
 
 // ListCalendarsInput is an empty input object for calendar_list_calendars.
@@ -467,6 +478,50 @@ func (h *Handler) deleteEvent(ctx context.Context, in DeleteEventInput) (DeleteE
 	}
 
 	return DeleteEventOutput{Deleted: true, ID: id}, nil
+}
+
+// RespondToEventInput defines parameters for calendar_respond_to_event.
+type RespondToEventInput struct {
+	ID             string `json:"id" jsonschema:"Calendar event ID (cev_...) to respond to"`
+	ResponseStatus string `json:"response_status" jsonschema:"RSVP status: 'accepted', 'tentative', or 'declined'"`
+}
+
+// RespondToEventOutput confirms the updated event RSVP status.
+type RespondToEventOutput struct {
+	ID             string `json:"id"`
+	Title          string `json:"title"`
+	ResponseStatus string `json:"response_status"`
+}
+
+func (h *Handler) respondToEvent(ctx context.Context, in RespondToEventInput) (RespondToEventOutput, error) {
+	if _, err := mcptransport.RequireSpaceID(ctx); err != nil {
+		return RespondToEventOutput{}, err
+	}
+	id := strings.TrimSpace(in.ID)
+	if id == "" {
+		return RespondToEventOutput{}, errors.E(errors.Invalid, "event id is required")
+	}
+
+	status := strings.ToLower(strings.TrimSpace(in.ResponseStatus))
+	switch status {
+	case "accepted", "tentative", "declined":
+	default:
+		return RespondToEventOutput{}, errors.E(errors.Invalid, "response_status must be 'accepted', 'tentative', or 'declined'")
+	}
+
+	ev, err := h.coord.RespondToEvent(ctx, &calendarapp.RespondToEventRequest{
+		ID:             id,
+		ResponseStatus: status,
+	})
+	if err != nil {
+		return RespondToEventOutput{}, err
+	}
+
+	return RespondToEventOutput{
+		ID:             ev.ID,
+		Title:          ev.Title,
+		ResponseStatus: status,
+	}, nil
 }
 
 func toEventOutput(ev *domaincalendar.Event, loc *time.Location) EventOutput {
