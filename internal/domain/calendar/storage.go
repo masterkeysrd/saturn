@@ -53,8 +53,8 @@ type EventStore interface {
 	// GetByID retrieves an Event by space ID and event ID.
 	GetByID(ctx context.Context, spaceID, id string) (*Event, error)
 
-	// GetByProviderEventID retrieves an event by its external provider event ID.
-	GetByProviderEventID(ctx context.Context, calendarID, providerEventID string) (*Event, error)
+	// GetByProviderEventID retrieves an event by space ID, calendar ID, and external provider event ID.
+	GetByProviderEventID(ctx context.Context, spaceID, calendarID, providerEventID string) (*Event, error)
 
 	// GetByICalUID retrieves an event by space ID, calendar ID, and deterministic iCalUID.
 	GetByICalUID(ctx context.Context, spaceID, calendarID, icalUID string) (*Event, error)

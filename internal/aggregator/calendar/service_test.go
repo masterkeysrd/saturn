@@ -7,6 +7,7 @@ import (
 	"time"
 
 	domaincalendar "github.com/masterkeysrd/saturn/internal/domain/calendar"
+	platformerrors "github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,6 +37,32 @@ func TestService_GetCalendar(t *testing.T) {
 		_, err := svc.GetCalendar(context.Background(), "spc_1", "cal_missing")
 		require.Error(t, err)
 	})
+
+	t.Run("nil calendar returns NotExist", func(t *testing.T) {
+		nilCalReader := &CalendarReaderMock{
+			GetByIDFunc: func(ctx context.Context, spaceID, id string) (*domaincalendar.Calendar, error) {
+				return nil, nil
+			},
+		}
+		nilSvc := NewService(nilCalReader, nil, nil)
+		_, err := nilSvc.GetCalendar(context.Background(), "spc_1", "cal_missing")
+		require.Error(t, err)
+		assert.True(t, platformerrors.Is(err, platformerrors.NotExist))
+	})
+}
+
+func TestService_GetEvent_NilReturnsNotExist(t *testing.T) {
+	t.Parallel()
+
+	evReader := &EventReaderMock{
+		GetByIDFunc: func(ctx context.Context, spaceID, id string) (*domaincalendar.Event, error) {
+			return nil, nil
+		},
+	}
+	svc := NewService(nil, evReader, nil)
+	_, err := svc.GetEvent(context.Background(), "spc_1", "cev_missing")
+	require.Error(t, err)
+	assert.True(t, platformerrors.Is(err, platformerrors.NotExist))
 }
 
 func TestService_ListEvents_ParallelHydration(t *testing.T) {
@@ -182,5 +209,42 @@ func TestService_ListEvents_ParallelHydration(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, occurrences, 1)
 		assert.Equal(t, "Design Review", occurrences[0].Title)
+	})
+
+	t.Run("concurrent timeline sources append safely without race", func(t *testing.T) {
+		calReader := &CalendarReaderMock{
+			ListBySpaceFunc: func(ctx context.Context, spaceID string, filter *domaincalendar.ListCalendarsFilter) ([]*domaincalendar.Calendar, error) {
+				return []*domaincalendar.Calendar{{ID: "cal_1", Name: "Work"}}, nil
+			},
+		}
+		eventReader := &EventReaderMock{
+			ListInTimeRangeFunc: func(ctx context.Context, spaceID string, calendarIDs []string, startTime, endTime time.Time, startDate, endDate string) ([]*domaincalendar.Event, error) {
+				return nil, nil
+			},
+			ListRecurringMastersFunc: func(ctx context.Context, spaceID string, calendarIDs []string) ([]*domaincalendar.Event, error) {
+				return nil, nil
+			},
+		}
+
+		sources := make([]TimelineSource, 8)
+		for i := range 8 {
+			idx := i
+			sources[i] = &TimelineSourceMock{
+				SourceTypeFunc: func() string { return "src" },
+				FetchOccurrencesFunc: func(ctx context.Context, spaceID string, rangeStart, rangeEnd time.Time) ([]VirtualOccurrence, error) {
+					return []VirtualOccurrence{{
+						ID:        "v_" + string(rune('a'+idx)),
+						Title:     "Item",
+						StartTime: start.Add(time.Duration(idx) * time.Hour),
+						EndTime:   start.Add(time.Duration(idx) * time.Hour),
+					}}, nil
+				},
+			}
+		}
+
+		svc := NewService(calReader, eventReader, nil, sources...)
+		occs, err := svc.ListEvents(context.Background(), "spc_1", []string{"cal_1"}, start, end, "")
+		require.NoError(t, err)
+		assert.Len(t, occs, 8)
 	})
 }

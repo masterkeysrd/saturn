@@ -47,7 +47,7 @@ type Coordinator interface {
 	// @transactional
 	RespondToEvent(ctx context.Context, req *RespondToEventRequest) (*domaincalendar.Event, error)
 
-	// @transactional
+	// SyncConnectedAccountCalendars does not use @transactional so network sync does not hold open DB transactions.
 	SyncConnectedAccountCalendars(ctx context.Context, req *SyncConnectedAccountCalendarsRequest) error
 }
 
@@ -146,7 +146,7 @@ var _ Coordinator = (*coordinator)(nil)
 
 func requireWriteAccess(ctx context.Context) error {
 	role, ok := auth.SpaceRoleFromContext(ctx)
-	if !ok || role == string(space.RoleViewer) || role == "viewer" {
+	if !ok || strings.EqualFold(role, string(space.RoleViewer)) {
 		return errors.E(errors.Permission, "viewers cannot modify calendars or events")
 	}
 	return nil
@@ -229,6 +229,10 @@ func (c *coordinator) DeleteCalendar(ctx context.Context, req *DeleteCalendarReq
 func (c *coordinator) EnsureDefaultCalendar(ctx context.Context, req *EnsureDefaultCalendarRequest) (*domaincalendar.Calendar, error) {
 	const op errors.Op = "application/calendar.EnsureDefaultCalendar"
 
+	if err := requireWriteAccess(ctx); err != nil {
+		return nil, errors.E(op, err)
+	}
+
 	spaceID := req.SpaceID
 	if spaceID == "" {
 		var err error
@@ -287,6 +291,9 @@ func (c *coordinator) CreateEvent(ctx context.Context, req *CreateEventRequest) 
 	cal, err := c.calendarStore.GetByID(ctx, spaceID, ev.CalendarID)
 	if err != nil {
 		return nil, errors.E(op, err)
+	}
+	if cal == nil {
+		return nil, errors.E(op, errors.NotExist, domaincalendar.ErrCalendarNotFound, "calendar not found")
 	}
 	if !cal.CanWrite() {
 		return nil, errors.E(op, domaincalendar.ErrReadOnlyCalendar)
@@ -355,10 +362,16 @@ func (c *coordinator) UpdateEvent(ctx context.Context, req *UpdateEventRequest) 
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
+	if existing == nil {
+		return nil, errors.E(op, errors.NotExist, domaincalendar.ErrEventNotFound, "event not found")
+	}
 
 	cal, err := c.calendarStore.GetByID(ctx, spaceID, existing.CalendarID)
 	if err != nil {
 		return nil, errors.E(op, err)
+	}
+	if cal == nil {
+		return nil, errors.E(op, errors.NotExist, domaincalendar.ErrCalendarNotFound, "calendar not found")
 	}
 	if !cal.CanWrite() {
 		return nil, errors.E(op, domaincalendar.ErrReadOnlyCalendar)
@@ -366,6 +379,11 @@ func (c *coordinator) UpdateEvent(ctx context.Context, req *UpdateEventRequest) 
 
 	// External write-through
 	if cal.Source == domaincalendar.SourceExternal && existing.ProviderEventID != nil {
+		patched := *existing
+		if err := patched.ApplyPatch(req.Event, req.UpdateMask); err != nil {
+			return nil, errors.E(op, err)
+		}
+
 		token := ""
 		if c.tokenManager != nil {
 			var tErr error
@@ -381,13 +399,15 @@ func (c *coordinator) UpdateEvent(ctx context.Context, req *UpdateEventRequest) 
 			return nil, errors.E(op, errors.NotExist, "unsupported provider: %s", providerName)
 		}
 
-		writeRes, err := prov.UpdateEvent(ctx, token, *cal.ProviderCalendarID, req.Event)
+		writeRes, err := prov.UpdateEvent(ctx, token, *cal.ProviderCalendarID, &patched)
 		if err != nil {
 			return nil, errors.E(op, fmt.Errorf("external provider rejected update: %w", err))
 		}
-		req.Event.ETag = &writeRes.ETag
-		if writeRes.ConferenceURL != "" {
-			req.Event.ConferenceURL = &writeRes.ConferenceURL
+		if req.Event != nil {
+			req.Event.ETag = &writeRes.ETag
+			if writeRes.ConferenceURL != "" {
+				req.Event.ConferenceURL = &writeRes.ConferenceURL
+			}
 		}
 	}
 
@@ -443,10 +463,16 @@ func (c *coordinator) DeleteEvent(ctx context.Context, req *DeleteEventRequest) 
 	if err != nil {
 		return errors.E(op, err)
 	}
+	if existing == nil {
+		return errors.E(op, errors.NotExist, domaincalendar.ErrEventNotFound, "event not found")
+	}
 
 	cal, err := c.calendarStore.GetByID(ctx, spaceID, existing.CalendarID)
 	if err != nil {
 		return errors.E(op, err)
+	}
+	if cal == nil {
+		return errors.E(op, errors.NotExist, domaincalendar.ErrCalendarNotFound, "calendar not found")
 	}
 	if !cal.CanWrite() {
 		return errors.E(op, domaincalendar.ErrReadOnlyCalendar)
@@ -508,6 +534,9 @@ func (c *coordinator) RespondToEvent(ctx context.Context, req *RespondToEventReq
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
+	if existing == nil {
+		return nil, errors.E(op, errors.NotExist, domaincalendar.ErrEventNotFound, "event not found")
+	}
 
 	callerEmail := ""
 	if u, ok := auth.CurrentUserFromContext(ctx); ok {
@@ -537,7 +566,7 @@ func (c *coordinator) RespondToEvent(ctx context.Context, req *RespondToEventReq
 
 	// External write-through if applicable
 	cal, err := c.calendarStore.GetByID(ctx, spaceID, existing.CalendarID)
-	if err == nil && cal.Source == domaincalendar.SourceExternal && existing.ProviderEventID != nil {
+	if err == nil && cal != nil && cal.Source == domaincalendar.SourceExternal && existing.ProviderEventID != nil {
 		token := ""
 		if c.tokenManager != nil {
 			token, _ = c.tokenManager.TokenSource(ctx, spaceID, *cal.ConnectedAccountID)

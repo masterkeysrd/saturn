@@ -334,7 +334,7 @@ type EventStoreMock struct {
 	GetByIDFunc func(ctx context.Context, spaceID string, id string) (*Event, error)
 
 	// GetByProviderEventIDFunc mocks the GetByProviderEventID method.
-	GetByProviderEventIDFunc func(ctx context.Context, calendarID string, providerEventID string) (*Event, error)
+	GetByProviderEventIDFunc func(ctx context.Context, spaceID string, calendarID string, providerEventID string) (*Event, error)
 
 	// GetByICalUIDFunc mocks the GetByICalUID method.
 	GetByICalUIDFunc func(ctx context.Context, spaceID string, calendarID string, icalUID string) (*Event, error)
@@ -379,6 +379,7 @@ type EventStoreMock struct {
 		}
 		GetByProviderEventID []struct {
 			Ctx             context.Context
+			SpaceID         string
 			CalendarID      string
 			ProviderEventID string
 		}
@@ -510,27 +511,30 @@ func (mock *EventStoreMock) GetByIDCalls() []struct {
 }
 
 // GetByProviderEventID calls GetByProviderEventIDFunc.
-func (mock *EventStoreMock) GetByProviderEventID(ctx context.Context, calendarID string, providerEventID string) (*Event, error) {
+func (mock *EventStoreMock) GetByProviderEventID(ctx context.Context, spaceID string, calendarID string, providerEventID string) (*Event, error) {
 	if mock.GetByProviderEventIDFunc == nil {
 		panic("EventStoreMock.GetByProviderEventIDFunc: method is nil but EventStore.GetByProviderEventID was just called")
 	}
 	mock.lockGetByProviderEventID.Lock()
 	mock.calls.GetByProviderEventID = append(mock.calls.GetByProviderEventID, struct {
 		Ctx             context.Context
+		SpaceID         string
 		CalendarID      string
 		ProviderEventID string
 	}{
 		Ctx:             ctx,
+		SpaceID:         spaceID,
 		CalendarID:      calendarID,
 		ProviderEventID: providerEventID,
 	})
 	mock.lockGetByProviderEventID.Unlock()
-	return mock.GetByProviderEventIDFunc(ctx, calendarID, providerEventID)
+	return mock.GetByProviderEventIDFunc(ctx, spaceID, calendarID, providerEventID)
 }
 
 // GetByProviderEventIDCalls returns all calls made to GetByProviderEventID.
 func (mock *EventStoreMock) GetByProviderEventIDCalls() []struct {
 	Ctx             context.Context
+	SpaceID         string
 	CalendarID      string
 	ProviderEventID string
 } {

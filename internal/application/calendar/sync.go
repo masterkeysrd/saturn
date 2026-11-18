@@ -25,11 +25,17 @@ func (c *coordinator) SyncConnectedAccountCalendars(ctx context.Context, req *Sy
 			spaceID = sID
 		}
 	}
+	if spaceID == "" {
+		return errors.E(op, errors.Unauthenticated, "missing active space context")
+	}
 
 	// 1. Verify connected account exists and has calendar capability enabled
 	acc, err := c.accountStore.GetAccount(ctx, spaceID, req.ConnectedAccountID)
 	if err != nil {
 		return errors.E(op, err)
+	}
+	if acc == nil {
+		return nil
 	}
 	if !slices.Contains(acc.EnabledCapabilities, string(connector.CapabilityCalendar)) {
 		return nil // calendar sync disabled for this account
@@ -126,14 +132,14 @@ func (c *coordinator) SyncConnectedAccountCalendars(ctx context.Context, req *Sy
 
 		for _, discEv := range syncRes.Events {
 			if discEv.Status == domaincalendar.EventStatusCancelled {
-				existing, err := c.eventStore.GetByProviderEventID(ctx, cal.ID, discEv.ProviderEventID)
+				existing, err := c.eventStore.GetByProviderEventID(ctx, spaceID, cal.ID, discEv.ProviderEventID)
 				if err == nil && existing != nil {
 					_ = c.eventStore.Delete(ctx, spaceID, existing.ID)
 				}
 				continue
 			}
 
-			existing, err := c.eventStore.GetByProviderEventID(ctx, cal.ID, discEv.ProviderEventID)
+			existing, err := c.eventStore.GetByProviderEventID(ctx, spaceID, cal.ID, discEv.ProviderEventID)
 			if err == nil && existing != nil {
 				// Update existing
 				existing.Title = discEv.Title

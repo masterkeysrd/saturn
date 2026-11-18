@@ -405,7 +405,11 @@ func resolveTargetCalendar(ctx context.Context, deps WorkflowDependencies, space
 		}
 	}
 
-	defCal, err := deps.Coordinator.EnsureDefaultCalendar(ctx, &EnsureDefaultCalendarRequest{SpaceID: spaceID})
+	calCtx := ctx
+	if _, ok := auth.SpaceRoleFromContext(calCtx); !ok {
+		calCtx = auth.WithSpaceRole(calCtx, string(space.RoleMember))
+	}
+	defCal, err := deps.Coordinator.EnsureDefaultCalendar(calCtx, &EnsureDefaultCalendarRequest{SpaceID: spaceID})
 	if err != nil {
 		return "", "", err
 	}

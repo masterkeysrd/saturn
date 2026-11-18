@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	domaincalendar "github.com/masterkeysrd/saturn/internal/domain/calendar"
@@ -43,6 +44,9 @@ func (s *Service) GetCalendar(ctx context.Context, spaceID, id string) (*domainc
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
+	if cal == nil {
+		return nil, errors.E(op, errors.NotExist, domaincalendar.ErrCalendarNotFound, "calendar not found")
+	}
 	return cal, nil
 }
 
@@ -64,6 +68,9 @@ func (s *Service) GetEvent(ctx context.Context, spaceID, id string) (*domaincale
 	ev, err := s.eventReader.GetByID(ctx, spaceID, id)
 	if err != nil {
 		return nil, errors.E(op, err)
+	}
+	if ev == nil {
+		return nil, errors.E(op, errors.NotExist, domaincalendar.ErrEventNotFound, "event not found")
 	}
 	return ev, nil
 }
@@ -121,6 +128,7 @@ func (s *Service) ListEvents(
 
 	var standaloneEvents []*domaincalendar.Event
 	var recurringMasters []*domaincalendar.Event
+	var virtualMu sync.Mutex
 	var virtualItems []VirtualOccurrence
 
 	// Query 1: Standalone single events and exception overrides overlapping the time interval
@@ -159,7 +167,9 @@ func (s *Service) ListEvents(
 			if err != nil {
 				return err
 			}
+			virtualMu.Lock()
 			virtualItems = append(virtualItems, items...)
+			virtualMu.Unlock()
 			return nil
 		})
 	}

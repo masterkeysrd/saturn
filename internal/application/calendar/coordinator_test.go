@@ -9,6 +9,8 @@ import (
 	appcalendar "github.com/masterkeysrd/saturn/internal/application/calendar"
 	domaincalendar "github.com/masterkeysrd/saturn/internal/domain/calendar"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/platform/connector"
+	platformerrors "github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -112,9 +114,9 @@ func (m *mockEventStore) GetByID(ctx context.Context, spaceID, id string) (*doma
 	return ev, nil
 }
 
-func (m *mockEventStore) GetByProviderEventID(ctx context.Context, calendarID, providerEventID string) (*domaincalendar.Event, error) {
+func (m *mockEventStore) GetByProviderEventID(ctx context.Context, spaceID, calendarID, providerEventID string) (*domaincalendar.Event, error) {
 	for _, ev := range m.events {
-		if ev.CalendarID == calendarID && ev.ProviderEventID != nil && *ev.ProviderEventID == providerEventID {
+		if ev.SpaceID == spaceID && ev.CalendarID == calendarID && ev.ProviderEventID != nil && *ev.ProviderEventID == providerEventID {
 			return ev, nil
 		}
 	}
@@ -191,7 +193,8 @@ func (m *mockEventStore) ListExceptionsByMasterIDs(ctx context.Context, spaceID 
 
 // Mock external calendar provider
 type mockExternalProvider struct {
-	createErr error
+	createErr      error
+	lastUpdatedEvt *domaincalendar.Event
 }
 
 func (m *mockExternalProvider) Provider() string { return "google" }
@@ -212,7 +215,9 @@ func (m *mockExternalProvider) CreateEvent(ctx context.Context, accessToken, pro
 	}, nil
 }
 func (m *mockExternalProvider) UpdateEvent(ctx context.Context, accessToken, providerCalendarID string, event *domaincalendar.Event) (*domaincalendar.EventWriteResult, error) {
-	return &domaincalendar.EventWriteResult{ProviderEventID: "google_cev_123"}, nil
+	cp := *event
+	m.lastUpdatedEvt = &cp
+	return &domaincalendar.EventWriteResult{ProviderEventID: "google_cev_123", ETag: "\"etag_updated\""}, nil
 }
 func (m *mockExternalProvider) DeleteEvent(ctx context.Context, accessToken, providerCalendarID, providerEventID string) error {
 	return nil
@@ -259,6 +264,20 @@ func TestCoordinator_Permissions(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, cal.ID)
 		assert.Equal(t, "spc_1", cal.SpaceID)
+	})
+
+	t.Run("viewer rejected on EnsureDefaultCalendar", func(t *testing.T) {
+		ctx := contextWithRole("viewer", "spc_1")
+		_, err := coord.EnsureDefaultCalendar(ctx, &appcalendar.EnsureDefaultCalendarRequest{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "viewers cannot modify")
+	})
+
+	t.Run("missing role rejected on EnsureDefaultCalendar", func(t *testing.T) {
+		ctx := auth.WithSpaceID(context.Background(), "spc_1")
+		_, err := coord.EnsureDefaultCalendar(ctx, &appcalendar.EnsureDefaultCalendarRequest{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "viewers cannot modify")
 	})
 }
 
@@ -386,4 +405,163 @@ func TestCoordinator_WriteThrough(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), string(domaincalendar.ErrReadOnlyCalendar))
 	})
+}
+
+type nilReturningCalendarStore struct {
+	*mockCalendarStore
+}
+
+func (n *nilReturningCalendarStore) GetByID(ctx context.Context, spaceID, id string) (*domaincalendar.Calendar, error) {
+	return nil, nil
+}
+
+type nilReturningEventStore struct {
+	*mockEventStore
+}
+
+func (n *nilReturningEventStore) GetByID(ctx context.Context, spaceID, id string) (*domaincalendar.Event, error) {
+	return nil, nil
+}
+
+type nilAccountStore struct {
+	connector.Store
+}
+
+func (n *nilAccountStore) GetAccount(ctx context.Context, spaceID, id string) (*connector.ConnectedAccount, error) {
+	return nil, nil
+}
+
+func TestCoordinator_NilGuards(t *testing.T) {
+	t.Parallel()
+
+	calStore := &nilReturningCalendarStore{mockCalendarStore: newMockCalendarStore()}
+	evStore := &nilReturningEventStore{mockEventStore: newMockEventStore()}
+	domainSvc := domaincalendar.NewService(domaincalendar.Dependencies{
+		CalendarStore: calStore,
+		EventStore:    evStore,
+	})
+
+	coord := appcalendar.NewCoordinator(appcalendar.Dependencies{
+		CalendarStore: calStore,
+		EventStore:    evStore,
+		DomainService: domainSvc,
+		AccountStore:  &nilAccountStore{},
+		Events:        eventbus.NoopPublisher{},
+	})
+
+	ctx := contextWithRole("member", "spc_1")
+
+	t.Run("CreateEvent missing calendar returns NotExist", func(t *testing.T) {
+		_, err := coord.CreateEvent(ctx, &appcalendar.CreateEventRequest{
+			Event: &domaincalendar.Event{CalendarID: "cal_missing", Title: "Test"},
+		})
+		require.Error(t, err)
+		assert.True(t, platformerrors.Is(err, platformerrors.NotExist))
+	})
+
+	t.Run("UpdateEvent missing event returns NotExist", func(t *testing.T) {
+		_, err := coord.UpdateEvent(ctx, &appcalendar.UpdateEventRequest{
+			ID:    "cev_missing",
+			Event: &domaincalendar.Event{Title: "Test"},
+		})
+		require.Error(t, err)
+		assert.True(t, platformerrors.Is(err, platformerrors.NotExist))
+	})
+
+	t.Run("DeleteEvent missing event returns NotExist", func(t *testing.T) {
+		err := coord.DeleteEvent(ctx, &appcalendar.DeleteEventRequest{ID: "cev_missing"})
+		require.Error(t, err)
+		assert.True(t, platformerrors.Is(err, platformerrors.NotExist))
+	})
+
+	t.Run("RespondToEvent missing event returns NotExist", func(t *testing.T) {
+		_, err := coord.RespondToEvent(ctx, &appcalendar.RespondToEventRequest{ID: "cev_missing", ResponseStatus: "accepted"})
+		require.Error(t, err)
+		assert.True(t, platformerrors.Is(err, platformerrors.NotExist))
+	})
+
+	t.Run("SyncConnectedAccountCalendars nil account returns nil", func(t *testing.T) {
+		err := coord.SyncConnectedAccountCalendars(context.Background(), &appcalendar.SyncConnectedAccountCalendarsRequest{
+			SpaceID:            "spc_1",
+			ConnectedAccountID: "cac_missing",
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("SyncConnectedAccountCalendars missing spaceID returns Unauthenticated", func(t *testing.T) {
+		err := coord.SyncConnectedAccountCalendars(context.Background(), &appcalendar.SyncConnectedAccountCalendarsRequest{
+			ConnectedAccountID: "cac_1",
+		})
+		require.Error(t, err)
+		assert.True(t, platformerrors.Is(err, platformerrors.Unauthenticated))
+	})
+}
+
+func TestCoordinator_UpdateEvent_WriteThroughPreservesProviderIDAndUnmaskedFields(t *testing.T) {
+	t.Parallel()
+
+	calStore := newMockCalendarStore()
+	evStore := newMockEventStore()
+	domainSvc := domaincalendar.NewService(domaincalendar.Dependencies{
+		CalendarStore: calStore,
+		EventStore:    evStore,
+	})
+	mockProv := &mockExternalProvider{}
+	coord := appcalendar.NewCoordinator(appcalendar.Dependencies{
+		CalendarStore:     calStore,
+		EventStore:        evStore,
+		DomainService:     domainSvc,
+		ExternalProviders: map[string]domaincalendar.ExternalCalendarProvider{"google": mockProv},
+		Events:            eventbus.NoopPublisher{},
+	})
+
+	calID, err := domaincalendar.GenerateCalendarID()
+	require.NoError(t, err)
+	evID, err := domaincalendar.GenerateEventID()
+	require.NoError(t, err)
+
+	accID := "cac_1"
+	pCalID := "primary"
+	require.NoError(t, calStore.Create(context.Background(), &domaincalendar.Calendar{
+		ID:                 calID,
+		SpaceID:            "spc_1",
+		ConnectedAccountID: &accID,
+		ProviderCalendarID: &pCalID,
+		Name:               "Ext",
+		Timezone:           "UTC",
+		Source:             domaincalendar.SourceExternal,
+		AccessRole:         domaincalendar.AccessRoleWriter,
+		IsEnabled:          true,
+	}))
+
+	start := time.Date(2026, 10, 20, 10, 0, 0, 0, time.UTC)
+	end := time.Date(2026, 10, 20, 11, 0, 0, 0, time.UTC)
+	tz := "UTC"
+	pEvID := "g_ev_99"
+	require.NoError(t, evStore.Create(context.Background(), &domaincalendar.Event{
+		ID:              evID,
+		SpaceID:         "spc_1",
+		CalendarID:      calID,
+		ProviderEventID: &pEvID,
+		Title:           "Old Title",
+		StartTime:       &start,
+		EndTime:         &end,
+		Timezone:        &tz,
+		Status:          domaincalendar.EventStatusConfirmed,
+	}))
+
+	ctx := contextWithRole("member", "spc_1")
+	updated, err := coord.UpdateEvent(ctx, &appcalendar.UpdateEventRequest{
+		ID:         evID,
+		Event:      &domaincalendar.Event{Title: "New Title"},
+		UpdateMask: []string{"title"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "New Title", updated.Title)
+	require.NotNil(t, mockProv.lastUpdatedEvt)
+	require.NotNil(t, mockProv.lastUpdatedEvt.ProviderEventID)
+	assert.Equal(t, "g_ev_99", *mockProv.lastUpdatedEvt.ProviderEventID)
+	assert.Equal(t, "New Title", mockProv.lastUpdatedEvt.Title)
+	require.NotNil(t, mockProv.lastUpdatedEvt.StartTime)
+	assert.True(t, mockProv.lastUpdatedEvt.StartTime.Equal(start))
 }

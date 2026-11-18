@@ -196,8 +196,8 @@ func (s *EventStore) GetByID(ctx context.Context, spaceID, id string) (*calendar
 	return rec.toModel(), nil
 }
 
-// GetByProviderEventID retrieves an Event by calendar ID and provider event ID.
-func (s *EventStore) GetByProviderEventID(ctx context.Context, calendarID, providerEventID string) (*calendar.Event, error) {
+// GetByProviderEventID retrieves an Event by space ID, calendar ID, and provider event ID.
+func (s *EventStore) GetByProviderEventID(ctx context.Context, spaceID, calendarID, providerEventID string) (*calendar.Event, error) {
 	const op errors.Op = "calendar/storage.GetByProviderEventID"
 
 	query := `
@@ -211,11 +211,11 @@ func (s *EventStore) GetByProviderEventID(ctx context.Context, calendarID, provi
 			attendees_json, reminders_json, source_mail_message_id,
 			etag, version, create_time, update_time
 		FROM calendar.events
-		WHERE calendar_id = $1 AND provider_event_id = $2
+		WHERE space_id = $1 AND calendar_id = $2 AND provider_event_id = $3
 	`
 
 	var rec EventRecord
-	if err := s.db.Get(ctx, &rec, query, calendarID, providerEventID); err != nil {
+	if err := s.db.Get(ctx, &rec, query, spaceID, calendarID, providerEventID); err != nil {
 		if errors.Is(err, errors.NotExist) {
 			return nil, nil
 		}
