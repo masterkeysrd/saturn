@@ -77,8 +77,12 @@ export default function OverviewScreen() {
         queryClient.invalidateQueries({
           predicate: (query) => {
             const firstKey = query.queryKey[0]
+            if (typeof firstKey !== "string") return false
             return (
-              typeof firstKey === "string" && firstKey.startsWith("/api/v1/")
+              firstKey.startsWith("/api/v1/") ||
+              firstKey === "calendar" ||
+              firstKey === "mail" ||
+              firstKey === "connector"
             )
           },
         }),
