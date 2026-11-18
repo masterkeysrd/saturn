@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentRef,
+} from "react"
 import {
   Alert,
   Keyboard,
@@ -23,6 +30,7 @@ import {
   useListAgentsQuery,
   useListModelsQuery,
 } from "@saturn/api/saturn/platform/ai/v1/ai"
+import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { ChatMessageBubble, type ToolResultEntry } from "./chat-message-bubble"
@@ -67,6 +75,7 @@ export function MobileChatScreen({
 }: MobileChatScreenProps) {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { activeSpaceId } = useSpace()
   const containerRef = useRef<ComponentRef<typeof View>>(null)
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null)
   const threadSheetRef = useRef<BottomSheet>(null)
@@ -92,19 +101,20 @@ export function MobileChatScreen({
   const [keyboardVisible, setKeyboardVisible] = useState(false)
   const [androidKeyboardPadding, setAndroidKeyboardPadding] = useState(0)
 
-  const syncAndroidKeyboardPadding = (
-    kbHeight: number,
-    y: number,
-    h: number
-  ) => {
-    const currentBottom = y + h
-    const baselineBottom =
-      unshrunkBottomRef.current > 0 ? unshrunkBottomRef.current : currentBottom
-    const alreadyShrunk = Math.max(0, baselineBottom - currentBottom)
-    setAndroidKeyboardPadding(Math.max(0, kbHeight - alreadyShrunk))
-  }
+  const syncAndroidKeyboardPadding = useCallback(
+    (kbHeight: number, y: number, h: number) => {
+      const currentBottom = y + h
+      const baselineBottom =
+        unshrunkBottomRef.current > 0
+          ? unshrunkBottomRef.current
+          : currentBottom
+      const alreadyShrunk = Math.max(0, baselineBottom - currentBottom)
+      setAndroidKeyboardPadding(Math.max(0, kbHeight - alreadyShrunk))
+    },
+    []
+  )
 
-  const measureContainerOffset = () => {
+  const measureContainerOffset = useCallback(() => {
     containerRef.current?.measureInWindow((_x, y, _w, h) => {
       if (y > 0) {
         setVerticalOffset((prev) => (Math.abs(prev - y) > 1 ? y : prev))
@@ -119,12 +129,24 @@ export function MobileChatScreen({
         syncAndroidKeyboardPadding(lastAndroidKbHeightRef.current, y, h)
       }
     })
-  }
+  }, [syncAndroidKeyboardPadding])
 
   useEffect(() => {
     const timer = setTimeout(measureContainerOffset, 350)
     return () => clearTimeout(timer)
-  }, [])
+  }, [measureContainerOffset])
+
+  const prevSpaceIdRef = useRef<string | null>(activeSpaceId)
+  useEffect(() => {
+    if (prevSpaceIdRef.current !== activeSpaceId) {
+      prevSpaceIdRef.current = activeSpaceId
+      setActiveThreadId(null)
+      setSelectedAgentId(undefined)
+      setSelectedModelId(undefined)
+      setAttachments([])
+      setInput("")
+    }
+  }, [activeSpaceId])
 
   useEffect(() => {
     const showEvent =
@@ -160,7 +182,7 @@ export function MobileChatScreen({
       showSub.remove()
       hideSub.remove()
     }
-  }, [])
+  }, [syncAndroidKeyboardPadding])
 
   useEffect(() => {
     setActiveThreadId(threadId)
