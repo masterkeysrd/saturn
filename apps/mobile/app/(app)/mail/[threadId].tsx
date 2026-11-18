@@ -27,9 +27,10 @@ import {
   Download,
   Paperclip,
 } from "lucide-react-native"
-import { useMailThread, useModifyThread } from "@saturn/hooks"
+import { useMailThread, useModifyThread, useTimezone } from "@saturn/hooks"
 import type { Message, Attachment } from "@saturn/api/saturn/mail/v1/mail"
 import { formatAttachmentBytes } from "@saturn/core"
+import { getApiBaseUrl } from "@/lib/config"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { useToast } from "@/components/ui/toast"
@@ -44,6 +45,7 @@ export default function MobileThreadReaderScreen() {
   const modifyMutation = useModifyThread()
   const { mutate: modifyThread } = modifyMutation
   const toast = useToast()
+  const tz = useTimezone()
 
   // Auto-mark conversation as read when opened
   const markedAsReadRef = useRef<Set<string>>(new Set())
@@ -214,8 +216,12 @@ export default function MobileThreadReaderScreen() {
     if (!att.downloadUrl) return
     haptics.selection()
 
+    const fullUrl = att.downloadUrl.startsWith("http")
+      ? att.downloadUrl
+      : `${getApiBaseUrl().replace(/\/$/, "")}${att.downloadUrl}`
+
     if (Platform.OS === "web") {
-      Linking.openURL(att.downloadUrl)
+      Linking.openURL(fullUrl)
       return
     }
 
@@ -223,12 +229,11 @@ export default function MobileThreadReaderScreen() {
       const attKey = att.id || att.filename || "file"
       setDownloadingId(attKey)
       const filename = att.filename || "attachment"
-      const destUri = `${FileSystem.cacheDirectory ?? ""}${attKey}_${filename}`
+      const safeKey = attKey.replace(/[^a-zA-Z0-9._-]/g, "_")
+      const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_")
+      const destUri = `${FileSystem.cacheDirectory ?? ""}${safeKey}_${safeFilename}`
 
-      const downloadRes = await FileSystem.downloadAsync(
-        att.downloadUrl,
-        destUri
-      )
+      const downloadRes = await FileSystem.downloadAsync(fullUrl, destUri)
 
       if (downloadRes.status === 200) {
         const canShare = await Sharing.isAvailableAsync()
@@ -384,9 +389,7 @@ export default function MobileThreadReaderScreen() {
           {messages.map((msg, index) => {
             const isExpanded = expandedIds.has(msg.id)
             const senderName = msg.from?.name || msg.from?.email || "Unknown"
-            const timeStr = msg.sentAt
-              ? new Date(msg.sentAt).toLocaleString()
-              : ""
+            const timeStr = msg.sentAt ? tz.formatDateTime(msg.sentAt) : ""
             const initials = senderName.slice(0, 2).toUpperCase()
 
             if (!isExpanded) {

@@ -133,7 +133,7 @@ export function RecipientInput({
               <Pressable
                 key={contact.email || ""}
                 testID={`contact-suggestion-${contact.email || ""}`}
-                onPress={() => {
+                onPressIn={() => {
                   if (contact.email) {
                     handleAddEmail(contact.email, contact.displayName || "")
                   }

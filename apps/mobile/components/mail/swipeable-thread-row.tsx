@@ -18,7 +18,8 @@ import {
   Check,
 } from "lucide-react-native"
 import type { Thread } from "@saturn/api/saturn/mail/v1/mail"
-import { formatThreadParticipants } from "@saturn/core"
+import { formatThreadParticipants, parseDate } from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
@@ -33,25 +34,27 @@ export interface SwipeableThreadRowProps {
   onToggleStar: (thread: Thread) => void
 }
 
-function formatRelativeTime(dateStr?: string): string {
+function formatRelativeTime(
+  dateStr: string | undefined,
+  tz: ReturnType<typeof useTimezone>
+): string {
   if (!dateStr) return ""
-  const date = new Date(dateStr)
-  if (isNaN(date.getTime())) return ""
+  const date = parseDate(dateStr)
+  if (!date) return ""
 
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
+  const diffMs = tz.now().getTime() - date.getTime()
   const diffMins = Math.floor(diffMs / 60000)
   const diffHours = Math.floor(diffMins / 60)
   const diffDays = Math.floor(diffHours / 24)
 
   if (diffMins < 1) return "Now"
   if (diffMins < 60) return `${diffMins}m`
-  if (diffHours < 24) return `${diffHours}h`
-  if (diffDays === 1) return "Yesterday"
+  if (diffHours < 24 && tz.isToday(date)) return `${diffHours}h`
+  if (tz.isYesterday(date)) return "Yesterday"
   if (diffDays < 7) {
-    return date.toLocaleDateString(undefined, { weekday: "short" })
+    return tz.format(date, { weekday: "short" })
   }
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+  return tz.format(date, { month: "short", day: "numeric" })
 }
 
 const PALETTE_COLORS = [
@@ -293,6 +296,7 @@ export function SwipeableThreadRow({
       ? externalParticipants[0]
       : thread.participants?.[0]
 
+  const tz = useTimezone()
   const senderNames = formatThreadParticipants({
     participants: thread.participants,
     selfEmails: accountEmail ? [accountEmail] : [],
@@ -300,7 +304,8 @@ export function SwipeableThreadRow({
   })
 
   const timeDisplay = formatRelativeTime(
-    thread.lastMessageAt || thread.updateTime
+    thread.lastMessageAt || thread.updateTime,
+    tz
   )
 
   return (

@@ -10,6 +10,7 @@ import {
 import { WebView, type WebViewNavigation } from "react-native-webview"
 import { ShieldAlert, Image as ImageIcon } from "lucide-react-native"
 import type { Attachment } from "@saturn/api/saturn/mail/v1/mail"
+import { getApiBaseUrl } from "@/lib/config"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
@@ -64,7 +65,8 @@ export function MessageWebView({
 
   const containsRemoteImages = useMemo(() => {
     return Boolean(
-      hasRemoteImages || (html && html.includes("data-saturn-remote-src"))
+      hasRemoteImages ||
+      (html && /data-saturn-remote-(?:src|srcset|background)/i.test(html))
     )
   }, [hasRemoteImages, html])
 
@@ -85,17 +87,22 @@ export function MessageWebView({
 
     // 1. Resolve and rewrite cid: inline attachments
     if (attachments && attachments.length > 0) {
+      const baseUrl = getApiBaseUrl().replace(/\/$/, "")
       for (const att of attachments) {
-        if (att.contentId && att.downloadUrl) {
+        if (!att.downloadUrl) continue
+        const resolvedUrl = att.downloadUrl.startsWith("http")
+          ? att.downloadUrl
+          : `${baseUrl}${att.downloadUrl}`
+        if (att.contentId) {
           const cleanCid = att.contentId.replace(/^<|>$/g, "").trim()
-          source = source.replaceAll(`cid:${cleanCid}`, att.downloadUrl)
-          source = source.replaceAll(`CID:${cleanCid}`, att.downloadUrl)
-          source = source.replaceAll(`cid:<${cleanCid}>`, att.downloadUrl)
-          source = source.replaceAll(`CID:<${cleanCid}>`, att.downloadUrl)
+          source = source.replaceAll(`cid:${cleanCid}`, resolvedUrl)
+          source = source.replaceAll(`CID:${cleanCid}`, resolvedUrl)
+          source = source.replaceAll(`cid:<${cleanCid}>`, resolvedUrl)
+          source = source.replaceAll(`CID:<${cleanCid}>`, resolvedUrl)
         }
-        if (att.filename && att.isInline && att.downloadUrl) {
-          source = source.replaceAll(`cid:${att.filename}`, att.downloadUrl)
-          source = source.replaceAll(`CID:${att.filename}`, att.downloadUrl)
+        if (att.filename && att.isInline) {
+          source = source.replaceAll(`cid:${att.filename}`, resolvedUrl)
+          source = source.replaceAll(`CID:${att.filename}`, resolvedUrl)
         }
       }
     }
@@ -240,7 +247,7 @@ export function MessageWebView({
       >
         <WebView
           testID="mobile-message-webview"
-          originWhitelist={["about:blank"]}
+          originWhitelist={["about:blank", "https://*", "http://*"]}
           source={{ html: fullHtmlDocument, baseUrl: "about:blank" }}
           injectedJavaScript={INJECTED_HEIGHT_MEASURE_JS}
           onMessage={handleMessage}

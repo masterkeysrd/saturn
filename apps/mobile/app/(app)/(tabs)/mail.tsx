@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react"
+import React, { useState, useMemo, useCallback, useEffect } from "react"
 import {
   View,
   Text,
@@ -10,15 +10,30 @@ import {
 } from "react-native"
 import { FlatList, RefreshControl } from "react-native-gesture-handler"
 import { useRouter } from "expo-router"
-import { Search, X, Edit, Inbox, AlertCircle } from "lucide-react-native"
+import {
+  Search,
+  X,
+  Edit,
+  Inbox,
+  AlertCircle,
+  FileEdit,
+} from "lucide-react-native"
 import {
   useInfiniteMailThreads,
   useMailboxes,
   useModifyThread,
   useConnectedAccounts,
   useSyncConnectedAccount,
+  useDrafts,
+  useTimezone,
 } from "@saturn/hooks"
-import type { Thread, MailboxRole } from "@saturn/api/saturn/mail/v1/mail"
+import type {
+  Thread,
+  MailboxRole,
+  Draft,
+} from "@saturn/api/saturn/mail/v1/mail"
+import { stripHtmlToPlainText } from "@saturn/core"
+import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { useToast } from "@/components/ui/toast"
@@ -26,6 +41,8 @@ import { SwipeableThreadRow, AccountBucketBar } from "@/components/mail"
 
 export default function MobileMailScreen() {
   const router = useRouter()
+  const { activeSpaceId } = useSpace()
+  const tz = useTimezone()
   const [selectedAccountId, setSelectedAccountId] = useState<
     string | undefined
   >()
@@ -35,6 +52,14 @@ export default function MobileMailScreen() {
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
 
+  // Reset account selection and search filters on workspace switch
+  useEffect(() => {
+    setSelectedAccountId(undefined)
+    setSearchQuery("")
+    setDebouncedSearch("")
+    setIsUnreadFilter(false)
+  }, [activeSpaceId])
+
   const { data: accountsData } = useConnectedAccounts()
   const accounts = useMemo(() => {
     return (accountsData?.accounts || []).filter(
@@ -43,6 +68,17 @@ export default function MobileMailScreen() {
         a.enabledCapabilities?.includes("MAIL")
     )
   }, [accountsData])
+
+  // Clear stale account ID if it does not belong to current workspace accounts
+  useEffect(() => {
+    if (
+      accountsData &&
+      selectedAccountId &&
+      !accounts.some((a) => a.id === selectedAccountId)
+    ) {
+      setSelectedAccountId(undefined)
+    }
+  }, [accountsData, accounts, selectedAccountId])
 
   // Account lookup map for row colors
   const accountColorMap = useMemo(() => {
@@ -82,6 +118,37 @@ export default function MobileMailScreen() {
     }
   }, [selectedAccountId, selectedRole, isUnreadFilter, debouncedSearch])
 
+  const isDraftsBucket =
+    !isUnreadFilter && selectedRole === "MAILBOX_ROLE_DRAFTS"
+
+  const {
+    data: draftsData,
+    isLoading: isDraftsLoading,
+    isRefetching: isDraftsRefetching,
+    refetch: refetchDrafts,
+    error: draftsError,
+  } = useDrafts(selectedAccountId, {
+    enabled: isDraftsBucket,
+  })
+
+  const drafts = useMemo(() => {
+    const raw = draftsData?.drafts || []
+    const q = debouncedSearch.trim().toLowerCase()
+    if (!q) return raw
+    return raw.filter((d) => {
+      const subjectMatch = (d.subject || "").toLowerCase().includes(q)
+      const recipientMatch = (d.to || []).some(
+        (p) =>
+          p.email.toLowerCase().includes(q) ||
+          (p.name || "").toLowerCase().includes(q)
+      )
+      const bodyMatch = stripHtmlToPlainText(d.bodyHtml || d.bodyText || "")
+        .toLowerCase()
+        .includes(q)
+      return subjectMatch || recipientMatch || bodyMatch
+    })
+  }, [draftsData?.drafts, debouncedSearch])
+
   const {
     data: threadsData,
     isLoading,
@@ -120,17 +187,36 @@ export default function MobileMailScreen() {
       if (selectedAccountId) {
         await syncMutation.mutateAsync({ id: selectedAccountId })
       }
-      await refetch()
+      if (isDraftsBucket) {
+        await refetchDrafts()
+      } else {
+        await refetch()
+      }
     } catch {
       // Ignored
     } finally {
       setIsManualRefreshing(false)
     }
-  }, [selectedAccountId, syncMutation, refetch])
+  }, [selectedAccountId, syncMutation, isDraftsBucket, refetchDrafts, refetch])
 
   const handleThreadPress = (thread: Thread) => {
     haptics.selection()
     router.push(`/(app)/mail/${thread.id}`)
+  }
+
+  const handleDraftPress = (draft: Draft) => {
+    haptics.selection()
+    router.push({
+      pathname: "/modal/compose-mail",
+      params: {
+        draftId: draft.id,
+        defaultAccountId:
+          draft.connectedAccountId ||
+          selectedAccountId ||
+          accounts[0]?.id ||
+          "",
+      },
+    })
   }
 
   const handleArchive = (thread: Thread) => {
@@ -257,8 +343,97 @@ export default function MobileMailScreen() {
         </View>
       </View>
 
-      {/* Thread List */}
-      {isLoading && !isRefetching ? (
+      {/* Thread / Drafts List */}
+      {isDraftsBucket ? (
+        isDraftsLoading && !isDraftsRefetching ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        ) : draftsError ? (
+          <View style={styles.centerContainer}>
+            <AlertCircle size={36} color={theme.colors.destructive} />
+            <Text style={styles.errorText}>Failed to load drafts</Text>
+            <Pressable style={styles.retryBtn} onPress={() => refetchDrafts()}>
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : drafts.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <FileEdit size={48} color={theme.colors.textMuted} />
+            <Text style={styles.emptyTitle}>No drafts</Text>
+            <Text style={styles.emptySubtitle}>
+              {searchQuery
+                ? "No drafts matched your search query."
+                : "Saved message drafts will appear here."}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={drafts}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => {
+              const recipientsLabel =
+                (item.to || []).map((p) => p.name || p.email).join(", ") ||
+                "(No recipients)"
+              const previewText = stripHtmlToPlainText(
+                item.bodyHtml || item.bodyText || ""
+              )
+              const accColor =
+                accountColorMap.get(item.connectedAccountId) ||
+                theme.colors.primary
+              const timeLabel = item.updateTime
+                ? tz.format(item.updateTime, { month: "short", day: "numeric" })
+                : ""
+
+              return (
+                <Pressable
+                  testID={`mobile-draft-row-${item.id}`}
+                  onPress={() => handleDraftPress(item)}
+                  style={styles.draftRow}
+                >
+                  <View
+                    style={[
+                      styles.draftAccountBar,
+                      { backgroundColor: accColor },
+                    ]}
+                  />
+                  <View style={styles.draftRowBody}>
+                    <View style={styles.draftRowTop}>
+                      <Text numberOfLines={1} style={styles.draftRecipients}>
+                        <Text style={styles.draftTag}>Draft · </Text>
+                        {recipientsLabel}
+                      </Text>
+                      {timeLabel ? (
+                        <Text style={styles.draftTime}>{timeLabel}</Text>
+                      ) : null}
+                    </View>
+                    <Text numberOfLines={1} style={styles.draftSubject}>
+                      {item.subject || "(No Subject)"}
+                    </Text>
+                    {previewText ? (
+                      <Text numberOfLines={1} style={styles.draftSnippet}>
+                        {previewText}
+                      </Text>
+                    ) : null}
+                  </View>
+                </Pressable>
+              )
+            }}
+            bounces={true}
+            overScrollMode="never"
+            refreshControl={
+              <RefreshControl
+                refreshing={isManualRefreshing}
+                onRefresh={handleRefresh}
+                tintColor={theme.colors.primary}
+                colors={[theme.colors.primary]}
+                progressViewOffset={Platform.OS === "android" ? 30 : 0}
+              />
+            }
+            contentContainerStyle={styles.listContent}
+          />
+        )
+      ) : isLoading && !isRefetching ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
@@ -449,5 +624,52 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 8,
     elevation: 8,
+  },
+  draftRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    gap: 10,
+  },
+  draftAccountBar: {
+    width: 3,
+    borderRadius: 2,
+  },
+  draftRowBody: {
+    flex: 1,
+    gap: 3,
+  },
+  draftRowTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  draftRecipients: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+  },
+  draftTag: {
+    color: theme.colors.destructive,
+    fontWeight: "700",
+  },
+  draftTime: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+  },
+  draftSubject: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
+  draftSnippet: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
   },
 })

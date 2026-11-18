@@ -31,9 +31,11 @@ import {
 } from "lucide-react-native"
 import {
   useConnectedAccounts,
+  useDrafts,
   useMailThread,
   useSaveDraft,
   useSendDraft,
+  uploadDraftAttachment,
   type SaveDraftVariables,
 } from "@saturn/hooks"
 import type { MailRecipientFormValues } from "@saturn/schemas"
@@ -59,10 +61,20 @@ import {
   type EmailEditorActiveFormats,
 } from "@/components/mail/email-rich-editor"
 
+function isLocalAttachment(att: Attachment): boolean {
+  const url = att.downloadUrl || ""
+  return (
+    url.startsWith("file://") ||
+    url.startsWith("content://") ||
+    att.id.startsWith("att_local_")
+  )
+}
+
 export default function ComposeMailModal() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{
+    draftId?: string
     threadId?: string
     replyToMessageId?: string
     mode?:
@@ -86,6 +98,10 @@ export default function ComposeMailModal() {
 
   const { data: thread } = useMailThread(params.threadId, {
     enabled: Boolean(params.threadId),
+  })
+
+  const { data: draftsData } = useDrafts(params.defaultAccountId, {
+    enabled: Boolean(params.draftId),
   })
 
   // Selected sending account (defaults to the receiving account on reply, or first account)
@@ -112,12 +128,14 @@ export default function ComposeMailModal() {
   const [showCcBcc, setShowCcBcc] = useState(false)
 
   // Subject & Unified Rich Editor Body
+  const [draftId, setDraftId] = useState<string | undefined>(params.draftId)
   const [subject, setSubject] = useState("")
   const [initialBodyHtml, setInitialBodyHtml] = useState("")
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [activeFormats, setActiveFormats] =
     useState<EmailEditorActiveFormats>(EMPTY_ACTIVE_FORMATS)
   const [remoteImagesRevealed, setRemoteImagesRevealed] = useState(false)
+  const [isDirty, setIsDirty] = useState(false)
 
   const editorRef = useRef<EmailRichEditorHandle>(null)
   const initializedKeyRef = useRef<string | null>(null)
@@ -148,6 +166,43 @@ export default function ComposeMailModal() {
       }),
     [initialBodyHtml, targetMessage?.attachments]
   )
+
+  // Initialize existing draft when editing from Drafts mailbox
+  useEffect(() => {
+    if (!params.draftId || !draftsData?.drafts) return
+    const existingDraft = draftsData.drafts.find((d) => d.id === params.draftId)
+    if (!existingDraft) return
+
+    const initKey = `draft:${existingDraft.id}`
+    if (initializedKeyRef.current === initKey) return
+    initializedKeyRef.current = initKey
+
+    setDraftId(existingDraft.id)
+    if (existingDraft.connectedAccountId) {
+      setSelectedAccountId(existingDraft.connectedAccountId)
+    }
+    setToRecipients(
+      (existingDraft.to || []).map((p) => ({
+        email: p.email,
+        displayName: p.name || "",
+      }))
+    )
+    const ccList = (existingDraft.cc || []).map((p) => ({
+      email: p.email,
+      displayName: p.name || "",
+    }))
+    const bccList = (existingDraft.bcc || []).map((p) => ({
+      email: p.email,
+      displayName: p.name || "",
+    }))
+    setCcRecipients(ccList)
+    setBccRecipients(bccList)
+    if (ccList.length > 0 || bccList.length > 0) setShowCcBcc(true)
+    setSubject(existingDraft.subject || "")
+    setInitialBodyHtml(existingDraft.bodyHtml || existingDraft.bodyText || "")
+    setAttachments(existingDraft.attachments || [])
+    setIsDirty(false)
+  }, [params.draftId, draftsData])
 
   // Initialize reply/forward fields from thread when available
   useEffect(() => {
@@ -317,6 +372,9 @@ export default function ComposeMailModal() {
           })
         }
         setAttachments((prev) => [...prev, ...newAtts])
+        if (newAtts.length > 0) {
+          setIsDirty(true)
+        }
       }
     } catch {
       // Ignored
@@ -325,11 +383,94 @@ export default function ComposeMailModal() {
 
   const handleRemoveAttachment = (index: number) => {
     haptics.selection()
+    setIsDirty(true)
     setAttachments((prev) => {
       const next = [...prev]
       next.splice(index, 1)
       return next
     })
+  }
+
+  const persistDraftWithAttachments = async (): Promise<string> => {
+    const finalHtml =
+      editorRef.current?.getHTML() || preparedContent.bodyHtml || ""
+    const plainBodyText =
+      editorRef.current?.getText() || stripHtmlToPlainText(finalHtml)
+
+    const serverAttachments = attachments.filter(
+      (att) => !isLocalAttachment(att)
+    )
+    const localAttachments = attachments.filter((att) => isLocalAttachment(att))
+
+    const draftPayload: SaveDraftVariables = {
+      id: draftId,
+      connectedAccountId: selectedAccountId,
+      threadId: params.threadId,
+      replyToMessageId: params.replyToMessageId,
+      to: toRecipients.map((r) => ({
+        email: r.email,
+        name: r.displayName || "",
+        avatarUrl: "",
+        isVerified: false,
+      })),
+      cc: ccRecipients.map((r) => ({
+        email: r.email,
+        name: r.displayName || "",
+        avatarUrl: "",
+        isVerified: false,
+      })),
+      bcc: bccRecipients.map((r) => ({
+        email: r.email,
+        name: r.displayName || "",
+        avatarUrl: "",
+        isVerified: false,
+      })),
+      subject: subject.trim(),
+      bodyHtml: finalHtml,
+      bodyText: plainBodyText,
+      mode: params.mode || "DRAFT_MODE_NEW",
+      attachments: serverAttachments,
+    }
+
+    const savedDraft = await saveDraftMutation.mutateAsync(draftPayload)
+    const targetDraftId = savedDraft?.id || draftId
+
+    if (!targetDraftId) {
+      throw new Error("Failed to create draft for sending")
+    }
+    setDraftId(targetDraftId)
+
+    if (localAttachments.length > 0) {
+      const uploadedAttachments: Attachment[] = [...serverAttachments]
+      for (let i = 0; i < localAttachments.length; i++) {
+        const att = localAttachments[i]
+        try {
+          const uploaded = await uploadDraftAttachment({
+            draftId: targetDraftId,
+            file: {
+              uri: att.downloadUrl,
+              name: att.filename,
+              type: att.contentType || "application/octet-stream",
+            } as unknown as Blob,
+            filename: att.filename,
+          })
+          if (uploaded) {
+            uploadedAttachments.push(uploaded)
+          }
+        } catch (uploadErr: unknown) {
+          const remaining = localAttachments.slice(i)
+          setAttachments([...uploadedAttachments, ...remaining])
+          const msg =
+            uploadErr instanceof Error
+              ? uploadErr.message
+              : "Attachment upload failed"
+          throw new Error(`Failed to upload "${att.filename}": ${msg}`)
+        }
+      }
+      setAttachments(uploadedAttachments)
+    }
+
+    return targetDraftId
   }
 
   // Send message
@@ -355,51 +496,10 @@ export default function ComposeMailModal() {
       setIsSending(true)
       haptics.selection()
 
-      const finalHtml =
-        editorRef.current?.getHTML() || preparedContent.bodyHtml || ""
-      const plainBodyText =
-        editorRef.current?.getText() || stripHtmlToPlainText(finalHtml)
-
-      // 1. Save draft
-      const draftPayload: SaveDraftVariables = {
-        connectedAccountId: selectedAccountId,
-        threadId: params.threadId,
-        replyToMessageId: params.replyToMessageId,
-        to: toRecipients.map((r) => ({
-          email: r.email,
-          name: r.displayName || "",
-          avatarUrl: "",
-          isVerified: false,
-        })),
-        cc: ccRecipients.map((r) => ({
-          email: r.email,
-          name: r.displayName || "",
-          avatarUrl: "",
-          isVerified: false,
-        })),
-        bcc: bccRecipients.map((r) => ({
-          email: r.email,
-          name: r.displayName || "",
-          avatarUrl: "",
-          isVerified: false,
-        })),
-        subject: subject.trim(),
-        bodyHtml: finalHtml,
-        bodyText: plainBodyText,
-        mode: params.mode || "DRAFT_MODE_NEW",
-        attachments,
-      }
-
-      const savedDraft = await saveDraftMutation.mutateAsync(draftPayload)
-      const targetDraftId = savedDraft?.id
-
-      if (targetDraftId) {
-        await sendDraftMutation.mutateAsync({ id: targetDraftId })
-        haptics.success()
-        router.back()
-      } else {
-        throw new Error("Failed to create draft for sending")
-      }
+      const targetDraftId = await persistDraftWithAttachments()
+      await sendDraftMutation.mutateAsync({ id: targetDraftId })
+      haptics.success()
+      router.back()
     } catch (err: unknown) {
       const e = err as Error
       Alert.alert(
@@ -411,6 +511,51 @@ export default function ComposeMailModal() {
     }
   }
 
+  const handleClose = () => {
+    if (!isDirty) {
+      router.back()
+      return
+    }
+    Alert.alert(
+      "Unsaved Changes",
+      "Would you like to save this message as a draft or discard your changes?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Discard",
+          style: "destructive",
+          onPress: () => router.back(),
+        },
+        {
+          text: "Save Draft",
+          onPress: async () => {
+            if (!selectedAccountId) {
+              Alert.alert(
+                "Missing Account",
+                "Please select an account before saving a draft."
+              )
+              return
+            }
+            try {
+              setIsSending(true)
+              await persistDraftWithAttachments()
+              haptics.success()
+              router.back()
+            } catch (err: unknown) {
+              const e = err as Error
+              Alert.alert(
+                "Failed to Save Draft",
+                e.message || "Could not save draft."
+              )
+            } finally {
+              setIsSending(false)
+            }
+          },
+        },
+      ]
+    )
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.keyboardContainer}
@@ -419,10 +564,15 @@ export default function ComposeMailModal() {
     >
       <View style={styles.container}>
         {/* Modal Top Bar */}
-        <View style={styles.topBar}>
+        <View
+          style={[
+            styles.topBar,
+            { paddingTop: insets.top > 0 ? insets.top + 8 : 12 },
+          ]}
+        >
           <Pressable
             testID="mobile-composer-close-btn"
-            onPress={() => router.back()}
+            onPress={handleClose}
             style={styles.iconBtn}
           >
             <X size={20} color={theme.colors.textPrimary} />
@@ -509,7 +659,10 @@ export default function ComposeMailModal() {
             label="To"
             testID="mobile-composer-to-input"
             recipients={toRecipients}
-            onChangeRecipients={setToRecipients}
+            onChangeRecipients={(next) => {
+              setToRecipients(next)
+              setIsDirty(true)
+            }}
             placeholder="Add recipient email..."
           />
 
@@ -529,13 +682,19 @@ export default function ComposeMailModal() {
               <RecipientInput
                 label="Cc"
                 recipients={ccRecipients}
-                onChangeRecipients={setCcRecipients}
+                onChangeRecipients={(next) => {
+                  setCcRecipients(next)
+                  setIsDirty(true)
+                }}
                 placeholder="Cc..."
               />
               <RecipientInput
                 label="Bcc"
                 recipients={bccRecipients}
-                onChangeRecipients={setBccRecipients}
+                onChangeRecipients={(next) => {
+                  setBccRecipients(next)
+                  setIsDirty(true)
+                }}
                 placeholder="Bcc..."
               />
             </>
@@ -547,7 +706,10 @@ export default function ComposeMailModal() {
             <TextInput
               testID="mobile-composer-subject-input"
               value={subject}
-              onChangeText={setSubject}
+              onChangeText={(text) => {
+                setSubject(text)
+                setIsDirty(true)
+              }}
               placeholder="Subject"
               placeholderTextColor={theme.colors.textMuted}
               style={styles.subjectInput}
@@ -661,6 +823,7 @@ export default function ComposeMailModal() {
             placeholder="Compose email..."
             minHeight={240}
             autoFocus={true}
+            onContentChange={() => setIsDirty(true)}
             onActiveFormatsChange={setActiveFormats}
           />
         </ScrollView>
@@ -681,9 +844,11 @@ export default function ComposeMailModal() {
             <Text style={styles.toolbarBtnText}>Attach File</Text>
           </Pressable>
 
-          <Text style={styles.draftIndicatorText}>
-            {saveDraftMutation.isPending ? "Saving draft..." : "Draft"}
-          </Text>
+          {(saveDraftMutation.isPending || draftId) && (
+            <Text style={styles.draftIndicatorText}>
+              {saveDraftMutation.isPending ? "Saving draft..." : "Draft"}
+            </Text>
+          )}
         </View>
       </View>
     </KeyboardAvoidingView>
