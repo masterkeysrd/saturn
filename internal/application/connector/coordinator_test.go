@@ -671,3 +671,36 @@ func TestCoordinator_CompleteOAuth(t *testing.T) {
 		assert.True(t, enqueued)
 	})
 }
+
+func TestCoordinator_InitiateOAuth_InvalidReturnURL(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		returnURL string
+	}{
+		{name: "empty return_url", returnURL: ""},
+		{name: "disallowed external origin", returnURL: "https://evil.example/phish"},
+		{name: "protocol relative url", returnURL: "//evil.example/phish"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			coord := setupTestCoordinator(t, &mockStore{}, &mockProvider{providerName: "google"}, nil, nil)
+			ctx := auth.WithSpaceScope(context.Background(), "spc_123", string(space.RoleOwner))
+
+			_, err := coord.InitiateOAuth(ctx, &connectorapp.InitiateOAuthRequest{
+				SpaceID:   "spc_123",
+				Provider:  "google",
+				ReturnURL: tc.returnURL,
+			})
+			require.Error(t, err)
+			platErr, ok := platformerrors.AsType[*platformerrors.Error](err)
+			require.True(t, ok)
+			assert.Equal(t, platformerrors.Invalid, platErr.Kind)
+			assert.Equal(t, connectorapp.ErrInvalidReturnURL, platErr.Code)
+		})
+	}
+}

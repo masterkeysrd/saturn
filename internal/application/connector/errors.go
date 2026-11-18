@@ -8,5 +8,6 @@ const (
 	ErrCooldownActive     errors.Code = "COOLDOWN_ACTIVE"
 	ErrUnauthorizedRole   errors.Code = "UNAUTHORIZED_ROLE"
 	ErrInvalidState       errors.Code = "INVALID_STATE"
+	ErrInvalidReturnURL   errors.Code = "INVALID_RETURN_URL"
 	ErrAccountNotFound    errors.Code = "ACCOUNT_NOT_FOUND"
 )

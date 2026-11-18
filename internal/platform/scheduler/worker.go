@@ -145,28 +145,46 @@ func (e *Engine) runExecutorLoop(ctx context.Context) {
 
 func (e *Engine) runJobWorker(ctx context.Context) {
 	for {
+		if ctx.Err() != nil {
+			e.drainJobQueue()
+			return
+		}
 		select {
 		case j, ok := <-e.jobQueue:
 			if !ok {
 				return
 			}
+			if ctx.Err() != nil {
+				e.revertJobToPending(j.ID)
+				e.drainJobQueue()
+				return
+			}
 			e.executeJobInstance(ctx, j)
 		case <-ctx.Done():
-			for {
-				select {
-				case j, ok := <-e.jobQueue:
-					if !ok {
-						return
-					}
-					revertCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-					_, _ = e.db.Exec(revertCtx, `UPDATE platform.job SET status = 'pending', update_time = NOW() WHERE id = $1 AND status = 'processing'`, j.ID)
-					cancel()
-				default:
-					return
-				}
-			}
+			e.drainJobQueue()
+			return
 		}
 	}
+}
+
+func (e *Engine) drainJobQueue() {
+	for {
+		select {
+		case j, ok := <-e.jobQueue:
+			if !ok {
+				return
+			}
+			e.revertJobToPending(j.ID)
+		default:
+			return
+		}
+	}
+}
+
+func (e *Engine) revertJobToPending(jobID string) {
+	revertCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, _ = e.db.Exec(revertCtx, `UPDATE platform.job SET status = 'pending', update_time = NOW() WHERE id = $1 AND status = 'processing'`, jobID)
 }
 
 func (e *Engine) spawnRecurrentJobs(ctx context.Context) error {

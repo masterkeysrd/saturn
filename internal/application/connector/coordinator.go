@@ -239,6 +239,9 @@ func (c *coordinator) InitiateOAuth(ctx context.Context, req *InitiateOAuthReque
 		ReturnURL:          req.ReturnURL,
 	})
 	if err != nil {
+		if errors.Is(err, connector.ErrInvalidReturnURL) {
+			return nil, errors.E(op, errors.Invalid, ErrInvalidReturnURL, err.Error())
+		}
 		return nil, errors.E(op, err)
 	}
 
