@@ -659,6 +659,7 @@ export function prepareDraftContentForEditor(
     extractStyles: true,
     extractBody: true,
     stripDocumentWrappers: true,
+    allowRemoteImages: loadRemoteImages,
   })
   const extractedStyles = sanitized.extractedStyles
   content = sanitized.html.trim()
@@ -740,6 +741,7 @@ export function prepareUnifiedDraftHtml(
     extractStyles: true,
     extractBody: true,
     stripDocumentWrappers: true,
+    allowRemoteImages: loadRemoteImages,
   })
   const extractedStyles = sanitized.extractedStyles
   content = sanitized.html.trim()

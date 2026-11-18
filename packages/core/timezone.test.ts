@@ -6,6 +6,8 @@ import {
   getTimezoneParts,
   formatDateWithTimezone,
   getStartOfDay,
+  wallTimeToUtcIso,
+  getDaysDiff,
 } from "./timezone"
 
 describe("timezone utilities", () => {
@@ -49,5 +51,53 @@ describe("timezone utilities", () => {
 
     const start = getStartOfDay("2026-01-15T03:30:00.000Z", "America/New_York")
     expect(start.toISOString()).toBe("2026-01-14T05:00:00.000Z")
+  })
+
+  it("converts wall-clock date/time in any IANA timezone to exact UTC ISO across DST and extreme offsets", () => {
+    // Standard time (EST = UTC-5)
+    expect(wallTimeToUtcIso("2026-01-15", "09:30", "America/New_York")).toBe(
+      "2026-01-15T14:30:00.000Z"
+    )
+    // Daylight saving time after spring-forward (EDT = UTC-4)
+    expect(wallTimeToUtcIso("2026-03-08", "09:00", "America/New_York")).toBe(
+      "2026-03-08T13:00:00.000Z"
+    )
+    // Early morning right after spring-forward 02:00 -> 03:00 transition
+    expect(wallTimeToUtcIso("2026-03-08", "03:00", "America/New_York")).toBe(
+      "2026-03-08T07:00:00.000Z"
+    )
+    // Fall-back day afternoon (EST = UTC-5)
+    expect(wallTimeToUtcIso("2026-11-01", "15:00", "America/New_York")).toBe(
+      "2026-11-01T20:00:00.000Z"
+    )
+    // Positive offset (Asia/Tokyo = UTC+9)
+    expect(wallTimeToUtcIso("2026-04-15", "09:00", "Asia/Tokyo")).toBe(
+      "2026-04-15T00:00:00.000Z"
+    )
+    // Extreme positive offset (Pacific/Auckland = UTC+12 in April, UTC+13 in Jan)
+    expect(wallTimeToUtcIso("2026-01-15", "09:00", "Pacific/Auckland")).toBe(
+      "2026-01-14T20:00:00.000Z"
+    )
+  })
+
+  it("keeps YYYY-MM-DD dates on the same calendar day in UTC+13/UTC+14 timezones", () => {
+    expect(formatDateWithTimezone("2026-01-15", "Pacific/Auckland")).toBe(
+      "Jan 15, 2026"
+    )
+    expect(formatDateWithTimezone("2026-04-15", "Pacific/Kiritimati")).toBe(
+      "Apr 15, 2026"
+    )
+    expect(getTimezoneParts("2026-04-15", "Pacific/Kiritimati")).toMatchObject({
+      year: 2026,
+      month: 4,
+      day: 15,
+    })
+    expect(
+      getDaysDiff(
+        "2026-04-15",
+        "Pacific/Kiritimati",
+        new Date("2026-04-15T01:00:00+14:00")
+      )
+    ).toBe(0)
   })
 })

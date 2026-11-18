@@ -109,6 +109,68 @@ export function findClosingTag(
   return null
 }
 
+const CONTAINER_STRIP_TAGS = new Set([
+  "script",
+  "iframe",
+  "object",
+  "embed",
+  "applet",
+])
+const VOID_STRIP_TAGS = new Set(["meta", "base", "link"])
+const URI_ATTRS = new Set(["href", "src", "action", "formaction", "poster"])
+
+function decodeHtmlEntitiesMinimal(value: string): string {
+  return value
+    .replace(/&#(\d+);?/g, (_, dec) => {
+      const code = Number(dec)
+      return Number.isFinite(code) ? String.fromCharCode(code) : ""
+    })
+    .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => {
+      const code = parseInt(hex, 16)
+      return Number.isFinite(code) ? String.fromCharCode(code) : ""
+    })
+    .replace(/&colon;/gi, ":")
+    .replace(/&tab;|&newline;/gi, "")
+}
+
+function isDangerousUri(value: string): boolean {
+  const decoded = decodeHtmlEntitiesMinimal(value)
+  const normalized = decoded.replace(/[\s\u0000-\u001f]+/g, "").toLowerCase()
+  return (
+    normalized.startsWith("javascript:") ||
+    normalized.startsWith("vbscript:") ||
+    normalized.startsWith("data:text/html")
+  )
+}
+
+function isRemoteHttpUrl(value: string): boolean {
+  const decoded = decodeHtmlEntitiesMinimal(value).trim().toLowerCase()
+  return (
+    decoded.startsWith("http://") ||
+    decoded.startsWith("https://") ||
+    decoded.startsWith("//")
+  )
+}
+
+function stripRemoteCssUrls(css: string): string {
+  if (!css) return css
+  let out = css.replace(
+    /@import\s+(?:url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*))\s*\)|"([^"]*)"|'([^']*)')[^;]*;?/gi,
+    (full, u1, u2, u3, u4, u5) => {
+      const target = String(u1 ?? u2 ?? u3 ?? u4 ?? u5 ?? "")
+      return isRemoteHttpUrl(target) ? "" : full
+    }
+  )
+  out = out.replace(
+    /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*))\s*\)/gi,
+    (full, u1, u2, u3) => {
+      const target = String(u1 ?? u2 ?? u3 ?? "")
+      return isRemoteHttpUrl(target) ? "none" : full
+    }
+  )
+  return out
+}
+
 function isEventHandlerAttr(attrNameLower: string): boolean {
   if (attrNameLower.length < 3 || !attrNameLower.startsWith("on")) {
     return false
@@ -119,10 +181,11 @@ function isEventHandlerAttr(attrNameLower: string): boolean {
   return true
 }
 
-function stripEventHandlersFromOpeningTag(
+function sanitizeOpeningTag(
   html: string,
   ltIdx: number,
-  header: ParsedTagHeader
+  header: ParsedTagHeader,
+  allowRemoteImages: boolean
 ): string {
   const gtIdx = header.tagEnd
   const afterNameIdx =
@@ -133,65 +196,31 @@ function stripEventHandlersFromOpeningTag(
     return html.slice(ltIdx, gtIdx + 1)
   }
 
+  const { attrs, selfClosing } = parseTagAttributes(html, ltIdx, header)
   const keptParts: string[] = []
-  let i = 0
-  const len = inner.length
-  let selfClosing = false
 
-  while (i < len) {
-    while (i < len && (isWhitespace(inner[i]) || inner[i] === "/")) {
-      if (inner[i] === "/" && inner.slice(i + 1).trim() === "") {
-        selfClosing = true
+  for (const attr of attrs) {
+    if (isEventHandlerAttr(attr.nameLower)) {
+      continue
+    }
+    if (URI_ATTRS.has(attr.nameLower)) {
+      if (isDangerousUri(attr.value)) {
+        continue
       }
-      i += 1
-    }
-    if (i >= len) break
-
-    const nameStart = i
-    while (
-      i < len &&
-      !isWhitespace(inner[i]) &&
-      inner[i] !== "=" &&
-      inner[i] !== "/"
-    ) {
-      i += 1
-    }
-    const attrName = inner.slice(nameStart, i)
-    if (!attrName) break
-
-    let j = i
-    while (j < len && isWhitespace(inner[j])) {
-      j += 1
-    }
-
-    let attrEnd = i
-    if (j < len && inner[j] === "=") {
-      j += 1
-      while (j < len && isWhitespace(inner[j])) {
-        j += 1
-      }
-      if (j < len && (inner[j] === '"' || inner[j] === "'")) {
-        const quote = inner[j]
-        j += 1
-        while (j < len && inner[j] !== quote) {
-          j += 1
-        }
-        if (j < len && inner[j] === quote) {
-          j += 1
-        }
-        attrEnd = j
-      } else {
-        while (j < len && !isWhitespace(inner[j])) {
-          j += 1
-        }
-        attrEnd = j
+      if (
+        !allowRemoteImages &&
+        attr.nameLower === "poster" &&
+        isRemoteHttpUrl(attr.value)
+      ) {
+        continue
       }
     }
-
-    if (!isEventHandlerAttr(attrName.toLowerCase())) {
-      keptParts.push(inner.slice(nameStart, attrEnd))
+    if (!allowRemoteImages && attr.nameLower === "style") {
+      const cleanedStyle = stripRemoteCssUrls(attr.value)
+      keptParts.push(`style="${cleanedStyle.replace(/"/g, "&quot;")}"`)
+      continue
     }
-    i = attrEnd
+    keptParts.push(attr.raw)
   }
 
   const attrsStr = keptParts.length > 0 ? ` ${keptParts.join(" ")}` : ""
@@ -204,6 +233,7 @@ export interface SanitizeEmailHtmlOptions {
   stripStyles?: boolean
   extractBody?: boolean
   stripDocumentWrappers?: boolean
+  allowRemoteImages?: boolean
 }
 
 export interface SanitizeEmailHtmlResult {
@@ -213,7 +243,9 @@ export interface SanitizeEmailHtmlResult {
 
 /**
  * Linear-time HTML sanitizer for email fragments and documents.
- * - Strips <script> tags (including malformed closing tags) and inline on* event handlers
+ * - Strips <script>, <iframe>, <object>, <embed>, <applet>, <meta>, <base>, <link> tags and inline on* event handlers
+ * - Neutralizes javascript:, vbscript:, and data:text/html URIs on href/src/action/formaction/poster
+ * - When !allowRemoteImages, strips remote http(s):// URLs from poster, <style> url(...)/@import, and inline style="..."
  * - Optionally extracts or strips <style> blocks
  * - Optionally strips <!DOCTYPE>, <html>, and <head> wrappers and extracts <body> contents
  * - Escapes malformed/non-tag '<' characters to prevent multi-character tag reconstruction
@@ -227,6 +259,7 @@ export function sanitizeEmailHtml(
     stripStyles = false,
     extractBody = false,
     stripDocumentWrappers = false,
+    allowRemoteImages = true,
   } = options
 
   if (!html) {
@@ -294,13 +327,18 @@ export function sanitizeEmailHtml(
 
     const { isClosing, tagNameLower, tagEnd } = header
 
-    if (tagNameLower === "script") {
+    if (CONTAINER_STRIP_TAGS.has(tagNameLower)) {
       if (!isClosing) {
-        const close = findClosingTag(html, tagEnd + 1, "script")
+        const close = findClosingTag(html, tagEnd + 1, tagNameLower)
         pos = close ? close.closeEnd : tagEnd + 1
       } else {
         pos = tagEnd + 1
       }
+      continue
+    }
+
+    if (VOID_STRIP_TAGS.has(tagNameLower)) {
+      pos = tagEnd + 1
       continue
     }
 
@@ -321,10 +359,15 @@ export function sanitizeEmailHtml(
       if (!isClosing) {
         const close = findClosingTag(html, tagEnd + 1, "style")
         if (close) {
+          const rawInner = html.slice(tagEnd + 1, close.closeStart)
+          const cleanedInner = allowRemoteImages
+            ? rawInner
+            : stripRemoteCssUrls(rawInner)
+          const styleBlock = `<${header.tagName}>${cleanedInner}</${header.tagName}>`
           if (extractStyles) {
-            extractedStyles.push(html.slice(lt, close.closeEnd))
+            extractedStyles.push(styleBlock)
           } else if (!stripStyles && !inHead) {
-            out.push(html.slice(lt, close.closeEnd))
+            out.push(styleBlock)
           }
           pos = close.closeEnd
           continue
@@ -372,7 +415,7 @@ export function sanitizeEmailHtml(
     if (isClosing) {
       out.push(`</${header.tagName}>`)
     } else {
-      out.push(stripEventHandlersFromOpeningTag(html, lt, header))
+      out.push(sanitizeOpeningTag(html, lt, header, allowRemoteImages))
     }
     pos = tagEnd + 1
   }
@@ -906,12 +949,34 @@ export function findQuotedBlockStart(
   return null
 }
 
+function normalizeProtocolRelativeUrl(url: string): string {
+  const trimmed = url.trim()
+  if (trimmed.startsWith("//")) {
+    return `https:${trimmed}`
+  }
+  return url
+}
+
+function normalizeProtocolRelativeSrcset(srcset: string): string {
+  return srcset
+    .split(",")
+    .map((entry) => {
+      const trimmed = entry.trim()
+      if (trimmed.startsWith("//")) {
+        return `https:${trimmed}`
+      }
+      return trimmed
+    })
+    .join(", ")
+}
+
 /**
- * Rewrites `data-saturn-remote-src="..."` attributes on HTML tags to `src="..."`
- * in linear time without regex backtracking.
+ * Rewrites `data-saturn-remote-src`, `data-saturn-remote-srcset`, and
+ * `data-saturn-remote-background` attributes on HTML tags back to their live
+ * attributes in linear time without regex backtracking.
  */
 export function restoreRemoteImageSrc(html: string): string {
-  if (!html || !html.toLowerCase().includes("data-saturn-remote-src")) {
+  if (!html || !html.toLowerCase().includes("data-saturn-remote-")) {
     return html
   }
 
@@ -938,13 +1003,47 @@ export function restoreRemoteImageSrc(html: string): string {
 
     if (!header.isClosing) {
       const rawTag = html.slice(lt, header.tagEnd + 1)
-      if (rawTag.toLowerCase().includes("data-saturn-remote-src")) {
+      if (rawTag.toLowerCase().includes("data-saturn-remote-")) {
         const { attrs, selfClosing } = parseTagAttributes(html, lt, header)
-        const rebuiltAttrs = attrs.map((attr) =>
-          attr.nameLower === "data-saturn-remote-src"
-            ? `src="${attr.value}"`
-            : attr.raw
+        const hasRemoteSrc = attrs.some(
+          (a) => a.nameLower === "data-saturn-remote-src"
         )
+        const hasRemoteSrcset = attrs.some(
+          (a) => a.nameLower === "data-saturn-remote-srcset"
+        )
+        const hasRemoteBg = attrs.some(
+          (a) => a.nameLower === "data-saturn-remote-background"
+        )
+
+        const rebuiltAttrs: string[] = []
+        for (const attr of attrs) {
+          if (hasRemoteSrc && attr.nameLower === "src") continue
+          if (hasRemoteSrcset && attr.nameLower === "srcset") continue
+          if (hasRemoteBg && attr.nameLower === "background") continue
+
+          if (attr.nameLower === "data-saturn-remote-src") {
+            const val = normalizeProtocolRelativeUrl(attr.value).replace(
+              /"/g,
+              "&quot;"
+            )
+            rebuiltAttrs.push(`src="${val}"`)
+          } else if (attr.nameLower === "data-saturn-remote-srcset") {
+            const val = normalizeProtocolRelativeSrcset(attr.value).replace(
+              /"/g,
+              "&quot;"
+            )
+            rebuiltAttrs.push(`srcset="${val}"`)
+          } else if (attr.nameLower === "data-saturn-remote-background") {
+            const val = normalizeProtocolRelativeUrl(attr.value).replace(
+              /"/g,
+              "&quot;"
+            )
+            rebuiltAttrs.push(`background="${val}"`)
+          } else {
+            rebuiltAttrs.push(attr.raw)
+          }
+        }
+
         const attrsStr =
           rebuiltAttrs.length > 0 ? ` ${rebuiltAttrs.join(" ")}` : ""
         const slashStr = selfClosing ? " /" : ""

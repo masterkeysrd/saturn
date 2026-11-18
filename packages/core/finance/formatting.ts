@@ -58,7 +58,7 @@ export function formatNextDueDate(
   timezone: string = "UTC"
 ): string {
   if (!dateStr) return "N/A"
-  const d = parseDate(dateStr)
+  const d = parseDate(dateStr, timezone)
   if (!d || d.getFullYear() <= 1970) return "N/A"
   const now = new Date()
   const dParts = getTimezoneParts(d, timezone)
@@ -134,7 +134,7 @@ export function getSectionDateTitle(
   timezone: string = "UTC"
 ): string {
   if (!dateStr) return "Older"
-  const date = parseDate(dateStr)
+  const date = parseDate(dateStr, timezone)
   if (!date) return "Older"
 
   const now = new Date()

@@ -15,6 +15,7 @@ import {
   linkifyEmailsInHtml,
   prepareUnifiedDraftHtml,
 } from "./format"
+import { restoreRemoteImageSrc, sanitizeEmailHtml } from "./html"
 
 describe("normalizeReplySubject", () => {
   it("prepends Re: to standard subject", () => {
@@ -517,5 +518,75 @@ describe("prepareUnifiedDraftHtml", () => {
     expect(linkifyEmailsInHtml(manyLt)).toContain(
       '<a href="mailto:user@example.com">user@example.com</a>'
     )
+  })
+})
+
+describe("sanitizeEmailHtml security hardening", () => {
+  it("strips iframe, object, embed, applet, meta, base, and link tags", () => {
+    const dirty = [
+      '<link rel="stylesheet" href="https://tracker.test/track.css">',
+      '<meta http-equiv="refresh" content="0;url=https://evil.test">',
+      '<base href="https://evil.test/">',
+      '<iframe src="https://evil.test/frame">fallback</iframe>',
+      '<object data="https://evil.test/obj"></object>',
+      '<embed src="https://evil.test/emb">',
+      '<applet code="Evil.class"></applet>',
+      "<p>Safe content</p>",
+    ].join("")
+
+    const res = sanitizeEmailHtml(dirty, { allowRemoteImages: false })
+    expect(res.html).toBe("<p>Safe content</p>")
+  })
+
+  it("neutralizes javascript:, vbscript:, and data:text/html URIs on href/src/action/formaction/poster", () => {
+    const dirty = [
+      '<a href="javascript:alert(1)">Link1</a>',
+      '<a href="j&#x61;vascript:alert(2)">Link2</a>',
+      '<a href="vbscript:msgbox(1)">Link3</a>',
+      '<a href="data:text/html,<script>alert(1)</script>">Link4</a>',
+      '<form action="javascript:steal()"><button formaction="data:text/html,hi">Go</button></form>',
+      '<video poster="javascript:alert(3)" src="vbscript:evil()"></video>',
+    ].join("")
+
+    const res = sanitizeEmailHtml(dirty)
+    expect(res.html).not.toMatch(/javascript:/i)
+    expect(res.html).not.toMatch(/vbscript:/i)
+    expect(res.html).not.toMatch(/data:text\/html/i)
+    expect(res.html).toContain(">Link1</a>")
+    expect(res.html).toContain(">Go</button>")
+  })
+
+  it("blocks remote http(s) URLs in poster, <style> url()/@import, and inline style url() when allowRemoteImages is false", () => {
+    const dirty = [
+      '<style>@import url("https://tracker.test/font.css"); .hero { background: url("https://tracker.test/bg.png"); color: red; }</style>',
+      '<div style="background-image: url(https://tracker.test/pixel.gif); color: blue;">Hi</div>',
+      '<video poster="https://tracker.test/poster.jpg"></video>',
+    ].join("")
+
+    const blocked = sanitizeEmailHtml(dirty, { allowRemoteImages: false })
+    expect(blocked.html).not.toContain("https://tracker.test")
+    expect(blocked.html).toContain("color: red;")
+    expect(blocked.html).toContain("color: blue;")
+    expect(blocked.html).toContain("<video></video>")
+
+    const allowed = sanitizeEmailHtml(dirty, { allowRemoteImages: true })
+    expect(allowed.html).toContain("https://tracker.test/bg.png")
+    expect(allowed.html).toContain("https://tracker.test/pixel.gif")
+    expect(allowed.html).toContain('poster="https://tracker.test/poster.jpg"')
+  })
+
+  it("restores data-saturn-remote-src, srcset, and background while normalizing protocol-relative URLs", () => {
+    const blocked = [
+      '<img src="" data-saturn-remote-src="//i.pinimg.com/236x/pin.jpg" data-saturn-remote-srcset="//i.pinimg.com/236x/pin.jpg 1x, https://i.pinimg.com/474x/pin.jpg 2x" alt="Pin">',
+      '<td data-saturn-remote-background="https://i.pinimg.com/bg.jpg">Cell</td>',
+    ].join("")
+
+    const restored = restoreRemoteImageSrc(blocked)
+    expect(restored).toContain('src="https://i.pinimg.com/236x/pin.jpg"')
+    expect(restored).not.toContain('src=""')
+    expect(restored).toContain(
+      'srcset="https://i.pinimg.com/236x/pin.jpg 1x, https://i.pinimg.com/474x/pin.jpg 2x"'
+    )
+    expect(restored).toContain('background="https://i.pinimg.com/bg.jpg"')
   })
 })

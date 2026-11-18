@@ -34,11 +34,20 @@ function getCachedFormatter(
   return formatter
 }
 
-export function parseDate(date: DateInput): Date | null {
+export function parseDate(date: DateInput, timeZone?: string): Date | null {
   if (date === null || date === undefined || date === "") {
     return null
   }
   if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (timeZone) {
+      const iso = wallTimeToUtcIso(date, "12:00", timeZone)
+      if (iso) {
+        const zoned = new Date(iso)
+        if (!isNaN(zoned.getTime())) {
+          return zoned
+        }
+      }
+    }
     const [y, m, d] = date.split("-").map(Number)
     return new Date(Date.UTC(y, m - 1, d, NOON_UTC_HOUR, 0, 0))
   }
@@ -77,10 +86,10 @@ export function getTimezoneParts(
   date: DateInput,
   timeZone: string
 ): TimezoneParts | null {
-  const d = parseDate(date)
+  const tz = sanitizeTimezone(timeZone)
+  const d = parseDate(date, tz)
   if (!d) return null
 
-  const tz = sanitizeTimezone(timeZone)
   const formatter = getCachedFormatter("en-US", tz, {
     year: "numeric",
     month: "2-digit",
@@ -134,16 +143,75 @@ export function getTimezoneParts(
   }
 }
 
+export function wallTimeToUtcIso(
+  dateStr: string,
+  timeStr: string,
+  timeZone: string
+): string {
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr.trim())
+  const timeMatch = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(timeStr.trim())
+  if (!dateMatch || !timeMatch) {
+    const fallback = new Date(`${dateStr}T${timeStr}`)
+    return isNaN(fallback.getTime()) ? "" : fallback.toISOString()
+  }
+
+  const year = Number(dateMatch[1])
+  const month = Number(dateMatch[2])
+  const day = Number(dateMatch[3])
+  const hour = Number(timeMatch[1])
+  const minute = Number(timeMatch[2])
+  const second = timeMatch[3] ? Number(timeMatch[3]) : 0
+
+  const tz = sanitizeTimezone(timeZone)
+  const utcGuess = new Date(
+    Date.UTC(year, month - 1, day, hour, minute, second, 0)
+  )
+  const invParts = getTimezoneParts(utcGuess, tz)
+  if (!invParts) return utcGuess.toISOString()
+
+  const targetAsUtc = Date.UTC(
+    invParts.year,
+    invParts.month - 1,
+    invParts.day,
+    invParts.hour,
+    invParts.minute,
+    invParts.second,
+    0
+  )
+  const diff = targetAsUtc - utcGuess.getTime()
+  let result = new Date(utcGuess.getTime() - diff)
+
+  const checkParts = getTimezoneParts(result, tz)
+  if (checkParts) {
+    const checkAsUtc = Date.UTC(
+      checkParts.year,
+      checkParts.month - 1,
+      checkParts.day,
+      checkParts.hour,
+      checkParts.minute,
+      checkParts.second,
+      0
+    )
+    const desiredAsUtc = Date.UTC(year, month - 1, day, hour, minute, second, 0)
+    const correction = desiredAsUtc - checkAsUtc
+    if (correction !== 0) {
+      result = new Date(result.getTime() + correction)
+    }
+  }
+
+  return result.toISOString()
+}
+
 export function formatDateWithTimezone(
   date: DateInput,
   timeZone: string,
   options?: Intl.DateTimeFormatOptions,
   locale?: string
 ): string {
-  const d = parseDate(date)
+  const tz = sanitizeTimezone(timeZone)
+  const d = parseDate(date, tz)
   if (!d) return ""
 
-  const tz = sanitizeTimezone(timeZone)
   const defaultOptions: Intl.DateTimeFormatOptions = {
     year: "numeric",
     month: "short",
@@ -243,7 +311,7 @@ export function getDaysDiff(
   timeZone: string = "UTC",
   now: Date = new Date()
 ): number | null {
-  const target = parseDate(date)
+  const target = parseDate(date, timeZone)
   if (!target) return null
   const startToday = getStartOfDay(now, timeZone)
   const startTarget = getStartOfDay(target, timeZone)
