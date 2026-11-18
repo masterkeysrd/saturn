@@ -25,6 +25,12 @@ type MailAggregatorMock struct {
 	// GetThreadFunc mocks the GetThread method.
 	GetThreadFunc func(ctx context.Context, spaceID string, id string) (*mailaggregator.ThreadProjection, error)
 
+	// ListDraftsFunc mocks the ListDrafts method.
+	ListDraftsFunc func(ctx context.Context, spaceID string, filter *domainmail.ListDraftsFilter) ([]*domainmail.Draft, error)
+
+	// GetDraftFunc mocks the GetDraft method.
+	GetDraftFunc func(ctx context.Context, spaceID string, id string) (*domainmail.Draft, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		ListThreads []struct {
@@ -37,9 +43,21 @@ type MailAggregatorMock struct {
 			SpaceID string
 			Id      string
 		}
+		ListDrafts []struct {
+			Ctx     context.Context
+			SpaceID string
+			Filter  *domainmail.ListDraftsFilter
+		}
+		GetDraft []struct {
+			Ctx     context.Context
+			SpaceID string
+			Id      string
+		}
 	}
 	lockListThreads sync.RWMutex
 	lockGetThread   sync.RWMutex
+	lockListDrafts  sync.RWMutex
+	lockGetDraft    sync.RWMutex
 }
 
 // ListThreads calls ListThreadsFunc.
@@ -102,6 +120,66 @@ func (mock *MailAggregatorMock) GetThreadCalls() []struct {
 	return mock.calls.GetThread
 }
 
+// ListDrafts calls ListDraftsFunc.
+func (mock *MailAggregatorMock) ListDrafts(ctx context.Context, spaceID string, filter *domainmail.ListDraftsFilter) ([]*domainmail.Draft, error) {
+	if mock.ListDraftsFunc == nil {
+		panic("MailAggregatorMock.ListDraftsFunc: method is nil but MailAggregator.ListDrafts was just called")
+	}
+	mock.lockListDrafts.Lock()
+	mock.calls.ListDrafts = append(mock.calls.ListDrafts, struct {
+		Ctx     context.Context
+		SpaceID string
+		Filter  *domainmail.ListDraftsFilter
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+		Filter:  filter,
+	})
+	mock.lockListDrafts.Unlock()
+	return mock.ListDraftsFunc(ctx, spaceID, filter)
+}
+
+// ListDraftsCalls returns all calls made to ListDrafts.
+func (mock *MailAggregatorMock) ListDraftsCalls() []struct {
+	Ctx     context.Context
+	SpaceID string
+	Filter  *domainmail.ListDraftsFilter
+} {
+	mock.lockListDrafts.RLock()
+	defer mock.lockListDrafts.RUnlock()
+	return mock.calls.ListDrafts
+}
+
+// GetDraft calls GetDraftFunc.
+func (mock *MailAggregatorMock) GetDraft(ctx context.Context, spaceID string, id string) (*domainmail.Draft, error) {
+	if mock.GetDraftFunc == nil {
+		panic("MailAggregatorMock.GetDraftFunc: method is nil but MailAggregator.GetDraft was just called")
+	}
+	mock.lockGetDraft.Lock()
+	mock.calls.GetDraft = append(mock.calls.GetDraft, struct {
+		Ctx     context.Context
+		SpaceID string
+		Id      string
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+		Id:      id,
+	})
+	mock.lockGetDraft.Unlock()
+	return mock.GetDraftFunc(ctx, spaceID, id)
+}
+
+// GetDraftCalls returns all calls made to GetDraft.
+func (mock *MailAggregatorMock) GetDraftCalls() []struct {
+	Ctx     context.Context
+	SpaceID string
+	Id      string
+} {
+	mock.lockGetDraft.RLock()
+	defer mock.lockGetDraft.RUnlock()
+	return mock.calls.GetDraft
+}
+
 // Compile-time interface assertion.
 var _ MailCoordinator = (*MailCoordinatorMock)(nil)
 
@@ -112,6 +190,12 @@ type MailCoordinatorMock struct {
 
 	// CreateDraftFunc mocks the CreateDraft method.
 	CreateDraftFunc func(ctx context.Context, req *mailapp.CreateDraftRequest) (*domainmail.Draft, error)
+
+	// UpdateDraftFunc mocks the UpdateDraft method.
+	UpdateDraftFunc func(ctx context.Context, req *mailapp.UpdateDraftRequest) (*domainmail.Draft, error)
+
+	// DeleteDraftFunc mocks the DeleteDraft method.
+	DeleteDraftFunc func(ctx context.Context, req *mailapp.DeleteDraftRequest) error
 
 	// SendDraftFunc mocks the SendDraft method.
 	SendDraftFunc func(ctx context.Context, req *mailapp.SendDraftRequest) (*domainmail.Message, error)
@@ -126,6 +210,14 @@ type MailCoordinatorMock struct {
 			Ctx context.Context
 			Req *mailapp.CreateDraftRequest
 		}
+		UpdateDraft []struct {
+			Ctx context.Context
+			Req *mailapp.UpdateDraftRequest
+		}
+		DeleteDraft []struct {
+			Ctx context.Context
+			Req *mailapp.DeleteDraftRequest
+		}
 		SendDraft []struct {
 			Ctx context.Context
 			Req *mailapp.SendDraftRequest
@@ -133,6 +225,8 @@ type MailCoordinatorMock struct {
 	}
 	lockModifyThread sync.RWMutex
 	lockCreateDraft  sync.RWMutex
+	lockUpdateDraft  sync.RWMutex
+	lockDeleteDraft  sync.RWMutex
 	lockSendDraft    sync.RWMutex
 }
 
@@ -188,6 +282,60 @@ func (mock *MailCoordinatorMock) CreateDraftCalls() []struct {
 	mock.lockCreateDraft.RLock()
 	defer mock.lockCreateDraft.RUnlock()
 	return mock.calls.CreateDraft
+}
+
+// UpdateDraft calls UpdateDraftFunc.
+func (mock *MailCoordinatorMock) UpdateDraft(ctx context.Context, req *mailapp.UpdateDraftRequest) (*domainmail.Draft, error) {
+	if mock.UpdateDraftFunc == nil {
+		panic("MailCoordinatorMock.UpdateDraftFunc: method is nil but MailCoordinator.UpdateDraft was just called")
+	}
+	mock.lockUpdateDraft.Lock()
+	mock.calls.UpdateDraft = append(mock.calls.UpdateDraft, struct {
+		Ctx context.Context
+		Req *mailapp.UpdateDraftRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockUpdateDraft.Unlock()
+	return mock.UpdateDraftFunc(ctx, req)
+}
+
+// UpdateDraftCalls returns all calls made to UpdateDraft.
+func (mock *MailCoordinatorMock) UpdateDraftCalls() []struct {
+	Ctx context.Context
+	Req *mailapp.UpdateDraftRequest
+} {
+	mock.lockUpdateDraft.RLock()
+	defer mock.lockUpdateDraft.RUnlock()
+	return mock.calls.UpdateDraft
+}
+
+// DeleteDraft calls DeleteDraftFunc.
+func (mock *MailCoordinatorMock) DeleteDraft(ctx context.Context, req *mailapp.DeleteDraftRequest) error {
+	if mock.DeleteDraftFunc == nil {
+		panic("MailCoordinatorMock.DeleteDraftFunc: method is nil but MailCoordinator.DeleteDraft was just called")
+	}
+	mock.lockDeleteDraft.Lock()
+	mock.calls.DeleteDraft = append(mock.calls.DeleteDraft, struct {
+		Ctx context.Context
+		Req *mailapp.DeleteDraftRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockDeleteDraft.Unlock()
+	return mock.DeleteDraftFunc(ctx, req)
+}
+
+// DeleteDraftCalls returns all calls made to DeleteDraft.
+func (mock *MailCoordinatorMock) DeleteDraftCalls() []struct {
+	Ctx context.Context
+	Req *mailapp.DeleteDraftRequest
+} {
+	mock.lockDeleteDraft.RLock()
+	defer mock.lockDeleteDraft.RUnlock()
+	return mock.calls.DeleteDraft
 }
 
 // SendDraft calls SendDraftFunc.

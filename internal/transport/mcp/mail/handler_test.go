@@ -161,6 +161,149 @@ func TestMailHandler(t *testing.T) {
 			args:     map[string]any{},
 			wantErr:  true,
 		},
+		{
+			name:     "modify thread updates flags and labels",
+			toolName: "mail_modify_thread",
+			args: map[string]any{
+				"id":              "mth_1",
+				"is_starred":      true,
+				"is_unread":       false,
+				"add_mailbox_ids": []string{"mbx_important"},
+			},
+			setupMocks: func(_ *MailAggregatorMock, coord *MailCoordinatorMock, _ *SpaceSettingsReaderMock) {
+				coord.ModifyThreadFunc = func(_ context.Context, req *mailapp.ModifyThreadRequest) (*domainmail.Thread, error) {
+					if req.ID != "mth_1" || req.IsStarred == nil || !*req.IsStarred || len(req.AddMailboxIDs) != 1 {
+						t.Errorf("unexpected modify request: %+v", req)
+					}
+					return &domainmail.Thread{
+						ID:        req.ID,
+						Subject:   "Invoice",
+						IsStarred: true,
+						IsUnread:  false,
+						InInbox:   true,
+					}, nil
+				}
+			},
+			assertOut: func(t *testing.T, out map[string]any) {
+				if out["is_starred"] != true || out["is_unread"] != false {
+					t.Errorf("unexpected modify thread output: %+v", out)
+				}
+			},
+		},
+		{
+			name:     "modify thread with no changes fails",
+			toolName: "mail_modify_thread",
+			args:     map[string]any{"id": "mth_1"},
+			wantErr:  true,
+		},
+		{
+			name:     "modify thread propagates coordinator error",
+			toolName: "mail_modify_thread",
+			args:     map[string]any{"id": "mth_missing", "in_trash": true},
+			setupMocks: func(_ *MailAggregatorMock, coord *MailCoordinatorMock, _ *SpaceSettingsReaderMock) {
+				coord.ModifyThreadFunc = func(_ context.Context, _ *mailapp.ModifyThreadRequest) (*domainmail.Thread, error) {
+					return nil, errors.E(errors.NotExist, "thread not found")
+				}
+			},
+			wantErr: true,
+		},
+		{
+			name:     "list drafts returns localized summaries",
+			toolName: "mail_list_drafts",
+			args:     map[string]any{"connected_account_id": "cac_1", "limit": 10},
+			setupMocks: func(agg *MailAggregatorMock, _ *MailCoordinatorMock, ss *SpaceSettingsReaderMock) {
+				ss.GetSettingsFunc = func(_ context.Context, _ *spaceapp.GetSettingsRequest) (*settings.Entry[space.Settings], error) {
+					return &settings.Entry[space.Settings]{Value: space.Settings{Timezone: "America/New_York"}}, nil
+				}
+				agg.ListDraftsFunc = func(_ context.Context, _ string, filter *domainmail.ListDraftsFilter) ([]*domainmail.Draft, error) {
+					if filter.ConnectedAccountID == nil || *filter.ConnectedAccountID != "cac_1" || filter.Limit != 10 {
+						t.Errorf("unexpected draft filter: %+v", filter)
+					}
+					return []*domainmail.Draft{
+						{
+							ID:                 "mdf_1",
+							ConnectedAccountID: "cac_1",
+							Subject:            "Draft Subject",
+							Mode:               domainmail.DraftModeNew,
+							To:                 []domainmail.Participant{{Email: "bob@example.com"}},
+							UpdateTime:         time.Date(2026, 4, 15, 14, 0, 0, 0, time.UTC),
+						},
+					}, nil
+				}
+			},
+			assertOut: func(t *testing.T, out map[string]any) {
+				drafts := out["drafts"].([]any)
+				if len(drafts) != 1 || drafts[0].(map[string]any)["update_time"] != "2026-04-15T10:00:00-04:00" {
+					t.Errorf("unexpected drafts: %+v", drafts)
+				}
+			},
+		},
+		{
+			name:     "update draft merges existing fields and patches",
+			toolName: "mail_update_draft",
+			args: map[string]any{
+				"id":        "mdf_1",
+				"subject":   "Updated Subject",
+				"body_text": "Updated body",
+			},
+			setupMocks: func(agg *MailAggregatorMock, coord *MailCoordinatorMock, ss *SpaceSettingsReaderMock) {
+				ss.GetSettingsFunc = func(_ context.Context, _ *spaceapp.GetSettingsRequest) (*settings.Entry[space.Settings], error) {
+					return &settings.Entry[space.Settings]{Value: space.Settings{Timezone: "UTC"}}, nil
+				}
+				agg.GetDraftFunc = func(_ context.Context, _, id string) (*domainmail.Draft, error) {
+					return &domainmail.Draft{
+						ID:                 id,
+						ConnectedAccountID: "cac_1",
+						Mode:               domainmail.DraftModeReply,
+						To:                 []domainmail.Participant{{Email: "alice@example.com"}},
+						Subject:            "Old Subject",
+						Version:            3,
+					}, nil
+				}
+				coord.UpdateDraftFunc = func(_ context.Context, req *mailapp.UpdateDraftRequest) (*domainmail.Draft, error) {
+					if req.Draft.Version != 3 || req.Draft.ConnectedAccountID != "cac_1" || req.Draft.Subject != "Updated Subject" || len(req.UpdateMask) != 2 {
+						t.Errorf("unexpected update draft req: %+v", req)
+					}
+					req.Draft.Version = 4
+					return req.Draft, nil
+				}
+			},
+			assertOut: func(t *testing.T, out map[string]any) {
+				if out["subject"] != "Updated Subject" || out["mode"] != "reply" {
+					t.Errorf("unexpected updated draft: %+v", out)
+				}
+			},
+		},
+		{
+			name:     "update draft with no fields fails",
+			toolName: "mail_update_draft",
+			args:     map[string]any{"id": "mdf_1"},
+			wantErr:  true,
+		},
+		{
+			name:     "delete draft succeeds",
+			toolName: "mail_delete_draft",
+			args:     map[string]any{"id": "mdf_1"},
+			setupMocks: func(_ *MailAggregatorMock, coord *MailCoordinatorMock, _ *SpaceSettingsReaderMock) {
+				coord.DeleteDraftFunc = func(_ context.Context, req *mailapp.DeleteDraftRequest) error {
+					if req.ID != "mdf_1" {
+						t.Errorf("unexpected draft id %q", req.ID)
+					}
+					return nil
+				}
+			},
+			assertOut: func(t *testing.T, out map[string]any) {
+				if out["deleted"] != true || out["id"] != "mdf_1" {
+					t.Errorf("unexpected delete draft output: %+v", out)
+				}
+			},
+		},
+		{
+			name:     "delete draft empty id fails",
+			toolName: "mail_delete_draft",
+			args:     map[string]any{"id": " "},
+			wantErr:  true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -208,5 +351,35 @@ func TestMailHandler(t *testing.T) {
 			}
 			tc.assertOut(t, res.StructuredContent.(map[string]any))
 		})
+	}
+}
+
+func TestMailHandler_ViewerReadOnlyTools(t *testing.T) {
+	srv := mcptransport.NewServer(mcptransport.ServerConfig{})
+	NewHandler(Dependencies{
+		Aggregator:    &MailAggregatorMock{},
+		Coordinator:   &MailCoordinatorMock{},
+		SpaceSettings: &SpaceSettingsReaderMock{},
+	}).Register(srv.Registry())
+
+	ctx := auth.WithSpaceScope(
+		auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_1"}),
+		"spc_1",
+		string(space.RoleViewer),
+	)
+	session, err := srv.ConnectInMemory(ctx)
+	if err != nil {
+		t.Fatalf("ConnectInMemory failed: %v", err)
+	}
+	defer func() { _ = session.Close() }()
+
+	toolsRes, err := session.ListTools(context.Background(), &sdkmcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools failed: %v", err)
+	}
+	for _, tool := range toolsRes.Tools {
+		if !tool.Annotations.ReadOnlyHint {
+			t.Errorf("unexpected non-readonly tool %q exposed to viewer", tool.Name)
+		}
 	}
 }

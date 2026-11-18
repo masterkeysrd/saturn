@@ -23,11 +23,13 @@ const (
 	maxThreadsLimit     = 50
 )
 
-// MailAggregator defines read-only mail thread queries.
+// MailAggregator defines read-only mail thread and draft queries.
 // @Mock
 type MailAggregator interface {
 	ListThreads(ctx context.Context, spaceID string, filter *domainmail.ListThreadsFilter) ([]*domainmail.Thread, int, error)
 	GetThread(ctx context.Context, spaceID, id string) (*mailaggregator.ThreadProjection, error)
+	ListDrafts(ctx context.Context, spaceID string, filter *domainmail.ListDraftsFilter) ([]*domainmail.Draft, error)
+	GetDraft(ctx context.Context, spaceID, id string) (*domainmail.Draft, error)
 }
 
 // MailCoordinator defines mail thread and draft mutations.
@@ -35,6 +37,8 @@ type MailAggregator interface {
 type MailCoordinator interface {
 	ModifyThread(ctx context.Context, req *mailapp.ModifyThreadRequest) (*domainmail.Thread, error)
 	CreateDraft(ctx context.Context, req *mailapp.CreateDraftRequest) (*domainmail.Draft, error)
+	UpdateDraft(ctx context.Context, req *mailapp.UpdateDraftRequest) (*domainmail.Draft, error)
+	DeleteDraft(ctx context.Context, req *mailapp.DeleteDraftRequest) error
 	SendDraft(ctx context.Context, req *mailapp.SendDraftRequest) (*domainmail.Message, error)
 }
 
@@ -116,6 +120,45 @@ func (h *Handler) Register(reg *mcptransport.Registry) {
 		ReadOnly:      false,
 		Destructive:   true,
 	}, h.sendMessage)
+
+	reg.RegisterTool(mcptransport.ToolSpec{
+		Name:          "mail_modify_thread",
+		Domain:        "mail",
+		Title:         "Modify Mail Thread",
+		Description:   "Updates flags (starred, unread, inbox, trash, spam) or mailbox labels on an email thread.",
+		RequiredScope: identity.ScopeMailWrite,
+		ReadOnly:      false,
+		Destructive:   false,
+	}, h.modifyThread)
+
+	reg.RegisterTool(mcptransport.ToolSpec{
+		Name:          "mail_list_drafts",
+		Domain:        "mail",
+		Title:         "List Mail Drafts",
+		Description:   "Lists email drafts in the workspace with optional connected account filter.",
+		RequiredScope: identity.ScopeMailRead,
+		ReadOnly:      true,
+	}, h.listDrafts)
+
+	reg.RegisterTool(mcptransport.ToolSpec{
+		Name:          "mail_update_draft",
+		Domain:        "mail",
+		Title:         "Update Mail Draft",
+		Description:   "Updates recipients, subject, or body fields on an existing mail draft.",
+		RequiredScope: identity.ScopeMailWrite,
+		ReadOnly:      false,
+		Destructive:   false,
+	}, h.updateDraft)
+
+	reg.RegisterTool(mcptransport.ToolSpec{
+		Name:          "mail_delete_draft",
+		Domain:        "mail",
+		Title:         "Delete Mail Draft",
+		Description:   "Deletes an email draft from the workspace and connected provider.",
+		RequiredScope: identity.ScopeMailWrite,
+		ReadOnly:      false,
+		Destructive:   true,
+	}, h.deleteDraft)
 }
 
 // ListThreadsInput defines parameters for mail_list_threads.
@@ -448,4 +491,259 @@ func buildDraftFromInput(in CreateDraftInput) (*domainmail.Draft, error) {
 	}
 
 	return draft, nil
+}
+
+// ModifyThreadInput defines parameters for mail_modify_thread.
+type ModifyThreadInput struct {
+	ID               string   `json:"id" jsonschema:"Mail thread ID (mth_...) to modify"`
+	IsStarred        *bool    `json:"is_starred,omitempty" jsonschema:"Set starred state"`
+	IsUnread         *bool    `json:"is_unread,omitempty" jsonschema:"Set unread state"`
+	InInbox          *bool    `json:"in_inbox,omitempty" jsonschema:"Set inbox membership (false archives)"`
+	InTrash          *bool    `json:"in_trash,omitempty" jsonschema:"Move thread to or out of trash"`
+	InSpam           *bool    `json:"in_spam,omitempty" jsonschema:"Move thread to or out of spam"`
+	AddMailboxIDs    []string `json:"add_mailbox_ids,omitempty" jsonschema:"Mailbox or label IDs to add"`
+	RemoveMailboxIDs []string `json:"remove_mailbox_ids,omitempty" jsonschema:"Mailbox or label IDs to remove"`
+}
+
+// ModifyThreadOutput summarizes the updated mail thread flags.
+type ModifyThreadOutput struct {
+	ID        string `json:"id"`
+	Subject   string `json:"subject"`
+	IsUnread  bool   `json:"is_unread"`
+	IsStarred bool   `json:"is_starred"`
+	InInbox   bool   `json:"in_inbox"`
+	InTrash   bool   `json:"in_trash"`
+	InSpam    bool   `json:"in_spam"`
+}
+
+func (h *Handler) modifyThread(ctx context.Context, in ModifyThreadInput) (ModifyThreadOutput, error) {
+	if _, err := mcptransport.RequireSpaceID(ctx); err != nil {
+		return ModifyThreadOutput{}, err
+	}
+	id := strings.TrimSpace(in.ID)
+	if id == "" {
+		return ModifyThreadOutput{}, errors.E(errors.Invalid, "thread id is required")
+	}
+
+	addIDs := trimNonEmptyStrings(in.AddMailboxIDs)
+	removeIDs := trimNonEmptyStrings(in.RemoveMailboxIDs)
+	if in.IsStarred == nil && in.IsUnread == nil && in.InInbox == nil && in.InTrash == nil &&
+		in.InSpam == nil && len(addIDs) == 0 && len(removeIDs) == 0 {
+		return ModifyThreadOutput{}, errors.E(errors.Invalid, "at least one thread modification must be provided")
+	}
+
+	updated, err := h.coord.ModifyThread(ctx, &mailapp.ModifyThreadRequest{
+		ID:               id,
+		IsStarred:        in.IsStarred,
+		IsUnread:         in.IsUnread,
+		InInbox:          in.InInbox,
+		InTrash:          in.InTrash,
+		InSpam:           in.InSpam,
+		AddMailboxIDs:    addIDs,
+		RemoveMailboxIDs: removeIDs,
+	})
+	if err != nil {
+		return ModifyThreadOutput{}, err
+	}
+
+	return ModifyThreadOutput{
+		ID:        updated.ID,
+		Subject:   updated.Subject,
+		IsUnread:  updated.IsUnread,
+		IsStarred: updated.IsStarred,
+		InInbox:   updated.InInbox,
+		InTrash:   updated.InTrash,
+		InSpam:    updated.InSpam,
+	}, nil
+}
+
+// ListDraftsInput defines parameters for mail_list_drafts.
+type ListDraftsInput struct {
+	ConnectedAccountID string `json:"connected_account_id,omitempty" jsonschema:"Optional connected account ID filter"`
+	Limit              int    `json:"limit,omitempty" jsonschema:"Maximum drafts to return (1-50, default 20)"`
+}
+
+// DraftSummary summarizes a mail draft.
+type DraftSummary struct {
+	ID                 string   `json:"id"`
+	ConnectedAccountID string   `json:"connected_account_id"`
+	Subject            string   `json:"subject"`
+	Mode               string   `json:"mode"`
+	To                 []string `json:"to"`
+	Cc                 []string `json:"cc,omitempty"`
+	ThreadID           *string  `json:"thread_id,omitempty"`
+	UpdateTime         string   `json:"update_time"`
+}
+
+// ListDraftsOutput is returned by mail_list_drafts.
+type ListDraftsOutput struct {
+	Drafts []DraftSummary `json:"drafts"`
+}
+
+func (h *Handler) listDrafts(ctx context.Context, in ListDraftsInput) (ListDraftsOutput, error) {
+	spaceID, err := mcptransport.RequireSpaceID(ctx)
+	if err != nil {
+		return ListDraftsOutput{}, err
+	}
+
+	filter := &domainmail.ListDraftsFilter{
+		Limit: mcptransport.ClampLimit(in.Limit, defaultThreadsLimit, maxThreadsLimit),
+	}
+	if acc := strings.TrimSpace(in.ConnectedAccountID); acc != "" {
+		filter.ConnectedAccountID = new(acc)
+	}
+
+	drafts, err := h.agg.ListDrafts(ctx, spaceID, filter)
+	if err != nil {
+		return ListDraftsOutput{}, err
+	}
+
+	loc := mcptransport.ResolveLocation(ctx, h.spaceSettings.GetSettings, spaceID)
+	items := make([]DraftSummary, 0, len(drafts))
+	for _, d := range drafts {
+		items = append(items, toDraftSummary(d, loc))
+	}
+
+	return ListDraftsOutput{Drafts: items}, nil
+}
+
+// UpdateDraftInput defines parameters for mail_update_draft.
+type UpdateDraftInput struct {
+	ID       string   `json:"id" jsonschema:"Draft ID (mdf_...) to update"`
+	To       []string `json:"to,omitempty" jsonschema:"Updated recipient email addresses"`
+	Cc       []string `json:"cc,omitempty" jsonschema:"Updated CC email addresses"`
+	Bcc      []string `json:"bcc,omitempty" jsonschema:"Updated BCC email addresses"`
+	Subject  *string  `json:"subject,omitempty" jsonschema:"Updated email subject line"`
+	BodyText *string  `json:"body_text,omitempty" jsonschema:"Updated plain-text body"`
+	BodyHTML *string  `json:"body_html,omitempty" jsonschema:"Updated HTML body"`
+}
+
+func (h *Handler) updateDraft(ctx context.Context, in UpdateDraftInput) (DraftSummary, error) {
+	spaceID, err := mcptransport.RequireSpaceID(ctx)
+	if err != nil {
+		return DraftSummary{}, err
+	}
+	id := strings.TrimSpace(in.ID)
+	if id == "" {
+		return DraftSummary{}, errors.E(errors.Invalid, "draft id is required")
+	}
+
+	if in.To == nil && in.Cc == nil && in.Bcc == nil && in.Subject == nil && in.BodyText == nil && in.BodyHTML == nil {
+		return DraftSummary{}, errors.E(errors.Invalid, "at least one field to update must be provided")
+	}
+
+	existing, err := h.agg.GetDraft(ctx, spaceID, id)
+	if err != nil {
+		return DraftSummary{}, err
+	}
+
+	merged := *existing
+	var mask []string
+	if in.To != nil {
+		merged.To = parseParticipants(in.To)
+		mask = append(mask, "to")
+	}
+	if in.Cc != nil {
+		merged.Cc = parseParticipants(in.Cc)
+		mask = append(mask, "cc")
+	}
+	if in.Bcc != nil {
+		merged.Bcc = parseParticipants(in.Bcc)
+		mask = append(mask, "bcc")
+	}
+	if in.Subject != nil {
+		merged.Subject = strings.TrimSpace(*in.Subject)
+		mask = append(mask, "subject")
+	}
+	if in.BodyText != nil {
+		merged.BodyText = *in.BodyText
+		mask = append(mask, "body_text")
+	}
+	if in.BodyHTML != nil {
+		merged.BodyHTML = *in.BodyHTML
+		mask = append(mask, "body_html")
+	}
+
+	updated, err := h.coord.UpdateDraft(ctx, &mailapp.UpdateDraftRequest{
+		ID:         id,
+		Draft:      &merged,
+		UpdateMask: mask,
+	})
+	if err != nil {
+		return DraftSummary{}, err
+	}
+
+	loc := mcptransport.ResolveLocation(ctx, h.spaceSettings.GetSettings, spaceID)
+	return toDraftSummary(updated, loc), nil
+}
+
+// DeleteDraftInput defines parameters for mail_delete_draft.
+type DeleteDraftInput struct {
+	ID string `json:"id" jsonschema:"Draft ID (mdf_...) to delete"`
+}
+
+// DeleteDraftOutput confirms deletion of a mail draft.
+type DeleteDraftOutput struct {
+	ID      string `json:"id"`
+	Deleted bool   `json:"deleted"`
+}
+
+func (h *Handler) deleteDraft(ctx context.Context, in DeleteDraftInput) (DeleteDraftOutput, error) {
+	if _, err := mcptransport.RequireSpaceID(ctx); err != nil {
+		return DeleteDraftOutput{}, err
+	}
+	id := strings.TrimSpace(in.ID)
+	if id == "" {
+		return DeleteDraftOutput{}, errors.E(errors.Invalid, "draft id is required")
+	}
+
+	if err := h.coord.DeleteDraft(ctx, &mailapp.DeleteDraftRequest{ID: id}); err != nil {
+		return DeleteDraftOutput{}, err
+	}
+
+	return DeleteDraftOutput{
+		ID:      id,
+		Deleted: true,
+	}, nil
+}
+
+func toDraftSummary(d *domainmail.Draft, loc *time.Location) DraftSummary {
+	to := make([]string, 0, len(d.To))
+	for _, p := range d.To {
+		to = append(to, p.String())
+	}
+	cc := make([]string, 0, len(d.Cc))
+	for _, p := range d.Cc {
+		cc = append(cc, p.String())
+	}
+	return DraftSummary{
+		ID:                 d.ID,
+		ConnectedAccountID: d.ConnectedAccountID,
+		Subject:            d.Subject,
+		Mode:               string(d.Mode),
+		To:                 to,
+		Cc:                 cc,
+		ThreadID:           d.ThreadID,
+		UpdateTime:         d.UpdateTime.In(loc).Format(time.RFC3339),
+	}
+}
+
+func parseParticipants(addrs []string) []domainmail.Participant {
+	out := make([]domainmail.Participant, 0, len(addrs))
+	for _, addr := range addrs {
+		if trimmed := strings.TrimSpace(addr); trimmed != "" {
+			out = append(out, domainmail.Participant{Email: trimmed})
+		}
+	}
+	return out
+}
+
+func trimNonEmptyStrings(items []string) []string {
+	var out []string
+	for _, s := range items {
+		if trimmed := strings.TrimSpace(s); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }
