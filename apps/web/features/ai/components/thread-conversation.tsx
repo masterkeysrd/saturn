@@ -2,10 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useLocation } from "react-router-dom"
 import {
   describeToolCall,
+  extractToolErrorMessage,
   getStreamPhaseLabel,
+  splitThinkingFromText,
   type ThreadStreamPhase,
+  type ToolDescriptor,
 } from "@saturn/core"
 import { useThreadStream } from "@saturn/hooks/ai"
+import { useActiveSpaceContext } from "@/features/space/use-space"
 import {
   useListAgentsQuery,
   useListModelsQuery,
@@ -34,7 +38,11 @@ import {
   ToolHeader,
   ToolInput,
   ToolOutput,
+  type ToolState,
 } from "@/components/ai-elements/tool"
+import { ToolApprovalPreview } from "./tool-approval-preview"
+import { ToolChainGroup } from "./tool-chain-group"
+import { DomainToolOutput } from "./tool-result-renderer"
 import {
   Confirmation,
   ConfirmationAction,
@@ -102,17 +110,23 @@ interface ThreadConversationProps {
 
 function renderMessageBlocks(msg: ThreadMessage) {
   const blocks = msg.blocks ?? []
-  const thinkingParts = blocks
+  const explicitThinking = blocks
     .filter((b) => b.type === "thinking" && b.text)
     .map((b) => b.text?.trim() ?? "")
     .filter(Boolean)
-    .join("\n")
 
-  const textParts = blocks
+  const rawTextParts = blocks
     .filter((b) => b.type === "text" && b.text)
     .map((b) => b.text?.trim() ?? "")
     .filter(Boolean)
     .join("\n")
+
+  const inlineExtracted = splitThinkingFromText(rawTextParts)
+  const thinkingParts = [
+    ...explicitThinking,
+    ...(inlineExtracted.thinking ? [inlineExtracted.thinking] : []),
+  ].join("\n\n")
+  const textParts = inlineExtracted.text.trim()
 
   const attachments = blocks.filter(
     (b) => b.type === "attachment" && b.attachment
@@ -138,7 +152,7 @@ function renderMessageBlocks(msg: ThreadMessage) {
 
       {thinkingParts && (
         <Reasoning defaultOpen={false}>
-          <ReasoningTrigger />
+          <ReasoningTrigger preview={thinkingParts} />
           <ReasoningContent>{thinkingParts}</ReasoningContent>
         </Reasoning>
       )}
@@ -157,6 +171,112 @@ function renderMessageBlocks(msg: ThreadMessage) {
   )
 }
 
+interface NormalizedToolItem {
+  key: string
+  toolName: string
+  state: ToolState
+  descriptor: ToolDescriptor
+  arguments?: Record<string, unknown>
+  result?: Record<string, unknown>
+  isError?: boolean
+  durationMs?: number
+  isStreamingRunning?: boolean
+}
+
+function renderSingleToolCard(
+  item: NormalizedToolItem,
+  spaceId: string | undefined,
+  nested = false
+) {
+  const title =
+    item.isStreamingRunning && item.state === "running"
+      ? item.descriptor.activeLabel
+      : item.state === "completed"
+        ? item.descriptor.completedLabel
+        : item.descriptor.label
+
+  return (
+    <Tool
+      key={item.key}
+      state={item.state}
+      defaultOpen={item.state === "error"}
+      className={
+        nested ? "mb-0 rounded-none border-0 bg-transparent" : undefined
+      }
+    >
+      <ToolHeader
+        toolName={item.toolName}
+        title={title}
+        domain={item.descriptor.domain}
+        domainLabel={item.descriptor.domainLabel}
+        serverName={item.descriptor.serverName}
+        summary={item.descriptor.summary}
+        durationMs={item.durationMs}
+        state={item.state}
+      />
+      <ToolContent toolName={item.toolName}>
+        <ToolInput input={item.arguments} />
+        {(item.result || item.isError) && (
+          <ToolOutput
+            output={item.isError ? undefined : item.result}
+            rawOutput={item.result}
+            errorText={
+              item.isError
+                ? (extractToolErrorMessage(item.result) ??
+                  "Tool execution failed")
+                : undefined
+            }
+            renderCustomOutput={(unwrapped, fallback) => (
+              <DomainToolOutput
+                toolName={item.toolName}
+                output={unwrapped}
+                spaceId={spaceId}
+                fallback={fallback}
+              />
+            )}
+          />
+        )}
+      </ToolContent>
+    </Tool>
+  )
+}
+
+function renderGroupedTools(
+  items: NormalizedToolItem[],
+  spaceId: string | undefined
+) {
+  const nodes: React.ReactNode[] = []
+  let readRun: NormalizedToolItem[] = []
+
+  const flushRun = () => {
+    if (readRun.length >= 2) {
+      const groupKey = `chain-${readRun.map((r) => r.key).join("-")}`
+      const groupItems = readRun.map((item) => ({
+        key: item.key,
+        descriptor: item.descriptor,
+        durationMs: item.durationMs,
+        renderTool: () => renderSingleToolCard(item, spaceId, true),
+      }))
+      nodes.push(<ToolChainGroup key={groupKey} items={groupItems} />)
+    } else if (readRun.length === 1) {
+      nodes.push(renderSingleToolCard(readRun[0], spaceId, false))
+    }
+    readRun = []
+  }
+
+  for (const item of items) {
+    if (item.state === "completed" && item.descriptor.isReadOnly) {
+      readRun.push(item)
+    } else {
+      flushRun()
+      nodes.push(renderSingleToolCard(item, spaceId, false))
+    }
+  }
+  flushRun()
+
+  return nodes
+}
+
 export function ThreadConversation({
   threadId = null,
   compact = false,
@@ -166,6 +286,7 @@ export function ThreadConversation({
   onThreadUpdated,
 }: ThreadConversationProps) {
   const location = useLocation()
+  const { spaceId } = useActiveSpaceContext()
   const [input, setInput] = useState("")
   const [attachments, setAttachments] = useState<PromptInputAttachment[]>([])
   const threadKey = threadId ?? "__new__"
@@ -420,7 +541,8 @@ export function ThreadConversation({
           {visibleMessages.list.length === 0 &&
           !streamingMessage &&
           !isStreaming &&
-          !isLoadingMessages ? (
+          !isLoadingMessages &&
+          pendingApprovals.length === 0 ? (
             <ConversationEmptyState
               icon={<SparklesIcon className="size-8 text-primary/70" />}
               title={activeAgent?.name || "Saturn Assistant"}
@@ -468,155 +590,122 @@ export function ThreadConversation({
                   <Message key={msg.id ?? idx} from={role}>
                     <MessageContent>
                       {renderMessageBlocks({ ...msg, blocks: nonToolBlocks })}
-                      {toolCallBlocks.map((tc, tcIdx) => {
-                        const res = tc.toolCallId
-                          ? visibleMessages.resultsByCallId.get(tc.toolCallId)
-                          : undefined
-                        const isAwaitingApproval = Boolean(
-                          tc.toolCallId &&
-                          pendingApprovals.some(
-                            (p) => p.toolCallId === tc.toolCallId
+                      {renderGroupedTools(
+                        toolCallBlocks.map((tc, tcIdx) => {
+                          const res = tc.toolCallId
+                            ? visibleMessages.resultsByCallId.get(tc.toolCallId)
+                            : undefined
+                          const isAwaitingApproval = Boolean(
+                            tc.toolCallId &&
+                            pendingApprovals.some(
+                              (p) => p.toolCallId === tc.toolCallId
+                            )
                           )
-                        )
-                        const state = res
-                          ? res.isError
-                            ? "error"
-                            : "completed"
-                          : isAwaitingApproval
-                            ? "awaiting_approval"
-                            : "rejected"
-                        const rawName = tc.toolName ?? "tool"
-                        const desc = describeToolCall({
-                          toolName: rawName,
-                          arguments: tc.arguments,
-                          result: res?.result,
-                        })
-                        return (
-                          <Tool
-                            key={tc.toolCallId ?? tcIdx}
-                            state={state}
-                            defaultOpen={Boolean(res?.isError)}
-                          >
-                            <ToolHeader
-                              toolName={rawName}
-                              title={
-                                state === "completed"
-                                  ? desc.completedLabel
-                                  : desc.label
-                              }
-                              domain={desc.domain}
-                              domainLabel={desc.domainLabel}
-                              serverName={desc.serverName}
-                              summary={desc.summary}
-                              state={state}
-                            />
-                            <ToolContent toolName={rawName}>
-                              <ToolInput input={tc.arguments} />
-                              {res && (
-                                <ToolOutput
-                                  output={res.isError ? undefined : res.result}
-                                  errorText={
-                                    res.isError
-                                      ? JSON.stringify(res.result ?? {})
-                                      : undefined
-                                  }
-                                />
-                              )}
-                            </ToolContent>
-                          </Tool>
-                        )
-                      })}
+                          const state: ToolState = res
+                            ? res.isError
+                              ? "error"
+                              : "completed"
+                            : isAwaitingApproval
+                              ? "awaiting_approval"
+                              : "rejected"
+                          const rawName = tc.toolName ?? "tool"
+                          const descriptor = describeToolCall({
+                            toolName: rawName,
+                            arguments: tc.arguments,
+                            result: res?.result,
+                          })
+                          return {
+                            key: tc.toolCallId ?? String(tcIdx),
+                            toolName: rawName,
+                            state,
+                            descriptor,
+                            arguments: tc.arguments,
+                            result: res?.result,
+                            isError: res?.isError,
+                          }
+                        }),
+                        spaceId
+                      )}
                     </MessageContent>
                   </Message>
                 )
               })}
 
-              {(streamingMessage || isStreaming) && (
-                <Message from="assistant">
-                  <MessageContent>
-                    {streamingMessage?.thinking?.trim() && (
-                      <Reasoning
-                        isStreaming={
-                          isStreaming && resolvedPhase === "thinking"
-                        }
-                      >
-                        <ReasoningTrigger />
-                        <ReasoningContent>
-                          {streamingMessage.thinking.trim()}
-                        </ReasoningContent>
-                      </Reasoning>
-                    )}
+              {(streamingMessage || isStreaming) &&
+                (() => {
+                  const streamExtracted = splitThinkingFromText(
+                    streamingMessage?.text ?? ""
+                  )
+                  const mergedStreamThinking = [
+                    streamingMessage?.thinking?.trim() ?? "",
+                    streamExtracted.thinking,
+                  ]
+                    .filter(Boolean)
+                    .join("\n\n")
+                  const cleanStreamText = streamExtracted.text
+                  const isActivelyThinking =
+                    isStreaming &&
+                    (resolvedPhase === "thinking" ||
+                      streamExtracted.hasUnclosedThink)
 
-                    {streamingMessage?.toolCalls.map((tc) => {
-                      const desc = describeToolCall({
-                        toolName: tc.toolName,
-                        arguments: tc.arguments,
-                        result: tc.result,
-                      })
-                      return (
-                        <Tool
-                          key={tc.toolCallId}
-                          state={tc.status}
-                          defaultOpen={tc.status === "error"}
-                        >
-                          <ToolHeader
-                            toolName={tc.toolName}
-                            title={
-                              tc.status === "running"
-                                ? desc.activeLabel
-                                : tc.status === "completed"
-                                  ? desc.completedLabel
-                                  : desc.label
-                            }
-                            domain={desc.domain}
-                            domainLabel={desc.domainLabel}
-                            serverName={desc.serverName}
-                            summary={desc.summary}
-                            durationMs={tc.durationMs}
-                            state={tc.status}
-                          />
-                          <ToolContent toolName={tc.toolName}>
-                            <ToolInput input={tc.arguments} />
-                            {(tc.result || tc.isError) && (
-                              <ToolOutput
-                                output={tc.isError ? undefined : tc.result}
-                                errorText={
-                                  tc.isError
-                                    ? JSON.stringify(tc.result ?? {})
-                                    : undefined
-                                }
-                              />
-                            )}
-                          </ToolContent>
-                        </Tool>
-                      )
-                    })}
+                  return (
+                    <Message from="assistant">
+                      <MessageContent>
+                        {mergedStreamThinking && (
+                          <Reasoning isStreaming={isActivelyThinking}>
+                            <ReasoningTrigger preview={mergedStreamThinking} />
+                            <ReasoningContent>
+                              {mergedStreamThinking}
+                            </ReasoningContent>
+                          </Reasoning>
+                        )}
 
-                    {streamingMessage?.text?.trim() && (
-                      <MessageResponse isAnimating={isStreaming}>
-                        {streamingMessage.text.trimStart()}
-                      </MessageResponse>
-                    )}
+                        {streamingMessage?.toolCalls &&
+                          renderGroupedTools(
+                            streamingMessage.toolCalls.map((tc) => ({
+                              key: tc.toolCallId,
+                              toolName: tc.toolName,
+                              state: tc.status,
+                              descriptor: describeToolCall({
+                                toolName: tc.toolName,
+                                arguments: tc.arguments,
+                                result: tc.result,
+                              }),
+                              arguments: tc.arguments,
+                              result: tc.result,
+                              isError: tc.isError,
+                              durationMs: tc.durationMs,
+                              isStreamingRunning: true,
+                            })),
+                            spaceId
+                          )}
 
-                    {isStreaming && (
-                      <div
-                        className="flex items-center gap-2 py-0.5 text-xs text-muted-foreground"
-                        role="status"
-                        aria-live="polite"
-                      >
-                        <Loader2Icon className="size-3.5 animate-spin text-primary" />
-                        <span>
-                          {getStreamPhaseLabel(resolvedPhase, {
-                            activeToolName: activeToolCall?.toolName,
-                            hasCompletedTools:
-                              (streamingMessage?.toolCalls.length ?? 0) > 0,
-                          }) || "Thinking…"}
-                        </span>
-                      </div>
-                    )}
-                  </MessageContent>
-                </Message>
-              )}
+                        {cleanStreamText.trim() && (
+                          <MessageResponse isAnimating={isStreaming}>
+                            {cleanStreamText}
+                          </MessageResponse>
+                        )}
+
+                        {isStreaming && (
+                          <div
+                            className="flex items-center gap-2 py-0.5 text-xs text-muted-foreground"
+                            role="status"
+                            aria-live="polite"
+                          >
+                            <Loader2Icon className="size-3.5 animate-spin text-primary" />
+                            <span>
+                              {getStreamPhaseLabel(resolvedPhase, {
+                                activeToolName: activeToolCall?.toolName,
+                                hasCompletedTools:
+                                  (streamingMessage?.toolCalls.length ?? 0) > 0,
+                              }) || "Thinking…"}
+                            </span>
+                          </div>
+                        )}
+                      </MessageContent>
+                    </Message>
+                  )
+                })()}
 
               {pendingApprovals.length > 0 && (
                 <div className="space-y-2">
@@ -626,12 +715,15 @@ export function ThreadConversation({
                       mcpServerName: pa.mcpServerName,
                       arguments: pa.arguments,
                     })
+                    const isDestructive =
+                      desc.isDestructive || Boolean(pa.destructiveHint)
                     return (
                       <Confirmation
                         key={pa.toolCallId}
                         state="approval-requested"
+                        destructive={isDestructive}
                       >
-                        <ConfirmationTitle>
+                        <ConfirmationTitle destructive={isDestructive}>
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span>Confirm {desc.label}</span>
                             <Badge
@@ -649,12 +741,11 @@ export function ThreadConversation({
                               </span>
                             )}
                           </div>
-                          {pa.arguments &&
-                            Object.keys(pa.arguments).length > 0 && (
-                              <pre className="mt-2 overflow-x-auto rounded-lg bg-background/80 p-2 font-mono text-[11px] text-muted-foreground">
-                                {JSON.stringify(pa.arguments, null, 2)}
-                              </pre>
-                            )}
+                          <ToolApprovalPreview
+                            toolName={pa.toolName ?? "tool"}
+                            arguments={pa.arguments}
+                            destructive={isDestructive}
+                          />
                         </ConfirmationTitle>
                         <ConfirmationRequest>
                           <ConfirmationActions>

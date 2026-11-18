@@ -66,6 +66,18 @@ function ModelSheetForm({
   const [reasoning, setReasoning] = useState(
     Boolean(model?.profile?.capabilities?.reasoning)
   )
+  const [thinkingEnabled, setThinkingEnabled] = useState(
+    model?.config?.thinking?.enabled ??
+      Boolean(model?.profile?.capabilities?.reasoning)
+  )
+  const [thinkingEffort, setThinkingEffort] = useState(
+    model?.config?.thinking?.effort ?? "default"
+  )
+  const [thinkingBudget, setThinkingBudget] = useState(
+    model?.config?.thinking?.budgetTokens
+      ? String(model.config.thinking.budgetTokens)
+      : ""
+  )
   const [temperature, setTemperature] = useState(
     model?.config?.temperature !== undefined
       ? String(model.config.temperature)
@@ -106,6 +118,7 @@ function ModelSheetForm({
 
     const parsedTemp = parseFloat(temperature)
     const parsedMax = parseInt(maxTokens, 10)
+    const parsedBudget = parseInt(thinkingBudget, 10)
 
     const payload: Model = {
       id: model?.id ?? "",
@@ -134,6 +147,12 @@ function ModelSheetForm({
         ...(!Number.isNaN(parsedTemp) && { temperature: parsedTemp }),
         ...(!Number.isNaN(parsedMax) &&
           parsedMax > 0 && { maxTokens: parsedMax }),
+        thinking: {
+          enabled: reasoning && thinkingEnabled,
+          ...(thinkingEffort !== "default" && { effort: thinkingEffort }),
+          ...(!Number.isNaN(parsedBudget) &&
+            parsedBudget > 0 && { budgetTokens: parsedBudget }),
+        },
       },
     }
 
@@ -245,11 +264,14 @@ function ModelSheetForm({
             />
           </div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="mdl-reasoning">Reasoning</Label>
+            <Label htmlFor="mdl-reasoning">Reasoning & Thought Summaries</Label>
             <Switch
               id="mdl-reasoning"
               checked={reasoning}
-              onCheckedChange={setReasoning}
+              onCheckedChange={(checked) => {
+                setReasoning(checked)
+                setThinkingEnabled(checked)
+              }}
             />
           </div>
         </div>
@@ -288,6 +310,50 @@ function ModelSheetForm({
                 onChange={(e) => setMaxTokens(e.target.value)}
               />
             </div>
+            {reasoning && (
+              <>
+                <div className="flex items-center justify-between pt-1">
+                  <Label htmlFor="mdl-thinking-enabled">
+                    Stream Thinking Blocks
+                  </Label>
+                  <Switch
+                    id="mdl-thinking-enabled"
+                    checked={thinkingEnabled}
+                    onCheckedChange={setThinkingEnabled}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Thinking Effort</Label>
+                  <Select
+                    value={thinkingEffort}
+                    onValueChange={(v) => setThinkingEffort(v ?? "default")}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Provider default" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Provider default</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="mdl-thinking-budget">
+                    Thinking Budget Tokens (optional)
+                  </Label>
+                  <Input
+                    id="mdl-thinking-budget"
+                    type="number"
+                    min={0}
+                    placeholder="e.g. 2048"
+                    value={thinkingBudget}
+                    onChange={(e) => setThinkingBudget(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
           </CollapsibleContent>
         </Collapsible>
       </div>

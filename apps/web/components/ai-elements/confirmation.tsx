@@ -19,18 +19,23 @@ const useConfirmation = () => useContext(ConfirmationContext)
 
 export type ConfirmationProps = ComponentProps<"div"> & {
   state?: ConfirmationState
+  destructive?: boolean
 }
 
 export const Confirmation = ({
   className,
   state = "approval-requested",
+  destructive = false,
   children,
   ...props
 }: ConfirmationProps) => (
   <ConfirmationContext.Provider value={{ state }}>
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 text-sm",
+        "flex flex-col gap-3 rounded-xl border p-3.5 text-sm",
+        destructive
+          ? "border-destructive/40 bg-destructive/5"
+          : "border-amber-500/30 bg-amber-500/5",
         className
       )}
       {...props}
@@ -42,11 +47,13 @@ export const Confirmation = ({
 
 export type ConfirmationTitleProps = ComponentProps<"div"> & {
   icon?: ReactNode
+  destructive?: boolean
 }
 
 export const ConfirmationTitle = ({
   className,
   icon,
+  destructive = false,
   children,
   ...props
 }: ConfirmationTitleProps) => (
@@ -55,7 +62,12 @@ export const ConfirmationTitle = ({
     {...props}
   >
     {icon ?? (
-      <ShieldAlertIcon className="mt-0.5 size-4 shrink-0 text-amber-500" />
+      <ShieldAlertIcon
+        className={cn(
+          "mt-0.5 size-4 shrink-0",
+          destructive ? "text-destructive" : "text-amber-500"
+        )}
+      />
     )}
     <div className="min-w-0 flex-1">{children}</div>
   </div>

@@ -727,4 +727,512 @@ describe("Web AI Studio", () => {
     expect(screen.getByText("Page 2 prompt")).toBeTruthy()
     expect(screen.getByRole("button", { name: "Previous" })).toBeTruthy()
   })
+
+  it("renders rich Layer 1 approval previews for Finance, Mail, and Calendar with Raw JSON toggle", () => {
+    queryClient.setQueryData(["/api/v1/finance/budgets", {}], {
+      budgets: [{ id: "bgt_dining", name: "Dining Out" }],
+    })
+
+    vi.mocked(aiHooks.useThreadStream).mockReturnValue({
+      thread: undefined,
+      messages: [
+        {
+          id: "aim_u1",
+          threadId: "thr_1",
+          spaceId: "spc_1",
+          seq: 1,
+          role: "user",
+          blocks: [{ type: "text", text: "Handle pending actions" }],
+        },
+      ],
+      isLoadingMessages: false,
+      isStreaming: false,
+      status: "awaiting_approval",
+      streamPhase: "awaiting_approval",
+      activeToolCall: null,
+      activeRunId: "air_1",
+      streamingMessage: null,
+      pendingApprovals: [
+        {
+          toolCallId: "tc_fin",
+          mcpServerId: "mcp_sys",
+          mcpServerName: "Saturn Workspace",
+          toolName: "finance_create_transaction",
+          arguments: {
+            type: "EXPENSE",
+            amount_cents: 4500,
+            currency: "USD",
+            description: "Team Lunch",
+            budget_id: "bgt_dining",
+            transaction_date: "2026-04-15",
+          },
+          destructiveHint: false,
+        },
+        {
+          toolCallId: "tc_mail",
+          mcpServerId: "mcp_sys",
+          mcpServerName: "Saturn Workspace",
+          toolName: "mail_send_message",
+          arguments: {
+            to: ["alice@example.com"],
+            subject: "Q2 Report",
+            body_html: "<p>Please review <b>attached</b></p>",
+          },
+          destructiveHint: true,
+        },
+        {
+          toolCallId: "tc_cal_del",
+          mcpServerId: "mcp_sys",
+          mcpServerName: "Saturn Workspace",
+          toolName: "calendar_delete_event",
+          arguments: {
+            id: "evt_99",
+            scope: "THIS_EVENT",
+          },
+          destructiveHint: true,
+        },
+      ],
+      error: null,
+      sendMessage,
+      resolveApprovals,
+      stop,
+      clearError: vi.fn(),
+    })
+
+    renderWithProviders(<ChatView />)
+
+    // Finance rich preview (formatted currency + resolved budget name, no raw amount_cents yet)
+    expect(screen.getByText("$45.00 USD")).toBeTruthy()
+    expect(screen.getByText("Team Lunch")).toBeTruthy()
+    expect(screen.getByText("Dining Out")).toBeTruthy()
+    expect(screen.queryByText(/"amount_cents": 4500/)).toBeNull()
+
+    // Mail rich preview (recipient pill + subject + stripped HTML body)
+    expect(screen.getByText("alice@example.com")).toBeTruthy()
+    expect(screen.getByText("Q2 Report")).toBeTruthy()
+    expect(screen.getByText("Please review attached")).toBeTruthy()
+
+    // Destructive calendar delete preview
+    expect(
+      screen.getByText("This will permanently delete the calendar event.")
+    ).toBeTruthy()
+    expect(screen.getByText("This Event")).toBeTruthy()
+
+    // Toggle { } Raw on the first approval preview to inspect raw JSON
+    const rawToggles = screen.getAllByRole("button", {
+      name: "Toggle raw JSON",
+    })
+    fireEvent.click(rawToggles[0])
+    expect(screen.getByText(/"amount_cents": 4500/)).toBeTruthy()
+  })
+
+  it("renders Layer 2 domain-native outputs with deep links and Layer 3 generic fallback + Raw toggle", () => {
+    vi.mocked(aiHooks.useThreadStream).mockReturnValue({
+      thread: undefined,
+      messages: [
+        {
+          id: "aim_u1",
+          threadId: "thr_1",
+          spaceId: "spc_1",
+          seq: 1,
+          role: "user",
+          blocks: [{ type: "text", text: "Check budgets and weather" }],
+        },
+        {
+          id: "aim_a1",
+          threadId: "thr_1",
+          spaceId: "spc_1",
+          seq: 2,
+          role: "assistant",
+          blocks: [
+            {
+              type: "tool_call",
+              toolCallId: "tc_bgt",
+              toolName: "finance_list_budgets",
+              arguments: { status: "active", search_query: "" },
+            },
+            {
+              type: "tool_call",
+              toolCallId: "tc_wfr",
+              toolName: "workflows_get_flow_run",
+              arguments: { id: "wfr_123" },
+            },
+            {
+              type: "tool_call",
+              toolCallId: "tc_mcp",
+              toolName: "mcp__weather__get_forecast",
+              arguments: { city: "Tokyo", start_date: "2026-04-15" },
+            },
+            {
+              type: "tool_call",
+              toolCallId: "tc_err",
+              toolName: "calendar_list_events",
+              arguments: {},
+            },
+          ],
+        },
+        {
+          id: "aim_t1",
+          threadId: "thr_1",
+          spaceId: "spc_1",
+          seq: 3,
+          role: "tool",
+          blocks: [
+            {
+              type: "tool_result",
+              toolCallId: "tc_bgt",
+              result: {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify({
+                      budgets: [
+                        {
+                          id: "bgt_1",
+                          name: "Groceries",
+                          currency: "USD",
+                          limit_cents: 40000,
+                          spent_cents: 30000,
+                          formatted_limit: "USD 400.00",
+                          formatted_spent: "USD 300.00",
+                        },
+                      ],
+                    }),
+                  },
+                ],
+              },
+            },
+            {
+              type: "tool_result",
+              toolCallId: "tc_wfr",
+              result: {
+                id: "wfr_123",
+                flow_id: "flw_1",
+                flow_name: "Daily Digest",
+                status: "completed",
+                step_runs: [],
+              },
+            },
+            {
+              type: "tool_result",
+              toolCallId: "tc_mcp",
+              result: {
+                forecast: [{ name: "Tokyo", status: "Sunny", temp: "22C" }],
+              },
+            },
+            {
+              type: "tool_result",
+              toolCallId: "tc_err",
+              isError: true,
+              result: {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify({
+                      error: "Calendar sync token expired",
+                    }),
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      isLoadingMessages: false,
+      isStreaming: false,
+      status: "idle",
+      streamPhase: "idle",
+      activeToolCall: null,
+      activeRunId: null,
+      streamingMessage: null,
+      pendingApprovals: [],
+      error: null,
+      sendMessage,
+      resolveApprovals,
+      stop,
+      clearError: vi.fn(),
+    })
+
+    renderWithProviders(<ChatView />)
+
+    // Errored tool defaults open and shows clean human-readable alert instead of raw JSON
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Calendar sync token expired"
+    )
+
+    // Layer 4 collapsed the 3 consecutive completed read-only tools into ToolChainGroup!
+    expect(screen.getByText("Used 3 workspace tools")).toBeTruthy()
+    fireEvent.click(screen.getByText("Used 3 workspace tools"))
+
+    // Expand Checked budgets inside the group
+    fireEvent.click(screen.getByText("Checked budgets"))
+    expect(screen.getByText("Groceries")).toBeTruthy()
+    expect(screen.getByText("(75%)")).toBeTruthy()
+    const budgetsLink = screen.getByRole("link", { name: "Open Budgets →" })
+    expect(budgetsLink.getAttribute("href")).toBe(
+      "/space/spc_1/finance/budgets"
+    )
+    // Empty search_query was filtered out of Parameters
+    expect(screen.queryByText(/Search Query/)).toBeNull()
+
+    // Expand Inspected workflow run and verify exact run trace deep link
+    fireEvent.click(screen.getByText("Inspected workflow run"))
+    expect(screen.getByText("Daily Digest")).toBeTruthy()
+    const runLink = screen.getByRole("link", { name: "Open Run Trace →" })
+    expect(runLink.getAttribute("href")).toBe(
+      "/space/spc_1/workflows/runs/wfr_123"
+    )
+
+    // Expand external MCP tool and verify generic rendering + smart date param + { } Raw toggle
+    fireEvent.click(screen.getByText("Ran Get Forecast"))
+    expect(screen.getAllByText("Tokyo").length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText("Start Date:")).toBeTruthy()
+    expect(screen.getByText("FMT(2026-04-15)")).toBeTruthy()
+    expect(screen.getByText("Sunny")).toBeTruthy()
+
+    const rawButtons = screen.getAllByRole("button", {
+      name: "Toggle raw JSON",
+    })
+    fireEvent.click(rawButtons[2])
+    expect(screen.getByText(/"temp": "22C"/)).toBeTruthy()
+  })
+
+  it("groups consecutive read-only completed tools into ToolChainGroup while keeping mutating tools ungrouped", () => {
+    vi.mocked(aiHooks.useThreadStream).mockReturnValue({
+      thread: undefined,
+      messages: [
+        {
+          id: "aim_u1",
+          threadId: "thr_1",
+          spaceId: "spc_1",
+          seq: 1,
+          role: "user",
+          blocks: [{ type: "text", text: "Check finances and record coffee" }],
+        },
+        {
+          id: "aim_a1",
+          threadId: "thr_1",
+          spaceId: "spc_1",
+          seq: 2,
+          role: "assistant",
+          blocks: [
+            {
+              type: "tool_call",
+              toolCallId: "tc_1",
+              toolName: "space_get_context",
+              arguments: {},
+            },
+            {
+              type: "tool_call",
+              toolCallId: "tc_2",
+              toolName: "finance_list_accounts",
+              arguments: {},
+            },
+            {
+              type: "tool_call",
+              toolCallId: "tc_3",
+              toolName: "finance_create_transaction",
+              arguments: {
+                type: "EXPENSE",
+                amount_cents: 500,
+                currency: "USD",
+                description: "Latte",
+              },
+            },
+          ],
+        },
+        {
+          id: "aim_t1",
+          threadId: "thr_1",
+          spaceId: "spc_1",
+          seq: 3,
+          role: "tool",
+          blocks: [
+            {
+              type: "tool_result",
+              toolCallId: "tc_1",
+              result: { name: "Personal", timezone: "UTC", role: "owner" },
+            },
+            {
+              type: "tool_result",
+              toolCallId: "tc_2",
+              result: {
+                accounts: [
+                  {
+                    id: "acc_1",
+                    name: "Main Checking",
+                    type: "checking",
+                    currency: "USD",
+                    formatted_balance: "USD 1200.00",
+                  },
+                ],
+              },
+            },
+            {
+              type: "tool_result",
+              toolCallId: "tc_3",
+              result: {
+                id: "tx_1",
+                type: "EXPENSE",
+                amount_cents: 500,
+                currency: "USD",
+                formatted_amount: "USD 5.00",
+                description: "Latte",
+              },
+            },
+          ],
+        },
+      ],
+      isLoadingMessages: false,
+      isStreaming: false,
+      status: "idle",
+      streamPhase: "idle",
+      activeToolCall: null,
+      activeRunId: null,
+      streamingMessage: null,
+      pendingApprovals: [],
+      error: null,
+      sendMessage,
+      resolveApprovals,
+      stop,
+      clearError: vi.fn(),
+    })
+
+    renderWithProviders(<ChatView />)
+
+    // First 2 read-only tools are grouped
+    expect(screen.getByText("Used 2 workspace tools")).toBeTruthy()
+    // Mutating tool stays top-level and visible immediately
+    expect(screen.getByText("Recorded transaction")).toBeTruthy()
+    // Individual read-only tool titles are hidden inside collapsed group until clicked
+    expect(screen.queryByText("Checked accounts")).toBeNull()
+
+    fireEvent.click(screen.getByText("Used 2 workspace tools"))
+    expect(screen.getByText("Read workspace context")).toBeTruthy()
+    expect(screen.getByText("Checked accounts")).toBeTruthy()
+
+    fireEvent.click(screen.getByText("Checked accounts"))
+    expect(screen.getByText("Main Checking")).toBeTruthy()
+    const accountsLink = screen.getByRole("link", { name: "Open Accounts →" })
+    expect(accountsLink.getAttribute("href")).toBe(
+      "/space/spc_1/finance/accounts"
+    )
+  })
+
+  it("renders both explicit thinking blocks and inline <think> tags inside collapsible Reasoning cards", () => {
+    vi.mocked(aiHooks.useThreadStream).mockReturnValue({
+      thread: {
+        id: "thr_1",
+        spaceId: "spc_1",
+        userId: "usr_1",
+        title: "Reasoning Check",
+        status: "streaming",
+        messageCount: 1,
+        isPinned: false,
+        isArchived: false,
+      },
+      messages: [
+        {
+          id: "aim_think_1",
+          threadId: "thr_1",
+          spaceId: "spc_1",
+          seq: 1,
+          role: "assistant",
+          blocks: [
+            {
+              type: "text",
+              text: "<think>Reviewing dining budget vs April spend.</think>You have $180 remaining.",
+            },
+          ],
+        },
+      ],
+      isLoadingMessages: false,
+      isStreaming: true,
+      status: "streaming",
+      streamPhase: "generating",
+      activeToolCall: null,
+      activeRunId: "air_think",
+      streamingMessage: {
+        thinking: "",
+        text: "<think>Checking upcoming recurring bills",
+        toolCalls: [],
+      },
+      pendingApprovals: [],
+      error: null,
+      sendMessage,
+      resolveApprovals,
+      stop,
+      clearError: vi.fn(),
+    })
+
+    renderWithProviders(<ChatView />)
+
+    // Persisted message extracts <think> into collapsed Reasoning card and shows clean prose
+    expect(screen.getByText("You have $180 remaining.")).toBeTruthy()
+    expect(screen.queryByText(/<think>Reviewing dining budget/)).toBeNull()
+    fireEvent.click(screen.getByText("Thought process"))
+    expect(
+      screen.getByText("Reviewing dining budget vs April spend.")
+    ).toBeTruthy()
+
+    // Live streaming unclosed <think> stays open in Reasoning card
+    expect(screen.getByText("Checking upcoming recurring bills")).toBeTruthy()
+  })
+
+  it("renders Markdown tables in a clean single-frame card with right-aligned currency cells and hover copy", () => {
+    vi.mocked(aiHooks.useThreadStream).mockReturnValue({
+      thread: {
+        id: "thr_1",
+        spaceId: "spc_1",
+        userId: "usr_1",
+        title: "Budget Table",
+        status: "idle",
+        messageCount: 1,
+        isPinned: false,
+        isArchived: false,
+      },
+      messages: [
+        {
+          id: "aim_tbl_1",
+          threadId: "thr_1",
+          spaceId: "spc_1",
+          seq: 1,
+          role: "assistant",
+          blocks: [
+            {
+              type: "text",
+              text: [
+                "| Category | Spent | Limit |",
+                "| --- | --- | --- |",
+                "| Groceries | $420.50 | $600.00 |",
+                "| Dining Out | $185.00 | $200.00 |",
+              ].join("\n"),
+            },
+          ],
+        },
+      ],
+      isLoadingMessages: false,
+      isStreaming: false,
+      status: "idle",
+      streamPhase: "idle",
+      activeToolCall: null,
+      activeRunId: null,
+      streamingMessage: null,
+      pendingApprovals: [],
+      error: null,
+      sendMessage,
+      resolveApprovals,
+      stop,
+      clearError: vi.fn(),
+    })
+
+    renderWithProviders(<ChatView />)
+
+    const tableCard = screen.getByTestId("markdown-table-card")
+    expect(tableCard).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Copy table" })).toBeTruthy()
+    expect(screen.getByText("Groceries")).toBeTruthy()
+    const spentCell = screen.getByText("$420.50").closest("td")
+    expect(spentCell?.className).toContain("text-right")
+  })
 })
