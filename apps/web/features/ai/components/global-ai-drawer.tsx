@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useListThreadsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import {
@@ -41,6 +41,16 @@ export function GlobalAIDrawer() {
   const [threadId, setThreadId] = useState<string | null>(null)
   const [pendingPrompt, setPendingPrompt] =
     useState<PendingDrawerPrompt | null>(null)
+  const prevSpaceIdRef = useRef(spaceId)
+
+  useEffect(() => {
+    if (prevSpaceIdRef.current !== spaceId) {
+      prevSpaceIdRef.current = spaceId
+      setOpen(false)
+      setThreadId(null)
+      setPendingPrompt(null)
+    }
+  }, [spaceId])
 
   const { data: threadsData } = useListThreadsQuery(
     { isArchived: false, pageSize: 15, pageToken: "" },
@@ -195,6 +205,7 @@ export function GlobalAIDrawer() {
           </SheetHeader>
 
           <ThreadConversation
+            key={spaceId}
             threadId={threadId}
             compact
             pendingPrompt={pendingPrompt}

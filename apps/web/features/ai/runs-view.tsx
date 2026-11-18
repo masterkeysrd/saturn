@@ -26,6 +26,7 @@ export function RunsView() {
   const [sourceFilter, setSourceFilter] = useState<string>("")
   const [kindFilter, setKindFilter] = useState<string>("")
   const [pageToken, setPageToken] = useState("")
+  const [prevPageTokens, setPrevPageTokens] = useState<string[]>([])
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
 
   const { data, isLoading } = useListRunsQuery({
@@ -48,6 +49,7 @@ export function RunsView() {
             onValueChange={(v) => {
               setKindFilter(v ?? "")
               setPageToken("")
+              setPrevPageTokens([])
             }}
           >
             <SelectTrigger className="h-8 w-36 text-xs">
@@ -68,6 +70,7 @@ export function RunsView() {
             onValueChange={(v) => {
               setSourceFilter(v ?? "")
               setPageToken("")
+              setPrevPageTokens([])
             }}
           >
             <SelectTrigger className="h-8 w-36 text-xs">
@@ -165,16 +168,36 @@ export function RunsView() {
             ))}
           </div>
 
-          {data?.nextPageToken && (
-            <div className="flex justify-center">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPageToken(data.nextPageToken ?? "")}
-                className="cursor-pointer"
-              >
-                Load More
-              </Button>
+          {(prevPageTokens.length > 0 || data?.nextPageToken) && (
+            <div className="flex items-center justify-center gap-2">
+              {prevPageTokens.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const prevToken =
+                      prevPageTokens[prevPageTokens.length - 1] ?? ""
+                    setPrevPageTokens((prev) => prev.slice(0, -1))
+                    setPageToken(prevToken)
+                  }}
+                  className="cursor-pointer"
+                >
+                  Previous
+                </Button>
+              )}
+              {data?.nextPageToken && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setPrevPageTokens((prev) => [...prev, pageToken])
+                    setPageToken(data.nextPageToken ?? "")
+                  }}
+                  className="cursor-pointer"
+                >
+                  Next
+                </Button>
+              )}
             </div>
           )}
         </div>

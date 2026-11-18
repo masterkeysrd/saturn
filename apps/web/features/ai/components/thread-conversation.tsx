@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useLocation } from "react-router-dom"
 import {
   describeToolCall,
@@ -168,12 +168,44 @@ export function ThreadConversation({
   const location = useLocation()
   const [input, setInput] = useState("")
   const [attachments, setAttachments] = useState<PromptInputAttachment[]>([])
-  const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(
-    undefined
+  const threadKey = threadId ?? "__new__"
+  const [threadOverrides, setThreadOverrides] = useState<{
+    threadKey: string
+    agentId?: string
+    modelId?: string
+  }>({ threadKey })
+  const selectedAgentId =
+    threadOverrides.threadKey === threadKey
+      ? threadOverrides.agentId
+      : undefined
+  const selectedModelId =
+    threadOverrides.threadKey === threadKey
+      ? threadOverrides.modelId
+      : undefined
+  const setSelectedAgentId = useCallback(
+    (agentId: string | undefined) => {
+      setThreadOverrides((prev) => ({
+        threadKey,
+        agentId,
+        modelId: prev.threadKey === threadKey ? prev.modelId : undefined,
+      }))
+    },
+    [threadKey]
   )
-  const [selectedModelId, setSelectedModelId] = useState<string | undefined>(
-    undefined
+  const setSelectedModelId = useCallback(
+    (modelId: string | undefined) => {
+      setThreadOverrides((prev) => ({
+        threadKey,
+        agentId: prev.threadKey === threadKey ? prev.agentId : undefined,
+        modelId,
+      }))
+    },
+    [threadKey]
   )
+  const [stagedDecisionState, setStagedDecisionState] = useState<{
+    approvalsKey: string
+    decisions: Record<string, boolean>
+  }>({ approvalsKey: "", decisions: {} })
   const [modelPickerOpen, setModelPickerOpen] = useState(false)
   const consumedPromptIdRef = useRef<string | null>(null)
 
@@ -204,6 +236,12 @@ export function ThreadConversation({
     onThreadCreated,
     onThreadUpdated,
   })
+
+  const approvalsKey = `${threadKey}:${pendingApprovals.map((pa) => pa.toolCallId ?? "").join(",")}`
+  const stagedDecisions =
+    stagedDecisionState.approvalsKey === approvalsKey
+      ? stagedDecisionState.decisions
+      : {}
 
   const resolvedPhase: ThreadStreamPhase =
     streamPhase ??
@@ -331,7 +369,33 @@ export function ThreadConversation({
   }
 
   const handleSingleDecision = (toolCallId: string, approved: boolean) => {
-    void resolveApprovals([{ toolCallId, approved }])
+    if (pendingApprovals.length <= 1) {
+      void resolveApprovals([{ toolCallId, approved }])
+      return
+    }
+    setStagedDecisionState((prev) => ({
+      approvalsKey,
+      decisions: {
+        ...(prev.approvalsKey === approvalsKey ? prev.decisions : {}),
+        [toolCallId]: approved,
+      },
+    }))
+  }
+
+  const allStaged =
+    pendingApprovals.length > 0 &&
+    pendingApprovals.every(
+      (pa) => pa.toolCallId && stagedDecisions[pa.toolCallId] !== undefined
+    )
+
+  const handleSubmitStagedDecisions = () => {
+    if (!allStaged) return
+    void resolveApprovals(
+      pendingApprovals.map((pa) => ({
+        toolCallId: pa.toolCallId ?? "",
+        approved: Boolean(stagedDecisions[pa.toolCallId ?? ""]),
+      }))
+    )
   }
 
   const groupedModels = useMemo(() => {
@@ -408,11 +472,19 @@ export function ThreadConversation({
                         const res = tc.toolCallId
                           ? visibleMessages.resultsByCallId.get(tc.toolCallId)
                           : undefined
+                        const isAwaitingApproval = Boolean(
+                          tc.toolCallId &&
+                          pendingApprovals.some(
+                            (p) => p.toolCallId === tc.toolCallId
+                          )
+                        )
                         const state = res
                           ? res.isError
                             ? "error"
                             : "completed"
-                          : "awaiting_approval"
+                          : isAwaitingApproval
+                            ? "awaiting_approval"
+                            : "rejected"
                         const rawName = tc.toolName ?? "tool"
                         const desc = describeToolCall({
                           toolName: rawName,
@@ -587,19 +659,49 @@ export function ThreadConversation({
                         <ConfirmationRequest>
                           <ConfirmationActions>
                             <ConfirmationAction
-                              variant="outline"
+                              variant={
+                                pendingApprovals.length > 1 &&
+                                stagedDecisions[pa.toolCallId ?? ""] === false
+                                  ? "destructive"
+                                  : "outline"
+                              }
+                              aria-pressed={
+                                pendingApprovals.length > 1
+                                  ? stagedDecisions[pa.toolCallId ?? ""] ===
+                                    false
+                                  : undefined
+                              }
                               onClick={() =>
                                 handleSingleDecision(pa.toolCallId ?? "", false)
                               }
                             >
-                              Reject
+                              {pendingApprovals.length > 1 &&
+                              stagedDecisions[pa.toolCallId ?? ""] === false
+                                ? "Rejected"
+                                : "Reject"}
                             </ConfirmationAction>
                             <ConfirmationAction
+                              variant={
+                                pendingApprovals.length > 1 &&
+                                stagedDecisions[pa.toolCallId ?? ""] ===
+                                  undefined
+                                  ? "outline"
+                                  : "default"
+                              }
+                              aria-pressed={
+                                pendingApprovals.length > 1
+                                  ? stagedDecisions[pa.toolCallId ?? ""] ===
+                                    true
+                                  : undefined
+                              }
                               onClick={() =>
                                 handleSingleDecision(pa.toolCallId ?? "", true)
                               }
                             >
-                              Approve
+                              {pendingApprovals.length > 1 &&
+                              stagedDecisions[pa.toolCallId ?? ""] === true
+                                ? "Approved"
+                                : "Approve"}
                             </ConfirmationAction>
                           </ConfirmationActions>
                         </ConfirmationRequest>
@@ -608,7 +710,7 @@ export function ThreadConversation({
                   })}
 
                   {pendingApprovals.length > 1 && (
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
                       <ConfirmationAction
                         variant="outline"
                         onClick={() => handleApproveAll(false)}
@@ -616,9 +718,24 @@ export function ThreadConversation({
                         Reject All
                       </ConfirmationAction>
                       <ConfirmationAction
+                        variant="outline"
                         onClick={() => handleApproveAll(true)}
                       >
                         Approve All ({pendingApprovals.length})
+                      </ConfirmationAction>
+                      <ConfirmationAction
+                        disabled={!allStaged}
+                        onClick={handleSubmitStagedDecisions}
+                      >
+                        Submit Decisions (
+                        {
+                          pendingApprovals.filter(
+                            (pa) =>
+                              pa.toolCallId &&
+                              stagedDecisions[pa.toolCallId] !== undefined
+                          ).length
+                        }
+                        /{pendingApprovals.length})
                       </ConfirmationAction>
                     </div>
                   )}

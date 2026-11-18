@@ -30,6 +30,7 @@ import { ModelsView } from "./models-view"
 import { MCPServersView } from "./mcp-servers-view"
 import { RunsView } from "./runs-view"
 import { GlobalAIDrawer } from "./components/global-ai-drawer"
+import { MCPServerSheet } from "./components/mcp-server-sheet"
 import { openAIDrawer } from "./lib/drawer-events"
 
 vi.mock("@saturn/api/saturn/platform/ai/v1/ai", () => ({
@@ -543,5 +544,187 @@ describe("Web AI Studio", () => {
       )
     })
     expect(screen.getByRole("button", { name: "Recent threads" })).toBeTruthy()
+  })
+
+  it("stages multi-tool approval decisions without silently rejecting siblings and marks orphan tool_calls as rejected", () => {
+    vi.mocked(aiHooks.useThreadStream).mockReturnValue({
+      thread: undefined,
+      messages: [
+        {
+          id: "aim_ast_orphan",
+          threadId: "thr_1",
+          spaceId: "spc_1",
+          seq: 1,
+          role: "assistant",
+          blocks: [
+            {
+              type: "tool_call",
+              toolCallId: "tc_old_cancelled",
+              toolName: "finance_create_expense",
+              arguments: { amount: 500 },
+            },
+          ],
+        },
+      ],
+      isLoadingMessages: false,
+      isStreaming: false,
+      status: "awaiting_approval",
+      streamPhase: "awaiting_approval",
+      activeToolCall: null,
+      activeRunId: "air_1",
+      streamingMessage: null,
+      pendingApprovals: [
+        {
+          toolCallId: "tc_1",
+          mcpServerId: "mcp_sys",
+          mcpServerName: "Saturn Workspace",
+          toolName: "calendar_create_event",
+          arguments: { title: "Sync" },
+          destructiveHint: false,
+        },
+        {
+          toolCallId: "tc_2",
+          mcpServerId: "mcp_sys",
+          mcpServerName: "Saturn Workspace",
+          toolName: "mail_send_message",
+          arguments: { to: "a@b.com" },
+          destructiveHint: true,
+        },
+      ],
+      error: null,
+      sendMessage,
+      resolveApprovals,
+      stop,
+      clearError: vi.fn(),
+    })
+
+    renderWithProviders(<ChatView />)
+
+    // Orphan tool_call not in pendingApprovals should NOT show "Awaiting Approval"
+    expect(screen.queryByText(/Awaiting Approval/i)).toBeNull()
+
+    const approveButtons = screen.getAllByRole("button", { name: "Approve" })
+    const rejectButtons = screen.getAllByRole("button", { name: "Reject" })
+
+    // Click Approve on card #1 -> staged, NOT submitted yet
+    fireEvent.click(approveButtons[0])
+    expect(resolveApprovals).not.toHaveBeenCalled()
+
+    // Click Reject on card #2 -> staged, Submit Decisions becomes enabled
+    fireEvent.click(rejectButtons[1])
+    expect(resolveApprovals).not.toHaveBeenCalled()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Submit Decisions (2/2)" })
+    )
+    expect(resolveApprovals).toHaveBeenCalledWith([
+      { toolCallId: "tc_1", approved: true },
+      { toolCallId: "tc_2", approved: false },
+    ])
+  })
+
+  it("submits custom_headers authSecret and updateMask in MCPServerSheet and navigates RunsView pages with Previous/Next", () => {
+    const updateMutate = vi.fn()
+    vi.mocked(aiApi.useUpdateMCPServerMutation).mockReturnValue({
+      mutate: updateMutate,
+      isPending: false,
+    } as never)
+
+    const { unmount } = renderWithProviders(
+      <MCPServerSheet
+        open={true}
+        onOpenChange={vi.fn()}
+        server={{
+          id: "mcp_custom_1",
+          spaceId: "spc_1",
+          isSystem: false,
+          slug: "custom-srv",
+          name: "Custom Server",
+          description: "",
+          transport: "http",
+          hasAuthSecret: false,
+          isEnabled: true,
+          config: {
+            url: "https://mcp.custom.test/mcp",
+            authType: "custom_headers",
+            trustReadHints: true,
+            timeoutSeconds: 30,
+          },
+        }}
+      />
+    )
+
+    fireEvent.change(screen.getByLabelText("Header name 1"), {
+      target: { value: "X-Api-Key" },
+    })
+    fireEvent.change(screen.getByLabelText("Header value 1"), {
+      target: { value: "secret-123" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }))
+
+    expect(updateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "mcp_custom_1",
+        req: expect.objectContaining({
+          mcpServer: expect.objectContaining({
+            authSecret: {
+              bearerToken: "",
+              headers: { "X-Api-Key": "secret-123" },
+            },
+          }),
+          updateMask: {
+            paths: expect.arrayContaining(["auth_secret.headers"]),
+          },
+        }),
+      })
+    )
+    unmount()
+
+    // Test RunsView Previous / Next pagination
+    vi.mocked(aiApi.useListRunsQuery)
+      .mockReturnValueOnce({
+        data: {
+          runs: [
+            {
+              id: "air_p1",
+              spaceId: "spc_1",
+              kind: "chat_turn",
+              source: "chat",
+              status: "completed",
+              input: { prompt: "Page 1 prompt" },
+              metrics: { tokens: { total: 10 }, latencyMs: "100" },
+              steps: [],
+              createTime: "2026-04-15T10:00:00Z",
+            },
+          ],
+          nextPageToken: "tok_page_2",
+        },
+        isLoading: false,
+      } as never)
+      .mockReturnValue({
+        data: {
+          runs: [
+            {
+              id: "air_p2",
+              spaceId: "spc_1",
+              kind: "chat_turn",
+              source: "chat",
+              status: "completed",
+              input: { prompt: "Page 2 prompt" },
+              metrics: { tokens: { total: 20 }, latencyMs: "200" },
+              steps: [],
+              createTime: "2026-04-15T09:00:00Z",
+            },
+          ],
+          nextPageToken: "",
+        },
+        isLoading: false,
+      } as never)
+
+    renderWithProviders(<RunsView />)
+    expect(screen.getByText("Page 1 prompt")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Next" }))
+    expect(screen.getByText("Page 2 prompt")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Previous" })).toBeTruthy()
   })
 })

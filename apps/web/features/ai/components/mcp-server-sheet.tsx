@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ChevronDownIcon } from "lucide-react"
+import { ChevronDownIcon, PlusIcon, Trash2Icon } from "lucide-react"
 
 interface MCPServerSheetProps {
   open: boolean
@@ -62,6 +62,9 @@ function MCPServerSheetForm({
   const [url, setUrl] = useState(server?.config?.url ?? "")
   const [authType, setAuthType] = useState(server?.config?.authType || "none")
   const [bearerToken, setBearerToken] = useState("")
+  const [customHeaders, setCustomHeaders] = useState<
+    Array<{ key: string; value: string }>
+  >([{ key: "", value: "" }])
   const [trustReadHints, setTrustReadHints] = useState(
     server?.config?.trustReadHints ?? true
   )
@@ -96,6 +99,17 @@ function MCPServerSheetForm({
     e.preventDefault()
     setErrorMsg(null)
 
+    const normalizedHeaders: Record<string, string> = {}
+    if (authType === "custom_headers") {
+      for (const h of customHeaders) {
+        const k = h.key.trim()
+        if (k) {
+          normalizedHeaders[k] = h.value
+        }
+      }
+    }
+    const hasCustomHeaders = Object.keys(normalizedHeaders).length > 0
+
     const payload: MCPServer = {
       id: server?.id ?? "",
       spaceId: server?.spaceId ?? "",
@@ -119,6 +133,13 @@ function MCPServerSheetForm({
             headers: {},
           },
         }),
+      ...(authType === "custom_headers" &&
+        hasCustomHeaders && {
+          authSecret: {
+            bearerToken: "",
+            headers: normalizedHeaders,
+          },
+        }),
     }
 
     if (isEditing && server?.id) {
@@ -132,8 +153,11 @@ function MCPServerSheetForm({
       if (!server.isSystem) {
         paths.push("slug", "config.url", "config.auth_type")
       }
-      if (bearerToken.trim()) {
+      if (authType === "bearer" && bearerToken.trim()) {
         paths.push("auth_secret.bearer_token")
+      }
+      if (authType === "custom_headers" && hasCustomHeaders) {
+        paths.push("auth_secret.headers")
       }
       updateServer.mutate({
         id: server.id,
@@ -239,6 +263,83 @@ function MCPServerSheetForm({
                       : "Bearer token"
                   }
                 />
+              </div>
+            )}
+
+            {authType === "custom_headers" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Custom Headers</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setCustomHeaders((prev) => [
+                        ...prev,
+                        { key: "", value: "" },
+                      ])
+                    }
+                    className="h-7 gap-1 px-2 text-xs text-primary"
+                  >
+                    <PlusIcon className="size-3.5" />
+                    Add Header
+                  </Button>
+                </div>
+                {isEditing && server?.hasAuthSecret && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Leave blank to keep stored headers, or enter headers to
+                    replace them.
+                  </p>
+                )}
+                <div className="space-y-2">
+                  {customHeaders.map((header, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Input
+                        aria-label={`Header name ${idx + 1}`}
+                        placeholder="Header name (e.g. X-Api-Key)"
+                        value={header.key}
+                        onChange={(e) =>
+                          setCustomHeaders((prev) =>
+                            prev.map((h, i) =>
+                              i === idx ? { ...h, key: e.target.value } : h
+                            )
+                          )
+                        }
+                        className="font-mono text-xs"
+                      />
+                      <Input
+                        aria-label={`Header value ${idx + 1}`}
+                        type="password"
+                        placeholder="Header value"
+                        value={header.value}
+                        onChange={(e) =>
+                          setCustomHeaders((prev) =>
+                            prev.map((h, i) =>
+                              i === idx ? { ...h, value: e.target.value } : h
+                            )
+                          )
+                        }
+                        className="font-mono text-xs"
+                      />
+                      {customHeaders.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Remove header ${idx + 1}`}
+                          onClick={() =>
+                            setCustomHeaders((prev) =>
+                              prev.filter((_, i) => i !== idx)
+                            )
+                          }
+                        >
+                          <Trash2Icon className="size-3.5 text-muted-foreground" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </>
