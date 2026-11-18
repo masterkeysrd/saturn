@@ -392,6 +392,10 @@ func (c *coordinator) ExecuteFlow(ctx context.Context, req *ExecuteFlowRequest) 
 		return nil, errors.E(op, workflow.ErrFlowDisabled)
 	}
 
+	if req.Async && len(req.Artifacts) > 0 {
+		return nil, errors.E(op, errors.Invalid, "inline artifacts are not supported with async execution")
+	}
+
 	input, ephemeral := buildInputAndEphemeralArtifacts(req.Input, req.Artifacts)
 
 	if req.Async {
@@ -714,6 +718,10 @@ func (c *coordinator) ExecuteFlowRun(ctx context.Context, spaceID string, flowRu
 // InvokeScheduleTrigger executes a cron-scheduled workflow trigger for a Space.
 func (c *coordinator) InvokeScheduleTrigger(ctx context.Context, spaceID string, flowID string, triggerID string) (*workflow.FlowRun, error) {
 	const op errors.Op = "application/workflow.InvokeScheduleTrigger"
+
+	if spaceID != "" {
+		ctx = auth.WithSpaceID(ctx, spaceID)
+	}
 
 	flow, err := c.workflow.GetFlow(ctx, spaceID, flowID)
 	if err != nil {

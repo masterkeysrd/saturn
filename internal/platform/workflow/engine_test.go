@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	pdfcpuapi "github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
@@ -751,5 +752,77 @@ func TestEngine_TriggerFilterAndInputMapping(t *testing.T) {
 	}
 	if passthru["raw"] != 42 {
 		t.Fatalf("expected passthrough trigger data, got %#v", passthru)
+	}
+}
+
+func TestEngine_Execute_ContextCancelledPersistsTerminalStatusAndSpaceID(t *testing.T) {
+	celEval, err := NewCELEvaluator()
+	if err != nil {
+		t.Fatalf("NewCELEvaluator failed: %v", err)
+	}
+
+	var observedSpaceID string
+	runCtx, cancelRun := context.WithCancel(context.Background())
+
+	reg := NewRegistry()
+	reg.RegisterStep(StepDescriptor{Type: "test.cancel_step", Owner: "test"}, func(ctx context.Context, _ *StepContext[map[string]any]) (map[string]any, error) {
+		observedSpaceID, _ = auth.SpaceIDFromContext(ctx)
+		cancelRun()
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+
+	var persistedUpdateCtxErr error
+	var persistedStatus FlowRunStatus
+	flowRunMock := &FlowRunStoreMock{
+		CreateOrResumeFunc: func(_ context.Context, run *FlowRun) (*FlowRun, bool, error) {
+			cp := *run
+			cp.ID = "wfr_cancel_1"
+			return &cp, false, nil
+		},
+		UpdateFunc: func(ctx context.Context, run *FlowRun) error {
+			persistedStatus = run.Status
+			persistedUpdateCtxErr = ctx.Err()
+			return ctx.Err()
+		},
+	}
+
+	engine, err := NewEngine(Dependencies{
+		FlowRuns: flowRunMock,
+		Registry: reg,
+		CEL:      celEval,
+	})
+	if err != nil {
+		t.Fatalf("NewEngine failed: %v", err)
+	}
+
+	flow := &Flow{
+		ID:      "flw_cancel",
+		Name:    "Cancel Flow",
+		Version: 1,
+		Steps: []StepNode{
+			{ID: "s1", Type: "test.cancel_step"},
+		},
+	}
+
+	run, execErr := engine.Execute(runCtx, ExecuteOptions{
+		Flow:    flow,
+		Space:   SpaceContext{ID: "spc_cancel", Timezone: "UTC"},
+		Persist: true,
+	})
+	if execErr == nil {
+		t.Fatal("expected execution error on context cancellation, got nil")
+	}
+	if observedSpaceID != "spc_cancel" {
+		t.Errorf("expected space_id spc_cancel in step context, got %q", observedSpaceID)
+	}
+	if run == nil || run.Status != RunFailed {
+		t.Fatalf("expected run status failed, got %+v", run)
+	}
+	if persistedStatus != RunFailed {
+		t.Errorf("expected persisted status failed, got %s", persistedStatus)
+	}
+	if persistedUpdateCtxErr != nil {
+		t.Errorf("expected detached non-cancelled context for terminal Update, got %v", persistedUpdateCtxErr)
 	}
 }

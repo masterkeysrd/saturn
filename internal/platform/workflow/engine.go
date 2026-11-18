@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/masterkeysrd/loom/graph"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/pdf"
 )
@@ -219,6 +220,10 @@ func (e *Engine) Execute(ctx context.Context, opts ExecuteOptions) (*FlowRun, er
 		run.ID = idStr
 	}
 
+	if run.SpaceID != "" {
+		ctx = auth.WithSpaceID(ctx, run.SpaceID)
+	}
+
 	runCtx := ctx
 	var cancel context.CancelFunc
 	if opts.Flow.Config.TimeoutSeconds != nil && *opts.Flow.Config.TimeoutSeconds > 0 {
@@ -284,7 +289,9 @@ func (e *Engine) Execute(ctx context.Context, opts ExecuteOptions) (*FlowRun, er
 			run.Error = newStepFlowError("", "EXECUTION_ERROR", execErr.Error())
 		}
 		if opts.Persist && e.flowRuns != nil {
-			_ = e.flowRuns.Update(ctx, run)
+			cleanupCtx, cancelCleanup := context.WithTimeout(context.Background(), 5*time.Second)
+			_ = e.flowRuns.Update(cleanupCtx, run)
+			cancelCleanup()
 		}
 		return run, errors.E(op, execErr)
 	}

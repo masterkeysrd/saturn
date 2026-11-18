@@ -429,6 +429,14 @@ func TestCoordinator_ExecutionAndTriggers(t *testing.T) {
 		if _, err := coord.ExecuteFlow(ctx, &ExecuteFlowRequest{ID: "flw_disabled"}); !errors.Is(err, workflow.ErrFlowDisabled) {
 			t.Fatalf("expected ErrFlowDisabled, got %v", err)
 		}
+
+		if _, err := coord.ExecuteFlow(ctx, &ExecuteFlowRequest{
+			ID:        "flw_sync",
+			Async:     true,
+			Artifacts: []InlineArtifact{{Filename: "note.txt", ContentType: "text/plain", Data: []byte("abc")}},
+		}); !errors.Is(err, errors.Invalid) {
+			t.Fatalf("expected errors.Invalid for async + inline artifacts, got %v", err)
+		}
 	})
 
 	t.Run("InvokeWebhookTrigger", func(t *testing.T) {
@@ -740,4 +748,40 @@ func TestCoordinator_GenerateFlow(t *testing.T) {
 			t.Errorf("expected WORKFLOW_VALIDATION_FAILED after retries, got %v", err)
 		}
 	})
+}
+
+func TestCoordinator_InvokeScheduleTrigger_SetsSpaceID(t *testing.T) {
+	var capturedSpaceID string
+	ws := &WorkflowServiceMock{
+		GetFlowFunc: func(_ context.Context, spaceID, id string) (*workflow.Flow, error) {
+			return &workflow.Flow{
+				ID:        id,
+				SpaceID:   spaceID,
+				IsEnabled: true,
+				Triggers: []workflow.Trigger{
+					{ID: "trg_1", Type: workflow.TriggerSchedule, IsEnabled: true},
+				},
+			}, nil
+		},
+		MapTriggerInputFunc: func(_ *workflow.Trigger, _ workflow.SpaceContext, data map[string]any) (map[string]any, error) {
+			return data, nil
+		},
+		ExecuteFunc: func(ctx context.Context, opts workflow.ExecuteOptions) (*workflow.FlowRun, error) {
+			capturedSpaceID, _ = auth.SpaceIDFromContext(ctx)
+			return &workflow.FlowRun{ID: "wfr_1", SpaceID: opts.Space.ID, Status: workflow.RunCompleted}, nil
+		},
+	}
+
+	coord := NewCoordinator(Dependencies{
+		Workflow:    ws,
+		SpaceLoader: defaultSpaceLoader(),
+	})
+
+	run, err := coord.InvokeScheduleTrigger(context.Background(), "spc_sched", "flw_1", "trg_1")
+	if err != nil {
+		t.Fatalf("InvokeScheduleTrigger error = %v", err)
+	}
+	if run == nil || capturedSpaceID != "spc_sched" {
+		t.Fatalf("expected space_id spc_sched in Execute context, got %q", capturedSpaceID)
+	}
 }
