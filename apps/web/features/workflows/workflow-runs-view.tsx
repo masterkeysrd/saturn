@@ -103,7 +103,8 @@ export function WorkflowRunsView() {
   const handleSelectRun = (id: string) => {
     setSelectedRunId(id)
     if (spaceId) {
-      navigate(`/space/${spaceId}/workflows/runs/${id}`)
+      const qs = searchParams.toString()
+      navigate(`/space/${spaceId}/workflows/runs/${id}${qs ? `?${qs}` : ""}`)
     }
   }
 

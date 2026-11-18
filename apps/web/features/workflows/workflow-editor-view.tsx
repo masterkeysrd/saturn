@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -78,6 +78,19 @@ export function WorkflowEditorView() {
   const [testOpen, setTestOpen] = useState(false)
   const [lastRun, setLastRun] = useState<FlowRun | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
+
+  const scopeKey = `${spaceId}:${flowId ?? "new"}`
+  const prevScopeKeyRef = useRef(scopeKey)
+  useEffect(() => {
+    if (prevScopeKeyRef.current !== scopeKey) {
+      prevScopeKeyRef.current = scopeKey
+      setDraftOverride(draftFromState ? draftFromState : null)
+      setSelectedNode({ kind: "flow" })
+      setTestOpen(false)
+      setLastRun(null)
+      setValidationError(null)
+    }
+  }, [scopeKey, draftFromState])
 
   const invalidateWorkflows = async () => {
     await queryClient.invalidateQueries({
@@ -234,17 +247,44 @@ export function WorkflowEditorView() {
     setSelectedNode({ kind: "step", stepId: newStep.id })
   }
 
+  const cloneStepTree = (
+    step: Flow_StepNode,
+    usedIds: Set<string>,
+    isRoot = false
+  ): Flow_StepNode => {
+    const fresh = createDefaultWorkflowStep(
+      step.type ?? "llm.generate",
+      usedIds
+    )
+    if (fresh.id) usedIds.add(fresh.id)
+    const clonedInputs = JSON.parse(
+      JSON.stringify(step.inputs ?? {})
+    ) as Record<string, unknown>
+    const clonedSources = JSON.parse(
+      JSON.stringify(step.sources ?? {})
+    ) as Flow_StepNode["sources"]
+
+    return {
+      ...fresh,
+      name: isRoot ? `${step.name || step.id} Copy` : step.name,
+      onError: step.onError,
+      model: step.model ? { ...step.model } : undefined,
+      inputs: clonedInputs,
+      sources: clonedSources,
+      cases: (step.cases ?? []).map((sc) => ({
+        ...sc,
+        steps: (sc.steps ?? []).map((sub) => cloneStepTree(sub, usedIds)),
+      })),
+      default: (step.default ?? []).map((sub) => cloneStepTree(sub, usedIds)),
+      steps: (step.steps ?? []).map((sub) => cloneStepTree(sub, usedIds)),
+    }
+  }
+
   const handleDuplicateStep = (stepId: string) => {
     const orig = findStepById(draft.steps ?? [], stepId)
     if (!orig) return
-    const ids = collectWorkflowStepIds(draft.steps ?? [])
-    const cloned = createDefaultWorkflowStep(orig.type, ids)
-    cloned.name = `${orig.name || orig.id} Copy`
-    cloned.inputs = { ...(orig.inputs ?? {}) }
-    cloned.sources = { ...(orig.sources ?? {}) }
-    cloned.cases = orig.cases ?? []
-    cloned.default = orig.default ?? []
-    cloned.steps = orig.steps ?? []
+    const usedIds = new Set(collectWorkflowStepIds(draft.steps ?? []))
+    const cloned = cloneStepTree(orig, usedIds, true)
 
     const rootIdx = (draft.steps ?? []).findIndex((s) => s.id === stepId)
     const target: InsertTarget =
@@ -443,12 +483,21 @@ export function WorkflowEditorView() {
               })
               setSelectedNode({ kind: "flow" })
             }}
-            onUpdateStep={(nextStep) =>
+            onUpdateStep={(nextStep, previousId) => {
+              const targetId = previousId ?? nextStep.id
               setDraft({
                 ...draft,
-                steps: updateStepById(draft.steps ?? [], nextStep.id, nextStep),
+                steps: updateStepById(draft.steps ?? [], targetId, nextStep),
               })
-            }
+              if (
+                previousId &&
+                previousId !== nextStep.id &&
+                selectedNode.kind === "step" &&
+                selectedNode.stepId === previousId
+              ) {
+                setSelectedNode({ kind: "step", stepId: nextStep.id })
+              }
+            }}
             onRemoveStep={(stepId) => {
               setDraft({
                 ...draft,

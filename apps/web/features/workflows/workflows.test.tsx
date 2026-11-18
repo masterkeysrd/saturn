@@ -6,7 +6,7 @@ import {
   waitFor,
   cleanup,
 } from "@testing-library/react"
-import { MemoryRouter, Route, Routes } from "react-router-dom"
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import * as workflowApi from "@saturn/api/gen/saturn/platform/workflow/v1/workflow"
 import * as aiApi from "@saturn/api/gen/saturn/platform/ai/v1/ai"
@@ -445,5 +445,146 @@ describe("Web Workflows Studio", () => {
       screen.getByText("accounts: finance.accounts (2 rows)")
     ).toBeDefined()
     expect(screen.getByText("120 tokens")).toBeDefined()
+  })
+
+  it("supports Step ID rename, non-LLM onError toggle, ai.agent_run exclusion, switch Default branch, and preserves run filters", async () => {
+    const complexFlow: workflowApi.Flow = {
+      ...mockCustomFlow,
+      id: "flw_complex",
+      steps: [
+        {
+          id: "agent_step",
+          name: "Agent Step",
+          type: "ai.agent_run",
+          sources: {},
+          cases: [],
+          default: [],
+          steps: [],
+          inputs: { agent_id: "agt_1", prompt: "Analyze" },
+        },
+        {
+          id: "switch_step",
+          name: "Branch Switch",
+          type: "switch",
+          sources: {},
+          cases: [{ name: "high", condition: "true", steps: [] }],
+          default: [
+            {
+              id: "fallback_out",
+              name: "Fallback Output",
+              type: "output",
+              sources: {},
+              cases: [],
+              default: [],
+              steps: [],
+              inputs: { value: "fallback" },
+            },
+          ],
+          steps: [],
+          inputs: {},
+        },
+      ],
+    }
+
+    vi.mocked(workflowApi.useGetFlowQuery).mockReturnValue({
+      data: complexFlow,
+      isLoading: false,
+    } as unknown as ReturnType<typeof workflowApi.useGetFlowQuery>)
+    mutateUpdate.mockResolvedValueOnce(complexFlow)
+
+    const { unmount } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/space/spc_1/workflows/flw_complex"]}>
+          <Routes>
+            <Route
+              path="/space/:spaceId/workflows/:flowId"
+              element={<WorkflowEditorView />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    // Switch Default branch is rendered on canvas with its fallback step
+    expect(screen.getByText("Default")).toBeDefined()
+    expect(screen.getByText("Fallback Output")).toBeDefined()
+
+    // Inspect ai.agent_run step -> no duplicate generic fields (only SchemaFieldsEditor's Add Field button)
+    fireEvent.click(screen.getByText("Agent Step"))
+    expect(screen.queryByText("agent_id")).toBeNull()
+    expect(screen.getAllByRole("button", { name: /Add Field/i })).toHaveLength(
+      1
+    )
+
+    // Inspect Fallback Output -> Advanced section has onError switch and Step ID rename works
+    fireEvent.click(screen.getByText("Fallback Output"))
+    fireEvent.click(screen.getByRole("button", { name: /Advanced/i }))
+    expect(screen.getByText("Continue workflow on step failure")).toBeDefined()
+
+    const stepIdInput = screen.getByDisplayValue("fallback_out")
+    fireEvent.change(stepIdInput, { target: { value: "fallback_renamed" } })
+    expect(screen.getByDisplayValue("fallback_renamed")).toBeDefined()
+
+    fireEvent.click(screen.getByRole("button", { name: /Save Workflow/i }))
+    await waitFor(() => {
+      expect(mutateUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          req: expect.objectContaining({
+            flow: expect.objectContaining({
+              steps: expect.arrayContaining([
+                expect.objectContaining({
+                  id: "switch_step",
+                  default: [
+                    expect.objectContaining({ id: "fallback_renamed" }),
+                  ],
+                }),
+              ]),
+            }),
+          }),
+        })
+      )
+    })
+    unmount()
+
+    // Verify WorkflowRunsView preserves ?flowId=&status= query string on run selection
+    let capturedSearch = ""
+    function SearchSpy() {
+      capturedSearch = useLocation().search
+      return null
+    }
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter
+          initialEntries={[
+            "/space/spc_1/workflows/runs?flowId=flw_usr_1&status=completed",
+          ]}
+        >
+          <Routes>
+            <Route
+              path="/space/:spaceId/workflows/runs"
+              element={
+                <>
+                  <WorkflowRunsView />
+                  <SearchSpy />
+                </>
+              }
+            />
+            <Route
+              path="/space/:spaceId/workflows/runs/:runId"
+              element={
+                <>
+                  <WorkflowRunsView />
+                  <SearchSpy />
+                </>
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    fireEvent.click(screen.getByText("wfr_1"))
+    expect(capturedSearch).toBe("?flowId=flw_usr_1&status=completed")
   })
 })

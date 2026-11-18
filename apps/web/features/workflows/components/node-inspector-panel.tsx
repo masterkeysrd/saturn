@@ -57,7 +57,7 @@ interface NodeInspectorPanelProps {
   onUpdateFlow: (next: Flow) => void
   onUpdateTrigger: (index: number, next: Flow_Trigger) => void
   onRemoveTrigger: (index: number) => void
-  onUpdateStep: (step: Flow_StepNode) => void
+  onUpdateStep: (step: Flow_StepNode, previousId?: string) => void
   onRemoveStep: (stepId: string) => void
 }
 
@@ -680,6 +680,7 @@ export function NodeInspectorPanel({
 
             {![
               "llm.generate",
+              "ai.agent_run",
               "filter",
               "switch",
               "for_each",
@@ -750,7 +751,7 @@ export function NodeInspectorPanel({
                     <Input
                       value={step.id}
                       onChange={(e) =>
-                        onUpdateStep({ ...step, id: e.target.value })
+                        onUpdateStep({ ...step, id: e.target.value }, step.id)
                       }
                       className="h-9 rounded-xl font-mono text-xs"
                     />
@@ -782,22 +783,22 @@ export function NodeInspectorPanel({
                           placeholder="{{ input.?documents.orValue([]) }}"
                         />
                       </div>
-
-                      <label className="flex cursor-pointer items-center justify-between py-1 text-xs font-medium">
-                        <span>Continue workflow on step failure</span>
-                        <Switch
-                          size="sm"
-                          checked={step.onError === "continue"}
-                          onCheckedChange={(checked) =>
-                            onUpdateStep({
-                              ...step,
-                              onError: checked ? "continue" : "fail",
-                            })
-                          }
-                        />
-                      </label>
                     </>
                   )}
+
+                  <label className="flex cursor-pointer items-center justify-between py-1 text-xs font-medium">
+                    <span>Continue workflow on step failure</span>
+                    <Switch
+                      size="sm"
+                      checked={step.onError === "continue"}
+                      onCheckedChange={(checked) =>
+                        onUpdateStep({
+                          ...step,
+                          onError: checked ? "continue" : "fail",
+                        })
+                      }
+                    />
+                  </label>
                 </div>
               )}
             </div>

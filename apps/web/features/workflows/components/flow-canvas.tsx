@@ -424,6 +424,47 @@ export function FlowCanvas({
                 </div>
               ))}
 
+              <div className="flex min-w-[275px] flex-col items-center rounded-xl border border-dashed border-border/60 bg-background/60 p-3">
+                <div className="mb-2 flex w-full items-center justify-between gap-2 border-b border-border/40 pb-2">
+                  <span className="font-mono text-xs font-bold text-muted-foreground">
+                    Default
+                  </span>
+                  <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                    fallback
+                  </span>
+                </div>
+
+                <StepInsertEdge
+                  stepDescriptors={stepDescriptors}
+                  onInsert={(t) =>
+                    onInsertStep(t, {
+                      kind: "default",
+                      switchId: step.id,
+                      index: 0,
+                    })
+                  }
+                />
+
+                {(step.default ?? []).map((sub, subIdx) => (
+                  <div
+                    key={`${sub.id}-${subIdx}`}
+                    className="flex flex-col items-center"
+                  >
+                    {renderStepNode(sub, subIdx, (step.default ?? []).length)}
+                    <StepInsertEdge
+                      stepDescriptors={stepDescriptors}
+                      onInsert={(t) =>
+                        onInsertStep(t, {
+                          kind: "default",
+                          switchId: step.id,
+                          index: subIdx + 1,
+                        })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+
               <div className="flex flex-col items-center justify-center self-stretch">
                 <Button
                   type="button"

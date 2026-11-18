@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   useTestFlowMutation,
   useExecuteFlowMutation,
@@ -41,6 +42,7 @@ export function TestRunDrawer({
   const [parseError, setParseError] = useState<string | null>(null)
   const [lastRun, setLastRun] = useState<FlowRun | null>(null)
 
+  const queryClient = useQueryClient()
   const testMutation = useTestFlowMutation()
   const executeMutation = useExecuteFlowMutation()
 
@@ -104,6 +106,11 @@ export function TestRunDrawer({
       })
       setLastRun(run)
       onRunComplete?.(run)
+      await queryClient.invalidateQueries({
+        predicate: (q) =>
+          typeof q.queryKey[0] === "string" &&
+          q.queryKey[0].startsWith("/api/v1/platform/workflows"),
+      })
     } catch (err) {
       setParseError(
         err instanceof Error ? err.message : "Live execution failed"
@@ -211,35 +218,37 @@ export function TestRunDrawer({
               )}
 
               {lastRun.stepRuns && lastRun.stepRuns.length > 0 && (
-                <div className="space-y-2">
+                <div className="space-y-2 border-t border-border/40 pt-3">
                   <span className="text-xs font-semibold text-muted-foreground">
                     Step Outputs
                   </span>
-                  {lastRun.stepRuns.map((sr) => (
-                    <div
-                      key={sr.executionKey}
-                      className="space-y-1.5 rounded-xl border border-border/40 bg-card/50 p-3"
-                    >
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-mono font-semibold">
-                          {sr.executionKey} ({sr.stepType})
-                        </span>
-                        <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-bold uppercase">
-                          {sr.status}
-                        </span>
+                  <div className="divide-y divide-border/40">
+                    {lastRun.stepRuns.map((sr) => (
+                      <div
+                        key={sr.executionKey}
+                        className="space-y-1.5 py-2.5 first:pt-0 last:pb-0"
+                      >
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-mono font-semibold">
+                            {sr.executionKey} ({sr.stepType})
+                          </span>
+                          <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-bold uppercase">
+                            {sr.status}
+                          </span>
+                        </div>
+                        {sr.output && (
+                          <pre className="overflow-x-auto rounded-lg bg-muted/50 p-2 font-mono text-[11px]">
+                            {JSON.stringify(sr.output, null, 2)}
+                          </pre>
+                        )}
+                        {sr.error?.message && (
+                          <p className="font-mono text-[11px] text-destructive">
+                            {sr.error.message}
+                          </p>
+                        )}
                       </div>
-                      {sr.output && (
-                        <pre className="overflow-x-auto rounded-lg bg-muted/50 p-2 font-mono text-[11px]">
-                          {JSON.stringify(sr.output, null, 2)}
-                        </pre>
-                      )}
-                      {sr.error?.message && (
-                        <p className="font-mono text-[11px] text-destructive">
-                          {sr.error.message}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 
