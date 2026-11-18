@@ -11,6 +11,7 @@ type Options struct {
 	Cursor   *Cursor
 	PageSize uint
 	IDColumn string
+	Nullable bool
 }
 
 // ApplyPagination applies limit, sorting, and keyset cursor conditions to a goqu select dataset.
@@ -32,19 +33,36 @@ func ApplyPagination(query *goqu.SelectDataset, opts Options) *goqu.SelectDatase
 		query = query.Order(sortCol.Desc(), idCol.Desc())
 	}
 
-	if opts.Cursor != nil && opts.Cursor.ID != "" && opts.Cursor.SortValue != "" {
-		if opts.Sort.Ascending {
-			// (sort_field > sort_value) OR (sort_field = sort_value AND id > cursor_id)
-			query = query.Where(goqu.Or(
-				sortCol.Gt(opts.Cursor.SortValue),
-				goqu.And(sortCol.Eq(opts.Cursor.SortValue), idCol.Gt(opts.Cursor.ID)),
-			))
-		} else {
-			// (sort_field < sort_value) OR (sort_field = sort_value AND id < cursor_id)
-			query = query.Where(goqu.Or(
-				sortCol.Lt(opts.Cursor.SortValue),
-				goqu.And(sortCol.Eq(opts.Cursor.SortValue), idCol.Lt(opts.Cursor.ID)),
-			))
+	if opts.Cursor != nil && opts.Cursor.ID != "" {
+		if opts.Cursor.IsNull {
+			if opts.Sort.Ascending {
+				// PostgreSQL ASC defaults to NULLS LAST: remaining rows are NULLs with larger ID
+				query = query.Where(goqu.And(sortCol.IsNull(), idCol.Gt(opts.Cursor.ID)))
+			} else {
+				// PostgreSQL DESC defaults to NULLS FIRST: remaining rows are NULLs with smaller ID, or any non-NULL rows
+				query = query.Where(goqu.Or(
+					goqu.And(sortCol.IsNull(), idCol.Lt(opts.Cursor.ID)),
+					sortCol.IsNotNull(),
+				))
+			}
+		} else if opts.Cursor.SortValue != "" {
+			if opts.Sort.Ascending {
+				// (sort_field > sort_value) OR (sort_field = sort_value AND id > cursor_id) [OR (sort_field IS NULL)]
+				conds := []goqu.Expression{
+					sortCol.Gt(opts.Cursor.SortValue),
+					goqu.And(sortCol.Eq(opts.Cursor.SortValue), idCol.Gt(opts.Cursor.ID)),
+				}
+				if opts.Nullable {
+					conds = append(conds, sortCol.IsNull())
+				}
+				query = query.Where(goqu.Or(conds...))
+			} else {
+				// (sort_field < sort_value) OR (sort_field = sort_value AND id < cursor_id)
+				query = query.Where(goqu.Or(
+					sortCol.Lt(opts.Cursor.SortValue),
+					goqu.And(sortCol.Eq(opts.Cursor.SortValue), idCol.Lt(opts.Cursor.ID)),
+				))
+			}
 		}
 	}
 

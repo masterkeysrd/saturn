@@ -7,8 +7,9 @@ import (
 
 // Cursor represents the point in the dataset where the next page starts.
 type Cursor struct {
-	SortValue string `json:"v"` // The value of the sorting column (e.g. date string, number)
-	ID        string `json:"i"` // The unique ID of the last record (to break ties)
+	SortValue string `json:"v"`           // The value of the sorting column (e.g. date string, number)
+	ID        string `json:"i"`           // The unique ID of the last record (to break ties)
+	IsNull    bool   `json:"n,omitempty"` // True when the sorting column value on the cursor row is NULL
 }
 
 // Encode converts the Cursor struct into a base64 string page token.

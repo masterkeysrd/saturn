@@ -140,3 +140,67 @@ func TestApplyPaginationGoqu(t *testing.T) {
 		t.Errorf("unexpected arguments: %v", args)
 	}
 }
+
+func TestApplyPaginationGoqu_NullableCursor(t *testing.T) {
+	dialect := goqu.Dialect("postgres")
+
+	t.Run("ASC non-null cursor includes IS NULL tail", func(t *testing.T) {
+		q := ApplyPagination(dialect.From("borrowing"), Options{
+			Sort:     sorting.New("due_at", true),
+			Cursor:   &Cursor{SortValue: "2026-06-01T00:00:00Z", ID: "brw_1"},
+			PageSize: 10,
+			Nullable: true,
+		})
+		sqlStr, args, err := q.Prepared(true).ToSQL()
+		if err != nil {
+			t.Fatalf("ToSQL failed: %v", err)
+		}
+		want := `SELECT * FROM "borrowing" WHERE (("due_at" > $1) OR (("due_at" = $2) AND ("id" > $3)) OR ("due_at" IS NULL)) ORDER BY "due_at" ASC, "id" ASC LIMIT $4`
+		if sqlStr != want {
+			t.Errorf("got SQL:\n%s\nwant:\n%s", sqlStr, want)
+		}
+		if len(args) != 4 {
+			t.Fatalf("expected 4 args, got %v", args)
+		}
+	})
+
+	t.Run("ASC null cursor paginates remaining NULL rows by ID", func(t *testing.T) {
+		q := ApplyPagination(dialect.From("borrowing"), Options{
+			Sort:     sorting.New("due_at", true),
+			Cursor:   &Cursor{ID: "brw_2", IsNull: true},
+			PageSize: 10,
+			Nullable: true,
+		})
+		sqlStr, args, err := q.Prepared(true).ToSQL()
+		if err != nil {
+			t.Fatalf("ToSQL failed: %v", err)
+		}
+		want := `SELECT * FROM "borrowing" WHERE (("due_at" IS NULL) AND ("id" > $1)) ORDER BY "due_at" ASC, "id" ASC LIMIT $2`
+		if sqlStr != want {
+			t.Errorf("got SQL:\n%s\nwant:\n%s", sqlStr, want)
+		}
+		if len(args) != 2 || args[0] != "brw_2" {
+			t.Fatalf("unexpected args: %v", args)
+		}
+	})
+
+	t.Run("DESC null cursor paginates NULLs then non-NULLs", func(t *testing.T) {
+		q := ApplyPagination(dialect.From("borrowing"), Options{
+			Sort:     sorting.New("due_at", false),
+			Cursor:   &Cursor{ID: "brw_3", IsNull: true},
+			PageSize: 10,
+			Nullable: true,
+		})
+		sqlStr, args, err := q.Prepared(true).ToSQL()
+		if err != nil {
+			t.Fatalf("ToSQL failed: %v", err)
+		}
+		want := `SELECT * FROM "borrowing" WHERE ((("due_at" IS NULL) AND ("id" < $1)) OR ("due_at" IS NOT NULL)) ORDER BY "due_at" DESC, "id" DESC LIMIT $2`
+		if sqlStr != want {
+			t.Errorf("got SQL:\n%s\nwant:\n%s", sqlStr, want)
+		}
+		if len(args) != 2 || args[0] != "brw_3" {
+			t.Fatalf("unexpected args: %v", args)
+		}
+	})
+}
