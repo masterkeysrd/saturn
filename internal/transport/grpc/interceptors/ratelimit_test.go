@@ -2,6 +2,7 @@ package interceptors
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -141,5 +142,27 @@ func TestRateLimitInterceptor(t *testing.T) {
 	}
 	if _, err := interceptor(ctxUser2, nil, changePwdInfo, handler); err != nil {
 		t.Fatalf("usr_2 first request should have its own bucket, got %v", err)
+	}
+}
+
+func TestRateLimitInterceptor_BoundedMapUnderIPChurn(t *testing.T) {
+	origNow := timeNow
+	defer func() { timeNow = origNow }()
+
+	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+	timeNow = func() time.Time { return now }
+
+	rl := NewRateLimitInterceptor(RateLimitConfig{Enabled: true})
+	for i := range maxRateLimitEntries + 250 {
+		now = now.Add(time.Millisecond)
+		key := fmt.Sprintf("ip:198.51.%d.%d|/saturn.identity.v1.Identity/LoginUser", i/250, i%250)
+		rl.allow(key, 1, 5)
+	}
+
+	rl.mu.Lock()
+	count := len(rl.limiters)
+	rl.mu.Unlock()
+	if count > maxRateLimitEntries {
+		t.Fatalf("limiters map grew to %d, exceeding max %d", count, maxRateLimitEntries)
 	}
 }

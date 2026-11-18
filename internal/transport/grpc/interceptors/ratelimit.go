@@ -140,20 +140,34 @@ func (rl *RateLimitInterceptor) extractSubjectKey(ctx context.Context, keyBy str
 	return "ip:" + ExtractClientIP(ctx, rl.trustedProxies)
 }
 
+const maxRateLimitEntries = 10000
+
 func (rl *RateLimitInterceptor) allow(key string, ratePerSec float64, burst int) bool {
 	now := timeNow()
 	rl.mu.Lock()
-	if len(rl.limiters) > 10000 {
-		cutoff := now.Add(-10 * time.Minute)
-		for k, entry := range rl.limiters {
-			if entry.lastSeen.Before(cutoff) {
-				delete(rl.limiters, k)
-			}
-		}
-	}
-
 	entry, ok := rl.limiters[key]
 	if !ok {
+		if len(rl.limiters) >= maxRateLimitEntries {
+			cutoff := now.Add(-10 * time.Minute)
+			for k, existing := range rl.limiters {
+				if existing.lastSeen.Before(cutoff) {
+					delete(rl.limiters, k)
+				}
+			}
+		}
+		if len(rl.limiters) >= maxRateLimitEntries {
+			var oldestKey string
+			var oldestTime time.Time
+			for k, existing := range rl.limiters {
+				if oldestKey == "" || existing.lastSeen.Before(oldestTime) {
+					oldestKey = k
+					oldestTime = existing.lastSeen
+				}
+			}
+			if oldestKey != "" {
+				delete(rl.limiters, oldestKey)
+			}
+		}
 		entry = &limiterEntry{
 			limiter: rate.NewLimiter(rate.Limit(ratePerSec), burst),
 		}
