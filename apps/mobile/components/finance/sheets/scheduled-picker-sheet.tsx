@@ -7,11 +7,13 @@ import BottomSheet, {
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { CalendarClock } from "lucide-react-native"
 import {
+  useGetSettingsQuery,
   type ScheduledTransaction,
   type RecurringTransaction,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { getScheduledDisplayName } from "@saturn/core"
+import { formatAmount, getScheduledDisplayName } from "@saturn/core"
 import { useTimezone } from "@saturn/hooks"
+import { useSpace } from "@/lib/space-context"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
 import { sheetStyles } from "./sheet-styles"
@@ -42,6 +44,12 @@ export const ScheduledPickerSheet = forwardRef<
   ) => {
     const insets = useSafeAreaInsets()
     const tz = useTimezone()
+    const { activeSpaceId } = useSpace()
+    const { data: settingsData } = useGetSettingsQuery(
+      {},
+      { enabled: !!activeSpaceId }
+    )
+    const baseCurrency = settingsData?.baseCurrency || "USD"
 
     const handleClose = () => {
       if (ref && "current" in ref && ref.current) {
@@ -86,7 +94,6 @@ export const ScheduledPickerSheet = forwardRef<
           }
           renderItem={({ item: st }) => {
             const isSelected = selectedScheduledId === st.id
-            const amountVal = (parseInt(st.amount || "0", 10) / 100).toFixed(2)
             const displayName = getScheduledDisplayName(st, recurringTemplates)
 
             return (
@@ -121,7 +128,7 @@ export const ScheduledPickerSheet = forwardRef<
                   </Text>
                 </View>
                 <Text style={sheetStyles.scheduledItemAmount}>
-                  ${amountVal}
+                  {formatAmount(st.amount || "0", st.currency || baseCurrency)}
                 </Text>
               </TouchableOpacity>
             )

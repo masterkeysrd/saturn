@@ -9,6 +9,7 @@ import {
 } from "react-native"
 import { useLocalSearchParams, useRouter, Stack } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import * as Clipboard from "expo-clipboard"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   ArrowUpRight,
@@ -25,7 +26,7 @@ import {
   Copy,
   Zap,
 } from "lucide-react-native"
-import { formatAmount } from "@saturn/core"
+import { formatAmount, formatLocalDateString } from "@saturn/core"
 import {
   useGetTransactionQuery,
   useDeleteTransactionMutation,
@@ -158,14 +159,11 @@ export default function TransactionDetailScreen() {
 
   const isSameDaySettlement = useMemo(() => {
     if (!tx?.transactionDate || !tx?.effectiveDate) return true
-    const d1 = new Date(tx.transactionDate)
-    const d2 = new Date(tx.effectiveDate)
     return (
-      d1.getFullYear() === d2.getFullYear() &&
-      d1.getMonth() === d2.getMonth() &&
-      d1.getDate() === d2.getDate()
+      formatLocalDateString(tx.transactionDate, tz.timezone) ===
+      formatLocalDateString(tx.effectiveDate, tz.timezone)
     )
-  }, [tx])
+  }, [tx, tz.timezone])
 
   const isRecurring = Boolean(tx?.metadata?.recurring_transaction_id)
   const isBorrowing = Boolean(tx?.metadata?.borrowing_id)
@@ -225,13 +223,15 @@ export default function TransactionDetailScreen() {
     }
   }
 
-  const handleCopyId = () => {
-    if (!id) return
+  const handleCopyId = async () => {
+    const value = tx?.id || id
+    if (!value) return
+    await Clipboard.setStringAsync(value)
     haptics.light()
     toast.show({
-      type: "info",
-      title: "Transaction ID",
-      message: id,
+      type: "success",
+      title: "Copied Transaction ID",
+      message: value,
     })
   }
 

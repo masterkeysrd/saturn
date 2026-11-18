@@ -10,7 +10,7 @@ import {
 } from "react-native"
 import { useRouter } from "expo-router"
 import { useInfiniteQuery } from "@tanstack/react-query"
-import BottomSheet from "@gorhom/bottom-sheet"
+import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import {
   Search,
   Plus,
@@ -414,7 +414,10 @@ export default function TransactionsScreen() {
         snapPoints={["60%"]}
         title="Filter Transactions"
       >
-        <View style={styles.filterSheetContent}>
+        <BottomSheetScrollView
+          contentContainerStyle={styles.filterSheetContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Flow Type Filter */}
           <View style={styles.filterSection}>
             <Text style={styles.filterSectionTitle}>Flow Type</Text>
@@ -579,7 +582,7 @@ export default function TransactionsScreen() {
               Apply Filters
             </Button>
           </View>
-        </View>
+        </BottomSheetScrollView>
       </AppBottomSheet>
     </View>
   )

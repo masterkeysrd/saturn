@@ -16,6 +16,7 @@ import {
   ArrowRightLeft,
   CalendarClock,
   HandCoins,
+  X,
 } from "lucide-react-native"
 import {
   useGetTransactionQuery,
@@ -167,11 +168,38 @@ export default function AddTransactionModal() {
                 ? "Edit Income"
                 : "Edit Expense"
               : "New Transaction",
-            ...(Platform.OS !== "ios" && {
-              headerStyle: {
-                backgroundColor: theme.colors.background,
-              },
-            }),
+            ...(Platform.OS === "ios"
+              ? {
+                  unstable_headerLeftItems: () => [
+                    {
+                      type: "button",
+                      label: "Close",
+                      icon: { type: "sfSymbol", name: "xmark" },
+                      onPress: () => {
+                        haptics.light()
+                        router.back()
+                      },
+                    },
+                  ],
+                }
+              : {
+                  headerStyle: {
+                    backgroundColor: theme.colors.background,
+                  },
+                  headerLeft: () => (
+                    <TouchableOpacity
+                      onPress={() => {
+                        haptics.light()
+                        router.back()
+                      }}
+                      style={{ paddingHorizontal: 4, paddingVertical: 4 }}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      accessibilityLabel="Close"
+                    >
+                      <X size={20} color={theme.colors.textMuted} />
+                    </TouchableOpacity>
+                  ),
+                }),
             headerTintColor: theme.colors.textPrimary,
           }}
         />

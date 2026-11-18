@@ -47,6 +47,7 @@ import {
   formatAmount,
   formatInterval,
   groupTransactionsByDate,
+  parseDate,
 } from "@saturn/core"
 import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
@@ -98,17 +99,22 @@ const deleteIcon = Icon.select({
   android: require("@expo/material-symbols/delete.xml"),
 })
 
-function calculateDaysLeft(endDateStr?: string): number {
-  const now = new Date()
+function calculateDaysLeft(
+  endDateStr: string | undefined,
+  tz: ReturnType<typeof useTimezone>
+): number {
+  const now = tz.now()
   if (!endDateStr) {
-    // Default to days left in current month
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    const diff = endOfMonth.getTime() - now.getTime()
-    return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+    const parts = tz.parts(now)
+    if (!parts) return 1
+    const daysInMonth = new Date(
+      Date.UTC(parts.year, parts.month, 0)
+    ).getUTCDate()
+    return Math.max(1, daysInMonth - parts.day + 1)
   }
-  const end = new Date(endDateStr)
-  if (isNaN(end.getTime())) return 1
-  const diff = end.getTime() - now.getTime()
+  const end = parseDate(endDateStr)
+  if (!end) return 1
+  const diff = tz.endOfDay(end).getTime() - now.getTime()
   return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)))
 }
 
@@ -393,16 +399,24 @@ export default function BudgetDetailScreen() {
   // Stepping historical periods
   const handleStepPeriod = (step: -1 | 1) => {
     haptics.selection()
-    const base = selectedDate || new Date()
-    const next = new Date(base)
+    const base = selectedDate || tz.now()
+    const parts = tz.parts(base)
+    if (!parts) return
     const interval = budget?.interval || "MONTHLY"
 
+    let next: Date
     if (interval === "WEEKLY") {
-      next.setDate(next.getDate() + step * 7)
+      next = new Date(
+        Date.UTC(parts.year, parts.month - 1, parts.day + step * 7, 12, 0, 0)
+      )
     } else if (interval === "YEARLY") {
-      next.setFullYear(next.getFullYear() + step)
+      next = new Date(
+        Date.UTC(parts.year + step, parts.month - 1, parts.day, 12, 0, 0)
+      )
     } else {
-      next.setMonth(next.getMonth() + step)
+      next = new Date(
+        Date.UTC(parts.year, parts.month - 1 + step, parts.day, 12, 0, 0)
+      )
     }
     setSelectedDate(next)
   }
@@ -463,7 +477,7 @@ export default function BudgetDetailScreen() {
   const remainingCents = Math.max(limitCents - spentCents, 0)
   const overCents = Math.max(spentCents - limitCents, 0)
 
-  const daysLeft = calculateDaysLeft(currentPeriod?.endDate)
+  const daysLeft = calculateDaysLeft(currentPeriod?.endDate, tz)
   const dailyAllowanceCents =
     !isOver && daysLeft > 0 ? Math.round(remainingCents / daysLeft) : 0
 

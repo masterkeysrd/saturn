@@ -264,7 +264,7 @@ export default function AdjustBalanceModal() {
 
             <Text style={styles.summaryAmount}>
               {differenceCents === 0
-                ? "$0.00"
+                ? formatAmount("0", account.currency)
                 : differenceCents > 0
                   ? `+${formatAmount(String(differenceCents), account.currency)}`
                   : `-${formatAmount(String(Math.abs(differenceCents)), account.currency)}`}

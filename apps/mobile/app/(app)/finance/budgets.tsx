@@ -26,7 +26,7 @@ import {
 } from "lucide-react-native"
 import { Icon } from "@expo/ui"
 import { ActionMenu } from "@/components/ui/action-menu"
-import { formatAmount, formatInterval } from "@saturn/core"
+import { formatAmount, formatInterval, parseDate } from "@saturn/core"
 import {
   useListBudgetsQuery,
   useGetSettingsQuery,
@@ -506,28 +506,23 @@ export default function BudgetsScreen() {
               const remainingCents = Math.max(limitCents - spentCents, 0)
               const overCents = Math.max(spentCents - limitCents, 0)
 
-              const now = new Date()
-              const daysLeft = b.currentPeriod?.endDate
-                ? Math.max(
-                    1,
-                    Math.ceil(
-                      (new Date(b.currentPeriod.endDate).getTime() -
-                        now.getTime()) /
-                        (1000 * 60 * 60 * 24)
-                    )
-                  )
-                : Math.max(
-                    1,
-                    Math.ceil(
-                      (new Date(
-                        now.getFullYear(),
-                        now.getMonth() + 1,
-                        0
-                      ).getTime() -
-                        now.getTime()) /
-                        (1000 * 60 * 60 * 24)
-                    )
-                  )
+              const now = tz.now()
+              const endParsed = b.currentPeriod?.endDate
+                ? parseDate(b.currentPeriod.endDate)
+                : null
+              let daysLeft = 1
+              if (endParsed) {
+                const diff = tz.endOfDay(endParsed).getTime() - now.getTime()
+                daysLeft = Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+              } else {
+                const parts = tz.parts(now)
+                if (parts) {
+                  const daysInMonth = new Date(
+                    Date.UTC(parts.year, parts.month, 0)
+                  ).getUTCDate()
+                  daysLeft = Math.max(1, daysInMonth - parts.day + 1)
+                }
+              }
               const dailyAllowanceCents =
                 !isOver && daysLeft > 0
                   ? Math.round(remainingCents / daysLeft)
