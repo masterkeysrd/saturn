@@ -41,4 +41,32 @@ describe("jwt utilities", () => {
     })
     expect(isTokenExpired(expired)).toBe(true)
   })
+
+  it("decodes padded tokens via pure JS fallback when atob is unavailable without ReDoS", () => {
+    const originalAtob = globalThis.atob
+    try {
+      const token = makeToken({
+        sub: "usr_fallback",
+        name: "Alice",
+        exp: Math.floor(Date.now() / 1000) + 600,
+      })
+      const [hdr, payload, sig] = token.split(".")
+      const paddedPayload =
+        payload + "=".repeat((4 - (payload.length % 4)) % 4) + "=".repeat(10000)
+
+      // @ts-expect-error testing pure-JS fallback when atob is absent
+      globalThis.atob = undefined
+
+      const start = performance.now()
+      const decoded = decodeJwt(`${hdr}.${paddedPayload}.${sig}`)
+      const pathological = decodeJwt(`${hdr}.${"=".repeat(10000)}a.${sig}`)
+      const elapsedMs = performance.now() - start
+
+      expect(decoded).toMatchObject({ sub: "usr_fallback", name: "Alice" })
+      expect(pathological).toBeNull()
+      expect(elapsedMs).toBeLessThan(50)
+    } finally {
+      globalThis.atob = originalAtob
+    }
+  })
 })

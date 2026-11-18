@@ -259,22 +259,179 @@ export function isIsoTimestampLike(value: string): boolean {
   )
 }
 
+const BASIC_HTML_ENTITIES: Record<string, string> = {
+  "&nbsp;": " ",
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&#039;": "'",
+  "&apos;": "'",
+}
+
+function isAsciiAlphaNum(code: number): boolean {
+  return (
+    (code >= 65 && code <= 90) ||
+    (code >= 97 && code <= 122) ||
+    (code >= 48 && code <= 57)
+  )
+}
+
+function isAsciiWhitespace(ch: string): boolean {
+  return ch === " " || ch === "\t" || ch === "\n" || ch === "\r" || ch === "\f"
+}
+
+function findRawElementCloseEnd(
+  lower: string,
+  fromIndex: number,
+  tagName: string
+): number {
+  const closePrefix = `</${tagName}`
+  let pos = fromIndex
+  while (pos < lower.length) {
+    const idx = lower.indexOf(closePrefix, pos)
+    if (idx === -1) return lower.length
+    const afterName = idx + closePrefix.length
+    if (afterName >= lower.length) return lower.length
+    const nextCh = lower[afterName]
+    if (nextCh === ">") return afterName + 1
+    if (isAsciiWhitespace(nextCh) || nextCh === "/") {
+      const gt = lower.indexOf(">", afterName + 1)
+      return gt === -1 ? lower.length : gt + 1
+    }
+    pos = afterName
+  }
+  return lower.length
+}
+
+function decodeBasicHtmlEntities(text: string): string {
+  if (!text.includes("&")) return text
+  const out: string[] = []
+  let pos = 0
+  while (pos < text.length) {
+    const amp = text.indexOf("&", pos)
+    if (amp === -1) {
+      out.push(text.slice(pos))
+      break
+    }
+    if (amp > pos) {
+      out.push(text.slice(pos, amp))
+    }
+    const semi = text.indexOf(";", amp + 1)
+    if (semi !== -1 && semi - amp <= 10) {
+      const entity = text.slice(amp, semi + 1).toLowerCase()
+      const mapped = BASIC_HTML_ENTITIES[entity]
+      if (mapped !== undefined) {
+        out.push(mapped)
+        pos = semi + 1
+        continue
+      }
+    }
+    out.push("&")
+    pos = amp + 1
+  }
+  return out.join("")
+}
+
 export function stripHtmlTags(html: string): string {
-  return html
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|div|li|tr|h[1-6])>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/[ \t]+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
+  if (!html) return ""
+
+  const lower = html.toLowerCase()
+  const parts: string[] = []
+  let pos = 0
+
+  while (pos < html.length) {
+    const lt = html.indexOf("<", pos)
+    if (lt === -1) {
+      parts.push(html.slice(pos))
+      break
+    }
+    if (lt > pos) {
+      parts.push(html.slice(pos, lt))
+    }
+
+    if (html.startsWith("<!--", lt)) {
+      const commentEnd = html.indexOf("-->", lt + 4)
+      pos = commentEnd === -1 ? html.length : commentEnd + 3
+      continue
+    }
+
+    let scan = lt + 1
+    let isClosing = false
+    if (scan < html.length && html[scan] === "/") {
+      isClosing = true
+      scan++
+    }
+
+    const nameStart = scan
+    while (scan < html.length && isAsciiAlphaNum(html.charCodeAt(scan))) {
+      scan++
+    }
+    const tagName = lower.slice(nameStart, scan)
+    const hasDelimiter =
+      scan < html.length &&
+      (isAsciiWhitespace(html[scan]) ||
+        html[scan] === "/" ||
+        html[scan] === ">")
+
+    const gt = html.indexOf(">", lt + 1)
+    if (gt === -1) {
+      pos = html.length
+      continue
+    }
+
+    if (
+      !isClosing &&
+      hasDelimiter &&
+      (tagName === "script" || tagName === "style")
+    ) {
+      parts.push(" ")
+      pos = findRawElementCloseEnd(lower, gt + 1, tagName)
+      continue
+    }
+
+    if (!isClosing && hasDelimiter && tagName === "br") {
+      parts.push("\n")
+    } else if (
+      isClosing &&
+      hasDelimiter &&
+      (tagName === "p" ||
+        tagName === "div" ||
+        tagName === "li" ||
+        tagName === "tr" ||
+        (tagName.length === 2 &&
+          tagName[0] === "h" &&
+          tagName[1] >= "1" &&
+          tagName[1] <= "6"))
+    ) {
+      parts.push("\n")
+    }
+
+    pos = gt + 1
+  }
+
+  const decoded = decodeBasicHtmlEntities(parts.join(""))
+  const lines = decoded.split("\n")
+  const normalizedLines: string[] = []
+  let emptyRun = 0
+  for (const line of lines) {
+    let end = line.length
+    while (end > 0 && (line[end - 1] === " " || line[end - 1] === "\t")) {
+      end--
+    }
+    const trimmedLine = end === line.length ? line : line.slice(0, end)
+    if (trimmedLine === "") {
+      emptyRun++
+      if (emptyRun <= 1) {
+        normalizedLines.push("")
+      }
+    } else {
+      emptyRun = 0
+      normalizedLines.push(trimmedLine)
+    }
+  }
+  return normalizedLines.join("\n").trim()
 }
 
 export function isEmptyToolParam(value: unknown): boolean {
@@ -291,6 +448,26 @@ export interface SplitThinkingResult {
   hasUnclosedThink: boolean
 }
 
+const OPEN_THINK_SHORT = "<think>"
+const OPEN_THINK_LONG = "<thinking>"
+const CLOSE_THINK_SHORT = "</think>"
+const CLOSE_THINK_LONG = "</thinking>"
+
+function findEarliestTag(
+  lower: string,
+  fromIndex: number,
+  shortTag: string,
+  longTag: string
+): { index: number; length: number } | null {
+  const shortIdx = lower.indexOf(shortTag, fromIndex)
+  const longIdx = lower.indexOf(longTag, fromIndex)
+  if (shortIdx === -1 && longIdx === -1) return null
+  if (shortIdx !== -1 && (longIdx === -1 || shortIdx <= longIdx)) {
+    return { index: shortIdx, length: shortTag.length }
+  }
+  return { index: longIdx, length: longTag.length }
+}
+
 /**
  * Extracts `<think>...</think>` or `<thinking>...</thinking>` blocks emitted inline
  * by reasoning models (such as Qwen3, DeepSeek-R1, OpenRouter, or local GGUF servers),
@@ -302,35 +479,57 @@ export function splitThinkingFromText(rawText: string): SplitThinkingResult {
   }
 
   const lower = rawText.toLowerCase()
-  if (!lower.includes("<think>") && !lower.includes("<thinking>")) {
+  if (!lower.includes(OPEN_THINK_SHORT) && !lower.includes(OPEN_THINK_LONG)) {
     return { thinking: "", text: rawText, hasUnclosedThink: false }
   }
 
   const thinkingParts: string[] = []
-  let cleaned = rawText.replace(
-    /<think(?:ing)?>([\s\S]*?)<\/think(?:ing)?>/gi,
-    (_, inner: string) => {
-      if (inner.trim()) {
-        thinkingParts.push(inner.trim())
-      }
-      return ""
-    }
-  )
-
+  const visibleChunks: string[] = []
+  let cursor = 0
   let hasUnclosedThink = false
-  const openMatch = /<think(?:ing)?>([\s\S]*)$/i.exec(cleaned)
-  if (openMatch) {
-    hasUnclosedThink = true
-    const partial = openMatch[1]?.trim() ?? ""
-    if (partial) {
-      thinkingParts.push(partial)
+
+  while (cursor < rawText.length) {
+    const open = findEarliestTag(
+      lower,
+      cursor,
+      OPEN_THINK_SHORT,
+      OPEN_THINK_LONG
+    )
+    if (!open) {
+      visibleChunks.push(rawText.slice(cursor))
+      break
     }
-    cleaned = cleaned.slice(0, openMatch.index)
+
+    if (open.index > cursor) {
+      visibleChunks.push(rawText.slice(cursor, open.index))
+    }
+
+    const contentStart = open.index + open.length
+    const close = findEarliestTag(
+      lower,
+      contentStart,
+      CLOSE_THINK_SHORT,
+      CLOSE_THINK_LONG
+    )
+    if (!close) {
+      hasUnclosedThink = true
+      const partial = rawText.slice(contentStart).trim()
+      if (partial) {
+        thinkingParts.push(partial)
+      }
+      break
+    }
+
+    const inner = rawText.slice(contentStart, close.index).trim()
+    if (inner) {
+      thinkingParts.push(inner)
+    }
+    cursor = close.index + close.length
   }
 
   return {
     thinking: thinkingParts.join("\n\n").trim(),
-    text: cleaned.trimStart(),
+    text: visibleChunks.join("").trimStart(),
     hasUnclosedThink,
   }
 }

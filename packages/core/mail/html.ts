@@ -133,13 +133,58 @@ function decodeHtmlEntitiesMinimal(value: string): string {
     .replace(/&tab;|&newline;/gi, "")
 }
 
-function isDangerousUri(value: string): boolean {
+const SAFE_RASTER_DATA_IMAGE_PREFIXES = [
+  "data:image/png;base64,",
+  "data:image/jpeg;base64,",
+  "data:image/jpg;base64,",
+  "data:image/gif;base64,",
+  "data:image/webp;base64,",
+  "data:image/bmp;base64,",
+  "data:image/x-icon;base64,",
+  "data:image/vnd.microsoft.icon;base64,",
+]
+
+function isBase64PayloadChar(code: number): boolean {
+  return (
+    (code >= 65 && code <= 90) ||
+    (code >= 97 && code <= 122) ||
+    (code >= 48 && code <= 57) ||
+    code === 43 ||
+    code === 47 ||
+    code === 61
+  )
+}
+
+function isSafeRasterDataImageUri(normalized: string): boolean {
+  let payloadStart = -1
+  for (const prefix of SAFE_RASTER_DATA_IMAGE_PREFIXES) {
+    if (normalized.startsWith(prefix)) {
+      payloadStart = prefix.length
+      break
+    }
+  }
+  if (payloadStart === -1 || payloadStart >= normalized.length) {
+    return false
+  }
+  for (let i = payloadStart; i < normalized.length; i++) {
+    const ch = normalized[i]
+    if (!isBase64PayloadChar(ch.charCodeAt(0)) && !isWhitespace(ch)) {
+      return false
+    }
+  }
+  return true
+}
+
+function isDangerousUri(value: string, attrNameLower?: string): boolean {
   const decoded = decodeHtmlEntitiesMinimal(value)
   const normalized = decoded.replace(/[\s\u0000-\u001f]+/g, "").toLowerCase()
+  if (attrNameLower === "src" && isSafeRasterDataImageUri(normalized)) {
+    return false
+  }
   return (
     normalized.startsWith("javascript:") ||
     normalized.startsWith("vbscript:") ||
-    normalized.startsWith("data:text/html")
+    normalized.startsWith("data:")
   )
 }
 
@@ -204,7 +249,7 @@ function sanitizeOpeningTag(
       continue
     }
     if (URI_ATTRS.has(attr.nameLower)) {
-      if (isDangerousUri(attr.value)) {
+      if (isDangerousUri(attr.value, attr.nameLower)) {
         continue
       }
       if (

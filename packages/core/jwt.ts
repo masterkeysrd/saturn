@@ -33,7 +33,11 @@ function decodeBase64Bytes(base64: string): Uint8Array {
     return bytes
   }
 
-  const clean = base64.replace(/=+$/, "")
+  let end = base64.length
+  while (end > 0 && base64.charCodeAt(end - 1) === 61) {
+    end--
+  }
+  const clean = end === base64.length ? base64 : base64.slice(0, end)
   if (clean.length % BASE64_QUANTUM === BASE64_INVALID_REMAINDER) {
     throw new Error("Invalid base64 string")
   }

@@ -214,4 +214,43 @@ describe("@saturn/core/ai tool-descriptor", () => {
     expect(streaming.text).toBe("")
     expect(streaming.hasUnclosedThink).toBe(true)
   })
+
+  it("strips script/style/malformed HTML linearly without double-unescaping entities", () => {
+    expect(stripHtmlTags("<p>Hello<script>alert(1)</script >World</p>")).toBe(
+      "Hello World"
+    )
+    expect(
+      stripHtmlTags("<p>Hello</p><script>alert(1)</script ><b>World</b>")
+    ).toBe("Hello\n World")
+
+    expect(stripHtmlTags("<scr<script>ipt>alert(1)</script>")).not.toContain(
+      "<script"
+    )
+
+    expect(stripHtmlTags("<p>&amp;lt;script&amp;gt;</p>")).toBe(
+      "&lt;script&gt;"
+    )
+
+    const start = performance.now()
+    const stripped = stripHtmlTags("<style ".repeat(5000))
+    const elapsedMs = performance.now() - start
+    expect(stripped).toBe("")
+    expect(elapsedMs).toBeLessThan(50)
+  })
+
+  it("splits <thinking> blocks and pathological unclosed <think> streams in linear time", () => {
+    const thinkingRes = splitThinkingFromText(
+      "Prefix <thinking>Step 1</thinking> Answer"
+    )
+    expect(thinkingRes.thinking).toBe("Step 1")
+    expect(thinkingRes.text).toBe("Prefix  Answer")
+    expect(thinkingRes.hasUnclosedThink).toBe(false)
+
+    const start = performance.now()
+    const pathological = splitThinkingFromText("<think>a".repeat(10000))
+    const elapsedMs = performance.now() - start
+    expect(pathological.hasUnclosedThink).toBe(true)
+    expect(pathological.text).toBe("")
+    expect(elapsedMs).toBeLessThan(50)
+  })
 })
