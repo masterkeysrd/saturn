@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 
 if (typeof globalThis.ResizeObserver === "undefined") {
   globalThis.ResizeObserver = class ResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      void callback
+    }
     observe() {}
     unobserve() {}
     disconnect() {}
