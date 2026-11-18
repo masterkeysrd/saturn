@@ -564,4 +564,63 @@ describe("Mobile Mail Feature Logic & Component Unit Tests", () => {
       ])
     })
   })
+
+  describe("Mail Attachment URL Resolution & Sanitization", () => {
+    it("resolves relative attachment URLs against the API base URL and sanitizes cached filenames", () => {
+      const resolveUrl = (downloadUrl: string, apiBaseUrl: string) =>
+        downloadUrl.startsWith("http")
+          ? downloadUrl
+          : `${apiBaseUrl.replace(/\/$/, "")}${downloadUrl}`
+
+      expect(
+        resolveUrl(
+          "/api/v1/mail/attachments/tok_123",
+          "https://saturn.example.com/"
+        )
+      ).toBe("https://saturn.example.com/api/v1/mail/attachments/tok_123")
+
+      expect(
+        resolveUrl(
+          "https://cdn.example.com/file.pdf",
+          "https://saturn.example.com"
+        )
+      ).toBe("https://cdn.example.com/file.pdf")
+
+      const sanitizeFilename = (name: string) =>
+        name.replace(/[^a-zA-Z0-9._-]/g, "_")
+      expect(sanitizeFilename("Q4 Report (Final) / v2?.pdf")).toBe(
+        "Q4_Report__Final____v2_.pdf"
+      )
+    })
+
+    it("detects local file:// and content:// attachments separately from server attachments", () => {
+      const isLocalAttachment = (att: { id: string; downloadUrl?: string }) => {
+        const url = att.downloadUrl || ""
+        return (
+          url.startsWith("file://") ||
+          url.startsWith("content://") ||
+          att.id.startsWith("att_local_")
+        )
+      }
+
+      expect(
+        isLocalAttachment({
+          id: "att_local_123",
+          downloadUrl: "file:///var/mobile/doc.pdf",
+        })
+      ).toBe(true)
+      expect(
+        isLocalAttachment({
+          id: "att_1",
+          downloadUrl: "content://media/external/file/42",
+        })
+      ).toBe(true)
+      expect(
+        isLocalAttachment({
+          id: "att_srv_99",
+          downloadUrl: "/api/v1/mail/attachments/tok_99",
+        })
+      ).toBe(false)
+    })
+  })
 })
