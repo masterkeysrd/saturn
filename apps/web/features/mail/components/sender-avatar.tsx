@@ -65,8 +65,9 @@ function extractRegistrableBrandDomain(domain: string): string {
 function normalizeFaviconUrl(url: string): string {
   try {
     const parsed = new URL(url)
+    const hostname = parsed.hostname.toLowerCase()
     if (
-      parsed.hostname.endsWith("google.com") &&
+      (hostname === "google.com" || hostname.endsWith(".google.com")) &&
       parsed.pathname === "/s2/favicons"
     ) {
       const rawDomain = parsed.searchParams.get("domain")
