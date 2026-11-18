@@ -21,6 +21,7 @@ import { AmountInput } from "@/components/ui/amount-input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { DatePicker } from "@/components/ui/date-picker"
+import { toast } from "@/components/ui/toast"
 import { toCentsString, formatCents } from "../utils"
 
 interface CreateIncomeFormProps {
@@ -57,7 +58,12 @@ export function CreateIncomeForm({
       onOpenChange(false)
     },
     onError: (err: unknown) => {
-      alert(err instanceof Error ? err.message : "Failed to record income.")
+      toast.add({
+        title: "Failed to record income",
+        description:
+          err instanceof Error ? err.message : "Failed to record income.",
+        type: "error",
+      })
     },
   })
 
@@ -67,7 +73,12 @@ export function CreateIncomeForm({
       onOpenChange(false)
     },
     onError: (err: unknown) => {
-      alert(err instanceof Error ? err.message : "Failed to update income.")
+      toast.add({
+        title: "Failed to update income",
+        description:
+          err instanceof Error ? err.message : "Failed to update income.",
+        type: "error",
+      })
     },
   })
 

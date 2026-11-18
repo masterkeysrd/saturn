@@ -12,6 +12,7 @@ import {
   useGetSettingsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useActiveSpaceContext } from "@/features/space/use-space"
+import { useTimezone } from "@saturn/hooks"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Loader2,
@@ -37,6 +38,7 @@ export function BudgetHistorySheet({
   budget,
 }: BudgetHistorySheetProps) {
   const { spaceId } = useActiveSpaceContext()
+  const tz = useTimezone()
   const { data: settings } = useGetSettingsQuery(
     {},
     { enabled: open && !!spaceId }
@@ -132,15 +134,11 @@ export function BudgetHistorySheet({
                           </span>
                           <div className="mt-0.5 flex items-center gap-1.5 text-[9px] text-muted-foreground">
                             <span>
-                              {new Date(txn.transactionDate).toLocaleDateString(
-                                undefined,
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                  timeZone: "UTC",
-                                }
-                              )}
+                              {tz.formatDate(txn.transactionDate, {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
                             </span>
                             {account && (
                               <>

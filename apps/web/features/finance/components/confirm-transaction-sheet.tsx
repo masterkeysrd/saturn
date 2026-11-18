@@ -2,6 +2,7 @@ import { useState, useMemo } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
+import { useTimezone } from "@saturn/hooks"
 import {
   ConfirmTransactionSchema,
   type ConfirmTransactionFormValues,
@@ -80,6 +81,7 @@ export function ConfirmTransactionSheet({
   getConversionPreview,
 }: ConfirmTransactionSheetProps) {
   const navigate = useNavigate()
+  const tz = useTimezone()
 
   const [confirmedTxn, setConfirmedTxn] = useState<Transaction | null>(null)
   const [selectedTxnId, setSelectedTxnId] = useState<string>("")
@@ -127,9 +129,7 @@ export function ConfirmTransactionSheet({
       budgets.find((b) => b.id === t.budgetId)?.name?.toLowerCase() || ""
     const accountName =
       accounts.find((a) => a.id === t.accountId)?.name?.toLowerCase() || ""
-    const dateStr = t.transactionDate
-      ? new Date(t.transactionDate).toLocaleDateString()
-      : ""
+    const dateStr = t.transactionDate ? tz.formatDate(t.transactionDate) : ""
 
     return (
       vendor.includes(q) ||
@@ -506,15 +506,11 @@ export function ConfirmTransactionSheet({
                               Due Date
                             </span>
                             <span className="font-mono font-bold text-foreground">
-                              {new Date(transaction.dueDate).toLocaleDateString(
-                                undefined,
-                                {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                  timeZone: "UTC",
-                                }
-                              )}
+                              {tz.formatDate(transaction.dueDate, {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })}
                             </span>
                           </div>
                         </div>
@@ -606,12 +602,13 @@ export function ConfirmTransactionSheet({
                                 </div>
                                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                                   <span>
-                                    {new Date(
-                                      candidateMatch.transactionDate
-                                    ).toLocaleDateString(undefined, {
-                                      month: "short",
-                                      day: "numeric",
-                                    })}
+                                    {tz.formatDate(
+                                      candidateMatch.transactionDate,
+                                      {
+                                        month: "short",
+                                        day: "numeric",
+                                      }
+                                    )}
                                   </span>
                                   {candidateMatch.account && (
                                     <>
@@ -644,12 +641,13 @@ export function ConfirmTransactionSheet({
                                       if (!matched)
                                         return "Selected Transaction"
                                       const dateStr = matched.transactionDate
-                                        ? new Date(
-                                            matched.transactionDate
-                                          ).toLocaleDateString(undefined, {
-                                            month: "short",
-                                            day: "numeric",
-                                          })
+                                        ? tz.formatDate(
+                                            matched.transactionDate,
+                                            {
+                                              month: "short",
+                                              day: "numeric",
+                                            }
+                                          )
                                         : ""
                                       const amtStr = formatCents(
                                         matched.amount || "0"
@@ -726,9 +724,7 @@ export function ConfirmTransactionSheet({
                                       ) : (
                                         filteredTransactions.map((t) => {
                                           const dateStr = t.transactionDate
-                                            ? new Date(
-                                                t.transactionDate
-                                              ).toLocaleDateString(undefined, {
+                                            ? tz.formatDate(t.transactionDate, {
                                                 month: "short",
                                                 day: "numeric",
                                               })

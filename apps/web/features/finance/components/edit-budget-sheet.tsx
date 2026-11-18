@@ -22,6 +22,7 @@ import { AmountInput } from "@/components/ui/amount-input"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { toast } from "@/components/ui/toast"
 import {
   Select,
   SelectTrigger,
@@ -82,13 +83,26 @@ export function EditBudgetSheet({
   const [propagation, setPropagation] = useState<LimitPropagation>(
     "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
   )
+  const [prevBudgetKey, setPrevBudgetKey] = useState("")
+  const budgetKey = `${open}:${activeBudget?.id || ""}`
+  if (budgetKey !== prevBudgetKey) {
+    setPrevBudgetKey(budgetKey)
+    setPropagation("LIMIT_PROPAGATION_NEXT_PERIODS_ONLY")
+  }
 
   const patchMutation = usePatch<
     Budget,
     { id: string; req: UpdateBudgetRequest }
   >({
-    entityKey: "budgets",
+    entityKey: "/api/v1/finance/budgets",
     mutationFn: (vars) => updateMutation.mutateAsync(vars),
+    onErrorToast: (error) => {
+      toast.add({
+        title: "Failed to update budget",
+        description: error.message,
+        type: "error",
+      })
+    },
     buildVariables: (id, payload, dirtyPaths, expectedVersion) => {
       const fieldPathMap: Record<string, string> = {
         name: "name",
@@ -101,20 +115,35 @@ export function EditBudgetSheet({
         color: "color",
         defaultAccountId: "default_account_id",
       }
-      const paths = Array.from(
-        new Set(dirtyPaths.map((p) => fieldPathMap[p] || p))
+      const mappedPaths = Array.from(
+        new Set(
+          dirtyPaths
+            .filter((p) => p !== "propagation")
+            .map((p) => fieldPathMap[p] || p)
+        )
       )
+      const paths = mappedPaths.length > 0 ? mappedPaths : ["limit_amount"]
+
+      const rawLimit = (payload as { limit?: string | number }).limit
+      const resolvedLimitAmount =
+        rawLimit !== undefined
+          ? toCentsString(String(rawLimit))
+          : payload.limitAmount || activeBudget?.limitAmount || "0"
+
+      const budgetPayload = {
+        ...(activeBudget || {}),
+        ...payload,
+        limitAmount: resolvedLimitAmount,
+      } as Record<string, unknown>
+      delete budgetPayload.limit
+      delete budgetPayload.propagation
+
       return {
         id,
         req: {
           id,
           version: expectedVersion,
-          budget: {
-            ...(activeBudget || {}),
-            ...payload,
-            limitAmount:
-              payload.limitAmount || activeBudget?.limitAmount || "0",
-          } as Budget,
+          budget: budgetPayload as unknown as Budget,
           propagation,
           updateMask: { paths },
         },
@@ -176,6 +205,9 @@ export function EditBudgetSheet({
   const onSubmit = async (data: BudgetFormValues) => {
     if (!activeBudget?.id) return
 
+    const isPropagationChanged =
+      propagation !== "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
+
     try {
       await patchMutation.mutateAsync({
         id: activeBudget.id,
@@ -183,21 +215,24 @@ export function EditBudgetSheet({
         payload: {
           name: data.name,
           limit: data.limit,
-          limitAmount: toCentsString(data.limit),
+          limitAmount: toCentsString(String(data.limit)),
           currency: data.currency,
           interval: data.interval,
           status: data.status,
           icon: data.icon,
           color: data.color,
           defaultAccountId: data.defaultAccountId || "",
+          ...(isPropagationChanged ? { propagation } : {}),
         } as unknown as Partial<Budget>,
-        dirtyFields,
+        dirtyFields: isPropagationChanged
+          ? { ...dirtyFields, propagation: true }
+          : dirtyFields,
       })
       onOpenChange(false)
       await invalidateFinanceQueries(queryClient)
       refetchBudgets?.()
     } catch {
-      // Handled by patchMutation / toast
+      // Handled by patchMutation onErrorToast
     }
   }
 

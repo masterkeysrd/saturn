@@ -7,6 +7,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet"
 import { useListTransactionEventsQuery } from "@saturn/api/gen/saturn/finance/v1/finance"
+import { useTimezone } from "@saturn/hooks"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Loader2,
@@ -32,6 +33,7 @@ export function TransactionEventsSheet({
   txnId,
   txnDescription,
 }: TransactionEventsSheetProps) {
+  const tz = useTimezone()
   // Fetch transaction events
   const { data, isLoading } = useListTransactionEventsQuery(
     { txnId: txnId || "" },
@@ -147,17 +149,13 @@ export function TransactionEventsSheet({
                           </h4>
                           <span className="mt-1 block font-mono text-[9.5px] font-semibold text-muted-foreground">
                             {e.createTime
-                              ? new Date(e.createTime).toLocaleString(
-                                  undefined,
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                    timeZone: "UTC",
-                                  }
-                                )
+                              ? tz.formatDateTime(e.createTime, {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
                               : ""}
                           </span>
                         </div>

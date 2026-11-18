@@ -3,7 +3,11 @@ import { useQueryClient } from "@tanstack/react-query"
 import type { InboxReviewFormValues } from "@saturn/schemas"
 import { InboxItemReviewPanel } from "./components/inbox-item-review-panel"
 import { useUrlState } from "@/lib/use-url-state"
-import { useDebounce } from "@saturn/hooks"
+import {
+  useDebounce,
+  useTimezone,
+  invalidateFinanceQueries,
+} from "@saturn/hooks"
 import {
   useListInboxItemsQuery,
   useApproveInboxItemMutation,
@@ -12,7 +16,6 @@ import {
   useListScheduledTransactionsQuery,
   useListAccountsQuery,
   useListBorrowingsQuery,
-  useLogBorrowingTransactionMutation,
   useListBudgetsQuery,
   useListTransactionsQuery,
   type InboxItem,
@@ -32,9 +35,20 @@ import {
 } from "@/components/ui/select"
 import { Inbox, Loader2 } from "lucide-react"
 import { toast } from "@/components/ui/toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export function InboxView() {
   const queryClient = useQueryClient()
+  const tz = useTimezone()
   const { spaceId } = useActiveSpaceContext()
   const [urlState, setUrlState] = useUrlState({
     search: "",
@@ -114,6 +128,7 @@ export function InboxView() {
 
   // 2. State for the selected inbox item
   const [error, setError] = useState<string | null>(null)
+  const [discardTargetId, setDiscardTargetId] = useState<string | null>(null)
   const selectedItem =
     inboxItems.find((item) => item.id === selectedItemId) || null
 
@@ -174,7 +189,6 @@ export function InboxView() {
   const approveMutation = useApproveInboxItemMutation()
   const discardMutation = useDiscardInboxItemMutation()
   const updateInboxMutation = useUpdateInboxItemMutation()
-  const logTransactionMutation = useLogBorrowingTransactionMutation()
 
   const handleApprove = async (
     tx: InboxItem,
@@ -185,7 +199,6 @@ export function InboxView() {
     const accId = values.accountId || ""
     const budId = values.budgetId || ""
     const payId = values.scheduledTransactionId || ""
-    const borrowingId = values.borrowingId || ""
     const amtStr = values.amountStr || ""
     const desc = values.description || ""
     const docType = values.docType
@@ -286,7 +299,7 @@ export function InboxView() {
         },
       })
 
-      // 2. Call standard Inbox Approval
+      // 2. Call standard Inbox Approval (backend atomically logs linked borrowing transactions)
       await approveMutation.mutateAsync({
         id,
         req: {
@@ -294,24 +307,7 @@ export function InboxView() {
         },
       })
 
-      // 3. If a borrowing option is selected, create a repayment record
-      if (borrowingId && borrowingId !== "none") {
-        await logTransactionMutation.mutateAsync({
-          borrowing_id: borrowingId,
-          req: {
-            borrowingId,
-            transaction: {
-              type: "BORROWING_TRANSACTION_TYPE_PAYMENT",
-              amount: finalAmount,
-              transactionDate: tx.transactionDate || new Date().toISOString(),
-              notes: `Inbox payment match for vendor: ${desc || tx.vendorName}`,
-              accountId: accId,
-            },
-          },
-        })
-      }
-
-      // 4. Update local state & select next available item
+      // 3. Update local state & select next available item
       setAllStagedItems((prev) => prev.filter((item) => item.id !== id))
       const remaining = inboxItems.filter((item) => item.id !== id)
       if (remaining.length > 0) {
@@ -320,18 +316,7 @@ export function InboxView() {
         setUrlState({ selected: "" })
       }
 
-      await queryClient.invalidateQueries({
-        queryKey: ["/api/v1/finance/inbox-items"],
-      })
-      await queryClient.invalidateQueries({
-        queryKey: ["/api/v1/finance/transactions"],
-      })
-      await queryClient.invalidateQueries({
-        queryKey: ["/api/v1/finance/accounts"],
-      })
-      await queryClient.invalidateQueries({
-        queryKey: ["/api/v1/finance/borrowings"],
-      })
+      await invalidateFinanceQueries(queryClient)
       refetchInbox()
       toast.add({
         title: "Reconciliation Approved",
@@ -346,14 +331,18 @@ export function InboxView() {
   }
 
   const handleDiscard = async (id: string) => {
-    if (!confirm("Are you sure you want to discard this inbox item?")) {
-      return
-    }
+    setDiscardTargetId(id)
+  }
+
+  const handleConfirmDiscard = async () => {
+    const id = discardTargetId
+    if (!id) return
     try {
       await discardMutation.mutateAsync({
         id,
         req: { id },
       })
+      setDiscardTargetId(null)
       setAllStagedItems((prev) => prev.filter((item) => item.id !== id))
       const remaining = inboxItems.filter((item) => item.id !== id)
       if (remaining.length > 0) {
@@ -361,9 +350,7 @@ export function InboxView() {
       } else {
         setUrlState({ selected: "" })
       }
-      await queryClient.invalidateQueries({
-        queryKey: ["/api/v1/finance/inbox-items"],
-      })
+      await invalidateFinanceQueries(queryClient)
       refetchInbox()
       toast.add({
         title: "Item Discarded",
@@ -533,11 +520,9 @@ export function InboxView() {
                           </span>
                           <span className="mt-0.5 text-[10px] text-muted-foreground">
                             {tx.transactionDate
-                              ? new Date(
-                                  tx.transactionDate
-                                ).toLocaleDateString()
+                              ? tz.formatDate(tx.transactionDate)
                               : tx.createTime
-                                ? new Date(tx.createTime).toLocaleDateString()
+                                ? tz.formatDate(tx.createTime)
                                 : ""}
                           </span>
                         </div>
@@ -609,6 +594,33 @@ export function InboxView() {
           </div>
         </div>
       )}
+
+      <AlertDialog
+        open={Boolean(discardTargetId)}
+        onOpenChange={(open) => !open && setDiscardTargetId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard Inbox Item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to discard this inbox item? This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={discardMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={handleConfirmDiscard}
+              disabled={discardMutation.isPending}
+            >
+              {discardMutation.isPending ? "Discarding..." : "Discard"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </FinancePageLayout>
   )
 }

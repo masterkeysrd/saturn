@@ -1,4 +1,6 @@
 import { useMemo } from "react"
+import { useQueryClient } from "@tanstack/react-query"
+import { invalidateFinanceQueries } from "@saturn/hooks"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
@@ -17,6 +19,7 @@ import { Input } from "@/components/ui/input"
 import { AmountInput } from "@/components/ui/amount-input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { toast } from "@/components/ui/toast"
 import {
   formatCents,
   toCentsString,
@@ -37,6 +40,17 @@ interface CreateAccountSheetProps {
 
 const ACCOUNT_TYPE_ITEMS = ACCOUNT_TYPES
 
+const ACCOUNT_FIELD_PATH_MAP: Record<string, string> = {
+  name: "name",
+  lastFour: "last_four",
+  creditLimit: "credit_limit",
+  color: "color",
+  institutionId: "institution_id",
+  isDefault: "is_default",
+  isActive: "is_active",
+  notes: "notes",
+}
+
 export function CreateAccountSheet({
   open,
   onOpenChange,
@@ -45,6 +59,7 @@ export function CreateAccountSheet({
   editAccount,
   refetchAccounts,
 }: CreateAccountSheetProps) {
+  const queryClient = useQueryClient()
   const { data: currenciesData } = useListCurrenciesQuery(
     {},
     { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
@@ -63,16 +78,36 @@ export function CreateAccountSheet({
     Account,
     { id: string; req: UpdateAccountRequest }
   >({
-    entityKey: "accounts",
+    entityKey: "/api/v1/finance/accounts",
     mutationFn: (vars) => updateMutation.mutateAsync(vars),
-    buildVariables: (id, payload, _dirtyPaths, expectedVersion) => ({
-      id,
-      req: {
+    onErrorToast: (error) => {
+      toast.add({
+        title: "Failed to update account",
+        description: error.message,
+        type: "error",
+      })
+    },
+    buildVariables: (id, payload, dirtyPaths, expectedVersion) => {
+      const paths = Array.from(
+        new Set(
+          dirtyPaths
+            .map((p) => ACCOUNT_FIELD_PATH_MAP[p])
+            .filter((p): p is string => Boolean(p))
+        )
+      )
+      return {
         id,
-        account: payload as Account,
-        version: expectedVersion,
-      },
-    }),
+        req: {
+          id,
+          account: {
+            ...(editAccount || {}),
+            ...payload,
+          } as Account,
+          updateMask: { paths },
+          version: expectedVersion,
+        },
+      }
+    },
   })
 
   const accountDefaultValues = useMemo<AccountFormValues>(() => {
@@ -199,11 +234,18 @@ export function CreateAccountSheet({
           },
         })
       }
+      await invalidateFinanceQueries(queryClient)
       reset()
       onOpenChange(false)
       refetchAccounts()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Operation failed.")
+      if (!editAccount?.id) {
+        toast.add({
+          title: "Failed to create account",
+          description: err instanceof Error ? err.message : "Operation failed.",
+          type: "error",
+        })
+      }
     }
   }
 
@@ -331,7 +373,7 @@ export function CreateAccountSheet({
         </div>
       </div>
 
-      <div className="space-y-4 rounded-2xl border border-border/40 bg-muted/40 p-4">
+      <div className="space-y-4 border-t border-border/40 pt-4">
         <div className="flex items-center justify-between">
           <div>
             <Label

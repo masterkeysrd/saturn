@@ -1,4 +1,6 @@
 import { useMemo } from "react"
+import { useQueryClient } from "@tanstack/react-query"
+import { invalidateFinanceQueries } from "@saturn/hooks"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { cn } from "@/lib/utils"
@@ -27,6 +29,7 @@ import { AmountInput } from "@/components/ui/amount-input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { DatePicker } from "@/components/ui/date-picker"
+import { toast } from "@/components/ui/toast"
 import {
   toCentsString,
   formatCents,
@@ -49,6 +52,20 @@ const STATUS_ITEMS = [
   { value: "ENDED", label: "Ended" },
 ]
 
+const RECURRING_FIELD_PATH_MAP: Record<string, string> = {
+  type: "type",
+  budgetId: "budget_id",
+  accountId: "account_id",
+  name: "name",
+  amount: "amount",
+  currency: "currency",
+  interval: "interval",
+  nextDueDate: "next_due_date",
+  isVariable: "is_variable",
+  status: "status",
+  gracePeriodDays: "grace_period_days",
+}
+
 export function CreateRecurringTransactionSheet({
   open,
   onOpenChange,
@@ -58,6 +75,7 @@ export function CreateRecurringTransactionSheet({
   editTransaction,
   refetchTransactions,
 }: CreateRecurringTransactionSheetProps) {
+  const queryClient = useQueryClient()
   const createMutation = useCreateRecurringTransactionMutation()
   const updateMutation = useUpdateRecurringTransactionMutation()
 
@@ -65,18 +83,53 @@ export function CreateRecurringTransactionSheet({
     RecurringTransaction,
     { id: string; req: UpdateRecurringTransactionRequest }
   >({
-    entityKey: "recurring-transactions",
+    entityKey: "/api/v1/finance/recurring-transactions",
     mutationFn: (vars) => updateMutation.mutateAsync(vars),
-    buildVariables: (id, payload, _dirtyPaths, expectedVersion) => ({
-      id,
-      req: {
+    onErrorToast: (error) => {
+      toast.add({
+        title: "Failed to update recurring transaction",
+        description: error.message,
+        type: "error",
+      })
+    },
+    buildVariables: (id, payload, dirtyPaths, expectedVersion) => {
+      const paths = Array.from(
+        new Set(
+          dirtyPaths
+            .map((p) => RECURRING_FIELD_PATH_MAP[p])
+            .filter((p): p is string => Boolean(p))
+        )
+      )
+      const { nextDueDate: nextDueDateOverride, ...restPayload } =
+        payload as Partial<RecurringTransaction> & { nextDueDate?: string }
+
+      const merged: Partial<RecurringTransaction> = {
+        ...(editTransaction || {}),
+        ...restPayload,
+      }
+
+      if (nextDueDateOverride || dirtyPaths.includes("nextDueDate")) {
+        merged.executionState = {
+          ...(editTransaction?.executionState || {}),
+          ...(restPayload.executionState || {}),
+          nextDueDate:
+            nextDueDateOverride ||
+            restPayload.executionState?.nextDueDate ||
+            editTransaction?.executionState?.nextDueDate ||
+            "",
+        }
+      }
+
+      return {
         id,
-        version: expectedVersion,
-        recurringTransaction: {
-          ...(payload as Partial<RecurringTransaction>),
-        } as RecurringTransaction,
-      },
-    }),
+        req: {
+          id,
+          version: expectedVersion,
+          updateMask: { paths },
+          recurringTransaction: merged as RecurringTransaction,
+        },
+      }
+    },
   })
 
   const { getConversionPreview } = useCurrencyConversionPreview({
@@ -176,7 +229,7 @@ export function CreateRecurringTransactionSheet({
   const handleBudgetChange = (newBudgetId: string) => {
     const b = budgets.find((x) => x.id === newBudgetId)
     if (b) {
-      setValue("currency", b.currency)
+      setValue("currency", b.currency, { shouldDirty: true })
     }
   }
 
@@ -194,50 +247,62 @@ export function CreateRecurringTransactionSheet({
     const centsAmount = toCentsString(data.amount)
     const nextDueDateStr = toLocalISODate(data.nextDueDate)
 
-    if (editTransaction) {
-      await patchMutation.mutateAsync({
-        id: editTransaction.id || "",
-        expectedVersion: editTransaction.version,
-        payload: {
-          type: data.type,
-          budgetId: data.type === "EXPENSE" ? data.budgetId : undefined,
-          accountId: data.accountId || undefined,
-          name: data.name,
-          amount: centsAmount,
-          currency: data.currency,
-          interval: data.interval,
-          executionState: {
+    try {
+      if (editTransaction) {
+        await patchMutation.mutateAsync({
+          id: editTransaction.id || "",
+          expectedVersion: editTransaction.version,
+          payload: {
+            type: data.type,
+            budgetId: data.type === "EXPENSE" ? data.budgetId : undefined,
+            accountId: data.accountId || undefined,
+            name: data.name,
+            amount: centsAmount,
+            currency: data.currency,
+            interval: data.interval,
             nextDueDate: nextDueDateStr,
+            executionState: {
+              nextDueDate: nextDueDateStr,
+            },
+            isVariable: data.isVariable,
+            status: data.status,
+            gracePeriodDays: data.gracePeriodDays,
+          } as unknown as Partial<RecurringTransaction>,
+          dirtyFields,
+        })
+      } else {
+        await createMutation.mutateAsync({
+          recurringTransaction: {
+            type: data.type,
+            budgetId: data.type === "EXPENSE" ? data.budgetId : undefined,
+            accountId: data.accountId || undefined,
+            name: data.name,
+            amount: centsAmount,
+            currency: data.currency,
+            interval: data.interval,
+            executionState: {
+              nextDueDate: nextDueDateStr,
+            },
+            isVariable: data.isVariable,
+            status: "ACTIVE",
+            gracePeriodDays: data.gracePeriodDays,
           },
-          isVariable: data.isVariable,
-          status: data.status,
-          gracePeriodDays: data.gracePeriodDays,
-        } as unknown as Partial<RecurringTransaction>,
-        dirtyFields,
-      })
-    } else {
-      await createMutation.mutateAsync({
-        recurringTransaction: {
-          type: data.type,
-          budgetId: data.type === "EXPENSE" ? data.budgetId : undefined,
-          accountId: data.accountId || undefined,
-          name: data.name,
-          amount: centsAmount,
-          currency: data.currency,
-          interval: data.interval,
-          executionState: {
-            nextDueDate: nextDueDateStr,
-          },
-          isVariable: data.isVariable,
-          status: "ACTIVE",
-          gracePeriodDays: data.gracePeriodDays,
-        },
-      })
-    }
+        })
+      }
 
-    refetchTransactions?.()
-    reset()
-    onOpenChange(false)
+      await invalidateFinanceQueries(queryClient)
+      refetchTransactions?.()
+      reset()
+      onOpenChange(false)
+    } catch (err: unknown) {
+      if (!editTransaction) {
+        toast.add({
+          title: "Failed to create recurring transaction",
+          description: err instanceof Error ? err.message : "Operation failed.",
+          type: "error",
+        })
+      }
+    }
   }
 
   return (
@@ -389,7 +454,7 @@ export function CreateRecurringTransactionSheet({
         />
       </FormFieldItem>
 
-      <div className="flex items-center gap-3.5 rounded-2xl border border-muted/20 bg-muted/5 p-4 select-none">
+      <div className="flex items-center gap-3.5 border-t border-border/40 pt-4 select-none">
         <Checkbox
           id="isVariable"
           checked={isVariableValue}

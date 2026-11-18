@@ -4,6 +4,7 @@ import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { InboxReviewSchema, type InboxReviewFormValues } from "@saturn/schemas"
 import { useActiveSpaceContext } from "@/features/space/use-space"
+import { useTimezone } from "@saturn/hooks"
 import type {
   InboxItem,
   Account,
@@ -93,6 +94,7 @@ export function InboxItemReviewPanel({
   error,
 }: InboxItemReviewPanelProps) {
   const { spaceId } = useActiveSpaceContext()
+  const tz = useTimezone()
   const [nowTime] = useState(() => Date.now())
   const [rawOpen, setRawOpen] = useState(false)
   const [popoverOpen, setPopoverOpen] = useState(false)
@@ -325,9 +327,7 @@ export function InboxItemReviewPanel({
       const budget = budgets.find((b) => b.id === p.budgetId)
       const budgetName = (budget?.name || "").toLowerCase()
       const amtStr = (Number(p.amount || 0) / 100).toFixed(2)
-      const dateStr = p.dueDate
-        ? new Date(p.dueDate).toLocaleDateString().toLowerCase()
-        : ""
+      const dateStr = p.dueDate ? tz.formatDate(p.dueDate).toLowerCase() : ""
       const sourceType = (p.sourceType || "").toLowerCase()
 
       return (
@@ -337,7 +337,7 @@ export function InboxItemReviewPanel({
         sourceType.includes(q)
       )
     })
-  }, [payments, budgets, billSearch, currentTxnType])
+  }, [payments, budgets, billSearch, currentTxnType, tz])
 
   const currentBorrowingId = useWatch({ control, name: "borrowingId" })
   const currentBorrowingLinkType = useWatch({
@@ -426,9 +426,7 @@ export function InboxItemReviewPanel({
       budgets.find((b) => b.id === t.budgetId)?.name?.toLowerCase() || ""
     const accountName =
       accounts.find((a) => a.id === t.accountId)?.name?.toLowerCase() || ""
-    const dateStr = t.transactionDate
-      ? new Date(t.transactionDate).toLocaleDateString()
-      : ""
+    const dateStr = t.transactionDate ? tz.formatDate(t.transactionDate) : ""
 
     return (
       vendor.includes(q) ||
@@ -491,7 +489,7 @@ export function InboxItemReviewPanel({
             </span>
             <span className="font-semibold text-foreground">
               {selectedItem.transactionDate
-                ? new Date(selectedItem.transactionDate).toLocaleDateString()
+                ? tz.formatDate(selectedItem.transactionDate)
                 : "N/A"}
             </span>
           </div>
@@ -610,7 +608,7 @@ export function InboxItemReviewPanel({
                     <div>
                       <span className="text-muted-foreground">Date:</span>{" "}
                       {dupTx.transactionDate
-                        ? new Date(dupTx.transactionDate).toLocaleDateString()
+                        ? tz.formatDate(dupTx.transactionDate)
                         : "N/A"}
                     </div>
                     <div>
@@ -664,7 +662,7 @@ export function InboxItemReviewPanel({
                       )
                       if (!matched) return "Selected Transaction"
                       const dateStr = matched.transactionDate
-                        ? new Date(matched.transactionDate).toLocaleDateString()
+                        ? tz.formatDate(matched.transactionDate)
                         : ""
                       const amtStr = formatCents(matched.amount || "0")
                       return (
@@ -733,7 +731,7 @@ export function InboxItemReviewPanel({
                           const isSelected = selectedTxId === t.id
                           const isIncome = t.type === "INCOME"
                           const formattedDate = t.transactionDate
-                            ? new Date(t.transactionDate).toLocaleDateString()
+                            ? tz.formatDate(t.transactionDate)
                             : ""
                           const budgetName = budgets.find(
                             (b) => b.id === t.budgetId
@@ -1181,9 +1179,9 @@ export function InboxItemReviewPanel({
                                     </span>
                                     <span className="shrink-0 text-[10px] text-muted-foreground">
                                       (Due{" "}
-                                      {new Date(
+                                      {tz.formatDate(
                                         selectedPaymentObj.dueDate
-                                      ).toLocaleDateString()}
+                                      )}
                                       )
                                     </span>
                                   </div>
@@ -1254,9 +1252,7 @@ export function InboxItemReviewPanel({
                                         p.dueDate &&
                                         new Date(p.dueDate).getTime() < nowTime
                                       const formattedDate = p.dueDate
-                                        ? new Date(
-                                            p.dueDate
-                                          ).toLocaleDateString(undefined, {
+                                        ? tz.formatDate(p.dueDate, {
                                             month: "short",
                                             day: "numeric",
                                           })

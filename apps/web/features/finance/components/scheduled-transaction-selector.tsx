@@ -18,6 +18,7 @@ import {
   useListRecurringTransactionsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { getScheduledDisplayName } from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import { formatCents } from "../utils"
 
 interface ScheduledTransactionSelectorProps {
@@ -41,6 +42,7 @@ export function ScheduledTransactionSelector({
   onBack,
 }: ScheduledTransactionSelectorProps) {
   const navigate = useNavigate()
+  const tz = useTimezone()
   const [searchText, setSearchText] = useState("")
 
   // Fetch pending scheduled transactions
@@ -153,7 +155,7 @@ export function ScheduledTransactionSelector({
                 budgets.find((b) => b.id === st.budgetId)?.name || ""
               const isExpense = st.type === "EXPENSE"
               const dateStr = st.dueDate
-                ? new Date(st.dueDate).toLocaleDateString(undefined, {
+                ? tz.formatDate(st.dueDate, {
                     month: "short",
                     day: "numeric",
                   })

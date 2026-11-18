@@ -1,10 +1,16 @@
 import { useState, useMemo, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   useSpacePermissions,
   resolveSpacePath,
 } from "@/features/space/use-space"
-import { useDebounce, useTimezone } from "@saturn/hooks"
+import {
+  useDebounce,
+  useTimezone,
+  invalidateFinanceQueries,
+} from "@saturn/hooks"
+import { toast } from "@/components/ui/toast"
 import {
   type Account,
   type Account_Type,
@@ -62,6 +68,7 @@ const ACCOUNTS_FILTER_DEFAULTS = {
 
 export function AccountsView() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { spaceId, isWritable } = useSpacePermissions()
   const tz = useTimezone()
   const [urlState, setUrlState] = useUrlState(ACCOUNTS_FILTER_DEFAULTS)
@@ -135,6 +142,8 @@ export function AccountsView() {
         id: acc.id,
         req: {
           id: acc.id,
+          version: acc.version,
+          updateMask: { paths: ["is_default"] },
           account: {
             ...acc,
             isDefault: true,
@@ -142,8 +151,16 @@ export function AccountsView() {
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
+          await invalidateFinanceQueries(queryClient)
           refetchAccounts()
+        },
+        onError: (err) => {
+          toast.add({
+            title: "Failed to set default account",
+            description: err.message,
+            type: "error",
+          })
         },
       }
     )

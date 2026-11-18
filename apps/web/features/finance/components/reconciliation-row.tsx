@@ -42,6 +42,7 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import { formatAmount, formatCents, toCents } from "../utils"
+import { useTimezone } from "@saturn/hooks"
 import { cn } from "@/lib/utils"
 import { AccountSelect } from "./account-select"
 import { BudgetSelect } from "./budget-select"
@@ -89,6 +90,7 @@ export function ReconciliationRow({
   isSuspectDiscrepancy = false,
   isReadOnly = false,
 }: ReconciliationRowProps) {
+  const tz = useTimezone()
   const lineAmount = Number(line.amount || 0)
   const isExpense = lineAmount < 0
   const hasExactMatches =
@@ -168,10 +170,10 @@ export function ReconciliationRow({
     return eligibleScheduledTxns.filter((s) => {
       const name = getScheduledName(s).toLowerCase()
       const amt = formatCents(s.amount).toFixed(2)
-      const date = s.dueDate ? new Date(s.dueDate).toLocaleDateString() : ""
+      const date = s.dueDate ? tz.formatDate(s.dueDate) : ""
       return name.includes(q) || amt.includes(q) || date.includes(q)
     })
-  }, [eligibleScheduledTxns, scheduledSearch, getScheduledName])
+  }, [eligibleScheduledTxns, scheduledSearch, getScheduledName, tz])
 
   const selectedScheduledObj = useMemo(() => {
     return scheduledTxns.find((s) => s.id === scheduledId) || null
@@ -224,12 +226,10 @@ export function ReconciliationRow({
     return accountTransactions.filter((t) => {
       const desc = (t.description || "").toLowerCase()
       const amt = formatCents(t.amount).toFixed(2)
-      const date = t.transactionDate
-        ? new Date(t.transactionDate).toLocaleDateString()
-        : ""
+      const date = t.transactionDate ? tz.formatDate(t.transactionDate) : ""
       return desc.includes(q) || amt.includes(q) || date.includes(q)
     })
-  }, [accountTransactions, searchMatchQuery])
+  }, [accountTransactions, searchMatchQuery, tz])
 
   const selectedMatchObj = useMemo(() => {
     if (!selectedMatchId) return null
@@ -272,7 +272,7 @@ export function ReconciliationRow({
         subtitle: isOverwritten
           ? `Overwrites ledger amount to ${formatAmount(Math.abs(lineAmount), targetAccount?.currency)} and adjusts balance delta`
           : matchedTxn
-            ? `${new Date(matchedTxn.effectiveDate || matchedTxn.transactionDate || "").toLocaleDateString()} • ${formatAmount(matchedTxn.amount, targetAccount?.currency)}`
+            ? `${tz.formatDate(matchedTxn.effectiveDate || matchedTxn.transactionDate || "")} • ${formatAmount(matchedTxn.amount, targetAccount?.currency)}`
             : matchTxnId
               ? `Linked Transaction ID: ${matchTxnId}`
               : "Linked with existing ledger entry",
@@ -338,7 +338,7 @@ export function ReconciliationRow({
         iconBg: "bg-indigo-500/10 text-indigo-500",
         title: `Scheduled: ${scheduledName}`,
         subtitle: scheduled?.dueDate
-          ? `Due ${new Date(scheduled.dueDate).toLocaleDateString()}${budget ? ` • ${budget.name}` : ""} (Marks as Paid)`
+          ? `Due ${tz.formatDate(scheduled.dueDate)}${budget ? ` • ${budget.name}` : ""} (Marks as Paid)`
           : "Marks scheduled payment as Paid",
       }
     }
@@ -397,6 +397,7 @@ export function ReconciliationRow({
     lineAmount,
     isReadOnly,
     getScheduledName,
+    tz,
   ])
 
   const handleSaveDescription = () => {
@@ -761,9 +762,7 @@ export function ReconciliationRow({
                             <span className="shrink-0 text-[10px] text-muted-foreground">
                               (Due{" "}
                               {selectedScheduledObj.dueDate
-                                ? new Date(
-                                    selectedScheduledObj.dueDate
-                                  ).toLocaleDateString()
+                                ? tz.formatDate(selectedScheduledObj.dueDate)
                                 : "N/A"}
                               )
                             </span>
@@ -807,13 +806,10 @@ export function ReconciliationRow({
                                 s.dueDate &&
                                 new Date(s.dueDate).getTime() < currentTime
                               const formattedDueDate = s.dueDate
-                                ? new Date(s.dueDate).toLocaleDateString(
-                                    undefined,
-                                    {
-                                      month: "short",
-                                      day: "numeric",
-                                    }
-                                  )
+                                ? tz.formatDate(s.dueDate, {
+                                    month: "short",
+                                    day: "numeric",
+                                  })
                                 : "N/A"
                               const title = getScheduledName(s)
                               const budget = budgets.find(
@@ -1082,7 +1078,7 @@ export function ReconciliationRow({
                           {m.description}
                         </p>
                         <p className="text-[10px] text-muted-foreground">
-                          {new Date(m.effectiveDate).toLocaleDateString()}
+                          {tz.formatDate(m.effectiveDate)}
                         </p>
                       </div>
                       <span className="shrink-0 font-mono font-bold">
@@ -1284,9 +1280,7 @@ export function ReconciliationRow({
                             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                               <span>
                                 {m.transactionDate
-                                  ? new Date(
-                                      m.transactionDate
-                                    ).toLocaleDateString()
+                                  ? tz.formatDate(m.transactionDate)
                                   : "No Date"}
                               </span>
                               {budget && (
@@ -1430,10 +1424,7 @@ export function ReconciliationRow({
                           {firstMatch.description}
                         </p>
                         <p className="text-[10px] text-muted-foreground">
-                          Recorded on{" "}
-                          {new Date(
-                            firstMatch.effectiveDate
-                          ).toLocaleDateString()}
+                          Recorded on {tz.formatDate(firstMatch.effectiveDate)}
                         </p>
                       </div>
                       <span className="shrink-0 font-mono text-xs font-black text-foreground">

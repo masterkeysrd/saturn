@@ -23,6 +23,7 @@ import { AmountInput } from "@/components/ui/amount-input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { DatePicker } from "@/components/ui/date-picker"
+import { toast } from "@/components/ui/toast"
 import { toCentsString, formatCents } from "../utils"
 
 interface CreateExpenseFormProps {
@@ -63,7 +64,12 @@ export function CreateExpenseForm({
       onOpenChange(false)
     },
     onError: (err: unknown) => {
-      alert(err instanceof Error ? err.message : "Failed to record expense.")
+      toast.add({
+        title: "Failed to record expense",
+        description:
+          err instanceof Error ? err.message : "Failed to record expense.",
+        type: "error",
+      })
     },
   })
 
@@ -73,7 +79,12 @@ export function CreateExpenseForm({
       onOpenChange(false)
     },
     onError: (err: unknown) => {
-      alert(err instanceof Error ? err.message : "Failed to update expense.")
+      toast.add({
+        title: "Failed to update expense",
+        description:
+          err instanceof Error ? err.message : "Failed to update expense.",
+        type: "error",
+      })
     },
   })
 
