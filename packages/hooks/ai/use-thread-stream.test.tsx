@@ -455,4 +455,102 @@ describe("@saturn/hooks useThreadStream", () => {
     expect(result.current.streamPhase).toBe("idle")
     expect(result.current.error?.message).toBe("Provider unavailable")
   })
+
+  it("ignores FetchError when signal is aborted on stop() and aborts active stream on unmount", async () => {
+    const onError = vi.fn()
+    let capturedSignal: AbortSignal | undefined
+
+    vi.mocked(streamMod.streamSSE).mockImplementation(
+      ({ signal }) =>
+        new Promise((_, reject) => {
+          capturedSignal = signal
+          signal?.addEventListener("abort", () => {
+            // Expo SDK 58 FetchError has name === "Error" instead of "AbortError"
+            const fetchErr = new Error("Aborted by fetch")
+            fetchErr.name = "Error"
+            reject(fetchErr)
+          })
+        })
+    )
+
+    const { result, unmount } = renderHook(
+      () => useThreadStream({ threadId: "thr_1", onError }),
+      { wrapper: createWrapper() }
+    )
+
+    let pendingSend: Promise<void> | undefined
+    act(() => {
+      pendingSend = result.current.sendMessage({ content: "Hello" })
+    })
+
+    await waitFor(() => expect(result.current.isStreaming).toBe(true))
+
+    await act(async () => {
+      await result.current.stop()
+      await pendingSend
+    })
+
+    expect(result.current.error).toBeNull()
+    expect(onError).not.toHaveBeenCalled()
+
+    // Start another stream and unmount before it completes
+    act(() => {
+      void result.current.sendMessage({ content: "Again" })
+    })
+    await waitFor(() => expect(result.current.isStreaming).toBe(true))
+    expect(capturedSignal?.aborted).toBe(false)
+    unmount()
+    expect(capturedSignal?.aborted).toBe(true)
+  })
+
+  it("restores pendingApprovals if resolveApprovals stream fails", async () => {
+    vi.mocked(streamMod.streamSSE)
+      .mockImplementationOnce(async ({ onEvent }) => {
+        onEvent({ type: "run.started", threadId: "thr_1", runId: "air_1" })
+        onEvent({
+          type: "tool.approval.required",
+          threadId: "thr_1",
+          runId: "air_1",
+          approvals: [
+            {
+              toolCallId: "tc_1",
+              mcpServerId: "mcp_saturn",
+              mcpServerName: "Saturn Workspace",
+              toolName: "calendar_create_event",
+              destructiveHint: false,
+            },
+            {
+              toolCallId: "tc_2",
+              mcpServerId: "mcp_saturn",
+              mcpServerName: "Saturn Workspace",
+              toolName: "mail_send_message",
+              destructiveHint: true,
+            },
+          ],
+        })
+      })
+      .mockRejectedValueOnce(new Error("Network timeout"))
+
+    const { result } = renderHook(
+      () => useThreadStream({ threadId: "thr_1" }),
+      { wrapper: createWrapper() }
+    )
+
+    await act(async () => {
+      await result.current.sendMessage({ content: "Schedule and email" })
+    })
+
+    expect(result.current.pendingApprovals).toHaveLength(2)
+
+    await act(async () => {
+      await result.current.resolveApprovals([
+        { toolCallId: "tc_1", approved: true },
+        { toolCallId: "tc_2", approved: true },
+      ])
+    })
+
+    expect(result.current.error?.message).toBe("Network timeout")
+    expect(result.current.status).toBe("awaiting_approval")
+    expect(result.current.pendingApprovals).toHaveLength(2)
+  })
 })

@@ -165,11 +165,10 @@ export function useUpdateConnectedAccount(
     },
     ...restOptions,
     onSuccess: async (...args) => {
-      const [data, variables] = args
-      const spaceId = variables.spaceId || defaultSpaceId || data.spaceId
+      const [, variables] = args
 
       await queryClient.invalidateQueries({
-        queryKey: connectorKeys.all(spaceId),
+        queryKey: ["connector"],
       })
 
       const paths =
@@ -182,10 +181,10 @@ export function useUpdateConnectedAccount(
       if (hasCapChanges) {
         await Promise.all([
           queryClient.invalidateQueries({
-            queryKey: ["calendar", spaceId],
+            queryKey: ["calendar"],
           }),
           queryClient.invalidateQueries({
-            queryKey: ["mail", spaceId],
+            queryKey: ["mail"],
           }),
         ])
       }
@@ -226,18 +225,15 @@ export function useDeleteConnectedAccount(
     },
     ...restOptions,
     onSuccess: async (...args) => {
-      const [, variables] = args
-      const spaceId = variables.spaceId || defaultSpaceId
-
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: connectorKeys.all(spaceId),
+          queryKey: ["connector"],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["calendar", spaceId],
+          queryKey: ["calendar"],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["mail", spaceId],
+          queryKey: ["mail"],
         }),
       ])
 
@@ -277,19 +273,15 @@ export function useSyncConnectedAccount(
     },
     ...restOptions,
     onSuccess: async (...args) => {
-      const [data, variables] = args
-      const spaceId =
-        variables.spaceId || defaultSpaceId || data.account?.spaceId
-
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: connectorKeys.all(spaceId),
+          queryKey: ["connector"],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["calendar", spaceId],
+          queryKey: ["calendar"],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["mail", spaceId],
+          queryKey: ["mail"],
         }),
       ])
 

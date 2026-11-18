@@ -124,7 +124,7 @@ export function useTimezone(overrideTimezone?: string | null): TimezoneObject {
         })
       },
       formatRelative(date) {
-        const d = parseDate(date)
+        const d = parseDate(date, tz)
         if (!d) return ""
         const now = new Date()
         if (isSameDayInTimezone(d, now, tz)) {

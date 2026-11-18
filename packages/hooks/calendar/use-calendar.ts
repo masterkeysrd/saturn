@@ -5,6 +5,7 @@ import {
   type UseMutationOptions,
   useQueryClient,
 } from "@tanstack/react-query"
+import { findSelfAttendee } from "@saturn/core"
 import {
   listCalendars,
   getCalendar,
@@ -113,6 +114,7 @@ export interface UseCalendarEventsOptions extends Omit<
   "queryKey" | "queryFn"
 > {
   query?: string
+  hasLoadedCalendars?: boolean
 }
 
 export function useCalendarEvents(
@@ -121,7 +123,15 @@ export function useCalendarEvents(
   calendarIds?: string[],
   options?: UseCalendarEventsOptions
 ) {
-  const query = options?.query ?? ""
+  const {
+    query = "",
+    hasLoadedCalendars = false,
+    enabled: optionEnabled,
+    refetchInterval: optionRefetchInterval,
+    ...restOptions
+  } = options || {}
+  const emptyCalendarsFilter =
+    hasLoadedCalendars && calendarIds !== undefined && calendarIds.length === 0
   return useQuery<ListEventsResponse, Error>({
     queryKey: calendarKeys.events(rangeStart, rangeEnd, calendarIds, query),
     queryFn: () =>
@@ -132,12 +142,9 @@ export function useCalendarEvents(
           calendarIds && calendarIds.length > 0 ? calendarIds : undefined,
         query,
       }),
-    enabled:
-      Boolean(rangeStart && rangeEnd) &&
-      (options?.enabled !== undefined ? options.enabled : true),
     refetchInterval:
-      options?.refetchInterval !== undefined
-        ? options.refetchInterval
+      optionRefetchInterval !== undefined
+        ? optionRefetchInterval
         : typeof globalThis !== "undefined" &&
             (
               globalThis as unknown as {
@@ -147,7 +154,11 @@ export function useCalendarEvents(
           ? false
           : 60_000,
     refetchOnWindowFocus: true,
-    ...options,
+    ...restOptions,
+    enabled:
+      Boolean(rangeStart && rangeEnd) &&
+      !emptyCalendarsFilter &&
+      (optionEnabled !== undefined ? optionEnabled : true),
   })
 }
 
@@ -439,6 +450,7 @@ export function useDeleteEvent(
 export interface RespondToEventVariables {
   id: string
   response: AttendeeResponseStatus
+  selfEmails?: string[]
 }
 
 export function useRespondToEvent(
@@ -470,7 +482,7 @@ export function useRespondToEvent(
         id,
         response,
       }),
-    onMutate: async ({ id, response }) => {
+    onMutate: async ({ id, response, selfEmails }) => {
       await queryClient.cancelQueries({ queryKey: calendarKeys.allEvents() })
       const matchingQueries = queryClient.getQueriesData<ListEventsResponse>({
         queryKey: calendarKeys.allEvents(),
@@ -485,8 +497,28 @@ export function useRespondToEvent(
           ...data,
           occurrences: data.occurrences.map((occ) => {
             if (occ.eventId === id || occ.masterId === id) {
+              let targetAttendee =
+                selfEmails && selfEmails.length > 0
+                  ? findSelfAttendee(occ.attendees, selfEmails)
+                  : undefined
+
+              if (!targetAttendee && (!selfEmails || selfEmails.length === 0)) {
+                const nonOrganizers = occ.attendees.filter(
+                  (a) => !a.isOrganizer
+                )
+                if (nonOrganizers.length === 1) {
+                  targetAttendee = nonOrganizers[0]
+                }
+              }
+
+              if (!targetAttendee) {
+                return occ
+              }
+
+              const targetEmail = targetAttendee.email?.trim().toLowerCase()
               const attendees = occ.attendees.map((att) =>
-                att.isOrganizer || att.email
+                att === targetAttendee ||
+                (targetEmail && att.email?.trim().toLowerCase() === targetEmail)
                   ? { ...att, responseStatus: response }
                   : att
               )

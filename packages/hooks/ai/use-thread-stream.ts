@@ -176,6 +176,17 @@ export function useThreadStream(options: UseThreadStreamOptions = {}) {
   const [pendingApprovals, setPendingApprovals] = useState<
     PendingToolApproval[]
   >([])
+  const pendingApprovalsRef = useRef<PendingToolApproval[]>([])
+  useEffect(() => {
+    pendingApprovalsRef.current = pendingApprovals
+  }, [pendingApprovals])
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+      abortRef.current = null
+    }
+  }, [])
   const [optimisticMessages, setOptimisticMessages] = useState<ThreadMessage[]>(
     []
   )
@@ -442,14 +453,18 @@ export function useThreadStream(options: UseThreadStreamOptions = {}) {
           signal: controller.signal,
           onEvent: (ev) => handleStreamEvent(ev, targetThreadId),
         })
+        return true
       } catch (err) {
         runningToolIdsRef.current.clear()
-        if (err instanceof Error && err.name === "AbortError") {
+        if (
+          controller.signal.aborted ||
+          (err instanceof Error && err.name === "AbortError")
+        ) {
           setIsStreaming(false)
           setStatus("idle")
           setStreamPhase("idle")
           setStreamingMessage(null)
-          return
+          return true
         }
         const errObj =
           err instanceof Error ? err : new Error("Failed to stream AI turn")
@@ -459,6 +474,7 @@ export function useThreadStream(options: UseThreadStreamOptions = {}) {
         setStreamingMessage(null)
         setError(errObj)
         onError?.(errObj)
+        return false
       } finally {
         if (abortRef.current === controller) {
           abortRef.current = null
@@ -590,12 +606,18 @@ export function useThreadStream(options: UseThreadStreamOptions = {}) {
       const targetId = activeThreadIdRef.current
       if (!targetId) return
 
+      const previousApprovals = pendingApprovalsRef.current
       setPendingApprovals([])
-      await runSSEStream(
+      const ok = await runSSEStream(
         targetId,
         `/api/v1/platform/ai/threads/${targetId}:resolveApprovals`,
         { decisions }
       )
+      if (!ok && previousApprovals.length > 0) {
+        setPendingApprovals(previousApprovals)
+        setStatus("awaiting_approval")
+        setStreamPhase("awaiting_approval")
+      }
     },
     [runSSEStream]
   )

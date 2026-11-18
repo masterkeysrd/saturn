@@ -128,13 +128,13 @@ describe("connector hooks and cache invalidation", () => {
       })
 
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ["connector", "spc_abc"],
+        queryKey: ["connector"],
       })
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ["calendar", "spc_abc"],
+        queryKey: ["calendar"],
       })
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ["mail", "spc_abc"],
+        queryKey: ["mail"],
       })
     })
 
@@ -165,13 +165,13 @@ describe("connector hooks and cache invalidation", () => {
       })
 
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ["connector", "spc_abc"],
+        queryKey: ["connector"],
       })
       expect(invalidateSpy).not.toHaveBeenCalledWith({
-        queryKey: ["calendar", "spc_abc"],
+        queryKey: ["calendar"],
       })
       expect(invalidateSpy).not.toHaveBeenCalledWith({
-        queryKey: ["mail", "spc_abc"],
+        queryKey: ["mail"],
       })
     })
   })
@@ -194,13 +194,13 @@ describe("connector hooks and cache invalidation", () => {
       })
 
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ["connector", "spc_abc"],
+        queryKey: ["connector"],
       })
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ["calendar", "spc_abc"],
+        queryKey: ["calendar"],
       })
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ["mail", "spc_abc"],
+        queryKey: ["mail"],
       })
     })
   })
@@ -225,13 +225,13 @@ describe("connector hooks and cache invalidation", () => {
       })
 
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ["connector", "spc_abc"],
+        queryKey: ["connector"],
       })
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ["calendar", "spc_abc"],
+        queryKey: ["calendar"],
       })
       expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ["mail", "spc_abc"],
+        queryKey: ["mail"],
       })
     })
   })

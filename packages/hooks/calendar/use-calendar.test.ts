@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import {
   calendarKeys,
   useCalendars,
+  useCalendarEvents,
   useUpdateCalendar,
   useUpdateEvent,
   useRespondToEvent,
@@ -335,6 +336,122 @@ describe("useCalendar hooks and optimistic updates", () => {
       expect(rolledBack?.occurrences[0].attendees[0].responseStatus).toBe(
         "ATTENDEE_RESPONSE_STATUS_NEEDS_ACTION"
       )
+    })
+
+    it("scopes optimistic RSVP update to matching selfEmails without touching organizer or other attendees", async () => {
+      const rangeStart = "2026-10-20T00:00:00Z"
+      const rangeEnd = "2026-10-21T00:00:00Z"
+      const key = calendarKeys.events(rangeStart, rangeEnd, undefined, "")
+      queryClient.setQueryData<api.ListEventsResponse>(key, {
+        occurrences: [
+          {
+            eventId: "ev_multi",
+            calendarId: "cal_1",
+            masterId: "",
+            instanceId: "inst_multi",
+            title: "Team Sync",
+            description: "",
+            location: "",
+            isAllDay: false,
+            startTime: "2026-10-20T10:00:00Z",
+            endTime: "2026-10-20T11:00:00Z",
+            startDate: "",
+            endDate: "",
+            timezone: "UTC",
+            status: "EVENT_STATUS_CONFIRMED",
+            isException: false,
+            meetUrl: "",
+            color: "#3b82f6",
+            calendarName: "Work",
+            organizer: {
+              email: "boss@example.com",
+              displayName: "Boss",
+              isSelf: false,
+            },
+            attendees: [
+              {
+                email: "boss@example.com",
+                displayName: "Boss",
+                responseStatus: "ATTENDEE_RESPONSE_STATUS_ACCEPTED",
+                isOptional: false,
+                isOrganizer: true,
+              },
+              {
+                email: "other@example.com",
+                displayName: "Other",
+                responseStatus: "ATTENDEE_RESPONSE_STATUS_NEEDS_ACTION",
+                isOptional: false,
+                isOrganizer: false,
+              },
+              {
+                email: "me@example.com",
+                displayName: "Me",
+                responseStatus: "ATTENDEE_RESPONSE_STATUS_NEEDS_ACTION",
+                isOptional: false,
+                isOrganizer: false,
+              },
+            ],
+            reminders: [],
+            isVirtual: false,
+            sourceType: "",
+          },
+        ],
+      })
+
+      let resolvePromise!: (val: api.Event) => void
+      vi.mocked(api.respondToEvent).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolvePromise = resolve
+          })
+      )
+
+      const { result } = renderHook(() => useRespondToEvent(), {
+        wrapper: createWrapper(),
+      })
+
+      act(() => {
+        result.current.mutate({
+          id: "ev_multi",
+          response: "ATTENDEE_RESPONSE_STATUS_TENTATIVE",
+          selfEmails: ["ME@EXAMPLE.COM"],
+        })
+      })
+
+      await waitFor(() => {
+        const optimistic = queryClient.getQueryData<api.ListEventsResponse>(key)
+        expect(optimistic?.occurrences[0].attendees[0].responseStatus).toBe(
+          "ATTENDEE_RESPONSE_STATUS_ACCEPTED"
+        )
+        expect(optimistic?.occurrences[0].attendees[1].responseStatus).toBe(
+          "ATTENDEE_RESPONSE_STATUS_NEEDS_ACTION"
+        )
+        expect(optimistic?.occurrences[0].attendees[2].responseStatus).toBe(
+          "ATTENDEE_RESPONSE_STATUS_TENTATIVE"
+        )
+      })
+
+      await act(async () => {
+        resolvePromise({ id: "ev_multi" } as api.Event)
+      })
+    })
+  })
+
+  describe("useCalendarEvents empty filter", () => {
+    it("disables query when hasLoadedCalendars is true and calendarIds is empty", () => {
+      renderHook(
+        () =>
+          useCalendarEvents(
+            "2026-10-01T00:00:00Z",
+            "2026-10-31T00:00:00Z",
+            [],
+            {
+              hasLoadedCalendars: true,
+            }
+          ),
+        { wrapper: createWrapper() }
+      )
+      expect(api.listEvents).not.toHaveBeenCalled()
     })
   })
 })
