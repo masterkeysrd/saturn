@@ -27,13 +27,16 @@ const (
 // @Mock
 type WorkflowAggregator interface {
 	ListFlows(ctx context.Context, filter workflow.ListFlowsFilter) ([]*workflow.Flow, error)
+	ListFlowRuns(ctx context.Context, filter workflow.ListFlowRunsFilter) (*workflowaggregator.FlowRunListResult, error)
 	GetFlowRun(ctx context.Context, id string) (*workflowaggregator.FlowRunView, error)
 }
 
-// WorkflowCoordinator defines workflow execution commands.
+// WorkflowCoordinator defines workflow execution and lifecycle commands.
 // @Mock
 type WorkflowCoordinator interface {
 	ExecuteFlow(ctx context.Context, req *workflowapp.ExecuteFlowRequest) (*workflow.FlowRun, error)
+	EnableFlow(ctx context.Context, idOrSystemKey string) (*workflow.Flow, error)
+	DisableFlow(ctx context.Context, idOrSystemKey string) (*workflow.Flow, error)
 }
 
 // SpaceSettingsReader retrieves the workspace IANA timezone.
@@ -94,6 +97,25 @@ func (h *Handler) Register(reg *mcptransport.Registry) {
 		ReadOnly:      false,
 		Destructive:   false,
 	}, h.executeFlow)
+
+	reg.RegisterTool(mcptransport.ToolSpec{
+		Name:          "workflows_list_flow_runs",
+		Domain:        "workflows",
+		Title:         "List Workflow Runs",
+		Description:   "Lists workflow execution runs in the workspace with optional flow_id, status, and pagination filters.",
+		RequiredScope: identity.ScopeWorkflowsRead,
+		ReadOnly:      true,
+	}, h.listFlowRuns)
+
+	reg.RegisterTool(mcptransport.ToolSpec{
+		Name:          "workflows_set_flow_enabled",
+		Domain:        "workflows",
+		Title:         "Enable or Disable Workflow",
+		Description:   "Enables or disables a saved workflow (or built-in system workflow) and syncs its schedule triggers.",
+		RequiredScope: identity.ScopeWorkflowsWrite,
+		ReadOnly:      false,
+		Destructive:   false,
+	}, h.setFlowEnabled)
 }
 
 // ListFlowsInput defines parameters for workflows_list_flows.
@@ -286,4 +308,159 @@ func (h *Handler) executeFlow(ctx context.Context, in ExecuteFlowInput) (Execute
 		out.Error = run.Error.Message
 	}
 	return out, nil
+}
+
+// ListFlowRunsInput defines parameters for workflows_list_flow_runs.
+type ListFlowRunsInput struct {
+	FlowID    string `json:"flow_id,omitempty" jsonschema:"Optional workflow ID (flw_...) to filter runs"`
+	Status    string `json:"status,omitempty" jsonschema:"Optional run status ('pending', 'running', 'waiting', 'completed', 'filtered', 'stopped', 'failed', 'cancelled')"`
+	Limit     int    `json:"limit,omitempty" jsonschema:"Maximum runs to return (1-100, default 20)"`
+	PageToken string `json:"page_token,omitempty" jsonschema:"Pagination cursor from previous response"`
+}
+
+// FlowRunSummary summarizes a workflow execution run.
+type FlowRunSummary struct {
+	ID           string `json:"id"`
+	FlowID       string `json:"flow_id"`
+	FlowName     string `json:"flow_name,omitempty"`
+	Status       string `json:"status"`
+	DurationMs   *int64 `json:"duration_ms,omitempty"`
+	TokensUsed   int    `json:"tokens_used,omitempty"`
+	ErrorMessage string `json:"error_message,omitempty"`
+	CreateTime   string `json:"create_time"`
+}
+
+// ListFlowRunsOutput is returned by workflows_list_flow_runs.
+type ListFlowRunsOutput struct {
+	Runs          []FlowRunSummary `json:"runs"`
+	NextPageToken string           `json:"next_page_token,omitempty"`
+}
+
+func (h *Handler) listFlowRuns(ctx context.Context, in ListFlowRunsInput) (ListFlowRunsOutput, error) {
+	spaceID, err := mcptransport.RequireSpaceID(ctx)
+	if err != nil {
+		return ListFlowRunsOutput{}, err
+	}
+
+	filter := workflow.ListFlowRunsFilter{
+		PageSize:  mcptransport.ClampLimit(in.Limit, defaultFlowsLimit, maxFlowsLimit),
+		PageToken: in.PageToken,
+	}
+	if fid := strings.TrimSpace(in.FlowID); fid != "" {
+		filter.FlowID = new(fid)
+	}
+	if st := strings.ToLower(strings.TrimSpace(in.Status)); st != "" {
+		runStatus := workflow.FlowRunStatus(st)
+		switch runStatus {
+		case workflow.RunPending,
+			workflow.RunRunning,
+			workflow.RunWaiting,
+			workflow.RunCompleted,
+			workflow.RunFiltered,
+			workflow.RunStopped,
+			workflow.RunFailed,
+			workflow.RunCancelled:
+			filter.Status = new(runStatus)
+		default:
+			return ListFlowRunsOutput{}, errors.E(errors.Invalid, "invalid status: "+in.Status)
+		}
+	}
+
+	res, err := h.agg.ListFlowRuns(ctx, filter)
+	if err != nil {
+		return ListFlowRunsOutput{}, err
+	}
+
+	loc := mcptransport.ResolveLocation(ctx, h.spaceSettings.GetSettings, spaceID)
+	items := make([]FlowRunSummary, 0, len(res.Runs))
+	for _, r := range res.Runs {
+		item := FlowRunSummary{
+			ID:         r.ID,
+			FlowID:     r.FlowID,
+			Status:     string(r.Status),
+			TokensUsed: extractTokensUsed(r),
+			CreateTime: r.CreateTime.In(loc).Format(time.RFC3339),
+		}
+		if r.FlowName != nil {
+			item.FlowName = *r.FlowName
+		}
+		if r.StartTime != nil && r.EndTime != nil {
+			item.DurationMs = new(r.EndTime.Sub(*r.StartTime).Milliseconds())
+		}
+		if r.Error != nil {
+			item.ErrorMessage = r.Error.Message
+		}
+		items = append(items, item)
+	}
+
+	return ListFlowRunsOutput{
+		Runs:          items,
+		NextPageToken: res.NextPageToken,
+	}, nil
+}
+
+// SetFlowEnabledInput defines parameters for workflows_set_flow_enabled.
+type SetFlowEnabledInput struct {
+	ID      string `json:"id" jsonschema:"Flow ID (flw_...) or system key (system.*)"`
+	Enabled bool   `json:"enabled" jsonschema:"True to enable the workflow, false to disable it"`
+}
+
+func (h *Handler) setFlowEnabled(ctx context.Context, in SetFlowEnabledInput) (FlowSummary, error) {
+	if _, err := mcptransport.RequireSpaceID(ctx); err != nil {
+		return FlowSummary{}, err
+	}
+	id := strings.TrimSpace(in.ID)
+	if id == "" {
+		return FlowSummary{}, errors.E(errors.Invalid, "flow id is required")
+	}
+
+	var (
+		f   *workflow.Flow
+		err error
+	)
+	if in.Enabled {
+		f, err = h.coord.EnableFlow(ctx, id)
+	} else {
+		f, err = h.coord.DisableFlow(ctx, id)
+	}
+	if err != nil {
+		return FlowSummary{}, err
+	}
+
+	out := FlowSummary{
+		ID:           f.ID,
+		IsSystem:     f.IsSystem,
+		IsEnabled:    f.IsEnabled,
+		Name:         f.Name,
+		Description:  f.Description,
+		StepCount:    len(f.Steps),
+		TriggerCount: len(f.Triggers),
+	}
+	if f.SystemKey != nil {
+		out.SystemKey = *f.SystemKey
+	}
+	if f.Stats != nil {
+		out.TotalRuns7d = f.Stats.TotalRuns7d
+	}
+	return out, nil
+}
+
+func extractTokensUsed(view *workflowaggregator.FlowRunView) int {
+	if view.Metadata != nil {
+		switch v := view.Metadata["tokens_used"].(type) {
+		case int:
+			return v
+		case int64:
+			return int(v)
+		case float64:
+			return int(v)
+		}
+	}
+	var total int
+	for _, ar := range view.AIRuns {
+		if ar != nil {
+			total += int(ar.Metrics.Tokens.Total)
+		}
+	}
+	return total
 }

@@ -22,6 +22,9 @@ type WorkflowAggregatorMock struct {
 	// ListFlowsFunc mocks the ListFlows method.
 	ListFlowsFunc func(ctx context.Context, filter workflow.ListFlowsFilter) ([]*workflow.Flow, error)
 
+	// ListFlowRunsFunc mocks the ListFlowRuns method.
+	ListFlowRunsFunc func(ctx context.Context, filter workflow.ListFlowRunsFilter) (*workflowaggregator.FlowRunListResult, error)
+
 	// GetFlowRunFunc mocks the GetFlowRun method.
 	GetFlowRunFunc func(ctx context.Context, id string) (*workflowaggregator.FlowRunView, error)
 
@@ -31,13 +34,18 @@ type WorkflowAggregatorMock struct {
 			Ctx    context.Context
 			Filter workflow.ListFlowsFilter
 		}
+		ListFlowRuns []struct {
+			Ctx    context.Context
+			Filter workflow.ListFlowRunsFilter
+		}
 		GetFlowRun []struct {
 			Ctx context.Context
 			Id  string
 		}
 	}
-	lockListFlows  sync.RWMutex
-	lockGetFlowRun sync.RWMutex
+	lockListFlows    sync.RWMutex
+	lockListFlowRuns sync.RWMutex
+	lockGetFlowRun   sync.RWMutex
 }
 
 // ListFlows calls ListFlowsFunc.
@@ -65,6 +73,33 @@ func (mock *WorkflowAggregatorMock) ListFlowsCalls() []struct {
 	mock.lockListFlows.RLock()
 	defer mock.lockListFlows.RUnlock()
 	return mock.calls.ListFlows
+}
+
+// ListFlowRuns calls ListFlowRunsFunc.
+func (mock *WorkflowAggregatorMock) ListFlowRuns(ctx context.Context, filter workflow.ListFlowRunsFilter) (*workflowaggregator.FlowRunListResult, error) {
+	if mock.ListFlowRunsFunc == nil {
+		panic("WorkflowAggregatorMock.ListFlowRunsFunc: method is nil but WorkflowAggregator.ListFlowRuns was just called")
+	}
+	mock.lockListFlowRuns.Lock()
+	mock.calls.ListFlowRuns = append(mock.calls.ListFlowRuns, struct {
+		Ctx    context.Context
+		Filter workflow.ListFlowRunsFilter
+	}{
+		Ctx:    ctx,
+		Filter: filter,
+	})
+	mock.lockListFlowRuns.Unlock()
+	return mock.ListFlowRunsFunc(ctx, filter)
+}
+
+// ListFlowRunsCalls returns all calls made to ListFlowRuns.
+func (mock *WorkflowAggregatorMock) ListFlowRunsCalls() []struct {
+	Ctx    context.Context
+	Filter workflow.ListFlowRunsFilter
+} {
+	mock.lockListFlowRuns.RLock()
+	defer mock.lockListFlowRuns.RUnlock()
+	return mock.calls.ListFlowRuns
 }
 
 // GetFlowRun calls GetFlowRunFunc.
@@ -102,14 +137,30 @@ type WorkflowCoordinatorMock struct {
 	// ExecuteFlowFunc mocks the ExecuteFlow method.
 	ExecuteFlowFunc func(ctx context.Context, req *workflowapp.ExecuteFlowRequest) (*workflow.FlowRun, error)
 
+	// EnableFlowFunc mocks the EnableFlow method.
+	EnableFlowFunc func(ctx context.Context, idOrSystemKey string) (*workflow.Flow, error)
+
+	// DisableFlowFunc mocks the DisableFlow method.
+	DisableFlowFunc func(ctx context.Context, idOrSystemKey string) (*workflow.Flow, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		ExecuteFlow []struct {
 			Ctx context.Context
 			Req *workflowapp.ExecuteFlowRequest
 		}
+		EnableFlow []struct {
+			Ctx           context.Context
+			IdOrSystemKey string
+		}
+		DisableFlow []struct {
+			Ctx           context.Context
+			IdOrSystemKey string
+		}
 	}
 	lockExecuteFlow sync.RWMutex
+	lockEnableFlow  sync.RWMutex
+	lockDisableFlow sync.RWMutex
 }
 
 // ExecuteFlow calls ExecuteFlowFunc.
@@ -137,6 +188,60 @@ func (mock *WorkflowCoordinatorMock) ExecuteFlowCalls() []struct {
 	mock.lockExecuteFlow.RLock()
 	defer mock.lockExecuteFlow.RUnlock()
 	return mock.calls.ExecuteFlow
+}
+
+// EnableFlow calls EnableFlowFunc.
+func (mock *WorkflowCoordinatorMock) EnableFlow(ctx context.Context, idOrSystemKey string) (*workflow.Flow, error) {
+	if mock.EnableFlowFunc == nil {
+		panic("WorkflowCoordinatorMock.EnableFlowFunc: method is nil but WorkflowCoordinator.EnableFlow was just called")
+	}
+	mock.lockEnableFlow.Lock()
+	mock.calls.EnableFlow = append(mock.calls.EnableFlow, struct {
+		Ctx           context.Context
+		IdOrSystemKey string
+	}{
+		Ctx:           ctx,
+		IdOrSystemKey: idOrSystemKey,
+	})
+	mock.lockEnableFlow.Unlock()
+	return mock.EnableFlowFunc(ctx, idOrSystemKey)
+}
+
+// EnableFlowCalls returns all calls made to EnableFlow.
+func (mock *WorkflowCoordinatorMock) EnableFlowCalls() []struct {
+	Ctx           context.Context
+	IdOrSystemKey string
+} {
+	mock.lockEnableFlow.RLock()
+	defer mock.lockEnableFlow.RUnlock()
+	return mock.calls.EnableFlow
+}
+
+// DisableFlow calls DisableFlowFunc.
+func (mock *WorkflowCoordinatorMock) DisableFlow(ctx context.Context, idOrSystemKey string) (*workflow.Flow, error) {
+	if mock.DisableFlowFunc == nil {
+		panic("WorkflowCoordinatorMock.DisableFlowFunc: method is nil but WorkflowCoordinator.DisableFlow was just called")
+	}
+	mock.lockDisableFlow.Lock()
+	mock.calls.DisableFlow = append(mock.calls.DisableFlow, struct {
+		Ctx           context.Context
+		IdOrSystemKey string
+	}{
+		Ctx:           ctx,
+		IdOrSystemKey: idOrSystemKey,
+	})
+	mock.lockDisableFlow.Unlock()
+	return mock.DisableFlowFunc(ctx, idOrSystemKey)
+}
+
+// DisableFlowCalls returns all calls made to DisableFlow.
+func (mock *WorkflowCoordinatorMock) DisableFlowCalls() []struct {
+	Ctx           context.Context
+	IdOrSystemKey string
+} {
+	mock.lockDisableFlow.RLock()
+	defer mock.lockDisableFlow.RUnlock()
+	return mock.calls.DisableFlow
 }
 
 // Compile-time interface assertion.

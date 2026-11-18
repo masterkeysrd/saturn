@@ -158,6 +158,155 @@ func TestWorkflowHandler(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "list flow runs returns duration, tokens, and localized timestamps",
+			ctx: auth.WithSpaceScope(
+				auth.WithPrincipal(context.Background(), auth.Principal{
+					Subject:  "usr_1",
+					APIKeyID: "apk_1",
+					Scopes:   []string{string(identity.ScopeWorkflowsRead)},
+				}),
+				"spc_1",
+				string(space.RoleViewer),
+			),
+			toolName: "workflows_list_flow_runs",
+			args: map[string]any{
+				"flow_id": "flw_1",
+				"status":  "completed",
+				"limit":   10,
+			},
+			setupMocks: func(agg *WorkflowAggregatorMock, _ *WorkflowCoordinatorMock, ss *SpaceSettingsReaderMock) {
+				ss.GetSettingsFunc = func(_ context.Context, _ *spaceapp.GetSettingsRequest) (*settings.Entry[space.Settings], error) {
+					return &settings.Entry[space.Settings]{Value: space.Settings{Timezone: "America/New_York"}}, nil
+				}
+				agg.ListFlowRunsFunc = func(_ context.Context, filter workflow.ListFlowRunsFilter) (*workflowaggregator.FlowRunListResult, error) {
+					if filter.FlowID == nil || *filter.FlowID != "flw_1" || filter.Status == nil || *filter.Status != workflow.RunCompleted || filter.PageSize != 10 {
+						t.Errorf("unexpected list flow runs filter: %+v", filter)
+					}
+					start := time.Date(2026, 4, 15, 14, 0, 0, 0, time.UTC)
+					end := start.Add(1500 * time.Millisecond)
+					return &workflowaggregator.FlowRunListResult{
+						Runs: []*workflowaggregator.FlowRunView{
+							{
+								FlowRun: &workflow.FlowRun{
+									ID:         "wfr_1",
+									FlowID:     "flw_1",
+									Status:     workflow.RunCompleted,
+									StartTime:  new(start),
+									EndTime:    new(end),
+									CreateTime: start,
+									Metadata:   map[string]any{"tokens_used": 340},
+								},
+								FlowName: new("Receipt Classifier"),
+							},
+						},
+						NextPageToken: "tok_2",
+					}, nil
+				}
+			},
+			assertOut: func(t *testing.T, out map[string]any) {
+				runs := out["runs"].([]any)
+				if len(runs) != 1 {
+					t.Fatalf("expected 1 run, got %d", len(runs))
+				}
+				first := runs[0].(map[string]any)
+				if first["duration_ms"] != float64(1500) || first["tokens_used"] != float64(340) || out["next_page_token"] != "tok_2" {
+					t.Errorf("unexpected flow run summary: %+v", out)
+				}
+			},
+		},
+		{
+			name: "list flow runs rejects invalid status",
+			ctx: auth.WithSpaceScope(
+				auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_1"}),
+				"spc_1",
+				string(space.RoleViewer),
+			),
+			toolName: "workflows_list_flow_runs",
+			args:     map[string]any{"status": "bogus"},
+			wantErr:  true,
+		},
+		{
+			name: "set flow enabled enables workflow",
+			ctx: auth.WithSpaceScope(
+				auth.WithPrincipal(context.Background(), auth.Principal{
+					Subject:  "usr_1",
+					APIKeyID: "apk_1",
+					Scopes:   []string{string(identity.ScopeWorkflowsWrite)},
+				}),
+				"spc_1",
+				string(space.RoleMember),
+			),
+			toolName: "workflows_set_flow_enabled",
+			args:     map[string]any{"id": "flw_1", "enabled": true},
+			setupMocks: func(_ *WorkflowAggregatorMock, coord *WorkflowCoordinatorMock, _ *SpaceSettingsReaderMock) {
+				coord.EnableFlowFunc = func(_ context.Context, id string) (*workflow.Flow, error) {
+					return &workflow.Flow{
+						ID:        id,
+						Name:      "Receipt Classifier",
+						IsEnabled: true,
+					}, nil
+				}
+			},
+			assertOut: func(t *testing.T, out map[string]any) {
+				if out["is_enabled"] != true || out["id"] != "flw_1" {
+					t.Errorf("unexpected enable flow output: %+v", out)
+				}
+			},
+		},
+		{
+			name: "set flow enabled disables workflow",
+			ctx: auth.WithSpaceScope(
+				auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_1"}),
+				"spc_1",
+				string(space.RoleMember),
+			),
+			toolName: "workflows_set_flow_enabled",
+			args:     map[string]any{"id": "system.finance.inbox_ingestion", "enabled": false},
+			setupMocks: func(_ *WorkflowAggregatorMock, coord *WorkflowCoordinatorMock, _ *SpaceSettingsReaderMock) {
+				coord.DisableFlowFunc = func(_ context.Context, id string) (*workflow.Flow, error) {
+					return &workflow.Flow{
+						ID:        "flw_sys",
+						SystemKey: new(id),
+						IsSystem:  true,
+						IsEnabled: false,
+						Name:      "Inbox Ingestion",
+					}, nil
+				}
+			},
+			assertOut: func(t *testing.T, out map[string]any) {
+				if out["is_enabled"] != false || out["system_key"] != "system.finance.inbox_ingestion" {
+					t.Errorf("unexpected disable flow output: %+v", out)
+				}
+			},
+		},
+		{
+			name: "set flow enabled empty id fails",
+			ctx: auth.WithSpaceScope(
+				auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_1"}),
+				"spc_1",
+				string(space.RoleMember),
+			),
+			toolName: "workflows_set_flow_enabled",
+			args:     map[string]any{"id": " ", "enabled": true},
+			wantErr:  true,
+		},
+		{
+			name: "set flow enabled propagates coordinator error",
+			ctx: auth.WithSpaceScope(
+				auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_1"}),
+				"spc_1",
+				string(space.RoleMember),
+			),
+			toolName: "workflows_set_flow_enabled",
+			args:     map[string]any{"id": "flw_missing", "enabled": true},
+			setupMocks: func(_ *WorkflowAggregatorMock, coord *WorkflowCoordinatorMock, _ *SpaceSettingsReaderMock) {
+				coord.EnableFlowFunc = func(_ context.Context, _ string) (*workflow.Flow, error) {
+					return nil, errors.E(errors.NotExist, "flow not found")
+				}
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -200,5 +349,35 @@ func TestWorkflowHandler(t *testing.T) {
 			}
 			tc.assertOut(t, res.StructuredContent.(map[string]any))
 		})
+	}
+}
+
+func TestWorkflowHandler_ViewerReadOnlyTools(t *testing.T) {
+	srv := mcptransport.NewServer(mcptransport.ServerConfig{})
+	NewHandler(Dependencies{
+		Aggregator:    &WorkflowAggregatorMock{},
+		Coordinator:   &WorkflowCoordinatorMock{},
+		SpaceSettings: &SpaceSettingsReaderMock{},
+	}).Register(srv.Registry())
+
+	ctx := auth.WithSpaceScope(
+		auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_1"}),
+		"spc_1",
+		string(space.RoleViewer),
+	)
+	session, err := srv.ConnectInMemory(ctx)
+	if err != nil {
+		t.Fatalf("ConnectInMemory failed: %v", err)
+	}
+	defer func() { _ = session.Close() }()
+
+	toolsRes, err := session.ListTools(context.Background(), &sdkmcp.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("ListTools failed: %v", err)
+	}
+	for _, tool := range toolsRes.Tools {
+		if !tool.Annotations.ReadOnlyHint {
+			t.Errorf("unexpected non-readonly tool %q exposed to viewer", tool.Name)
+		}
 	}
 }
