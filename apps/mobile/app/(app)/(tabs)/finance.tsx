@@ -889,8 +889,8 @@ export default function FinanceHubScreen() {
                       {Math.round(budgetStats.topCritical.usagePercentage || 0)}
                       % (
                       {formatAmount(
-                        budgetStats.topCritical.spent ||
-                          budgetStats.topCritical.spentInBase,
+                        budgetStats.topCritical.spentInBase ||
+                          budgetStats.topCritical.spent,
                         baseCurrency
                       )}{" "}
                       of{" "}
