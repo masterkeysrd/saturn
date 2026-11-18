@@ -146,6 +146,7 @@ export interface MailComposerProps {
   isOpen?: boolean
   onClose?: () => void
   onSend: (data: {
+    id?: string
     connectedAccountId: string
     to: MailRecipientFormValues[]
     cc: MailRecipientFormValues[]
@@ -293,6 +294,15 @@ export function MailComposer({
   >(null)
   const attachments = editedAttachments ?? initialAttachments
 
+  const [draftId, setDraftId] = useState<string | undefined>(initialDraft?.id)
+  const draftIdRef = useRef<string | undefined>(initialDraft?.id)
+  useEffect(() => {
+    if (initialDraft?.id && !draftIdRef.current) {
+      draftIdRef.current = initialDraft.id
+      setDraftId(initialDraft.id)
+    }
+  }, [initialDraft?.id])
+
   const [isUploading, setIsUploading] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [isDiscarding, setIsDiscarding] = useState(false)
@@ -319,6 +329,41 @@ export function MailComposer({
     editorRef.current?.revealRemoteImages()
   }
 
+  const buildDraftPayload = (
+    overrideAttachments?: Attachment[]
+  ): Partial<Draft> => {
+    const html = editorRef.current?.getHTML() || ""
+    const text = editorRef.current?.getText() || ""
+    return {
+      id: draftIdRef.current ?? draftId,
+      connectedAccountId: activeAccountId,
+      threadId: threadId || initialDraft?.threadId,
+      replyToMessageId: replyToMessageId || initialDraft?.replyToMessageId,
+      subject,
+      bodyHtml: html,
+      bodyText: text,
+      to: toRecipients.map((r) => ({
+        email: r.email,
+        name: r.displayName || "",
+        avatarUrl: "",
+        isVerified: false,
+      })),
+      cc: ccRecipients.map((r) => ({
+        email: r.email,
+        name: r.displayName || "",
+        avatarUrl: "",
+        isVerified: false,
+      })),
+      bcc: bccRecipients.map((r) => ({
+        email: r.email,
+        name: r.displayName || "",
+        avatarUrl: "",
+        isVerified: false,
+      })),
+      attachments: overrideAttachments ?? attachments,
+    }
+  }
+
   // Debounced Autosave Draft
   useEffect(() => {
     if (!onSaveDraft || isInlineReply) return
@@ -341,8 +386,8 @@ export function MailComposer({
 
       setSaveStatus("saving")
       try {
-        await onSaveDraft({
-          id: initialDraft?.id,
+        const saved = await onSaveDraft({
+          id: draftIdRef.current ?? draftId,
           connectedAccountId: activeAccountId,
           threadId: threadId || initialDraft?.threadId,
           replyToMessageId: replyToMessageId || initialDraft?.replyToMessageId,
@@ -369,6 +414,10 @@ export function MailComposer({
           })),
           attachments,
         })
+        if (saved?.id) {
+          draftIdRef.current = saved.id
+          setDraftId(saved.id)
+        }
         setSaveStatus("saved")
       } catch {
         setSaveStatus("")
@@ -386,6 +435,7 @@ export function MailComposer({
     editorVersion,
     onSaveDraft,
     initialDraft,
+    draftId,
     threadId,
     replyToMessageId,
     isInlineReply,
@@ -440,45 +490,68 @@ export function MailComposer({
     if (!files || files.length === 0) return
     setIsUploading(true)
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      if (file.size > 25 * 1024 * 1024) {
-        toast.add({
-          title: `File ${file.name} exceeds 25 MB maximum attachment size`,
-          type: "error",
-        })
-        continue
+    try {
+      let currentDraftId = draftIdRef.current ?? draftId
+      if (!currentDraftId) {
+        if (!onSaveDraft) {
+          toast.add({
+            title: "Cannot upload attachment",
+            description: "Draft saving is unavailable in this composer.",
+            type: "error",
+          })
+          return
+        }
+        try {
+          const saved = await onSaveDraft(buildDraftPayload())
+          if (!saved?.id) {
+            throw new Error("Draft ID was not returned")
+          }
+          currentDraftId = saved.id
+          draftIdRef.current = saved.id
+          setDraftId(saved.id)
+        } catch (err) {
+          toast.add({
+            title: "Failed to save draft before uploading attachment",
+            description:
+              err instanceof Error ? err.message : "Could not create draft",
+            type: "error",
+          })
+          return
+        }
       }
 
-      try {
-        const fakeDraftId = initialDraft?.id || "temp_draft"
-        const uploaded = await uploadDraftAttachment({
-          draftId: fakeDraftId,
-          file,
-          filename: file.name,
-        })
-        setEditedAttachments((prev) => [
-          ...(prev ?? initialAttachments),
-          uploaded,
-        ])
-      } catch {
-        // Fallback: mock attachment descriptor if server offline in test
-        setEditedAttachments((prev) => [
-          ...(prev ?? initialAttachments),
-          {
-            id: `att_${Date.now()}_${i}`,
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        if (file.size > 25 * 1024 * 1024) {
+          toast.add({
+            title: `File ${file.name} exceeds 25 MB maximum attachment size`,
+            type: "error",
+          })
+          continue
+        }
+
+        try {
+          const uploaded = await uploadDraftAttachment({
+            draftId: currentDraftId,
+            file,
             filename: file.name,
-            contentType: file.type || "application/octet-stream",
-            size: String(file.size),
-            contentId: "",
-            isInline: false,
-            downloadUrl: "",
-          },
-        ])
+          })
+          setEditedAttachments((prev) => [
+            ...(prev ?? initialAttachments),
+            uploaded,
+          ])
+        } catch (err) {
+          toast.add({
+            title: `Failed to upload ${file.name}`,
+            description:
+              err instanceof Error ? err.message : "Attachment upload failed",
+            type: "error",
+          })
+        }
       }
+    } finally {
+      setIsUploading(false)
     }
-
-    setIsUploading(false)
   }
 
   // Send action
@@ -513,6 +586,7 @@ export function MailComposer({
       const text = editorRef.current?.getText() || ""
 
       await onSend({
+        id: draftIdRef.current ?? draftId,
         connectedAccountId: activeAccountId,
         to: currentTo,
         cc: ccRecipients,
@@ -525,6 +599,12 @@ export function MailComposer({
         attachments,
       })
       onClose?.()
+    } catch (err) {
+      toast.add({
+        title: "Failed to send email",
+        description: err instanceof Error ? err.message : "An error occurred",
+        type: "error",
+      })
     } finally {
       setIsSending(false)
     }

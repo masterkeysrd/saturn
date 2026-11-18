@@ -71,7 +71,14 @@ export function SandboxedEmailFrame({
   // Detect whether HTML actually contains remote images (external tracking pixels or remote URLs)
   const containsRemoteImages = useMemo(() => {
     return Boolean(
-      hasRemoteImages || (html && html.includes("data-saturn-remote-src"))
+      hasRemoteImages ||
+      (html &&
+        (/data-saturn-remote-(?:src|srcset|background)/i.test(html) ||
+          /<(?:img|image|source)\b[^>]*\b(?:src|srcset)\s*=\s*["']?(?:https?:|\/\/)/i.test(
+            html
+          ) ||
+          /poster\s*=\s*["']https?:/i.test(html) ||
+          /url\(\s*["']?https?:/i.test(html)))
     )
   }, [hasRemoteImages, html])
 
@@ -90,8 +97,10 @@ export function SandboxedEmailFrame({
     }
     if (!source) return "<div></div>"
 
-    // Strip any <script> tags or inline event handlers to guarantee clean sandbox execution
-    source = sanitizeEmailHtml(source).html
+    // Strip any <script> tags, dangerous embeds/URIs, or remote CSS/poster URLs when blocked
+    source = sanitizeEmailHtml(source, {
+      allowRemoteImages: shouldLoadImages,
+    }).html
 
     // 1. Resolve and rewrite cid: inline attachments to authenticated download URLs
     if (attachments && attachments.length > 0) {
@@ -118,18 +127,40 @@ export function SandboxedEmailFrame({
     return source
   }, [html, plainText, attachments, shouldLoadImages])
 
+  const srcDocSig = useMemo(
+    () =>
+      `${processedHtml.length}:${shouldLoadImages ? 1 : 0}:${isAppDark ? 1 : 0}`,
+    [processedHtml, shouldLoadImages, isAppDark]
+  )
+
   // Construct complete srcDoc document on clean light paper matching Gmail Web
   const srcDoc = useMemo(() => {
     const bodyPaddingCss = isAppDark
       ? "padding: 12px 16px; box-sizing: border-box;"
       : "padding: 0;"
+    const appOrigin =
+      typeof window !== "undefined" &&
+      window.location?.origin &&
+      window.location.origin !== "null"
+        ? window.location.origin
+        : ""
+    const originSource = appOrigin ? ` ${appOrigin}` : ""
+    const baseHref = appOrigin ? `${appOrigin}/` : ""
+    const cspContent = shouldLoadImages
+      ? `default-src 'none'; img-src https: http: data: blob: 'self'${originSource}; media-src https: http: data: blob: 'self'${originSource}; style-src 'unsafe-inline'; font-src https: http: data: 'self'${originSource}; script-src 'none'; object-src 'none'; frame-src 'none';`
+      : `default-src 'none'; img-src data: blob: 'self'${originSource}; style-src 'unsafe-inline'; font-src data: 'self'${originSource}; script-src 'none'; object-src 'none'; frame-src 'none';`
+    const baseTag = baseHref
+      ? `<base href="${baseHref}" target="_blank">`
+      : `<base target="_blank">`
 
     return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <base target="_blank">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="${cspContent}">
+  ${baseTag}
   <style>
     :root {
       color-scheme: light;
@@ -167,11 +198,11 @@ export function SandboxedEmailFrame({
   </style>
 </head>
 <body>
-  <div id="saturn-email-root" style="display: flow-root; width: 100%; height: auto !important; min-height: 0 !important;">${processedHtml}</div>
+  <div id="saturn-email-root" data-srcdoc-sig="${srcDocSig}" style="display: flow-root; width: 100%; height: auto !important; min-height: 0 !important;">${processedHtml}</div>
   <style>html, body { height: auto !important; min-height: 0 !important; }</style>
 </body>
 </html>`
-  }, [processedHtml, isAppDark])
+  }, [processedHtml, isAppDark, shouldLoadImages, srcDocSig])
 
   // Height measurement function
   const updateHeight = useCallback(() => {
@@ -201,51 +232,145 @@ export function SandboxedEmailFrame({
     }
   }, [isAppDark])
 
-  // Dynamically update iframe height to eliminate inner scrollbars
+  // Dynamically update iframe height to eliminate inner scrollbars without waiting
+  // for slow external images to finish/timeout before `iframe.onload` fires.
   useEffect(() => {
     const iframe = iframeRef.current
     if (!iframe) return
 
+    let observedDoc: Document | null = null
     let resizeObserver: ResizeObserver | null = null
+    let mutationObserver: MutationObserver | null = null
+    let rafId: number | null = null
+    let docCleanups: Array<() => void> = []
+    const boundImages = new WeakSet<HTMLImageElement>()
 
-    const handleLoad = () => {
-      updateHeight()
+    const teardownDocObservers = () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+        resizeObserver = null
+      }
+      if (mutationObserver) {
+        mutationObserver.disconnect()
+        mutationObserver = null
+      }
+      for (const fn of docCleanups) {
+        fn()
+      }
+      docCleanups = []
+    }
 
-      try {
-        const doc = iframe.contentDocument
-        if (doc?.body) {
-          const target = doc.getElementById("saturn-email-root") || doc.body
-          if (typeof window !== "undefined" && window.ResizeObserver) {
-            resizeObserver = new ResizeObserver(() => {
-              updateHeight()
-            })
-            resizeObserver.observe(target)
-          }
-
-          // Attach listeners to images for height recalculation when images finish downloading
-          const images = doc.images || []
-          for (let i = 0; i < images.length; i++) {
-            images[i].addEventListener("load", updateHeight)
-          }
-        }
-      } catch {
-        // Fallback
+    const bindImages = (doc: Document) => {
+      const images = doc.images || []
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i]
+        if (!img || boundImages.has(img)) continue
+        boundImages.add(img)
+        img.addEventListener("load", updateHeight)
+        img.addEventListener("error", updateHeight)
+        docCleanups.push(() => {
+          img.removeEventListener("load", updateHeight)
+          img.removeEventListener("error", updateHeight)
+        })
       }
     }
 
-    iframe.addEventListener("load", handleLoad)
+    const attachToSrcDoc = (): boolean => {
+      try {
+        const doc = iframe.contentDocument
+        const root = doc?.getElementById("saturn-email-root")
+        // Initial `about:blank` or outgoing `srcDoc` document has readyState === "complete"
+        // before the new `srcDoc` replaces `contentDocument`; verify `#saturn-email-root` matches.
+        if (!doc || !root) {
+          return false
+        }
+        if (typeof root.getAttribute === "function") {
+          const domSig = root.getAttribute("data-srcdoc-sig")
+          if (domSig && domSig !== srcDocSig) {
+            return false
+          }
+        }
 
-    if (iframe.contentDocument?.readyState === "complete") {
-      handleLoad()
+        updateHeight()
+
+        if (doc !== observedDoc) {
+          teardownDocObservers()
+          observedDoc = doc
+
+          if (typeof window !== "undefined" && window.ResizeObserver) {
+            try {
+              resizeObserver = new ResizeObserver(() => {
+                updateHeight()
+              })
+              resizeObserver.observe(root)
+            } catch {
+              // Ignore non-Element test mocks
+            }
+          }
+
+          if (typeof MutationObserver !== "undefined") {
+            try {
+              mutationObserver = new MutationObserver(() => {
+                bindImages(doc)
+                updateHeight()
+              })
+              mutationObserver.observe(root, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+              })
+            } catch {
+              // Ignore non-Node test mocks
+            }
+          }
+
+          if (typeof doc.addEventListener === "function") {
+            doc.addEventListener("DOMContentLoaded", updateHeight)
+            docCleanups.push(() =>
+              doc.removeEventListener("DOMContentLoaded", updateHeight)
+            )
+          }
+
+          if (doc.fonts?.ready) {
+            void doc.fonts.ready.then(updateHeight).catch(() => undefined)
+          }
+        }
+
+        bindImages(doc)
+        return doc.readyState !== "loading"
+      } catch {
+        return false
+      }
+    }
+
+    const handleLoad = () => {
+      attachToSrcDoc()
+      updateHeight()
+    }
+
+    iframe.addEventListener("load", handleLoad)
+    window.addEventListener("resize", updateHeight)
+
+    if (!attachToSrcDoc() && typeof requestAnimationFrame === "function") {
+      let attempts = 0
+      const poll = () => {
+        attempts += 1
+        if (!attachToSrcDoc() && attempts < 120) {
+          rafId = requestAnimationFrame(poll)
+        }
+      }
+      rafId = requestAnimationFrame(poll)
     }
 
     return () => {
       iframe.removeEventListener("load", handleLoad)
-      if (resizeObserver) {
-        resizeObserver.disconnect()
+      window.removeEventListener("resize", updateHeight)
+      if (rafId !== null && typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(rafId)
       }
+      teardownDocObservers()
     }
-  }, [srcDoc, updateHeight])
+  }, [srcDoc, srcDocSig, updateHeight])
 
   return (
     <div className={`flex flex-col ${className}`}>

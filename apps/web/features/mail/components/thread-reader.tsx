@@ -38,7 +38,12 @@ import {
   buildQuotedReplyHtml,
   buildForwardedMessageHtml,
 } from "@saturn/core"
-import type { Thread, Message, Draft } from "@saturn/api/saturn/mail/v1/mail"
+import type {
+  Thread,
+  Message,
+  Draft,
+  Attachment,
+} from "@saturn/api/saturn/mail/v1/mail"
 import { SandboxedEmailFrame } from "./sandboxed-email-frame"
 import { AttachmentList } from "./attachment-list"
 import { MailComposer } from "./mail-composer"
@@ -48,6 +53,7 @@ import { cn } from "@/lib/utils"
 export interface ThreadReaderProps {
   threadId?: string
   initialThread?: Thread
+  replyTrigger?: { threadId: string; seq: number } | null
   onArchive: (thread: Thread) => void
   onTrash: (thread: Thread) => void
   onToggleStar: (thread: Thread) => void
@@ -59,6 +65,7 @@ export interface ThreadReaderProps {
     attendees: Array<{ email: string; displayName?: string }>
   }) => void
   onSendReply: (data: {
+    id?: string
     connectedAccountId: string
     to: Array<{ email: string; displayName?: string }>
     cc: Array<{ email: string; displayName?: string }>
@@ -68,6 +75,7 @@ export interface ThreadReaderProps {
     bodyText: string
     threadId?: string
     replyToMessageId?: string
+    attachments?: Attachment[]
   }) => Promise<void>
   onSaveDraft?: (draft: Partial<Draft>) => Promise<Draft | undefined>
   onDiscardDraft?: (draftId: string) => Promise<void> | void
@@ -76,6 +84,7 @@ export interface ThreadReaderProps {
 export function ThreadReader({
   threadId,
   initialThread,
+  replyTrigger,
   onArchive,
   onTrash,
   onToggleStar,
@@ -223,6 +232,24 @@ export function ThreadReader({
     setReplyTargetMessage(msg)
     setShowReplyComposer(true)
   }
+
+  const lastHandledReplySeqRef = useRef<number>(0)
+  useEffect(() => {
+    if (
+      !replyTrigger ||
+      replyTrigger.seq <= lastHandledReplySeqRef.current ||
+      !thread ||
+      replyTrigger.threadId !== thread.id ||
+      messages.length === 0
+    ) {
+      return
+    }
+    lastHandledReplySeqRef.current = replyTrigger.seq
+    const msg = messages[messages.length - 1]
+    setReplyType("reply")
+    setReplyTargetMessage(msg)
+    setShowReplyComposer(true)
+  }, [replyTrigger, thread, messages])
 
   // Compute recipient list for reply/forward
   const replyRecipients = useMemo(() => {
@@ -840,6 +867,7 @@ export function ThreadReader({
                 <div className="mt-4 pt-1">
                   {/* Sandboxed Body Frame */}
                   <SandboxedEmailFrame
+                    key={msg.id}
                     html={msg.bodyHtml}
                     plainText={msg.bodyPlain || msg.snippet}
                     hasRemoteImages={msg.hasRemoteImages}

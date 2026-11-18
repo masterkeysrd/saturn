@@ -13,7 +13,9 @@ import type {
   Thread,
   MailboxRole,
   ListThreadsRequest,
+  Attachment,
 } from "@saturn/api/saturn/mail/v1/mail"
+import { useActiveSpaceContext } from "@/features/space/use-space"
 import { MailboxRail } from "./components/mailbox-rail"
 import { ThreadList } from "./components/thread-list"
 import { ThreadReader } from "./components/thread-reader"
@@ -22,6 +24,7 @@ import { EventDialog } from "@/features/calendar/components/event-dialog"
 import { toast } from "@/components/ui/toast"
 
 export function MailView() {
+  const { spaceId } = useActiveSpaceContext()
   const { data: accountsData } = useConnectedAccounts()
   const accounts = useMemo(() => {
     return (accountsData?.accounts || []).filter(
@@ -47,6 +50,10 @@ export function MailView() {
 
   // Compose modal state
   const [composeOpen, setComposeOpen] = useState(false)
+  const [replyTrigger, setReplyTrigger] = useState<{
+    threadId: string
+    seq: number
+  } | null>(null)
 
   // Event dialog handoff state
   const [eventDialogOpen, setEventDialogOpen] = useState(false)
@@ -61,6 +68,19 @@ export function MailView() {
     sourceMailMessageId: "",
     attendees: [],
   })
+
+  const [prevSpaceId, setPrevSpaceId] = useState(spaceId)
+  if (prevSpaceId !== spaceId) {
+    setPrevSpaceId(spaceId)
+    setSelectedRole("MAILBOX_ROLE_INBOX")
+    setSelectedAccountId(undefined)
+    setSelectedMailboxId(undefined)
+    setSearchQuery("")
+    setSelectedThreadId(undefined)
+    setComposeOpen(false)
+    setEventDialogOpen(false)
+    setReplyTrigger(null)
+  }
 
   // Build filter query for useInfiniteMailThreads
   const filter = useMemo<ListThreadsRequest>(() => {
@@ -298,6 +318,7 @@ export function MailView() {
 
   // Handle send from compose modal or inline reply
   const handleSendMail = async (data: {
+    id?: string
     connectedAccountId: string
     to: Array<{ email: string; displayName?: string }>
     cc: Array<{ email: string; displayName?: string }>
@@ -307,9 +328,11 @@ export function MailView() {
     bodyText: string
     threadId?: string
     replyToMessageId?: string
+    attachments?: Attachment[]
   }) => {
     // Save draft first then send
     const draft = await saveDraftMutation.mutateAsync({
+      id: data.id,
       connectedAccountId: data.connectedAccountId,
       threadId: data.threadId,
       replyToMessageId: data.replyToMessageId,
@@ -334,6 +357,7 @@ export function MailView() {
       subject: data.subject,
       bodyHtml: data.bodyHtml,
       bodyText: data.bodyText,
+      attachments: data.attachments,
     })
 
     if (draft?.id) {
@@ -391,6 +415,13 @@ export function MailView() {
         onBulkAction={handleBulkAction}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        onReply={(t) => {
+          setSelectedThreadId(t.id)
+          setReplyTrigger((prev) => ({
+            threadId: t.id,
+            seq: (prev?.seq ?? 0) + 1,
+          }))
+        }}
         onOpenCompose={() => setComposeOpen(true)}
         onRefresh={handleRefresh}
         isLoading={threadsLoading || syncAccountMutation.isPending}
@@ -409,6 +440,7 @@ export function MailView() {
         key={activeThread?.id}
         threadId={activeThread?.id}
         initialThread={activeThread}
+        replyTrigger={replyTrigger}
         onArchive={handleArchiveThread}
         onTrash={handleTrashThread}
         onToggleStar={handleToggleStar}

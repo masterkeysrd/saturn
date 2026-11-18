@@ -40,6 +40,50 @@ const PUBLIC_DOMAINS = new Set([
   "mail.com",
 ])
 
+const SECOND_LEVEL_TLDS = new Set([
+  "co",
+  "com",
+  "org",
+  "net",
+  "edu",
+  "gov",
+  "ac",
+  "mil",
+])
+
+function extractRegistrableBrandDomain(domain: string): string {
+  const labels = domain.split(".").filter(Boolean)
+  if (labels.length <= 2) return domain
+  const tld = labels[labels.length - 1]
+  const sld = labels[labels.length - 2]
+  if (tld.length === 2 && SECOND_LEVEL_TLDS.has(sld) && labels.length >= 3) {
+    return labels.slice(-3).join(".")
+  }
+  return labels.slice(-2).join(".")
+}
+
+function normalizeFaviconUrl(url: string): string {
+  try {
+    const parsed = new URL(url)
+    if (
+      parsed.hostname.endsWith("google.com") &&
+      parsed.pathname === "/s2/favicons"
+    ) {
+      const rawDomain = parsed.searchParams.get("domain")
+      if (rawDomain) {
+        parsed.searchParams.set(
+          "domain",
+          extractRegistrableBrandDomain(rawDomain.toLowerCase())
+        )
+        return parsed.toString()
+      }
+    }
+  } catch {
+    // Keep non-URL or custom avatar URLs untouched
+  }
+  return url
+}
+
 const PALETTES = [
   "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-200 border-indigo-200",
   "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200 border-emerald-200",
@@ -82,16 +126,24 @@ export function SenderAvatar({
     return parts[parts.length - 1].toLowerCase().trim()
   }, [email])
 
+  const brandDomain = useMemo(
+    () => (domain ? extractRegistrableBrandDomain(domain) : ""),
+    [domain]
+  )
+
   const isCompanyDomain = Boolean(
-    domain && !PUBLIC_DOMAINS.has(domain) && domain.includes(".")
+    brandDomain &&
+    !PUBLIC_DOMAINS.has(domain) &&
+    !PUBLIC_DOMAINS.has(brandDomain) &&
+    brandDomain.includes(".")
   )
 
   // Prefer backend-resolved avatar URL (BIMI or domain logo), with fallback to Google Favicons
   const logoUrl = useMemo(() => {
-    if (avatarUrl) return avatarUrl
+    if (avatarUrl) return normalizeFaviconUrl(avatarUrl)
     if (!isCompanyDomain) return null
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
-  }, [avatarUrl, domain, isCompanyDomain])
+    return `https://www.google.com/s2/favicons?domain=${brandDomain}&sz=128`
+  }, [avatarUrl, brandDomain, isCompanyDomain])
 
   const isVerifiedSender = Boolean(isVerified)
 

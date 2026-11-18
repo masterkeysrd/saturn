@@ -7,6 +7,14 @@ import { MailUnreadBadge } from "./components/mail-unread-badge"
 import * as hooks from "@saturn/hooks"
 import type { Thread, Mailbox } from "@saturn/api/saturn/mail/v1/mail"
 
+vi.mock("@/features/space/use-space", () => ({
+  useActiveSpaceContext: () => ({
+    spaceId: "sp_1",
+    spaceName: "Personal",
+    spaceRole: "owner",
+  }),
+}))
+
 const mockAccounts = [
   {
     id: "acc_work",
@@ -857,5 +865,40 @@ describe("MailView Web Feature", () => {
     } finally {
       vi.unstubAllGlobals()
     }
+  })
+
+  it("ignores Cmd/Ctrl shortcuts (Cmd+C, Cmd+R) and opens inline reply when pressing 'r'", async () => {
+    render(<MailView />, { wrapper: createWrapper() })
+
+    // Select a thread first
+    fireEvent.click(screen.getByTestId("thread-row-mth_101"))
+
+    // Cmd+C must NOT open compose modal
+    const copyEvent = new KeyboardEvent("keydown", {
+      key: "c",
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    window.dispatchEvent(copyEvent)
+    expect(copyEvent.defaultPrevented).toBe(false)
+    expect(screen.queryByTestId("composer-subject-input")).toBeNull()
+
+    // Cmd+R must NOT open inline reply
+    const reloadEvent = new KeyboardEvent("keydown", {
+      key: "r",
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    window.dispatchEvent(reloadEvent)
+    expect(reloadEvent.defaultPrevented).toBe(false)
+    expect(screen.queryByTestId("inline-reply-composer")).toBeNull()
+
+    // Plain 'r' opens inline reply on the selected thread
+    fireEvent.keyDown(window, { key: "r" })
+    await waitFor(() => {
+      expect(screen.getByTestId("inline-reply-composer")).toBeDefined()
+    })
   })
 })

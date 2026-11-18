@@ -1,8 +1,10 @@
 import { useMemo } from "react"
 import { useMailboxes } from "@saturn/hooks"
+import { useActiveSpaceContext } from "@/features/space/use-space"
 
 export function MailUnreadBadge() {
-  const { data } = useMailboxes()
+  const { spaceId } = useActiveSpaceContext()
+  const { data } = useMailboxes(undefined, { enabled: Boolean(spaceId) })
 
   const unreadCount = useMemo(() => {
     if (!data?.mailboxes) return 0

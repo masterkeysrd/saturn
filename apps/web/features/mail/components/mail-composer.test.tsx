@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { createElement, type ReactNode } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { toast } from "@/components/ui/toast"
 import * as hooks from "@saturn/hooks"
 import { MailComposer } from "./mail-composer"
 
@@ -215,6 +216,88 @@ describe("MailComposer", () => {
     const focusSpy = vi.spyOn(doc.body, "focus")
     await waitFor(() => {
       expect(focusSpy).toHaveBeenCalled()
+    })
+  })
+
+  it("creates a real draft before uploading attachments, reuses draftId on send, and shows toast on upload/send errors", async () => {
+    const onSaveDraft = vi.fn().mockResolvedValue({ id: "mdf_real_1" })
+    const onSend = vi.fn().mockRejectedValueOnce(new Error("SMTP error"))
+    const toastSpy = vi.spyOn(toast, "add")
+    const uploadSpy = vi
+      .spyOn(hooks, "uploadDraftAttachment")
+      .mockResolvedValueOnce({
+        id: "att_real_1",
+        filename: "report.pdf",
+        contentType: "application/pdf",
+        size: "2048",
+        contentId: "",
+        isInline: false,
+        downloadUrl: "/api/v1/mail/attachments/tok_real",
+      })
+      .mockRejectedValueOnce(new Error("403 forbidden"))
+
+    const { container } = render(
+      <MailComposer
+        isInlineReply={false}
+        isOpen={true}
+        defaultTo={[{ email: "alice@example.com", displayName: "Alice" }]}
+        defaultSubject="Attachment test"
+        onSaveDraft={onSaveDraft}
+        onSend={onSend}
+      />,
+      { wrapper }
+    )
+
+    const fileInput = container.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement
+    const goodFile = new File(["pdf-bytes"], "report.pdf", {
+      type: "application/pdf",
+    })
+    fireEvent.change(fileInput, { target: { files: [goodFile] } })
+
+    await waitFor(() => {
+      expect(onSaveDraft).toHaveBeenCalledTimes(1)
+      expect(uploadSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          draftId: "mdf_real_1",
+          filename: "report.pdf",
+        })
+      )
+      expect(screen.getByText("report.pdf")).toBeDefined()
+    })
+
+    // Second upload that fails must NOT create a fake mock chip and must toast error
+    const badFile = new File(["x"], "broken.txt", { type: "text/plain" })
+    fireEvent.change(fileInput, { target: { files: [badFile] } })
+
+    await waitFor(() => {
+      expect(toastSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Failed to upload broken.txt",
+          type: "error",
+        })
+      )
+    })
+    expect(screen.queryByText("broken.txt")).toBeNull()
+
+    // Send passes stored draft id and real attachments, and toasts if onSend fails
+    fireEvent.click(screen.getByTestId("composer-send-btn"))
+
+    await waitFor(() => {
+      expect(onSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "mdf_real_1",
+          attachments: [expect.objectContaining({ id: "att_real_1" })],
+        })
+      )
+      expect(toastSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Failed to send email",
+          description: "SMTP error",
+          type: "error",
+        })
+      )
     })
   })
 })

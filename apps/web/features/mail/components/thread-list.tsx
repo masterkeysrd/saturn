@@ -150,13 +150,22 @@ export function ThreadList({
   // Keyboard navigation shortcuts
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      // Ignore if user is currently typing in an input or textarea
-      const target = e.target as HTMLElement
+      if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) {
+        return
+      }
+      const target = e.target as HTMLElement | null
       if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable ||
+          (typeof target.closest === "function" &&
+            (target.closest('[role="dialog"]') ||
+              target.closest('[contenteditable="true"]'))))
       ) {
+        return
+      }
+      if (document.querySelector('[role="dialog"]')) {
         return
       }
 
