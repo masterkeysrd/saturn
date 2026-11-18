@@ -2,7 +2,10 @@ package api
 
 import (
 	"encoding/json/v2"
+	"io/fs"
+	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -263,5 +266,42 @@ func TestLoadServiceConfigs_RateLimitRules(t *testing.T) {
 	}
 	if r := findRule("saturn.identity.v1.Identity.ChangePassword"); r == nil || !r.Enabled || r.KeyBy != "principal" {
 		t.Errorf("unexpected ChangePassword rate limit rule: %+v", r)
+	}
+}
+
+func TestLoadServiceConfigs_AllDiskYAMLFilesEmbedded(t *testing.T) {
+	var diskFiles []string
+	err := filepath.WalkDir("saturn", func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".yaml") {
+			return nil
+		}
+		diskFiles = append(diskFiles, filepath.ToSlash(path))
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("WalkDir(saturn) error = %v", err)
+	}
+	if len(diskFiles) == 0 {
+		t.Fatal("expected at least one YAML config file under api/saturn")
+	}
+
+	for _, p := range diskFiles {
+		data, err := configFS.ReadFile(p)
+		if err != nil {
+			t.Errorf("YAML file %q exists on disk but is not embedded in configFS: %v", p, err)
+		} else if len(data) == 0 {
+			t.Errorf("embedded YAML file %q is empty", p)
+		}
+	}
+
+	_, modules, err := LoadServiceConfigs()
+	if err != nil {
+		t.Fatalf("LoadServiceConfigs() error = %v", err)
+	}
+	if len(modules) != len(diskFiles) {
+		t.Errorf("LoadServiceConfigs() loaded %d module configs, want %d matching disk YAML files %v", len(modules), len(diskFiles), diskFiles)
 	}
 }
