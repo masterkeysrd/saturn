@@ -257,7 +257,11 @@ func (e *Engine) RegisterSchedule(ctx context.Context, s Schedule) error {
 			job_type = EXCLUDED.job_type,
 			payload = EXCLUDED.payload,
 			cron_expression = EXCLUDED.cron_expression,
-			next_run_at = EXCLUDED.next_run_at,
+			next_run_at = CASE
+				WHEN platform.schedule.cron_expression = EXCLUDED.cron_expression AND platform.schedule.status = 'active'
+				THEN platform.schedule.next_run_at
+				ELSE EXCLUDED.next_run_at
+			END,
 			status = 'active',
 			update_time = NOW()`
 
@@ -267,6 +271,11 @@ func (e *Engine) RegisterSchedule(ctx context.Context, s Schedule) error {
 	}
 
 	return nil
+}
+
+// GetHandler returns the registered handler for a job type.
+func (e *Engine) GetHandler(jobType string) (Handler, bool) {
+	return e.getHandler(jobType)
 }
 
 // getHandler retrieves a handler in a thread-safe way.

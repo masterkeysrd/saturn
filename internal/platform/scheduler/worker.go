@@ -152,7 +152,19 @@ func (e *Engine) runJobWorker(ctx context.Context) {
 			}
 			e.executeJobInstance(ctx, j)
 		case <-ctx.Done():
-			return
+			for {
+				select {
+				case j, ok := <-e.jobQueue:
+					if !ok {
+						return
+					}
+					revertCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+					_, _ = e.db.Exec(revertCtx, `UPDATE platform.job SET status = 'pending', update_time = NOW() WHERE id = $1 AND status = 'processing'`, j.ID)
+					cancel()
+				default:
+					return
+				}
+			}
 		}
 	}
 }
@@ -290,9 +302,11 @@ func (e *Engine) executeJobInstance(ctx context.Context, j jobInstance) {
 			backoffMinutes := nextAttempt * 5
 			runAt := time.Now().Add(time.Duration(backoffMinutes) * time.Minute).UTC()
 			panicErr := fmt.Sprintf("panic: %v", r)
-			_, _ = e.db.Exec(ctx, `UPDATE platform.job 
+			updateCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			_, _ = e.db.Exec(updateCtx, `UPDATE platform.job 
 				SET status = $1, attempts = $2, run_at = $3, last_error = $4, update_time = NOW() 
 				WHERE id = $5`, status, nextAttempt, runAt, panicErr, j.ID)
+			cancel()
 		}
 	}()
 
@@ -303,7 +317,9 @@ func (e *Engine) executeJobInstance(ctx context.Context, j jobInstance) {
 			log.String("job_id", j.ID),
 			log.String("job_type", j.JobType),
 		)
-		_, _ = e.db.Exec(ctx, `UPDATE platform.job SET status = 'failed', last_error = $1, update_time = NOW() WHERE id = $2`, errMsg, j.ID)
+		updateCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		_, _ = e.db.Exec(updateCtx, `UPDATE platform.job SET status = 'failed', last_error = $1, update_time = NOW() WHERE id = $2`, errMsg, j.ID)
+		cancel()
 		return
 	}
 
@@ -354,9 +370,11 @@ func (e *Engine) executeJobInstance(ctx context.Context, j jobInstance) {
 			)
 		}
 
-		_, _ = e.db.Exec(ctx, `UPDATE platform.job 
+		updateCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		_, _ = e.db.Exec(updateCtx, `UPDATE platform.job 
 			SET status = $1, attempts = $2, run_at = $3, last_error = $4, update_time = NOW() 
 			WHERE id = $5`, status, nextAttempt, runAt, err.Error(), j.ID)
+		cancel()
 	} else {
 		// Success -> Transition status to 'completed'
 		log.Info(ctx, "scheduler job completed successfully",
@@ -364,6 +382,8 @@ func (e *Engine) executeJobInstance(ctx context.Context, j jobInstance) {
 			log.String("job_type", j.JobType),
 			log.Duration("duration", time.Since(start)),
 		)
-		_, _ = e.db.Exec(ctx, `UPDATE platform.job SET status = 'completed', update_time = NOW() WHERE id = $1`, j.ID)
+		updateCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		_, _ = e.db.Exec(updateCtx, `UPDATE platform.job SET status = 'completed', update_time = NOW() WHERE id = $1`, j.ID)
+		cancel()
 	}
 }

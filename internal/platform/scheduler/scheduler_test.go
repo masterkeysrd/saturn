@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -300,9 +301,11 @@ func TestEngineRegisterSchedule(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		var execCalled bool
+		var capturedQuery string
 		dbMock := &DatabaseMock{
 			ExecFunc: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
 				execCalled = true
+				capturedQuery = query
 				if args[0] != "sched_1" || args[1] != "finance.sync" {
 					t.Errorf("unexpected args: %v", args)
 				}
@@ -322,6 +325,9 @@ func TestEngineRegisterSchedule(t *testing.T) {
 		}
 		if !execCalled {
 			t.Error("expected db.Exec to be called")
+		}
+		if !strings.Contains(capturedQuery, "WHEN platform.schedule.cron_expression = EXCLUDED.cron_expression AND platform.schedule.status = 'active'") {
+			t.Errorf("expected next_run_at preservation CASE in query, got %q", capturedQuery)
 		}
 	})
 

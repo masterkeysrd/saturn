@@ -599,3 +599,66 @@ func TestEngineRecoverStaleJobs(t *testing.T) {
 		t.Errorf("expected cutoff ~10m ago, got diff %v", diff)
 	}
 }
+
+func TestEngineShutdown_DetachedStatusUpdatesAndQueueDrain(t *testing.T) {
+	t.Run("executeJobInstance persists status even when worker ctx is cancelled", func(t *testing.T) {
+		var updateCtxErr error
+		var updateQuery string
+		dbMock := &DatabaseMock{
+			ExecFunc: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
+				updateCtxErr = ctx.Err()
+				updateQuery = query
+				return nil, nil
+			},
+		}
+
+		engine := NewEngine(dbMock)
+		workerCtx, cancel := context.WithCancel(context.Background())
+		engine.Register("slow.job", func(ctx context.Context, _ []byte) error {
+			cancel()
+			return nil
+		})
+
+		engine.executeJobInstance(workerCtx, jobInstance{
+			ID:          "job_cancelled",
+			JobType:     "slow.job",
+			MaxAttempts: 3,
+		})
+
+		if updateCtxErr != nil {
+			t.Fatalf("expected non-cancelled detached context for job update, got %v", updateCtxErr)
+		}
+		if !strings.Contains(updateQuery, "status = 'completed'") {
+			t.Errorf("expected completed status update, got %q", updateQuery)
+		}
+	})
+
+	t.Run("runJobWorker drains unclaimed buffered jobs back to pending on shutdown", func(t *testing.T) {
+		var reverted []string
+		dbMock := &DatabaseMock{
+			ExecFunc: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
+				if ctx.Err() != nil {
+					t.Errorf("expected non-cancelled context on drain revert, got %v", ctx.Err())
+				}
+				if strings.Contains(query, "status = 'pending'") && len(args) > 0 {
+					reverted = append(reverted, args[0].(string))
+				}
+				return nil, nil
+			},
+		}
+
+		engine := NewEngine(dbMock)
+		engine.jobQueue = make(chan jobInstance, 4)
+		engine.jobQueue <- jobInstance{ID: "job_buf_1", JobType: "noop"}
+		engine.jobQueue <- jobInstance{ID: "job_buf_2", JobType: "noop"}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		engine.runJobWorker(ctx)
+
+		if len(reverted) != 2 {
+			t.Fatalf("expected 2 buffered jobs reverted to pending, got %v", reverted)
+		}
+	})
+}
