@@ -120,6 +120,7 @@ type GRPCServer struct {
 	AttachmentHandler    *mailhttp.AttachmentHandler
 	AIStreamHandler      *aihttp.StreamHandler
 	MCPServer            *mcptransport.Server
+	ConnectorStore       connector.Store
 }
 
 // NewGRPCServer creates a new GRPCServer instance.
@@ -130,6 +131,10 @@ func NewGRPCServer(cfg *Config) *GRPCServer {
 // Start initializes the gRPC server, registers the Identity service, and
 // begins listening on the configured Unix socket.
 func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) error {
+	if strings.TrimSpace(cfg.Security.EncryptionKey) == "" {
+		return fmt.Errorf("security.encryption_key is required (set SATURN_SECURITY_ENCRYPTION_KEY)")
+	}
+
 	if err := os.Remove(cfg.GRPC.Socket); err != nil && !os.IsNotExist(err) {
 		log.Warn(ctx, "failed to remove stale socket file", log.String("path", cfg.GRPC.Socket), log.Err(err))
 	}
@@ -338,7 +343,6 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		eventmiddleware.SpaceIDConsumer(),
 		eventmiddleware.WorkflowChainConsumer(),
 	)
-	eventBusEngine.Start(ctx)
 	s.EventBus = eventBusEngine
 
 	converterRegistry := eventbus.NewConverterRegistry()
@@ -348,9 +352,8 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	messageHandler := messagegrpc.NewHandler(eventBusEngine)
 	messagev1.RegisterMessageAdminServer(s.grpc, messageHandler)
 
-	// Wire Scheduler service & start workers
+	// Wire Scheduler service (workers are started after all job/subscriber registrations complete)
 	schedulerEngine := scheduler.NewEngine(dbClient)
-	schedulerEngine.Start(ctx)
 	s.Scheduler = schedulerEngine
 	schedulerHandler := schedulergrpc.NewHandler(schedulerEngine)
 	schedulerv1.RegisterSchedulerAdminServer(s.grpc, schedulerHandler)
@@ -409,7 +412,6 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	mcpfinance.NewHandler(mcpfinance.Dependencies{
 		Aggregator:  financeAggregator,
 		Coordinator: financeCoordinator,
-		InboxStager: financeService,
 	}).Register(mcpServer.Registry())
 
 	// Wire Platform AI service (Providers, Models, Unified MCP, Agents, Private Threads, Runs)
@@ -419,7 +421,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		return fmt.Errorf("init encrypted ai store: %w", err)
 	}
 	aiSettingsClient := settings.Bind(platformSettingsStore, ai.SettingsKey)
-	aiInvoker := ai.NewLoomClient(nil)
+	aiInvoker := ai.NewLoomClient(ai.NewSSRFSafeHTTPClient(cfg.AI.MCP.AllowPrivateNetworks, 0))
 	mcpConnector := ai.NewUnifiedMCPConnector(mcpServer.ConnectInMemory, cfg.AI.MCP.AllowPrivateNetworks)
 	aiRuntime := ai.NewRuntime(ai.RuntimeDependencies{
 		Store:    aiStore,
@@ -538,8 +540,9 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	})
 	providerRegistry.Register(googleProvider)
 
-	oauthManager := connector.NewOAuthManager(connectorStore, connectorCipher)
+	oauthManager := connector.NewOAuthManager(connectorStore, connectorCipher, cfg.Connector.ResolvedAllowedReturnOrigins()...)
 	tokenManager := connector.NewTokenManager(connectorStore, connectorCipher, providerRegistry, connector.DefaultCleanerRegistry)
+	s.ConnectorStore = connectorStore
 
 	connectorCoordinator := connectorapp.NewLoggingCoordinator(
 		connectorapp.NewTransactionalCoordinator(
@@ -629,9 +632,9 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		"google": googleProvider,
 	}
 
-	hmacSecret := []byte(cfg.Security.EncryptionKey)
-	if len(hmacSecret) == 0 {
-		hmacSecret = []byte("saturn-attachment-hmac-secret-default")
+	hmacSecret, err := crypto.DeriveSubkey(cfg.Security.EncryptionKey, "saturn-mail-attachment-hmac-v1", 32)
+	if err != nil {
+		return fmt.Errorf("derive mail attachment hmac key: %w", err)
 	}
 
 	mailCoordinator := mailapp.NewLoggingCoordinator(
@@ -680,6 +683,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		tokenManager,
 		externalMailProviders,
 		mailCoordinator,
+		sharedAuthenticator,
 		hmacSecret,
 	)
 
@@ -697,6 +701,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	financeapp.RegisterWorkflows(workflowRegistry, financeapp.WorkflowDependencies{
 		FinanceService: financeService,
 		SpaceService:   spaceService,
+		Transactor:     dbClient,
 	})
 	calendarapp.RegisterWorkflows(workflowRegistry, calendarapp.WorkflowDependencies{
 		Coordinator:   calendarCoordinator,
@@ -768,6 +773,10 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	event.RegisterWorkflowSubscribers(eventBusEngine, workflowCoordinator, workflowService, workflowService.Catalog())
 	transportscheduler.RegisterWorkflowJobs(schedulerEngine, workflowCoordinator)
 
+	// Start background workers only after all job handlers and workflow subscribers are registered.
+	eventBusEngine.Start(ctx)
+	schedulerEngine.Start(ctx)
+
 	return nil
 }
 
@@ -821,6 +830,7 @@ type GRPCGatewayServer struct {
 	attachmentHandler    *mailhttp.AttachmentHandler
 	AIStreamHandler      *aihttp.StreamHandler
 	MCPServer            *mcptransport.Server
+	ConnectorStore       connector.Store
 	DB                   *sql.DB
 }
 
@@ -943,11 +953,11 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 
 	// Register Google push notification webhook handler
 	if s.scheduler != nil {
-		googleWebhookHandler := connectorhttp.NewGoogleWebhookHandler(s.scheduler)
+		googleWebhookHandler := connectorhttp.NewGoogleWebhookHandler(s.scheduler, cfg.Connector.WebhookSecret)
 		handler.Handle("/v1/platform/connectors/webhooks/google", googleWebhookHandler)
 		handler.Handle("/api/v1/platform/connectors/webhooks/google", googleWebhookHandler)
 
-		gmailWebhookHandler := mailhttp.NewGmailWebhookHandler(s.scheduler)
+		gmailWebhookHandler := mailhttp.NewGmailWebhookHandler(s.scheduler, s.ConnectorStore, cfg.Connector.WebhookSecret)
 		handler.Handle("/v1/platform/connectors/webhooks/gmail", gmailWebhookHandler)
 		handler.Handle("/api/v1/platform/connectors/webhooks/gmail", gmailWebhookHandler)
 	}
@@ -1107,6 +1117,7 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 	gwSrv.DB = db
 	gwSrv.AIStreamHandler = grpcSrv.AIStreamHandler
 	gwSrv.MCPServer = grpcSrv.MCPServer
+	gwSrv.ConnectorStore = grpcSrv.ConnectorStore
 
 	// Register shutdown callbacks (LIFO order: gateway first, then gRPC).
 	mgr.Register(grpcSrv.Shutdown)
@@ -1135,19 +1146,6 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 
 	if err := g.Wait(); err != nil {
 		log.Error(ctx, "server stopped", log.Err(err))
-	}
-
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.Shutdown.Timeout)
-	defer shutdownCancel()
-	if grpcSrv.Scheduler != nil {
-		if err := grpcSrv.Scheduler.Shutdown(shutdownCtx); err != nil {
-			log.Error(shutdownCtx, "scheduler shutdown error", log.Err(err))
-		}
-	}
-	if grpcSrv.EventBus != nil {
-		if err := grpcSrv.EventBus.Shutdown(shutdownCtx); err != nil {
-			log.Error(shutdownCtx, "eventbus shutdown error", log.Err(err))
-		}
 	}
 
 	log.Info(ctx, "all servers stopped")

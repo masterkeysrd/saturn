@@ -74,8 +74,37 @@ type AIMCPConfig struct {
 // ConnectorConfig holds instance-level OAuth connector configurations.
 type ConnectorConfig struct {
 	PublicCallbackBaseURL string                   `mapstructure:"public_callback_base_url"`
+	AllowedReturnOrigins  []string                 `mapstructure:"allowed_return_origins"`
+	WebhookSecret         string                   `mapstructure:"webhook_secret"`
 	Google                GoogleConnectorConfig    `mapstructure:"google"`
 	Microsoft             MicrosoftConnectorConfig `mapstructure:"microsoft"`
+}
+
+// ResolvedAllowedReturnOrigins returns AllowedReturnOrigins plus the origin of PublicCallbackBaseURL when set.
+func (c *ConnectorConfig) ResolvedAllowedReturnOrigins() []string {
+	seen := make(map[string]struct{})
+	var out []string
+	add := func(raw string) {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			return
+		}
+		u, err := url.Parse(raw)
+		if err != nil || u.Scheme == "" || u.Host == "" {
+			return
+		}
+		origin := strings.ToLower(u.Scheme + "://" + u.Host)
+		if _, ok := seen[origin]; ok {
+			return
+		}
+		seen[origin] = struct{}{}
+		out = append(out, origin)
+	}
+	for _, o := range c.AllowedReturnOrigins {
+		add(o)
+	}
+	add(c.PublicCallbackBaseURL)
+	return out
 }
 
 // CallbackURL returns the OAuth redirect callback URI for the given provider.
@@ -267,6 +296,8 @@ func NewViper() *viper.Viper {
 	v.SetDefault("security.encryption_key", "")
 
 	v.SetDefault("connector.public_callback_base_url", "http://localhost:8080/v1/platform/connectors/oauth")
+	v.SetDefault("connector.allowed_return_origins", []string{})
+	v.SetDefault("connector.webhook_secret", "")
 	v.SetDefault("connector.google.client_id", "")
 	v.SetDefault("connector.google.client_secret", "")
 	v.SetDefault("connector.microsoft.client_id", "")

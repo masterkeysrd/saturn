@@ -5,6 +5,7 @@ import (
 	"encoding/json/v2"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/swaggest/swgui/v5emb"
@@ -14,6 +15,12 @@ func apiV1Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r2 := r.Clone(r.Context())
 		r2.URL.Path = strings.TrimPrefix(r.URL.Path, "/api")
+		if strings.HasPrefix(r2.URL.Path, "/v1/platform/ai/") ||
+			strings.HasPrefix(r2.URL.Path, "/v1/platform/workflows/") ||
+			strings.HasPrefix(r2.URL.Path, "/v1/platform/backup/") {
+			rc := http.NewResponseController(w)
+			_ = rc.SetWriteDeadline(time.Now().Add(5 * time.Minute))
+		}
 		next.ServeHTTP(w, r2)
 	})
 }

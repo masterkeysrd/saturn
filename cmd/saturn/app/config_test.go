@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -127,5 +128,30 @@ func TestConfig_AIMCPAllowPrivateNetworks(t *testing.T) {
 	cfg2 := LoadConfig(v2)
 	if !cfg2.AI.MCP.AllowPrivateNetworks {
 		t.Fatalf("expected AI.MCP.AllowPrivateNetworks=true from env override")
+	}
+}
+
+func TestConnectorConfig_ResolvedAllowedReturnOrigins(t *testing.T) {
+	cfg := ConnectorConfig{
+		PublicCallbackBaseURL: "https://api.saturn.example/v1/platform/connectors/oauth",
+		AllowedReturnOrigins:  []string{"https://app.saturn.example/", "https://API.saturn.example", "invalid"},
+	}
+	got := cfg.ResolvedAllowedReturnOrigins()
+	want := []string{"https://app.saturn.example", "https://api.saturn.example"}
+	if len(got) != len(want) {
+		t.Fatalf("ResolvedAllowedReturnOrigins() = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("ResolvedAllowedReturnOrigins()[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+func TestGRPCServer_StartRequiresEncryptionKey(t *testing.T) {
+	srv := NewGRPCServer(&Config{})
+	err := srv.Start(context.Background(), &Config{}, nil)
+	if err == nil {
+		t.Fatal("expected GRPCServer.Start to fail when Security.EncryptionKey is empty")
 	}
 }
