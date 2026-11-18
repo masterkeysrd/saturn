@@ -276,6 +276,7 @@ func (s *MailboxStore) Upsert(ctx context.Context, m *mail.Mailbox) error {
 			unread_count = EXCLUDED.unread_count,
 			total_count = EXCLUDED.total_count,
 			update_time = EXCLUDED.update_time
+		WHERE mail.mailboxes.space_id = EXCLUDED.space_id
 	`
 
 	_, err := s.db.Exec(

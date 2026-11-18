@@ -1011,3 +1011,295 @@ func TestCoordinator_SyncOlderThreads(t *testing.T) {
 		})
 	}
 }
+
+type mockAttachmentProvider struct {
+	*mockExternalMailProvider
+	createDraftFn func(ctx context.Context, accessToken string, draft *domainmail.Draft) (*domainmail.Draft, error)
+	uploadFn      func(ctx context.Context, accessToken, providerDraftID, filename, contentType string, r io.Reader) (*domainmail.AttachmentMeta, error)
+}
+
+func (m *mockAttachmentProvider) CreateDraft(ctx context.Context, accessToken string, draft *domainmail.Draft) (*domainmail.Draft, error) {
+	if m.createDraftFn != nil {
+		return m.createDraftFn(ctx, accessToken, draft)
+	}
+	return m.mockExternalMailProvider.CreateDraft(ctx, accessToken, draft)
+}
+
+func (m *mockAttachmentProvider) UploadDraftAttachment(ctx context.Context, accessToken, providerDraftID, filename, contentType string, r io.Reader) (*domainmail.AttachmentMeta, error) {
+	if m.uploadFn != nil {
+		return m.uploadFn(ctx, accessToken, providerDraftID, filename, contentType, r)
+	}
+	return m.mockExternalMailProvider.UploadDraftAttachment(ctx, accessToken, providerDraftID, filename, contentType, r)
+}
+
+func TestCoordinator_UploadDraftAttachment(t *testing.T) {
+	cipher, err := crypto.NewCipher("test-master-encryption-key-32b!!")
+	require.NoError(t, err)
+	encAccess, _ := cipher.Encrypt("access-token-1")
+	encRefresh, _ := cipher.Encrypt("refresh-token-1")
+
+	dftID1, err := domainmail.GenerateDraftID()
+	require.NoError(t, err)
+	dftID2, err := domainmail.GenerateDraftID()
+	require.NoError(t, err)
+	dftID3, err := domainmail.GenerateDraftID()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name               string
+		initialDraft       *domainmail.Draft
+		createDraftFn      func(ctx context.Context, accessToken string, draft *domainmail.Draft) (*domainmail.Draft, error)
+		uploadFn           func(ctx context.Context, accessToken, providerDraftID, filename, contentType string, r io.Reader) (*domainmail.AttachmentMeta, error)
+		wantErr            bool
+		wantProviderDraft  string
+		wantCreateDraftHit bool
+	}{
+		{
+			name: "creates unsynced provider draft before uploading attachment",
+			initialDraft: &domainmail.Draft{
+				ID:                 dftID1,
+				SpaceID:            "spc_1",
+				ConnectedAccountID: "acc_1",
+				ProviderDraftID:    nil,
+				Mode:               domainmail.DraftModeNew,
+				Subject:            "With Attachment",
+			},
+			createDraftFn: func(_ context.Context, _ string, draft *domainmail.Draft) (*domainmail.Draft, error) {
+				copyDraft := *draft
+				copyDraft.ProviderDraftID = new("gm_dft_created")
+				copyDraft.ProviderMessageID = new("gm_msg_created")
+				return &copyDraft, nil
+			},
+			uploadFn: func(_ context.Context, _ string, providerDraftID, filename, contentType string, r io.Reader) (*domainmail.AttachmentMeta, error) {
+				if providerDraftID != "gm_dft_created" {
+					t.Fatalf("expected created provider draft id, got %q", providerDraftID)
+				}
+				attID, err := domainmail.GenerateAttachmentID()
+				if err != nil {
+					t.Fatalf("GenerateAttachmentID failed: %v", err)
+				}
+				return &domainmail.AttachmentMeta{
+					ID:          attID,
+					Filename:    filename,
+					ContentType: contentType,
+					Size:        5,
+				}, nil
+			},
+			wantProviderDraft:  "gm_dft_created",
+			wantCreateDraftHit: true,
+		},
+		{
+			name: "propagates provider UploadDraftAttachment error",
+			initialDraft: &domainmail.Draft{
+				ID:                 dftID2,
+				SpaceID:            "spc_1",
+				ConnectedAccountID: "acc_1",
+				ProviderDraftID:    new("gm_dft_existing"),
+				Mode:               domainmail.DraftModeNew,
+				Subject:            "Synced",
+			},
+			uploadFn: func(_ context.Context, _ string, _ string, _ string, _ string, _ io.Reader) (*domainmail.AttachmentMeta, error) {
+				return nil, errors.E(errors.Internal, "upstream upload failed")
+			},
+			wantErr: true,
+		},
+		{
+			name: "propagates provider CreateDraft error for unsynced draft",
+			initialDraft: &domainmail.Draft{
+				ID:                 dftID3,
+				SpaceID:            "spc_1",
+				ConnectedAccountID: "acc_1",
+				Mode:               domainmail.DraftModeNew,
+				Subject:            "Unsynced",
+			},
+			createDraftFn: func(_ context.Context, _ string, _ *domainmail.Draft) (*domainmail.Draft, error) {
+				return nil, errors.E(errors.Internal, "upstream create draft failed")
+			},
+			wantErr:            true,
+			wantCreateDraftHit: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mbxStore := newMockMailboxStore()
+			thStore := newMockThreadStore()
+			msgStore := newMockMessageStore()
+			dftStore := newMockDraftStore()
+			syncStore := newMockSyncStateStore()
+			accStore := &mockAccountStore{accounts: make(map[string]*connector.ConnectedAccount)}
+
+			accStore.accounts["acc_1"] = &connector.ConnectedAccount{
+				ID:                  "acc_1",
+				SpaceID:             "spc_1",
+				Provider:            "google",
+				Status:              connector.AccountStatusHealthy,
+				EnabledCapabilities: []string{string(connector.CapabilityMail)},
+				AccessTokenEnc:      encAccess,
+				RefreshTokenEnc:     encRefresh,
+				TokenExpiry:         time.Now().Add(1 * time.Hour),
+			}
+
+			require.NoError(t, dftStore.Create(context.Background(), tc.initialDraft))
+
+			createHit := false
+			extProv := &mockAttachmentProvider{
+				mockExternalMailProvider: &mockExternalMailProvider{},
+				createDraftFn: func(ctx context.Context, accessToken string, draft *domainmail.Draft) (*domainmail.Draft, error) {
+					createHit = true
+					return tc.createDraftFn(ctx, accessToken, draft)
+				},
+				uploadFn: tc.uploadFn,
+			}
+
+			tokenMgr := connector.NewTokenManager(accStore, cipher, connector.NewProviderRegistry(), nil)
+			domainService := domainmail.NewService(domainmail.Dependencies{
+				MailboxStore:   mbxStore,
+				ThreadStore:    thStore,
+				MessageStore:   msgStore,
+				DraftStore:     dftStore,
+				SyncStateStore: syncStore,
+			})
+
+			coord := appmail.NewCoordinator(appmail.Dependencies{
+				DomainService:  domainService,
+				MailboxStore:   mbxStore,
+				ThreadStore:    thStore,
+				MessageStore:   msgStore,
+				DraftStore:     dftStore,
+				SyncStateStore: syncStore,
+				AccountStore:   accStore,
+				TokenManager:   tokenMgr,
+				ExternalProviders: map[string]domainmail.ExternalMailProvider{
+					"google": extProv,
+				},
+				Events:     eventbus.NoopPublisher{},
+				HMACSecret: []byte("test-super-secret-hmac-key-32bytes"),
+			})
+
+			ctx := contextWithAuth("spc_1", string(space.RoleMember))
+			meta, uploadErr := coord.UploadDraftAttachment(ctx, &appmail.UploadDraftAttachmentRequest{
+				DraftID:     tc.initialDraft.ID,
+				Filename:    "hello.txt",
+				ContentType: "text/plain",
+				Body:        strings.NewReader("hello"),
+			})
+			assert.Equal(t, tc.wantCreateDraftHit, createHit)
+			if tc.wantErr {
+				require.Error(t, uploadErr)
+				return
+			}
+			require.NoError(t, uploadErr)
+			require.NotNil(t, meta)
+
+			saved, err := dftStore.GetByID(context.Background(), "spc_1", tc.initialDraft.ID)
+			require.NoError(t, err)
+			require.NotNil(t, saved.ProviderDraftID)
+			assert.Equal(t, tc.wantProviderDraft, *saved.ProviderDraftID)
+			assert.Len(t, saved.Attachments, 1)
+		})
+	}
+}
+
+type mockModifyProvider struct {
+	*mockExternalMailProvider
+	capturedAdd    []string
+	capturedRemove []string
+}
+
+func (m *mockModifyProvider) ModifyThread(ctx context.Context, accessToken, providerThreadID string, addLabelIDs, removeLabelIDs []string) error {
+	m.capturedAdd = append([]string(nil), addLabelIDs...)
+	m.capturedRemove = append([]string(nil), removeLabelIDs...)
+	return nil
+}
+
+func TestCoordinator_ModifyThread_SpamAndMailboxIDMapping(t *testing.T) {
+	cipher, err := crypto.NewCipher("test-master-encryption-key-32b!!")
+	require.NoError(t, err)
+	encAccess, _ := cipher.Encrypt("access-token-1")
+	encRefresh, _ := cipher.Encrypt("refresh-token-1")
+
+	mbxStore := newMockMailboxStore()
+	thStore := newMockThreadStore()
+	msgStore := newMockMessageStore()
+	dftStore := newMockDraftStore()
+	syncStore := newMockSyncStateStore()
+	accStore := &mockAccountStore{accounts: make(map[string]*connector.ConnectedAccount)}
+
+	accStore.accounts["acc_1"] = &connector.ConnectedAccount{
+		ID:                  "acc_1",
+		SpaceID:             "spc_1",
+		Provider:            "google",
+		Status:              connector.AccountStatusHealthy,
+		EnabledCapabilities: []string{string(connector.CapabilityMail)},
+		AccessTokenEnc:      encAccess,
+		RefreshTokenEnc:     encRefresh,
+		TokenExpiry:         time.Now().Add(1 * time.Hour),
+	}
+
+	require.NoError(t, mbxStore.Create(context.Background(), &domainmail.Mailbox{
+		ID:                 "mbx_add_1",
+		SpaceID:            "spc_1",
+		ConnectedAccountID: "acc_1",
+		ProviderMailboxID:  new("Label_Add"),
+		Name:               "Receipts",
+	}))
+	require.NoError(t, mbxStore.Create(context.Background(), &domainmail.Mailbox{
+		ID:                 "mbx_rm_1",
+		SpaceID:            "spc_1",
+		ConnectedAccountID: "acc_1",
+		ProviderMailboxID:  new("Label_Rm"),
+		Name:               "Todo",
+	}))
+
+	thID, err := domainmail.GenerateThreadID()
+	require.NoError(t, err)
+
+	require.NoError(t, thStore.Create(context.Background(), &domainmail.Thread{
+		ID:                 thID,
+		SpaceID:            "spc_1",
+		ConnectedAccountID: "acc_1",
+		ProviderThreadID:   new("gm_th_spam"),
+		InInbox:            true,
+		MailboxIDs:         []string{"mbx_rm_1"},
+		LastMessageAt:      time.Now().UTC(),
+	}))
+
+	prov := &mockModifyProvider{mockExternalMailProvider: &mockExternalMailProvider{}}
+	tokenMgr := connector.NewTokenManager(accStore, cipher, connector.NewProviderRegistry(), nil)
+	domainService := domainmail.NewService(domainmail.Dependencies{
+		MailboxStore:   mbxStore,
+		ThreadStore:    thStore,
+		MessageStore:   msgStore,
+		DraftStore:     dftStore,
+		SyncStateStore: syncStore,
+	})
+	coord := appmail.NewCoordinator(appmail.Dependencies{
+		DomainService:  domainService,
+		MailboxStore:   mbxStore,
+		ThreadStore:    thStore,
+		MessageStore:   msgStore,
+		DraftStore:     dftStore,
+		SyncStateStore: syncStore,
+		AccountStore:   accStore,
+		TokenManager:   tokenMgr,
+		ExternalProviders: map[string]domainmail.ExternalMailProvider{
+			"google": prov,
+		},
+		Events:     eventbus.NoopPublisher{},
+		HMACSecret: []byte("test-super-secret-hmac-key-32bytes"),
+	})
+
+	ctx := contextWithAuth("spc_1", string(space.RoleMember))
+	modified, err := coord.ModifyThread(ctx, &appmail.ModifyThreadRequest{
+		ID:               thID,
+		InSpam:           new(true),
+		AddMailboxIDs:    []string{"mbx_add_1"},
+		RemoveMailboxIDs: []string{"mbx_rm_1"},
+	})
+	require.NoError(t, err)
+	assert.True(t, modified.InSpam)
+	assert.False(t, modified.InInbox)
+	assert.ElementsMatch(t, []string{"SPAM", "Label_Add"}, prov.capturedAdd)
+	assert.ElementsMatch(t, []string{"INBOX", "Label_Rm"}, prov.capturedRemove)
+}

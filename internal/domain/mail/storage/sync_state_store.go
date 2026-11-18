@@ -44,8 +44,9 @@ type SyncStateStore struct {
 	db db.DB
 }
 
-// NewSyncStateStore constructs a new SyncStateStore.
+// NewSyncStateStore constructs a new SyncStateStore and registers the CapabilityMail cleaner.
 func NewSyncStateStore(database db.DB) *SyncStateStore {
+	RegisterCapabilityCleaner(database)
 	return &SyncStateStore{db: database}
 }
 
@@ -97,6 +98,7 @@ func (s *SyncStateStore) Upsert(ctx context.Context, state *mail.SyncState) erro
 			exhausted_buckets = EXCLUDED.exhausted_buckets,
 			last_synced_at = EXCLUDED.last_synced_at,
 			watch_expiration = EXCLUDED.watch_expiration
+		WHERE mail.sync_states.space_id = EXCLUDED.space_id
 	`
 
 	_, err := s.db.Exec(

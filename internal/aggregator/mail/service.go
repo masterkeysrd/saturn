@@ -9,12 +9,13 @@ import (
 	"sync"
 	"time"
 
-	appmail "github.com/masterkeysrd/saturn/internal/application/mail"
 	domainmail "github.com/masterkeysrd/saturn/internal/domain/mail"
 	"github.com/masterkeysrd/saturn/internal/platform/connector"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"golang.org/x/sync/errgroup"
 )
+
+const maxThreadOffset = 10000
 
 // Service provides aggregated, read-only multi-entity mail projections, hybrid search,
 // message body hydration, and ephemeral signed attachment links.
@@ -86,6 +87,12 @@ func (s *Service) ListThreads(ctx context.Context, spaceID string, filter *domai
 	}
 	if filter.Limit <= 0 {
 		filter.Limit = 50
+	}
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
+	if filter.Offset > maxThreadOffset {
+		filter.Offset = maxThreadOffset
 	}
 
 	trimmedQuery := strings.TrimSpace(filter.Query)
@@ -178,6 +185,22 @@ func (s *Service) hybridSearchThreads(ctx context.Context, spaceID string, filte
 					existing, err := s.threadReader.GetByProviderID(ctx, spaceID, acc.ID, *rt.ProviderThreadID)
 					if err == nil && existing != nil {
 						rt.ID = existing.ID
+					} else {
+						if rt.ID == "" {
+							if genID, genErr := domainmail.GenerateThreadID(); genErr == nil {
+								rt.ID = genID
+							}
+						}
+						now := time.Now().UTC()
+						if rt.CreateTime.IsZero() {
+							rt.CreateTime = now
+						}
+						if rt.UpdateTime.IsZero() {
+							rt.UpdateTime = now
+						}
+						if rt.ID != "" {
+							_ = s.threadReader.Upsert(ctx, rt)
+						}
 					}
 				}
 				remoteResults = append(remoteResults, rt)
@@ -295,6 +318,9 @@ func (s *Service) hydrateMessage(ctx context.Context, spaceID string, msg *domai
 	if err == nil && body != nil {
 		bodyHTML = body.SanitizedHTML
 		bodyPlain = body.PlainText
+		if !msg.HasRemoteImages && strings.Contains(strings.ToLower(bodyHTML), "data-saturn-remote-") {
+			msg.HasRemoteImages = true
+		}
 	} else if msg.ConnectedAccountID != "" && msg.ProviderMessageID != nil && *msg.ProviderMessageID != "" && s.accountReader != nil {
 		acc, err := s.accountReader.GetAccount(ctx, spaceID, msg.ConnectedAccountID)
 		if err == nil && acc != nil {
@@ -327,7 +353,7 @@ func (s *Service) hydrateMessage(ctx context.Context, spaceID string, msg *domai
 			disposition = "inline"
 		}
 
-		claims := appmail.AttachmentTokenClaims{
+		claims := domainmail.AttachmentTokenClaims{
 			SpaceID:      spaceID,
 			MessageID:    msg.ID,
 			AttachmentID: att.ID,
@@ -335,7 +361,7 @@ func (s *Service) hydrateMessage(ctx context.Context, spaceID string, msg *domai
 			ExpiresAt:    time.Now().Add(5 * time.Minute).Unix(),
 		}
 
-		token, err := appmail.MintAttachmentToken(claims, s.hmacSecret)
+		token, err := domainmail.MintAttachmentToken(claims, s.hmacSecret)
 		if err != nil {
 			return nil, errors.E(op, err)
 		}

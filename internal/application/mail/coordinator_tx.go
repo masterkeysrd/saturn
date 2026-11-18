@@ -224,43 +224,12 @@ func (t *TransactionalCoordinator) UploadDraftAttachment(ctx context.Context, re
 	return res, nil
 }
 
-// SyncConnectedAccountMail executes next.SyncConnectedAccountMail inside a database transaction.
 func (t *TransactionalCoordinator) SyncConnectedAccountMail(ctx context.Context, req *SyncConnectedAccountMailRequest) error {
-	ctx, tx, err := t.txr.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	if err := t.next.SyncConnectedAccountMail(ctx, req); err != nil {
-		return err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return t.next.SyncConnectedAccountMail(ctx, req)
 }
 
-// SyncOlderThreads executes next.SyncOlderThreads inside a database transaction.
 func (t *TransactionalCoordinator) SyncOlderThreads(ctx context.Context, req *SyncOlderThreadsRequest) (*SyncOlderThreadsResult, error) {
-	ctx, tx, err := t.txr.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	res, err := t.next.SyncOlderThreads(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	return res, nil
+	return t.next.SyncOlderThreads(ctx, req)
 }
 
 // PruneWindowAndBodies executes next.PruneWindowAndBodies inside a database transaction.

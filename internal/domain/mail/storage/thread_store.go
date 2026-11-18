@@ -468,6 +468,7 @@ func (s *ThreadStore) Upsert(ctx context.Context, t *mail.Thread) error {
 			last_message_at = EXCLUDED.last_message_at,
 			search_tsv = EXCLUDED.search_tsv,
 			update_time = EXCLUDED.update_time
+		WHERE mail.threads.space_id = EXCLUDED.space_id
 	`
 
 	mailboxIDs := t.MailboxIDs

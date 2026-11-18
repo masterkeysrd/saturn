@@ -8,6 +8,7 @@ import (
 	"context"
 	"io"
 	"slices"
+	"strings"
 	"time"
 
 	domainmail "github.com/masterkeysrd/saturn/internal/domain/mail"
@@ -53,10 +54,8 @@ type Coordinator interface {
 	// @transactional
 	UploadDraftAttachment(ctx context.Context, req *UploadDraftAttachmentRequest) (*domainmail.AttachmentMeta, error)
 
-	// @transactional
 	SyncConnectedAccountMail(ctx context.Context, req *SyncConnectedAccountMailRequest) error
 
-	// @transactional
 	SyncOlderThreads(ctx context.Context, req *SyncOlderThreadsRequest) (*SyncOlderThreadsResult, error)
 
 	// @transactional
@@ -370,23 +369,37 @@ func (c *coordinator) ModifyThread(ctx context.Context, req *ModifyThreadRequest
 		if *req.InSpam {
 			thread.InInbox = false
 			addLabels = append(addLabels, "SPAM")
-			removeLabels = append(removeLabels, "SPAM", "INBOX")
+			removeLabels = append(removeLabels, "INBOX")
 		} else {
 			removeLabels = append(removeLabels, "SPAM")
 		}
+	}
+
+	resolveProviderMailboxID := func(mbxID string) string {
+		if mbx, mbxErr := c.mailboxStore.GetByID(ctx, spaceID, mbxID); mbxErr == nil && mbx != nil && mbx.ProviderMailboxID != nil && *mbx.ProviderMailboxID != "" {
+			return *mbx.ProviderMailboxID
+		}
+		if strings.HasPrefix(mbxID, "mbx_") {
+			return ""
+		}
+		return mbxID
 	}
 
 	for _, addID := range req.AddMailboxIDs {
 		if !slices.Contains(thread.MailboxIDs, addID) {
 			thread.MailboxIDs = append(thread.MailboxIDs, addID)
 		}
-		addLabels = append(addLabels, addID)
+		if lbl := resolveProviderMailboxID(addID); lbl != "" {
+			addLabels = append(addLabels, lbl)
+		}
 	}
 	for _, rmID := range req.RemoveMailboxIDs {
 		thread.MailboxIDs = slices.DeleteFunc(thread.MailboxIDs, func(s string) bool {
 			return s == rmID
 		})
-		removeLabels = append(removeLabels, rmID)
+		if lbl := resolveProviderMailboxID(rmID); lbl != "" {
+			removeLabels = append(removeLabels, lbl)
+		}
 	}
 
 	if err := c.domainService.UpdateThread(ctx, thread); err != nil {

@@ -231,7 +231,7 @@ func isInSVG(n *html.Node) bool {
 func sanitizeElement(n *html.Node, opts *SanitizeOptions, res *SanitizeResult) {
 	var cleanAttrs []html.Attribute
 	isLink := n.DataAtom == atom.A || n.DataAtom == atom.Area
-	isImage := n.DataAtom == atom.Img || n.DataAtom == atom.Image
+	isImage := n.DataAtom == atom.Img || n.DataAtom == atom.Image || n.DataAtom == atom.Source
 	var hrefVal string
 	var hasTarget, hasRel bool
 

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/mail"
+	"github.com/masterkeysrd/saturn/internal/platform/connector"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -288,5 +289,28 @@ func TestSyncStateStore(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, state)
 		assert.Equal(t, 90, state.WindowDays)
+	})
+
+	t.Run("CapabilityMail cleaner deletes mail tables for account", func(t *testing.T) {
+		var queries []string
+		db := &mockDB{
+			execFn: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
+				queries = append(queries, query)
+				return mockResult{rowsAffected: 1}, nil
+			},
+		}
+		NewSyncStateStore(db)
+		err := connector.DefaultCleanerRegistry.RunCleaners(ctx, "spc_1", "acc_1", connector.CapabilityMail)
+		require.NoError(t, err)
+		require.GreaterOrEqual(t, len(queries), 5)
+		joined := ""
+		for _, q := range queries {
+			joined += q + "\n"
+		}
+		assert.Contains(t, joined, "DELETE FROM mail.drafts")
+		assert.Contains(t, joined, "DELETE FROM mail.messages")
+		assert.Contains(t, joined, "DELETE FROM mail.threads")
+		assert.Contains(t, joined, "DELETE FROM mail.mailboxes")
+		assert.Contains(t, joined, "DELETE FROM mail.sync_states")
 	})
 }

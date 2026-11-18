@@ -27,6 +27,34 @@ var publicEmailDomains = map[string]struct{}{
 	"mail.com":       {},
 }
 
+var secondLevelTLDs = map[string]struct{}{
+	"co":  {},
+	"com": {},
+	"org": {},
+	"net": {},
+	"edu": {},
+	"gov": {},
+	"ac":  {},
+	"mil": {},
+}
+
+// extractRegistrableBrandDomain strips mail-sending subdomains (e.g. inspire.pinterest.com -> pinterest.com,
+// notifications.banco.com.do -> banco.com.do) so favicon lookups resolve the organization's root website.
+func extractRegistrableBrandDomain(domain string) string {
+	labels := strings.Split(domain, ".")
+	if len(labels) <= 2 {
+		return domain
+	}
+	tld := labels[len(labels)-1]
+	sld := labels[len(labels)-2]
+	if len(tld) == 2 {
+		if _, ok := secondLevelTLDs[sld]; ok && len(labels) >= 3 {
+			return strings.Join(labels[len(labels)-3:], ".")
+		}
+	}
+	return strings.Join(labels[len(labels)-2:], ".")
+}
+
 // ResolveParticipantAvatar determines the best avatar URL and verification status
 // for an email participant using a hybrid BIMI and domain-favicon pipeline.
 func ResolveParticipantAvatar(email string, headers map[string]string) (avatarURL string, isVerified bool) {
@@ -51,11 +79,16 @@ func ResolveParticipantAvatar(email string, headers map[string]string) (avatarUR
 		}
 	}
 
+	brandDomain := extractRegistrableBrandDomain(domain)
+
 	// 2. Filter out generic public webmail providers (personal accounts should use initial fallbacks)
 	if _, isPublic := publicEmailDomains[domain]; isPublic {
 		return "", false
 	}
+	if _, isPublic := publicEmailDomains[brandDomain]; isPublic {
+		return "", false
+	}
 
 	// 3. Resolve high-resolution brand favicon for corporate and organization domains
-	return fmt.Sprintf("https://www.google.com/s2/favicons?domain=%s&sz=128", domain), false
+	return fmt.Sprintf("https://www.google.com/s2/favicons?domain=%s&sz=128", brandDomain), false
 }

@@ -196,3 +196,17 @@ func TestCoordinator_SyncConnectedAccountMail_Events(t *testing.T) {
 		})
 	}
 }
+
+func TestCoordinator_SyncConnectedAccountMail_NilAccount(t *testing.T) {
+	accStore := &mockAccountStore{accounts: map[string]*connector.ConnectedAccount{}}
+	coord := appmail.NewCoordinator(appmail.Dependencies{
+		AccountStore: accStore,
+	})
+	err := coord.SyncConnectedAccountMail(t.Context(), &appmail.SyncConnectedAccountMailRequest{
+		SpaceID:            "spc_1",
+		ConnectedAccountID: "cac_missing",
+	})
+	if err != nil {
+		t.Fatalf("expected nil error for missing account, got %v", err)
+	}
+}

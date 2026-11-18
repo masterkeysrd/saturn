@@ -7,15 +7,31 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	appmail "github.com/masterkeysrd/saturn/internal/application/mail"
+	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	domainmail "github.com/masterkeysrd/saturn/internal/domain/mail"
+	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/connector"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
+	transportauth "github.com/masterkeysrd/saturn/internal/transport/auth"
 )
 
 const maxUploadBytes = 25 * 1024 * 1024
+
+// MetadataAttachmentStreamer is an optional provider capability that resolves stale ephemeral
+// or inline-body attachment tokens using stored attachment metadata and part ordering.
+type MetadataAttachmentStreamer interface {
+	OpenAttachmentStreamWithMeta(
+		ctx context.Context,
+		accessToken, providerMessageID, attachmentID string,
+		meta *domainmail.AttachmentMeta,
+		partIndex int,
+	) (io.ReadCloser, string, int64, error)
+}
 
 // MessageStoreReader abstracts message lookup for attachment streaming.
 type MessageStoreReader interface {
@@ -32,6 +48,12 @@ type TokenSource interface {
 	TokenSource(ctx context.Context, spaceID, accountID string) (string, error)
 }
 
+// RequestAuthenticator authenticates bearer/cookie tokens and resolves active workspace scopes.
+type RequestAuthenticator interface {
+	AuthenticateToken(ctx context.Context, rawToken string) (transportauth.AuthResult, error)
+	ResolveSpace(ctx context.Context, principal auth.Principal, explicitSpaceID string) (auth.SpaceContext, error)
+}
+
 // AttachmentHandler serves streaming attachment downloads and draft uploads.
 type AttachmentHandler struct {
 	messageReader     MessageStoreReader
@@ -39,6 +61,7 @@ type AttachmentHandler struct {
 	tokenSource       TokenSource
 	externalProviders map[string]domainmail.ExternalMailProvider
 	coordinator       appmail.Coordinator
+	authenticator     RequestAuthenticator
 	hmacSecret        []byte
 }
 
@@ -49,6 +72,7 @@ func NewAttachmentHandler(
 	tokenSource TokenSource,
 	externalProviders map[string]domainmail.ExternalMailProvider,
 	coordinator appmail.Coordinator,
+	authenticator RequestAuthenticator,
 	hmacSecret []byte,
 ) *AttachmentHandler {
 	return &AttachmentHandler{
@@ -57,6 +81,7 @@ func NewAttachmentHandler(
 		tokenSource:       tokenSource,
 		externalProviders: externalProviders,
 		coordinator:       coordinator,
+		authenticator:     authenticator,
 		hmacSecret:        hmacSecret,
 	}
 }
@@ -99,9 +124,11 @@ func (h *AttachmentHandler) ServeDownload(w http.ResponseWriter, r *http.Request
 	}
 
 	var targetAtt *domainmail.AttachmentMeta
-	for _, att := range msg.Attachments {
-		if att.ID == claims.AttachmentID {
-			targetAtt = &att
+	targetIdx := -1
+	for i := range msg.Attachments {
+		if msg.Attachments[i].ID == claims.AttachmentID {
+			targetAtt = &msg.Attachments[i]
+			targetIdx = i
 			break
 		}
 	}
@@ -125,12 +152,40 @@ func (h *AttachmentHandler) ServeDownload(w http.ResponseWriter, r *http.Request
 
 	accessToken, err := h.tokenSource.TokenSource(ctx, claims.SpaceID, msg.ConnectedAccountID)
 	if err != nil || accessToken == "" {
+		log.Error(ctx, "mail attachment download: failed to acquire provider access token",
+			log.String("space_id", claims.SpaceID),
+			log.String("account_id", msg.ConnectedAccountID),
+			log.String("message_id", claims.MessageID),
+			log.Err(err),
+		)
 		http.Error(w, "unable to acquire provider access token", http.StatusBadGateway)
 		return
 	}
 
-	stream, contentType, size, err := prov.OpenAttachmentStream(ctx, accessToken, *msg.ProviderMessageID, claims.AttachmentID)
+	var (
+		stream      io.ReadCloser
+		contentType string
+		size        int64
+	)
+	if metaStreamer, ok := prov.(MetadataAttachmentStreamer); ok {
+		stream, contentType, size, err = metaStreamer.OpenAttachmentStreamWithMeta(
+			ctx,
+			accessToken,
+			*msg.ProviderMessageID,
+			claims.AttachmentID,
+			targetAtt,
+			targetIdx,
+		)
+	} else {
+		stream, contentType, size, err = prov.OpenAttachmentStream(ctx, accessToken, *msg.ProviderMessageID, claims.AttachmentID)
+	}
 	if err != nil {
+		log.Error(ctx, "mail attachment download: failed to stream attachment from provider",
+			log.String("space_id", claims.SpaceID),
+			log.String("account_id", msg.ConnectedAccountID),
+			log.String("message_id", claims.MessageID),
+			log.Err(err),
+		)
 		http.Error(w, "failed to stream attachment from provider", http.StatusBadGateway)
 		return
 	}
@@ -163,6 +218,8 @@ func (h *AttachmentHandler) ServeDownload(w http.ResponseWriter, r *http.Request
 	}
 
 	w.WriteHeader(http.StatusOK)
+	rc := http.NewResponseController(w)
+	_ = rc.SetWriteDeadline(time.Time{})
 	_, _ = io.Copy(w, stream)
 }
 
@@ -189,6 +246,49 @@ func (h *AttachmentHandler) ServeUpload(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	ctx := r.Context()
+	rawToken := extractRequestToken(r)
+	if rawToken == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	authRes, err := h.authenticator.AuthenticateToken(ctx, rawToken)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if authRes.Principal.IsAPIKey() && !authRes.Principal.HasScope(string(identity.ScopeMailWrite)) {
+		http.Error(w, "forbidden: missing mail:write scope", http.StatusForbidden)
+		return
+	}
+
+	sc, err := h.authenticator.ResolveSpace(ctx, authRes.Principal, r.Header.Get("Space-Id"))
+	if err != nil {
+		switch {
+		case errors.Is(err, errors.Permission):
+			http.Error(w, "forbidden", http.StatusForbidden)
+		case errors.Is(err, errors.Invalid):
+			http.Error(w, errors.UserMessage(err), http.StatusBadRequest)
+		case errors.Is(err, errors.NotExist):
+			http.Error(w, "space not found", http.StatusNotFound)
+		default:
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+		}
+		return
+	}
+	if sc.Role == string(space.RoleViewer) {
+		http.Error(w, "forbidden: viewer role", http.StatusForbidden)
+		return
+	}
+
+	ctx = auth.WithPrincipal(ctx, authRes.Principal)
+	ctx = auth.WithSpaceScope(ctx, sc.SpaceID, sc.Role)
+
+	rc := http.NewResponseController(w)
+	_ = rc.SetReadDeadline(time.Now().Add(5 * time.Minute))
+	_ = rc.SetWriteDeadline(time.Time{})
+
 	// Enforce 25 MB maximum request entity size
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
 	if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
@@ -213,12 +313,6 @@ func (h *AttachmentHandler) ServeUpload(w http.ResponseWriter, r *http.Request) 
 		contentType = "application/octet-stream"
 	}
 
-	ctx := r.Context()
-	spaceID := r.Header.Get("Space-Id")
-	if spaceID != "" {
-		ctx = auth.WithSpaceID(ctx, spaceID)
-	}
-
 	meta, err := h.coordinator.UploadDraftAttachment(ctx, &appmail.UploadDraftAttachmentRequest{
 		DraftID:     draftID,
 		Filename:    header.Filename,
@@ -226,15 +320,36 @@ func (h *AttachmentHandler) ServeUpload(w http.ResponseWriter, r *http.Request) 
 		Body:        file,
 	})
 	if err != nil {
-		if errors.Is(err, errors.Permission) {
+		switch {
+		case errors.Is(err, errors.Permission):
 			http.Error(w, "forbidden: viewer role", http.StatusForbidden)
-			return
+		case errors.Is(err, errors.Unauthenticated):
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+		case errors.Is(err, errors.NotExist):
+			http.Error(w, errors.UserMessage(err), http.StatusNotFound)
+		case errors.Is(err, errors.Invalid):
+			http.Error(w, errors.UserMessage(err), http.StatusBadRequest)
+		default:
+			http.Error(w, errors.UserMessage(err), http.StatusInternalServerError)
 		}
-		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_ = json.MarshalWrite(w, meta)
+}
+
+func extractRequestToken(r *http.Request) string {
+	if authHeader := strings.TrimSpace(r.Header.Get("Authorization")); authHeader != "" {
+		if len(authHeader) > 7 && strings.EqualFold(authHeader[:7], "Bearer ") {
+			if tok := strings.TrimSpace(authHeader[7:]); tok != "" {
+				return tok
+			}
+		}
+	}
+	if cookie, err := r.Cookie("access_token"); err == nil && strings.TrimSpace(cookie.Value) != "" {
+		return strings.TrimSpace(cookie.Value)
+	}
+	return ""
 }

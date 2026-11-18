@@ -2,14 +2,17 @@ package mailaggregator_test
 
 import (
 	"context"
+	"io"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	mailaggregator "github.com/masterkeysrd/saturn/internal/aggregator/mail"
-	appmail "github.com/masterkeysrd/saturn/internal/application/mail"
 	domainmail "github.com/masterkeysrd/saturn/internal/domain/mail"
+	"github.com/masterkeysrd/saturn/internal/platform/connector"
+	"github.com/masterkeysrd/saturn/internal/platform/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,14 +34,19 @@ func (m *mockMailboxReader) ListBySpace(ctx context.Context, spaceID string, fil
 }
 
 type mockThreadReader struct {
+	mu      sync.RWMutex
 	threads map[string]*domainmail.Thread
 }
 
 func (m *mockThreadReader) GetByID(ctx context.Context, spaceID, id string) (*domainmail.Thread, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.threads[id], nil
 }
 
 func (m *mockThreadReader) GetByProviderID(ctx context.Context, spaceID, connectedAccountID, providerThreadID string) (*domainmail.Thread, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	for _, th := range m.threads {
 		if th.SpaceID == spaceID && th.ConnectedAccountID == connectedAccountID && th.ProviderThreadID != nil && *th.ProviderThreadID == providerThreadID {
 			return th, nil
@@ -48,6 +56,8 @@ func (m *mockThreadReader) GetByProviderID(ctx context.Context, spaceID, connect
 }
 
 func (m *mockThreadReader) ListBySpace(ctx context.Context, spaceID string, filter *domainmail.ListThreadsFilter) ([]*domainmail.Thread, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	var list []*domainmail.Thread
 	for _, th := range m.threads {
 		if filter != nil && filter.Query != "" && !strings.Contains(strings.ToLower(th.Subject), strings.ToLower(filter.Query)) {
@@ -77,6 +87,8 @@ func (m *mockThreadReader) CountBySpace(ctx context.Context, spaceID string, fil
 }
 
 func (m *mockThreadReader) Upsert(ctx context.Context, thread *domainmail.Thread) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.threads[thread.ID] = thread
 	return nil
 }
@@ -205,7 +217,7 @@ func TestAggregator_GetThread_Hydration(t *testing.T) {
 
 	// Verify the minted HMAC download URL
 	tokenStr := strings.TrimPrefix(strings.TrimPrefix(attProj.DownloadURL, "/api"), "/v1/mail/attachments/")
-	claims, err := appmail.VerifyAttachmentToken(tokenStr, secret)
+	claims, err := domainmail.VerifyAttachmentToken(tokenStr, secret)
 	require.NoError(t, err)
 	assert.Equal(t, spaceID, claims.SpaceID)
 	assert.Equal(t, msgID, claims.MessageID)
@@ -339,4 +351,175 @@ func TestAggregator_ListThreads_HybridSearchPagination(t *testing.T) {
 			assert.Equal(t, tc.wantIDs, gotIDs)
 		})
 	}
+}
+
+type mockSearchAccountReader struct {
+	accounts map[string]*connector.ConnectedAccount
+}
+
+func (m *mockSearchAccountReader) ListAccounts(_ context.Context, spaceID string) ([]*connector.ConnectedAccount, error) {
+	var out []*connector.ConnectedAccount
+	for _, a := range m.accounts {
+		if a.SpaceID == spaceID {
+			out = append(out, a)
+		}
+	}
+	return out, nil
+}
+func (m *mockSearchAccountReader) GetAccount(_ context.Context, spaceID, id string) (*connector.ConnectedAccount, error) {
+	a := m.accounts[id]
+	if a != nil && a.SpaceID == spaceID {
+		return a, nil
+	}
+	return nil, nil
+}
+
+type mockRemoteSearchProvider struct {
+	searchFn func(ctx context.Context, accessToken, query string, limit int) ([]*domainmail.Thread, error)
+	fetchFn  func(ctx context.Context, accessToken, providerThreadID string) (*domainmail.Thread, []*domainmail.Message, error)
+}
+
+func (m *mockRemoteSearchProvider) Provider() string { return "google" }
+func (m *mockRemoteSearchProvider) ListMailboxes(context.Context, string) ([]*domainmail.Mailbox, error) {
+	return nil, nil
+}
+func (m *mockRemoteSearchProvider) SyncThreads(context.Context, string, *domainmail.SyncThreadsRequest) (*domainmail.SyncThreadsResult, error) {
+	return &domainmail.SyncThreadsResult{}, nil
+}
+func (m *mockRemoteSearchProvider) FetchOlderThreads(context.Context, string, *domainmail.FetchOlderThreadsRequest) (*domainmail.FetchOlderThreadsResult, error) {
+	return &domainmail.FetchOlderThreadsResult{}, nil
+}
+func (m *mockRemoteSearchProvider) SearchThreads(ctx context.Context, accessToken, query string, limit int) ([]*domainmail.Thread, error) {
+	if m.searchFn != nil {
+		return m.searchFn(ctx, accessToken, query, limit)
+	}
+	return nil, nil
+}
+func (m *mockRemoteSearchProvider) FetchThread(ctx context.Context, accessToken, providerThreadID string) (*domainmail.Thread, []*domainmail.Message, error) {
+	if m.fetchFn != nil {
+		return m.fetchFn(ctx, accessToken, providerThreadID)
+	}
+	return nil, nil, nil
+}
+func (m *mockRemoteSearchProvider) FetchMessageBody(context.Context, string, string) (*domainmail.MessageBody, error) {
+	return nil, nil
+}
+func (m *mockRemoteSearchProvider) ModifyThread(context.Context, string, string, []string, []string) error {
+	return nil
+}
+func (m *mockRemoteSearchProvider) BatchModifyThreads(context.Context, string, []string, []string, []string) error {
+	return nil
+}
+func (m *mockRemoteSearchProvider) CreateDraft(context.Context, string, *domainmail.Draft) (*domainmail.Draft, error) {
+	return nil, nil
+}
+func (m *mockRemoteSearchProvider) UpdateDraft(context.Context, string, *domainmail.Draft) (*domainmail.Draft, error) {
+	return nil, nil
+}
+func (m *mockRemoteSearchProvider) DeleteDraft(context.Context, string, string) error {
+	return nil
+}
+func (m *mockRemoteSearchProvider) SendDraft(context.Context, string, string) (*domainmail.Message, error) {
+	return nil, nil
+}
+func (m *mockRemoteSearchProvider) OpenAttachmentStream(context.Context, string, string, string) (io.ReadCloser, string, int64, error) {
+	return nil, "", 0, nil
+}
+func (m *mockRemoteSearchProvider) UploadDraftAttachment(context.Context, string, string, string, string, io.Reader) (*domainmail.AttachmentMeta, error) {
+	return nil, nil
+}
+
+type mockSearchConnectorStore struct {
+	connector.Store
+	accounts map[string]*connector.ConnectedAccount
+}
+
+func (m *mockSearchConnectorStore) GetAccount(_ context.Context, spaceID, id string) (*connector.ConnectedAccount, error) {
+	a := m.accounts[id]
+	if a != nil && a.SpaceID == spaceID {
+		return a, nil
+	}
+	return nil, nil
+}
+
+func TestAggregator_HybridSearch_OffsetCapAndPersistsRemoteStub(t *testing.T) {
+	cipher, err := crypto.NewCipher("test-master-encryption-key-32b!!")
+	require.NoError(t, err)
+	encAccess, _ := cipher.Encrypt("access-tok")
+	encRefresh, _ := cipher.Encrypt("refresh-tok")
+
+	acc := &connector.ConnectedAccount{
+		ID:                  "acc_1",
+		SpaceID:             "spc_1",
+		Provider:            "google",
+		Status:              connector.AccountStatusHealthy,
+		EnabledCapabilities: []string{string(connector.CapabilityMail)},
+		AccessTokenEnc:      encAccess,
+		RefreshTokenEnc:     encRefresh,
+		TokenExpiry:         time.Now().Add(time.Hour),
+	}
+
+	thReader := &mockThreadReader{threads: make(map[string]*domainmail.Thread)}
+	msgReader := &mockMessageReader{
+		messages: make(map[string]*domainmail.Message),
+		bodies:   make(map[string]*domainmail.MessageBody),
+	}
+	mbxReader := &mockMailboxReader{mailboxes: make(map[string]*domainmail.Mailbox)}
+	dftReader := &mockDraftReader{drafts: make(map[string]*domainmail.Draft)}
+	accReader := &mockSearchAccountReader{accounts: map[string]*connector.ConnectedAccount{"acc_1": acc}}
+	connStore := &mockSearchConnectorStore{accounts: map[string]*connector.ConnectedAccount{"acc_1": acc}}
+	tokenMgr := connector.NewTokenManager(connStore, cipher, connector.NewProviderRegistry(), nil)
+
+	var capturedSearchLimit int
+	prov := &mockRemoteSearchProvider{
+		searchFn: func(_ context.Context, _ string, _ string, limit int) ([]*domainmail.Thread, error) {
+			capturedSearchLimit = limit
+			return []*domainmail.Thread{
+				{
+					ProviderThreadID: new("gm_remote_99"),
+					Subject:          "Remote Search Hit",
+					LastMessageAt:    time.Now().UTC(),
+				},
+			}, nil
+		},
+		fetchFn: func(_ context.Context, _ string, providerThreadID string) (*domainmail.Thread, []*domainmail.Message, error) {
+			return &domainmail.Thread{ProviderThreadID: &providerThreadID, Subject: "Remote Search Hit"},
+				[]*domainmail.Message{{ID: "msg_remote_1", Subject: "Remote Search Hit", Snippet: "Hello"}}, nil
+		},
+	}
+
+	svc := mailaggregator.NewService(
+		mbxReader,
+		thReader,
+		msgReader,
+		dftReader,
+		accReader,
+		tokenMgr,
+		map[string]domainmail.ExternalMailProvider{"google": prov},
+		[]byte("secret-key-32-bytes-long-for-testing"),
+	)
+
+	// 1. Offset exceeding cap is clamped to 10,000
+	_, _, err = svc.ListThreads(context.Background(), "spc_1", &domainmail.ListThreadsFilter{
+		Query:  "Remote",
+		Offset: 999999,
+		Limit:  10,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 10011, capturedSearchLimit)
+
+	// 2. Normal query persists remote stub so GetThread succeeds instead of 404
+	threads, _, err := svc.ListThreads(context.Background(), "spc_1", &domainmail.ListThreadsFilter{
+		Query:  "Remote",
+		Offset: 0,
+		Limit:  10,
+	})
+	require.NoError(t, err)
+	require.Len(t, threads, 1)
+	require.NotEmpty(t, threads[0].ID)
+
+	proj, err := svc.GetThread(context.Background(), "spc_1", threads[0].ID)
+	require.NoError(t, err)
+	require.NotNil(t, proj)
+	require.Len(t, proj.Messages, 1)
 }

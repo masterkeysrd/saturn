@@ -416,6 +416,7 @@ func (s *MessageStore) Upsert(ctx context.Context, m *mail.Message) error {
 			has_remote_images = EXCLUDED.has_remote_images,
 			body_cached = EXCLUDED.body_cached,
 			update_time = EXCLUDED.update_time
+		WHERE mail.messages.space_id = EXCLUDED.space_id
 	`
 
 	_, err := s.db.Exec(
@@ -471,6 +472,7 @@ func (s *MessageStore) SaveBody(ctx context.Context, body *mail.MessageBody) err
 			plain_text = EXCLUDED.plain_text,
 			fetched_at = EXCLUDED.fetched_at,
 			expires_at = EXCLUDED.expires_at
+		WHERE mail.message_bodies.space_id = EXCLUDED.space_id
 	`
 
 	_, err := s.db.Exec(

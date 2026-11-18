@@ -34,6 +34,20 @@ func TestResolveParticipantAvatar(t *testing.T) {
 			wantIsVerified: false,
 		},
 		{
+			name:           "Mail subdomain resolves to registrable root brand domain",
+			email:          "pinbot@inspire.pinterest.com",
+			headers:        nil,
+			wantAvatarURL:  "https://www.google.com/s2/favicons?domain=pinterest.com&sz=128",
+			wantIsVerified: false,
+		},
+		{
+			name:           "Country-code second-level domain preserves registrable brand domain",
+			email:          "alerts@mail.banco.com.do",
+			headers:        nil,
+			wantAvatarURL:  "https://www.google.com/s2/favicons?domain=banco.com.do&sz=128",
+			wantIsVerified: false,
+		},
+		{
 			name:           "Generic public webmail domain (gmail) returns empty for initial fallback",
 			email:          "john.doe@gmail.com",
 			headers:        nil,

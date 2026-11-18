@@ -34,6 +34,9 @@ func (c *coordinator) SyncConnectedAccountMail(ctx context.Context, req *SyncCon
 	if err != nil {
 		return errors.E(op, err)
 	}
+	if acc == nil {
+		return nil
+	}
 	if !slices.Contains(acc.EnabledCapabilities, string(connector.CapabilityMail)) {
 		return nil // mail sync disabled for this account
 	}

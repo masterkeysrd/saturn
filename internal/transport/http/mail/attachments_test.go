@@ -11,8 +11,13 @@ import (
 	"time"
 
 	appmail "github.com/masterkeysrd/saturn/internal/application/mail"
+	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	domainmail "github.com/masterkeysrd/saturn/internal/domain/mail"
+	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/connector"
+	platformerrors "github.com/masterkeysrd/saturn/internal/platform/errors"
+	transportauth "github.com/masterkeysrd/saturn/internal/transport/auth"
 	httpmail "github.com/masterkeysrd/saturn/internal/transport/http/mail"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -92,13 +97,39 @@ type mockCoordinator struct {
 	appmail.Coordinator
 	uploadedMeta *domainmail.AttachmentMeta
 	uploadErr    error
+	lastCtx      context.Context
 }
 
 func (m *mockCoordinator) UploadDraftAttachment(ctx context.Context, req *appmail.UploadDraftAttachmentRequest) (*domainmail.AttachmentMeta, error) {
+	m.lastCtx = ctx
 	if m.uploadErr != nil {
 		return nil, m.uploadErr
 	}
 	return m.uploadedMeta, nil
+}
+
+type mockAuthenticator struct {
+	authFunc    func(ctx context.Context, rawToken string) (transportauth.AuthResult, error)
+	resolveFunc func(ctx context.Context, principal auth.Principal, explicitSpaceID string) (auth.SpaceContext, error)
+}
+
+func (m *mockAuthenticator) AuthenticateToken(ctx context.Context, rawToken string) (transportauth.AuthResult, error) {
+	if m.authFunc != nil {
+		return m.authFunc(ctx, rawToken)
+	}
+	return transportauth.AuthResult{
+		Principal: auth.Principal{Subject: "usr_1"},
+	}, nil
+}
+
+func (m *mockAuthenticator) ResolveSpace(ctx context.Context, principal auth.Principal, explicitSpaceID string) (auth.SpaceContext, error) {
+	if m.resolveFunc != nil {
+		return m.resolveFunc(ctx, principal, explicitSpaceID)
+	}
+	if explicitSpaceID == "" {
+		explicitSpaceID = "spc_1"
+	}
+	return auth.SpaceContext{SpaceID: explicitSpaceID, Role: string(space.RoleMember)}, nil
 }
 
 type mockTokenSource struct{}
@@ -146,6 +177,7 @@ func TestAttachmentHandler_Download_SecurityHeadersAndStreaming(t *testing.T) {
 		&mockTokenSource{},
 		map[string]domainmail.ExternalMailProvider{"google": extProv},
 		&mockCoordinator{},
+		&mockAuthenticator{},
 		secret,
 	)
 
@@ -233,6 +265,7 @@ func TestAttachmentHandler_Upload_SizeGuard25MB(t *testing.T) {
 		nil,
 		nil,
 		coord,
+		&mockAuthenticator{},
 		secret,
 	)
 
@@ -247,6 +280,8 @@ func TestAttachmentHandler_Upload_SizeGuard25MB(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/v1/mail/drafts/mdf_100/attachments", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
+		req.Header.Set("Authorization", "Bearer valid-jwt")
+		req.Header.Set("Space-Id", "spc_1")
 		w := httptest.NewRecorder()
 
 		handler.ServeUpload(w, req)
@@ -270,6 +305,8 @@ func TestAttachmentHandler_Upload_SizeGuard25MB(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/v1/mail/drafts/mdf_100/attachments", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
+		req.Header.Set("Authorization", "Bearer valid-jwt")
+		req.Header.Set("Space-Id", "spc_1")
 		w := httptest.NewRecorder()
 
 		handler.ServeUpload(w, req)
@@ -278,4 +315,145 @@ func TestAttachmentHandler_Upload_SizeGuard25MB(t *testing.T) {
 
 		assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode)
 	})
+}
+
+func TestAttachmentHandler_Upload_AuthAndRBAC(t *testing.T) {
+	secret := []byte("secret-hmac-32-bytes-test-key!!")
+
+	newUploadReq := func(authHeader string, cookie *http.Cookie, spaceID string) *http.Request {
+		body := new(bytes.Buffer)
+		writer := multipart.NewWriter(body)
+		part, _ := writer.CreateFormFile("file", "note.txt")
+		_, _ = part.Write([]byte("hello"))
+		_ = writer.Close()
+		req := httptest.NewRequest(http.MethodPost, "/v1/mail/drafts/mdf_1/attachments", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		if authHeader != "" {
+			req.Header.Set("Authorization", authHeader)
+		}
+		if cookie != nil {
+			req.AddCookie(cookie)
+		}
+		if spaceID != "" {
+			req.Header.Set("Space-Id", spaceID)
+		}
+		return req
+	}
+
+	tests := []struct {
+		name       string
+		authHeader string
+		cookie     *http.Cookie
+		spaceID    string
+		authMock   *mockAuthenticator
+		wantStatus int
+		wantSpace  string
+		wantRole   string
+	}{
+		{
+			name:       "missing token returns 401",
+			authMock:   &mockAuthenticator{},
+			wantStatus: http.StatusUnauthorized,
+		},
+		{
+			name:       "invalid token returns 401",
+			authHeader: "Bearer bad-token",
+			authMock: &mockAuthenticator{
+				authFunc: func(_ context.Context, _ string) (transportauth.AuthResult, error) {
+					return transportauth.AuthResult{}, platformerrors.E(platformerrors.Unauthenticated, "invalid token")
+				},
+			},
+			wantStatus: http.StatusUnauthorized,
+		},
+		{
+			name:       "api key missing mail:write scope returns 403",
+			authHeader: "Bearer sat_readonly",
+			spaceID:    "spc_1",
+			authMock: &mockAuthenticator{
+				authFunc: func(_ context.Context, _ string) (transportauth.AuthResult, error) {
+					return transportauth.AuthResult{
+						Principal: auth.Principal{
+							Subject:  "usr_1",
+							APIKeyID: "apk_ro",
+							Scopes:   []string{string(identity.ScopeMailRead)},
+						},
+					}, nil
+				},
+			},
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name:       "viewer role returns 403",
+			authHeader: "Bearer valid-jwt",
+			spaceID:    "spc_1",
+			authMock: &mockAuthenticator{
+				resolveFunc: func(_ context.Context, _ auth.Principal, spaceID string) (auth.SpaceContext, error) {
+					return auth.SpaceContext{SpaceID: spaceID, Role: string(space.RoleViewer)}, nil
+				},
+			},
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name:       "non-member space denied with 403",
+			authHeader: "Bearer valid-jwt",
+			spaceID:    "spc_other",
+			authMock: &mockAuthenticator{
+				resolveFunc: func(_ context.Context, _ auth.Principal, _ string) (auth.SpaceContext, error) {
+					return auth.SpaceContext{}, platformerrors.E(platformerrors.Permission, "not a member")
+				},
+			},
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name:       "api key with mail:write scope succeeds",
+			authHeader: "Bearer sat_writer",
+			spaceID:    "spc_9",
+			authMock: &mockAuthenticator{
+				authFunc: func(_ context.Context, _ string) (transportauth.AuthResult, error) {
+					return transportauth.AuthResult{
+						Principal: auth.Principal{
+							Subject:  "usr_1",
+							APIKeyID: "apk_rw",
+							Scopes:   []string{string(identity.ScopeMailWrite)},
+						},
+					}, nil
+				},
+			},
+			wantStatus: http.StatusCreated,
+			wantSpace:  "spc_9",
+			wantRole:   string(space.RoleMember),
+		},
+		{
+			name:       "cookie access_token auth succeeds",
+			cookie:     &http.Cookie{Name: "access_token", Value: "cookie-jwt"},
+			spaceID:    "spc_2",
+			authMock:   &mockAuthenticator{},
+			wantStatus: http.StatusCreated,
+			wantSpace:  "spc_2",
+			wantRole:   string(space.RoleMember),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			coord := &mockCoordinator{
+				uploadedMeta: &domainmail.AttachmentMeta{ID: "mat_1", Filename: "note.txt"},
+			}
+			handler := httpmail.NewAttachmentHandler(nil, nil, nil, nil, coord, tc.authMock, secret)
+			req := newUploadReq(tc.authHeader, tc.cookie, tc.spaceID)
+			w := httptest.NewRecorder()
+
+			handler.ServeUpload(w, req)
+			require.Equal(t, tc.wantStatus, w.Code)
+			if tc.wantStatus == http.StatusCreated {
+				sc, ok := auth.SpaceContextFromContext(coord.lastCtx)
+				require.True(t, ok)
+				assert.Equal(t, tc.wantSpace, sc.SpaceID)
+				assert.Equal(t, tc.wantRole, sc.Role)
+				p, ok := auth.PrincipalFromContext(coord.lastCtx)
+				require.True(t, ok)
+				assert.Equal(t, "usr_1", p.Subject)
+			}
+		})
+	}
 }
