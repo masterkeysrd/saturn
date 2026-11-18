@@ -4,6 +4,7 @@ import {
   groupEventsByDate,
   getConsecutiveDays,
   formatEventTime,
+  findSelfAttendee,
 } from "../components/calendar/calendar-utils"
 import { haptics } from "../lib/haptics"
 import { buildRRule, parseRRule } from "@saturn/schemas"
@@ -340,5 +341,39 @@ describe("Space Role Access Control", () => {
     expect(checkCanEdit("member")).toBe(true)
     expect(checkCanEdit("admin")).toBe(true)
     expect(checkCanEdit("owner")).toBe(true)
+  })
+})
+
+describe("Self-Attendee RSVP Matching", () => {
+  it("matches case-insensitively against user and connected account emails without falsely matching external organizers", () => {
+    const attendees = [
+      {
+        email: "External.Host@company.com",
+        displayName: "External Host",
+        isOrganizer: true,
+        responseStatus: "ATTENDEE_RESPONSE_STATUS_ACCEPTED",
+      },
+      {
+        email: "Me.Work@Example.com",
+        displayName: "Me",
+        isOrganizer: false,
+        responseStatus: "ATTENDEE_RESPONSE_STATUS_NEEDS_ACTION",
+      },
+    ]
+
+    const matched = findSelfAttendee(attendees, [
+      "personal@other.com",
+      "me.work@example.com",
+    ])
+    expect(matched?.email).toBe("Me.Work@Example.com")
+    expect(matched?.responseStatus).toBe(
+      "ATTENDEE_RESPONSE_STATUS_NEEDS_ACTION"
+    )
+
+    // Solo or non-attendee event must return undefined (never match organizer)
+    expect(
+      findSelfAttendee([attendees[0]], ["me.work@example.com"])
+    ).toBeUndefined()
+    expect(findSelfAttendee(attendees, [])).toBeUndefined()
   })
 })

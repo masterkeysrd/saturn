@@ -212,6 +212,10 @@ export default function CalendarScreen() {
       params: {
         eventId: occ.eventId,
         instanceId: occ.instanceId,
+        occurrenceStartTime: occ.startTime ?? "",
+        occurrenceStartDate: occ.startDate ?? "",
+        occurrenceEndTime: occ.endTime ?? "",
+        occurrenceEndDate: occ.endDate ?? "",
       },
     })
   }
