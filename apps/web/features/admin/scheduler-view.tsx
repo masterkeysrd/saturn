@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useQueryClient } from "@tanstack/react-query"
+import { useTimezone } from "@saturn/hooks"
 import {
   useListSchedulesQuery,
   useListJobsQuery,
@@ -36,6 +37,7 @@ import { formatRelativeTime } from "@/lib/utils"
 
 export function SchedulerAdminView() {
   const queryClient = useQueryClient()
+  const tz = useTimezone()
   const [activeTab, setActiveTab] = useState<"schedules" | "jobs">("schedules")
   const [jobStatusFilter, setJobStatusFilter] = useState<string>("")
   const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(0)
@@ -174,8 +176,7 @@ export function SchedulerAdminView() {
 
   const formatTime = (timeStr?: string) => {
     if (!timeStr) return "N/A"
-    const d = new Date(timeStr)
-    return d.toLocaleString()
+    return tz.formatDateTime(timeStr) || "N/A"
   }
 
   // Calculate summary stats

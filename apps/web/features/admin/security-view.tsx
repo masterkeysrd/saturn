@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTimezone } from "@saturn/hooks"
 import {
   useListSecurityEventsQuery,
   type SecurityEvent,
@@ -32,6 +33,7 @@ import { parseUserAgent } from "@/lib/utils"
 import { PageLayout } from "@/components/ui/page-layout"
 
 export function AdminSecurityView() {
+  const tz = useTimezone()
   const [emailFilter, setEmailFilter] = useState("")
   const [eventTypeFilter, setEventTypeFilter] = useState("")
   const [pageToken, setPageToken] = useState("")
@@ -255,7 +257,7 @@ export function AdminSecurityView() {
                       const meta = getEventMeta(ev.eventType)
                       const parsedDevice = parseUserAgent(ev.userAgent)
                       const dateStr = ev.createdAt
-                        ? new Date(ev.createdAt).toLocaleString()
+                        ? tz.formatDateTime(ev.createdAt)
                         : "Unknown"
 
                       return (

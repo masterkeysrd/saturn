@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, Suspense } from "react"
+import { type ReactNode, useEffect, useRef, Suspense } from "react"
 import {
   Routes,
   Route,
@@ -38,8 +38,7 @@ function SpaceGuard({ children }: { children: ReactNode }) {
       if (spaceIdParam === "default") {
         const firstSpace = spaces[0]
         if (firstSpace?.id) {
-          const role =
-            user && firstSpace.ownerId === user.id ? "owner" : "member"
+          const role = user && firstSpace.ownerId === user.id ? "owner" : ""
           switchSpace({
             spaceId: firstSpace.id,
             spaceName: firstSpace.name || "",
@@ -53,8 +52,7 @@ function SpaceGuard({ children }: { children: ReactNode }) {
       const matchedSpace = spaces.find((s) => s.id === spaceIdParam)
       if (matchedSpace) {
         if (spaceIdParam !== contextSpaceId) {
-          const role =
-            user && matchedSpace.ownerId === user.id ? "owner" : "member"
+          const role = user && matchedSpace.ownerId === user.id ? "owner" : ""
           switchSpace({
             spaceId: spaceIdParam,
             spaceName: matchedSpace.name || "",
@@ -77,6 +75,14 @@ function SpaceGuard({ children }: { children: ReactNode }) {
 
   if (!spaceIdParam || spaces.length === 0) {
     return <NoSpaceActiveScreen />
+  }
+
+  if (contextSpaceId !== spaceIdParam) {
+    return (
+      <div className="flex h-svh flex-1 items-center justify-center p-6">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    )
   }
 
   return <>{children}</>
@@ -114,11 +120,21 @@ function ThemeToggle() {
 export function App() {
   const queryClient = useQueryClient()
   const { spaceId } = useActiveSpaceContext()
+  const prevSpaceIdRef = useRef(spaceId)
 
   useEffect(() => {
-    if (spaceId) {
-      queryClient.resetQueries()
+    if (spaceId && prevSpaceIdRef.current !== spaceId) {
+      queryClient.resetQueries({
+        predicate: (query) => {
+          const firstKey = query.queryKey[0]
+          return (
+            firstKey !== "/api/v1/spaces" &&
+            firstKey !== "/api/v1/identity/users/me"
+          )
+        },
+      })
     }
+    prevSpaceIdRef.current = spaceId
   }, [spaceId, queryClient])
 
   const mappedFeatureRoutes = featureRoutes.map((route) => {
@@ -157,7 +173,7 @@ export function App() {
                   <div className="flex h-14 shrink-0 items-center justify-between border-b border-border/40 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                     <SidebarTrigger />
                     <div className="flex items-center gap-2">
-                      <GlobalAIDrawer />
+                      <GlobalAIDrawer key={spaceId} />
                       <ThemeToggle />
                     </div>
                   </div>

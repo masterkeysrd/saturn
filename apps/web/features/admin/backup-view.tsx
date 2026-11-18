@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
+import { useTimezone } from "@saturn/hooks"
 import {
   useListBackupsQuery,
   useTriggerBackupMutation,
@@ -19,6 +20,7 @@ import { PageLayout } from "@/components/ui/page-layout"
 
 export function BackupAdminView() {
   const queryClient = useQueryClient()
+  const tz = useTimezone()
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   // Fetch index
@@ -46,7 +48,7 @@ export function BackupAdminView() {
     try {
       const d = new Date(dateStr)
       if (isNaN(d.getTime())) return "Never"
-      return d.toLocaleString(undefined, {
+      return tz.formatDateTime(d, {
         year: "numeric",
         month: "short",
         day: "numeric",

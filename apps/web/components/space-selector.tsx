@@ -68,8 +68,7 @@ export function SpaceSelector() {
           <DropdownMenuItem
             key={space.id}
             onClick={() => {
-              const role =
-                user && space.ownerId === user.id ? "owner" : "member"
+              const role = user && space.ownerId === user.id ? "owner" : ""
               switchSpace({
                 spaceId: space.id || "",
                 spaceName: space.name,

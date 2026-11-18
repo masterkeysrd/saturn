@@ -6,6 +6,7 @@ import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useActiveSpaceContext } from "@/features/space/use-space"
+import { useTimezone } from "@saturn/hooks"
 import { openAIDrawer } from "@/features/ai/lib/drawer-events"
 
 const QUICK_PROMPTS = [
@@ -17,10 +18,11 @@ const QUICK_PROMPTS = [
 export function DashboardView() {
   const { user } = useAuth()
   const { spaceId } = useActiveSpaceContext()
+  const tz = useTimezone()
   const [prompt, setPrompt] = useState("")
 
   // Format today's date: e.g. "Saturday, July 18, 2026"
-  const formattedDate = new Date().toLocaleDateString("en-US", {
+  const formattedDate = tz.formatDate(tz.now(), {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -29,7 +31,7 @@ export function DashboardView() {
 
   // Get a time-based greeting: "Good morning", "Good afternoon", or "Good evening"
   const getGreeting = () => {
-    const hour = new Date().getHours()
+    const hour = tz.parts()?.hour ?? 0
     if (hour < 12) return "Good morning"
     if (hour < 18) return "Good afternoon"
     return "Good evening"

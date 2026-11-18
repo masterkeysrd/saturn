@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
+import { useTimezone } from "@saturn/hooks"
 import {
   useGetQueueMetricsQuery,
   useListDeliveriesQuery,
@@ -55,6 +56,7 @@ import { formatRelativeTime } from "@/lib/utils"
 
 export function MessageQueueAdminView() {
   const queryClient = useQueryClient()
+  const tz = useTimezone()
   const [selectedTopic, setSelectedTopic] = useState<string>("")
   const [selectedStatus, setSelectedStatus] = useState<string>("")
   const [pageToken, setPageToken] = useState<string>("")
@@ -682,7 +684,7 @@ export function MessageQueueAdminView() {
                     </span>
                     <span className="mt-0.5 block truncate font-medium text-foreground">
                       {selectedDelivery.createTime
-                        ? new Date(selectedDelivery.createTime).toLocaleString()
+                        ? tz.formatDateTime(selectedDelivery.createTime)
                         : "-"}
                     </span>
                   </div>
@@ -693,9 +695,7 @@ export function MessageQueueAdminView() {
                     </span>
                     <span className="mt-0.5 block truncate font-medium text-foreground">
                       {selectedDelivery.scheduleTime
-                        ? new Date(
-                            selectedDelivery.scheduleTime
-                          ).toLocaleString()
+                        ? tz.formatDateTime(selectedDelivery.scheduleTime)
                         : "-"}
                     </span>
                   </div>
@@ -706,7 +706,7 @@ export function MessageQueueAdminView() {
                     </span>
                     <span className="mt-0.5 block truncate font-medium text-foreground">
                       {selectedDelivery.updateTime
-                        ? new Date(selectedDelivery.updateTime).toLocaleString()
+                        ? tz.formatDateTime(selectedDelivery.updateTime)
                         : "-"}
                     </span>
                   </div>

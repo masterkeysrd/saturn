@@ -23,6 +23,16 @@ export interface PerformPatchParams<TData> {
   expectedVersion?: string
 }
 
+function isDirtyFieldValue(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some(isDirtyFieldValue)
+  }
+  if (value && typeof value === "object") {
+    return Object.values(value).some(isDirtyFieldValue)
+  }
+  return Boolean(value)
+}
+
 export function usePatch<
   TData extends { id?: string; version?: string },
   TVariables,
@@ -38,7 +48,7 @@ export function usePatch<
   >({
     mutationFn: async ({ id, payload, dirtyFields, expectedVersion }) => {
       const dirtyPaths = Object.keys(dirtyFields).filter((key) =>
-        Boolean(dirtyFields[key])
+        isDirtyFieldValue(dirtyFields[key])
       )
       if (dirtyPaths.length === 0) {
         throw new Error("No fields modified")
