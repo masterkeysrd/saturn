@@ -1,11 +1,44 @@
+# Version control & CI
 .git
+.gitignore
 .github
+.agents
+
+# Secrets & local env
 .env
 .env.*
+
+# Node / Monorepo caches & dependencies (installed cleanly via npm ci in Stage 1)
+**/node_modules
+.npm
+.turbo
+**/.turbo
+
+# Web build artifacts (rebuilt in Stage 1 and copied into Stage 2)
+apps/web/dist
+
+# Mobile app & native build artifacts (keep package*.json for npm workspace resolution)
+apps/mobile/*
+!apps/mobile/package*.json
+
+# Local Go / test / coverage artifacts
+/bin
+/dist
+coverage
+tmp
+tests
+*.exe
+*.exe.*
+*.test
+*.out
+
+# Docs, IDE & OS metadata
+docs
+deployments
+.vscode
+.idea
 **/.DS_Store
-bin/
-apps/web/node_modules/
-apps/web/dist/
-tests/
-tmp/
+*.swp
+*.swo
+*~
 *.md
