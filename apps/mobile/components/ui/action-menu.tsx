@@ -1,15 +1,19 @@
-import type { ComponentType } from "react"
+import { useState, type ComponentType } from "react"
 import {
-  Alert,
+  Modal,
   Platform,
+  Pressable,
+  StyleSheet,
+  Text,
   TouchableOpacity,
-  type AlertButton,
+  View,
 } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import type { MenuAction, MenuComponentProps } from "@expo/ui/community/menu"
+import { theme } from "@/lib/theme"
+import { haptics } from "@/lib/haptics"
 
 function canRenderNativeMenuView(): boolean {
-  if (Platform.OS === "ios") return true
-  if (Platform.OS !== "android") return false
   const expoGlobal = (
     globalThis as {
       expo?: {
@@ -17,6 +21,15 @@ function canRenderNativeMenuView(): boolean {
       }
     }
   ).expo
+  if (Platform.OS === "ios") {
+    return Boolean(
+      expoGlobal?.getViewConfig?.("ExpoUI", "HostView") ||
+      expoGlobal?.getViewConfig?.("ExpoUI", "MenuView") ||
+      expoGlobal?.getViewConfig?.("ExpoUI", "ContextMenu") ||
+      expoGlobal?.getViewConfig?.("ExpoUI")
+    )
+  }
+  if (Platform.OS !== "android") return false
   return Boolean(
     expoGlobal?.getViewConfig?.("ExpoUI", "DropdownMenuPopupView") &&
     expoGlobal?.getViewConfig?.("ExpoUI", "DropdownMenuGroupView")
@@ -59,6 +72,9 @@ export function ActionMenu({
   children,
   ...rest
 }: MenuComponentProps) {
+  const [sheetVisible, setSheetVisible] = useState(false)
+  const insets = useSafeAreaInsets()
+
   if (NativeMenuView) {
     return (
       <NativeMenuView
@@ -73,35 +89,158 @@ export function ActionMenu({
     )
   }
 
+  const visibleActions = flattenActions(actions).filter(
+    (a) => !a.attributes?.disabled
+  )
+
   const handleFallbackPress = () => {
-    const visibleActions = flattenActions(actions).filter(
-      (a) => !a.attributes?.disabled
-    )
     if (visibleActions.length === 0) return
+    haptics.light()
+    setSheetVisible(true)
+  }
 
-    const buttons: AlertButton[] = visibleActions.map((action) => ({
-      text: action.title,
-      style: action.attributes?.destructive ? "destructive" : "default",
-      onPress: () => {
-        onPressAction?.({
-          nativeEvent: { event: action.id ?? action.title },
-        })
-      },
-    }))
-    buttons.push({ text: "Cancel", style: "cancel" })
-
-    Alert.alert(title || "Actions", undefined, buttons, { cancelable: true })
+  const handleSelectAction = (action: MenuAction) => {
+    setSheetVisible(false)
+    haptics.selection()
+    onPressAction?.({
+      nativeEvent: { event: action.id ?? action.title },
+    })
   }
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={handleFallbackPress}
-      style={style}
-      accessibilityRole="button"
-      accessibilityLabel={title || "More actions"}
-    >
-      {children}
-    </TouchableOpacity>
+    <>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={handleFallbackPress}
+        style={style}
+        accessibilityRole="button"
+        accessibilityLabel={title || "More actions"}
+      >
+        {children}
+      </TouchableOpacity>
+
+      <Modal
+        visible={sheetVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSheetVisible(false)}
+      >
+        <Pressable
+          style={styles.backdrop}
+          onPress={() => setSheetVisible(false)}
+        >
+          <Pressable
+            style={[
+              styles.sheetContainer,
+              { paddingBottom: Math.max(insets.bottom, 16) },
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.actionsCard}>
+              {title ? (
+                <View style={styles.titleRow}>
+                  <Text style={styles.titleText}>{title}</Text>
+                </View>
+              ) : null}
+
+              {visibleActions.map((action, index) => {
+                const isDestructive = Boolean(action.attributes?.destructive)
+                return (
+                  <TouchableOpacity
+                    key={action.id ?? `${action.title}-${index}`}
+                    activeOpacity={0.7}
+                    onPress={() => handleSelectAction(action)}
+                    style={[
+                      styles.actionRow,
+                      (index > 0 || Boolean(title)) && styles.actionRowBorder,
+                    ]}
+                    testID={`action-menu-item-${action.id ?? action.title}`}
+                  >
+                    <Text
+                      style={[
+                        styles.actionText,
+                        isDestructive && styles.actionTextDestructive,
+                      ]}
+                    >
+                      {action.title}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setSheetVisible(false)}
+              style={styles.cancelButton}
+              testID="action-menu-cancel"
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   )
 }
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.55)",
+    justifyContent: "flex-end",
+    paddingHorizontal: 12,
+  },
+  sheetContainer: {
+    gap: 8,
+  },
+  actionsCard: {
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+  },
+  titleRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: "center",
+  },
+  titleText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textMuted,
+  },
+  actionRow: {
+    paddingVertical: 15,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionRowBorder: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.border,
+  },
+  actionText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: theme.colors.primary,
+  },
+  actionTextDestructive: {
+    color: theme.colors.destructive,
+  },
+  cancelButton: {
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+})

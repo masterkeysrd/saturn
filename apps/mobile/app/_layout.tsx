@@ -1,22 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Platform } from "react-native"
+import { Platform, TouchableOpacity } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
 } from "react-native-reanimated"
 import { isRunningInExpoGo } from "expo"
-import { Stack } from "expo-router"
+import { Stack, router } from "expo-router"
 import * as SplashScreen from "expo-splash-screen"
 import { StatusBar } from "expo-status-bar"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet"
+import { X } from "lucide-react-native"
 import { AuthProvider, useAuth } from "@/lib/auth-context"
 import { SpaceProvider } from "@/lib/space-context"
 import { ToastProvider } from "@/components/ui/toast"
 import { queryClient, persistOptions } from "@/lib/query-persister"
 import { theme } from "@/lib/theme"
+import { haptics } from "@/lib/haptics"
 
 void SplashScreen.preventAutoHideAsync().catch(() => {})
 if (!isRunningInExpoGo()) {
@@ -45,6 +47,38 @@ function SplashScreenController({ isLayoutReady }: { isLayoutReady: boolean }) {
   }, [isLoading, isLayoutReady])
 
   return null
+}
+
+function modalCloseHeaderOptions() {
+  return Platform.OS === "ios"
+    ? {
+        unstable_headerLeftItems: () => [
+          {
+            type: "button" as const,
+            label: "Close",
+            icon: { type: "sfSymbol" as const, name: "xmark" as const },
+            onPress: () => {
+              haptics.light()
+              router.back()
+            },
+          },
+        ],
+      }
+    : {
+        headerLeft: () => (
+          <TouchableOpacity
+            onPress={() => {
+              haptics.light()
+              router.back()
+            }}
+            style={{ paddingHorizontal: 4, paddingVertical: 4 }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityLabel="Close"
+          >
+            <X size={20} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        ),
+      }
 }
 
 export default function RootLayout() {
@@ -103,6 +137,7 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "New Transaction",
+                        ...modalCloseHeaderOptions(),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
                             backgroundColor: theme.colors.surface,
@@ -115,6 +150,7 @@ export default function RootLayout() {
                       options={{
                         presentation: "formSheet",
                         headerTitle: "Switch Workspace",
+                        ...modalCloseHeaderOptions(),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
                             backgroundColor: theme.colors.surface,
@@ -138,6 +174,7 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "Create Workspace",
+                        ...modalCloseHeaderOptions(),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
                             backgroundColor: theme.colors.surface,
@@ -233,6 +270,7 @@ export default function RootLayout() {
                       name="modal/compose-mail"
                       options={{
                         presentation: "modal",
+                        headerShown: false,
                         headerTitle: "New Message",
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
@@ -246,6 +284,7 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "API Key",
+                        ...modalCloseHeaderOptions(),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
                             backgroundColor: theme.colors.surface,
@@ -258,6 +297,7 @@ export default function RootLayout() {
                       options={{
                         presentation: "modal",
                         headerTitle: "Generate Workflow",
+                        ...modalCloseHeaderOptions(),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
                             backgroundColor: theme.colors.surface,

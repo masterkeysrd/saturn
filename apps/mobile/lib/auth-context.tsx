@@ -42,6 +42,8 @@ import {
   setServerUrl as setConfigServerUrl,
   resetServerUrl as resetConfigServerUrl,
 } from "./config"
+import { clearPersistedQueryCache } from "./query-persister"
+import { setPendingWorkflowDraft } from "@/components/workflows/workflow-draft-store"
 
 // Configure client storage and base URL synchronously at module load
 configureClient({
@@ -148,11 +150,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setIsDeviceEnrolled(false)
             setIsBiometricActive(false)
             mobileStorage.clearSession()
+            mobileStorage.setActiveSpaceId(null)
             setStoredUserProfile(null)
             setCachedUser(null)
             setSession({ accessToken: null, hasSession: false })
             setAccessToken(null)
+            setActiveSpaceId(null)
+            setPendingWorkflowDraft(null)
             queryClient.clear()
+            void clearPersistedQueryCache()
           },
         })
 
@@ -420,15 +426,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession({ accessToken: null, hasSession: false })
       setAccessToken(null)
       setActiveSpaceId(null)
+      setPendingWorkflowDraft(null)
       queryClient.clear()
+      await clearPersistedQueryCache()
     }
   }
 
-  const switchSpace = async (spaceId: string | null) => {
+  const setAuthActiveSpace = useCallback(async (spaceId: string | null) => {
     await mobileStorage.setActiveSpaceId(spaceId)
     setActiveSpaceId(spaceId)
-    queryClient.invalidateQueries()
-  }
+  }, [])
 
   const toggleBiometrics = async (
     enabled: boolean,
@@ -463,17 +470,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return res.success
   }
 
+  const clearServerSessionAndCache = async () => {
+    await clearDeviceEnrollment()
+    setIsDeviceEnrolled(false)
+    setIsBiometricActive(false)
+    await mobileStorage.clearSession()
+    await mobileStorage.setActiveSpaceId(null)
+    await setStoredUserProfile(null)
+    setCachedUser(null)
+    setSession({ accessToken: null, hasSession: false })
+    setAccessToken(null)
+    setActiveSpaceId(null)
+    setPendingWorkflowDraft(null)
+    queryClient.clear()
+    await clearPersistedQueryCache()
+  }
+
   const updateServerUrl = async (url: string): Promise<string> => {
+    const previousUrl = serverUrl
     const updated = await setConfigServerUrl(url)
     setServerUrl(updated)
-    queryClient.clear()
+    if (updated !== previousUrl) {
+      await clearServerSessionAndCache()
+    } else {
+      queryClient.clear()
+    }
     return updated
   }
 
   const resetServerUrl = async (): Promise<string> => {
+    const previousUrl = serverUrl
     const reset = await resetConfigServerUrl()
     setServerUrl(reset)
-    queryClient.clear()
+    if (reset !== previousUrl) {
+      await clearServerSessionAndCache()
+    } else {
+      queryClient.clear()
+    }
     return reset
   }
 
@@ -512,8 +545,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         unenrollBiometrics,
         register,
         logout,
-        switchSpace,
-        setActiveSpace: switchSpace,
+        switchSpace: setAuthActiveSpace,
+        setActiveSpace: setAuthActiveSpace,
         toggleBiometrics,
         authenticateWithBiometrics,
         updateServerUrl,

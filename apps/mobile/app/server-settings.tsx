@@ -56,6 +56,7 @@ export default function ServerSettingsScreen() {
     setSaving(true)
     try {
       haptics.light()
+      const previousUrl = serverUrl
       const appliedUrl = await updateServerUrl(values.serverUrl.trim())
       haptics.success()
       toast.show({
@@ -63,7 +64,11 @@ export default function ServerSettingsScreen() {
         title: "Server Updated",
         message: `Connected to ${appliedUrl}`,
       })
-      router.back()
+      if (appliedUrl !== previousUrl) {
+        router.replace("/(auth)/login")
+      } else {
+        router.back()
+      }
     } catch (err: unknown) {
       haptics.error()
       const msg =

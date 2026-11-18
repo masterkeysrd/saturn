@@ -39,6 +39,12 @@
       "expo-web-browser",
       "expo-sharing",
       [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Saturn to unlock your workspace and sign in securely using Face ID."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",

@@ -17,6 +17,8 @@ import { TimezoneProvider, useSpaceRole } from "@saturn/hooks"
 import { useAuth } from "./auth-context"
 import { mobileStorage } from "./storage"
 import { haptics } from "./haptics"
+import { clearPersistedQueryCache } from "./query-persister"
+import { setPendingWorkflowDraft } from "@/components/workflows/workflow-draft-store"
 
 export interface SpaceContextType {
   spaces: Space[]
@@ -62,22 +64,24 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
 
   const spaces = useMemo(() => spacesData?.spaces || [], [spacesData?.spaces])
 
-  // Restore stored active space ID on mount
+  // Restore stored active space ID on mount, and reset when unauthenticated
   useEffect(() => {
+    if (!isAuthenticated) {
+      setActiveSpaceId(null)
+      return
+    }
     async function restoreActiveSpace() {
       try {
         const stored = await mobileStorage.getActiveSpaceId()
         if (stored) {
           setActiveSpaceId(stored)
-          setAuthActiveSpace(stored)
+          await setAuthActiveSpace(stored)
         }
       } catch {
         // Fallback
       }
     }
-    if (isAuthenticated) {
-      restoreActiveSpace()
-    }
+    restoreActiveSpace()
   }, [isAuthenticated, setAuthActiveSpace])
 
   // Automatically select first space if none is set or active space is invalid
@@ -114,9 +118,14 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
       if (newSpaceId === activeSpaceId) return
       setIsSwitching(true)
       try {
-        await mobileStorage.setActiveSpaceId(newSpaceId)
-        setActiveSpaceId(newSpaceId)
-        setAuthActiveSpace(newSpaceId)
+        setPendingWorkflowDraft(null)
+        await setAuthActiveSpace(newSpaceId)
+        queryClient.removeQueries({
+          predicate: (q) =>
+            q.queryKey[0] !== "/api/v1/spaces" &&
+            q.queryKey[0] !== "/api/v1/identity/users/me",
+        })
+        await clearPersistedQueryCache()
         await haptics.success()
         // Invalidate all tenant queries so dashboard, budgets, transactions refetch
         await queryClient.invalidateQueries()
@@ -130,7 +139,7 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
   const { data: settingsData } = useGetSettingsQuery(
     { spaceId: activeSpaceId ?? "" },
     {
-      enabled: !!activeSpaceId,
+      enabled: isAuthenticated && !!activeSpaceId,
       staleTime: 1000 * 60 * 5,
     }
   )

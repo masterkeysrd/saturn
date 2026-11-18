@@ -1,37 +1,77 @@
-import React, { useState, useMemo, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { Modal, StyleSheet, Text, View, TouchableOpacity } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ChevronLeft, ChevronRight } from "lucide-react-native"
+import { formatLocalDateString, getTimezoneParts } from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { BottomSheetHeader } from "./bottom-sheet"
 
-export function toLocalISODate(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, "0")
-  const date = String(d.getDate()).padStart(2, "0")
-  return `${y}-${m}-${date}T12:00:00Z`
+function makeNoonInTimezone(
+  year: number,
+  month: number,
+  day: number,
+  timeZone: string
+): Date {
+  const utcNoon = new Date(Date.UTC(year, month - 1, day, 12, 0, 0))
+  const tzParts = getTimezoneParts(utcNoon, timeZone)
+  if (!tzParts) return utcNoon
+  const localAsUtc = Date.UTC(
+    tzParts.year,
+    tzParts.month - 1,
+    tzParts.day,
+    tzParts.hour,
+    tzParts.minute,
+    tzParts.second
+  )
+  const offsetMs = localAsUtc - utcNoon.getTime()
+  return new Date(utcNoon.getTime() - offsetMs)
 }
 
-export function formatDisplayDate(date: Date): string {
-  const today = new Date()
+export function toLocalISODate(d: Date, timeZone?: string): string {
+  const tzName =
+    timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+  const dateStr = formatLocalDateString(d, tzName)
+  return `${dateStr}T12:00:00Z`
+}
+
+export function formatDisplayDate(date: Date, timeZone?: string): string {
+  const tzName =
+    timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+  const dateParts = getTimezoneParts(date, tzName)
+  const todayParts = getTimezoneParts(new Date(), tzName)
+  if (!dateParts || !todayParts) {
+    return ""
+  }
+
+  const todayNoon = makeNoonInTimezone(
+    todayParts.year,
+    todayParts.month,
+    todayParts.day,
+    tzName
+  )
+  const yesterdayNoon = new Date(todayNoon.getTime() - 86400000)
+  const yesterdayParts = getTimezoneParts(yesterdayNoon, tzName)
+
   const isToday =
-    date.getFullYear() === today.getFullYear() &&
-    date.getMonth() === today.getMonth() &&
-    date.getDate() === today.getDate()
+    dateParts.year === todayParts.year &&
+    dateParts.month === todayParts.month &&
+    dateParts.day === todayParts.day
 
-  const yesterday = new Date()
-  yesterday.setDate(today.getDate() - 1)
-  const isYesterday =
-    date.getFullYear() === yesterday.getFullYear() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getDate() === yesterday.getDate()
+  const isYesterday = Boolean(
+    yesterdayParts &&
+    dateParts.year === yesterdayParts.year &&
+    dateParts.month === yesterdayParts.month &&
+    dateParts.day === yesterdayParts.day
+  )
 
-  const formattedStr = date.toLocaleDateString("en-US", {
+  const formattedStr = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
-    year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
-  })
+    year: dateParts.year !== todayParts.year ? "numeric" : undefined,
+    timeZone: tzName,
+  }).format(date)
 
   if (isToday) return `Today (${formattedStr})`
   if (isYesterday) return `Yesterday (${formattedStr})`
@@ -56,6 +96,7 @@ export function DatePickerSheet({
   onClose,
 }: DatePickerSheetProps) {
   const insets = useSafeAreaInsets()
+  const tz = useTimezone()
   const [calendarViewDate, setCalendarViewDate] = useState<Date>(value)
 
   useEffect(() => {
@@ -64,27 +105,33 @@ export function DatePickerSheet({
 
   const handlePrevMonth = () => {
     haptics.light()
-    setCalendarViewDate(
-      (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
-    )
+    setCalendarViewDate((prev) => {
+      const parts = tz.parts(prev)
+      if (!parts) return prev
+      const targetYear = parts.month === 1 ? parts.year - 1 : parts.year
+      const targetMonth = parts.month === 1 ? 12 : parts.month - 1
+      return makeNoonInTimezone(targetYear, targetMonth, 1, tz.timezone)
+    })
   }
 
   const handleNextMonth = () => {
     haptics.light()
-    setCalendarViewDate(
-      (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
-    )
+    setCalendarViewDate((prev) => {
+      const parts = tz.parts(prev)
+      if (!parts) return prev
+      const targetYear = parts.month === 12 ? parts.year + 1 : parts.year
+      const targetMonth = parts.month === 12 ? 1 : parts.month + 1
+      return makeNoonInTimezone(targetYear, targetMonth, 1, tz.timezone)
+    })
   }
 
   const handleSelectDay = (day: number) => {
     haptics.light()
-    const newDate = new Date(
-      calendarViewDate.getFullYear(),
-      calendarViewDate.getMonth(),
+    const newDate = makeNoonInTimezone(
+      calendarData.year,
+      calendarData.month,
       day,
-      12,
-      0,
-      0
+      tz.timezone
     )
     onChange(newDate)
     onClose()
@@ -94,42 +141,54 @@ export function DatePickerSheet({
     type: "today" | "yesterday" | "2days" | "firstOfMonth"
   ) => {
     haptics.light()
-    const d = new Date()
-    d.setHours(12, 0, 0, 0)
+    const nowParts = tz.parts(tz.now())
+    if (!nowParts) return
+    const todayNoon = makeNoonInTimezone(
+      nowParts.year,
+      nowParts.month,
+      nowParts.day,
+      tz.timezone
+    )
+    let target = todayNoon
     if (type === "yesterday") {
-      d.setDate(d.getDate() - 1)
+      target = new Date(todayNoon.getTime() - 86400000)
     } else if (type === "2days") {
-      d.setDate(d.getDate() - 2)
+      target = new Date(todayNoon.getTime() - 2 * 86400000)
     } else if (type === "firstOfMonth") {
-      d.setDate(1)
+      target = makeNoonInTimezone(nowParts.year, nowParts.month, 1, tz.timezone)
     }
 
-    onChange(d)
+    onChange(target)
     onClose()
   }
 
-  const calendarData = useMemo(() => {
-    const year = calendarViewDate.getFullYear()
-    const month = calendarViewDate.getMonth()
+  const timeZone = tz.timezone
+  const parts = getTimezoneParts(calendarViewDate, timeZone)
+  const fallback = new Date()
+  const year = parts?.year ?? fallback.getUTCFullYear()
+  const month = parts?.month ?? fallback.getUTCMonth() + 1
 
-    const firstDayOfWeek = new Date(year, month, 1).getDay()
-    const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const firstDayOfWeek = new Date(Date.UTC(year, month - 1, 1)).getUTCDay()
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
 
-    const monthName = calendarViewDate.toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    })
+  const monthName = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone,
+  }).format(makeNoonInTimezone(year, month, 1, timeZone))
 
-    const days: (number | null)[] = []
-    for (let i = 0; i < firstDayOfWeek; i++) {
-      days.push(null)
-    }
-    for (let d = 1; d <= daysInMonth; d++) {
-      days.push(d)
-    }
+  const days: (number | null)[] = []
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    days.push(null)
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    days.push(d)
+  }
 
-    return { monthName, days, year, month }
-  }, [calendarViewDate])
+  const calendarData = { monthName, days, year, month }
+
+  const selectedParts = tz.parts(value)
+  const todayParts = tz.parts(tz.now())
 
   if (!visible) return null
 
@@ -232,16 +291,19 @@ export function DatePickerSheet({
                   )
                 }
 
-                const isSelected =
-                  value.getFullYear() === calendarData.year &&
-                  value.getMonth() === calendarData.month &&
-                  value.getDate() === day
+                const isSelected = Boolean(
+                  selectedParts &&
+                  selectedParts.year === calendarData.year &&
+                  selectedParts.month === calendarData.month &&
+                  selectedParts.day === day
+                )
 
-                const now = new Date()
-                const isToday =
-                  now.getFullYear() === calendarData.year &&
-                  now.getMonth() === calendarData.month &&
-                  now.getDate() === day
+                const isToday = Boolean(
+                  todayParts &&
+                  todayParts.year === calendarData.year &&
+                  todayParts.month === calendarData.month &&
+                  todayParts.day === day
+                )
 
                 return (
                   <View key={`day-${day}`} style={styles.calendarDayCell}>

@@ -26,6 +26,7 @@ import {
   type Path,
 } from "react-hook-form"
 import { AVAILABLE_COLORS, COLOR_HEX_MAP } from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { DatePickerSheet, formatDisplayDate } from "./date-picker-sheet"
@@ -333,6 +334,7 @@ export function FormDateRow<TFieldValues extends FieldValues = FieldValues>({
   title,
 }: FormDateRowProps<TFieldValues>) {
   const [isOpen, setIsOpen] = useState(false)
+  const tz = useTimezone()
 
   return (
     <Controller
@@ -367,7 +369,7 @@ export function FormDateRow<TFieldValues extends FieldValues = FieldValues>({
               </View>
               <View style={styles.formRowValueGroup}>
                 <Text style={styles.formRowValueText}>
-                  {formatDisplayDate(dateVal)}
+                  {formatDisplayDate(dateVal, tz.timezone)}
                 </Text>
                 <ChevronRight size={14} color={theme.colors.textMuted} />
               </View>
@@ -422,6 +424,7 @@ export function FormEffectiveDateSection<
   const [activeTarget, setActiveTarget] = useState<"date" | "effective" | null>(
     null
   )
+  const tz = useTimezone()
 
   return (
     <Controller
@@ -471,7 +474,7 @@ export function FormEffectiveDateSection<
                         </View>
                         <View style={styles.formRowValueGroup}>
                           <Text style={styles.formRowValueText}>
-                            {formatDisplayDate(parsedDate)}
+                            {formatDisplayDate(parsedDate, tz.timezone)}
                           </Text>
                           <ChevronRight
                             size={14}
@@ -559,7 +562,7 @@ export function FormEffectiveDateSection<
                                 { color: theme.colors.primary },
                               ]}
                             >
-                              {formatDisplayDate(parsedEffective)}
+                              {formatDisplayDate(parsedEffective, tz.timezone)}
                             </Text>
                             <ChevronRight
                               size={14}

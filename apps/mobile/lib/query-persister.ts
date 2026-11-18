@@ -41,6 +41,14 @@ export const asyncStoragePersister = createAsyncStoragePersister({
   throttleTime: 1000,
 })
 
+export async function clearPersistedQueryCache(): Promise<void> {
+  try {
+    await asyncStoragePersister.removeClient()
+  } catch {
+    // Best-effort cache removal
+  }
+}
+
 export function shouldDehydrateQuery(query: {
   state: { status: string }
   queryKey: unknown
