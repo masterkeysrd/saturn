@@ -1,13 +1,9 @@
-import { forwardRef, useState } from "react"
-import {
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native"
-import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet"
+import { forwardRef, useEffect, useState } from "react"
+import { StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native"
+import BottomSheet, {
+  BottomSheetScrollView,
+  BottomSheetTextInput,
+} from "@gorhom/bottom-sheet"
 import * as Clipboard from "expo-clipboard"
 import {
   CRON_PRESETS,
@@ -49,6 +45,11 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
 
     const [draft, setDraft] = useState<Flow_Trigger>(trigger)
     const [mintedKey, setMintedKey] = useState<string | null>(null)
+
+    useEffect(() => {
+      setDraft(trigger)
+      setMintedKey(null)
+    }, [trigger])
 
     const cfg = draft.config ?? {}
     const selectedTopic = topics.find((t) => t.topic === cfg.topic)
@@ -120,7 +121,7 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
 
           <View style={styles.fieldGroup}>
             <Text style={styles.sectionLabel}>Trigger Name</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.input}
               value={draft.name}
               onChangeText={(name) => setDraft({ ...draft, name })}
@@ -189,7 +190,7 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
               </View>
 
               <Text style={styles.sectionLabel}>Optional CEL Filter</Text>
-              <TextInput
+              <BottomSheetTextInput
                 style={styles.monoInput}
                 value={cfg.filter ?? ""}
                 onChangeText={(filter) =>
@@ -290,7 +291,7 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
                   )
                 })}
               </View>
-              <TextInput
+              <BottomSheetTextInput
                 style={styles.monoInput}
                 value={cronVal}
                 onChangeText={(cron) =>

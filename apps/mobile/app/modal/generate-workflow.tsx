@@ -1,5 +1,8 @@
 import { useState } from "react"
 import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -7,6 +10,7 @@ import {
   View,
 } from "react-native"
 import { useRouter } from "expo-router"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useGenerateFlowMutation } from "@saturn/api/saturn/platform/workflow/v1/workflow"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
@@ -17,6 +21,7 @@ import { Sparkles } from "lucide-react-native"
 
 export default function GenerateWorkflowModalScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const toast = useToast()
   const [prompt, setPrompt] = useState("")
   const [role, setRole] = useState<"default" | "fast" | "reasoning">("default")
@@ -33,7 +38,10 @@ export default function GenerateWorkflowModalScreen() {
       })
       setPendingWorkflowDraft(flow)
       haptics.success()
-      router.replace("/(app)/workflows/new" as never)
+      if (router.canDismiss()) {
+        router.dismiss()
+      }
+      router.push("/(app)/workflows/new" as never)
     } catch (err) {
       haptics.error()
       toast.show({
@@ -45,60 +53,80 @@ export default function GenerateWorkflowModalScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Sparkles size={20} color={theme.colors.primary} />
-        <Text style={styles.title}>Build Workflow with AI</Text>
-      </View>
-      <Text style={styles.subtitle}>
-        Describe what should trigger your automation and what steps or actions
-        to perform. The generated draft opens in the editor before saving.
-      </Text>
-
-      <TextInput
-        style={styles.input}
-        multiline
-        value={prompt}
-        onChangeText={setPrompt}
-        placeholder="e.g. Every weekday at 9am, check pending bills and summarize them..."
-        placeholderTextColor={theme.colors.textMuted}
-      />
-
-      <View style={styles.roleRow}>
-        {(["default", "fast", "reasoning"] as const).map((r) => (
-          <TouchableOpacity
-            key={r}
-            style={[styles.rolePill, role === r && styles.rolePillActive]}
-            onPress={() => {
-              haptics.selection()
-              setRole(r)
-            }}
-          >
-            <Text
-              style={[styles.roleText, role === r && styles.roleTextActive]}
-            >
-              {r}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <Button
-        onPress={handleGenerate}
-        loading={generateMutation.isPending}
-        disabled={!prompt.trim()}
-        leftIcon={<Sparkles size={16} color={theme.colors.primaryForeground} />}
+    <KeyboardAvoidingView
+      style={styles.keyboardAvoid}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.container,
+          { paddingBottom: Math.max(insets.bottom, 20) + 16 },
+        ]}
+        keyboardShouldPersistTaps="handled"
       >
-        Generate Draft
-      </Button>
-    </View>
+        <View style={styles.header}>
+          <Sparkles size={20} color={theme.colors.primary} />
+          <Text style={styles.title}>Build Workflow with AI</Text>
+        </View>
+        <Text style={styles.subtitle}>
+          Describe what should trigger your automation and what steps or actions
+          to perform. The generated draft opens in the editor before saving.
+        </Text>
+
+        <TextInput
+          style={styles.input}
+          multiline
+          value={prompt}
+          onChangeText={setPrompt}
+          placeholder="e.g. Every weekday at 9am, check pending bills and summarize them..."
+          placeholderTextColor={theme.colors.textMuted}
+        />
+
+        <View style={styles.roleRow}>
+          {(["default", "fast", "reasoning"] as const).map((r) => (
+            <TouchableOpacity
+              key={r}
+              style={[styles.rolePill, role === r && styles.rolePillActive]}
+              onPress={() => {
+                haptics.selection()
+                setRole(r)
+              }}
+            >
+              <Text
+                style={[styles.roleText, role === r && styles.roleTextActive]}
+              >
+                {r}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Button
+          onPress={handleGenerate}
+          loading={generateMutation.isPending}
+          disabled={!prompt.trim()}
+          leftIcon={
+            <Sparkles size={16} color={theme.colors.primaryForeground} />
+          }
+        >
+          Generate Draft
+        </Button>
+      </ScrollView>
+    </KeyboardAvoidingView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
+  keyboardAvoid: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  scroll: {
+    flex: 1,
+  },
+  container: {
+    flexGrow: 1,
     padding: 20,
     gap: 16,
   },

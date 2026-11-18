@@ -1,13 +1,9 @@
-import { forwardRef, useState } from "react"
-import {
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native"
-import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet"
+import { forwardRef, useEffect, useState } from "react"
+import { StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native"
+import BottomSheet, {
+  BottomSheetScrollView,
+  BottomSheetTextInput,
+} from "@gorhom/bottom-sheet"
 import type { WorkflowVariable } from "@saturn/core"
 import type {
   Catalog_Loader,
@@ -34,6 +30,10 @@ export const SourceBindingSheet = forwardRef<
 >(({ sources, loaders, variables, onSave, onClose }, ref) => {
   const [draft, setDraft] =
     useState<Record<string, Flow_SourceBinding>>(sources)
+
+  useEffect(() => {
+    setDraft(sources)
+  }, [sources])
 
   const handleAdd = () => {
     haptics.light()
@@ -161,7 +161,7 @@ export const SourceBindingSheet = forwardRef<
                 return (
                   <View key={paramKey} style={styles.paramBlock}>
                     <Text style={styles.paramKey}>{paramKey}</Text>
-                    <TextInput
+                    <BottomSheetTextInput
                       style={styles.input}
                       value={strVal}
                       onChangeText={(txt) => {

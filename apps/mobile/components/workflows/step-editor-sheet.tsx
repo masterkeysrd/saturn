@@ -1,13 +1,9 @@
-import { forwardRef, useRef, useState } from "react"
-import {
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native"
-import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet"
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react"
+import { StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native"
+import BottomSheet, {
+  BottomSheetScrollView,
+  BottomSheetTextInput,
+} from "@gorhom/bottom-sheet"
 import {
   collectWorkflowStepIds,
   createDefaultWorkflowStep,
@@ -63,6 +59,47 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
     const { data: agentsData } = useListAgentsQuery({})
     const agents = agentsData?.agents ?? []
 
+    useEffect(() => {
+      setDraft(step)
+    }, [step])
+
+    const availableStepTypes = useMemo(() => {
+      const baseTypes = [
+        "llm.generate",
+        "ai.agent_run",
+        "filter",
+        "switch",
+        "for_each",
+        "output",
+      ]
+      const seen = new Set(baseTypes)
+      for (const d of stepDescriptors) {
+        if (d.type && !seen.has(d.type)) {
+          seen.add(d.type)
+          baseTypes.push(d.type)
+        }
+      }
+      if (draft.type && !seen.has(draft.type)) {
+        baseTypes.push(draft.type)
+      }
+      return baseTypes
+    }, [stepDescriptors, draft.type])
+
+    const handleStepTypeChange = (nextType: string) => {
+      if (nextType === draft.type) return
+      haptics.selection()
+      const template = createDefaultWorkflowStep(
+        nextType,
+        collectWorkflowStepIds(rootSteps)
+      )
+      setDraft({
+        ...template,
+        id: draft.id,
+        name: draft.name,
+        sources: draft.sources,
+      })
+    }
+
     const stepDescMap = Object.fromEntries(
       stepDescriptors.map((d) => [
         d.type ?? "",
@@ -113,10 +150,41 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
           onClose={onClose}
         >
           <BottomSheetScrollView contentContainerStyle={styles.body}>
+            <View style={styles.section}>
+              <Text style={styles.label}>Step Type</Text>
+              <View style={styles.typeGrid}>
+                {availableStepTypes.map((stepType) => {
+                  const active = draft.type === stepType
+                  return (
+                    <TouchableOpacity
+                      key={stepType}
+                      style={[
+                        styles.pillBtn,
+                        active && {
+                          borderColor: theme.colors.primary,
+                          backgroundColor: theme.colors.primarySubtle,
+                        },
+                      ]}
+                      onPress={() => handleStepTypeChange(stepType)}
+                    >
+                      <Text
+                        style={[
+                          styles.pillBtnText,
+                          active && { color: theme.colors.primary },
+                        ]}
+                      >
+                        {stepType}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </View>
+
             <View style={styles.fieldRow}>
               <View style={styles.halfField}>
                 <Text style={styles.label}>Step ID</Text>
-                <TextInput
+                <BottomSheetTextInput
                   style={styles.monoInput}
                   value={draft.id}
                   onChangeText={(id) => setDraft({ ...draft, id })}
@@ -125,7 +193,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
               </View>
               <View style={styles.halfField}>
                 <Text style={styles.label}>Label</Text>
-                <TextInput
+                <BottomSheetTextInput
                   style={styles.input}
                   value={draft.name ?? ""}
                   onChangeText={(name) => setDraft({ ...draft, name })}
@@ -206,7 +274,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                 {draft.type === "llm.generate" && (
                   <>
                     <Text style={styles.label}>System Instruction</Text>
-                    <TextInput
+                    <BottomSheetTextInput
                       style={[styles.monoInput, styles.multiline]}
                       multiline
                       value={String(inputs.system ?? "")}
@@ -216,7 +284,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                 )}
 
                 <Text style={styles.label}>Prompt</Text>
-                <TextInput
+                <BottomSheetTextInput
                   style={[styles.monoInput, styles.multiline]}
                   multiline
                   value={String(inputs.prompt ?? "")}
@@ -233,7 +301,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
             {draft.type === "filter" && (
               <View style={styles.section}>
                 <Text style={styles.label}>CEL Condition</Text>
-                <TextInput
+                <BottomSheetTextInput
                   style={styles.monoInput}
                   value={String(inputs.condition ?? "")}
                   onChangeText={(v) => updateInput("condition", v)}
@@ -246,7 +314,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   onInsert={(v) => updateInput("condition", v)}
                 />
                 <Text style={styles.label}>Skip Reason</Text>
-                <TextInput
+                <BottomSheetTextInput
                   style={styles.input}
                   value={String(inputs.reason ?? "")}
                   onChangeText={(v) => updateInput("reason", v)}
@@ -282,7 +350,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
 
                 {(draft.cases ?? []).map((sc, idx) => (
                   <View key={`${sc.name}-${idx}`} style={styles.nestedBox}>
-                    <TextInput
+                    <BottomSheetTextInput
                       style={styles.monoInput}
                       value={sc.name}
                       onChangeText={(name) =>
@@ -295,7 +363,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                       }
                       placeholder="case_name"
                     />
-                    <TextInput
+                    <BottomSheetTextInput
                       style={styles.monoInput}
                       value={sc.condition}
                       onChangeText={(condition) =>
@@ -341,7 +409,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
             {draft.type === "for_each" && (
               <View style={styles.section}>
                 <Text style={styles.label}>Items Expression</Text>
-                <TextInput
+                <BottomSheetTextInput
                   style={styles.monoInput}
                   value={String(inputs.items ?? "")}
                   onChangeText={(v) => updateInput("items", v)}
@@ -353,7 +421,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   onInsert={(v) => updateInput("items", v)}
                 />
                 <Text style={styles.label}>Item Alias</Text>
-                <TextInput
+                <BottomSheetTextInput
                   style={styles.monoInput}
                   value={String(inputs.item_alias ?? "item")}
                   onChangeText={(v) => updateInput("item_alias", v)}
@@ -368,7 +436,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
             {draft.type === "output" && (
               <View style={styles.section}>
                 <Text style={styles.label}>Output Expression / JSON</Text>
-                <TextInput
+                <BottomSheetTextInput
                   style={[styles.monoInput, styles.multiline]}
                   multiline
                   value={
@@ -390,6 +458,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
 
             {![
               "llm.generate",
+              "ai.agent_run",
               "filter",
               "switch",
               "for_each",
@@ -410,7 +479,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   return (
                     <View key={k} style={styles.section}>
                       <Text style={styles.label}>{k}</Text>
-                      <TextInput
+                      <BottomSheetTextInput
                         style={styles.monoInput}
                         value={strVal}
                         onChangeText={(v) => updateInput(k, v)}
@@ -516,6 +585,11 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   section: {
+    gap: 8,
+  },
+  typeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   label: {

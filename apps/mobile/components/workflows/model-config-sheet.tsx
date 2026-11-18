@@ -1,13 +1,9 @@
-import { forwardRef, useState } from "react"
-import {
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native"
-import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet"
+import { forwardRef, useEffect, useState } from "react"
+import { StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native"
+import BottomSheet, {
+  BottomSheetScrollView,
+  BottomSheetTextInput,
+} from "@gorhom/bottom-sheet"
 import { useListModelsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import type { ModelConfig } from "@saturn/api/saturn/platform/workflow/v1/workflow"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
@@ -47,6 +43,23 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
     const [thinkingEnabled, setThinkingEnabled] = useState(
       Boolean(value?.generation?.thinking?.enabled)
     )
+
+    useEffect(() => {
+      const nextStrategy: ModelStrategy = value?.modelId
+        ? "model"
+        : value?.role
+          ? "role"
+          : "default"
+      setStrategy(nextStrategy)
+      setRole(value?.role ?? "default")
+      setModelId(value?.modelId ?? "")
+      setTempStr(
+        value?.generation?.temperature !== undefined
+          ? String(value.generation.temperature)
+          : ""
+      )
+      setThinkingEnabled(Boolean(value?.generation?.thinking?.enabled))
+    }, [value])
 
     const handleApply = () => {
       haptics.success()
@@ -181,7 +194,7 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
           {strategy !== "default" && (
             <View style={styles.listSection}>
               <Text style={styles.fieldLabel}>Temperature (0 - 2)</Text>
-              <TextInput
+              <BottomSheetTextInput
                 style={styles.input}
                 value={tempStr}
                 onChangeText={setTempStr}
