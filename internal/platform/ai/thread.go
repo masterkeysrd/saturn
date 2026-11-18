@@ -111,9 +111,7 @@ func (t *Thread) Validate() error {
 	if t.Title == "" {
 		t.Title = "New Chat"
 	}
-	if len(t.Title) > 255 {
-		t.Title = t.Title[:255]
-	}
+	t.Title = clipRunes(t.Title, 255)
 	if t.Status == "" {
 		t.Status = ThreadIdle
 	}

@@ -262,7 +262,7 @@ func TestService_ThreadsAndRuns(t *testing.T) {
 					Items: []*ai.Run{{ID: "air_1", SpaceID: "spc_1", AgentID: new("agt_1"), Status: ai.RunCompleted}},
 				}, nil
 			},
-			GetFunc: func(_ context.Context, _, id string) (*ai.Run, error) {
+			GetFunc: func(_ context.Context, _, id, _ string) (*ai.Run, error) {
 				return &ai.Run{ID: id, SpaceID: "spc_1", AgentID: new("agt_1"), Status: ai.RunCompleted}, nil
 			},
 			ListStepsFunc: func(_ context.Context, _, _ string) ([]*ai.RunStep, error) {
@@ -292,5 +292,177 @@ func TestService_ThreadsAndRuns(t *testing.T) {
 	runView, err := svc.GetRun(ctx, "air_1")
 	if err != nil || len(runView.Steps) != 1 || *runView.AgentName != "Saturn Assistant" {
 		t.Fatalf("GetRun() failed: err=%v view=%+v", err, runView)
+	}
+}
+
+func TestService_RunsViewerScoping(t *testing.T) {
+	type storedRun struct {
+		run         *ai.Run
+		threadOwner string
+	}
+	runs := map[string]storedRun{
+		"air_usrA_chat": {
+			run:         &ai.Run{ID: "air_usrA_chat", SpaceID: "spc_1", Kind: ai.RunKindChatTurn, ThreadID: new("thr_A"), AgentID: new("agt_1"), Status: ai.RunCompleted},
+			threadOwner: "usr_A",
+		},
+		"air_usrB_chat": {
+			run:         &ai.Run{ID: "air_usrB_chat", SpaceID: "spc_1", Kind: ai.RunKindChatTurn, ThreadID: new("thr_B"), AgentID: new("agt_1"), Status: ai.RunCompleted},
+			threadOwner: "usr_B",
+		},
+		"air_headless": {
+			run: &ai.Run{ID: "air_headless", SpaceID: "spc_1", Kind: ai.RunKindGenerate, Status: ai.RunCompleted},
+		},
+	}
+
+	newSvc := func() *aiaggregator.Service {
+		return aiaggregator.NewService(aiaggregator.Dependencies{
+			Agents: &aiaggregator.AgentReaderMock{
+				ListFunc: func(_ context.Context, _ string) ([]*ai.Agent, error) {
+					return []*ai.Agent{{ID: "agt_1", Name: "Saturn Assistant"}}, nil
+				},
+				GetFunc: func(_ context.Context, _, id string) (*ai.Agent, error) {
+					return &ai.Agent{ID: id, Name: "Saturn Assistant"}, nil
+				},
+			},
+			Runs: &aiaggregator.RunReaderMock{
+				ListFunc: func(_ context.Context, filter ai.ListRunsFilter) (*paging.Page[*ai.Run], error) {
+					var items []*ai.Run
+					for _, sr := range runs {
+						if sr.run.SpaceID != filter.SpaceID {
+							continue
+						}
+						if filter.ViewerUserID != "" && sr.run.ThreadID != nil && sr.threadOwner != filter.ViewerUserID {
+							continue
+						}
+						items = append(items, sr.run)
+					}
+					return &paging.Page[*ai.Run]{Items: items}, nil
+				},
+				GetFunc: func(_ context.Context, spaceID, id, viewerUserID string) (*ai.Run, error) {
+					sr, ok := runs[id]
+					if !ok || sr.run.SpaceID != spaceID {
+						return nil, ai.ErrRunNotFound
+					}
+					if viewerUserID != "" && sr.run.ThreadID != nil && sr.threadOwner != viewerUserID {
+						return nil, ai.ErrRunNotFound
+					}
+					return sr.run, nil
+				},
+				ListStepsFunc: func(_ context.Context, _, runID string) ([]*ai.RunStep, error) {
+					return []*ai.RunStep{{ID: "ais_" + runID, Seq: 1, Kind: ai.StepKindLLM, Name: "model"}}, nil
+				},
+			},
+		})
+	}
+
+	listTests := []struct {
+		name       string
+		ctx        context.Context
+		wantErr    bool
+		wantKind   errors.Kind
+		wantIDs    map[string]bool
+		wantViewer string
+	}{
+		{
+			name:     "missing space",
+			ctx:      auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_B"}),
+			wantErr:  true,
+			wantKind: errors.Unauthenticated,
+		},
+		{
+			name:     "missing principal",
+			ctx:      auth.WithSpaceScope(context.Background(), "spc_1", "member"),
+			wantErr:  true,
+			wantKind: errors.Unauthenticated,
+		},
+		{
+			name:       "user B sees only own chat_turn and headless runs",
+			ctx:        testCtx("spc_1", "usr_B"),
+			wantViewer: "usr_B",
+			wantIDs: map[string]bool{
+				"air_usrB_chat": true,
+				"air_headless":  true,
+			},
+		},
+	}
+
+	for _, tc := range listTests {
+		t.Run("ListRuns/"+tc.name, func(t *testing.T) {
+			svc := newSvc()
+			res, err := svc.ListRuns(tc.ctx, ai.ListRunsFilter{})
+			if tc.wantErr {
+				if !errors.Is(err, tc.wantKind) {
+					t.Fatalf("expected %v, got %v", tc.wantKind, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ListRuns() error = %v", err)
+			}
+			got := make(map[string]bool, len(res.Runs))
+			for _, r := range res.Runs {
+				got[r.ID] = true
+			}
+			if len(got) != len(tc.wantIDs) {
+				t.Fatalf("got runs %v, want %v", got, tc.wantIDs)
+			}
+			for id := range tc.wantIDs {
+				if !got[id] {
+					t.Fatalf("expected run %s in %v", id, got)
+				}
+			}
+		})
+	}
+
+	getTests := []struct {
+		name     string
+		ctx      context.Context
+		runID    string
+		wantErr  bool
+		wantKind errors.Kind
+	}{
+		{
+			name:     "missing principal",
+			ctx:      auth.WithSpaceScope(context.Background(), "spc_1", "member"),
+			runID:    "air_usrA_chat",
+			wantErr:  true,
+			wantKind: errors.Unauthenticated,
+		},
+		{
+			name:     "user B cannot fetch user A private chat_turn run",
+			ctx:      testCtx("spc_1", "usr_B"),
+			runID:    "air_usrA_chat",
+			wantErr:  true,
+			wantKind: errors.NotExist,
+		},
+		{
+			name:  "user B can fetch own chat_turn run",
+			ctx:   testCtx("spc_1", "usr_B"),
+			runID: "air_usrB_chat",
+		},
+		{
+			name:  "user B can fetch headless run",
+			ctx:   testCtx("spc_1", "usr_B"),
+			runID: "air_headless",
+		},
+	}
+
+	for _, tc := range getTests {
+		t.Run("GetRun/"+tc.name, func(t *testing.T) {
+			svc := newSvc()
+			view, err := svc.GetRun(tc.ctx, tc.runID)
+			if tc.wantErr {
+				if !errors.Is(err, tc.wantKind) {
+					t.Fatalf("expected %v, got %v", tc.wantKind, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("GetRun() error = %v", err)
+			}
+			if view.ID != tc.runID || len(view.Steps) != 1 {
+				t.Fatalf("unexpected GetRun view: %+v", view)
+			}
+		})
 	}
 }

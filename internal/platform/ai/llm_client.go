@@ -275,7 +275,11 @@ func (c *LoomClient) buildLoomProvider(ctx context.Context, p *Provider) (llm.Pr
 			APIKey: apiKey,
 		}
 		if len(headers) > 0 {
-			cfg.HTTPClient = &http.Client{Transport: &headerRoundTripper{base: rt, headers: headers}}
+			cfg.HTTPClient = &http.Client{
+				Timeout:       c.httpClient.Timeout,
+				CheckRedirect: c.httpClient.CheckRedirect,
+				Transport:     &headerRoundTripper{base: rt, headers: headers},
+			}
 		} else {
 			cfg.HTTPClient = c.httpClient
 		}
@@ -342,8 +346,9 @@ func (c *LoomClient) buildLoomProvider(ctx context.Context, p *Provider) (llm.Pr
 		ollamaHTTP := c.httpClient
 		if len(mergedHeaders) > 0 {
 			ollamaHTTP = &http.Client{
-				Timeout:   c.httpClient.Timeout,
-				Transport: &headerRoundTripper{base: rt, headers: mergedHeaders},
+				Timeout:       c.httpClient.Timeout,
+				CheckRedirect: c.httpClient.CheckRedirect,
+				Transport:     &headerRoundTripper{base: rt, headers: mergedHeaders},
 			}
 		}
 		ollamaClient := ollamaapi.NewClient(u, ollamaHTTP)

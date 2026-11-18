@@ -171,8 +171,10 @@ func (r *Runtime) Generate(ctx context.Context, req GenerateRequest) (*Run, erro
 	stepDur := r.nowFn().Sub(stepStart).Milliseconds()
 
 	if invErr != nil {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cleanupCancel()
 		errDetail := &ErrorDetail{Message: invErr.Error()}
-		_ = r.store.Runs().AppendStep(ctx, &RunStep{
+		_ = r.store.Runs().AppendStep(cleanupCtx, &RunStep{
 			RunID:   run.ID,
 			SpaceID: req.SpaceID,
 			Seq:     1,
@@ -189,7 +191,7 @@ func (r *Runtime) Generate(ctx context.Context, req GenerateRequest) (*Run, erro
 		run.EndTime = &endTime
 		run.Metrics.LatencyMS = endTime.Sub(startTime).Milliseconds()
 		run.Metrics.StepCount = 1
-		_ = r.store.Runs().Update(ctx, run)
+		_ = r.store.Runs().Update(cleanupCtx, run)
 		return run, errors.E(op, invErr)
 	}
 
@@ -366,8 +368,10 @@ func (r *Runtime) RunAgent(ctx context.Context, req RunAgentRequest) (*Run, erro
 		stepDur := r.nowFn().Sub(stepStart).Milliseconds()
 
 		if invErr != nil {
+			cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cleanupCancel()
 			stepSeq++
-			_ = r.store.Runs().AppendStep(ctx, &RunStep{
+			_ = r.store.Runs().AppendStep(cleanupCtx, &RunStep{
 				RunID:   run.ID,
 				SpaceID: req.SpaceID,
 				Seq:     stepSeq,
@@ -774,7 +778,7 @@ func (r *Runtime) failRun(ctx context.Context, op errors.Op, run *Run, startTime
 }
 
 func (r *Runtime) terminateRun(
-	ctx context.Context,
+	_ context.Context,
 	op errors.Op,
 	run *Run,
 	startTime time.Time,
@@ -783,12 +787,14 @@ func (r *Runtime) terminateRun(
 	msg string,
 	retErr error,
 ) (*Run, error) {
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	endTime := r.nowFn()
 	run.Status = status
 	run.Error = &ErrorDetail{Code: code, Message: msg}
 	run.EndTime = &endTime
 	run.Metrics.LatencyMS = endTime.Sub(startTime).Milliseconds()
-	_ = r.store.Runs().Update(ctx, run)
+	_ = r.store.Runs().Update(cleanupCtx, run)
 	return run, errors.E(op, retErr)
 }
 
@@ -866,6 +872,17 @@ func truncateRunes(s string, maxLen int) string {
 		return s
 	}
 	return string(runes[:maxLen]) + "\n...[truncated]"
+}
+
+func clipRunes(s string, maxLen int) string {
+	if maxLen <= 0 {
+		return ""
+	}
+	runes := []rune(s)
+	if len(runes) <= maxLen {
+		return s
+	}
+	return string(runes[:maxLen])
 }
 
 func mergeGenerationConfig(base GenerationConfig, override *GenerationConfig) GenerationConfig {

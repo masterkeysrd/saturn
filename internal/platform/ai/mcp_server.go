@@ -222,11 +222,7 @@ func ValidateMCPURL(rawURL string, allowPrivateNetworks bool) error {
 	}
 
 	if addr, err := netip.ParseAddr(host); err == nil {
-		addr = addr.Unmap()
-		if addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() || addr.IsMulticast() || addr.IsUnspecified() {
-			return ErrSSRFBlocked
-		}
-		if !allowPrivateNetworks && (addr.IsLoopback() || addr.IsPrivate()) {
+		if isBlockedSSRFIP(addr, allowPrivateNetworks) {
 			return ErrSSRFBlocked
 		}
 		return nil
@@ -270,7 +266,17 @@ func (m *MCPServer) ApplyPatch(incoming *MCPServer, mask []string, allowPrivateN
 	}
 
 	inCopy := *incoming
-	if slices.Contains(mask, "auth_secret.bearer_token") || slices.Contains(mask, "auth_secret.headers") {
+	if len(mask) == 0 {
+		if inCopy.AuthSecret == nil {
+			inCopy.AuthSecret = m.AuthSecret.Clone()
+		}
+		if m.AuthSecret == nil {
+			m.AuthSecret = &MCPAuthSecret{}
+		}
+		if inCopy.AuthSecret == nil {
+			inCopy.AuthSecret = &MCPAuthSecret{}
+		}
+	} else if slices.Contains(mask, "auth_secret.bearer_token") || slices.Contains(mask, "auth_secret.headers") {
 		if m.AuthSecret == nil {
 			m.AuthSecret = &MCPAuthSecret{}
 		}
@@ -281,6 +287,9 @@ func (m *MCPServer) ApplyPatch(incoming *MCPServer, mask []string, allowPrivateN
 
 	if err := MCPServerPatchSchema.Apply(m, &inCopy, mask); err != nil {
 		return errors.E(errors.Invalid, err)
+	}
+	if m.AuthSecret != nil && !m.AuthSecret.HasCredentials() {
+		m.AuthSecret = nil
 	}
 	m.UpdateTime = time.Now().UTC()
 	return m.Validate(allowPrivateNetworks)

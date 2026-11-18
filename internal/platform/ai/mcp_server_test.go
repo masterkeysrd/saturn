@@ -151,4 +151,29 @@ func TestMCPServer_EnsureDeletableAndPatch(t *testing.T) {
 	if userSrv.AuthSecret == nil || *userSrv.AuthSecret.BearerToken != "tok_new" || userSrv.AuthSecret.Headers["X-Env"] != "prod" {
 		t.Errorf("unexpected auth_secret after patch: %+v", userSrv.AuthSecret)
 	}
+
+	// Empty mask (full update) with nil AuthSecret must not panic and must preserve existing AuthSecret.
+	if err := userSrv.ApplyPatch(&MCPServer{
+		Slug:      "stripe",
+		Name:      "Stripe Updated",
+		Transport: TransportHTTP,
+		Config:    MCPServerConfig{URL: "https://mcp.stripe.com/v1", AuthType: MCPAuthBearer},
+	}, nil, false); err != nil {
+		t.Fatalf("ApplyPatch(nil mask) failed: %v", err)
+	}
+	if userSrv.AuthSecret == nil || *userSrv.AuthSecret.BearerToken != "tok_new" {
+		t.Fatalf("expected existing AuthSecret preserved, got %+v", userSrv.AuthSecret)
+	}
+
+	// Nil initial AuthSecret + mask with both "auth_secret" and "auth_secret.bearer_token" must not panic.
+	emptySrv := &MCPServer{
+		ID:        "mcp_2",
+		Slug:      "linear",
+		Name:      "Linear",
+		Transport: TransportHTTP,
+		Config:    MCPServerConfig{URL: "https://mcp.linear.app/sse", AuthType: MCPAuthNone},
+	}
+	if err := emptySrv.ApplyPatch(&MCPServer{Name: "Linear"}, []string{"auth_secret", "auth_secret.bearer_token"}, false); err != nil {
+		t.Fatalf("ApplyPatch(auth_secret + auth_secret.bearer_token) failed: %v", err)
+	}
 }

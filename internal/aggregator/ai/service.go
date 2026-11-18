@@ -55,7 +55,7 @@ type ThreadReader interface {
 // RunReader reads AI execution runs, step traces, and spend/stats aggregates.
 // @Mock
 type RunReader interface {
-	Get(ctx context.Context, spaceID, id string) (*ai.Run, error)
+	Get(ctx context.Context, spaceID, id, viewerUserID string) (*ai.Run, error)
 	List(ctx context.Context, filter ai.ListRunsFilter) (*paging.Page[*ai.Run], error)
 	ListSteps(ctx context.Context, spaceID, runID string) ([]*ai.RunStep, error)
 	GetAgentStats7d(ctx context.Context, spaceID string, agentIDs []string, since time.Time) (map[string]ai.AgentStats, error)
@@ -680,14 +680,16 @@ func (s *Service) ListThreadMessages(ctx context.Context, filter ai.ListMessages
 }
 
 // ListRuns returns paginated AI runs hydrated with agent display names.
+// Private chat_turn runs are strictly scoped to the authenticated caller's user ID.
 func (s *Service) ListRuns(ctx context.Context, filter ai.ListRunsFilter) (*RunListResult, error) {
 	const op errors.Op = "aggregator/ai.ListRuns"
 
-	spaceID, err := getSpaceID(ctx, op)
+	spaceID, userID, err := requireUserAndSpace(ctx, op)
 	if err != nil {
 		return nil, err
 	}
 	filter.SpaceID = spaceID
+	filter.ViewerUserID = userID
 
 	var (
 		page   *paging.Page[*ai.Run]
@@ -730,10 +732,11 @@ func (s *Service) ListRuns(ctx context.Context, filter ai.ListRunsFilter) (*RunL
 }
 
 // GetRun retrieves a single AI run hydrated with its agent display name and ordered step execution traces.
+// Private chat_turn runs are strictly scoped to the authenticated caller's user ID.
 func (s *Service) GetRun(ctx context.Context, id string) (*RunView, error) {
 	const op errors.Op = "aggregator/ai.GetRun"
 
-	spaceID, err := getSpaceID(ctx, op)
+	spaceID, userID, err := requireUserAndSpace(ctx, op)
 	if err != nil {
 		return nil, err
 	}
@@ -741,22 +744,12 @@ func (s *Service) GetRun(ctx context.Context, id string) (*RunView, error) {
 		return nil, errors.E(op, errors.Invalid, "run id is required")
 	}
 
-	var (
-		run   *ai.Run
-		steps []*ai.RunStep
-	)
-	g, gCtx := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		var rErr error
-		run, rErr = s.runs.Get(gCtx, spaceID, id)
-		return rErr
-	})
-	g.Go(func() error {
-		var sErr error
-		steps, sErr = s.runs.ListSteps(gCtx, spaceID, id)
-		return sErr
-	})
-	if err := g.Wait(); err != nil {
+	run, err := s.runs.Get(ctx, spaceID, id, userID)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	steps, err := s.runs.ListSteps(ctx, spaceID, id)
+	if err != nil {
 		return nil, errors.E(op, err)
 	}
 

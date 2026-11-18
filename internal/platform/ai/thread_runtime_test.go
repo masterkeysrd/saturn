@@ -10,6 +10,8 @@ import (
 
 	"github.com/masterkeysrd/loom/message"
 	"github.com/masterkeysrd/loom/tool"
+	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/platform/settings"
@@ -125,7 +127,7 @@ func newMemThreadHarness(t *testing.T, initialThread *Thread, invoker *ModelInvo
 			h.runs[r.ID] = r
 			return nil
 		},
-		GetFunc: func(_ context.Context, _, id string) (*Run, error) {
+		GetFunc: func(_ context.Context, _, id, _ string) (*Run, error) {
 			h.mu.Lock()
 			defer h.mu.Unlock()
 			r, ok := h.runs[id]
@@ -553,6 +555,71 @@ func TestThreadRuntime_StaleApprovalCleanup_OrphanRecovery_Attachments_And_Compa
 		}
 		if !sawRunErr {
 			t.Errorf("expected EventRunError with CodeExecutionTimedOut, got %+v", events)
+		}
+	})
+}
+
+func TestThreadRuntime_ApprovalPolicyCeilingAndViewerGuard(t *testing.T) {
+	tests := []struct {
+		name         string
+		agentPolicy  ApprovalPolicy
+		threadPolicy *ApprovalPolicy
+		role         string
+		want         ApprovalPolicy
+	}{
+		{name: "thread cannot relax deny_writes to auto", agentPolicy: ApprovalDenyWrites, threadPolicy: new(ApprovalAuto), role: string(space.RoleMember), want: ApprovalDenyWrites},
+		{name: "thread cannot relax confirm_writes to auto", agentPolicy: ApprovalConfirmWrites, threadPolicy: new(ApprovalAuto), role: string(space.RoleMember), want: ApprovalConfirmWrites},
+		{name: "thread can tighten auto to confirm_writes", agentPolicy: ApprovalAuto, threadPolicy: new(ApprovalConfirmWrites), role: string(space.RoleMember), want: ApprovalConfirmWrites},
+		{name: "thread can tighten confirm_writes to deny_writes", agentPolicy: ApprovalConfirmWrites, threadPolicy: new(ApprovalDenyWrites), role: string(space.RoleMember), want: ApprovalDenyWrites},
+		{name: "viewer always forced to deny_writes", agentPolicy: ApprovalAuto, threadPolicy: new(ApprovalAuto), role: string(space.RoleViewer), want: ApprovalDenyWrites},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := effectiveApprovalPolicy(tc.agentPolicy, tc.threadPolicy, tc.role); got != tc.want {
+				t.Fatalf("effectiveApprovalPolicy() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+
+	t.Run("viewer cannot approve pending mutating tools", func(t *testing.T) {
+		tr, _ := newMemThreadHarness(t, &Thread{
+			ID:      "thr_viewer",
+			SpaceID: "spc_1",
+			UserID:  "usr_1",
+			Status:  ThreadAwaitingApproval,
+			State: ThreadState{
+				PendingApprovals: []PendingToolApproval{{ToolCallID: "tc_1", ToolName: "write_tool"}},
+			},
+		}, &ModelInvokerMock{}, &MCPConnectorMock{})
+
+		viewerCtx := auth.WithSpaceScope(context.Background(), "spc_1", string(space.RoleViewer))
+		err := tr.ResolveApprovals(viewerCtx, ResolveApprovalsRequest{
+			SpaceID:   "spc_1",
+			UserID:    "usr_1",
+			ThreadID:  "thr_viewer",
+			Decisions: []ToolApprovalDecision{{ToolCallID: "tc_1", Approved: true}},
+		}, nil)
+		if !errors.Is(err, errors.Permission) {
+			t.Fatalf("expected Permission error for viewer approving tool, got %v", err)
+		}
+	})
+
+	t.Run("failStreamRun persists terminal status even when ctx is cancelled", func(t *testing.T) {
+		tr, h := newMemThreadHarness(t, &Thread{
+			ID:      "thr_fail",
+			SpaceID: "spc_1",
+			UserID:  "usr_1",
+			Status:  ThreadStreaming,
+		}, &ModelInvokerMock{}, &MCPConnectorMock{})
+		run := &Run{ID: "air_fail", SpaceID: "spc_1", Status: RunRunning}
+		h.runs[run.ID] = run
+
+		cancelledCtx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_ = tr.failStreamRun(cancelledCtx, "test.op", h.thread, run, time.Now().Add(-time.Second), func(ThreadStreamEvent) {}, fmt.Errorf("upstream failed"))
+		if run.Status != RunFailed || h.thread.Status != ThreadIdle {
+			t.Fatalf("expected run failed and thread idle on cancelled ctx, got run=%s thread=%s", run.Status, h.thread.Status)
 		}
 	})
 }

@@ -512,7 +512,7 @@ var _ RunReader = (*RunReaderMock)(nil)
 // RunReaderMock is a mock implementation of RunReader.
 type RunReaderMock struct {
 	// GetFunc mocks the Get method.
-	GetFunc func(ctx context.Context, spaceID string, id string) (*ai.Run, error)
+	GetFunc func(ctx context.Context, spaceID string, id string, viewerUserID string) (*ai.Run, error)
 
 	// ListFunc mocks the List method.
 	ListFunc func(ctx context.Context, filter ai.ListRunsFilter) (*paging.Page[*ai.Run], error)
@@ -529,9 +529,10 @@ type RunReaderMock struct {
 	// calls tracks calls to the methods.
 	calls struct {
 		Get []struct {
-			Ctx     context.Context
-			SpaceID string
-			Id      string
+			Ctx          context.Context
+			SpaceID      string
+			Id           string
+			ViewerUserID string
 		}
 		List []struct {
 			Ctx    context.Context
@@ -562,29 +563,32 @@ type RunReaderMock struct {
 }
 
 // Get calls GetFunc.
-func (mock *RunReaderMock) Get(ctx context.Context, spaceID string, id string) (*ai.Run, error) {
+func (mock *RunReaderMock) Get(ctx context.Context, spaceID string, id string, viewerUserID string) (*ai.Run, error) {
 	if mock.GetFunc == nil {
 		panic("RunReaderMock.GetFunc: method is nil but RunReader.Get was just called")
 	}
 	mock.lockGet.Lock()
 	mock.calls.Get = append(mock.calls.Get, struct {
-		Ctx     context.Context
-		SpaceID string
-		Id      string
+		Ctx          context.Context
+		SpaceID      string
+		Id           string
+		ViewerUserID string
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:          ctx,
+		SpaceID:      spaceID,
+		Id:           id,
+		ViewerUserID: viewerUserID,
 	})
 	mock.lockGet.Unlock()
-	return mock.GetFunc(ctx, spaceID, id)
+	return mock.GetFunc(ctx, spaceID, id, viewerUserID)
 }
 
 // GetCalls returns all calls made to Get.
 func (mock *RunReaderMock) GetCalls() []struct {
-	Ctx     context.Context
-	SpaceID string
-	Id      string
+	Ctx          context.Context
+	SpaceID      string
+	Id           string
+	ViewerUserID string
 } {
 	mock.lockGet.RLock()
 	defer mock.lockGet.RUnlock()

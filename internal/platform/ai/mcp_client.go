@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/google/jsonschema-go/jsonschema"
-	loommcp "github.com/masterkeysrd/loom/mcp"
 	"github.com/masterkeysrd/loom/message"
 	"github.com/masterkeysrd/loom/tool"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
@@ -159,6 +158,29 @@ func (c *UnifiedMCPConnector) discoverInMemory(ctx context.Context, server *MCPS
 	return state, nil
 }
 
+func (c *UnifiedMCPConnector) connectHTTPSession(ctx context.Context, server *MCPServer) (*sdkmcp.ClientSession, error) {
+	timeout := time.Duration(max(server.Config.TimeoutSeconds, 1)) * time.Second
+	if server.Config.TimeoutSeconds <= 0 {
+		timeout = 30 * time.Second
+	}
+	httpClient := NewSSRFSafeHTTPClient(c.allowPrivateNetworks, timeout)
+	if headers := buildMCPAuthHeaders(server); len(headers) > 0 {
+		httpClient.Transport = &headerRoundTripper{
+			base:    httpClient.Transport,
+			headers: headers,
+		}
+	}
+	transport := &sdkmcp.StreamableClientTransport{
+		Endpoint:   server.Config.URL,
+		HTTPClient: httpClient,
+	}
+	client := sdkmcp.NewClient(&sdkmcp.Implementation{
+		Name:    "saturn-mcp-client",
+		Version: "1.0.0",
+	}, nil)
+	return client.Connect(ctx, transport, nil)
+}
+
 func (c *UnifiedMCPConnector) discoverHTTP(ctx context.Context, server *MCPServer) (MCPDiscoveryState, error) {
 	if err := ValidateMCPURL(server.Config.URL, c.allowPrivateNetworks); err != nil {
 		return MCPDiscoveryState{
@@ -167,57 +189,54 @@ func (c *UnifiedMCPConnector) discoverHTTP(ctx context.Context, server *MCPServe
 		}, err
 	}
 
-	client := loommcp.NewClient(loommcp.Config{
-		Transport: "http",
-		URL:       server.Config.URL,
-		Headers:   buildMCPAuthHeaders(server),
-	})
-	defer func() { _ = client.Close() }()
+	session, err := c.connectHTTPSession(ctx, server)
+	if err != nil {
+		return MCPDiscoveryState{
+			HealthStatus: MCPHealthUnhealthy,
+			Error:        &ErrorDetail{Code: new(string(CodeMCPConnectionFailed)), Message: err.Error()},
+		}, errors.E(errors.Unavailable, CodeMCPConnectionFailed, err)
+	}
+	defer func() { _ = session.Close() }()
 
 	state := MCPDiscoveryState{
 		HealthStatus: MCPHealthHealthy,
 		LastSyncedAt: new(time.Now().UTC()),
 	}
 
-	info, err := client.Info(ctx)
-	if err != nil {
-		state.HealthStatus = MCPHealthUnhealthy
-		state.Error = &ErrorDetail{Code: new(string(CodeMCPConnectionFailed)), Message: err.Error()}
-		return state, errors.E(errors.Unavailable, CodeMCPConnectionFailed, err)
-	}
-	if info != nil {
+	if initRes := session.InitializeResult(); initRes != nil && initRes.ServerInfo != nil {
 		state.ServerInfo = &MCPServerInfo{
-			Name:    info.Name,
-			Version: info.Version,
+			Name:    initRes.ServerInfo.Name,
+			Version: initRes.ServerInfo.Version,
 		}
 	}
 
-	tools, err := client.Tools(ctx)
+	listRes, err := session.ListTools(ctx, &sdkmcp.ListToolsParams{})
 	if err != nil {
 		state.HealthStatus = MCPHealthUnhealthy
 		state.Error = &ErrorDetail{Code: new(string(CodeMCPConnectionFailed)), Message: err.Error()}
 		return state, errors.E(errors.Unavailable, CodeMCPConnectionFailed, err)
 	}
 
-	state.Tools = make([]MCPToolSummary, 0, len(tools))
-	for _, t := range tools {
+	state.Tools = make([]MCPToolSummary, 0, len(listRes.Tools))
+	for _, st := range listRes.Tools {
+		ro, dest := extractSDKAnnotations(st.Annotations)
 		var schemaMap map[string]any
-		if t.Definition.InputSchema != nil {
-			if raw, mErr := json.Marshal(t.Definition.InputSchema); mErr == nil {
+		if st.InputSchema != nil {
+			if raw, mErr := json.Marshal(st.InputSchema); mErr == nil {
 				_ = json.Unmarshal(raw, &schemaMap)
 			}
 		}
 		var titlePtr *string
-		if t.Definition.Title != "" {
-			titlePtr = new(t.Definition.Title)
+		if st.Title != "" {
+			titlePtr = new(st.Title)
 		}
 		state.Tools = append(state.Tools, MCPToolSummary{
-			Name:            t.Definition.Name,
+			Name:            st.Name,
 			Title:           titlePtr,
-			Description:     t.Definition.Description,
+			Description:     st.Description,
 			InputSchema:     schemaMap,
-			ReadOnlyHint:    t.Annotation.IsReadOnly,
-			DestructiveHint: t.Annotation.IsDangerous,
+			ReadOnlyHint:    ro,
+			DestructiveHint: dest,
 		})
 	}
 	return state, nil
@@ -274,15 +293,14 @@ func (c *UnifiedMCPConnector) connectHTTPTools(ctx context.Context, server *MCPS
 		return nil, err
 	}
 
-	client := loommcp.NewClient(loommcp.Config{
-		Transport: "http",
-		URL:       server.Config.URL,
-		Headers:   buildMCPAuthHeaders(server),
-	})
-
-	tools, err := client.Tools(ctx)
+	session, err := c.connectHTTPSession(ctx, server)
 	if err != nil {
-		_ = client.Close()
+		return nil, errors.E(errors.Unavailable, CodeMCPConnectionFailed, err)
+	}
+
+	listRes, err := session.ListTools(ctx, &sdkmcp.ListToolsParams{})
+	if err != nil {
+		_ = session.Close()
 		return nil, errors.E(errors.Unavailable, CodeMCPConnectionFailed, err)
 	}
 
@@ -291,11 +309,17 @@ func (c *UnifiedMCPConnector) connectHTTPTools(ctx context.Context, server *MCPS
 		cachedHints[dt.Name] = dt
 	}
 
-	bound := make([]*BoundMCPTool, 0, len(tools))
-	for _, lt := range tools {
-		origName := lt.Definition.Name
+	bound := make([]*BoundMCPTool, 0, len(listRes.Tools))
+	for _, st := range listRes.Tools {
+		origName := st.Name
 		if !isToolAllowed(origName, allowedTools) {
 			continue
+		}
+
+		lt, err := adaptSDKToolToLoom(st, session)
+		if err != nil {
+			_ = session.Close()
+			return nil, fmt.Errorf("adapt http mcp tool %q: %w", origName, err)
 		}
 
 		namespaced := NamespaceMCPToolName(server.Slug, origName)
@@ -339,7 +363,7 @@ func (c *UnifiedMCPConnector) connectHTTPTools(ctx context.Context, server *MCPS
 
 	return &ConnectedMCPTools{
 		Tools: bound,
-		Close: func() { _ = client.Close() },
+		Close: func() { _ = session.Close() },
 	}, nil
 }
 

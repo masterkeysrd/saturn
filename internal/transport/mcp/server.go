@@ -308,10 +308,17 @@ func (s *Server) HTTPHandler() http.Handler {
 		Logger:    s.logger,
 	})
 
+	wrapped := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rc := http.NewResponseController(w)
+		_ = rc.SetWriteDeadline(time.Time{})
+		r.Body = http.MaxBytesReader(w, r.Body, 4*1024*1024)
+		mcpHandler.ServeHTTP(w, r)
+	})
+
 	if s.authMiddleware != nil {
-		return s.authMiddleware(mcpHandler)
+		return s.authMiddleware(wrapped)
 	}
-	return mcpHandler
+	return wrapped
 }
 
 // ConnectInMemory dials an in-process MCP client session scoped to the caller's Principal and SpaceContext.
@@ -429,7 +436,7 @@ func callerHasScope(ctx context.Context, required identity.APIKeyScope) bool {
 	}
 
 	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsAPIKey() {
-		return principal.HasScope(string(required))
+		return apiKeyHasScope(principal, required)
 	}
 
 	switch space.SpaceRole(sc.Role) {
@@ -437,6 +444,25 @@ func callerHasScope(ctx context.Context, required identity.APIKeyScope) bool {
 		return isReadScope
 	case space.RoleMember, space.RoleAdmin, space.RoleOwner:
 		return true
+	default:
+		return false
+	}
+}
+
+func apiKeyHasScope(principal auth.Principal, required identity.APIKeyScope) bool {
+	reqStr := string(required)
+	if principal.HasScope(reqStr) {
+		return true
+	}
+	domain, action, ok := strings.Cut(reqStr, ":")
+	if !ok || domain == "" {
+		return false
+	}
+	switch action {
+	case "read":
+		return principal.HasScope(domain+":write") || principal.HasScope(domain+":execute")
+	case "execute":
+		return principal.HasScope(domain + ":write")
 	default:
 		return false
 	}

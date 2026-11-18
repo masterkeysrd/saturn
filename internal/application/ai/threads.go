@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/ai"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
@@ -186,6 +188,13 @@ func (c *coordinator) ResolveToolApprovals(ctx context.Context, req *ResolveTool
 	}
 	if req == nil || strings.TrimSpace(req.ThreadID) == "" {
 		return errors.E(op, errors.Invalid, "thread_id is required")
+	}
+	if role, ok := auth.SpaceRoleFromContext(ctx); ok && role == string(space.RoleViewer) {
+		for _, d := range req.Decisions {
+			if d.Approved {
+				return errors.E(op, errors.Permission, "viewers cannot approve mutating tool executions")
+			}
+		}
 	}
 
 	err = c.threadRuntime.ResolveApprovals(ctx, ai.ResolveApprovalsRequest{

@@ -2,7 +2,9 @@ package ai
 
 import (
 	"slices"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
@@ -38,6 +40,19 @@ func TestThread_ValidateAndApplyPatch(t *testing.T) {
 	bad := &Thread{SpaceID: "", UserID: "usr_1"}
 	if err := bad.Validate(); !errors.Is(err, errors.Invalid) {
 		t.Errorf("expected Invalid error for missing space_id, got %v", err)
+	}
+
+	// Multi-byte UTF-8 title exceeding 255 bytes must truncate by rune boundary without invalid UTF-8.
+	longEmojiTitle := strings.Repeat("🚀", 260)
+	utf8Thread := &Thread{SpaceID: "spc_1", UserID: "usr_1", Title: longEmojiTitle}
+	if err := utf8Thread.Validate(); err != nil {
+		t.Fatalf("Validate(long UTF-8 title) failed: %v", err)
+	}
+	if !utf8.ValidString(utf8Thread.Title) {
+		t.Fatalf("truncated title is not valid UTF-8")
+	}
+	if utf8.RuneCountInString(utf8Thread.Title) != 255 {
+		t.Fatalf("rune count = %d, want 255", utf8.RuneCountInString(utf8Thread.Title))
 	}
 }
 

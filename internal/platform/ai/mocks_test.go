@@ -1601,7 +1601,7 @@ type RunStoreMock struct {
 	CreateFunc func(ctx context.Context, r *Run) error
 
 	// GetFunc mocks the Get method.
-	GetFunc func(ctx context.Context, spaceID string, id string) (*Run, error)
+	GetFunc func(ctx context.Context, spaceID string, id string, viewerUserID string) (*Run, error)
 
 	// GetByIDsFunc mocks the GetByIDs method.
 	GetByIDsFunc func(ctx context.Context, spaceID string, ids []string) ([]*Run, error)
@@ -1637,9 +1637,10 @@ type RunStoreMock struct {
 			R   *Run
 		}
 		Get []struct {
-			Ctx     context.Context
-			SpaceID string
-			Id      string
+			Ctx          context.Context
+			SpaceID      string
+			Id           string
+			ViewerUserID string
 		}
 		GetByIDs []struct {
 			Ctx     context.Context
@@ -1724,29 +1725,32 @@ func (mock *RunStoreMock) CreateCalls() []struct {
 }
 
 // Get calls GetFunc.
-func (mock *RunStoreMock) Get(ctx context.Context, spaceID string, id string) (*Run, error) {
+func (mock *RunStoreMock) Get(ctx context.Context, spaceID string, id string, viewerUserID string) (*Run, error) {
 	if mock.GetFunc == nil {
 		panic("RunStoreMock.GetFunc: method is nil but RunStore.Get was just called")
 	}
 	mock.lockGet.Lock()
 	mock.calls.Get = append(mock.calls.Get, struct {
-		Ctx     context.Context
-		SpaceID string
-		Id      string
+		Ctx          context.Context
+		SpaceID      string
+		Id           string
+		ViewerUserID string
 	}{
-		Ctx:     ctx,
-		SpaceID: spaceID,
-		Id:      id,
+		Ctx:          ctx,
+		SpaceID:      spaceID,
+		Id:           id,
+		ViewerUserID: viewerUserID,
 	})
 	mock.lockGet.Unlock()
-	return mock.GetFunc(ctx, spaceID, id)
+	return mock.GetFunc(ctx, spaceID, id, viewerUserID)
 }
 
 // GetCalls returns all calls made to Get.
 func (mock *RunStoreMock) GetCalls() []struct {
-	Ctx     context.Context
-	SpaceID string
-	Id      string
+	Ctx          context.Context
+	SpaceID      string
+	Id           string
+	ViewerUserID string
 } {
 	mock.lockGet.RLock()
 	defer mock.lockGet.RUnlock()

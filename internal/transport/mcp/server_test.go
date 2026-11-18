@@ -166,7 +166,7 @@ func TestServer_ConnectInMemory_ScopeAndRoleFiltering(t *testing.T) {
 				"spc_3",
 				string(space.RoleOwner),
 			),
-			wantTools:      []string{"finance_create_transaction"},
+			wantTools:      []string{"finance_list_accounts", "finance_create_transaction"},
 			wantResources:  nil,
 			callTool:       "finance_create_transaction",
 			callQuery:      "fail_internal",
@@ -371,4 +371,39 @@ func (rt bearerRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 	clone := req.Clone(req.Context())
 	clone.Header.Set("Authorization", "Bearer "+rt.token)
 	return rt.next.RoundTrip(clone)
+}
+
+func TestCallerHasScope_APIKeyInheritanceAndViewerCap(t *testing.T) {
+	tests := []struct {
+		name     string
+		role     space.SpaceRole
+		scopes   []string
+		required identity.APIKeyScope
+		want     bool
+	}{
+		{name: "finance:write satisfies finance:read", role: space.RoleMember, scopes: []string{"finance:write"}, required: identity.ScopeFinanceRead, want: true},
+		{name: "ai:write satisfies ai:execute", role: space.RoleMember, scopes: []string{"ai:write"}, required: identity.ScopeAIExecute, want: true},
+		{name: "ai:write satisfies ai:read", role: space.RoleMember, scopes: []string{"ai:write"}, required: identity.ScopeAIRead, want: true},
+		{name: "ai:execute satisfies ai:read", role: space.RoleMember, scopes: []string{"ai:execute"}, required: identity.ScopeAIRead, want: true},
+		{name: "workflows:execute satisfies workflows:read", role: space.RoleMember, scopes: []string{"workflows:execute"}, required: identity.ScopeWorkflowsRead, want: true},
+		{name: "finance:read does not satisfy finance:write", role: space.RoleMember, scopes: []string{"finance:read"}, required: identity.ScopeFinanceWrite, want: false},
+		{name: "ai:execute does not satisfy ai:write", role: space.RoleMember, scopes: []string{"ai:execute"}, required: identity.ScopeAIWrite, want: false},
+		{name: "finance:write does not satisfy mail:read", role: space.RoleMember, scopes: []string{"finance:write"}, required: identity.ScopeMailRead, want: false},
+		{name: "viewer with finance:write is still capped at read-only", role: space.RoleViewer, scopes: []string{"finance:write"}, required: identity.ScopeFinanceWrite, want: false},
+		{name: "viewer with finance:write can read", role: space.RoleViewer, scopes: []string{"finance:write"}, required: identity.ScopeFinanceRead, want: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := auth.WithPrincipal(context.Background(), auth.Principal{
+				Subject:  "usr_1",
+				APIKeyID: "apk_1",
+				Scopes:   tc.scopes,
+			})
+			ctx = auth.WithSpaceScope(ctx, "spc_1", string(tc.role))
+			if got := callerHasScope(ctx, tc.required); got != tc.want {
+				t.Fatalf("callerHasScope() = %v, want %v", got, tc.want)
+			}
+		})
+	}
 }

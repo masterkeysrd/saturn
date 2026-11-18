@@ -10,6 +10,8 @@ import (
 	"github.com/masterkeysrd/loom/llm"
 	"github.com/masterkeysrd/loom/memory"
 	"github.com/masterkeysrd/loom/message"
+	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
@@ -72,7 +74,7 @@ func (tr *ThreadRuntime) CancelTurn(ctx context.Context, spaceID, userID, thread
 
 	if th.Status == ThreadStreaming && !hasActive {
 		if th.State.ActiveRunID != nil {
-			if run, rErr := tr.rt.store.Runs().Get(ctx, spaceID, *th.State.ActiveRunID); rErr == nil && run != nil {
+			if run, rErr := tr.rt.store.Runs().Get(ctx, spaceID, *th.State.ActiveRunID, ""); rErr == nil && run != nil {
 				now := tr.rt.nowFn()
 				run.Status = RunCancelled
 				run.EndTime = &now
@@ -124,6 +126,14 @@ func (tr *ThreadRuntime) StreamTurn(ctx context.Context, req StreamTurnRequest, 
 	if err := tr.recoverOrRejectBusyThread(ctx, th, agent); err != nil {
 		return errors.E(op, err)
 	}
+
+	turnCtx, cancel := context.WithCancel(ensureSpaceContext(ctx, req.SpaceID))
+	tr.registerCancel(th.ID, cancel)
+	defer func() {
+		tr.unregisterCancel(th.ID)
+		cancel()
+	}()
+	ctx = turnCtx
 
 	modelIDPtr := agent.ModelID
 	if th.ModelID != nil && strings.TrimSpace(*th.ModelID) != "" {
@@ -249,6 +259,21 @@ func (tr *ThreadRuntime) ResolveApprovals(ctx context.Context, req ResolveApprov
 	if th.Status != ThreadAwaitingApproval || len(th.State.PendingApprovals) == 0 {
 		return errors.E(op, errors.Precondition, "thread is not awaiting tool approvals")
 	}
+	if sc, ok := auth.SpaceContextFromContext(ctx); ok && sc.Role == string(space.RoleViewer) {
+		for _, d := range req.Decisions {
+			if d.Approved {
+				return errors.E(op, errors.Permission, "viewers cannot approve mutating tool executions")
+			}
+		}
+	}
+
+	turnCtx, cancel := context.WithCancel(ensureSpaceContext(ctx, req.SpaceID))
+	tr.registerCancel(th.ID, cancel)
+	defer func() {
+		tr.unregisterCancel(th.ID)
+		cancel()
+	}()
+	ctx = turnCtx
 
 	agentID := SystemSaturnAssistantKey
 	if th.AgentID != nil && strings.TrimSpace(*th.AgentID) != "" {
@@ -270,7 +295,7 @@ func (tr *ThreadRuntime) ResolveApprovals(ctx context.Context, req ResolveApprov
 
 	var run *Run
 	if th.State.ActiveRunID != nil {
-		run, err = tr.rt.store.Runs().Get(ctx, req.SpaceID, *th.State.ActiveRunID)
+		run, err = tr.rt.store.Runs().Get(ctx, req.SpaceID, *th.State.ActiveRunID, "")
 		if err != nil {
 			return errors.E(op, err)
 		}
@@ -503,11 +528,7 @@ func (tr *ThreadRuntime) runStreamingLoop(
 	}
 
 	turnCtx, cancel := context.WithTimeout(ensureSpaceContext(ctx, th.SpaceID), time.Duration(timeoutSec)*time.Second)
-	tr.registerCancel(th.ID, cancel)
-	defer func() {
-		tr.unregisterCancel(th.ID)
-		cancel()
-	}()
+	defer cancel()
 
 	boundSet, err := tr.rt.connectAgentTools(turnCtx, th.SpaceID, agent.Config.MCPBindings)
 	if err != nil {
@@ -518,13 +539,8 @@ func (tr *ThreadRuntime) runStreamingLoop(
 	genCfg := mergeGenerationConfig(rm.model.Config, &agent.Config.Generation)
 	genCfg = mergeGenerationConfig(genCfg, &th.Config.Generation)
 
-	policy := agent.Config.Execution.ApprovalPolicy
-	if th.Config.ApprovalPolicy != nil && *th.Config.ApprovalPolicy != "" {
-		policy = *th.Config.ApprovalPolicy
-	}
-	if policy == "" {
-		policy = ApprovalConfirmWrites
-	}
+	sc, _ := auth.SpaceContextFromContext(ctx)
+	policy := effectiveApprovalPolicy(agent.Config.Execution.ApprovalPolicy, th.Config.ApprovalPolicy, sc.Role)
 
 	maxSteps := int(agent.Config.Execution.MaxSteps)
 	if maxSteps <= 0 {
@@ -568,6 +584,8 @@ func (tr *ThreadRuntime) runStreamingLoop(
 
 		if streamErr != nil {
 			if errors.Is(turnCtx.Err(), context.Canceled) {
+				cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cleanupCancel()
 				if partial := strings.TrimSpace(streamedText.String()); partial != "" {
 					partialMsg := &ThreadMessage{
 						ThreadID: th.ID,
@@ -577,7 +595,7 @@ func (tr *ThreadRuntime) runStreamingLoop(
 						Blocks:   []ContentBlock{{Type: BlockText, Text: new(partial)}},
 						Metadata: MessageMetadata{ModelName: new(rm.model.ModelID)},
 					}
-					if aErr := tr.rt.store.Threads().AppendMessage(context.Background(), th.SpaceID, th.UserID, partialMsg); aErr == nil {
+					if aErr := tr.rt.store.Threads().AppendMessage(cleanupCtx, th.SpaceID, th.UserID, partialMsg); aErr == nil {
 						th.MessageCount++
 						emit(ThreadStreamEvent{
 							Type:     EventMessageCompleted,
@@ -594,11 +612,11 @@ func (tr *ThreadRuntime) runStreamingLoop(
 				run.Metrics.StepCount = stepSeq
 				run.Metrics.Tokens = totalUsage
 				run.Metrics.EstimatedCostUSD = EstimateCostUSD(totalUsage, rm.model.Profile.Pricing)
-				_ = tr.rt.store.Runs().Update(context.Background(), run)
+				_ = tr.rt.store.Runs().Update(cleanupCtx, run)
 
 				th.Status = ThreadIdle
 				th.State.ActiveRunID = nil
-				_ = tr.rt.store.Threads().Update(context.Background(), th)
+				_ = tr.rt.store.Threads().Update(cleanupCtx, th)
 				emit(ThreadStreamEvent{
 					Type:     EventThreadUpdated,
 					ThreadID: new(th.ID),
@@ -608,6 +626,8 @@ func (tr *ThreadRuntime) runStreamingLoop(
 			}
 
 			if errors.Is(turnCtx.Err(), context.DeadlineExceeded) || errors.Is(streamErr, context.DeadlineExceeded) {
+				cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cleanupCancel()
 				if partial := strings.TrimSpace(streamedText.String()); partial != "" {
 					partialMsg := &ThreadMessage{
 						ThreadID: th.ID,
@@ -617,7 +637,7 @@ func (tr *ThreadRuntime) runStreamingLoop(
 						Blocks:   []ContentBlock{{Type: BlockText, Text: new(partial)}},
 						Metadata: MessageMetadata{ModelName: new(rm.model.ModelID)},
 					}
-					if aErr := tr.rt.store.Threads().AppendMessage(context.Background(), th.SpaceID, th.UserID, partialMsg); aErr == nil {
+					if aErr := tr.rt.store.Threads().AppendMessage(cleanupCtx, th.SpaceID, th.UserID, partialMsg); aErr == nil {
 						th.MessageCount++
 						emit(ThreadStreamEvent{
 							Type:     EventMessageCompleted,
@@ -629,7 +649,7 @@ func (tr *ThreadRuntime) runStreamingLoop(
 				}
 				timeoutMsg := fmt.Sprintf("turn timed out after %ds — increase Timeout Seconds on the agent for longer runs", timeoutSec)
 				stepSeq++
-				_ = tr.rt.store.Runs().AppendStep(context.Background(), &RunStep{
+				_ = tr.rt.store.Runs().AppendStep(cleanupCtx, &RunStep{
 					RunID:   run.ID,
 					SpaceID: th.SpaceID,
 					Seq:     stepSeq,
@@ -648,11 +668,11 @@ func (tr *ThreadRuntime) runStreamingLoop(
 				run.Metrics.StepCount = stepSeq
 				run.Metrics.Tokens = totalUsage
 				run.Metrics.EstimatedCostUSD = EstimateCostUSD(totalUsage, rm.model.Profile.Pricing)
-				_ = tr.rt.store.Runs().Update(context.Background(), run)
+				_ = tr.rt.store.Runs().Update(cleanupCtx, run)
 
 				th.Status = ThreadIdle
 				th.State.ActiveRunID = nil
-				_ = tr.rt.store.Threads().Update(context.Background(), th)
+				_ = tr.rt.store.Threads().Update(cleanupCtx, th)
 
 				emit(ThreadStreamEvent{
 					Type:     EventRunError,
@@ -997,7 +1017,7 @@ func (tr *ThreadRuntime) recoverOrRejectBusyThread(ctx context.Context, th *Thre
 	}
 
 	if th.State.ActiveRunID != nil {
-		if orphan, err := tr.rt.store.Runs().Get(ctx, th.SpaceID, *th.State.ActiveRunID); err == nil && orphan != nil {
+		if orphan, err := tr.rt.store.Runs().Get(ctx, th.SpaceID, *th.State.ActiveRunID, ""); err == nil && orphan != nil {
 			now := tr.rt.nowFn()
 			orphan.Status = RunFailed
 			orphan.Error = &ErrorDetail{Code: new(string(CodeRunInterrupted)), Message: "streaming turn interrupted before completion"}
@@ -1040,7 +1060,7 @@ func (tr *ThreadRuntime) cleanupStaleApprovals(ctx context.Context, th *Thread) 
 	th.MessageCount++
 
 	if th.State.ActiveRunID != nil {
-		if prevRun, err := tr.rt.store.Runs().Get(ctx, th.SpaceID, *th.State.ActiveRunID); err == nil && prevRun != nil {
+		if prevRun, err := tr.rt.store.Runs().Get(ctx, th.SpaceID, *th.State.ActiveRunID, ""); err == nil && prevRun != nil {
 			now := tr.rt.nowFn()
 			prevRun.Status = RunCancelled
 			prevRun.EndTime = &now
@@ -1235,9 +1255,7 @@ func (tr *ThreadRuntime) autoTitleThread(ctx context.Context, th *Thread, rm *re
 		if title == "" {
 			title = fallbackTitle(prompt)
 		}
-		if len(title) > 100 {
-			title = title[:100]
-		}
+		title = clipRunes(title, 100)
 		ch <- result{title: title}
 	}()
 
@@ -1268,7 +1286,7 @@ func (tr *ThreadRuntime) autoTitleThread(ctx context.Context, th *Thread, rm *re
 }
 
 func (tr *ThreadRuntime) failStreamRun(
-	ctx context.Context,
+	_ context.Context,
 	op errors.Op,
 	th *Thread,
 	run *Run,
@@ -1276,6 +1294,9 @@ func (tr *ThreadRuntime) failStreamRun(
 	emit StreamEventEmitter,
 	err error,
 ) error {
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	var codePtr *string
 	if code := errors.CodeOf(err); code != "" {
 		codePtr = new(string(code))
@@ -1286,11 +1307,11 @@ func (tr *ThreadRuntime) failStreamRun(
 	run.Error = errDetail
 	run.EndTime = &endTime
 	run.Metrics.LatencyMS = endTime.Sub(startTime).Milliseconds()
-	_ = tr.rt.store.Runs().Update(ctx, run)
+	_ = tr.rt.store.Runs().Update(cleanupCtx, run)
 
 	th.Status = ThreadIdle
 	th.State.ActiveRunID = nil
-	_ = tr.rt.store.Threads().Update(ctx, th)
+	_ = tr.rt.store.Threads().Update(cleanupCtx, th)
 
 	emit(ThreadStreamEvent{
 		Type:     EventRunError,
@@ -1304,6 +1325,33 @@ func (tr *ThreadRuntime) failStreamRun(
 		Thread:   th,
 	})
 	return errors.E(op, err)
+}
+
+func approvalPolicyRank(p ApprovalPolicy) int {
+	switch p {
+	case ApprovalAuto:
+		return 0
+	case ApprovalDenyWrites:
+		return 2
+	default:
+		return 1
+	}
+}
+
+func effectiveApprovalPolicy(agentPolicy ApprovalPolicy, threadPolicy *ApprovalPolicy, spaceRole string) ApprovalPolicy {
+	if spaceRole == string(space.RoleViewer) {
+		return ApprovalDenyWrites
+	}
+	effective := agentPolicy
+	if effective == "" {
+		effective = ApprovalConfirmWrites
+	}
+	if threadPolicy != nil && *threadPolicy != "" {
+		if approvalPolicyRank(*threadPolicy) > approvalPolicyRank(effective) {
+			effective = *threadPolicy
+		}
+	}
+	return effective
 }
 
 func (tr *ThreadRuntime) registerCancel(threadID string, cancel context.CancelFunc) {

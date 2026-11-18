@@ -204,17 +204,32 @@ func (s *PostgresRunStore) Create(ctx context.Context, r *Run) error {
 	return nil
 }
 
-func (s *PostgresRunStore) Get(ctx context.Context, spaceID, id string) (*Run, error) {
+func (s *PostgresRunStore) Get(ctx context.Context, spaceID, id, viewerUserID string) (*Run, error) {
 	const op errors.Op = "platform/ai.RunStore.Get"
 
-	const query = `
-		SELECT id, space_id, kind, source, thread_id, agent_id, provider_id, model_id, flow_run_id,
-		       status, input, output, error, metrics, start_time, end_time, create_time
-		FROM platform.ai_runs
-		WHERE space_id = $1 AND id = $2
-	`
-	var row runRow
-	if err := s.db.Get(ctx, &row, query, spaceID, id); err != nil {
+	var (
+		row runRow
+		err error
+	)
+	if viewerUserID != "" {
+		const query = `
+			SELECT r.id, r.space_id, r.kind, r.source, r.thread_id, r.agent_id, r.provider_id, r.model_id, r.flow_run_id,
+			       r.status, r.input, r.output, r.error, r.metrics, r.start_time, r.end_time, r.create_time
+			FROM platform.ai_runs r
+			LEFT JOIN platform.ai_threads t ON t.id = r.thread_id AND t.space_id = r.space_id
+			WHERE r.space_id = $1 AND r.id = $2 AND (r.thread_id IS NULL OR t.user_id = $3)
+		`
+		err = s.db.Get(ctx, &row, query, spaceID, id, viewerUserID)
+	} else {
+		const query = `
+			SELECT id, space_id, kind, source, thread_id, agent_id, provider_id, model_id, flow_run_id,
+			       status, input, output, error, metrics, start_time, end_time, create_time
+			FROM platform.ai_runs
+			WHERE space_id = $1 AND id = $2
+		`
+		err = s.db.Get(ctx, &row, query, spaceID, id)
+	}
+	if err != nil {
 		if errors.Is(err, errors.NotExist) {
 			return nil, ErrRunNotFound
 		}
@@ -272,37 +287,55 @@ func (s *PostgresRunStore) List(ctx context.Context, filter ListRunsFilter) (*pa
 		return nil, errors.E(op, errors.Invalid, fmt.Errorf("invalid page token: %w", err))
 	}
 
-	ds := pgDialect.From(goqu.T("ai_runs").Schema("platform")).
+	runsTbl := goqu.T("ai_runs").Schema("platform").As("r")
+	ds := pgDialect.From(runsTbl).
 		Select(
-			"id", "space_id", "kind", "source", "thread_id", "agent_id", "provider_id", "model_id", "flow_run_id",
-			"status", "input", "output", "error", "metrics", "start_time", "end_time", "create_time",
+			goqu.I("r.id"), goqu.I("r.space_id"), goqu.I("r.kind"), goqu.I("r.source"),
+			goqu.I("r.thread_id"), goqu.I("r.agent_id"), goqu.I("r.provider_id"),
+			goqu.I("r.model_id"), goqu.I("r.flow_run_id"), goqu.I("r.status"),
+			goqu.I("r.input"), goqu.I("r.output"), goqu.I("r.error"), goqu.I("r.metrics"),
+			goqu.I("r.start_time"), goqu.I("r.end_time"), goqu.I("r.create_time"),
 		).
-		Where(goqu.C("space_id").Eq(filter.SpaceID))
+		Where(goqu.I("r.space_id").Eq(filter.SpaceID))
+
+	if filter.ViewerUserID != "" {
+		threadsTbl := goqu.T("ai_threads").Schema("platform").As("t")
+		ds = ds.LeftJoin(
+			threadsTbl,
+			goqu.On(
+				goqu.I("t.id").Eq(goqu.I("r.thread_id")),
+				goqu.I("t.space_id").Eq(goqu.I("r.space_id")),
+			),
+		).Where(goqu.Or(
+			goqu.I("r.thread_id").IsNull(),
+			goqu.I("t.user_id").Eq(filter.ViewerUserID),
+		))
+	}
 
 	if filter.Kind != nil && *filter.Kind != "" {
-		ds = ds.Where(goqu.C("kind").Eq(string(*filter.Kind)))
+		ds = ds.Where(goqu.I("r.kind").Eq(string(*filter.Kind)))
 	}
 	if filter.Source != nil && *filter.Source != "" {
-		ds = ds.Where(goqu.C("source").Eq(string(*filter.Source)))
+		ds = ds.Where(goqu.I("r.source").Eq(string(*filter.Source)))
 	}
 	if filter.AgentID != nil && *filter.AgentID != "" {
-		ds = ds.Where(goqu.C("agent_id").Eq(*filter.AgentID))
+		ds = ds.Where(goqu.I("r.agent_id").Eq(*filter.AgentID))
 	}
 	if filter.ThreadID != nil && *filter.ThreadID != "" {
-		ds = ds.Where(goqu.C("thread_id").Eq(*filter.ThreadID))
+		ds = ds.Where(goqu.I("r.thread_id").Eq(*filter.ThreadID))
 	}
 	if filter.Status != nil && *filter.Status != "" {
-		ds = ds.Where(goqu.C("status").Eq(string(*filter.Status)))
+		ds = ds.Where(goqu.I("r.status").Eq(string(*filter.Status)))
 	}
 	if cursor != nil {
 		cursorTime, tErr := time.Parse(time.RFC3339Nano, cursor.SortValue)
 		if tErr != nil {
 			return nil, errors.E(op, errors.Invalid, "invalid run cursor timestamp")
 		}
-		ds = ds.Where(goqu.L("(create_time, id) < (?, ?)", cursorTime, cursor.ID))
+		ds = ds.Where(goqu.L("(r.create_time, r.id) < (?, ?)", cursorTime, cursor.ID))
 	}
 
-	ds = ds.Order(goqu.C("create_time").Desc(), goqu.C("id").Desc()).Limit(uint(pageSize + 1))
+	ds = ds.Order(goqu.I("r.create_time").Desc(), goqu.I("r.id").Desc()).Limit(uint(pageSize + 1))
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {

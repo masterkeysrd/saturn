@@ -107,10 +107,14 @@ type Provider struct {
 	UpdateTime       time.Time
 }
 
-// Validate checks Provider invariants and normalizes fields.
-func (p *Provider) Validate() error {
+// Validate checks Provider invariants, SSRF constraints on BaseURL, and normalizes fields.
+func (p *Provider) Validate(allowPrivateNetworks ...bool) error {
 	if p == nil {
 		return errors.E(errors.Invalid, "provider payload is required")
+	}
+	allowPrivate := false
+	if len(allowPrivateNetworks) > 0 {
+		allowPrivate = allowPrivateNetworks[0]
 	}
 	p.Name = strings.TrimSpace(p.Name)
 	if p.Name == "" {
@@ -127,6 +131,9 @@ func (p *Provider) Validate() error {
 		if trimmed == "" {
 			p.Config.BaseURL = nil
 		} else {
+			if err := ValidateMCPURL(trimmed, allowPrivate); err != nil {
+				return err
+			}
 			p.Config.BaseURL = new(trimmed)
 		}
 	}
@@ -148,12 +155,22 @@ var ProviderPatchSchema = patch.NewSchema[Provider]().
 	Field("secret.headers", func(p *Provider) *map[string]string { return &p.Secret.Headers })
 
 // ApplyPatch applies partial updates from incoming according to mask.
-func (p *Provider) ApplyPatch(incoming *Provider, mask []string) error {
+func (p *Provider) ApplyPatch(incoming *Provider, mask []string, allowPrivateNetworks ...bool) error {
 	if incoming == nil {
 		return errors.E(errors.Invalid, "provider payload is required")
 	}
 	inCopy := *incoming
-	if slices.Contains(mask, "secret.api_key") || slices.Contains(mask, "secret.headers") {
+	if len(mask) == 0 {
+		if inCopy.Secret == nil {
+			inCopy.Secret = p.Secret.Clone()
+		}
+		if p.Secret == nil {
+			p.Secret = &ProviderSecret{}
+		}
+		if inCopy.Secret == nil {
+			inCopy.Secret = &ProviderSecret{}
+		}
+	} else if slices.Contains(mask, "secret.api_key") || slices.Contains(mask, "secret.headers") {
 		if p.Secret == nil {
 			p.Secret = &ProviderSecret{}
 		}
@@ -164,6 +181,9 @@ func (p *Provider) ApplyPatch(incoming *Provider, mask []string) error {
 	if err := ProviderPatchSchema.Apply(p, &inCopy, mask); err != nil {
 		return errors.E(errors.Invalid, err)
 	}
+	if p.Secret != nil && !p.Secret.HasCredentials() {
+		p.Secret = nil
+	}
 	p.UpdateTime = time.Now().UTC()
-	return p.Validate()
+	return p.Validate(allowPrivateNetworks...)
 }

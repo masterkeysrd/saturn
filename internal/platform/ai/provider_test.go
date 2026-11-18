@@ -105,3 +105,38 @@ func TestProvider_ValidateAndApplyPatch(t *testing.T) {
 		})
 	}
 }
+
+func TestProvider_ApplyPatch_NilSecretSafetyAndBaseURLSSRF(t *testing.T) {
+	p := &Provider{
+		ID:     "prv_1",
+		Name:   "OpenAI",
+		Driver: DriverOpenAI,
+		Secret: &ProviderSecret{APIKey: new("sk-keep")},
+	}
+	// Empty mask (full update) with incoming.Secret == nil must not panic and must preserve existing secret.
+	if err := p.ApplyPatch(&Provider{Name: "OpenAI v2", Driver: DriverOpenAI}, nil); err != nil {
+		t.Fatalf("ApplyPatch(nil mask) failed: %v", err)
+	}
+	if p.Secret == nil || p.Secret.APIKey == nil || *p.Secret.APIKey != "sk-keep" {
+		t.Fatalf("expected existing secret preserved on full update with nil incoming secret, got %+v", p.Secret)
+	}
+
+	// Nil initial secret + mask containing both "secret" and "secret.api_key" with nil incoming.Secret must not panic.
+	p2 := &Provider{ID: "prv_2", Name: "Anthropic", Driver: DriverAnthropic}
+	if err := p2.ApplyPatch(&Provider{Name: "Anthropic"}, []string{"secret", "secret.api_key"}); err != nil {
+		t.Fatalf("ApplyPatch(secret + secret.api_key) failed: %v", err)
+	}
+
+	// BaseURL SSRF validation rejects metadata IP even with allowPrivateNetworks=true, and localhost when false.
+	metaProv := &Provider{Name: "Meta", Driver: DriverOpenAICompatible, Config: ProviderConfig{BaseURL: new("http://169.254.169.254/v1")}}
+	if err := metaProv.Validate(true); !errors.Is(err, ErrSSRFBlocked) {
+		t.Fatalf("expected ErrSSRFBlocked for metadata BaseURL, got %v", err)
+	}
+	localProv := &Provider{Name: "Local", Driver: DriverOllama, Config: ProviderConfig{BaseURL: new("http://localhost:11434")}}
+	if err := localProv.Validate(false); !errors.Is(err, ErrSSRFBlocked) {
+		t.Fatalf("expected ErrSSRFBlocked for localhost BaseURL when allowPrivate=false, got %v", err)
+	}
+	if err := localProv.Validate(true); err != nil {
+		t.Fatalf("expected localhost BaseURL allowed when allowPrivate=true, got %v", err)
+	}
+}

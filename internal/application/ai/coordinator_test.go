@@ -448,7 +448,7 @@ func (m *memRunStore) Create(_ context.Context, r *ai.Run) error {
 	return nil
 }
 
-func (m *memRunStore) Get(_ context.Context, spaceID, id string) (*ai.Run, error) {
+func (m *memRunStore) Get(_ context.Context, spaceID, id, _ string) (*ai.Run, error) {
 	m.s.mu.Lock()
 	defer m.s.mu.Unlock()
 	r, ok := m.s.runs[id]
@@ -914,13 +914,13 @@ func TestCoordinator_PurgeExpiredRuns(t *testing.T) {
 		t.Fatalf("PurgeExpiredRuns() error = %v", err)
 	}
 
-	if _, err := st.Runs().Get(context.Background(), "spc_default", "air_old"); !errors.Is(err, ai.ErrRunNotFound) {
+	if _, err := st.Runs().Get(context.Background(), "spc_default", "air_old", ""); !errors.Is(err, ai.ErrRunNotFound) {
 		t.Fatalf("expected air_old to be purged, err=%v", err)
 	}
-	if _, err := st.Runs().Get(context.Background(), "spc_default", "air_fresh"); err != nil {
+	if _, err := st.Runs().Get(context.Background(), "spc_default", "air_fresh", ""); err != nil {
 		t.Fatalf("expected air_fresh to remain, err=%v", err)
 	}
-	if _, err := st.Runs().Get(context.Background(), "spc_disabled", "air_keep"); err != nil {
+	if _, err := st.Runs().Get(context.Background(), "spc_disabled", "air_keep", ""); err != nil {
 		t.Fatalf("expected air_keep to remain when retention=0, err=%v", err)
 	}
 }

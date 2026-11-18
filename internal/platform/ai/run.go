@@ -150,14 +150,15 @@ type RunStep struct {
 
 // ListRunsFilter filters workspace AI execution runs.
 type ListRunsFilter struct {
-	SpaceID   string
-	Kind      *RunKind
-	Source    *RunSource
-	AgentID   *string
-	ThreadID  *string
-	Status    *RunStatus
-	PageSize  int32
-	PageToken string
+	SpaceID      string
+	ViewerUserID string
+	Kind         *RunKind
+	Source       *RunSource
+	AgentID      *string
+	ThreadID     *string
+	Status       *RunStatus
+	PageSize     int32
+	PageToken    string
 }
 
 // EstimateCostUSD calculates estimated run cost in USD from TokenUsage and ModelPricing.

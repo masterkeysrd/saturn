@@ -73,7 +73,7 @@ type ThreadStore interface {
 // @Mock
 type RunStore interface {
 	Create(ctx context.Context, r *Run) error
-	Get(ctx context.Context, spaceID, id string) (*Run, error)
+	Get(ctx context.Context, spaceID, id, viewerUserID string) (*Run, error)
 	GetByIDs(ctx context.Context, spaceID string, ids []string) ([]*Run, error)
 	Update(ctx context.Context, r *Run) error
 	List(ctx context.Context, filter ListRunsFilter) (*paging.Page[*Run], error)
