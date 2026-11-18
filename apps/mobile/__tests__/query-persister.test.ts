@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from "vitest"
-import { shouldDehydrateQuery } from "../lib/query-persister"
+import AsyncStorage from "@react-native-async-storage/async-storage"
+import {
+  shouldDehydrateQuery,
+  clearPersistedQueryCache,
+} from "../lib/query-persister"
 
 vi.mock("react-native", () => ({
   Platform: { OS: "ios" },
@@ -70,5 +74,16 @@ describe("Android SQLite CursorWindow Persistence Guard", () => {
         queryKey: ["password", "reset"],
       })
     ).toBe(false)
+  })
+
+  it("clears persisted offline query cache via AsyncStorage without throwing on error", async () => {
+    const removeItemMock = AsyncStorage.removeItem as ReturnType<typeof vi.fn>
+    removeItemMock.mockResolvedValueOnce(undefined)
+
+    await clearPersistedQueryCache()
+    expect(removeItemMock).toHaveBeenCalledWith("SATURN_QUERY_OFFLINE_CACHE")
+
+    removeItemMock.mockRejectedValueOnce(new Error("disk error"))
+    await expect(clearPersistedQueryCache()).resolves.toBeUndefined()
   })
 })
