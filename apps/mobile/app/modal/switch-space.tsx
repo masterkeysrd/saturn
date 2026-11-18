@@ -88,29 +88,14 @@ export default function SwitchSpaceModal() {
             )
           })}
 
-          {/* Default fallback workspace if backend has no spaces yet */}
+          {/* Empty state when backend has no spaces yet */}
           {spaces.length === 0 && (
-            <TouchableOpacity
-              style={[styles.spaceItem, styles.spaceItemActive]}
-              activeOpacity={0.7}
-              onPress={() =>
-                handleSelectSpace("personal", "Personal Workspace")
-              }
-            >
-              <View style={styles.spaceLeft}>
-                <Avatar name="Personal Workspace" size={40} />
-                <View style={styles.spaceInfo}>
-                  <View style={styles.nameRow}>
-                    <Text style={styles.spaceName}>Personal Workspace</Text>
-                    <Badge variant="primary" size="sm" label="Default" />
-                  </View>
-                  <Text style={styles.spaceDescription}>
-                    Default local space
-                  </Text>
-                </View>
-              </View>
-              <Check size={20} color={theme.colors.primary} />
-            </TouchableOpacity>
+            <View style={styles.emptyState}>
+              <Text style={styles.spaceName}>No workspaces yet</Text>
+              <Text style={styles.spaceDescription}>
+                Create a workspace below to get started.
+              </Text>
+            </View>
           )}
         </Card>
       )}
@@ -119,7 +104,7 @@ export default function SwitchSpaceModal() {
         variant="primary"
         size="lg"
         leftIcon={<Plus size={18} color={theme.colors.primaryForeground} />}
-        onPress={() => router.push("/modal/create-space")}
+        onPress={() => router.replace("/modal/create-space")}
       >
         Create New Workspace
       </Button>
@@ -182,5 +167,10 @@ const styles = StyleSheet.create({
   spaceDescription: {
     fontSize: 12,
     color: theme.colors.textMuted,
+  },
+  emptyState: {
+    padding: 20,
+    alignItems: "center",
+    gap: 4,
   },
 })

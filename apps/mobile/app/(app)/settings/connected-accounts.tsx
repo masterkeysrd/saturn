@@ -195,9 +195,11 @@ export default function ConnectedAccountsScreen() {
         )
 
         if (result.type === "success") {
-          await queryClient.invalidateQueries({
-            queryKey: ["connector", activeSpaceId || undefined],
-          })
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["connector"] }),
+            queryClient.invalidateQueries({ queryKey: ["calendar"] }),
+            queryClient.invalidateQueries({ queryKey: ["mail"] }),
+          ])
           await haptics.success()
           toast.show({
             type: "success",

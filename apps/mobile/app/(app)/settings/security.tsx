@@ -35,6 +35,7 @@ import {
   type Device,
 } from "@saturn/api/saturn/identity/v1/identity"
 import { parseUserAgent } from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
@@ -49,6 +50,7 @@ import { haptics } from "@/lib/haptics"
 export default function SecuritySessionsScreen() {
   const router = useRouter()
   const toast = useToast()
+  const tz = useTimezone()
   const {
     logout,
     isDeviceEnrolled,
@@ -273,14 +275,14 @@ export default function SecuritySessionsScreen() {
 
   const formatTimestamp = (ts?: string) => {
     if (!ts) return "Unknown"
-    const d = new Date(ts)
-    if (isNaN(d.getTime())) return "Unknown"
-    return d.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
+    return (
+      tz.format(ts, {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }) || "Unknown"
+    )
   }
 
   const getDeviceIcon = (parsed: ReturnType<typeof parseUserAgent>) => {

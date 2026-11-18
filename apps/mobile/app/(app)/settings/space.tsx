@@ -576,8 +576,16 @@ export default function SpaceSettingsScreen() {
         )}
 
         {/* Member Invitation Modal */}
-        {inviteModalVisible && (
-          <View style={styles.inviteOverlay}>
+        <Modal
+          visible={inviteModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setInviteModalVisible(false)}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={styles.inviteOverlay}
+          >
             <Card style={styles.inviteCard}>
               <Title style={{ marginBottom: 4 }}>Add Space Member</Title>
               <Text style={styles.inviteSubtitle}>
@@ -626,8 +634,8 @@ export default function SpaceSettingsScreen() {
                 </Button>
               </View>
             </Card>
-          </View>
-        )}
+          </KeyboardAvoidingView>
+        </Modal>
 
         {/* Timezone Selection Modal */}
         <Modal
@@ -636,7 +644,14 @@ export default function SpaceSettingsScreen() {
           presentationStyle="pageSheet"
           onRequestClose={() => setTimezoneModalVisible(false)}
         >
-          <View style={styles.tzModalContainer}>
+          <View
+            style={[
+              styles.tzModalContainer,
+              Platform.OS === "android" && {
+                paddingTop: Math.max(insets.top, 20),
+              },
+            ]}
+          >
             <View style={styles.tzModalHeader}>
               <View style={{ flex: 1 }}>
                 <Title>Workspace Timezone</Title>
@@ -937,6 +952,9 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 0,
     backgroundColor: "transparent",
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    paddingVertical: 10,
   },
   tzItem: {
     flexDirection: "row",

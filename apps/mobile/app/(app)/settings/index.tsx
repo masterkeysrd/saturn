@@ -9,8 +9,10 @@ import {
   Alert,
   Modal,
   FlatList,
+  Platform,
 } from "react-native"
 import { useRouter } from "expo-router"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useQueryClient } from "@tanstack/react-query"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import Constants from "expo-constants"
@@ -58,6 +60,7 @@ import { haptics } from "@/lib/haptics"
 
 export default function SettingsScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const toast = useToast()
   const queryClient = useQueryClient()
   const {
@@ -520,18 +523,22 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>PREFERENCES & AGENTS</Text>
           <Card style={styles.menuGroup}>
-            <TouchableOpacity
-              style={[styles.menuItem, styles.menuItemBorder]}
-              activeOpacity={0.7}
-            >
+            <View style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuLeft}>
                 <Bell size={18} color={theme.colors.warning} />
                 <Text style={styles.menuLabel}>Notifications & Alerts</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
-            </TouchableOpacity>
+              <Badge size="sm" label="Soon" />
+            </View>
 
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => {
+                haptics.light()
+                router.push("/(app)/ai/agents" as never)
+              }}
+            >
               <View style={styles.menuLeft}>
                 <Sparkles size={18} color={theme.colors.accent} />
                 <Text style={styles.menuLabel}>AI Agents & Providers</Text>
@@ -629,7 +636,14 @@ export default function SettingsScreen() {
           presentationStyle="pageSheet"
           onRequestClose={() => setFiscalYearModalVisible(false)}
         >
-          <View style={styles.modalContainer}>
+          <View
+            style={[
+              styles.modalContainer,
+              Platform.OS === "android" && {
+                paddingTop: Math.max(insets.top, 16),
+              },
+            ]}
+          >
             <View style={styles.modalHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.modalTitle}>Fiscal Year Start</Text>
