@@ -321,7 +321,7 @@ type StoreMock struct {
 	UpdateAccountFunc func(ctx context.Context, account *ConnectedAccount) error
 
 	// UpdateAccountTokensFunc mocks the UpdateAccountTokens method.
-	UpdateAccountTokensFunc func(ctx context.Context, accountID string, accessTokenEnc string, refreshTokenEnc string, expiry time.Time) error
+	UpdateAccountTokensFunc func(ctx context.Context, spaceID string, accountID string, accessTokenEnc string, refreshTokenEnc string, expiry time.Time) error
 
 	// UpdateAccountStatusFunc mocks the UpdateAccountStatus method.
 	UpdateAccountStatusFunc func(ctx context.Context, spaceID string, accountID string, status AccountStatus, reason *string, backoffUntil *time.Time) error
@@ -381,6 +381,7 @@ type StoreMock struct {
 		}
 		UpdateAccountTokens []struct {
 			Ctx             context.Context
+			SpaceID         string
 			AccountID       string
 			AccessTokenEnc  string
 			RefreshTokenEnc string
@@ -643,31 +644,34 @@ func (mock *StoreMock) UpdateAccountCalls() []struct {
 }
 
 // UpdateAccountTokens calls UpdateAccountTokensFunc.
-func (mock *StoreMock) UpdateAccountTokens(ctx context.Context, accountID string, accessTokenEnc string, refreshTokenEnc string, expiry time.Time) error {
+func (mock *StoreMock) UpdateAccountTokens(ctx context.Context, spaceID string, accountID string, accessTokenEnc string, refreshTokenEnc string, expiry time.Time) error {
 	if mock.UpdateAccountTokensFunc == nil {
 		panic("StoreMock.UpdateAccountTokensFunc: method is nil but Store.UpdateAccountTokens was just called")
 	}
 	mock.lockUpdateAccountTokens.Lock()
 	mock.calls.UpdateAccountTokens = append(mock.calls.UpdateAccountTokens, struct {
 		Ctx             context.Context
+		SpaceID         string
 		AccountID       string
 		AccessTokenEnc  string
 		RefreshTokenEnc string
 		Expiry          time.Time
 	}{
 		Ctx:             ctx,
+		SpaceID:         spaceID,
 		AccountID:       accountID,
 		AccessTokenEnc:  accessTokenEnc,
 		RefreshTokenEnc: refreshTokenEnc,
 		Expiry:          expiry,
 	})
 	mock.lockUpdateAccountTokens.Unlock()
-	return mock.UpdateAccountTokensFunc(ctx, accountID, accessTokenEnc, refreshTokenEnc, expiry)
+	return mock.UpdateAccountTokensFunc(ctx, spaceID, accountID, accessTokenEnc, refreshTokenEnc, expiry)
 }
 
 // UpdateAccountTokensCalls returns all calls made to UpdateAccountTokens.
 func (mock *StoreMock) UpdateAccountTokensCalls() []struct {
 	Ctx             context.Context
+	SpaceID         string
 	AccountID       string
 	AccessTokenEnc  string
 	RefreshTokenEnc string

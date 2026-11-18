@@ -21,7 +21,7 @@ type Store interface {
 	ListAccounts(ctx context.Context, spaceID string) ([]*ConnectedAccount, error)
 	ListActiveAccounts(ctx context.Context) ([]*ConnectedAccount, error)
 	UpdateAccount(ctx context.Context, account *ConnectedAccount) error
-	UpdateAccountTokens(ctx context.Context, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error
+	UpdateAccountTokens(ctx context.Context, spaceID, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error
 	UpdateAccountStatus(ctx context.Context, spaceID, accountID string, status AccountStatus, reason *string, backoffUntil *time.Time) error
 	DeleteAccount(ctx context.Context, spaceID, accountID string) error
 	CountActiveByProviderIdentity(ctx context.Context, provider, providerAccountID, excludeSpaceID string) (int, error)
@@ -256,7 +256,7 @@ func (s *SQLStore) UpdateAccount(ctx context.Context, account *ConnectedAccount)
 }
 
 // UpdateAccountTokens persists refreshed access and refresh tokens, strictly enforcing encryption.
-func (s *SQLStore) UpdateAccountTokens(ctx context.Context, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error {
+func (s *SQLStore) UpdateAccountTokens(ctx context.Context, spaceID, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error {
 	const op errors.Op = "platform/connector/storage.UpdateAccountTokens"
 
 	if !strings.HasPrefix(accessTokenEnc, crypto.Prefix) {
@@ -275,9 +275,9 @@ func (s *SQLStore) UpdateAccountTokens(ctx context.Context, accountID string, ac
 		backoff_until = NULL,
 		version = version + 1,
 		update_time = NOW()
-	WHERE id = $4`
+	WHERE space_id = $4 AND id = $5`
 
-	if err := s.db.ExecOne(ctx, query, accessTokenEnc, refreshTokenEnc, expiry, accountID); err != nil {
+	if err := s.db.ExecOne(ctx, query, accessTokenEnc, refreshTokenEnc, expiry, spaceID, accountID); err != nil {
 		return errors.E(op, err)
 	}
 	return nil

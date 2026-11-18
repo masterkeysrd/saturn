@@ -1437,47 +1437,189 @@ func (p *Provider) SendDraft(ctx context.Context, accessToken, providerDraftID s
 
 // OpenAttachmentStream opens a readable binary stream for an attachment.
 func (p *Provider) OpenAttachmentStream(ctx context.Context, accessToken, providerMessageID, attachmentID string) (io.ReadCloser, string, int64, error) {
+	return p.OpenAttachmentStreamWithMeta(ctx, accessToken, providerMessageID, attachmentID, nil, -1)
+}
+
+// OpenAttachmentStreamWithMeta opens an attachment stream and automatically refreshes stale
+// ephemeral Gmail attachment tokens or inline MIME part bodies by re-fetching the message payload.
+func (p *Provider) OpenAttachmentStreamWithMeta(
+	ctx context.Context,
+	accessToken, providerMessageID, attachmentID string,
+	meta *domainmail.AttachmentMeta,
+	partIndex int,
+) (io.ReadCloser, string, int64, error) {
 	const op platformerrors.Op = "platform/connector/google.OpenAttachmentStream"
 
+	stream, contentType, size, statusCode, err := p.fetchAttachmentByID(ctx, op, accessToken, providerMessageID, attachmentID)
+	if err == nil {
+		return stream, contentType, size, nil
+	}
+	if statusCode != http.StatusBadRequest && statusCode != http.StatusNotFound {
+		return nil, "", 0, err
+	}
+
+	// Fallback for synthetic inline att_* IDs or rotated/expired ephemeral Gmail attachmentId tokens:
+	// re-fetch the live message MIME tree and match the part by Content-ID, Filename, or DFS attachment index.
+	msgEndpoint := fmt.Sprintf("%s/users/me/messages/%s?format=full", p.cfg.GmailURL, url.PathEscape(providerMessageID))
+	msgReq, err := http.NewRequestWithContext(ctx, http.MethodGet, msgEndpoint, nil)
+	if err != nil {
+		return nil, "", 0, platformerrors.E(op, err)
+	}
+	msgReq.Header.Set("Authorization", "Bearer "+accessToken)
+
+	msgResp, err := p.httpClient.Do(msgReq)
+	if err != nil {
+		return nil, "", 0, platformerrors.E(op, err)
+	}
+	defer msgResp.Body.Close()
+
+	if msgResp.StatusCode == http.StatusUnauthorized {
+		return nil, "", 0, platformerrors.E(op, connector.ErrInvalidGrant)
+	}
+	if msgResp.StatusCode == http.StatusTooManyRequests {
+		return nil, "", 0, platformerrors.E(op, connector.ErrRateLimited)
+	}
+	if msgResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(msgResp.Body)
+		return nil, "", 0, platformerrors.E(op, fmt.Sprintf("fetch message for attachment refresh failed with status %d: %s", msgResp.StatusCode, string(body)))
+	}
+
+	var gm gmailMessage
+	if err := json.UnmarshalRead(msgResp.Body, &gm); err != nil {
+		return nil, "", 0, platformerrors.E(op, err)
+	}
+
+	matched := findMatchingGmailAttachmentPart(gm.Payload, meta, partIndex)
+	if matched == nil || matched.Body == nil {
+		return nil, "", 0, platformerrors.E(op, platformerrors.NotExist, "matching attachment part not found in provider message")
+	}
+
+	resolvedType := matched.MimeType
+	if resolvedType == "" {
+		resolvedType = "application/octet-stream"
+	}
+
+	if matched.Body.Data != "" {
+		decodedBytes, decErr := decodeGmailBase64(matched.Body.Data)
+		if decErr != nil {
+			return nil, "", 0, platformerrors.E(op, decErr)
+		}
+		return io.NopCloser(bytes.NewReader(decodedBytes)), resolvedType, int64(len(decodedBytes)), nil
+	}
+
+	if matched.Body.AttachmentID != "" {
+		stream, _, size, _, fetchErr := p.fetchAttachmentByID(ctx, op, accessToken, providerMessageID, matched.Body.AttachmentID)
+		if fetchErr != nil {
+			return nil, "", 0, fetchErr
+		}
+		return stream, resolvedType, size, nil
+	}
+
+	return nil, "", 0, platformerrors.E(op, platformerrors.NotExist, "attachment payload is empty")
+}
+
+func (p *Provider) fetchAttachmentByID(
+	ctx context.Context,
+	op platformerrors.Op,
+	accessToken, providerMessageID, attachmentID string,
+) (io.ReadCloser, string, int64, int, error) {
 	endpoint := fmt.Sprintf("%s/users/me/messages/%s/attachments/%s", p.cfg.GmailURL, url.PathEscape(providerMessageID), url.PathEscape(attachmentID))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return nil, "", 0, platformerrors.E(op, err)
+		return nil, "", 0, 0, platformerrors.E(op, err)
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
-		return nil, "", 0, platformerrors.E(op, err)
+		return nil, "", 0, 0, platformerrors.E(op, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, "", 0, platformerrors.E(op, connector.ErrInvalidGrant)
+		return nil, "", 0, resp.StatusCode, platformerrors.E(op, connector.ErrInvalidGrant)
 	}
 	if resp.StatusCode == http.StatusTooManyRequests {
-		return nil, "", 0, platformerrors.E(op, connector.ErrRateLimited)
+		return nil, "", 0, resp.StatusCode, platformerrors.E(op, connector.ErrRateLimited)
 	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, "", 0, platformerrors.E(op, fmt.Sprintf("fetch attachment failed with status %d: %s", resp.StatusCode, string(body)))
+		return nil, "", 0, resp.StatusCode, platformerrors.E(op, fmt.Sprintf("fetch attachment failed with status %d: %s", resp.StatusCode, string(body)))
 	}
 
 	var attResp gmailAttachmentResponse
 	if err := json.UnmarshalRead(resp.Body, &attResp); err != nil {
-		return nil, "", 0, platformerrors.E(op, err)
+		return nil, "", 0, resp.StatusCode, platformerrors.E(op, err)
 	}
 
-	decodedBytes, err := base64.URLEncoding.DecodeString(attResp.Data)
+	decodedBytes, err := decodeGmailBase64(attResp.Data)
 	if err != nil {
-		decodedBytes, err = base64.RawURLEncoding.DecodeString(attResp.Data)
-		if err != nil {
-			return nil, "", 0, platformerrors.E(op, err)
+		return nil, "", 0, resp.StatusCode, platformerrors.E(op, err)
+	}
+
+	return io.NopCloser(bytes.NewReader(decodedBytes)), "application/octet-stream", int64(len(decodedBytes)), http.StatusOK, nil
+}
+
+func decodeGmailBase64(data string) ([]byte, error) {
+	decodedBytes, err := base64.URLEncoding.DecodeString(data)
+	if err == nil {
+		return decodedBytes, nil
+	}
+	return base64.RawURLEncoding.DecodeString(data)
+}
+
+func findMatchingGmailAttachmentPart(root *gmailMessagePayload, meta *domainmail.AttachmentMeta, targetIndex int) *gmailMessagePayload {
+	if root == nil {
+		return nil
+	}
+
+	var candidates []*gmailMessagePayload
+	var walk func(part *gmailMessagePayload)
+	walk = func(part *gmailMessagePayload) {
+		if part == nil {
+			return
+		}
+		if part.Filename != "" || (part.Body != nil && part.Body.AttachmentID != "") {
+			candidates = append(candidates, part)
+		}
+		for i := range part.Parts {
+			walk(&part.Parts[i])
+		}
+	}
+	walk(root)
+
+	if meta != nil {
+		wantCID := strings.Trim(meta.ContentID, "<>")
+		if wantCID != "" {
+			for _, part := range candidates {
+				for _, h := range part.Headers {
+					if strings.EqualFold(h.Name, "Content-ID") && strings.EqualFold(strings.Trim(h.Value, "<>"), wantCID) {
+						return part
+					}
+				}
+			}
+		}
+		if meta.Filename != "" {
+			for _, part := range candidates {
+				if part.Filename == meta.Filename && (meta.Size == 0 || part.Body == nil || part.Body.Size == meta.Size) {
+					return part
+				}
+			}
+			for _, part := range candidates {
+				if part.Filename == meta.Filename {
+					return part
+				}
+			}
 		}
 	}
 
-	contentType := "application/octet-stream"
-	return io.NopCloser(bytes.NewReader(decodedBytes)), contentType, int64(len(decodedBytes)), nil
+	if targetIndex >= 0 && targetIndex < len(candidates) {
+		return candidates[targetIndex]
+	}
+	if len(candidates) == 1 {
+		return candidates[0]
+	}
+	return nil
 }
 
 // UploadDraftAttachment streams a draft attachment to the provider.

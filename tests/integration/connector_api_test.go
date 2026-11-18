@@ -147,6 +147,20 @@ func TestConnectorAPI_GRPCInterceptorChainAndOAuthFlow(t *testing.T) {
 		assert.Equal(t, codes.PermissionDenied, st.Code(), "expected PermissionDenied for viewer calling DeleteConnectedAccount")
 	})
 
+	// Verify InitiateOAuth rejects unconfigured external open-redirect return_url
+	t.Run("InitiateOAuth rejects open redirect return_url", func(t *testing.T) {
+		ownerCtx := authCtx(ownerToken, spaceID)
+		_, err := client.InitiateOAuth(ownerCtx, &connectorv1.InitiateOAuthRequest{
+			Provider:     "google",
+			ReturnUrl:    "https://evil.example/phish",
+			Capabilities: []string{"contacts"},
+		})
+		require.Error(t, err)
+		st, ok := status.FromError(err)
+		require.True(t, ok)
+		assert.Equal(t, codes.InvalidArgument, st.Code(), "expected InvalidArgument for disallowed external return_url")
+	})
+
 	// 5. Mock Google OAuth server and end-to-end InitiateOAuth -> HTTP callback -> ListConnectedAccounts
 	t.Run("mock Google OAuth server completes full connection flow", func(t *testing.T) {
 		ownerCtx := authCtx(ownerToken, spaceID)

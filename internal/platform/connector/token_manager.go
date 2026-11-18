@@ -91,8 +91,12 @@ func (m *TokenManager) TokenSource(ctx context.Context, spaceID, accountID strin
 	}
 
 	// Token is expired or expiring within 60 seconds: execute single-flight refresh
+	// with a detached bounded context so a caller disconnect after upstream rotation
+	// never aborts persisting the rotated refresh token.
 	v, err, _ := m.sf.Do(account.ID, func() (any, error) {
-		return m.refreshToken(ctx, spaceID, accountID)
+		refreshCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		return m.refreshToken(refreshCtx, spaceID, accountID)
 	})
 	if err != nil {
 		return "", platformerrors.E(op, err)
@@ -161,7 +165,7 @@ func (m *TokenManager) refreshToken(ctx context.Context, spaceID, accountID stri
 		return "", fmt.Errorf("encrypt new refresh token: %w", err)
 	}
 
-	if err := m.store.UpdateAccountTokens(ctx, accountID, encAccessToken, encRefreshToken, resp.Expiry); err != nil {
+	if err := m.store.UpdateAccountTokens(ctx, spaceID, accountID, encAccessToken, encRefreshToken, resp.Expiry); err != nil {
 		return "", fmt.Errorf("persist refreshed tokens: %w", err)
 	}
 
@@ -283,11 +287,6 @@ func (m *TokenManager) SaveAccount(ctx context.Context, params SaveAccountParams
 		return nil, platformerrors.E(op, fmt.Errorf("encrypt access token: %w", err))
 	}
 
-	encRefreshToken, err := m.cipher.Encrypt(params.RefreshToken)
-	if err != nil {
-		return nil, platformerrors.E(op, fmt.Errorf("encrypt refresh token: %w", err))
-	}
-
 	caps := make([]string, len(params.EnabledCapabilities))
 	for i, c := range params.EnabledCapabilities {
 		caps[i] = string(c)
@@ -299,6 +298,15 @@ func (m *TokenManager) SaveAccount(ctx context.Context, params SaveAccountParams
 	}
 
 	if existing != nil {
+		// Preserve existing encrypted refresh token when provider omits refresh_token on re-auth.
+		encRefreshToken := existing.RefreshTokenEnc
+		if params.RefreshToken != "" {
+			encRefreshToken, err = m.cipher.Encrypt(params.RefreshToken)
+			if err != nil {
+				return nil, platformerrors.E(op, fmt.Errorf("encrypt refresh token: %w", err))
+			}
+		}
+
 		// Update existing account (e.g. re-auth or capability upgrade)
 		existing.AccessTokenEnc = encAccessToken
 		existing.RefreshTokenEnc = encRefreshToken
@@ -319,13 +327,18 @@ func (m *TokenManager) SaveAccount(ctx context.Context, params SaveAccountParams
 		existing.StatusReason = nil
 		existing.BackoffUntil = nil
 
-		if err := m.store.UpdateAccountTokens(ctx, existing.ID, encAccessToken, encRefreshToken, params.TokenExpiry); err != nil {
+		if err := m.store.UpdateAccountTokens(ctx, existing.SpaceID, existing.ID, encAccessToken, encRefreshToken, params.TokenExpiry); err != nil {
 			return nil, platformerrors.E(op, err)
 		}
 		if err := m.store.UpdateAccount(ctx, existing); err != nil {
 			return nil, platformerrors.E(op, err)
 		}
 		return existing, nil
+	}
+
+	encRefreshToken, err := m.cipher.Encrypt(params.RefreshToken)
+	if err != nil {
+		return nil, platformerrors.E(op, fmt.Errorf("encrypt refresh token: %w", err))
 	}
 
 	// Create new account

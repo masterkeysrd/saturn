@@ -79,7 +79,7 @@ func (m *mockOAuthStore) ListActiveAccounts(ctx context.Context) ([]*connector.C
 func (m *mockOAuthStore) UpdateAccount(ctx context.Context, account *connector.ConnectedAccount) error {
 	return nil
 }
-func (m *mockOAuthStore) UpdateAccountTokens(ctx context.Context, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error {
+func (m *mockOAuthStore) UpdateAccountTokens(ctx context.Context, spaceID, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error {
 	return nil
 }
 func (m *mockOAuthStore) UpdateAccountStatus(ctx context.Context, spaceID, accountID string, status connector.AccountStatus, reason *string, backoffUntil *time.Time) error {
@@ -216,6 +216,14 @@ func TestOAuthCallbackHandler(t *testing.T) {
 			url:        "/v1/platform/connectors/oauth/google/callback?state=any_state",
 			wantStatus: http.StatusBadRequest,
 		},
+		{
+			name: "internal error does not leak raw error details",
+			url:  "/v1/platform/connectors/oauth/google/callback?code=valid_code&state=valid_state",
+			completeOAuth: func(ctx context.Context, req *connectorapp.CompleteOAuthRequest) (*connectorapp.CompleteOAuthResult, error) {
+				return nil, platformerrors.E(platformerrors.Internal, "postgres pq: secret connection failed")
+			},
+			wantStatus: http.StatusBadRequest,
+		},
 	}
 
 	for _, tc := range tests {
@@ -237,6 +245,7 @@ func TestOAuthCallbackHandler(t *testing.T) {
 			handler.ServeHTTP(rec, req)
 
 			assert.Equal(t, tc.wantStatus, rec.Code)
+			assert.NotContains(t, rec.Body.String(), "secret connection failed")
 			if tc.wantLocation != "" {
 				assert.Equal(t, tc.wantLocation, rec.Header().Get("Location"))
 			}

@@ -75,7 +75,7 @@ func (h *OAuthCallbackHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 			http.Error(w, "invalid or expired oauth state", http.StatusBadRequest)
 			return
 		}
-		http.Error(w, fmt.Sprintf("oauth callback failed: %v", err), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("oauth callback failed: %s", errors.UserMessage(err)), http.StatusBadRequest)
 		return
 	}
 

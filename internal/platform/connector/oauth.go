@@ -75,8 +75,14 @@ func HashState(rawState string) string {
 }
 
 // ValidateReturnURL validates that a redirect target is a safe relative application path,
-// a valid HTTPS web URL, or a saturn:// mobile deep-link URL, and prevents open-redirect vulnerabilities.
+// a saturn:// mobile deep-link URL, or a localhost HTTP dev URL, preventing open-redirect vulnerabilities.
 func ValidateReturnURL(returnURL string) error {
+	return ValidateReturnURLWithOrigins(returnURL, nil)
+}
+
+// ValidateReturnURLWithOrigins validates that a redirect target is a safe relative application path,
+// a saturn:// mobile deep-link URL, a localhost HTTP dev URL, or an HTTPS/HTTP URL matching one of allowedOrigins.
+func ValidateReturnURLWithOrigins(returnURL string, allowedOrigins []string) error {
 	if returnURL == "" {
 		return fmt.Errorf("%w: return_url cannot be empty", ErrInvalidReturnURL)
 	}
@@ -94,9 +100,23 @@ func ValidateReturnURL(returnURL string) error {
 		}
 		return nil
 	}
-	// Allow HTTPS web URLs and saturn:// mobile deep links (and localhost HTTP in tests/dev)
-	if u.Scheme == "https" || u.Scheme == "saturn" || (u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1")) {
+	// Allow saturn:// mobile deep links and localhost HTTP dev URLs
+	if u.Scheme == "saturn" || (u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1")) {
 		return nil
+	}
+	// Allow explicit configured origins (scheme://host)
+	if u.Scheme == "https" || u.Scheme == "http" {
+		targetOrigin := strings.ToLower(u.Scheme + "://" + u.Host)
+		for _, rawOrigin := range allowedOrigins {
+			ao, parseErr := url.Parse(strings.TrimSpace(rawOrigin))
+			if parseErr != nil || ao.Scheme == "" || ao.Host == "" {
+				continue
+			}
+			if strings.ToLower(ao.Scheme+"://"+ao.Host) == targetOrigin {
+				return nil
+			}
+		}
+		return fmt.Errorf("%w: origin %q is not permitted", ErrInvalidReturnURL, targetOrigin)
 	}
 	return fmt.Errorf("%w: scheme %q is not permitted", ErrInvalidReturnURL, u.Scheme)
 }
@@ -171,22 +191,24 @@ type InitiatedOAuthState struct {
 
 // OAuthManager coordinates PKCE generation, state encryption, and state verification.
 type OAuthManager struct {
-	store  Store
-	cipher *crypto.Cipher
+	store                Store
+	cipher               *crypto.Cipher
+	allowedReturnOrigins []string
 }
 
-// NewOAuthManager creates a new OAuthManager.
-func NewOAuthManager(store Store, cipher *crypto.Cipher) *OAuthManager {
+// NewOAuthManager creates a new OAuthManager with optional allowed external redirect origins.
+func NewOAuthManager(store Store, cipher *crypto.Cipher, allowedReturnOrigins ...string) *OAuthManager {
 	return &OAuthManager{
-		store:  store,
-		cipher: cipher,
+		store:                store,
+		cipher:               cipher,
+		allowedReturnOrigins: append([]string(nil), allowedReturnOrigins...),
 	}
 }
 
 // InitiateSession creates a new PKCE verifier, hashes the state token, encrypts the verifier,
 // and persists the session in the store.
 func (m *OAuthManager) InitiateSession(ctx context.Context, req CreateStateRequest) (*InitiatedOAuthState, error) {
-	if err := ValidateReturnURL(req.ReturnURL); err != nil {
+	if err := ValidateReturnURLWithOrigins(req.ReturnURL, m.allowedReturnOrigins); err != nil {
 		return nil, err
 	}
 

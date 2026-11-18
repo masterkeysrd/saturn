@@ -41,7 +41,7 @@ func (m *mockConnectorStore) ListActiveAccounts(ctx context.Context) ([]*connect
 func (m *mockConnectorStore) UpdateAccount(ctx context.Context, account *connector.ConnectedAccount) error {
 	return nil
 }
-func (m *mockConnectorStore) UpdateAccountTokens(ctx context.Context, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error {
+func (m *mockConnectorStore) UpdateAccountTokens(ctx context.Context, spaceID, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error {
 	return nil
 }
 func (m *mockConnectorStore) UpdateAccountStatus(ctx context.Context, spaceID, accountID string, status connector.AccountStatus, reason *string, backoffUntil *time.Time) error {

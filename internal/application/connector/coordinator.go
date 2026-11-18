@@ -349,6 +349,11 @@ func (c *coordinator) GetConnectedAccount(ctx context.Context, req *GetConnected
 func (c *coordinator) UpdateConnectedAccount(ctx context.Context, req *UpdateConnectedAccountRequest) (*connector.ConnectedAccount, error) {
 	const op errors.Op = "application/connector.UpdateConnectedAccount"
 
+	role, ok := auth.SpaceRoleFromContext(ctx)
+	if !ok || !isSpaceAdminOrOwner(role) {
+		return nil, errors.E(op, errors.Permission, ErrUnauthorizedRole, "updating connected account requires space owner or admin role")
+	}
+
 	account, err := c.store.GetAccount(ctx, req.SpaceID, req.AccountID)
 	if err != nil {
 		return nil, errors.E(op, err)
@@ -446,6 +451,11 @@ func (c *coordinator) DeleteConnectedAccount(ctx context.Context, req *DeleteCon
 
 func (c *coordinator) SyncConnectedAccount(ctx context.Context, req *SyncConnectedAccountRequest) (*connector.ConnectedAccount, error) {
 	const op errors.Op = "application/connector.SyncConnectedAccount"
+
+	role, ok := auth.SpaceRoleFromContext(ctx)
+	if !ok || role == "" || role == string(space.RoleViewer) {
+		return nil, errors.E(op, errors.Permission, ErrUnauthorizedRole, "syncing connected account requires write access")
+	}
 
 	account, err := c.store.GetAccount(ctx, req.SpaceID, req.AccountID)
 	if err != nil {

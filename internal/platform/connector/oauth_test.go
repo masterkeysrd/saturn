@@ -101,9 +101,14 @@ func TestValidateReturnURL(t *testing.T) {
 			wantErr:   true,
 		},
 		{
-			name:      "valid absolute https URL",
+			name:      "external https URL rejected without allowlist",
+			returnURL: "https://evil.example/phish",
+			wantErr:   true,
+		},
+		{
+			name:      "unconfigured https origin rejected by default",
 			returnURL: "https://app.saturn.local/settings/connectors",
-			wantErr:   false,
+			wantErr:   true,
 		},
 		{
 			name:      "valid mobile saturn deep link",
@@ -140,6 +145,15 @@ func TestValidateReturnURL(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("ValidateReturnURLWithOrigins", func(t *testing.T) {
+		t.Parallel()
+		allowed := []string{"https://app.saturn.local", "https://web.example.com:8443"}
+		assert.NoError(t, connector.ValidateReturnURLWithOrigins("https://app.saturn.local/settings/connectors", allowed))
+		assert.NoError(t, connector.ValidateReturnURLWithOrigins("https://web.example.com:8443/done", allowed))
+		assert.ErrorIs(t, connector.ValidateReturnURLWithOrigins("https://evil.example/phish", allowed), connector.ErrInvalidReturnURL)
+		assert.ErrorIs(t, connector.ValidateReturnURLWithOrigins("https://app.saturn.local.evil.com/x", allowed), connector.ErrInvalidReturnURL)
+	})
 }
 
 func TestCalculateIncrementalScopes(t *testing.T) {

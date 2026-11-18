@@ -50,9 +50,10 @@ func TestTokenManager_TokenSourceSingleFlight(t *testing.T) {
 			cp := *account
 			return &cp, nil
 		},
-		UpdateAccountTokensFunc: func(ctx context.Context, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error {
+		UpdateAccountTokensFunc: func(ctx context.Context, spaceID, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error {
 			mu.Lock()
 			defer mu.Unlock()
+			assert.Equal(t, "spc_1", spaceID)
 			account.AccessTokenEnc = accessTokenEnc
 			account.RefreshTokenEnc = refreshTokenEnc
 			account.TokenExpiry = expiry
@@ -359,4 +360,118 @@ func TestTokenManager_DisableCapability(t *testing.T) {
 	assert.Equal(t, "calendar", cleanerCalledWithCap)
 	require.NotNil(t, updatedAccount)
 	assert.Equal(t, []string{"mail"}, []string(updatedAccount.EnabledCapabilities))
+}
+
+func TestTokenManager_DetachedRefreshAndSaveAccountPreservesRefreshToken(t *testing.T) {
+	t.Parallel()
+
+	cipher, err := crypto.NewCipher("test-encryption-key-32byteslong!")
+	require.NoError(t, err)
+
+	encAccess, _ := cipher.Encrypt("old-access")
+	encRefresh, _ := cipher.Encrypt("existing-refresh-token")
+	now := time.Now()
+
+	t.Run("refresh completes even if caller ctx is cancelled mid-flight", func(t *testing.T) {
+		t.Parallel()
+
+		account := &connector.ConnectedAccount{
+			ID:              "cac_1",
+			SpaceID:         "spc_1",
+			Provider:        "google",
+			AccessTokenEnc:  encAccess,
+			RefreshTokenEnc: encRefresh,
+			TokenExpiry:     now.Add(-5 * time.Minute),
+			Status:          connector.AccountStatusHealthy,
+		}
+
+		callerCtx, cancel := context.WithCancel(context.Background())
+		var savedRefresh string
+		storeMock := &connector.StoreMock{
+			GetAccountFunc: func(ctx context.Context, spaceID, accountID string) (*connector.ConnectedAccount, error) {
+				cp := *account
+				return &cp, nil
+			},
+			UpdateAccountTokensFunc: func(ctx context.Context, spaceID, accountID, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error {
+				require.NoError(t, ctx.Err(), "UpdateAccountTokens must receive non-cancelled detached context")
+				assert.Equal(t, "spc_1", spaceID)
+				savedRefresh = refreshTokenEnc
+				return nil
+			},
+		}
+		providerMock := &connector.OAuthProviderMock{
+			ProviderFunc: func() string { return "google" },
+			RefreshTokenFunc: func(ctx context.Context, refreshToken string) (*connector.TokenResponse, error) {
+				cancel()
+				require.NoError(t, ctx.Err(), "upstream RefreshToken must use detached context")
+				return &connector.TokenResponse{
+					AccessToken:  "rotated-access",
+					RefreshToken: "rotated-refresh",
+					Expiry:       now.Add(1 * time.Hour),
+				}, nil
+			},
+		}
+		providers := connector.NewProviderRegistry()
+		providers.Register(providerMock)
+
+		mgr := connector.NewTokenManager(storeMock, cipher, providers, nil)
+		mgr.SetNowFunc(func() time.Time { return now })
+
+		tok, err := mgr.TokenSource(callerCtx, "spc_1", "cac_1")
+		require.NoError(t, err)
+		assert.Equal(t, "rotated-access", tok)
+		dec, err := cipher.Decrypt(savedRefresh)
+		require.NoError(t, err)
+		assert.Equal(t, "rotated-refresh", dec)
+	})
+
+	t.Run("SaveAccount preserves existing RefreshTokenEnc when re-auth omits refresh_token", func(t *testing.T) {
+		t.Parallel()
+
+		existing := &connector.ConnectedAccount{
+			ID:                  "cac_reauth_keep",
+			SpaceID:             "spc_1",
+			Provider:            "google",
+			ProviderAccountID:   "goog_1",
+			AccessTokenEnc:      encAccess,
+			RefreshTokenEnc:     encRefresh,
+			GrantedScopes:       []string{"openid"},
+			EnabledCapabilities: []string{"contacts"},
+			Status:              connector.AccountStatusReauthRequired,
+		}
+
+		var persistedRefresh string
+		storeMock := &connector.StoreMock{
+			GetAccountByProviderFunc: func(ctx context.Context, spaceID, provider, providerAccountID string) (*connector.ConnectedAccount, error) {
+				cp := *existing
+				return &cp, nil
+			},
+			UpdateAccountTokensFunc: func(ctx context.Context, spaceID, accountID, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error {
+				assert.Equal(t, "spc_1", spaceID)
+				assert.Equal(t, "cac_reauth_keep", accountID)
+				persistedRefresh = refreshTokenEnc
+				return nil
+			},
+			UpdateAccountFunc: func(ctx context.Context, acc *connector.ConnectedAccount) error {
+				return nil
+			},
+		}
+
+		mgr := connector.NewTokenManager(storeMock, cipher, nil, nil)
+		saved, err := mgr.SaveAccount(context.Background(), connector.SaveAccountParams{
+			SpaceID:             "spc_1",
+			UserID:              "usr_1",
+			Provider:            "google",
+			ProviderAccountID:   "goog_1",
+			Email:               "user@example.com",
+			AccessToken:         "new-access-token",
+			RefreshToken:        "",
+			TokenExpiry:         now.Add(1 * time.Hour),
+			GrantedScopes:       []string{"openid", "email"},
+			EnabledCapabilities: []connector.Capability{connector.CapabilityContacts},
+		})
+		require.NoError(t, err)
+		assert.Equal(t, encRefresh, persistedRefresh)
+		assert.Equal(t, encRefresh, saved.RefreshTokenEnc)
+	})
 }

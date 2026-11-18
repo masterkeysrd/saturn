@@ -367,6 +367,109 @@ func TestProvider_AttachmentStreamAndUpload(t *testing.T) {
 	assert.Contains(t, err.Error(), "25 MB")
 }
 
+func TestProvider_AttachmentStream_RefreshesStaleTokenAndInlineData(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/users/me/messages/msg_stale/attachments/ANGjdJ_expired", func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, `{"error":{"code":400,"message":"Invalid attachment token"}}`, http.StatusBadRequest)
+	})
+	mux.HandleFunc("/users/me/messages/msg_stale/attachments/ANGjdJ_fresh", func(w http.ResponseWriter, r *http.Request) {
+		raw := []byte("Refreshed inline image bytes")
+		_ = json.MarshalWrite(w, gmailAttachmentResponse{
+			AttachmentID: "ANGjdJ_fresh",
+			Size:         int64(len(raw)),
+			Data:         base64.RawURLEncoding.EncodeToString(raw),
+		})
+	})
+	mux.HandleFunc("/users/me/messages/msg_stale/attachments/att_inline_1", func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	})
+	mux.HandleFunc("/users/me/messages/msg_stale", func(w http.ResponseWriter, r *http.Request) {
+		inlineBytes := []byte("Small inline logo")
+		_ = json.MarshalWrite(w, gmailMessage{
+			ID: "msg_stale",
+			Payload: &gmailMessagePayload{
+				MimeType: "multipart/related",
+				Parts: []gmailMessagePayload{
+					{
+						Filename: "hero.png",
+						MimeType: "image/png",
+						Headers:  []gmailHeader{{Name: "Content-ID", Value: "<hero@pinterest.com>"}},
+						Body:     &gmailMessagePartBody{AttachmentID: "ANGjdJ_fresh", Size: 28},
+					},
+					{
+						Filename: "tiny-logo.png",
+						MimeType: "image/png",
+						Headers:  []gmailHeader{{Name: "Content-ID", Value: "<tiny@pinterest.com>"}},
+						Body: &gmailMessagePartBody{
+							Size: int64(len(inlineBytes)),
+							Data: base64.RawURLEncoding.EncodeToString(inlineBytes),
+						},
+					},
+				},
+			},
+		})
+	})
+
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	provider := NewProvider(Config{GmailURL: server.URL})
+
+	tests := []struct {
+		name         string
+		attachmentID string
+		meta         *domainmail.AttachmentMeta
+		partIndex    int
+		wantBody     string
+	}{
+		{
+			name:         "refreshes rotated ephemeral Gmail attachmentId by Content-ID",
+			attachmentID: "ANGjdJ_expired",
+			meta: &domainmail.AttachmentMeta{
+				ID:        "ANGjdJ_expired",
+				Filename:  "hero.png",
+				ContentID: "hero@pinterest.com",
+				IsInline:  true,
+			},
+			partIndex: 0,
+			wantBody:  "Refreshed inline image bytes",
+		},
+		{
+			name:         "streams inline part.Body.Data when AttachmentID was empty",
+			attachmentID: "att_inline_1",
+			meta: &domainmail.AttachmentMeta{
+				ID:        "att_inline_1",
+				Filename:  "tiny-logo.png",
+				ContentID: "tiny@pinterest.com",
+				IsInline:  true,
+			},
+			partIndex: 1,
+			wantBody:  "Small inline logo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stream, contentType, size, err := provider.OpenAttachmentStreamWithMeta(
+				context.Background(),
+				"test-token",
+				"msg_stale",
+				tt.attachmentID,
+				tt.meta,
+				tt.partIndex,
+			)
+			require.NoError(t, err)
+			defer stream.Close()
+
+			got, err := io.ReadAll(stream)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantBody, string(got))
+			assert.Equal(t, int64(len(tt.wantBody)), size)
+			assert.Equal(t, "image/png", contentType)
+		})
+	}
+}
+
 func TestProvider_DeleteDraft_ResolvesMessageID(t *testing.T) {
 	deletedResolvedDraft := false
 

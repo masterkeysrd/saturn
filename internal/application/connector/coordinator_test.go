@@ -25,7 +25,7 @@ type mockStore struct {
 	listAccountsFunc                  func(ctx context.Context, spaceID string) ([]*connector.ConnectedAccount, error)
 	listActiveAccountsFunc            func(ctx context.Context) ([]*connector.ConnectedAccount, error)
 	updateAccountFunc                 func(ctx context.Context, account *connector.ConnectedAccount) error
-	updateAccountTokensFunc           func(ctx context.Context, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error
+	updateAccountTokensFunc           func(ctx context.Context, spaceID, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error
 	updateAccountStatusFunc           func(ctx context.Context, spaceID, accountID string, status connector.AccountStatus, reason *string, backoffUntil *time.Time) error
 	deleteAccountFunc                 func(ctx context.Context, spaceID, accountID string) error
 	countActiveByProviderIdentityFunc func(ctx context.Context, provider, providerAccountID, excludeSpaceID string) (int, error)
@@ -78,9 +78,9 @@ func (m *mockStore) UpdateAccount(ctx context.Context, account *connector.Connec
 	}
 	return nil
 }
-func (m *mockStore) UpdateAccountTokens(ctx context.Context, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error {
+func (m *mockStore) UpdateAccountTokens(ctx context.Context, spaceID, accountID string, accessTokenEnc, refreshTokenEnc string, expiry time.Time) error {
 	if m.updateAccountTokensFunc != nil {
-		return m.updateAccountTokensFunc(ctx, accountID, accessTokenEnc, refreshTokenEnc, expiry)
+		return m.updateAccountTokensFunc(ctx, spaceID, accountID, accessTokenEnc, refreshTokenEnc, expiry)
 	}
 	return nil
 }
@@ -337,6 +337,78 @@ func TestCoordinator_Authorization(t *testing.T) {
 			} else {
 				require.Error(t, delErr)
 				platErr, ok := platformerrors.AsType[*platformerrors.Error](delErr)
+				require.True(t, ok)
+				assert.Equal(t, platformerrors.Permission, platErr.Kind)
+			}
+
+			// Test UpdateConnectedAccount
+			updStore := &mockStore{
+				getAccountFunc: func(ctx context.Context, spaceID, accountID string) (*connector.ConnectedAccount, error) {
+					return &connector.ConnectedAccount{
+						ID:      accountID,
+						SpaceID: spaceID,
+					}, nil
+				},
+			}
+			updCoord := setupTestCoordinator(t, updStore, &mockProvider{providerName: "google"}, nil, nil)
+			_, updErr := updCoord.UpdateConnectedAccount(ctx, &connectorapp.UpdateConnectedAccountRequest{
+				SpaceID:    "spc_123",
+				AccountID:  "cac_123",
+				Account:    &connector.ConnectedAccount{DisplayName: new("Updated")},
+				UpdateMask: []string{"display_name"},
+			})
+			if tc.wantAllowed {
+				require.NoError(t, updErr)
+			} else {
+				require.Error(t, updErr)
+				platErr, ok := platformerrors.AsType[*platformerrors.Error](updErr)
+				require.True(t, ok)
+				assert.Equal(t, platformerrors.Permission, platErr.Kind)
+			}
+		})
+	}
+}
+
+func TestCoordinator_SyncConnectedAccount_Authorization(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		role        string
+		hasRole     bool
+		wantAllowed bool
+	}{
+		{name: "owner is authorized", role: string(space.RoleOwner), hasRole: true, wantAllowed: true},
+		{name: "admin is authorized", role: string(space.RoleAdmin), hasRole: true, wantAllowed: true},
+		{name: "member is authorized", role: string(space.RoleMember), hasRole: true, wantAllowed: true},
+		{name: "viewer is unauthorized", role: string(space.RoleViewer), hasRole: true, wantAllowed: false},
+		{name: "missing role is unauthorized", hasRole: false, wantAllowed: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			store := &mockStore{
+				getAccountFunc: func(ctx context.Context, spaceID, accountID string) (*connector.ConnectedAccount, error) {
+					return &connector.ConnectedAccount{ID: accountID, SpaceID: spaceID}, nil
+				},
+			}
+			coord := setupTestCoordinator(t, store, &mockProvider{providerName: "google"}, &mockScheduler{}, nil)
+			ctx := context.Background()
+			if tc.hasRole {
+				ctx = auth.WithSpaceScope(ctx, "spc_123", tc.role)
+			}
+
+			_, err := coord.SyncConnectedAccount(ctx, &connectorapp.SyncConnectedAccountRequest{
+				SpaceID:   "spc_123",
+				AccountID: "cac_123",
+			})
+			if tc.wantAllowed {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				platErr, ok := platformerrors.AsType[*platformerrors.Error](err)
 				require.True(t, ok)
 				assert.Equal(t, platformerrors.Permission, platErr.Kind)
 			}
