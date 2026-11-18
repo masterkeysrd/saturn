@@ -1,6 +1,8 @@
-import { useMemo } from "react"
-import { useTimezone } from "@saturn/hooks"
+import { useContext, useMemo } from "react"
+import { useConnectedAccounts, useTimezone } from "@saturn/hooks"
+import { findSelfAttendee, parseDate } from "@saturn/core"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
+import { AuthContext } from "@/features/auth/auth-context"
 import { Video, MapPin, Calendar, Check, HelpCircle, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -18,15 +20,24 @@ export function AgendaView({
   onOpenCreateDialog,
 }: AgendaViewProps) {
   const tz = useTimezone()
+  const auth = useContext(AuthContext)
+  const { data: accountsData } = useConnectedAccounts()
+  const selfEmails = useMemo(
+    () => [
+      auth?.user?.email,
+      ...(accountsData?.accounts ?? []).map((a) => a.email),
+    ],
+    [auth?.user?.email, accountsData?.accounts]
+  )
 
   // Sort occurrences chronologically and group by day
   const groupedEvents = useMemo(() => {
     const sorted = [...occurrences].sort((a, b) => {
       const aTime = a.isAllDay
-        ? new Date(a.startDate).getTime()
+        ? (parseDate(a.startDate, tz.timezone)?.getTime() ?? 0)
         : new Date(a.startTime).getTime()
       const bTime = b.isAllDay
-        ? new Date(b.startDate).getTime()
+        ? (parseDate(b.startDate, tz.timezone)?.getTime() ?? 0)
         : new Date(b.startTime).getTime()
       return aTime - bTime
     })
@@ -43,8 +54,8 @@ export function AgendaView({
       let dateKey: string
 
       if (occ.isAllDay) {
-        const parts = occ.startDate.split("-").map(Number)
-        dObj = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 12, 0, 0))
+        dObj =
+          parseDate(occ.startDate, tz.timezone) ?? tz.startOfDay(occ.startDate)
         dateKey = occ.startDate
       } else {
         dObj = new Date(occ.startTime)
@@ -59,7 +70,7 @@ export function AgendaView({
         group = {
           dateKey,
           dateObj: dObj,
-          isToday: tz.isToday(dObj),
+          isToday: tz.isToday(occ.isAllDay ? occ.startDate : dObj),
           events: [],
         }
         groups.push(group)
@@ -130,10 +141,12 @@ export function AgendaView({
             {/* Events on this day */}
             <div className="divide-y divide-border/40 overflow-hidden rounded-xl border border-border/40 bg-card shadow-2xs">
               {group.events.map((occ) => {
-                const selfAttendee = occ.attendees.find(
-                  (a) => a.isOrganizer || a.isOptional !== undefined
-                )
+                const selfAttendee = findSelfAttendee(occ.attendees, selfEmails)
                 const rsvpStatus = selfAttendee?.responseStatus
+                const safeMeetUrl =
+                  occ.meetUrl && /^https?:\/\//i.test(occ.meetUrl.trim())
+                    ? occ.meetUrl.trim()
+                    : ""
 
                 return (
                   <div
@@ -214,14 +227,18 @@ export function AgendaView({
                           </div>
                         )}
 
-                      {occ.meetUrl && (
+                      {safeMeetUrl && (
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-7 gap-1 text-xs"
                           onClick={(e) => {
                             e.stopPropagation()
-                            window.open(occ.meetUrl, "_blank")
+                            window.open(
+                              safeMeetUrl,
+                              "_blank",
+                              "noopener,noreferrer"
+                            )
                           }}
                         >
                           <Video className="h-3 w-3 text-primary" />

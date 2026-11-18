@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useContext } from "react"
 import {
   Dialog,
   DialogContent,
@@ -22,12 +22,16 @@ import {
 import {
   useTimezone,
   useCalendars,
+  useConnectedAccounts,
+  useGetEvent,
   useCreateEvent,
   useUpdateEvent,
   useDeleteEvent,
   useRespondToEvent,
   useContactSuggestions,
 } from "@saturn/hooks"
+import { findSelfAttendee, wallTimeToUtcIso } from "@saturn/core"
+import { AuthContext } from "@/features/auth/auth-context"
 import {
   buildRRule,
   parseRRule,
@@ -89,6 +93,7 @@ interface FormState {
   endTime: string
   timezone: string
   recurrencePreset: RecurrenceFrequency
+  rawRRule: string
   meetUrl: string
   attendees: AttendeeFormValues[]
   sourceMailMessageId: string
@@ -147,6 +152,7 @@ const RECURRENCE_LABELS: Record<RecurrenceFrequency, string> = {
 interface EventDialogFormProps {
   initialForm: FormState
   occurrence?: EventOccurrence
+  masterEvent?: Event
   calendars: Calendar[]
   onClose: () => void
 }
@@ -154,10 +160,21 @@ interface EventDialogFormProps {
 function EventDialogForm({
   initialForm,
   occurrence,
+  masterEvent,
   calendars,
   onClose,
 }: EventDialogFormProps) {
   const tz = useTimezone()
+  const auth = useContext(AuthContext)
+  const { data: accountsData } = useConnectedAccounts()
+  const selfEmails = useMemo(
+    () =>
+      [
+        auth?.user?.email,
+        ...(accountsData?.accounts ?? []).map((a) => a.email),
+      ].filter((e): e is string => Boolean(e)),
+    [auth?.user?.email, accountsData?.accounts]
+  )
   const createEventMutation = useCreateEvent()
   const updateEventMutation = useUpdateEvent()
   const deleteEventMutation = useDeleteEvent()
@@ -177,8 +194,26 @@ function EventDialogForm({
   const [startTime, setStartTime] = useState(initialForm.startTime)
   const [endTime, setEndTime] = useState(initialForm.endTime)
   const [timezone, setTimezone] = useState(initialForm.timezone)
-  const [recurrencePreset, setRecurrencePreset] = useState<RecurrenceFrequency>(
-    initialForm.recurrencePreset
+  const [selectedRecurrencePreset, setRecurrencePreset] =
+    useState<RecurrenceFrequency>(initialForm.recurrencePreset)
+  const [recurrenceModified, setRecurrenceModified] = useState(false)
+  const rawRRule =
+    !recurrenceModified && masterEvent?.rrule !== undefined
+      ? masterEvent.rrule
+      : initialForm.rawRRule
+  const recurrencePreset: RecurrenceFrequency =
+    !recurrenceModified && masterEvent?.rrule !== undefined
+      ? masterEvent.rrule
+        ? parseRRule(masterEvent.rrule).preset
+        : "none"
+      : selectedRecurrencePreset
+
+  const selfAttendee = useMemo(
+    () =>
+      occurrence
+        ? findSelfAttendee(occurrence.attendees, selfEmails)
+        : undefined,
+    [occurrence, selfEmails]
   )
   const [meetUrl, setMeetUrl] = useState(initialForm.meetUrl)
   const [attendees, setAttendees] = useState<AttendeeFormValues[]>(
@@ -325,17 +360,23 @@ function EventDialogForm({
         })
         return
       }
-      const s = new Date(`${startDate}T${startTime}:00`)
-      const e = new Date(`${endDate}T${endTime}:00`)
-      if (e.getTime() < s.getTime()) {
+      const effectiveTz = timezone || tz.timezone || "UTC"
+      startIso = wallTimeToUtcIso(startDate, startTime, effectiveTz)
+      endIso = wallTimeToUtcIso(endDate, endTime, effectiveTz)
+      if (!startIso || !endIso) {
+        toast.add({
+          title: "Please enter valid start and end times",
+          type: "error",
+        })
+        return
+      }
+      if (new Date(endIso).getTime() < new Date(startIso).getTime()) {
         toast.add({
           title: "End time cannot be earlier than start time",
           type: "error",
         })
         return
       }
-      startIso = s.toISOString()
-      endIso = e.toISOString()
     } else {
       if (!startDate || !endDate) {
         toast.add({
@@ -353,7 +394,11 @@ function EventDialogForm({
       }
     }
 
-    const rrule = buildRRule(recurrencePreset)
+    const rrule = recurrenceModified
+      ? recurrencePreset === "custom"
+        ? rawRRule
+        : buildRRule(recurrencePreset)
+      : rawRRule
 
     const mappedAttendees = attendees.map((a) => ({
       email: a.email,
@@ -366,6 +411,26 @@ function EventDialogForm({
 
     try {
       if (occurrence) {
+        const updatePaths = [
+          "title",
+          "description",
+          "location",
+          "is_all_day",
+          "start_time",
+          "end_time",
+          "start_date",
+          "end_date",
+          "timezone",
+          "attendees",
+          "meet_url",
+        ]
+        const canUpdateRRule =
+          scope !== "RECURRENCE_SCOPE_THIS_EVENT" &&
+          (recurrenceModified || Boolean(masterEvent) || !occurrence.masterId)
+        if (canUpdateRRule) {
+          updatePaths.push("rrule")
+        }
+
         await updateEventMutation.mutateAsync({
           id: occurrence.eventId,
           req: {
@@ -401,20 +466,7 @@ function EventDialogForm({
                 "",
             },
             updateMask: {
-              paths: [
-                "title",
-                "description",
-                "location",
-                "is_all_day",
-                "start_time",
-                "end_time",
-                "start_date",
-                "end_date",
-                "timezone",
-                "rrule",
-                "attendees",
-                "meet_url",
-              ],
+              paths: updatePaths,
             },
             recurrenceScope: scope || "RECURRENCE_SCOPE_ALL_EVENTS",
             targetStartTime: occurrence.startTime || "",
@@ -495,6 +547,7 @@ function EventDialogForm({
       await respondMutation.mutateAsync({
         id: occurrence.eventId,
         response,
+        selfEmails,
       })
       toast.add({ title: "RSVP updated", type: "success" })
     } catch (err) {
@@ -624,7 +677,7 @@ function EventDialogForm({
                           <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <span className="truncate">
                             {startDate
-                              ? tz.format(ymdToNoonUtc(startDate), {
+                              ? tz.format(startDate, {
                                   month: "short",
                                   day: "numeric",
                                   year: "numeric",
@@ -688,7 +741,7 @@ function EventDialogForm({
                           <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <span className="truncate">
                             {endDate
-                              ? tz.format(ymdToNoonUtc(endDate), {
+                              ? tz.format(endDate, {
                                   month: "short",
                                   day: "numeric",
                                   year: "numeric",
@@ -760,7 +813,7 @@ function EventDialogForm({
                           <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <span className="truncate">
                             {startDate
-                              ? tz.format(ymdToNoonUtc(startDate), {
+                              ? tz.format(startDate, {
                                   month: "short",
                                   day: "numeric",
                                   year: "numeric",
@@ -831,7 +884,7 @@ function EventDialogForm({
                           <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <span className="truncate">
                             {endDate
-                              ? tz.format(ymdToNoonUtc(endDate), {
+                              ? tz.format(endDate, {
                                   month: "short",
                                   day: "numeric",
                                   year: "numeric",
@@ -901,9 +954,12 @@ function EventDialogForm({
           <div className="mt-1">
             <Select
               value={recurrencePreset}
-              onValueChange={(val) =>
-                val && setRecurrencePreset(val as RecurrenceFrequency)
-              }
+              onValueChange={(val) => {
+                if (val) {
+                  setRecurrencePreset(val as RecurrenceFrequency)
+                  setRecurrenceModified(true)
+                }
+              }}
             >
               <SelectTrigger
                 id="recurrence-select"
@@ -919,6 +975,9 @@ function EventDialogForm({
                 <SelectItem value="weekly">Weekly</SelectItem>
                 <SelectItem value="monthly">Monthly</SelectItem>
                 <SelectItem value="yearly">Yearly</SelectItem>
+                {recurrencePreset === "custom" && (
+                  <SelectItem value="custom">Custom</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -942,13 +1001,15 @@ function EventDialogForm({
               onChange={(e) => setMeetUrl(e.target.value)}
               className="h-9 rounded-4xl border-input bg-input/30 text-sm"
             />
-            {meetUrl && (
+            {meetUrl && /^https?:\/\//i.test(meetUrl.trim()) && (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 className="h-9 shrink-0 gap-1.5 rounded-4xl border-input bg-input/30 hover:bg-input/50"
-                onClick={() => window.open(meetUrl, "_blank")}
+                onClick={() =>
+                  window.open(meetUrl.trim(), "_blank", "noopener,noreferrer")
+                }
               >
                 <ExternalLink className="h-3.5 w-3.5" />
                 Join
@@ -1068,7 +1129,7 @@ function EventDialogForm({
         </div>
 
         {/* RSVP Controls for participant */}
-        {occurrence && (
+        {occurrence && selfAttendee && (
           <div className="rounded-xl border border-input/60 bg-input/20 p-3">
             <div className="text-xs font-medium text-muted-foreground">
               Going?
@@ -1175,8 +1236,13 @@ export function EventDialog({
     [calendarsData]
   )
   const occurrence = initialValues?.occurrence
+  const masterEventId = occurrence?.masterId || occurrence?.eventId
+  const { data: masterEvent } = useGetEvent(masterEventId, {
+    enabled: open && Boolean(occurrence && masterEventId),
+  })
 
   const initialForm = useMemo<FormState>(() => {
+    const resolvedRRule = masterEvent?.rrule ?? initialValues?.rrule ?? ""
     if (occurrence) {
       let sDate = ""
       let eDate = ""
@@ -1221,9 +1287,10 @@ export function EventDialog({
         startTime: sTime,
         endTime: eTime,
         timezone: occurrence.timezone || tz.timezone || "UTC",
-        recurrencePreset: (initialValues?.rrule
-          ? parseRRule(initialValues.rrule).preset
+        recurrencePreset: (resolvedRRule
+          ? parseRRule(resolvedRRule).preset
           : "none") as RecurrenceFrequency,
+        rawRRule: resolvedRRule,
         meetUrl: occurrence.meetUrl || "",
         attendees: (occurrence.attendees as AttendeeFormValues[]) || [],
         sourceMailMessageId: initialValues?.sourceMailMessageId || "",
@@ -1258,15 +1325,17 @@ export function EventDialog({
           ? initialEndTime
           : "10:00",
       timezone: initialValues?.timezone || tz.timezone || "UTC",
-      recurrencePreset: (initialValues?.rrule
-        ? parseRRule(initialValues.rrule).preset
+      recurrencePreset: (resolvedRRule
+        ? parseRRule(resolvedRRule).preset
         : "none") as RecurrenceFrequency,
+      rawRRule: resolvedRRule,
       meetUrl: initialValues?.meetUrl || "",
       attendees: (initialValues?.attendees as AttendeeFormValues[]) || [],
       sourceMailMessageId: initialValues?.sourceMailMessageId || "",
     }
   }, [
     occurrence,
+    masterEvent?.rrule,
     initialDate,
     initialStartTime,
     initialEndTime,
@@ -1290,6 +1359,7 @@ export function EventDialog({
         <EventDialogForm
           initialForm={initialForm}
           occurrence={occurrence}
+          masterEvent={masterEvent}
           calendars={calendars}
           onClose={onClose}
         />

@@ -134,6 +134,9 @@ const mutateUpdateEvent = vi.fn()
 const mutateDeleteEvent = vi.fn()
 const mutateUpdateCalendar = vi.fn()
 const mutateRespond = vi.fn()
+const mockUseCalendarEvents = vi.fn()
+const mockUseCalendars = vi.fn()
+const mockUseGetEvent = vi.fn()
 
 import type { DateInput } from "@saturn/core"
 
@@ -205,18 +208,13 @@ vi.mock("@saturn/hooks", async () => {
   const actual = await vi.importActual<typeof hooks>("@saturn/hooks")
   return {
     ...actual,
-    useCalendars: () => ({
-      data: { calendars: mockCalendars },
-      isLoading: false,
-    }),
+    useCalendars: () => mockUseCalendars(),
     useConnectedAccounts: () => ({
       data: { accounts: mockConnectedAccounts },
       isLoading: false,
     }),
-    useCalendarEvents: () => ({
-      data: { occurrences: mockOccurrences },
-      isLoading: false,
-    }),
+    useCalendarEvents: (...args: unknown[]) => mockUseCalendarEvents(...args),
+    useGetEvent: (...args: unknown[]) => mockUseGetEvent(...args),
     useEnsureDefaultCalendar: () => ({
       mutate: vi.fn(),
       isPending: false,
@@ -256,6 +254,18 @@ describe("CalendarView Component", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUseCalendars.mockReturnValue({
+      data: { calendars: mockCalendars },
+      isLoading: false,
+    })
+    mockUseCalendarEvents.mockReturnValue({
+      data: { occurrences: mockOccurrences },
+      isLoading: false,
+    })
+    mockUseGetEvent.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    })
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -577,5 +587,100 @@ describe("CalendarView Component", () => {
 
     // Sidebar should be visible again
     expect(screen.getByTestId("create-event-btn")).toBeDefined()
+  })
+
+  it("serializes event times in the selected IANA timezone and preserves master custom RRULE on ALL_EVENTS while omitting rrule on THIS_EVENT", async () => {
+    mockUseGetEvent.mockReturnValue({
+      data: {
+        id: "ev_master_1",
+        rrule: "RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR",
+      },
+      isLoading: false,
+    })
+    mutateUpdateEvent.mockResolvedValue({ id: "ev_recurring" })
+
+    render(<CalendarView />, { wrapper: createWrapper() })
+
+    // Open recurring occurrence
+    fireEvent.click(screen.getByTestId("event-pill-inst_recurring_1"))
+    expect(screen.getByText("Edit Event")).toBeDefined()
+
+    // Select America/New_York timezone (EDT = UTC-4 in Oct)
+    fireEvent.click(screen.getByTestId("timezone-select"))
+    fireEvent.change(screen.getByPlaceholderText("Search timezones..."), {
+      target: { value: "New_York" },
+    })
+    fireEvent.click(screen.getByTestId("timezone-option-America/New_York"))
+
+    // Save -> THIS_EVENT omits rrule from updateMask.paths
+    fireEvent.click(screen.getByTestId("save-event-btn"))
+    const thisRadio = screen
+      .getByTestId("scope-this-event")
+      .querySelector("input")
+    fireEvent.click(thisRadio!)
+    fireEvent.click(screen.getByTestId("confirm-scope-btn"))
+
+    await waitFor(() => {
+      expect(mutateUpdateEvent).toHaveBeenCalledTimes(1)
+    })
+    const firstCall = mutateUpdateEvent.mock.calls[0][0]
+    expect(firstCall.req.updateMask.paths).not.toContain("rrule")
+    // 14:00 in America/New_York on 2026-10-20 (EDT = UTC-4) -> 18:00:00.000Z
+    expect(firstCall.req.event.startTime).toBe("2026-10-20T18:00:00.000Z")
+
+    // Reopen and save as ALL_EVENTS -> preserves custom RRULE
+    fireEvent.click(screen.getByTestId("event-pill-inst_recurring_1"))
+    fireEvent.click(screen.getByTestId("save-event-btn"))
+    const allRadio = screen
+      .getByTestId("scope-all-events")
+      .querySelector("input")
+    fireEvent.click(allRadio!)
+    fireEvent.click(screen.getByTestId("confirm-scope-btn"))
+
+    await waitFor(() => {
+      expect(mutateUpdateEvent).toHaveBeenCalledTimes(2)
+    })
+    const secondCall = mutateUpdateEvent.mock.calls[1][0]
+    expect(secondCall.req.updateMask.paths).toContain("rrule")
+    expect(secondCall.req.event.rrule).toBe("RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR")
+  })
+
+  it("disables events query and shows zero events when all calendars are unchecked, and navigates to Day view on +N more", () => {
+    mockUseCalendars.mockReturnValue({
+      data: {
+        calendars: mockCalendars.map((c) => ({ ...c, isEnabled: false })),
+      },
+      isLoading: false,
+    })
+
+    render(<CalendarView />, { wrapper: createWrapper() })
+
+    expect(mockUseCalendarEvents).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      [],
+      expect.objectContaining({ enabled: false, hasLoadedCalendars: true })
+    )
+    expect(screen.queryByText("Daily Standup")).toBeNull()
+
+    // Now test +N more button navigates to Day view
+    mockUseCalendars.mockReturnValue({
+      data: { calendars: mockCalendars },
+      isLoading: false,
+    })
+    const manyOccurrences = [1, 2, 3, 4].map((idx) => ({
+      ...mockOccurrences[0],
+      eventId: `ev_m_${idx}`,
+      instanceId: `inst_m_${idx}`,
+      title: `Event ${idx}`,
+    }))
+    mockUseCalendarEvents.mockReturnValue({
+      data: { occurrences: manyOccurrences },
+      isLoading: false,
+    })
+
+    render(<CalendarView />, { wrapper: createWrapper() })
+    fireEvent.click(screen.getByTestId("month-more-2026-10-20"))
+    expect(screen.getByTestId("day-view-container")).toBeDefined()
   })
 })

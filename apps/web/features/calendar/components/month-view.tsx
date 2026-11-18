@@ -184,9 +184,17 @@ export function MonthView({
                       ))}
 
                       {cellTimed.length > 3 && (
-                        <div className="pl-1 text-[10px] font-semibold text-muted-foreground">
+                        <button
+                          type="button"
+                          data-testid={`month-more-${cell.dateString}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onSelectDate(cell.date)
+                          }}
+                          className="pl-1 text-left text-[10px] font-semibold text-muted-foreground hover:text-foreground hover:underline"
+                        >
                           +{cellTimed.length - 3} more
-                        </div>
+                        </button>
                       )}
                     </div>
                   </div>

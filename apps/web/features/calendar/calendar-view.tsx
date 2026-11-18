@@ -72,6 +72,11 @@ export function CalendarView() {
     return calendars.filter((c) => c.isEnabled).map((c) => c.id)
   }, [calendars])
 
+  const allCalendarsDisabled =
+    Boolean(calendarsData) &&
+    calendars.length > 0 &&
+    enabledCalendarIds.length === 0
+
   // Compute query viewport boundary based on active view and currentDate
   const { rangeStart, rangeEnd } = useMemo(() => {
     const tzName = tz.timezone
@@ -126,9 +131,13 @@ export function CalendarView() {
   const { data: eventsData } = useCalendarEvents(
     rangeStart,
     rangeEnd,
-    enabledCalendarIds
+    enabledCalendarIds,
+    {
+      enabled: !allCalendarsDisabled,
+      hasLoadedCalendars: Boolean(calendarsData),
+    }
   )
-  const occurrences = eventsData?.occurrences || []
+  const occurrences = allCalendarsDisabled ? [] : eventsData?.occurrences || []
 
   // Navigation handlers
   const handleToday = () => {
