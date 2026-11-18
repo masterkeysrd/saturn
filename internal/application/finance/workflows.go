@@ -6,6 +6,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
 )
 
@@ -13,6 +14,7 @@ import (
 type WorkflowDependencies struct {
 	FinanceService FinanceService
 	SpaceService   SpaceService
+	Transactor     db.Transactor
 }
 
 // RegisterWorkflows registers finance DataLoaders, Action Steps, and System Flows onto reg.

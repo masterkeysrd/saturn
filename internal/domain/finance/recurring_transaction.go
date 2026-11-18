@@ -204,9 +204,9 @@ const DefaultRecurringTransactionSortField = "create_time"
 var RecurringTransactionSortFields = map[string]func(*RecurringTransaction) string{
 	"name":          func(re *RecurringTransaction) string { return re.Name },
 	"amount":        func(re *RecurringTransaction) string { return fmt.Sprintf("%018d", re.Amount) },
-	"next_due_date": func(re *RecurringTransaction) string { return re.NextDueDate.Format(time.RFC3339) },
+	"next_due_date": func(re *RecurringTransaction) string { return re.NextDueDate.UTC().Format(time.RFC3339Nano) },
 	"status":        func(re *RecurringTransaction) string { return string(re.Status) },
-	"create_time":   func(re *RecurringTransaction) string { return re.CreateTime.Format(time.RFC3339) },
+	"create_time":   func(re *RecurringTransaction) string { return re.CreateTime.UTC().Format(time.RFC3339Nano) },
 }
 
 func IsRecurringTransactionSortField(field string) bool {

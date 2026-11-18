@@ -8,7 +8,7 @@ import (
 
 // CreateInstitution creates a new financial institution in the resolved space context.
 func (c *coordinator) CreateInstitution(ctx context.Context, inst *finance.Institution) (*finance.Institution, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -17,7 +17,7 @@ func (c *coordinator) CreateInstitution(ctx context.Context, inst *finance.Insti
 
 // UpdateInstitution updates an existing financial institution.
 func (c *coordinator) UpdateInstitution(ctx context.Context, inst *finance.Institution, mask []string) (*finance.Institution, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +26,7 @@ func (c *coordinator) UpdateInstitution(ctx context.Context, inst *finance.Insti
 
 // DeleteInstitution soft-deletes a financial institution.
 func (c *coordinator) DeleteInstitution(ctx context.Context, id finance.InstitutionID, opts finance.DeleteOptions) error {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return err
 	}

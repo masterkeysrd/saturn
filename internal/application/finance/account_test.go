@@ -5,14 +5,22 @@ import (
 	"testing"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
 
 func newTestContext(spaceID, userID string) context.Context {
+	return newTestContextWithRole(spaceID, userID, string(space.RoleMember))
+}
+
+func newTestContextWithRole(spaceID, userID, role string) context.Context {
 	ctx := context.Background()
 	if spaceID != "" {
 		ctx = auth.WithSpaceID(ctx, spaceID)
+	}
+	if role != "" {
+		ctx = auth.WithSpaceRole(ctx, role)
 	}
 	if userID != "" {
 		ctx = auth.WithPrincipal(ctx, auth.Principal{Subject: userID})

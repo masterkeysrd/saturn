@@ -429,13 +429,13 @@ const DefaultBorrowingSortField = "create_time"
 
 // BorrowingSortFields registry maps sortable borrowing field names to cursor strings.
 var BorrowingSortFields = map[string]func(*Borrowing) string{
-	"create_time":    func(b *Borrowing) string { return b.CreateTime.Format(time.RFC3339) },
+	"create_time":    func(b *Borrowing) string { return b.CreateTime.UTC().Format(time.RFC3339Nano) },
 	"counterparty":   func(b *Borrowing) string { return b.Counterparty },
 	"total_amount":   func(b *Borrowing) string { return fmt.Sprintf("%019d", b.TotalAmount) },
-	"established_at": func(b *Borrowing) string { return b.EstablishedAt.Format(time.RFC3339) },
+	"established_at": func(b *Borrowing) string { return b.EstablishedAt.UTC().Format(time.RFC3339Nano) },
 	"due_at": func(b *Borrowing) string {
 		if b.DueAt != nil {
-			return b.DueAt.Format(time.RFC3339)
+			return b.DueAt.UTC().Format(time.RFC3339Nano)
 		}
 		return ""
 	},

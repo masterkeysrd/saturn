@@ -42,34 +42,26 @@ type FinanceCoordinator interface {
 	CreateExpense(ctx context.Context, req *financeapp.CreateExpenseRequest) (*finance.Transaction, error)
 	CreateIncome(ctx context.Context, req *financeapp.CreateIncomeRequest) (*finance.Transaction, error)
 	CreateTransfer(ctx context.Context, req *financeapp.CreateTransferRequest) (*finance.Transfer, error)
-}
-
-// InboxStager stages inbound financial documents into the finance inbox queue.
-// @Mock
-type InboxStager interface {
-	StageInboxItem(ctx context.Context, rCtx finance.Context, req *finance.StageInboxItem) (*finance.InboxItem, error)
+	StageInboxItem(ctx context.Context, req *finance.StageInboxItem) (*finance.InboxItem, error)
 }
 
 // Dependencies holds the collaborators required by the finance MCP handler.
 type Dependencies struct {
 	Aggregator  FinanceAggregator
 	Coordinator FinanceCoordinator
-	InboxStager InboxStager
 }
 
 // Handler adapts finance operations into curated MCP tools and resources.
 type Handler struct {
-	agg         FinanceAggregator
-	coord       FinanceCoordinator
-	inboxStager InboxStager
+	agg   FinanceAggregator
+	coord FinanceCoordinator
 }
 
 // NewHandler constructs a new finance MCP Handler.
 func NewHandler(deps Dependencies) *Handler {
 	return &Handler{
-		agg:         deps.Aggregator,
-		coord:       deps.Coordinator,
-		inboxStager: deps.InboxStager,
+		agg:   deps.Aggregator,
+		coord: deps.Coordinator,
 	}
 }
 
@@ -982,7 +974,7 @@ func (h *Handler) createInboxItem(ctx context.Context, in CreateInboxItemInput) 
 		accID = new(s)
 	}
 
-	staged, err := h.inboxStager.StageInboxItem(ctx, rCtx, &finance.StageInboxItem{
+	staged, err := h.coord.StageInboxItem(ctx, &finance.StageInboxItem{
 		DocType:         finance.ParseInboxItemDocType(in.DocType),
 		Vendor:          strings.TrimSpace(in.Vendor),
 		Amount:          in.AmountCents,

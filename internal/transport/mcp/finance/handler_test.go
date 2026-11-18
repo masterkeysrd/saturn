@@ -232,7 +232,6 @@ func TestFinanceHandler_ReadToolsAndResources(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			agg := &FinanceAggregatorMock{}
 			coord := &FinanceCoordinatorMock{}
-			stager := &InboxStagerMock{}
 			if tc.setupMocks != nil {
 				tc.setupMocks(agg, coord)
 			}
@@ -241,7 +240,6 @@ func TestFinanceHandler_ReadToolsAndResources(t *testing.T) {
 			NewHandler(Dependencies{
 				Aggregator:  agg,
 				Coordinator: coord,
-				InboxStager: stager,
 			}).Register(srv.Registry())
 
 			ctx := auth.WithSpaceScope(
@@ -298,7 +296,7 @@ func TestFinanceHandler_WriteTools(t *testing.T) {
 		name       string
 		toolName   string
 		args       map[string]any
-		setupMocks func(coord *FinanceCoordinatorMock, stager *InboxStagerMock)
+		setupMocks func(coord *FinanceCoordinatorMock)
 		wantErr    bool
 	}{
 		{
@@ -311,7 +309,7 @@ func TestFinanceHandler_WriteTools(t *testing.T) {
 				"currency":     "USD",
 				"description":  "Lunch",
 			},
-			setupMocks: func(coord *FinanceCoordinatorMock, _ *InboxStagerMock) {
+			setupMocks: func(coord *FinanceCoordinatorMock) {
 				coord.ResolveContextFunc = func(_ context.Context) (finance.Context, error) { return rCtx, nil }
 				coord.CreateExpenseFunc = func(_ context.Context, req *financeapp.CreateExpenseRequest) (*finance.Transaction, error) {
 					if req.BudgetID != "bgt_1" || req.Amount != 2500 {
@@ -337,7 +335,7 @@ func TestFinanceHandler_WriteTools(t *testing.T) {
 				"currency":     "USD",
 				"description":  "Lunch",
 			},
-			setupMocks: func(coord *FinanceCoordinatorMock, _ *InboxStagerMock) {
+			setupMocks: func(coord *FinanceCoordinatorMock) {
 				coord.ResolveContextFunc = func(_ context.Context) (finance.Context, error) { return rCtx, nil }
 			},
 			wantErr: true,
@@ -350,7 +348,7 @@ func TestFinanceHandler_WriteTools(t *testing.T) {
 				"destination_account_id": "acc_2",
 				"source_amount_cents":    10000,
 			},
-			setupMocks: func(coord *FinanceCoordinatorMock, _ *InboxStagerMock) {
+			setupMocks: func(coord *FinanceCoordinatorMock) {
 				coord.ResolveContextFunc = func(_ context.Context) (finance.Context, error) { return rCtx, nil }
 				coord.CreateTransferFunc = func(_ context.Context, req *financeapp.CreateTransferRequest) (*finance.Transfer, error) {
 					if req.DestinationAmount != 10000 {
@@ -376,9 +374,9 @@ func TestFinanceHandler_WriteTools(t *testing.T) {
 				"amount_cents": 4500,
 				"currency":     "USD",
 			},
-			setupMocks: func(coord *FinanceCoordinatorMock, stager *InboxStagerMock) {
+			setupMocks: func(coord *FinanceCoordinatorMock) {
 				coord.ResolveContextFunc = func(_ context.Context) (finance.Context, error) { return rCtx, nil }
-				stager.StageInboxItemFunc = func(_ context.Context, _ finance.Context, req *finance.StageInboxItem) (*finance.InboxItem, error) {
+				coord.StageInboxItemFunc = func(_ context.Context, req *finance.StageInboxItem) (*finance.InboxItem, error) {
 					if req.Vendor != "Whole Foods" || req.Amount != 4500 {
 						t.Errorf("unexpected stage request: %+v", req)
 					}
@@ -402,7 +400,7 @@ func TestFinanceHandler_WriteTools(t *testing.T) {
 				"destination_account_id": "acc_1",
 				"source_amount_cents":    1000,
 			},
-			setupMocks: func(coord *FinanceCoordinatorMock, _ *InboxStagerMock) {
+			setupMocks: func(coord *FinanceCoordinatorMock) {
 				coord.ResolveContextFunc = func(_ context.Context) (finance.Context, error) { return rCtx, nil }
 				coord.CreateTransferFunc = func(_ context.Context, _ *financeapp.CreateTransferRequest) (*finance.Transfer, error) {
 					return nil, errors.E(errors.Invalid, "source and destination accounts must differ")
@@ -416,16 +414,14 @@ func TestFinanceHandler_WriteTools(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			agg := &FinanceAggregatorMock{}
 			coord := &FinanceCoordinatorMock{}
-			stager := &InboxStagerMock{}
 			if tc.setupMocks != nil {
-				tc.setupMocks(coord, stager)
+				tc.setupMocks(coord)
 			}
 
 			srv := mcptransport.NewServer(mcptransport.ServerConfig{})
 			NewHandler(Dependencies{
 				Aggregator:  agg,
 				Coordinator: coord,
-				InboxStager: stager,
 			}).Register(srv.Registry())
 
 			ctx := auth.WithSpaceScope(

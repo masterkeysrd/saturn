@@ -1595,3 +1595,128 @@ func TestCoordinator_TimezoneIntegration(t *testing.T) {
 		}
 	})
 }
+
+func TestCoordinator_ViewerRBAC(t *testing.T) {
+	viewerCtx := newTestContextWithRole("spc_1", "usr_viewer", string(space.RoleViewer))
+	upperViewerCtx := newTestContextWithRole("spc_1", "usr_viewer", "VIEWER")
+	missingRoleCtx := newTestContextWithRole("spc_1", "usr_norole", "")
+
+	coord := NewCoordinator(Dependencies{
+		FinanceService: &FinanceServiceMock{},
+	})
+
+	tests := []struct {
+		name string
+		ctx  context.Context
+		fn   func(ctx context.Context) error
+	}{
+		{
+			name: "Setup viewer",
+			ctx:  viewerCtx,
+			fn: func(ctx context.Context) error {
+				_, err := coord.Setup(ctx, &SetupRequest{BaseCurrency: "USD"})
+				return err
+			},
+		},
+		{
+			name: "UpdateSettings VIEWER",
+			ctx:  upperViewerCtx,
+			fn: func(ctx context.Context) error {
+				_, err := coord.UpdateSettings(ctx, &UpdateSettingsRequest{Settings: &finance.Settings{FiscalYearStartMonth: 1}})
+				return err
+			},
+		},
+		{
+			name: "CreateAccount missing role",
+			ctx:  missingRoleCtx,
+			fn: func(ctx context.Context) error {
+				_, err := coord.CreateAccount(ctx, &CreateAccountRequest{Name: "Checking"})
+				return err
+			},
+		},
+		{
+			name: "CreateExpense viewer",
+			ctx:  viewerCtx,
+			fn: func(ctx context.Context) error {
+				_, err := coord.CreateExpense(ctx, &CreateExpenseRequest{BudgetID: "bgt_1", Amount: 100})
+				return err
+			},
+		},
+		{
+			name: "CreateBudget viewer",
+			ctx:  viewerCtx,
+			fn: func(ctx context.Context) error {
+				_, err := coord.CreateBudget(ctx, &CreateBudgetRequest{Budget: &finance.Budget{Name: "Food"}})
+				return err
+			},
+		},
+		{
+			name: "CreateTransfer viewer",
+			ctx:  viewerCtx,
+			fn: func(ctx context.Context) error {
+				_, err := coord.CreateTransfer(ctx, &CreateTransferRequest{SourceAccountID: "acc_1", DestinationAccountID: "acc_2", SourceAmount: 100})
+				return err
+			},
+		},
+		{
+			name: "CreateBorrowing viewer",
+			ctx:  viewerCtx,
+			fn: func(ctx context.Context) error {
+				_, err := coord.CreateBorrowing(ctx, &CreateBorrowingRequest{Counterparty: "Alice", TotalAmount: 100})
+				return err
+			},
+		},
+		{
+			name: "CreateRecurringTransaction viewer",
+			ctx:  viewerCtx,
+			fn: func(ctx context.Context) error {
+				_, err := coord.CreateRecurringTransaction(ctx, &CreateRecurringTransactionRequest{Name: "Rent", Amount: 100})
+				return err
+			},
+		},
+		{
+			name: "ApproveInboxItem viewer",
+			ctx:  viewerCtx,
+			fn: func(ctx context.Context) error {
+				_, err := coord.ApproveInboxItem(ctx, "ibx_1")
+				return err
+			},
+		},
+		{
+			name: "ImportStatement viewer",
+			ctx:  viewerCtx,
+			fn: func(ctx context.Context) error {
+				_, err := coord.ImportStatement(ctx, "acc_1", &finance.Statement{})
+				return err
+			},
+		},
+		{
+			name: "CreateExchangeRate viewer",
+			ctx:  viewerCtx,
+			fn: func(ctx context.Context) error {
+				_, err := coord.CreateExchangeRate(ctx, &CreateExchangeRateRequest{FromCurrency: "USD", ToCurrency: "EUR", Rate: 0.9})
+				return err
+			},
+		},
+		{
+			name: "CreateInstitution viewer",
+			ctx:  viewerCtx,
+			fn: func(ctx context.Context) error {
+				_, err := coord.CreateInstitution(ctx, &finance.Institution{Name: "Bank"})
+				return err
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.fn(tc.ctx)
+			if err == nil {
+				t.Fatal("expected permission error, got nil")
+			}
+			if !errors.Is(err, errors.Permission) {
+				t.Fatalf("expected errors.Permission, got %v", err)
+			}
+		})
+	}
+}

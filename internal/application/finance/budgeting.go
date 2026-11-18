@@ -21,7 +21,7 @@ type UpdateBudgetRequest struct {
 // CreateBudget orchestrates budget template creation.
 func (c *coordinator) CreateBudget(ctx context.Context, req *CreateBudgetRequest) (*finance.Budget, error) {
 	const op errors.Op = "application/finance.CreateBudget"
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func (c *coordinator) CreateBudget(ctx context.Context, req *CreateBudgetRequest
 // UpdateBudget orchestrates budget template updates.
 func (c *coordinator) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest) (*finance.Budget, error) {
 	const op errors.Op = "application/finance.UpdateBudget"
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ type DeleteBudgetRequest struct {
 // DeleteBudget orchestrates budget template deletion.
 func (c *coordinator) DeleteBudget(ctx context.Context, req *DeleteBudgetRequest) error {
 	const op errors.Op = "application/finance.DeleteBudget"
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return err
 	}

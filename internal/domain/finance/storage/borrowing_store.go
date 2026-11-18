@@ -208,6 +208,7 @@ func (s *BorrowingStore) ListBySpace(ctx context.Context, rCtx finance.Context, 
 		Sort:     sortOrder,
 		Cursor:   cursor,
 		PageSize: uint(filter.PageSize),
+		Nullable: sortOrder.Field == "due_at",
 	})
 
 	query, args, err := ds.Prepared(true).ToSQL()
@@ -229,6 +230,7 @@ func (s *BorrowingStore) ListBySpace(ctx context.Context, rCtx finance.Context, 
 		return paging.Cursor{
 			SortValue: b.GetSortValue(sortOrder.Field),
 			ID:        string(b.ID),
+			IsNull:    sortOrder.Field == "due_at" && b.DueAt == nil,
 		}
 	})
 

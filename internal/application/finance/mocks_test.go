@@ -3142,6 +3142,9 @@ type CoordinatorMock struct {
 	// ListTransfersFunc mocks the ListTransfers method.
 	ListTransfersFunc func(ctx context.Context, req *ListTransfersRequest) ([]*finance.Transfer, string, error)
 
+	// StageInboxItemFunc mocks the StageInboxItem method.
+	StageInboxItemFunc func(ctx context.Context, req *finance.StageInboxItem) (*finance.InboxItem, error)
+
 	// DiscardInboxItemFunc mocks the DiscardInboxItem method.
 	DiscardInboxItemFunc func(ctx context.Context, id string) error
 
@@ -3373,6 +3376,10 @@ type CoordinatorMock struct {
 			Ctx context.Context
 			Req *ListTransfersRequest
 		}
+		StageInboxItem []struct {
+			Ctx context.Context
+			Req *finance.StageInboxItem
+		}
 		DiscardInboxItem []struct {
 			Ctx context.Context
 			Id  string
@@ -3441,6 +3448,7 @@ type CoordinatorMock struct {
 	lockGetTransfer                   sync.RWMutex
 	lockDeleteTransfer                sync.RWMutex
 	lockListTransfers                 sync.RWMutex
+	lockStageInboxItem                sync.RWMutex
 	lockDiscardInboxItem              sync.RWMutex
 	lockUpdateInboxItem               sync.RWMutex
 	lockApproveInboxItem              sync.RWMutex
@@ -4914,6 +4922,33 @@ func (mock *CoordinatorMock) ListTransfersCalls() []struct {
 	mock.lockListTransfers.RLock()
 	defer mock.lockListTransfers.RUnlock()
 	return mock.calls.ListTransfers
+}
+
+// StageInboxItem calls StageInboxItemFunc.
+func (mock *CoordinatorMock) StageInboxItem(ctx context.Context, req *finance.StageInboxItem) (*finance.InboxItem, error) {
+	if mock.StageInboxItemFunc == nil {
+		panic("CoordinatorMock.StageInboxItemFunc: method is nil but Coordinator.StageInboxItem was just called")
+	}
+	mock.lockStageInboxItem.Lock()
+	mock.calls.StageInboxItem = append(mock.calls.StageInboxItem, struct {
+		Ctx context.Context
+		Req *finance.StageInboxItem
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockStageInboxItem.Unlock()
+	return mock.StageInboxItemFunc(ctx, req)
+}
+
+// StageInboxItemCalls returns all calls made to StageInboxItem.
+func (mock *CoordinatorMock) StageInboxItemCalls() []struct {
+	Ctx context.Context
+	Req *finance.StageInboxItem
+} {
+	mock.lockStageInboxItem.RLock()
+	defer mock.lockStageInboxItem.RUnlock()
+	return mock.calls.StageInboxItem
 }
 
 // DiscardInboxItem calls DiscardInboxItemFunc.

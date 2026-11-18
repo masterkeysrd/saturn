@@ -21,7 +21,7 @@ type CreateBorrowingRequest struct {
 }
 
 func (c *coordinator) CreateBorrowing(ctx context.Context, req *CreateBorrowingRequest) (*finance.Borrowing, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ type UpdateBorrowingRequest struct {
 }
 
 func (c *coordinator) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingRequest) (*finance.Borrowing, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (c *coordinator) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingR
 }
 
 func (c *coordinator) DeleteBorrowing(ctx context.Context, id finance.BorrowingID) error {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ type AdjustBorrowingBalanceRequest struct {
 }
 
 func (c *coordinator) AdjustBorrowingBalance(ctx context.Context, req *AdjustBorrowingBalanceRequest) (*finance.Borrowing, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ type LogBorrowingTransactionRequest struct {
 }
 
 func (c *coordinator) LogBorrowingTransaction(ctx context.Context, req *LogBorrowingTransactionRequest) (*finance.Transaction, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ type UpdateBorrowingTransactionRequest struct {
 }
 
 func (c *coordinator) UpdateBorrowingTransaction(ctx context.Context, req *UpdateBorrowingTransactionRequest) (*finance.Transaction, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ type DeleteBorrowingTransactionRequest struct {
 }
 
 func (c *coordinator) DeleteBorrowingTransaction(ctx context.Context, req *DeleteBorrowingTransactionRequest) error {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return err
 	}

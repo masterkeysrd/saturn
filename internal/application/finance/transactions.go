@@ -18,7 +18,7 @@ type CreateExpenseRequest struct {
 }
 
 func (c *coordinator) CreateExpense(ctx context.Context, req *CreateExpenseRequest) (*finance.Transaction, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ type CreateIncomeRequest struct {
 }
 
 func (c *coordinator) CreateIncome(ctx context.Context, req *CreateIncomeRequest) (*finance.Transaction, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func (c *coordinator) CreateIncome(ctx context.Context, req *CreateIncomeRequest
 }
 
 func (c *coordinator) DeleteTransaction(ctx context.Context, id finance.TransactionID) error {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ type UpdateExpenseRequest struct {
 }
 
 func (c *coordinator) UpdateExpense(ctx context.Context, req *UpdateExpenseRequest) (*finance.Transaction, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ type UpdateIncomeRequest struct {
 }
 
 func (c *coordinator) UpdateIncome(ctx context.Context, req *UpdateIncomeRequest) (*finance.Transaction, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}

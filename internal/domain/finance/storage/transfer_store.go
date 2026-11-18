@@ -3,12 +3,14 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
+	"time"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
 type transferDB struct {
@@ -102,22 +104,18 @@ func (s *TransferStore) ListBySpace(ctx context.Context, rCtx finance.Context, l
 		limit = 20
 	}
 
-	var cursorID string
-	if pageToken != "" {
-		if decoded, err := base64.URLEncoding.DecodeString(pageToken); err == nil {
-			cursorID = string(decoded)
-		}
-	}
+	cursor, _ := paging.Decode(pageToken)
+	sortOrder := sorting.New("transfer_date", false)
 
 	ds := pgDialect.From(goqu.S("finance").Table("transfer")).
 		Select("*").
 		Where(goqu.Ex{"space_id": string(rCtx.SpaceID())})
 
-	if cursorID != "" {
-		ds = ds.Where(goqu.I("id").Lt(cursorID))
-	}
-
-	ds = ds.Order(goqu.I("transfer_date").Desc(), goqu.I("id").Desc()).Limit(uint(limit + 1))
+	ds = paging.ApplyPagination(ds, paging.Options{
+		Sort:     sortOrder,
+		Cursor:   cursor,
+		PageSize: uint(limit),
+	})
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
@@ -127,11 +125,6 @@ func (s *TransferStore) ListBySpace(ctx context.Context, rCtx finance.Context, l
 	var rows []transferDB
 	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
 		return nil, "", errors.E(op, err)
-	}
-
-	hasMore := len(rows) > int(limit)
-	if hasMore {
-		rows = rows[:limit]
 	}
 
 	transfers := make([]*finance.Transfer, 0, len(rows))
@@ -149,13 +142,14 @@ func (s *TransferStore) ListBySpace(ctx context.Context, rCtx finance.Context, l
 		})
 	}
 
-	var nextToken string
-	if hasMore && len(rows) > 0 {
-		lastTransfer := rows[len(rows)-1]
-		nextToken = base64.URLEncoding.EncodeToString([]byte(lastTransfer.ID))
-	}
+	page := paging.NewPage(transfers, int(limit), func(t *finance.Transfer) paging.Cursor {
+		return paging.Cursor{
+			SortValue: t.TransferDate.UTC().Format(time.RFC3339Nano),
+			ID:        string(t.ID),
+		}
+	})
 
-	return transfers, nextToken, nil
+	return page.Items, page.NextPageToken, nil
 }
 
 func rowAmount(amount int64) int64 {

@@ -3,11 +3,13 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 type mockDB struct {
@@ -436,4 +438,113 @@ func TestExchangeRateStore(t *testing.T) {
 			t.Errorf("expected op domain/finance/storage.GetRate, got %v", err)
 		}
 	})
+}
+
+func TestStatementStore_LineSpaceScoping(t *testing.T) {
+	ctx := context.Background()
+	rCtx := finance.NewContext("sp_1", "user_1", time.UTC, "USD")
+
+	t.Run("ListLines enforces space_id via statement EXISTS", func(t *testing.T) {
+		var capturedQuery string
+		var capturedArgs []any
+		mock := &mockDB{
+			selectFn: func(ctx context.Context, dest any, query string, args ...any) error {
+				capturedQuery = query
+				capturedArgs = args
+				return nil
+			},
+		}
+		store := NewStatementStore(mock)
+		_, err := store.ListLines(ctx, rCtx, "stmt_1")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !strings.Contains(capturedQuery, "EXISTS (SELECT 1 FROM finance.statement s WHERE s.id = finance.statement_line.statement_id AND s.space_id =") {
+			t.Errorf("expected space_id EXISTS predicate in query, got %s", capturedQuery)
+		}
+		if len(capturedArgs) != 2 || capturedArgs[1] != "sp_1" {
+			t.Errorf("expected sp_1 in args, got %v", capturedArgs)
+		}
+	})
+
+	t.Run("GetLineByID enforces space_id via statement EXISTS", func(t *testing.T) {
+		var capturedQuery string
+		var capturedArgs []any
+		mock := &mockDB{
+			getFn: func(ctx context.Context, dest any, query string, args ...any) error {
+				capturedQuery = query
+				capturedArgs = args
+				return errors.E(errors.NotExist, "not found")
+			},
+		}
+		store := NewStatementStore(mock)
+		_, _ = store.GetLineByID(ctx, rCtx, "line_1")
+		if !strings.Contains(capturedQuery, "EXISTS (SELECT 1 FROM finance.statement s WHERE s.id = finance.statement_line.statement_id AND s.space_id =") {
+			t.Errorf("expected space_id EXISTS predicate in query, got %s", capturedQuery)
+		}
+		if len(capturedArgs) != 2 || capturedArgs[1] != "sp_1" {
+			t.Errorf("expected sp_1 in args, got %v", capturedArgs)
+		}
+	})
+
+	t.Run("UpdateLineDraft enforces space_id via statement EXISTS", func(t *testing.T) {
+		var capturedQuery string
+		var capturedArgs []any
+		mock := &mockDB{
+			execOneFn: func(ctx context.Context, query string, args ...any) error {
+				capturedQuery = query
+				capturedArgs = args
+				return nil
+			},
+		}
+		store := NewStatementStore(mock)
+		err := store.UpdateLineDraft(ctx, rCtx, &finance.StatementLine{ID: "line_1", Version: 1})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !strings.Contains(capturedQuery, "EXISTS (SELECT 1 FROM finance.statement s WHERE s.id = finance.statement_line.statement_id AND s.space_id =") {
+			t.Errorf("expected space_id EXISTS predicate in query, got %s", capturedQuery)
+		}
+		foundSpace := false
+		for _, a := range capturedArgs {
+			if a == "sp_1" {
+				foundSpace = true
+			}
+		}
+		if !foundSpace {
+			t.Errorf("expected sp_1 in args, got %v", capturedArgs)
+		}
+	})
+}
+
+func TestTransferStore_KeysetPagination(t *testing.T) {
+	ctx := context.Background()
+	rCtx := finance.NewContext("sp_1", "user_1", time.UTC, "USD")
+
+	var capturedQuery string
+	var capturedArgs []any
+	mock := &mockDB{
+		selectFn: func(ctx context.Context, dest any, query string, args ...any) error {
+			capturedQuery = query
+			capturedArgs = args
+			return nil
+		},
+	}
+
+	cursor := paging.Cursor{
+		SortValue: "2026-08-01T10:00:00.123456Z",
+		ID:        "trf_10",
+	}.Encode()
+
+	store := NewTransferStore(mock)
+	_, _, err := store.ListBySpace(ctx, rCtx, 10, cursor)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(capturedQuery, `"transfer_date" <`) || !strings.Contains(capturedQuery, `"id" <`) {
+		t.Errorf("expected composite (transfer_date, id) keyset pagination in query, got %s", capturedQuery)
+	}
+	if len(capturedArgs) < 4 {
+		t.Errorf("expected cursor args in query, got %v", capturedArgs)
+	}
 }

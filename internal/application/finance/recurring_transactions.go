@@ -49,7 +49,7 @@ type ConfirmScheduledTransactionRequest struct {
 }
 
 func (c *coordinator) CreateRecurringTransaction(ctx context.Context, req *CreateRecurringTransactionRequest) (*finance.RecurringTransaction, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (c *coordinator) CreateRecurringTransaction(ctx context.Context, req *Creat
 }
 
 func (c *coordinator) UpdateRecurringTransaction(ctx context.Context, req *UpdateRecurringTransactionRequest) (*finance.RecurringTransaction, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (c *coordinator) UpdateRecurringTransaction(ctx context.Context, req *Updat
 }
 
 func (c *coordinator) DeleteRecurringTransaction(ctx context.Context, id finance.RecurringTransactionID, opts finance.DeleteOptions) error {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func (c *coordinator) DeleteRecurringTransaction(ctx context.Context, id finance
 }
 
 func (c *coordinator) ConfirmScheduledTransaction(ctx context.Context, req *ConfirmScheduledTransactionRequest) (*finance.Transaction, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ type MatchScheduledTransactionRequest struct {
 }
 
 func (c *coordinator) MatchScheduledTransaction(ctx context.Context, req *MatchScheduledTransactionRequest) (*finance.Transaction, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ func (c *coordinator) MatchScheduledTransaction(ctx context.Context, req *MatchS
 }
 
 func (c *coordinator) SkipScheduledTransaction(ctx context.Context, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}

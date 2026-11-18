@@ -82,7 +82,7 @@ var ExchangeRateSortFields = map[string]func(*ExchangeRate) string{
 	"from_currency": func(r *ExchangeRate) string { return string(r.FromCurrency) },
 	"to_currency":   func(r *ExchangeRate) string { return string(r.ToCurrency) },
 	"rate":          func(r *ExchangeRate) string { return fmt.Sprintf("%f", r.Rate) },
-	"create_time":   func(r *ExchangeRate) string { return r.CreateTime.Format(time.RFC3339) },
+	"create_time":   func(r *ExchangeRate) string { return r.CreateTime.UTC().Format(time.RFC3339Nano) },
 }
 
 // IsExchangeRateSortField validates if a sort column name is allowed.

@@ -1304,6 +1304,30 @@ func (l *LoggingCoordinator) ListTransfers(ctx context.Context, req *ListTransfe
 	return res1, res2, nil
 }
 
+// StageInboxItem executes next.StageInboxItem and logs execution duration and errors.
+func (l *LoggingCoordinator) StageInboxItem(ctx context.Context, req *finance.StageInboxItem) (*finance.InboxItem, error) {
+	start := time.Now()
+	res, err := l.next.StageInboxItem(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "finance.StageInboxItem failed",
+			log.String("component", "finance"),
+			log.String("operation", "StageInboxItem"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "finance.StageInboxItem completed",
+		log.String("component", "finance"),
+		log.String("operation", "StageInboxItem"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
 // DiscardInboxItem executes next.DiscardInboxItem and logs execution duration and errors.
 func (l *LoggingCoordinator) DiscardInboxItem(ctx context.Context, id string) error {
 	start := time.Now()

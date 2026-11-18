@@ -301,7 +301,10 @@ func (s *StatementStore) ListLines(ctx context.Context, rCtx finance.Context, st
 	const op errors.Op = "domain/finance/storage.ListStatementLines"
 	ds := pgDialect.From(goqu.S("finance").Table("statement_line")).
 		Select("*").
-		Where(goqu.Ex{"statement_id": string(statementID)}).
+		Where(
+			goqu.Ex{"statement_id": string(statementID)},
+			goqu.L("EXISTS (SELECT 1 FROM finance.statement s WHERE s.id = finance.statement_line.statement_id AND s.space_id = ?)", string(rCtx.SpaceID())),
+		).
 		Order(goqu.I("row_index").Asc())
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
@@ -322,7 +325,10 @@ func (s *StatementStore) GetLineByID(ctx context.Context, rCtx finance.Context, 
 	const op errors.Op = "domain/finance/storage.GetStatementLineByID"
 	ds := pgDialect.From(goqu.S("finance").Table("statement_line")).
 		Select("*").
-		Where(goqu.Ex{"id": string(id)})
+		Where(
+			goqu.Ex{"id": string(id)},
+			goqu.L("EXISTS (SELECT 1 FROM finance.statement s WHERE s.id = finance.statement_line.statement_id AND s.space_id = ?)", string(rCtx.SpaceID())),
+		)
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, errors.E(op, err)
@@ -357,7 +363,10 @@ func (s *StatementStore) UpdateLineDraft(ctx context.Context, rCtx finance.Conte
 
 	ds := pgDialect.Update(goqu.S("finance").Table("statement_line")).
 		Set(rec).
-		Where(ex)
+		Where(
+			ex,
+			goqu.L("EXISTS (SELECT 1 FROM finance.statement s WHERE s.id = finance.statement_line.statement_id AND s.space_id = ?)", string(rCtx.SpaceID())),
+		)
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {

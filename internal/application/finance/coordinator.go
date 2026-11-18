@@ -2,6 +2,7 @@ package financeapp
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -227,6 +228,8 @@ type Coordinator interface {
 	ListTransfers(ctx context.Context, req *ListTransfersRequest) ([]*finance.Transfer, string, error)
 
 	// @transactional
+	StageInboxItem(ctx context.Context, req *finance.StageInboxItem) (*finance.InboxItem, error)
+	// @transactional
 	DiscardInboxItem(ctx context.Context, id string) error
 	// @transactional
 	UpdateInboxItem(ctx context.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error)
@@ -418,6 +421,23 @@ func (c *coordinator) resolveContext(ctx context.Context) (*RequestContext, erro
 	}, nil
 }
 
+// resolveWriteContext resolves the RequestContext and rejects read-only viewer or missing space role callers.
+func (c *coordinator) resolveWriteContext(ctx context.Context) (*RequestContext, error) {
+	const op errors.Op = "application/finance.resolveWriteContext"
+
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	role, ok := auth.SpaceRoleFromContext(ctx)
+	if !ok || strings.EqualFold(role, string(space.RoleViewer)) {
+		return nil, errors.E(op, errors.Permission, "viewer role cannot modify finance data")
+	}
+
+	return rCtx, nil
+}
+
 // toLocation converts a non-zero time to loc, preserving zero times.
 func toLocation(t time.Time, loc *time.Location) time.Time {
 	if t.IsZero() {
@@ -437,7 +457,7 @@ type SetupRequest struct {
 
 // Setup sets up base currency preferences for a workspace.
 func (c *coordinator) Setup(ctx context.Context, req *SetupRequest) (*settings.Entry[finance.Settings], error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -473,7 +493,7 @@ func (c *coordinator) UpdateSettings(ctx context.Context, req *UpdateSettingsReq
 		return nil, errors.E(op, errors.Invalid, "settings are required")
 	}
 
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
@@ -496,7 +516,7 @@ func (c *coordinator) ListCurrencies(ctx context.Context) ([]finance.CurrencyInf
 
 // ImportStatement imports a statement for the session's workspace.
 func (c *coordinator) ImportStatement(ctx context.Context, accountID finance.AccountID, stmt *finance.Statement) (*finance.Statement, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -505,7 +525,7 @@ func (c *coordinator) ImportStatement(ctx context.Context, accountID finance.Acc
 
 // DeleteStatement deletes a statement for the session's workspace.
 func (c *coordinator) DeleteStatement(ctx context.Context, id finance.StatementID, opts finance.DeleteOptions) error {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -514,7 +534,7 @@ func (c *coordinator) DeleteStatement(ctx context.Context, id finance.StatementI
 
 // UpdateStatement updates statement metadata and balances.
 func (c *coordinator) UpdateStatement(ctx context.Context, stmt *finance.Statement, mask []string) (*finance.Statement, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -523,7 +543,7 @@ func (c *coordinator) UpdateStatement(ctx context.Context, stmt *finance.Stateme
 
 // UpdateStatementLine updates draft decisions on a statement line.
 func (c *coordinator) UpdateStatementLine(ctx context.Context, line *finance.StatementLine, mask []string) (*finance.StatementLine, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -532,7 +552,7 @@ func (c *coordinator) UpdateStatementLine(ctx context.Context, line *finance.Sta
 
 // CompleteStatement finalizes statement reconciliation.
 func (c *coordinator) CompleteStatement(ctx context.Context, id finance.StatementID) (*finance.Statement, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -541,7 +561,7 @@ func (c *coordinator) CompleteStatement(ctx context.Context, id finance.Statemen
 
 // InvertStatementSigns inverts all line amounts and negates statement starting/ending balances.
 func (c *coordinator) InvertStatementSigns(ctx context.Context, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, nil, err
 	}

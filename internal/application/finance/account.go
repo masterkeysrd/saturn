@@ -41,7 +41,7 @@ type AdjustAccountBalanceRequest struct {
 }
 
 func (c *coordinator) CreateAccount(ctx context.Context, req *CreateAccountRequest) (*finance.Account, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (c *coordinator) CreateAccount(ctx context.Context, req *CreateAccountReque
 }
 
 func (c *coordinator) UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (*finance.Account, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (c *coordinator) UpdateAccount(ctx context.Context, req *UpdateAccountReque
 }
 
 func (c *coordinator) DeleteAccount(ctx context.Context, id finance.AccountID, opts finance.DeleteOptions) error {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (c *coordinator) DeleteAccount(ctx context.Context, id finance.AccountID, o
 }
 
 func (c *coordinator) AdjustAccountBalance(ctx context.Context, req *AdjustAccountBalanceRequest) (*finance.Account, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}

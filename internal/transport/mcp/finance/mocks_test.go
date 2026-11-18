@@ -288,6 +288,9 @@ type FinanceCoordinatorMock struct {
 	// CreateTransferFunc mocks the CreateTransfer method.
 	CreateTransferFunc func(ctx context.Context, req *financeapp.CreateTransferRequest) (*finance.Transfer, error)
 
+	// StageInboxItemFunc mocks the StageInboxItem method.
+	StageInboxItemFunc func(ctx context.Context, req *finance.StageInboxItem) (*finance.InboxItem, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		ResolveContext []struct {
@@ -309,12 +312,17 @@ type FinanceCoordinatorMock struct {
 			Ctx context.Context
 			Req *financeapp.CreateTransferRequest
 		}
+		StageInboxItem []struct {
+			Ctx context.Context
+			Req *finance.StageInboxItem
+		}
 	}
 	lockResolveContext sync.RWMutex
 	lockGetInsights    sync.RWMutex
 	lockCreateExpense  sync.RWMutex
 	lockCreateIncome   sync.RWMutex
 	lockCreateTransfer sync.RWMutex
+	lockStageInboxItem sync.RWMutex
 }
 
 // ResolveContext calls ResolveContextFunc.
@@ -449,49 +457,27 @@ func (mock *FinanceCoordinatorMock) CreateTransferCalls() []struct {
 	return mock.calls.CreateTransfer
 }
 
-// Compile-time interface assertion.
-var _ InboxStager = (*InboxStagerMock)(nil)
-
-// InboxStagerMock is a mock implementation of InboxStager.
-type InboxStagerMock struct {
-	// StageInboxItemFunc mocks the StageInboxItem method.
-	StageInboxItemFunc func(ctx context.Context, rCtx finance.Context, req *finance.StageInboxItem) (*finance.InboxItem, error)
-
-	// calls tracks calls to the methods.
-	calls struct {
-		StageInboxItem []struct {
-			Ctx  context.Context
-			RCtx finance.Context
-			Req  *finance.StageInboxItem
-		}
-	}
-	lockStageInboxItem sync.RWMutex
-}
-
 // StageInboxItem calls StageInboxItemFunc.
-func (mock *InboxStagerMock) StageInboxItem(ctx context.Context, rCtx finance.Context, req *finance.StageInboxItem) (*finance.InboxItem, error) {
+func (mock *FinanceCoordinatorMock) StageInboxItem(ctx context.Context, req *finance.StageInboxItem) (*finance.InboxItem, error) {
 	if mock.StageInboxItemFunc == nil {
-		panic("InboxStagerMock.StageInboxItemFunc: method is nil but InboxStager.StageInboxItem was just called")
+		panic("FinanceCoordinatorMock.StageInboxItemFunc: method is nil but FinanceCoordinator.StageInboxItem was just called")
 	}
 	mock.lockStageInboxItem.Lock()
 	mock.calls.StageInboxItem = append(mock.calls.StageInboxItem, struct {
-		Ctx  context.Context
-		RCtx finance.Context
-		Req  *finance.StageInboxItem
+		Ctx context.Context
+		Req *finance.StageInboxItem
 	}{
-		Ctx:  ctx,
-		RCtx: rCtx,
-		Req:  req,
+		Ctx: ctx,
+		Req: req,
 	})
 	mock.lockStageInboxItem.Unlock()
-	return mock.StageInboxItemFunc(ctx, rCtx, req)
+	return mock.StageInboxItemFunc(ctx, req)
 }
 
 // StageInboxItemCalls returns all calls made to StageInboxItem.
-func (mock *InboxStagerMock) StageInboxItemCalls() []struct {
-	Ctx  context.Context
-	RCtx finance.Context
-	Req  *finance.StageInboxItem
+func (mock *FinanceCoordinatorMock) StageInboxItemCalls() []struct {
+	Ctx context.Context
+	Req *finance.StageInboxItem
 } {
 	mock.lockStageInboxItem.RLock()
 	defer mock.lockStageInboxItem.RUnlock()

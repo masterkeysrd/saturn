@@ -22,7 +22,7 @@ type ListTransfersRequest struct {
 }
 
 func (c *coordinator) CreateTransfer(ctx context.Context, req *CreateTransferRequest) (*finance.Transfer, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (c *coordinator) GetTransfer(ctx context.Context, id finance.TransferID) (*
 }
 
 func (c *coordinator) DeleteTransfer(ctx context.Context, id finance.TransferID) error {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return err
 	}

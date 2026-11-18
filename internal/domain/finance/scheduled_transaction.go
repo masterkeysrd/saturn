@@ -266,10 +266,10 @@ const DefaultScheduledTransactionSortField = "due_date"
 
 // ScheduledTransactionSortFields registry maps sortable scheduled transaction field names to cursor strings.
 var ScheduledTransactionSortFields = map[string]func(*ScheduledTransaction) string{
-	"due_date":    func(sp *ScheduledTransaction) string { return sp.DueDate.Format(time.RFC3339) },
+	"due_date":    func(sp *ScheduledTransaction) string { return sp.DueDate.UTC().Format(time.RFC3339Nano) },
 	"amount":      func(sp *ScheduledTransaction) string { return fmt.Sprintf("%018d", sp.Amount) },
 	"status":      func(sp *ScheduledTransaction) string { return string(sp.Status) },
-	"create_time": func(sp *ScheduledTransaction) string { return sp.CreateTime.Format(time.RFC3339) },
+	"create_time": func(sp *ScheduledTransaction) string { return sp.CreateTime.UTC().Format(time.RFC3339Nano) },
 }
 
 func IsScheduledTransactionSortField(field string) bool {

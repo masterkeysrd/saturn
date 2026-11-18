@@ -905,6 +905,26 @@ func (t *TransactionalCoordinator) ListTransfers(ctx context.Context, req *ListT
 	return t.next.ListTransfers(ctx, req)
 }
 
+// StageInboxItem executes next.StageInboxItem inside a database transaction.
+func (t *TransactionalCoordinator) StageInboxItem(ctx context.Context, req *finance.StageInboxItem) (*finance.InboxItem, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.StageInboxItem(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 // DiscardInboxItem executes next.DiscardInboxItem inside a database transaction.
 func (t *TransactionalCoordinator) DiscardInboxItem(ctx context.Context, id string) error {
 	ctx, tx, err := t.txr.Begin(ctx)

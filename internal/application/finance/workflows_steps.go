@@ -152,7 +152,7 @@ func registerFinanceSteps(reg *workflow.Registry, deps WorkflowDependencies) {
 			meta["suggested_borrowing_id"] = borID
 		}
 
-		staged, err := deps.FinanceService.StageInboxItem(ctx, fCtx, &finance.StageInboxItem{
+		stageReq := &finance.StageInboxItem{
 			FlowRunID:       flowRunID,
 			IdempotencyKey:  idemKey,
 			DocType:         docType,
@@ -164,7 +164,18 @@ func registerFinanceSteps(reg *workflow.Registry, deps WorkflowDependencies) {
 			Date:            dateStr,
 			RawPayload:      in.RawPayload,
 			Metadata:        meta,
-		})
+		}
+		var staged *finance.InboxItem
+		var err error
+		if deps.Transactor != nil {
+			err = deps.Transactor.WithTx(ctx, func(txCtx context.Context) error {
+				var txErr error
+				staged, txErr = deps.FinanceService.StageInboxItem(txCtx, fCtx, stageReq)
+				return txErr
+			})
+		} else {
+			staged, err = deps.FinanceService.StageInboxItem(ctx, fCtx, stageReq)
+		}
 		if err != nil {
 			return CreateInboxItemOutput{}, fmt.Errorf("stage inbox item: %w", err)
 		}
@@ -185,6 +196,15 @@ func registerFinanceSteps(reg *workflow.Registry, deps WorkflowDependencies) {
 		InvalidatesPrefixes: []string{"finance."},
 	}, func(ctx context.Context, execCtx *workflow.StepContext[ImportStatementDraftInputs]) (ImportStatementDraftOutput, error) {
 		fCtx := resolveWorkflowFinanceContext(ctx, deps, execCtx.SpaceID)
+		if deps.Transactor != nil && !execCtx.Inputs.DryRun {
+			var out ImportStatementDraftOutput
+			err := deps.Transactor.WithTx(ctx, func(txCtx context.Context) error {
+				var txErr error
+				out, txErr = executeImportStatementDraft(txCtx, fCtx, deps.FinanceService, execCtx.Inputs)
+				return txErr
+			})
+			return out, err
+		}
 		return executeImportStatementDraft(ctx, fCtx, deps.FinanceService, execCtx.Inputs)
 	})
 }

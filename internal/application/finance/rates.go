@@ -40,7 +40,7 @@ type DeleteExchangeRateRequest struct {
 }
 
 func (c *coordinator) CreateExchangeRate(ctx context.Context, req *CreateExchangeRateRequest) (*finance.ExchangeRate, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (c *coordinator) GetExchangeRate(ctx context.Context, req *GetExchangeRateR
 }
 
 func (c *coordinator) UpdateExchangeRate(ctx context.Context, req *UpdateExchangeRateRequest) (*finance.ExchangeRate, error) {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (c *coordinator) ListExchangeRates(ctx context.Context, req *ListExchangeRa
 }
 
 func (c *coordinator) DeleteExchangeRate(ctx context.Context, req *DeleteExchangeRateRequest) error {
-	rCtx, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveWriteContext(ctx)
 	if err != nil {
 		return err
 	}
