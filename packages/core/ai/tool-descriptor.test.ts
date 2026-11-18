@@ -1,9 +1,16 @@
 import { describe, it, expect } from "vitest"
 import {
   describeToolCall,
+  extractToolErrorMessage,
+  formatCurrencyCents,
   formatToolDuration,
   getStreamPhaseLabel,
-} from "./tool-descriptor"
+  humanizeFieldLabel,
+  isEmptyToolParam,
+  splitThinkingFromText,
+  stripHtmlTags,
+  unwrapToolResult,
+} from "./index"
 
 describe("@saturn/core/ai tool-descriptor", () => {
   it("describes built-in Saturn domain tools with human labels and result counts", () => {
@@ -69,5 +76,142 @@ describe("@saturn/core/ai tool-descriptor", () => {
 
     expect(formatToolDuration(420)).toBe("420ms")
     expect(formatToolDuration(1460)).toBe("1.5s")
+  })
+
+  it("populates isReadOnly and isDestructive for built-in and heuristic tools", () => {
+    const readTool = describeToolCall({ toolName: "finance_list_accounts" })
+    expect(readTool.isReadOnly).toBe(true)
+    expect(readTool.isDestructive).toBe(false)
+
+    const writeTool = describeToolCall({
+      toolName: "finance_create_transaction",
+    })
+    expect(writeTool.isReadOnly).toBe(false)
+    expect(writeTool.isDestructive).toBe(false)
+
+    const deleteTool = describeToolCall({ toolName: "calendar_delete_event" })
+    expect(deleteTool.isReadOnly).toBe(false)
+    expect(deleteTool.isDestructive).toBe(true)
+
+    const sendMailTool = describeToolCall({ toolName: "mail_send_message" })
+    expect(sendMailTool.isReadOnly).toBe(false)
+    expect(sendMailTool.isDestructive).toBe(true)
+
+    const mcpRead = describeToolCall({ toolName: "mcp__github__search_issues" })
+    expect(mcpRead.isReadOnly).toBe(true)
+    expect(mcpRead.isDestructive).toBe(false)
+
+    const mcpDelete = describeToolCall({ toolName: "mcp__jira__delete_issue" })
+    expect(mcpDelete.isReadOnly).toBe(false)
+    expect(mcpDelete.isDestructive).toBe(true)
+  })
+
+  it("unwraps MCP result envelopes and extracts summaries", () => {
+    const wrappedContent = {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            accounts: [{ id: "acc_1" }, { id: "acc_2" }],
+          }),
+        },
+      ],
+    }
+    expect(unwrapToolResult(wrappedContent)).toEqual({
+      accounts: [{ id: "acc_1" }, { id: "acc_2" }],
+    })
+    expect(
+      describeToolCall({
+        toolName: "finance_list_accounts",
+        result: wrappedContent,
+      }).summary
+    ).toBe("2 accounts")
+
+    const structuredEnvelope = {
+      structuredContent: { budgets: [{ id: "bgt_1" }] },
+    }
+    expect(unwrapToolResult(structuredEnvelope)).toEqual({
+      budgets: [{ id: "bgt_1" }],
+    })
+
+    const plainTextEnvelope = {
+      content: [{ type: "text", text: "Operation completed." }],
+    }
+    expect(unwrapToolResult(plainTextEnvelope)).toEqual({
+      text: "Operation completed.",
+    })
+  })
+
+  it("extracts human-readable error messages and formats labels/currency/html", () => {
+    expect(extractToolErrorMessage({ error: "Permission denied" })).toBe(
+      "Permission denied"
+    )
+
+    expect(
+      extractToolErrorMessage({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ error: "Insufficient budget" }),
+          },
+        ],
+      })
+    ).toBe("Insufficient budget")
+
+    expect(
+      extractToolErrorMessage(
+        undefined,
+        JSON.stringify({ message: "Upstream timeout" })
+      )
+    ).toBe("Upstream timeout")
+
+    expect(formatCurrencyCents(4500, "USD")).toBe("$45.00 USD")
+    expect(formatCurrencyCents(1500, "JPY")).toBe("¥1,500 JPY")
+    expect(humanizeFieldLabel("start_date")).toBe("Start Date")
+    expect(humanizeFieldLabel("connectedAccountId")).toBe(
+      "Connected Account ID"
+    )
+    expect(stripHtmlTags("<p>Hello <b>world</b></p><p>Line 2</p>")).toBe(
+      "Hello world\nLine 2"
+    )
+    expect(isEmptyToolParam("")).toBe(true)
+    expect(isEmptyToolParam([])).toBe(true)
+    expect(isEmptyToolParam({})).toBe(true)
+    expect(isEmptyToolParam(0)).toBe(false)
+    expect(isEmptyToolParam(false)).toBe(false)
+  })
+
+  it("describes expanded Finance, Mail, Calendar, and Workflow MCP tools and splits <think> tags", () => {
+    const updTx = describeToolCall({
+      toolName: "finance_update_transaction",
+      arguments: { amount_cents: 4250, currency: "USD" },
+    })
+    expect(updTx.label).toBe("Update Transaction")
+    expect(updTx.isReadOnly).toBe(false)
+    expect(updTx.isDestructive).toBe(false)
+
+    const delTx = describeToolCall({ toolName: "finance_delete_transaction" })
+    expect(delTx.isDestructive).toBe(true)
+
+    const runs = describeToolCall({
+      toolName: "workflows_list_flow_runs",
+      result: { runs: [{ id: "wfr_1" }, { id: "wfr_2" }] },
+    })
+    expect(runs.isReadOnly).toBe(true)
+    expect(runs.summary).toBe("2 runs")
+
+    const closed = splitThinkingFromText(
+      "<think>\nCheck April groceries budget.\n</think>\nYou spent $320."
+    )
+    expect(closed.thinking).toBe("Check April groceries budget.")
+    expect(closed.text).toBe("You spent $320.")
+    expect(closed.hasUnclosedThink).toBe(false)
+
+    const streaming = splitThinkingFromText(
+      "<think>Comparing checking and savings"
+    )
+    expect(streaming.thinking).toBe("Comparing checking and savings")
+    expect(streaming.text).toBe("")
+    expect(streaming.hasUnclosedThink).toBe(true)
   })
 })

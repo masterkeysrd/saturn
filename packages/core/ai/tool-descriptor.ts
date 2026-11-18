@@ -1,3 +1,5 @@
+import { unwrapToolResult } from "./tool-formatting"
+
 export type ToolDomain =
   | "finance"
   | "calendar"
@@ -33,6 +35,8 @@ export interface ToolDescriptor {
   activeLabel: string
   completedLabel: string
   summary?: string
+  isReadOnly: boolean
+  isDestructive: boolean
 }
 
 export interface DescribeToolCallInput {
@@ -48,6 +52,8 @@ interface KnownToolMeta {
   activeLabel: string
   completedLabel: string
   countKeys?: string[]
+  isReadOnly: boolean
+  isDestructive?: boolean
 }
 
 const DOMAIN_LABELS: Record<ToolDomain, string> = {
@@ -68,12 +74,14 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     label: "Workspace Context",
     activeLabel: "Reading workspace context…",
     completedLabel: "Read workspace context",
+    isReadOnly: true,
   },
   space_context: {
     domain: "space",
     label: "Workspace Context",
     activeLabel: "Reading workspace context…",
     completedLabel: "Read workspace context",
+    isReadOnly: true,
   },
 
   // Finance
@@ -83,6 +91,7 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     activeLabel: "Checking accounts…",
     completedLabel: "Checked accounts",
     countKeys: ["accounts"],
+    isReadOnly: true,
   },
   finance_accounts: {
     domain: "finance",
@@ -90,6 +99,7 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     activeLabel: "Reading accounts…",
     completedLabel: "Read accounts",
     countKeys: ["accounts"],
+    isReadOnly: true,
   },
   finance_list_budgets: {
     domain: "finance",
@@ -97,6 +107,7 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     activeLabel: "Checking budgets…",
     completedLabel: "Checked budgets",
     countKeys: ["budgets"],
+    isReadOnly: true,
   },
   finance_budgets: {
     domain: "finance",
@@ -104,6 +115,7 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     activeLabel: "Reading budgets…",
     completedLabel: "Read budgets",
     countKeys: ["budgets"],
+    isReadOnly: true,
   },
   finance_list_transactions: {
     domain: "finance",
@@ -111,12 +123,14 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     activeLabel: "Searching transactions…",
     completedLabel: "Searched transactions",
     countKeys: ["transactions"],
+    isReadOnly: true,
   },
   finance_get_insights: {
     domain: "finance",
     label: "Spending Insights",
     activeLabel: "Analyzing spending insights…",
     completedLabel: "Analyzed spending insights",
+    isReadOnly: true,
   },
   finance_list_inbox_items: {
     domain: "finance",
@@ -124,6 +138,7 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     activeLabel: "Checking finance inbox…",
     completedLabel: "Checked finance inbox",
     countKeys: ["items", "inbox_items", "inboxItems"],
+    isReadOnly: true,
   },
   finance_list_borrowings: {
     domain: "finance",
@@ -131,6 +146,7 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     activeLabel: "Checking borrowings…",
     completedLabel: "Checked borrowings",
     countKeys: ["borrowings"],
+    isReadOnly: true,
   },
   finance_list_recurring: {
     domain: "finance",
@@ -138,30 +154,101 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     activeLabel: "Checking recurring items…",
     completedLabel: "Checked recurring items",
     countKeys: ["recurring"],
+    isReadOnly: true,
   },
   finance_create_transaction: {
     domain: "finance",
     label: "Create Transaction",
     activeLabel: "Recording transaction…",
     completedLabel: "Recorded transaction",
+    isReadOnly: false,
   },
   finance_create_expense: {
     domain: "finance",
     label: "Create Expense",
     activeLabel: "Recording expense…",
     completedLabel: "Recorded expense",
+    isReadOnly: false,
   },
   finance_create_transfer: {
     domain: "finance",
     label: "Create Transfer",
     activeLabel: "Recording transfer…",
     completedLabel: "Recorded transfer",
+    isReadOnly: false,
   },
   finance_create_inbox_item: {
     domain: "finance",
     label: "Stage Inbox Item",
     activeLabel: "Staging inbox item…",
     completedLabel: "Staged inbox item",
+    isReadOnly: false,
+  },
+  finance_update_transaction: {
+    domain: "finance",
+    label: "Update Transaction",
+    activeLabel: "Updating transaction…",
+    completedLabel: "Updated transaction",
+    isReadOnly: false,
+  },
+  finance_delete_transaction: {
+    domain: "finance",
+    label: "Delete Transaction",
+    activeLabel: "Deleting transaction…",
+    completedLabel: "Deleted transaction",
+    isReadOnly: false,
+    isDestructive: true,
+  },
+  finance_list_transfers: {
+    domain: "finance",
+    label: "List Transfers",
+    activeLabel: "Checking transfers…",
+    completedLabel: "Checked transfers",
+    countKeys: ["transfers"],
+    isReadOnly: true,
+  },
+  finance_review_inbox_item: {
+    domain: "finance",
+    label: "Review Inbox Item",
+    activeLabel: "Reviewing inbox item…",
+    completedLabel: "Reviewed inbox item",
+    isReadOnly: false,
+  },
+  finance_manage_budget: {
+    domain: "finance",
+    label: "Manage Budget",
+    activeLabel: "Updating budget…",
+    completedLabel: "Saved budget",
+    isReadOnly: false,
+  },
+  finance_adjust_account_balance: {
+    domain: "finance",
+    label: "Adjust Balance",
+    activeLabel: "Reconciling account balance…",
+    completedLabel: "Adjusted account balance",
+    isReadOnly: false,
+  },
+  finance_log_borrowing_payment: {
+    domain: "finance",
+    label: "Log Borrowing Payment",
+    activeLabel: "Recording borrowing payment…",
+    completedLabel: "Recorded borrowing payment",
+    isReadOnly: false,
+  },
+  finance_list_scheduled: {
+    domain: "finance",
+    label: "Upcoming Scheduled",
+    activeLabel: "Checking upcoming bills…",
+    completedLabel: "Checked upcoming bills",
+    countKeys: ["scheduled", "items"],
+    isReadOnly: true,
+  },
+  finance_resolve_scheduled: {
+    domain: "finance",
+    label: "Resolve Scheduled Bill",
+    activeLabel: "Resolving scheduled transaction…",
+    completedLabel: "Resolved scheduled transaction",
+    isReadOnly: false,
   },
 
   // Calendar
@@ -171,6 +258,7 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     activeLabel: "Checking calendars…",
     completedLabel: "Checked calendars",
     countKeys: ["calendars"],
+    isReadOnly: true,
   },
   calendar_list_events: {
     domain: "calendar",
@@ -178,24 +266,36 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     activeLabel: "Checking calendar events…",
     completedLabel: "Checked calendar events",
     countKeys: ["events"],
+    isReadOnly: true,
   },
   calendar_create_event: {
     domain: "calendar",
     label: "Create Event",
     activeLabel: "Scheduling event…",
     completedLabel: "Scheduled event",
+    isReadOnly: false,
   },
   calendar_update_event: {
     domain: "calendar",
     label: "Update Event",
     activeLabel: "Updating event…",
     completedLabel: "Updated event",
+    isReadOnly: false,
   },
   calendar_delete_event: {
     domain: "calendar",
     label: "Delete Event",
     activeLabel: "Deleting event…",
     completedLabel: "Deleted event",
+    isReadOnly: false,
+    isDestructive: true,
+  },
+  calendar_respond_to_event: {
+    domain: "calendar",
+    label: "Respond to Invite",
+    activeLabel: "Updating event RSVP…",
+    completedLabel: "Updated event RSVP",
+    isReadOnly: false,
   },
 
   // Mail
@@ -205,6 +305,7 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     activeLabel: "Searching mail threads…",
     completedLabel: "Searched mail threads",
     countKeys: ["threads"],
+    isReadOnly: true,
   },
   mail_get_thread: {
     domain: "mail",
@@ -212,24 +313,59 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     activeLabel: "Reading email thread…",
     completedLabel: "Read email thread",
     countKeys: ["messages"],
+    isReadOnly: true,
+  },
+  mail_list_drafts: {
+    domain: "mail",
+    label: "List Drafts",
+    activeLabel: "Checking email drafts…",
+    completedLabel: "Checked email drafts",
+    countKeys: ["drafts"],
+    isReadOnly: true,
   },
   mail_create_draft: {
     domain: "mail",
     label: "Create Draft",
     activeLabel: "Drafting email…",
     completedLabel: "Drafted email",
+    isReadOnly: false,
+  },
+  mail_update_draft: {
+    domain: "mail",
+    label: "Update Draft",
+    activeLabel: "Updating email draft…",
+    completedLabel: "Updated email draft",
+    isReadOnly: false,
+  },
+  mail_delete_draft: {
+    domain: "mail",
+    label: "Delete Draft",
+    activeLabel: "Deleting email draft…",
+    completedLabel: "Deleted email draft",
+    isReadOnly: false,
+    isDestructive: true,
+  },
+  mail_modify_thread: {
+    domain: "mail",
+    label: "Update Thread",
+    activeLabel: "Updating email thread…",
+    completedLabel: "Updated email thread",
+    isReadOnly: false,
   },
   mail_archive_thread: {
     domain: "mail",
     label: "Archive Thread",
     activeLabel: "Archiving email thread…",
     completedLabel: "Archived email thread",
+    isReadOnly: false,
   },
   mail_send_message: {
     domain: "mail",
     label: "Send Email",
     activeLabel: "Sending email…",
     completedLabel: "Sent email",
+    isReadOnly: false,
+    isDestructive: true,
   },
 
   // Workflows
@@ -239,6 +375,15 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     activeLabel: "Checking workflows…",
     completedLabel: "Checked workflows",
     countKeys: ["flows"],
+    isReadOnly: true,
+  },
+  workflows_list_flow_runs: {
+    domain: "workflows",
+    label: "List Workflow Runs",
+    activeLabel: "Checking workflow runs…",
+    completedLabel: "Checked workflow runs",
+    countKeys: ["runs"],
+    isReadOnly: true,
   },
   workflows_get_flow_run: {
     domain: "workflows",
@@ -246,12 +391,21 @@ const KNOWN_TOOLS: Record<string, KnownToolMeta> = {
     activeLabel: "Inspecting workflow run…",
     completedLabel: "Inspected workflow run",
     countKeys: ["step_runs", "stepRuns"],
+    isReadOnly: true,
   },
   workflows_execute_flow: {
     domain: "workflows",
     label: "Run Workflow",
     activeLabel: "Running workflow…",
     completedLabel: "Triggered workflow",
+    isReadOnly: false,
+  },
+  workflows_set_flow_enabled: {
+    domain: "workflows",
+    label: "Toggle Workflow",
+    activeLabel: "Updating workflow state…",
+    completedLabel: "Updated workflow state",
+    isReadOnly: false,
   },
 }
 
@@ -365,12 +519,21 @@ function extractSummary(
   return undefined
 }
 
+function inferReadOnly(toolName: string): boolean {
+  return /(?:^|_)(?:list|get|search)(?:_|$)/i.test(toolName)
+}
+
+function inferDestructive(toolName: string): boolean {
+  return /(?:^|_)delete(?:_|$)/i.test(toolName)
+}
+
 export function describeToolCall({
   toolName,
   mcpServerName,
   arguments: args,
   result,
 }: DescribeToolCallInput): ToolDescriptor {
+  const unwrappedResult = unwrapToolResult(result)
   const known = KNOWN_TOOLS[toolName]
   if (known) {
     return {
@@ -381,7 +544,9 @@ export function describeToolCall({
       label: known.label,
       activeLabel: known.activeLabel,
       completedLabel: known.completedLabel,
-      summary: extractSummary(args, result, known.countKeys),
+      summary: extractSummary(args, unwrappedResult, known.countKeys),
+      isReadOnly: known.isReadOnly,
+      isDestructive: Boolean(known.isDestructive),
     }
   }
 
@@ -396,7 +561,9 @@ export function describeToolCall({
       label: agentLabel,
       activeLabel: `Consulting ${agentLabel}…`,
       completedLabel: `Consulted ${agentLabel}`,
-      summary: extractSummary(args, result),
+      summary: extractSummary(args, unwrappedResult),
+      isReadOnly: false,
+      isDestructive: false,
     }
   }
 
@@ -416,7 +583,9 @@ export function describeToolCall({
       label: opLabel,
       activeLabel: `Running ${opLabel}…`,
       completedLabel: `Ran ${opLabel}`,
-      summary: extractSummary(args, result),
+      summary: extractSummary(args, unwrappedResult),
+      isReadOnly: inferReadOnly(rawOp),
+      isDestructive: inferDestructive(rawOp),
     }
   }
 
@@ -433,7 +602,9 @@ export function describeToolCall({
     label,
     activeLabel: `Running ${label}…`,
     completedLabel: label,
-    summary: extractSummary(args, result),
+    summary: extractSummary(args, unwrappedResult),
+    isReadOnly: inferReadOnly(toolName),
+    isDestructive: inferDestructive(toolName),
   }
 }
 
