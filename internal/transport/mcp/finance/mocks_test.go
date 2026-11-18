@@ -23,6 +23,9 @@ type FinanceAggregatorMock struct {
 	// ListBudgetsFunc mocks the ListBudgets method.
 	ListBudgetsFunc func(ctx context.Context, rCtx finance.Context, filter financeaggregator.ListBudgetsFilter) (*paging.Page[*financeaggregator.AggregatedBudget], error)
 
+	// GetTransactionFunc mocks the GetTransaction method.
+	GetTransactionFunc func(ctx context.Context, rCtx finance.Context, view financeaggregator.ViewType, id finance.TransactionID) (*financeaggregator.AggregatedTransaction, error)
+
 	// ListTransactionsFunc mocks the ListTransactions method.
 	ListTransactionsFunc func(ctx context.Context, rCtx finance.Context, view financeaggregator.ViewType, filter finance.TransactionFilter) (*paging.Page[*financeaggregator.AggregatedTransaction], error)
 
@@ -34,6 +37,9 @@ type FinanceAggregatorMock struct {
 
 	// ListRecurringTransactionsFunc mocks the ListRecurringTransactions method.
 	ListRecurringTransactionsFunc func(ctx context.Context, rCtx finance.Context, view financeaggregator.ViewType, filter finance.ListRecurringTransactionsFilter) (*paging.Page[*financeaggregator.AggregatedRecurringTransaction], error)
+
+	// ListScheduledTransactionsFunc mocks the ListScheduledTransactions method.
+	ListScheduledTransactionsFunc func(ctx context.Context, rCtx finance.Context, view financeaggregator.ViewType, filter finance.ListScheduledTransactionsFilter) (*paging.Page[*financeaggregator.AggregatedScheduledTransaction], error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -47,6 +53,12 @@ type FinanceAggregatorMock struct {
 			Ctx    context.Context
 			RCtx   finance.Context
 			Filter financeaggregator.ListBudgetsFilter
+		}
+		GetTransaction []struct {
+			Ctx  context.Context
+			RCtx finance.Context
+			View financeaggregator.ViewType
+			Id   finance.TransactionID
 		}
 		ListTransactions []struct {
 			Ctx    context.Context
@@ -70,13 +82,21 @@ type FinanceAggregatorMock struct {
 			View   financeaggregator.ViewType
 			Filter finance.ListRecurringTransactionsFilter
 		}
+		ListScheduledTransactions []struct {
+			Ctx    context.Context
+			RCtx   finance.Context
+			View   financeaggregator.ViewType
+			Filter finance.ListScheduledTransactionsFilter
+		}
 	}
 	lockListAccounts              sync.RWMutex
 	lockListBudgets               sync.RWMutex
+	lockGetTransaction            sync.RWMutex
 	lockListTransactions          sync.RWMutex
 	lockListInboxItems            sync.RWMutex
 	lockListBorrowings            sync.RWMutex
 	lockListRecurringTransactions sync.RWMutex
+	lockListScheduledTransactions sync.RWMutex
 }
 
 // ListAccounts calls ListAccountsFunc.
@@ -140,6 +160,39 @@ func (mock *FinanceAggregatorMock) ListBudgetsCalls() []struct {
 	mock.lockListBudgets.RLock()
 	defer mock.lockListBudgets.RUnlock()
 	return mock.calls.ListBudgets
+}
+
+// GetTransaction calls GetTransactionFunc.
+func (mock *FinanceAggregatorMock) GetTransaction(ctx context.Context, rCtx finance.Context, view financeaggregator.ViewType, id finance.TransactionID) (*financeaggregator.AggregatedTransaction, error) {
+	if mock.GetTransactionFunc == nil {
+		panic("FinanceAggregatorMock.GetTransactionFunc: method is nil but FinanceAggregator.GetTransaction was just called")
+	}
+	mock.lockGetTransaction.Lock()
+	mock.calls.GetTransaction = append(mock.calls.GetTransaction, struct {
+		Ctx  context.Context
+		RCtx finance.Context
+		View financeaggregator.ViewType
+		Id   finance.TransactionID
+	}{
+		Ctx:  ctx,
+		RCtx: rCtx,
+		View: view,
+		Id:   id,
+	})
+	mock.lockGetTransaction.Unlock()
+	return mock.GetTransactionFunc(ctx, rCtx, view, id)
+}
+
+// GetTransactionCalls returns all calls made to GetTransaction.
+func (mock *FinanceAggregatorMock) GetTransactionCalls() []struct {
+	Ctx  context.Context
+	RCtx finance.Context
+	View financeaggregator.ViewType
+	Id   finance.TransactionID
+} {
+	mock.lockGetTransaction.RLock()
+	defer mock.lockGetTransaction.RUnlock()
+	return mock.calls.GetTransaction
 }
 
 // ListTransactions calls ListTransactionsFunc.
@@ -268,6 +321,39 @@ func (mock *FinanceAggregatorMock) ListRecurringTransactionsCalls() []struct {
 	return mock.calls.ListRecurringTransactions
 }
 
+// ListScheduledTransactions calls ListScheduledTransactionsFunc.
+func (mock *FinanceAggregatorMock) ListScheduledTransactions(ctx context.Context, rCtx finance.Context, view financeaggregator.ViewType, filter finance.ListScheduledTransactionsFilter) (*paging.Page[*financeaggregator.AggregatedScheduledTransaction], error) {
+	if mock.ListScheduledTransactionsFunc == nil {
+		panic("FinanceAggregatorMock.ListScheduledTransactionsFunc: method is nil but FinanceAggregator.ListScheduledTransactions was just called")
+	}
+	mock.lockListScheduledTransactions.Lock()
+	mock.calls.ListScheduledTransactions = append(mock.calls.ListScheduledTransactions, struct {
+		Ctx    context.Context
+		RCtx   finance.Context
+		View   financeaggregator.ViewType
+		Filter finance.ListScheduledTransactionsFilter
+	}{
+		Ctx:    ctx,
+		RCtx:   rCtx,
+		View:   view,
+		Filter: filter,
+	})
+	mock.lockListScheduledTransactions.Unlock()
+	return mock.ListScheduledTransactionsFunc(ctx, rCtx, view, filter)
+}
+
+// ListScheduledTransactionsCalls returns all calls made to ListScheduledTransactions.
+func (mock *FinanceAggregatorMock) ListScheduledTransactionsCalls() []struct {
+	Ctx    context.Context
+	RCtx   finance.Context
+	View   financeaggregator.ViewType
+	Filter finance.ListScheduledTransactionsFilter
+} {
+	mock.lockListScheduledTransactions.RLock()
+	defer mock.lockListScheduledTransactions.RUnlock()
+	return mock.calls.ListScheduledTransactions
+}
+
 // Compile-time interface assertion.
 var _ FinanceCoordinator = (*FinanceCoordinatorMock)(nil)
 
@@ -285,11 +371,56 @@ type FinanceCoordinatorMock struct {
 	// CreateIncomeFunc mocks the CreateIncome method.
 	CreateIncomeFunc func(ctx context.Context, req *financeapp.CreateIncomeRequest) (*finance.Transaction, error)
 
+	// UpdateExpenseFunc mocks the UpdateExpense method.
+	UpdateExpenseFunc func(ctx context.Context, req *financeapp.UpdateExpenseRequest) (*finance.Transaction, error)
+
+	// UpdateIncomeFunc mocks the UpdateIncome method.
+	UpdateIncomeFunc func(ctx context.Context, req *financeapp.UpdateIncomeRequest) (*finance.Transaction, error)
+
+	// DeleteTransactionFunc mocks the DeleteTransaction method.
+	DeleteTransactionFunc func(ctx context.Context, id finance.TransactionID) error
+
 	// CreateTransferFunc mocks the CreateTransfer method.
 	CreateTransferFunc func(ctx context.Context, req *financeapp.CreateTransferRequest) (*finance.Transfer, error)
 
+	// DeleteTransferFunc mocks the DeleteTransfer method.
+	DeleteTransferFunc func(ctx context.Context, id finance.TransferID) error
+
+	// ListTransfersFunc mocks the ListTransfers method.
+	ListTransfersFunc func(ctx context.Context, req *financeapp.ListTransfersRequest) ([]*finance.Transfer, string, error)
+
 	// StageInboxItemFunc mocks the StageInboxItem method.
 	StageInboxItemFunc func(ctx context.Context, req *finance.StageInboxItem) (*finance.InboxItem, error)
+
+	// UpdateInboxItemFunc mocks the UpdateInboxItem method.
+	UpdateInboxItemFunc func(ctx context.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error)
+
+	// DiscardInboxItemFunc mocks the DiscardInboxItem method.
+	DiscardInboxItemFunc func(ctx context.Context, id string) error
+
+	// ApproveInboxItemFunc mocks the ApproveInboxItem method.
+	ApproveInboxItemFunc func(ctx context.Context, id string) (*finance.InboxItem, error)
+
+	// CreateBudgetFunc mocks the CreateBudget method.
+	CreateBudgetFunc func(ctx context.Context, req *financeapp.CreateBudgetRequest) (*finance.Budget, error)
+
+	// UpdateBudgetFunc mocks the UpdateBudget method.
+	UpdateBudgetFunc func(ctx context.Context, req *financeapp.UpdateBudgetRequest) (*finance.Budget, error)
+
+	// GetBudgetFunc mocks the GetBudget method.
+	GetBudgetFunc func(ctx context.Context, id finance.BudgetID) (*finance.Budget, error)
+
+	// AdjustAccountBalanceFunc mocks the AdjustAccountBalance method.
+	AdjustAccountBalanceFunc func(ctx context.Context, req *financeapp.AdjustAccountBalanceRequest) (*finance.Account, error)
+
+	// LogBorrowingTransactionFunc mocks the LogBorrowingTransaction method.
+	LogBorrowingTransactionFunc func(ctx context.Context, req *financeapp.LogBorrowingTransactionRequest) (*finance.Transaction, error)
+
+	// ConfirmScheduledTransactionFunc mocks the ConfirmScheduledTransaction method.
+	ConfirmScheduledTransactionFunc func(ctx context.Context, req *financeapp.ConfirmScheduledTransactionRequest) (*finance.Transaction, error)
+
+	// SkipScheduledTransactionFunc mocks the SkipScheduledTransaction method.
+	SkipScheduledTransactionFunc func(ctx context.Context, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -308,21 +439,97 @@ type FinanceCoordinatorMock struct {
 			Ctx context.Context
 			Req *financeapp.CreateIncomeRequest
 		}
+		UpdateExpense []struct {
+			Ctx context.Context
+			Req *financeapp.UpdateExpenseRequest
+		}
+		UpdateIncome []struct {
+			Ctx context.Context
+			Req *financeapp.UpdateIncomeRequest
+		}
+		DeleteTransaction []struct {
+			Ctx context.Context
+			Id  finance.TransactionID
+		}
 		CreateTransfer []struct {
 			Ctx context.Context
 			Req *financeapp.CreateTransferRequest
+		}
+		DeleteTransfer []struct {
+			Ctx context.Context
+			Id  finance.TransferID
+		}
+		ListTransfers []struct {
+			Ctx context.Context
+			Req *financeapp.ListTransfersRequest
 		}
 		StageInboxItem []struct {
 			Ctx context.Context
 			Req *finance.StageInboxItem
 		}
+		UpdateInboxItem []struct {
+			Ctx  context.Context
+			Item *finance.InboxItem
+			Mask []string
+		}
+		DiscardInboxItem []struct {
+			Ctx context.Context
+			Id  string
+		}
+		ApproveInboxItem []struct {
+			Ctx context.Context
+			Id  string
+		}
+		CreateBudget []struct {
+			Ctx context.Context
+			Req *financeapp.CreateBudgetRequest
+		}
+		UpdateBudget []struct {
+			Ctx context.Context
+			Req *financeapp.UpdateBudgetRequest
+		}
+		GetBudget []struct {
+			Ctx context.Context
+			Id  finance.BudgetID
+		}
+		AdjustAccountBalance []struct {
+			Ctx context.Context
+			Req *financeapp.AdjustAccountBalanceRequest
+		}
+		LogBorrowingTransaction []struct {
+			Ctx context.Context
+			Req *financeapp.LogBorrowingTransactionRequest
+		}
+		ConfirmScheduledTransaction []struct {
+			Ctx context.Context
+			Req *financeapp.ConfirmScheduledTransactionRequest
+		}
+		SkipScheduledTransaction []struct {
+			Ctx context.Context
+			Id  finance.ScheduledTransactionID
+		}
 	}
-	lockResolveContext sync.RWMutex
-	lockGetInsights    sync.RWMutex
-	lockCreateExpense  sync.RWMutex
-	lockCreateIncome   sync.RWMutex
-	lockCreateTransfer sync.RWMutex
-	lockStageInboxItem sync.RWMutex
+	lockResolveContext              sync.RWMutex
+	lockGetInsights                 sync.RWMutex
+	lockCreateExpense               sync.RWMutex
+	lockCreateIncome                sync.RWMutex
+	lockUpdateExpense               sync.RWMutex
+	lockUpdateIncome                sync.RWMutex
+	lockDeleteTransaction           sync.RWMutex
+	lockCreateTransfer              sync.RWMutex
+	lockDeleteTransfer              sync.RWMutex
+	lockListTransfers               sync.RWMutex
+	lockStageInboxItem              sync.RWMutex
+	lockUpdateInboxItem             sync.RWMutex
+	lockDiscardInboxItem            sync.RWMutex
+	lockApproveInboxItem            sync.RWMutex
+	lockCreateBudget                sync.RWMutex
+	lockUpdateBudget                sync.RWMutex
+	lockGetBudget                   sync.RWMutex
+	lockAdjustAccountBalance        sync.RWMutex
+	lockLogBorrowingTransaction     sync.RWMutex
+	lockConfirmScheduledTransaction sync.RWMutex
+	lockSkipScheduledTransaction    sync.RWMutex
 }
 
 // ResolveContext calls ResolveContextFunc.
@@ -430,6 +637,87 @@ func (mock *FinanceCoordinatorMock) CreateIncomeCalls() []struct {
 	return mock.calls.CreateIncome
 }
 
+// UpdateExpense calls UpdateExpenseFunc.
+func (mock *FinanceCoordinatorMock) UpdateExpense(ctx context.Context, req *financeapp.UpdateExpenseRequest) (*finance.Transaction, error) {
+	if mock.UpdateExpenseFunc == nil {
+		panic("FinanceCoordinatorMock.UpdateExpenseFunc: method is nil but FinanceCoordinator.UpdateExpense was just called")
+	}
+	mock.lockUpdateExpense.Lock()
+	mock.calls.UpdateExpense = append(mock.calls.UpdateExpense, struct {
+		Ctx context.Context
+		Req *financeapp.UpdateExpenseRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockUpdateExpense.Unlock()
+	return mock.UpdateExpenseFunc(ctx, req)
+}
+
+// UpdateExpenseCalls returns all calls made to UpdateExpense.
+func (mock *FinanceCoordinatorMock) UpdateExpenseCalls() []struct {
+	Ctx context.Context
+	Req *financeapp.UpdateExpenseRequest
+} {
+	mock.lockUpdateExpense.RLock()
+	defer mock.lockUpdateExpense.RUnlock()
+	return mock.calls.UpdateExpense
+}
+
+// UpdateIncome calls UpdateIncomeFunc.
+func (mock *FinanceCoordinatorMock) UpdateIncome(ctx context.Context, req *financeapp.UpdateIncomeRequest) (*finance.Transaction, error) {
+	if mock.UpdateIncomeFunc == nil {
+		panic("FinanceCoordinatorMock.UpdateIncomeFunc: method is nil but FinanceCoordinator.UpdateIncome was just called")
+	}
+	mock.lockUpdateIncome.Lock()
+	mock.calls.UpdateIncome = append(mock.calls.UpdateIncome, struct {
+		Ctx context.Context
+		Req *financeapp.UpdateIncomeRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockUpdateIncome.Unlock()
+	return mock.UpdateIncomeFunc(ctx, req)
+}
+
+// UpdateIncomeCalls returns all calls made to UpdateIncome.
+func (mock *FinanceCoordinatorMock) UpdateIncomeCalls() []struct {
+	Ctx context.Context
+	Req *financeapp.UpdateIncomeRequest
+} {
+	mock.lockUpdateIncome.RLock()
+	defer mock.lockUpdateIncome.RUnlock()
+	return mock.calls.UpdateIncome
+}
+
+// DeleteTransaction calls DeleteTransactionFunc.
+func (mock *FinanceCoordinatorMock) DeleteTransaction(ctx context.Context, id finance.TransactionID) error {
+	if mock.DeleteTransactionFunc == nil {
+		panic("FinanceCoordinatorMock.DeleteTransactionFunc: method is nil but FinanceCoordinator.DeleteTransaction was just called")
+	}
+	mock.lockDeleteTransaction.Lock()
+	mock.calls.DeleteTransaction = append(mock.calls.DeleteTransaction, struct {
+		Ctx context.Context
+		Id  finance.TransactionID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockDeleteTransaction.Unlock()
+	return mock.DeleteTransactionFunc(ctx, id)
+}
+
+// DeleteTransactionCalls returns all calls made to DeleteTransaction.
+func (mock *FinanceCoordinatorMock) DeleteTransactionCalls() []struct {
+	Ctx context.Context
+	Id  finance.TransactionID
+} {
+	mock.lockDeleteTransaction.RLock()
+	defer mock.lockDeleteTransaction.RUnlock()
+	return mock.calls.DeleteTransaction
+}
+
 // CreateTransfer calls CreateTransferFunc.
 func (mock *FinanceCoordinatorMock) CreateTransfer(ctx context.Context, req *financeapp.CreateTransferRequest) (*finance.Transfer, error) {
 	if mock.CreateTransferFunc == nil {
@@ -457,6 +745,60 @@ func (mock *FinanceCoordinatorMock) CreateTransferCalls() []struct {
 	return mock.calls.CreateTransfer
 }
 
+// DeleteTransfer calls DeleteTransferFunc.
+func (mock *FinanceCoordinatorMock) DeleteTransfer(ctx context.Context, id finance.TransferID) error {
+	if mock.DeleteTransferFunc == nil {
+		panic("FinanceCoordinatorMock.DeleteTransferFunc: method is nil but FinanceCoordinator.DeleteTransfer was just called")
+	}
+	mock.lockDeleteTransfer.Lock()
+	mock.calls.DeleteTransfer = append(mock.calls.DeleteTransfer, struct {
+		Ctx context.Context
+		Id  finance.TransferID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockDeleteTransfer.Unlock()
+	return mock.DeleteTransferFunc(ctx, id)
+}
+
+// DeleteTransferCalls returns all calls made to DeleteTransfer.
+func (mock *FinanceCoordinatorMock) DeleteTransferCalls() []struct {
+	Ctx context.Context
+	Id  finance.TransferID
+} {
+	mock.lockDeleteTransfer.RLock()
+	defer mock.lockDeleteTransfer.RUnlock()
+	return mock.calls.DeleteTransfer
+}
+
+// ListTransfers calls ListTransfersFunc.
+func (mock *FinanceCoordinatorMock) ListTransfers(ctx context.Context, req *financeapp.ListTransfersRequest) ([]*finance.Transfer, string, error) {
+	if mock.ListTransfersFunc == nil {
+		panic("FinanceCoordinatorMock.ListTransfersFunc: method is nil but FinanceCoordinator.ListTransfers was just called")
+	}
+	mock.lockListTransfers.Lock()
+	mock.calls.ListTransfers = append(mock.calls.ListTransfers, struct {
+		Ctx context.Context
+		Req *financeapp.ListTransfersRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockListTransfers.Unlock()
+	return mock.ListTransfersFunc(ctx, req)
+}
+
+// ListTransfersCalls returns all calls made to ListTransfers.
+func (mock *FinanceCoordinatorMock) ListTransfersCalls() []struct {
+	Ctx context.Context
+	Req *financeapp.ListTransfersRequest
+} {
+	mock.lockListTransfers.RLock()
+	defer mock.lockListTransfers.RUnlock()
+	return mock.calls.ListTransfers
+}
+
 // StageInboxItem calls StageInboxItemFunc.
 func (mock *FinanceCoordinatorMock) StageInboxItem(ctx context.Context, req *finance.StageInboxItem) (*finance.InboxItem, error) {
 	if mock.StageInboxItemFunc == nil {
@@ -482,4 +824,277 @@ func (mock *FinanceCoordinatorMock) StageInboxItemCalls() []struct {
 	mock.lockStageInboxItem.RLock()
 	defer mock.lockStageInboxItem.RUnlock()
 	return mock.calls.StageInboxItem
+}
+
+// UpdateInboxItem calls UpdateInboxItemFunc.
+func (mock *FinanceCoordinatorMock) UpdateInboxItem(ctx context.Context, item *finance.InboxItem, mask []string) (*finance.InboxItem, error) {
+	if mock.UpdateInboxItemFunc == nil {
+		panic("FinanceCoordinatorMock.UpdateInboxItemFunc: method is nil but FinanceCoordinator.UpdateInboxItem was just called")
+	}
+	mock.lockUpdateInboxItem.Lock()
+	mock.calls.UpdateInboxItem = append(mock.calls.UpdateInboxItem, struct {
+		Ctx  context.Context
+		Item *finance.InboxItem
+		Mask []string
+	}{
+		Ctx:  ctx,
+		Item: item,
+		Mask: mask,
+	})
+	mock.lockUpdateInboxItem.Unlock()
+	return mock.UpdateInboxItemFunc(ctx, item, mask)
+}
+
+// UpdateInboxItemCalls returns all calls made to UpdateInboxItem.
+func (mock *FinanceCoordinatorMock) UpdateInboxItemCalls() []struct {
+	Ctx  context.Context
+	Item *finance.InboxItem
+	Mask []string
+} {
+	mock.lockUpdateInboxItem.RLock()
+	defer mock.lockUpdateInboxItem.RUnlock()
+	return mock.calls.UpdateInboxItem
+}
+
+// DiscardInboxItem calls DiscardInboxItemFunc.
+func (mock *FinanceCoordinatorMock) DiscardInboxItem(ctx context.Context, id string) error {
+	if mock.DiscardInboxItemFunc == nil {
+		panic("FinanceCoordinatorMock.DiscardInboxItemFunc: method is nil but FinanceCoordinator.DiscardInboxItem was just called")
+	}
+	mock.lockDiscardInboxItem.Lock()
+	mock.calls.DiscardInboxItem = append(mock.calls.DiscardInboxItem, struct {
+		Ctx context.Context
+		Id  string
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockDiscardInboxItem.Unlock()
+	return mock.DiscardInboxItemFunc(ctx, id)
+}
+
+// DiscardInboxItemCalls returns all calls made to DiscardInboxItem.
+func (mock *FinanceCoordinatorMock) DiscardInboxItemCalls() []struct {
+	Ctx context.Context
+	Id  string
+} {
+	mock.lockDiscardInboxItem.RLock()
+	defer mock.lockDiscardInboxItem.RUnlock()
+	return mock.calls.DiscardInboxItem
+}
+
+// ApproveInboxItem calls ApproveInboxItemFunc.
+func (mock *FinanceCoordinatorMock) ApproveInboxItem(ctx context.Context, id string) (*finance.InboxItem, error) {
+	if mock.ApproveInboxItemFunc == nil {
+		panic("FinanceCoordinatorMock.ApproveInboxItemFunc: method is nil but FinanceCoordinator.ApproveInboxItem was just called")
+	}
+	mock.lockApproveInboxItem.Lock()
+	mock.calls.ApproveInboxItem = append(mock.calls.ApproveInboxItem, struct {
+		Ctx context.Context
+		Id  string
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockApproveInboxItem.Unlock()
+	return mock.ApproveInboxItemFunc(ctx, id)
+}
+
+// ApproveInboxItemCalls returns all calls made to ApproveInboxItem.
+func (mock *FinanceCoordinatorMock) ApproveInboxItemCalls() []struct {
+	Ctx context.Context
+	Id  string
+} {
+	mock.lockApproveInboxItem.RLock()
+	defer mock.lockApproveInboxItem.RUnlock()
+	return mock.calls.ApproveInboxItem
+}
+
+// CreateBudget calls CreateBudgetFunc.
+func (mock *FinanceCoordinatorMock) CreateBudget(ctx context.Context, req *financeapp.CreateBudgetRequest) (*finance.Budget, error) {
+	if mock.CreateBudgetFunc == nil {
+		panic("FinanceCoordinatorMock.CreateBudgetFunc: method is nil but FinanceCoordinator.CreateBudget was just called")
+	}
+	mock.lockCreateBudget.Lock()
+	mock.calls.CreateBudget = append(mock.calls.CreateBudget, struct {
+		Ctx context.Context
+		Req *financeapp.CreateBudgetRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockCreateBudget.Unlock()
+	return mock.CreateBudgetFunc(ctx, req)
+}
+
+// CreateBudgetCalls returns all calls made to CreateBudget.
+func (mock *FinanceCoordinatorMock) CreateBudgetCalls() []struct {
+	Ctx context.Context
+	Req *financeapp.CreateBudgetRequest
+} {
+	mock.lockCreateBudget.RLock()
+	defer mock.lockCreateBudget.RUnlock()
+	return mock.calls.CreateBudget
+}
+
+// UpdateBudget calls UpdateBudgetFunc.
+func (mock *FinanceCoordinatorMock) UpdateBudget(ctx context.Context, req *financeapp.UpdateBudgetRequest) (*finance.Budget, error) {
+	if mock.UpdateBudgetFunc == nil {
+		panic("FinanceCoordinatorMock.UpdateBudgetFunc: method is nil but FinanceCoordinator.UpdateBudget was just called")
+	}
+	mock.lockUpdateBudget.Lock()
+	mock.calls.UpdateBudget = append(mock.calls.UpdateBudget, struct {
+		Ctx context.Context
+		Req *financeapp.UpdateBudgetRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockUpdateBudget.Unlock()
+	return mock.UpdateBudgetFunc(ctx, req)
+}
+
+// UpdateBudgetCalls returns all calls made to UpdateBudget.
+func (mock *FinanceCoordinatorMock) UpdateBudgetCalls() []struct {
+	Ctx context.Context
+	Req *financeapp.UpdateBudgetRequest
+} {
+	mock.lockUpdateBudget.RLock()
+	defer mock.lockUpdateBudget.RUnlock()
+	return mock.calls.UpdateBudget
+}
+
+// GetBudget calls GetBudgetFunc.
+func (mock *FinanceCoordinatorMock) GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error) {
+	if mock.GetBudgetFunc == nil {
+		panic("FinanceCoordinatorMock.GetBudgetFunc: method is nil but FinanceCoordinator.GetBudget was just called")
+	}
+	mock.lockGetBudget.Lock()
+	mock.calls.GetBudget = append(mock.calls.GetBudget, struct {
+		Ctx context.Context
+		Id  finance.BudgetID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockGetBudget.Unlock()
+	return mock.GetBudgetFunc(ctx, id)
+}
+
+// GetBudgetCalls returns all calls made to GetBudget.
+func (mock *FinanceCoordinatorMock) GetBudgetCalls() []struct {
+	Ctx context.Context
+	Id  finance.BudgetID
+} {
+	mock.lockGetBudget.RLock()
+	defer mock.lockGetBudget.RUnlock()
+	return mock.calls.GetBudget
+}
+
+// AdjustAccountBalance calls AdjustAccountBalanceFunc.
+func (mock *FinanceCoordinatorMock) AdjustAccountBalance(ctx context.Context, req *financeapp.AdjustAccountBalanceRequest) (*finance.Account, error) {
+	if mock.AdjustAccountBalanceFunc == nil {
+		panic("FinanceCoordinatorMock.AdjustAccountBalanceFunc: method is nil but FinanceCoordinator.AdjustAccountBalance was just called")
+	}
+	mock.lockAdjustAccountBalance.Lock()
+	mock.calls.AdjustAccountBalance = append(mock.calls.AdjustAccountBalance, struct {
+		Ctx context.Context
+		Req *financeapp.AdjustAccountBalanceRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockAdjustAccountBalance.Unlock()
+	return mock.AdjustAccountBalanceFunc(ctx, req)
+}
+
+// AdjustAccountBalanceCalls returns all calls made to AdjustAccountBalance.
+func (mock *FinanceCoordinatorMock) AdjustAccountBalanceCalls() []struct {
+	Ctx context.Context
+	Req *financeapp.AdjustAccountBalanceRequest
+} {
+	mock.lockAdjustAccountBalance.RLock()
+	defer mock.lockAdjustAccountBalance.RUnlock()
+	return mock.calls.AdjustAccountBalance
+}
+
+// LogBorrowingTransaction calls LogBorrowingTransactionFunc.
+func (mock *FinanceCoordinatorMock) LogBorrowingTransaction(ctx context.Context, req *financeapp.LogBorrowingTransactionRequest) (*finance.Transaction, error) {
+	if mock.LogBorrowingTransactionFunc == nil {
+		panic("FinanceCoordinatorMock.LogBorrowingTransactionFunc: method is nil but FinanceCoordinator.LogBorrowingTransaction was just called")
+	}
+	mock.lockLogBorrowingTransaction.Lock()
+	mock.calls.LogBorrowingTransaction = append(mock.calls.LogBorrowingTransaction, struct {
+		Ctx context.Context
+		Req *financeapp.LogBorrowingTransactionRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockLogBorrowingTransaction.Unlock()
+	return mock.LogBorrowingTransactionFunc(ctx, req)
+}
+
+// LogBorrowingTransactionCalls returns all calls made to LogBorrowingTransaction.
+func (mock *FinanceCoordinatorMock) LogBorrowingTransactionCalls() []struct {
+	Ctx context.Context
+	Req *financeapp.LogBorrowingTransactionRequest
+} {
+	mock.lockLogBorrowingTransaction.RLock()
+	defer mock.lockLogBorrowingTransaction.RUnlock()
+	return mock.calls.LogBorrowingTransaction
+}
+
+// ConfirmScheduledTransaction calls ConfirmScheduledTransactionFunc.
+func (mock *FinanceCoordinatorMock) ConfirmScheduledTransaction(ctx context.Context, req *financeapp.ConfirmScheduledTransactionRequest) (*finance.Transaction, error) {
+	if mock.ConfirmScheduledTransactionFunc == nil {
+		panic("FinanceCoordinatorMock.ConfirmScheduledTransactionFunc: method is nil but FinanceCoordinator.ConfirmScheduledTransaction was just called")
+	}
+	mock.lockConfirmScheduledTransaction.Lock()
+	mock.calls.ConfirmScheduledTransaction = append(mock.calls.ConfirmScheduledTransaction, struct {
+		Ctx context.Context
+		Req *financeapp.ConfirmScheduledTransactionRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockConfirmScheduledTransaction.Unlock()
+	return mock.ConfirmScheduledTransactionFunc(ctx, req)
+}
+
+// ConfirmScheduledTransactionCalls returns all calls made to ConfirmScheduledTransaction.
+func (mock *FinanceCoordinatorMock) ConfirmScheduledTransactionCalls() []struct {
+	Ctx context.Context
+	Req *financeapp.ConfirmScheduledTransactionRequest
+} {
+	mock.lockConfirmScheduledTransaction.RLock()
+	defer mock.lockConfirmScheduledTransaction.RUnlock()
+	return mock.calls.ConfirmScheduledTransaction
+}
+
+// SkipScheduledTransaction calls SkipScheduledTransactionFunc.
+func (mock *FinanceCoordinatorMock) SkipScheduledTransaction(ctx context.Context, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error) {
+	if mock.SkipScheduledTransactionFunc == nil {
+		panic("FinanceCoordinatorMock.SkipScheduledTransactionFunc: method is nil but FinanceCoordinator.SkipScheduledTransaction was just called")
+	}
+	mock.lockSkipScheduledTransaction.Lock()
+	mock.calls.SkipScheduledTransaction = append(mock.calls.SkipScheduledTransaction, struct {
+		Ctx context.Context
+		Id  finance.ScheduledTransactionID
+	}{
+		Ctx: ctx,
+		Id:  id,
+	})
+	mock.lockSkipScheduledTransaction.Unlock()
+	return mock.SkipScheduledTransactionFunc(ctx, id)
+}
+
+// SkipScheduledTransactionCalls returns all calls made to SkipScheduledTransaction.
+func (mock *FinanceCoordinatorMock) SkipScheduledTransactionCalls() []struct {
+	Ctx context.Context
+	Id  finance.ScheduledTransactionID
+} {
+	mock.lockSkipScheduledTransaction.RLock()
+	defer mock.lockSkipScheduledTransaction.RUnlock()
+	return mock.calls.SkipScheduledTransaction
 }
