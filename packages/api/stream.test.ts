@@ -208,4 +208,44 @@ describe("@saturn/api streamSSE", () => {
     expect(hdrs["Content-Type"]).toBeUndefined()
     expect(events).toHaveLength(1)
   })
+
+  it("falls back to response.text() when response.body is null and skips malformed JSON frames", async () => {
+    configureClient({
+      baseUrl: "https://api.example.com",
+      storage: makeStorage("valid_tok"),
+    })
+
+    const ssePayload = [
+      "event: message.delta\ndata: {not-valid-json\n\n",
+      'event: message.delta\ndata: {"type":"message.delta","delta":"Recovered"}\n\n',
+      "data: [DONE]\n\n",
+    ].join("")
+
+    const mockResponse = {
+      ok: true,
+      status: 200,
+      body: null,
+      text: vi.fn().mockResolvedValueOnce(ssePayload),
+    } as unknown as Response
+
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(mockResponse) as unknown as typeof fetch
+
+    const received: Array<{ event: unknown; type?: string }> = []
+    await streamSSE({
+      url: "/api/v1/platform/ai/threads/thr_1:stream",
+      body: { content: "Hi" },
+      onEvent: (event, type) => {
+        received.push({ event, type })
+      },
+    })
+
+    expect(received).toEqual([
+      {
+        type: "message.delta",
+        event: { type: "message.delta", delta: "Recovered" },
+      },
+    ])
+  })
 })

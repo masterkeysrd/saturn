@@ -53,6 +53,8 @@ export const defaultStorage: SyncStorageAdapter = {
     inMemoryAccessToken = null
     if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
       localStorage.removeItem("has_session")
+      localStorage.removeItem("active_space_id")
+      localStorage.removeItem("space_meta")
     }
   },
 

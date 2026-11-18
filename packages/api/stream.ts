@@ -78,7 +78,12 @@ function processSSEFrames<TEvent>(
     const rawData = dataLines.join("\n")
     if (rawData === "[DONE]") continue
 
-    const parsed = JSON.parse(rawData) as TEvent
+    let parsed: TEvent
+    try {
+      parsed = JSON.parse(rawData) as TEvent
+    } catch {
+      continue
+    }
     onEvent(parsed, eventType)
   }
 
@@ -159,6 +164,10 @@ export async function streamSSE<TEvent = unknown>({
   }
 
   if (!response.body) {
+    const text = await response.text()
+    if (text) {
+      processSSEFrames(text, true, onEvent)
+    }
     return
   }
 

@@ -5,7 +5,7 @@ import {
   refreshSession,
   SaturnApiError,
 } from "./client"
-import type { StorageAdapter } from "./storage"
+import { defaultStorage, type StorageAdapter } from "./storage"
 
 function makeStorage(
   initialToken: string | null = "expired_token"
@@ -212,5 +212,32 @@ describe("@saturn/api client", () => {
     expect(fetchMock.mock.calls[0][0]).toBe(
       "https://selfhosted.saturn.local/api/v1/identity/sessions:refresh"
     )
+  })
+
+  it("defaultStorage.clearSession removes active_space_id and space_meta from localStorage", () => {
+    const store = new Map<string, string>()
+    const originalLocalStorage = globalThis.localStorage
+    const originalWindow = globalThis.window
+    vi.stubGlobal("window", {})
+    vi.stubGlobal("localStorage", {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => store.set(k, v),
+      removeItem: (k: string) => store.delete(k),
+    })
+
+    try {
+      localStorage.setItem("has_session", "true")
+      localStorage.setItem("active_space_id", "spc_1")
+      localStorage.setItem("space_meta", '{"spaceId":"spc_1"}')
+
+      defaultStorage.clearSession()
+
+      expect(localStorage.getItem("has_session")).toBeNull()
+      expect(localStorage.getItem("active_space_id")).toBeNull()
+      expect(localStorage.getItem("space_meta")).toBeNull()
+    } finally {
+      vi.stubGlobal("window", originalWindow)
+      vi.stubGlobal("localStorage", originalLocalStorage)
+    }
   })
 })
