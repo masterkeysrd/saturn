@@ -6,15 +6,15 @@ import {
   TouchableOpacity,
   Switch,
   ScrollView,
-  TextInput,
   ActivityIndicator,
 } from "react-native"
-import BottomSheet from "@gorhom/bottom-sheet"
+import BottomSheet, { BottomSheetTextInput } from "@gorhom/bottom-sheet"
 import { Plus, Check } from "lucide-react-native"
 import {
   useCalendars,
   useUpdateCalendar,
   useCreateCalendar,
+  useTimezone,
   type Calendar,
 } from "@saturn/hooks"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
@@ -41,6 +41,7 @@ export const CalendarFilterSheet = forwardRef<
   BottomSheet,
   CalendarFilterSheetProps
 >(({ onClose, canManage = true }, ref) => {
+  const tz = useTimezone()
   const { data: calendarsData, isLoading } = useCalendars()
   const updateCalendarMutation = useUpdateCalendar()
   const createCalendarMutation = useCreateCalendar()
@@ -91,7 +92,7 @@ export const CalendarFilterSheet = forwardRef<
           name: newCalendarName.trim(),
           description: "",
           color: newCalendarColor,
-          timezone: "UTC",
+          timezone: tz.timezone,
           isEnabled: true,
         },
       })
@@ -147,7 +148,7 @@ export const CalendarFilterSheet = forwardRef<
                   <Text style={styles.createCardTitle}>
                     Create Space Calendar
                   </Text>
-                  <TextInput
+                  <BottomSheetTextInput
                     value={newCalendarName}
                     onChangeText={setNewCalendarName}
                     placeholder="Calendar Name"

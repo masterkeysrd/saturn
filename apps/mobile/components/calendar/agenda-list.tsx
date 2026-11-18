@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   SectionList,
+  ScrollView,
   TouchableOpacity,
   type RefreshControlProps,
 } from "react-native"
@@ -15,12 +16,15 @@ import {
   X,
   HelpCircle,
 } from "lucide-react-native"
+import { useConnectedAccounts } from "@saturn/hooks"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
+import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import {
   groupEventsByDate,
   formatEventTime,
+  findSelfAttendee,
   type CalendarDateSection,
 } from "./calendar-utils"
 
@@ -41,13 +45,29 @@ export function AgendaList({
   refreshControl,
   canCreate = true,
 }: AgendaListProps) {
+  const { user } = useAuth()
+  const { data: accountsData } = useConnectedAccounts()
+  const selfEmails = useMemo(() => {
+    const emails: string[] = []
+    if (user?.email) emails.push(user.email)
+    for (const acc of accountsData?.accounts || []) {
+      if (acc.email) emails.push(acc.email)
+    }
+    return emails
+  }, [user, accountsData?.accounts])
+
   const sections = useMemo<CalendarDateSection[]>(() => {
     return groupEventsByDate(occurrences, timeZone)
   }, [occurrences, timeZone])
 
   if (sections.length === 0) {
     return (
-      <View style={styles.emptyContainer} testID="agenda-empty-state">
+      <ScrollView
+        contentContainerStyle={styles.emptyContainer}
+        refreshControl={refreshControl}
+        showsVerticalScrollIndicator={false}
+        testID="agenda-empty-state"
+      >
         <View style={styles.emptyIconCircle}>
           <CalendarIcon size={28} color={theme.colors.textMuted} />
         </View>
@@ -68,7 +88,7 @@ export function AgendaList({
             <Text style={styles.emptyActionText}>Schedule Event</Text>
           </TouchableOpacity>
         )}
-      </View>
+      </ScrollView>
     )
   }
 
@@ -112,9 +132,7 @@ export function AgendaList({
       }}
       renderItem={({ item: occ }) => {
         const eventColor = occ.color || theme.colors.primary
-        const selfAttendee = occ.attendees?.find(
-          (a) => a.isOrganizer || a.email
-        )
+        const selfAttendee = findSelfAttendee(occ.attendees, selfEmails)
         const rsvpStatus = selfAttendee?.responseStatus
 
         return (
@@ -327,7 +345,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.warningSubtle,
   },
   emptyContainer: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,

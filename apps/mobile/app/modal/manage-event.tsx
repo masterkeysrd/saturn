@@ -54,6 +54,10 @@ import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 export type ManageEventParams = {
   eventId?: string
   instanceId?: string
+  occurrenceStartTime?: string
+  occurrenceStartDate?: string
+  occurrenceEndTime?: string
+  occurrenceEndDate?: string
   initialTitle?: string
   initialDescription?: string
   initialStart?: string
@@ -102,9 +106,32 @@ function parseInitialAttendees(raw?: string): AttendeeFormValues[] {
   return []
 }
 
+function isValidDateString(dateStr: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false
+  const [y, m, d] = dateStr.split("-").map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  return (
+    dt.getUTCFullYear() === y &&
+    dt.getUTCMonth() === m - 1 &&
+    dt.getUTCDate() === d
+  )
+}
+
+function isValidTimeString(timeStr: string): boolean {
+  if (!/^\d{2}:\d{2}$/.test(timeStr)) return false
+  const [hh, mm] = timeStr.split(":").map(Number)
+  return hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59
+}
+
 function toUtcIso(dateStr: string, timeStr: string, timeZone: string): string {
-  const [y, m, d] = (dateStr || "2026-01-01").split("-").map(Number)
-  const [hh, mm] = (timeStr || "09:00").split(":").map(Number)
+  if (!isValidDateString(dateStr)) {
+    throw new Error(`Invalid date "${dateStr}". Expected YYYY-MM-DD.`)
+  }
+  if (!isValidTimeString(timeStr)) {
+    throw new Error(`Invalid time "${timeStr}". Expected HH:mm.`)
+  }
+  const [y, m, d] = dateStr.split("-").map(Number)
+  const [hh, mm] = timeStr.split(":").map(Number)
   const targetUtc = new Date(Date.UTC(y, m - 1, d, hh, mm, 0))
   const tzParts = getTimezoneParts(targetUtc, timeZone)
   if (!tzParts) return targetUtc.toISOString()
@@ -123,6 +150,9 @@ function toUtcIso(dateStr: string, timeStr: string, timeZone: string): string {
 }
 
 function toExclusiveEndDate(dateStr: string): string {
+  if (!isValidDateString(dateStr)) {
+    throw new Error(`Invalid end date "${dateStr}". Expected YYYY-MM-DD.`)
+  }
   const [y, m, d] = dateStr.split("-").map(Number)
   const next = new Date(Date.UTC(y, m - 1, d + 1, 12, 0, 0))
   const ny = String(next.getUTCFullYear()).padStart(4, "0")
@@ -132,7 +162,9 @@ function toExclusiveEndDate(dateStr: string): string {
 }
 
 function toInclusiveEndDate(dateStr: string, startDateStr: string): string {
-  if (!dateStr || dateStr <= startDateStr) return startDateStr
+  if (!dateStr || dateStr <= startDateStr || !isValidDateString(dateStr)) {
+    return startDateStr
+  }
   const [y, m, d] = dateStr.split("-").map(Number)
   const prev = new Date(Date.UTC(y, m - 1, d - 1, 12, 0, 0))
   const py = String(prev.getUTCFullYear()).padStart(4, "0")
@@ -183,17 +215,49 @@ export default function ManageEventModal() {
 
   // Dates & Times
   const defaultDateStr = useMemo(() => {
+    if (params.occurrenceStartDate) return params.occurrenceStartDate
+    if (params.occurrenceStartTime) {
+      const p = parseDate(params.occurrenceStartTime)
+      if (p) return formatLocalDateString(p, tz.timezone)
+    }
     if (params.initialDate) return params.initialDate
     if (params.initialStart) {
       const p = parseDate(params.initialStart)
       if (p) return formatLocalDateString(p, tz.timezone)
     }
     return formatLocalDateString(new Date(), tz.timezone)
-  }, [params.initialDate, params.initialStart, tz.timezone])
+  }, [
+    params.occurrenceStartDate,
+    params.occurrenceStartTime,
+    params.initialDate,
+    params.initialStart,
+    tz.timezone,
+  ])
 
   const [startDate, setStartDate] = useState<string>(defaultDateStr)
-  const [endDate, setEndDate] = useState<string>(defaultDateStr)
+  const [endDate, setEndDate] = useState<string>(() => {
+    if (params.occurrenceEndDate && params.occurrenceStartDate) {
+      return toInclusiveEndDate(
+        params.occurrenceEndDate,
+        params.occurrenceStartDate
+      )
+    }
+    if (params.occurrenceEndTime) {
+      const p = parseDate(params.occurrenceEndTime)
+      if (p) return formatLocalDateString(p, tz.timezone)
+    }
+    return defaultDateStr
+  })
   const [startTime, setStartTime] = useState<string>(() => {
+    if (params.occurrenceStartTime) {
+      const p = parseDate(params.occurrenceStartTime)
+      if (p) {
+        const parts = getTimezoneParts(p, tz.timezone)
+        if (parts) {
+          return `${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}`
+        }
+      }
+    }
     if (params.initialStartTime) {
       return params.initialStartTime.length === 5
         ? params.initialStartTime
@@ -212,6 +276,15 @@ export default function ManageEventModal() {
   })
 
   const [endTime, setEndTime] = useState<string>(() => {
+    if (params.occurrenceEndTime) {
+      const p = parseDate(params.occurrenceEndTime)
+      if (p) {
+        const parts = getTimezoneParts(p, tz.timezone)
+        if (parts) {
+          return `${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}`
+        }
+      }
+    }
     if (params.initialEndTime) {
       return params.initialEndTime.length === 5
         ? params.initialEndTime
@@ -270,25 +343,25 @@ export default function ManageEventModal() {
         setRecurrencePreset("none")
       }
 
+      const targetTz = existingEvent.timezone || tz.timezone
       if (existingEvent.isAllDay) {
-        setStartDate(existingEvent.startDate || defaultDateStr)
-        setEndDate(
-          toInclusiveEndDate(
-            existingEvent.endDate,
-            existingEvent.startDate || defaultDateStr
-          )
-        )
+        const occStartDate =
+          params.occurrenceStartDate ||
+          existingEvent.startDate ||
+          defaultDateStr
+        const occEndDate =
+          params.occurrenceEndDate || existingEvent.endDate || occStartDate
+        setStartDate(occStartDate)
+        setEndDate(toInclusiveEndDate(occEndDate, occStartDate))
       } else {
-        if (existingEvent.startTime) {
-          const s = parseDate(existingEvent.startTime)
+        const occStartTimeStr =
+          params.occurrenceStartTime || existingEvent.startTime
+        const occEndTimeStr = params.occurrenceEndTime || existingEvent.endTime
+        if (occStartTimeStr) {
+          const s = parseDate(occStartTimeStr)
           if (s) {
-            setStartDate(
-              formatLocalDateString(s, existingEvent.timezone || tz.timezone)
-            )
-            const parts = getTimezoneParts(
-              s,
-              existingEvent.timezone || tz.timezone
-            )
+            setStartDate(formatLocalDateString(s, targetTz))
+            const parts = getTimezoneParts(s, targetTz)
             if (parts) {
               setStartTime(
                 `${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}`
@@ -296,16 +369,11 @@ export default function ManageEventModal() {
             }
           }
         }
-        if (existingEvent.endTime) {
-          const e = parseDate(existingEvent.endTime)
+        if (occEndTimeStr) {
+          const e = parseDate(occEndTimeStr)
           if (e) {
-            setEndDate(
-              formatLocalDateString(e, existingEvent.timezone || tz.timezone)
-            )
-            const parts = getTimezoneParts(
-              e,
-              existingEvent.timezone || tz.timezone
-            )
+            setEndDate(formatLocalDateString(e, targetTz))
+            const parts = getTimezoneParts(e, targetTz)
             if (parts) {
               setEndTime(
                 `${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}`
@@ -326,7 +394,15 @@ export default function ManageEventModal() {
         )
       }
     }
-  }, [existingEvent, defaultDateStr, tz.timezone])
+  }, [
+    existingEvent,
+    defaultDateStr,
+    tz.timezone,
+    params.occurrenceStartDate,
+    params.occurrenceEndDate,
+    params.occurrenceStartTime,
+    params.occurrenceEndTime,
+  ])
 
   // Automatically select first calendar if none selected
   useEffect(() => {
@@ -370,6 +446,23 @@ export default function ManageEventModal() {
       Alert.alert("Title Required", "Please enter an event title.")
       return
     }
+    if (!isValidDateString(startDate) || !isValidDateString(endDate)) {
+      Alert.alert(
+        "Invalid Date",
+        "Please enter valid start and end dates in YYYY-MM-DD format."
+      )
+      return
+    }
+    if (
+      !isAllDay &&
+      (!isValidTimeString(startTime) || !isValidTimeString(endTime))
+    ) {
+      Alert.alert(
+        "Invalid Time",
+        "Please enter valid start and end times in HH:mm format."
+      )
+      return
+    }
     if (isEditMode && isRecurring) {
       setPendingAction("save")
       recurrenceScopeSheetRef.current?.expand()
@@ -390,34 +483,49 @@ export default function ManageEventModal() {
       ""
 
     try {
+      const startIso = isAllDay
+        ? ""
+        : toUtcIso(startDate, startTime, eventTimezone)
+      const endIso = isAllDay ? "" : toUtcIso(endDate, endTime, eventTimezone)
+      const exclusiveEnd = isAllDay ? toExclusiveEndDate(endDate) : ""
+
       if (isEditMode && params.eventId) {
+        const origIsAllDay = existingEvent
+          ? existingEvent.isAllDay
+          : Boolean(params.occurrenceStartDate && !params.occurrenceStartTime)
+        const targetStartTime = origIsAllDay
+          ? ""
+          : params.occurrenceStartTime || existingEvent?.startTime || startIso
+        const targetStartDate = origIsAllDay
+          ? params.occurrenceStartDate || existingEvent?.startDate || startDate
+          : ""
+        const updatePaths = [
+          "title",
+          "description",
+          "location",
+          "isAllDay",
+          "startTime",
+          "endTime",
+          "startDate",
+          "endDate",
+          "timezone",
+          ...(scope === "RECURRENCE_SCOPE_THIS_EVENT" ? [] : ["rrule"]),
+          "attendees",
+          "meetUrl",
+          "sourceMailMessageId",
+          "calendarId",
+        ]
+
         const payload = {
           id: params.eventId,
           req: {
             id: params.eventId,
             updateMask: {
-              paths: [
-                "title",
-                "description",
-                "location",
-                "isAllDay",
-                "startTime",
-                "endTime",
-                "startDate",
-                "endDate",
-                "timezone",
-                "rrule",
-                "attendees",
-                "meetUrl",
-                "sourceMailMessageId",
-                "calendarId",
-              ],
+              paths: updatePaths,
             },
             recurrenceScope: scope,
-            targetStartTime: isAllDay
-              ? ""
-              : toUtcIso(startDate, startTime, eventTimezone),
-            targetStartDate: isAllDay ? startDate : "",
+            targetStartTime,
+            targetStartDate,
             event: {
               id: params.eventId,
               calendarId: effectiveCalId,
@@ -425,14 +533,10 @@ export default function ManageEventModal() {
               description: description.trim(),
               location: location.trim(),
               isAllDay,
-              startTime: isAllDay
-                ? ""
-                : toUtcIso(startDate, startTime, eventTimezone),
-              endTime: isAllDay
-                ? ""
-                : toUtcIso(endDate, endTime, eventTimezone),
+              startTime: startIso,
+              endTime: endIso,
               startDate: isAllDay ? startDate : "",
-              endDate: isAllDay ? toExclusiveEndDate(endDate) : "",
+              endDate: exclusiveEnd,
               timezone: eventTimezone,
               rrule: rruleStr,
               exdates: existingEvent?.exdates || [],
@@ -466,12 +570,10 @@ export default function ManageEventModal() {
             description: description.trim(),
             location: location.trim(),
             isAllDay,
-            startTime: isAllDay
-              ? ""
-              : toUtcIso(startDate, startTime, eventTimezone),
-            endTime: isAllDay ? "" : toUtcIso(endDate, endTime, eventTimezone),
+            startTime: startIso,
+            endTime: endIso,
             startDate: isAllDay ? startDate : "",
-            endDate: isAllDay ? toExclusiveEndDate(endDate) : "",
+            endDate: exclusiveEnd,
             timezone: eventTimezone,
             rrule: rruleStr,
             exdates: [],
@@ -493,8 +595,11 @@ export default function ManageEventModal() {
       }
       haptics.success()
       router.back()
-    } catch {
+    } catch (err: unknown) {
       haptics.error()
+      const message =
+        err instanceof Error ? err.message : "Could not save event."
+      Alert.alert("Save Failed", message)
     }
   }
 
@@ -520,21 +625,34 @@ export default function ManageEventModal() {
     if (!params.eventId) return
     haptics.heavy()
     try {
+      const origIsAllDay = existingEvent
+        ? existingEvent.isAllDay
+        : Boolean(params.occurrenceStartDate && !params.occurrenceStartTime)
+      const targetStartTime = origIsAllDay
+        ? ""
+        : params.occurrenceStartTime ||
+          existingEvent?.startTime ||
+          toUtcIso(startDate, startTime, eventTimezone)
+      const targetStartDate = origIsAllDay
+        ? params.occurrenceStartDate || existingEvent?.startDate || startDate
+        : ""
+
       await deleteMutation.mutateAsync({
         id: params.eventId,
         req: {
           id: params.eventId,
           recurrenceScope: scope,
-          targetStartTime: isAllDay
-            ? ""
-            : toUtcIso(startDate, startTime, eventTimezone),
-          targetStartDate: isAllDay ? startDate : "",
+          targetStartTime,
+          targetStartDate,
         },
       })
       haptics.success()
       router.back()
-    } catch {
+    } catch (err: unknown) {
       haptics.error()
+      const message =
+        err instanceof Error ? err.message : "Could not delete event."
+      Alert.alert("Delete Failed", message)
     }
   }
 

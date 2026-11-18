@@ -21,13 +21,16 @@ import {
 } from "lucide-react-native"
 import {
   useRespondToEvent,
+  useConnectedAccounts,
   type EventOccurrence,
   type AttendeeResponseStatus,
 } from "@saturn/hooks"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
+import { useToast } from "@/components/ui/toast"
+import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
-import { formatEventTime } from "./calendar-utils"
+import { formatEventTime, findSelfAttendee } from "./calendar-utils"
 
 export interface EventPreviewSheetProps {
   occurrence?: EventOccurrence
@@ -42,16 +45,28 @@ export const EventPreviewSheet = forwardRef<
   EventPreviewSheetProps
 >(({ occurrence, timeZone, canEdit = true, onEdit, onClose }, ref) => {
   const respondMutation = useRespondToEvent()
+  const { user } = useAuth()
+  const { data: accountsData } = useConnectedAccounts()
+  const toast = useToast()
 
-  const selfAttendee = useMemo(() => {
-    if (!occurrence?.attendees) return undefined
-    return occurrence.attendees.find((a) => a.isOrganizer || a.email)
-  }, [occurrence])
+  const selfEmails = useMemo(() => {
+    const emails: string[] = []
+    if (user?.email) emails.push(user.email)
+    for (const acc of accountsData?.accounts || []) {
+      if (acc.email) emails.push(acc.email)
+    }
+    return emails
+  }, [user?.email, accountsData?.accounts])
+
+  const selfAttendee = useMemo(
+    () => findSelfAttendee(occurrence?.attendees, selfEmails),
+    [occurrence?.attendees, selfEmails]
+  )
 
   const currentRsvp = selfAttendee?.responseStatus
 
   const handleRespond = async (status: AttendeeResponseStatus) => {
-    if (!occurrence) return
+    if (!occurrence || !selfAttendee) return
     haptics.selection()
     try {
       await respondMutation.mutateAsync({
@@ -59,8 +74,15 @@ export const EventPreviewSheet = forwardRef<
         response: status,
       })
       haptics.success()
-    } catch {
+    } catch (err: unknown) {
       haptics.error()
+      const message =
+        err instanceof Error ? err.message : "Could not update RSVP."
+      toast.show({
+        title: "RSVP failed",
+        message,
+        type: "error",
+      })
     }
   }
 
@@ -200,99 +222,105 @@ export const EventPreviewSheet = forwardRef<
         )}
 
         {/* RSVP Action Bar */}
-        <View style={styles.rsvpSection} testID="event-rsvp-section">
-          <Text style={styles.sectionLabel}>Going?</Text>
-          <View style={styles.rsvpButtonsRow}>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => handleRespond("ATTENDEE_RESPONSE_STATUS_ACCEPTED")}
-              style={[
-                styles.rsvpBtn,
-                currentRsvp === "ATTENDEE_RESPONSE_STATUS_ACCEPTED" &&
-                  styles.rsvpBtnAccepted,
-              ]}
-              testID="event-rsvp-yes"
-            >
-              <Check
-                size={14}
-                color={
-                  currentRsvp === "ATTENDEE_RESPONSE_STATUS_ACCEPTED"
-                    ? theme.colors.success
-                    : theme.colors.textMuted
+        {selfAttendee && (
+          <View style={styles.rsvpSection} testID="event-rsvp-section">
+            <Text style={styles.sectionLabel}>Going?</Text>
+            <View style={styles.rsvpButtonsRow}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() =>
+                  handleRespond("ATTENDEE_RESPONSE_STATUS_ACCEPTED")
                 }
-              />
-              <Text
                 style={[
-                  styles.rsvpBtnText,
+                  styles.rsvpBtn,
                   currentRsvp === "ATTENDEE_RESPONSE_STATUS_ACCEPTED" &&
-                    styles.rsvpBtnTextAccepted,
+                    styles.rsvpBtnAccepted,
                 ]}
+                testID="event-rsvp-yes"
               >
-                Yes
-              </Text>
-            </TouchableOpacity>
+                <Check
+                  size={14}
+                  color={
+                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_ACCEPTED"
+                      ? theme.colors.success
+                      : theme.colors.textMuted
+                  }
+                />
+                <Text
+                  style={[
+                    styles.rsvpBtnText,
+                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_ACCEPTED" &&
+                      styles.rsvpBtnTextAccepted,
+                  ]}
+                >
+                  Yes
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() =>
-                handleRespond("ATTENDEE_RESPONSE_STATUS_TENTATIVE")
-              }
-              style={[
-                styles.rsvpBtn,
-                currentRsvp === "ATTENDEE_RESPONSE_STATUS_TENTATIVE" &&
-                  styles.rsvpBtnTentative,
-              ]}
-              testID="event-rsvp-maybe"
-            >
-              <HelpCircle
-                size={14}
-                color={
-                  currentRsvp === "ATTENDEE_RESPONSE_STATUS_TENTATIVE"
-                    ? theme.colors.warning
-                    : theme.colors.textMuted
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() =>
+                  handleRespond("ATTENDEE_RESPONSE_STATUS_TENTATIVE")
                 }
-              />
-              <Text
                 style={[
-                  styles.rsvpBtnText,
+                  styles.rsvpBtn,
                   currentRsvp === "ATTENDEE_RESPONSE_STATUS_TENTATIVE" &&
-                    styles.rsvpBtnTextTentative,
+                    styles.rsvpBtnTentative,
                 ]}
+                testID="event-rsvp-maybe"
               >
-                Maybe
-              </Text>
-            </TouchableOpacity>
+                <HelpCircle
+                  size={14}
+                  color={
+                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_TENTATIVE"
+                      ? theme.colors.warning
+                      : theme.colors.textMuted
+                  }
+                />
+                <Text
+                  style={[
+                    styles.rsvpBtnText,
+                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_TENTATIVE" &&
+                      styles.rsvpBtnTextTentative,
+                  ]}
+                >
+                  Maybe
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => handleRespond("ATTENDEE_RESPONSE_STATUS_DECLINED")}
-              style={[
-                styles.rsvpBtn,
-                currentRsvp === "ATTENDEE_RESPONSE_STATUS_DECLINED" &&
-                  styles.rsvpBtnDeclined,
-              ]}
-              testID="event-rsvp-no"
-            >
-              <X
-                size={14}
-                color={
-                  currentRsvp === "ATTENDEE_RESPONSE_STATUS_DECLINED"
-                    ? theme.colors.destructive
-                    : theme.colors.textMuted
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() =>
+                  handleRespond("ATTENDEE_RESPONSE_STATUS_DECLINED")
                 }
-              />
-              <Text
                 style={[
-                  styles.rsvpBtnText,
+                  styles.rsvpBtn,
                   currentRsvp === "ATTENDEE_RESPONSE_STATUS_DECLINED" &&
-                    styles.rsvpBtnTextDeclined,
+                    styles.rsvpBtnDeclined,
                 ]}
+                testID="event-rsvp-no"
               >
-                No
-              </Text>
-            </TouchableOpacity>
+                <X
+                  size={14}
+                  color={
+                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_DECLINED"
+                      ? theme.colors.destructive
+                      : theme.colors.textMuted
+                  }
+                />
+                <Text
+                  style={[
+                    styles.rsvpBtnText,
+                    currentRsvp === "ATTENDEE_RESPONSE_STATUS_DECLINED" &&
+                      styles.rsvpBtnTextDeclined,
+                  ]}
+                >
+                  No
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Edit Button (if not viewer) */}
         {canEdit && onEdit && (

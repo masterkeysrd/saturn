@@ -155,3 +155,23 @@ export function formatEventTime(
   const endFormatted = timeFormatter.format(eDate)
   return `${startFormatted} – ${endFormatted}`
 }
+
+/**
+ * Matches the signed-in user (or any of their connected account emails)
+ * case-insensitively against an event's attendees list.
+ */
+export function findSelfAttendee<T extends { email?: string | null }>(
+  attendees: T[] | undefined,
+  selfEmails: (string | null | undefined)[]
+): T | undefined {
+  if (!attendees || attendees.length === 0) return undefined
+  const normalizedSet = new Set(
+    selfEmails
+      .map((e) => (e ?? "").trim().toLowerCase())
+      .filter((e) => e.length > 0)
+  )
+  if (normalizedSet.size === 0) return undefined
+  return attendees.find((a) =>
+    normalizedSet.has((a.email ?? "").trim().toLowerCase())
+  )
+}
