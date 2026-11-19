@@ -1,14 +1,15 @@
 import { z } from "zod"
 import { nonEmptyString, numericAmountString } from "../common"
+import { schemaError } from "../i18n"
 
 export const AccountSchema = z.compile(
   z
     .object({
-      name: nonEmptyString("Account name is required"),
+      name: nonEmptyString("finance.accountNameRequired"),
       lastFour: z
         .string()
-        .max(4, { error: "Max 4 digits" })
-        .regex(/^\d*$/, { error: "Must be numbers only" })
+        .max(4, { error: schemaError("finance.lastFourMaxLength") })
+        .regex(/^\d*$/, { error: schemaError("finance.lastFourDigitsOnly") })
         .optional(),
       type: z.enum([
         "TYPE_UNSPECIFIED",
@@ -17,13 +18,15 @@ export const AccountSchema = z.compile(
         "CASH",
         "DIGITAL_ACCOUNT",
       ]),
-      currency: z.string().min(1, { error: "Currency is required" }),
+      currency: z
+        .string()
+        .min(1, { error: schemaError("finance.currencyRequired") }),
       initialBalance: numericAmountString(
-        "Initial balance is required",
-        "Initial balance must be a valid number"
+        "finance.initialBalanceRequired",
+        "finance.initialBalanceInvalid"
       ),
       creditLimit: z.string().optional(),
-      color: z.string().min(1, { error: "Color is required" }),
+      color: z.string().min(1, { error: schemaError("finance.colorRequired") }),
       institutionId: z.string().optional(),
       isDefault: z.boolean(),
       isActive: z.boolean(),
@@ -38,7 +41,7 @@ export const AccountSchema = z.compile(
         return true
       },
       {
-        error: "Credit limit must be a valid non-negative number",
+        error: schemaError("finance.creditLimitInvalid"),
         path: ["creditLimit"],
       }
     )

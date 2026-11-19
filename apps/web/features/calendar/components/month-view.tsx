@@ -44,13 +44,15 @@ export function MonthView({
     day: 20,
   }
 
+  const weekStartsOn = tz.weekStartsOn ?? 0
+
   const weeks = useMemo(() => {
     return getMonthMatrix(currentParts.year, currentParts.month, {
-      weekStartsOn: 0,
+      weekStartsOn,
       timeZone: tz.timezone,
       fixedWeeks: true,
     })
-  }, [currentParts.year, currentParts.month, tz.timezone])
+  }, [currentParts.year, currentParts.month, tz.timezone, weekStartsOn])
 
   // Partition occurrences into all-day/multi-day vs timed single-day
   const { allDayEvents, timedEvents } = useMemo(() => {
@@ -68,7 +70,33 @@ export function MonthView({
     return { allDayEvents: allDay, timedEvents: timed }
   }, [occurrences])
 
-  const weekDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  const weekDayHeaders = useMemo(() => {
+    const firstWeek = weeks[0]
+    if (!firstWeek) {
+      return [
+        { label: "Sun", isWeekend: true },
+        { label: "Mon", isWeekend: false },
+        { label: "Tue", isWeekend: false },
+        { label: "Wed", isWeekend: false },
+        { label: "Thu", isWeekend: false },
+        { label: "Fri", isWeekend: false },
+        { label: "Sat", isWeekend: true },
+      ]
+    }
+    const fmt = new Intl.DateTimeFormat(tz.locale || "en-US", {
+      weekday: "short",
+      timeZone: tz.timezone,
+    })
+    return firstWeek.map((cell) => {
+      const noon = new Date(
+        Date.UTC(cell.year, cell.month - 1, cell.day, 12, 0, 0)
+      )
+      return {
+        label: fmt.format(noon),
+        isWeekend: cell.isWeekend,
+      }
+    })
+  }, [weeks, tz.locale, tz.timezone])
 
   return (
     <div
@@ -77,15 +105,15 @@ export function MonthView({
     >
       {/* Day of Week Headers */}
       <div className="grid grid-cols-7 border-b border-border/40 bg-muted/30 text-center text-xs font-semibold text-foreground/80">
-        {weekDayNames.map((dayName, idx) => (
+        {weekDayHeaders.map((day, idx) => (
           <div
-            key={dayName}
+            key={`${day.label}-${idx}`}
             className={cn(
               "border-r border-border/20 py-2 last:border-r-0",
-              (idx === 0 || idx === 6) && "text-muted-foreground"
+              day.isWeekend && "text-muted-foreground"
             )}
           >
-            {dayName}
+            {day.label}
           </div>
         ))}
       </div>

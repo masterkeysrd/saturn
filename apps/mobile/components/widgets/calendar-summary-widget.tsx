@@ -8,7 +8,12 @@ import {
   Clock,
   CheckCircle2,
 } from "lucide-react-native"
-import { useTimezone, useCalendars, useCalendarEvents } from "@saturn/hooks"
+import {
+  useTimezone,
+  useCalendars,
+  useCalendarEvents,
+  useI18n,
+} from "@saturn/hooks"
 import { formatLocalDateString, parseDate } from "@saturn/core"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton-loader"
@@ -21,6 +26,7 @@ export function CalendarSummaryWidget() {
   const styles = useThemedStyles(createStyles)
   const router = useRouter()
   const tz = useTimezone()
+  const { t } = useI18n()
 
   const todayStr = useMemo(
     () => formatLocalDateString(new Date(), tz.timezone),
@@ -104,7 +110,9 @@ export function CalendarSummaryWidget() {
         >
           <View style={styles.headerTitleRow}>
             <CalendarIcon size={16} color={colors.primary} />
-            <Text style={styles.titleText}>{"Today's Schedule"}</Text>
+            <Text style={styles.titleText}>
+              {t("dashboard.widget.today_schedule.title")}
+            </Text>
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.subtitleText}>
@@ -140,7 +148,7 @@ export function CalendarSummaryWidget() {
           >
             <CheckCircle2 size={18} color={colors.success} />
             <Text style={styles.emptyText}>
-              All clear for today. Tap to view calendar.
+              {t("dashboard.widget.today_schedule.empty")}
             </Text>
           </TouchableOpacity>
         ) : (

@@ -1,14 +1,17 @@
 import { z } from "zod"
 import { nonEmptyString, positiveAmountString } from "../common"
+import { schemaError } from "../i18n"
 
 export const BudgetSchema = z.compile(
   z.object({
-    name: nonEmptyString("Budget name is required"),
+    name: nonEmptyString("finance.budgetNameRequired"),
     limit: positiveAmountString(
-      "Limit amount is required",
-      "Limit amount must be a positive number"
+      "finance.limitAmountRequired",
+      "finance.limitAmountPositive"
     ),
-    currency: z.string().min(1, { error: "Currency is required" }),
+    currency: z
+      .string()
+      .min(1, { error: schemaError("finance.currencyRequired") }),
     interval: z.enum([
       "RECURRENCE_INTERVAL_UNSPECIFIED",
       "WEEKLY",
@@ -16,8 +19,8 @@ export const BudgetSchema = z.compile(
       "YEARLY",
       "ONE_TIME",
     ]),
-    icon: z.string().min(1, { error: "Icon is required" }),
-    color: z.string().min(1, { error: "Color is required" }),
+    icon: z.string().min(1, { error: schemaError("finance.iconRequired") }),
+    color: z.string().min(1, { error: schemaError("finance.colorRequired") }),
     status: z
       .enum(["STATUS_UNSPECIFIED", "ACTIVE", "PAUSED", "CLOSED"])
       .optional(),

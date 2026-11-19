@@ -61,11 +61,29 @@ export function CalendarSidebar({
     }
   }
 
+  const weekStartsOn = tz.weekStartsOn ?? 0
   const miniMonthWeeks = getMonthMatrix(jumperYear, jumperMonth, {
-    weekStartsOn: 0,
+    weekStartsOn,
     timeZone: tz.timezone,
     fixedWeeks: false,
   })
+
+  const miniWeekdayLabels = (() => {
+    const firstWeek = miniMonthWeeks[0]
+    if (!firstWeek) {
+      return ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+    }
+    const fmt = new Intl.DateTimeFormat(tz.locale || "en-US", {
+      weekday: "short",
+      timeZone: tz.timezone,
+    })
+    return firstWeek.map((cell) => {
+      const noon = new Date(
+        Date.UTC(cell.year, cell.month - 1, cell.day, 12, 0, 0)
+      )
+      return fmt.format(noon).slice(0, 2)
+    })
+  })()
 
   // Jumper month label using tz.formatMonth
   const jumperDateNoon = new Date(
@@ -136,13 +154,9 @@ export function CalendarSidebar({
 
         {/* Day of week headers */}
         <div className="grid grid-cols-7 text-center text-[10px] font-semibold text-foreground/70">
-          <span>Su</span>
-          <span>Mo</span>
-          <span>Tu</span>
-          <span>We</span>
-          <span>Th</span>
-          <span>Fr</span>
-          <span>Sa</span>
+          {miniWeekdayLabels.map((label, idx) => (
+            <span key={idx}>{label}</span>
+          ))}
         </div>
 
         {/* Grid cells */}

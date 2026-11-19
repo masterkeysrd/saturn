@@ -1,3 +1,4 @@
+export * from "./i18n"
 export * from "./finance"
 export * from "./space"
 export * from "./auth"

@@ -13,6 +13,7 @@ import { FormInput } from "./components/form-input"
 import { Button } from "@/components/ui/button"
 import { InputOTP } from "@/components/ui/input-otp"
 import type { MfaFactorDescriptor } from "@saturn/api/gen/saturn/identity/v1/identity"
+import { useI18n } from "@saturn/hooks"
 import { KeyRoundIcon, SmartphoneIcon, ArrowLeftIcon } from "lucide-react"
 
 export function LoginView() {
@@ -22,6 +23,7 @@ export function LoginView() {
 
   const { login, error, setError } = useAuth()
   const navigate = useNavigate()
+  const { t, language } = useI18n()
 
   // Step 1: Identifier & Password Form
   const {
@@ -271,7 +273,14 @@ export function LoginView() {
   }
 
   return (
-    <AuthCard title="Welcome back" subtitle="Sign in to your Saturn account">
+    <AuthCard
+      title={t("auth.welcomeBack")}
+      subtitle={
+        language === "es"
+          ? "Inicia sesión en tu cuenta de Saturn"
+          : "Sign in to your Saturn account"
+      }
+    >
       <form
         onSubmit={handleSubmit(onPasswordSubmit)}
         noValidate
@@ -289,7 +298,7 @@ export function LoginView() {
         <FormInput
           id="identifier"
           type="text"
-          label="Username or Email"
+          label={t("auth.usernameOrEmail")}
           autoComplete="username"
           error={formErrors.identifier?.message}
           disabled={isSubmitting}
@@ -299,7 +308,7 @@ export function LoginView() {
         <FormInput
           id="password"
           type="password"
-          label="Password"
+          label={t("auth.password")}
           autoComplete="current-password"
           error={formErrors.password?.message}
           disabled={isSubmitting}
@@ -311,16 +320,18 @@ export function LoginView() {
           className="w-full cursor-pointer rounded-2xl py-6 font-semibold shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99]"
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Signing in..." : "Sign In"}
+          {isSubmitting ? t("auth.signingIn") : t("auth.signIn")}
         </Button>
 
         <p className="text-center text-xs text-muted-foreground">
-          Don&apos;t have an account?{" "}
+          {language === "es"
+            ? "¿No tienes una cuenta?"
+            : "Don\u2019t have an account?"}{" "}
           <Link
             to="/register"
             className="font-medium text-primary hover:underline focus:outline-none"
           >
-            Create one
+            {language === "es" ? t("auth.createAccount") : "Create one"}
           </Link>
         </p>
       </form>

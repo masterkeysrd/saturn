@@ -16,6 +16,7 @@ import {
   createDefaultWorkflowStep,
   createEmptyWorkflowDraft,
 } from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import { FlowSchema } from "@saturn/schemas"
 import {
   useGetFlowQuery,
@@ -55,6 +56,7 @@ export default function WorkflowDetailEditorScreen() {
   const router = useRouter()
   const toast = useToast()
   const queryClient = useQueryClient()
+  const tz = useTimezone()
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
 
@@ -62,7 +64,7 @@ export default function WorkflowDetailEditorScreen() {
     { id: id ?? "" },
     { enabled: !isNew }
   )
-  const { data: catalog } = useGetCatalogQuery({})
+  const { data: catalog } = useGetCatalogQuery({ locale: tz.locale })
 
   const [initialFallback] = useState<Flow>(
     () => consumePendingWorkflowDraft() ?? createEmptyWorkflowDraft()

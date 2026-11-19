@@ -7,6 +7,7 @@ import {
   Download,
   Paperclip,
 } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
 import { formatAttachmentBytes } from "@saturn/core"
 import type { Attachment } from "@saturn/api/saturn/mail/v1/mail"
 import { cn } from "@/lib/utils"
@@ -123,6 +124,7 @@ export function AttachmentList({
   attachments,
   className = "",
 }: AttachmentListProps) {
+  const { t } = useI18n()
   // Only display non-inline or download-ready attachments
   const validAttachments = attachments.filter((a) => !a.isInline)
   if (validAttachments.length === 0) return null
@@ -147,7 +149,10 @@ export function AttachmentList({
             rel="noopener noreferrer"
             data-testid={`attachment-chip-${att.id || att.filename}`}
             className="group relative flex items-center gap-2.5 rounded-lg border border-zinc-200/90 bg-white p-1.5 pr-2.5 shadow-xs transition-all hover:border-zinc-300 hover:bg-zinc-50/80 hover:shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/60"
-            title={`Download ${att.filename} (${formattedSize})`}
+            title={t("mail.downloadAttachment", {
+              filename: att.filename,
+              size: formattedSize,
+            })}
           >
             {/* Color-Coded File Type Thumbnail Badge */}
             <div
@@ -163,7 +168,7 @@ export function AttachmentList({
             {/* File Details */}
             <div className="flex min-w-0 flex-col">
               <span className="max-w-[200px] truncate text-xs font-semibold text-zinc-900 transition-colors group-hover:text-primary dark:text-zinc-100">
-                {att.filename || "Attachment"}
+                {att.filename || t("mail.attachmentFallback")}
               </span>
               <span className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
                 <span>{formattedSize}</span>

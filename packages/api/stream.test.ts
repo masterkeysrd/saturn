@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { configureClient, SaturnApiError } from "./client"
+import { configureClient, SaturnApiError, setClientLocale } from "./client"
 import { streamSSE } from "./stream"
 import type { StorageAdapter } from "./storage"
 
@@ -46,6 +46,7 @@ describe("@saturn/api streamSSE", () => {
 
   afterEach(() => {
     globalThis.fetch = originalFetch
+    setClientLocale(undefined)
   })
 
   it("parses chunked SSE events, attaches Authorization + Space-Id headers, and retries once on 401", async () => {
@@ -247,5 +248,33 @@ describe("@saturn/api streamSSE", () => {
         event: { type: "message.delta", delta: "Recovered" },
       },
     ])
+  })
+
+  it("attaches Accept-Language header to SSE stream requests when client locale is set", async () => {
+    configureClient({
+      baseUrl: "https://api.example.com",
+      storage: makeStorage("valid_tok"),
+    })
+    setClientLocale("es-ES")
+
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(makeSSEStream(['data: {"type":"done"}\n\n']), {
+        status: 200,
+        headers: { "Content-Type": "text/event-stream" },
+      })
+    )
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    await streamSSE({
+      url: "/api/v1/platform/ai/threads/thr_1:stream",
+      body: { content: "Hola" },
+      onEvent: () => {},
+    })
+
+    const hdrs = (fetchMock.mock.calls[0][1] as RequestInit).headers as Record<
+      string,
+      string
+    >
+    expect(hdrs["Accept-Language"]).toBe("es-ES")
   })
 })

@@ -2,6 +2,7 @@ import { Text, View, ScrollView, TouchableOpacity } from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Check, ChevronRight, Plus, Settings, Users } from "lucide-react-native"
+import { useI18n } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { useAuth } from "@/lib/auth-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
@@ -19,6 +20,7 @@ export default function SwitchSpaceModal() {
   const toast = useToast()
   const { user } = useAuth()
   const { spaces, activeSpaceId, switchSpace, isLoading } = useSpace()
+  const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
 
@@ -53,8 +55,7 @@ export default function SwitchSpaceModal() {
     await switchSpace(spaceId)
     toast.show({
       type: "info",
-      title: "Workspace Changed",
-      message: `Active workspace: ${spaceName}`,
+      title: t("space.switchedTo", { name: spaceName }),
     })
     router.back()
   }
@@ -91,7 +92,7 @@ export default function SwitchSpaceModal() {
           </View>
           <View style={styles.accountSettingsAction}>
             <Settings size={14} color={colors.textSecondary} />
-            <Text style={styles.accountSettingsText}>Settings</Text>
+            <Text style={styles.accountSettingsText}>{t("nav.settings")}</Text>
             <ChevronRight size={15} color={colors.textMuted} />
           </View>
         </TouchableOpacity>
@@ -99,7 +100,7 @@ export default function SwitchSpaceModal() {
 
       {/* Workspaces Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Switch Workspace</Text>
+        <Text style={styles.sectionTitle}>{t("space.switchTitle")}</Text>
 
         {isLoading ? (
           <View style={styles.loadingContainer}>
@@ -166,10 +167,7 @@ export default function SwitchSpaceModal() {
         )}
 
         {spaces.length > 1 && (
-          <Text style={styles.tipText}>
-            Tip: Swipe up or down on the workspace avatar in the top bar, or
-            long-press the Menu tab, to quick-switch.
-          </Text>
+          <Text style={styles.tipText}>{t("space.swipeTip")}</Text>
         )}
       </View>
 
@@ -181,7 +179,7 @@ export default function SwitchSpaceModal() {
           leftIcon={<Plus size={18} color={colors.primaryForeground} />}
           onPress={() => router.replace("/modal/create-space")}
         >
-          Create New Workspace
+          {t("space.createNew")}
         </Button>
 
         {Boolean(activeSpaceId) && (
@@ -192,7 +190,7 @@ export default function SwitchSpaceModal() {
             onPress={handleManageWorkspaces}
             testID="switch-space-manage-btn"
           >
-            Manage Workspaces & Members
+            {t("space.manageMembers")}
           </Button>
         )}
       </View>

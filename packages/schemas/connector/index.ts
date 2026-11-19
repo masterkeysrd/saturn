@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { schemaError } from "../i18n"
 
 export const CONNECTOR_CAPABILITIES = ["calendar", "mail", "contacts"] as const
 
@@ -25,13 +26,15 @@ export const UpdateConnectedAccountSchema = z.compile(
     displayName: z
       .string()
       .trim()
-      .max(100, { error: "Display name cannot exceed 100 characters" })
+      .max(100, {
+        error: schemaError("connector.displayNameMaxLength"),
+      })
       .optional(),
     color: z
       .string()
       .trim()
       .regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, {
-        error: "Accent color must be a valid hex color code (e.g. #3b82f6)",
+        error: schemaError("connector.accentColorInvalid"),
       })
       .optional()
       .or(z.literal("")),

@@ -19,7 +19,8 @@ import {
 } from "lucide-react-native"
 import type { Thread } from "@saturn/api/saturn/mail/v1/mail"
 import { formatThreadParticipants, parseDate } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useTimezone, useI18n } from "@saturn/hooks"
+import type { TranslationKey } from "@saturn/i18n"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
@@ -36,7 +37,8 @@ export interface SwipeableThreadRowProps {
 
 function formatRelativeTime(
   dateStr: string | undefined,
-  tz: ReturnType<typeof useTimezone>
+  tz: ReturnType<typeof useTimezone>,
+  t: (key: TranslationKey) => string
 ): string {
   if (!dateStr) return ""
   const date = parseDate(dateStr)
@@ -47,10 +49,10 @@ function formatRelativeTime(
   const diffHours = Math.floor(diffMins / 60)
   const diffDays = Math.floor(diffHours / 24)
 
-  if (diffMins < 1) return "Now"
+  if (diffMins < 1) return t("common.now")
   if (diffMins < 60) return `${diffMins}m`
   if (diffHours < 24 && tz.isToday(date)) return `${diffHours}h`
-  if (tz.isYesterday(date)) return "Yesterday"
+  if (tz.isYesterday(date)) return t("common.yesterday")
   if (diffDays < 7) {
     return tz.format(date, { weekday: "short" })
   }
@@ -153,10 +155,16 @@ function ThreadAvatar({
 interface LeftSwipeActionProps {
   drag: SharedValue<number>
   testID: string
+  label: string
   onPress: () => void
 }
 
-function LeftSwipeAction({ drag, testID, onPress }: LeftSwipeActionProps) {
+function LeftSwipeAction({
+  drag,
+  testID,
+  label,
+  onPress,
+}: LeftSwipeActionProps) {
   const styles = useThemedStyles(createStyles)
   const containerStyle = useAnimatedStyle(() => {
     // Only fade in container background after deliberate horizontal drag
@@ -179,7 +187,7 @@ function LeftSwipeAction({ drag, testID, onPress }: LeftSwipeActionProps) {
       >
         <Animated.View style={[styles.actionContent, contentStyle]}>
           <Archive size={22} color="#ffffff" />
-          <Text style={styles.actionText}>Archive</Text>
+          <Text style={styles.actionText}>{label}</Text>
         </Animated.View>
       </Pressable>
     </Animated.View>
@@ -190,6 +198,9 @@ interface RightSwipeActionsProps {
   drag: SharedValue<number>
   threadId: string
   isUnread: boolean
+  readLabel: string
+  unreadLabel: string
+  trashLabel: string
   onToggleRead: () => void
   onTrash: () => void
 }
@@ -198,6 +209,9 @@ function RightSwipeActions({
   drag,
   threadId,
   isUnread,
+  readLabel,
+  unreadLabel,
+  trashLabel,
   onToggleRead,
   onTrash,
 }: RightSwipeActionsProps) {
@@ -229,7 +243,9 @@ function RightSwipeActions({
           ) : (
             <Mail size={20} color="#ffffff" />
           )}
-          <Text style={styles.actionText}>{isUnread ? "Read" : "Unread"}</Text>
+          <Text style={styles.actionText}>
+            {isUnread ? readLabel : unreadLabel}
+          </Text>
         </Animated.View>
       </Pressable>
 
@@ -241,7 +257,7 @@ function RightSwipeActions({
       >
         <Animated.View style={[styles.actionContent, contentStyle]}>
           <Trash2 size={20} color="#ffffff" />
-          <Text style={styles.actionText}>Trash</Text>
+          <Text style={styles.actionText}>{trashLabel}</Text>
         </Animated.View>
       </Pressable>
     </Animated.View>
@@ -259,6 +275,7 @@ export function SwipeableThreadRow({
   onToggleStar,
 }: SwipeableThreadRowProps) {
   const { colors } = useTheme()
+  const { t } = useI18n()
   const styles = useThemedStyles(createStyles)
   const resolvedAccountColor = accountColor ?? colors.primary
   const swipeableRef = useRef<SwipeableMethods>(null)
@@ -306,7 +323,8 @@ export function SwipeableThreadRow({
 
   const timeDisplay = formatRelativeTime(
     thread.lastMessageAt || thread.updateTime,
-    tz
+    tz,
+    t
   )
 
   return (
@@ -317,6 +335,7 @@ export function SwipeableThreadRow({
         <LeftSwipeAction
           drag={drag}
           testID={`thread-row-archive-action-${thread.id}`}
+          label={t("mail.archive")}
           onPress={handleArchive}
         />
       )}
@@ -325,6 +344,9 @@ export function SwipeableThreadRow({
           drag={drag}
           threadId={thread.id}
           isUnread={Boolean(thread.isUnread)}
+          readLabel={t("mail.read")}
+          unreadLabel={t("mail.unread")}
+          trashLabel={t("mail.trash")}
           onToggleRead={handleToggleRead}
           onTrash={handleTrash}
         />
@@ -398,7 +420,7 @@ export function SwipeableThreadRow({
               thread.isUnread && styles.subjectTextBold,
             ]}
           >
-            {thread.subject || "(No Subject)"}
+            {thread.subject || t("mail.noSubject")}
           </Text>
 
           {/* Bottom Row: Snippet & Icons */}

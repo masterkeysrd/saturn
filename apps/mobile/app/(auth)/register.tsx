@@ -21,6 +21,7 @@ import {
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { RegisterSchema, type RegisterFormValues } from "@saturn/schemas"
+import { useI18n } from "@saturn/hooks"
 import { useAuth } from "@/lib/auth-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Button } from "@/components/ui/button"
@@ -34,6 +35,7 @@ export default function RegisterScreen() {
   const router = useRouter()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
   const { register } = useAuth()
   const toast = useToast()
   const [errorState, setErrorState] = useState<string | null>(null)
@@ -119,7 +121,9 @@ export default function RegisterScreen() {
                 resizeMode="cover"
               />
             </View>
-            <Header1 style={styles.brandTitle}>Create Account</Header1>
+            <Header1 style={styles.brandTitle}>
+              {t("auth.createAccount")}
+            </Header1>
             <Subtitle style={styles.subtitle}>Join Saturn Life OS</Subtitle>
           </View>
 
@@ -150,7 +154,7 @@ export default function RegisterScreen() {
             <TextInput
               control={control}
               name="email"
-              label="Email Address"
+              label={t("auth.email")}
               placeholder="user@example.com"
               autoCapitalize="none"
               autoCorrect={false}
@@ -164,7 +168,7 @@ export default function RegisterScreen() {
             <TextInput
               control={control}
               name="password"
-              label="Password"
+              label={t("auth.password")}
               placeholder="••••••••"
               isPassword
               autoComplete="new-password"
@@ -183,7 +187,9 @@ export default function RegisterScreen() {
               leftIcon={<UserPlus size={18} color={colors.primaryForeground} />}
               style={styles.button}
             >
-              Sign Up
+              {loading || isSubmitting
+                ? t("auth.creatingAccount")
+                : t("auth.signUp")}
             </Button>
           </Card>
 
@@ -191,7 +197,7 @@ export default function RegisterScreen() {
             <Text style={styles.footerText}>Already have an account? </Text>
             <Link href="/(auth)/login" asChild>
               <TouchableOpacity>
-                <Text style={styles.linkText}>Sign In</Text>
+                <Text style={styles.linkText}>{t("auth.signIn")}</Text>
               </TouchableOpacity>
             </Link>
           </View>

@@ -1,22 +1,47 @@
 import { Outlet } from "react-router-dom"
 import { Wallet, Mail, Sparkles } from "lucide-react"
+import { SUPPORTED_UI_LOCALES } from "@saturn/i18n"
+import { useI18n } from "@saturn/hooks"
 import { SaturnMark } from "@/components/ui/saturn-mark"
+import { setCachedUserPreferences } from "@/lib/user-preferences"
 
 export function AuthLayout() {
+  const { locale, t } = useI18n()
+
   return (
     <div className="grid min-h-svh w-full grid-cols-1 overflow-hidden bg-background select-none lg:grid-cols-12">
       {/* Left Column: Auth form */}
       <div className="relative col-span-1 flex flex-col justify-between p-6 md:p-10 lg:col-span-5">
         {/* Branding header */}
-        <div className="flex items-center space-x-2.5">
-          <SaturnMark
-            variant="badge"
-            size="md"
-            className="animate-in duration-500 fade-in slide-in-from-top-4"
-          />
-          <span className="animate-in font-sans text-lg font-bold tracking-tight text-foreground duration-500 fade-in">
-            Saturn
-          </span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center space-x-2.5">
+            <SaturnMark
+              variant="badge"
+              size="md"
+              className="animate-in duration-500 fade-in slide-in-from-top-4"
+            />
+            <span className="animate-in font-sans text-lg font-bold tracking-tight text-foreground duration-500 fade-in">
+              Saturn
+            </span>
+          </div>
+          <select
+            aria-label={t("settings.regional.language")}
+            value={
+              SUPPORTED_UI_LOCALES.some((opt) => opt.value === locale)
+                ? locale
+                : "en-US"
+            }
+            onChange={(e) => {
+              setCachedUserPreferences({ locale: e.target.value })
+            }}
+            className="cursor-pointer rounded-lg border border-border/60 bg-background px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+          >
+            {SUPPORTED_UI_LOCALES.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Form Container */}

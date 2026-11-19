@@ -8,7 +8,7 @@ import {
   useListRecurringTransactionsQuery,
   useListScheduledTransactionsQuery,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -25,6 +25,7 @@ export function UpcomingBillsWidget() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { t } = useI18n()
 
   const { data: settingsData, isLoading: settingsLoading } =
     useGetSettingsQuery({}, { enabled: Boolean(activeSpaceId), retry: false })
@@ -116,7 +117,9 @@ export function UpcomingBillsWidget() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <CalendarClock size={16} color={colors.warning} />
-          <Text style={styles.headerTitle}>Upcoming Bills</Text>
+          <Text style={styles.headerTitle}>
+            {t("dashboard.widget.upcoming_bills.title")}
+          </Text>
         </View>
         <View style={styles.headerRight}>
           {isFinanceConfigured && upcomingItems.length > 0 && (
@@ -136,8 +139,7 @@ export function UpcomingBillsWidget() {
         </Text>
       ) : visibleItems.length === 0 ? (
         <Text style={styles.emptyText}>
-          No bills due in the next 14 days. Scheduled inflows and outflows
-          appear here.
+          {t("dashboard.widget.upcoming_bills.empty")}
         </Text>
       ) : (
         <View style={styles.list}>

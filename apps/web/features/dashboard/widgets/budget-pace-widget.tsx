@@ -2,11 +2,16 @@ import { useMemo } from "react"
 import { Link } from "react-router-dom"
 import { ArrowRight, PiggyBank } from "lucide-react"
 import { convertCentsToBase } from "@saturn/core"
+import { getLocalizedDashboardWidgetMeta } from "@saturn/i18n"
 import {
   useGetSettingsQuery,
   useListBudgetsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
-import { useCurrencyConversionPreview, useTimezone } from "@saturn/hooks"
+import {
+  useCurrencyConversionPreview,
+  useI18n,
+  useTimezone,
+} from "@saturn/hooks"
 import { Badge } from "@/components/ui/badge"
 import { MoneyAmount } from "@/components/ui/money-amount"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -21,6 +26,8 @@ function getDaysInMonth(year: number, month: number): number {
 export function BudgetPaceWidget() {
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
+  const { t, locale, language } = useI18n()
+  const widgetMeta = getLocalizedDashboardWidgetMeta("budget_pace", locale)
 
   const {
     data: settingsData,
@@ -123,19 +130,32 @@ export function BudgetPaceWidget() {
   const isLoading =
     settingsLoading || (isFinanceConfigured && budgetsLoading && !budgetsData)
 
+  const isEs = language === "es"
   const badgeConfig = summary.isMonthlyMode
     ? summary.paceStatus === "over_pace"
-      ? { variant: "destructive" as const, label: "Over pace" }
+      ? {
+          variant: "destructive" as const,
+          label: isEs ? "Por encima del ritmo" : "Over pace",
+        }
       : summary.paceStatus === "ahead"
-        ? { variant: "success" as const, label: "Ahead of pace" }
-        : { variant: "info" as const, label: "On track" }
+        ? {
+            variant: "success" as const,
+            label: isEs ? "Por debajo del ritmo" : "Ahead of pace",
+          }
+        : { variant: "info" as const, label: isEs ? "En ritmo" : "On track" }
     : summary.spentPct > 100
-      ? { variant: "destructive" as const, label: "Over limit" }
-      : { variant: "neutral" as const, label: `${summary.otherCount} active` }
+      ? {
+          variant: "destructive" as const,
+          label: isEs ? "Límite superado" : "Over limit",
+        }
+      : {
+          variant: "neutral" as const,
+          label: `${summary.otherCount} ${isEs ? "activos" : "active"}`,
+        }
 
   return (
     <DashboardWidgetCard
-      title="Monthly Budget Pace"
+      title={widgetMeta.title}
       icon={PiggyBank}
       badge={
         isFinanceConfigured && summary.totalCount > 0 ? (
@@ -150,7 +170,7 @@ export function BudgetPaceWidget() {
           : undefined
       }
       viewAllTo={spaceId ? `/space/${spaceId}/finance/budgets` : undefined}
-      viewAllLabel="Budgets"
+      viewAllLabel={t("nav.budgets")}
       isLoading={isLoading}
       loadingSkeleton={
         <div className="space-y-3">
@@ -168,10 +188,12 @@ export function BudgetPaceWidget() {
             </div>
             <div className="min-w-0 space-y-0.5">
               <p className="text-sm font-medium text-foreground">
-                Finance not initialized
+                {isEs ? "Finanzas sin configurar" : "Finance not initialized"}
               </p>
               <p className="text-xs text-muted-foreground">
-                Set a base currency before tracking budget limits.
+                {isEs
+                  ? "Configura una moneda base antes de seguir límites de presupuesto."
+                  : "Set a base currency before tracking budget limits."}
               </p>
             </div>
           </div>
@@ -180,7 +202,7 @@ export function BudgetPaceWidget() {
               to={`/space/${spaceId}/finance`}
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
             >
-              Set up base currency
+              {isEs ? "Configurar moneda base" : "Set up base currency"}
               <ArrowRight className="size-3.5" />
             </Link>
           </div>
@@ -193,10 +215,10 @@ export function BudgetPaceWidget() {
             </div>
             <div className="min-w-0 space-y-0.5">
               <p className="text-sm font-medium text-foreground">
-                No active budgets yet
+                {isEs ? "Sin presupuestos activos" : "No active budgets yet"}
               </p>
               <p className="text-xs text-muted-foreground">
-                Create spending limits to monitor your monthly pace.
+                {widgetMeta.empty}
               </p>
             </div>
           </div>
@@ -205,7 +227,7 @@ export function BudgetPaceWidget() {
               to={`/space/${spaceId}/finance/budgets`}
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
             >
-              Create budget
+              {isEs ? "Crear presupuesto" : "Create budget"}
               <ArrowRight className="size-3.5" />
             </Link>
           </div>
@@ -219,7 +241,9 @@ export function BudgetPaceWidget() {
                 currency={baseCurrency}
                 size="lg"
               />
-              <span className="text-xs text-muted-foreground">of</span>
+              <span className="text-xs text-muted-foreground">
+                {isEs ? "de" : "of"}
+              </span>
               <MoneyAmount
                 cents={summary.totalLimitCents}
                 currency={baseCurrency}
@@ -241,8 +265,10 @@ export function BudgetPaceWidget() {
               aria-valuemax={100}
               aria-label={
                 summary.isMonthlyMode
-                  ? "Monthly budget pace"
-                  : "Active budget usage"
+                  ? widgetMeta.title
+                  : isEs
+                    ? "Uso de presupuestos activos"
+                    : "Active budget usage"
               }
             >
               <div
@@ -270,10 +296,13 @@ export function BudgetPaceWidget() {
             {summary.isMonthlyMode ? (
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span>
-                  Day {summary.dayOfMonth} · {summary.elapsedPct}% of month
+                  {isEs
+                    ? `Día ${summary.dayOfMonth} · ${summary.elapsedPct}% del mes`
+                    : `Day ${summary.dayOfMonth} · ${summary.elapsedPct}% of month`}
                   {summary.otherCount > 0 && (
                     <span className="ml-1.5 text-muted-foreground/80">
-                      · +{summary.otherCount} weekly/yearly
+                      · +{summary.otherCount}{" "}
+                      {isEs ? "semanal/anual" : "weekly/yearly"}
                     </span>
                   )}
                 </span>
@@ -285,7 +314,7 @@ export function BudgetPaceWidget() {
                       size="sm"
                       className="text-success"
                     />
-                    <span>under pace</span>
+                    <span>{isEs ? "bajo el ritmo" : "under pace"}</span>
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1">
@@ -295,15 +324,19 @@ export function BudgetPaceWidget() {
                       size="sm"
                       className="text-destructive"
                     />
-                    <span>over pace</span>
+                    <span>{isEs ? "sobre el ritmo" : "over pace"}</span>
                   </span>
                 )}
               </div>
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span>
-                  {summary.otherCount} weekly/yearly{" "}
-                  {summary.otherCount === 1 ? "budget" : "budgets"}
+                  {summary.otherCount}{" "}
+                  {isEs
+                    ? summary.otherCount === 1
+                      ? "presupuesto semanal/anual"
+                      : "presupuestos semanales/anuales"
+                    : `weekly/yearly ${summary.otherCount === 1 ? "budget" : "budgets"}`}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <MoneyAmount
@@ -315,7 +348,7 @@ export function BudgetPaceWidget() {
                     size="sm"
                     className="text-foreground"
                   />
-                  <span>remaining</span>
+                  <span>{isEs ? "restante" : "remaining"}</span>
                 </span>
               </div>
             )}

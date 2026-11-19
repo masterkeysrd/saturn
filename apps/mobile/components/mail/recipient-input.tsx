@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from "react-native"
 import { X, User } from "lucide-react-native"
-import { useContactSuggestions } from "@saturn/hooks"
+import { useContactSuggestions, useI18n } from "@saturn/hooks"
 import type { MailRecipientFormValues } from "@saturn/schemas"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -25,9 +25,11 @@ export function RecipientInput({
   label,
   recipients,
   onChangeRecipients,
-  placeholder = "Add recipient...",
+  placeholder,
   testID,
 }: RecipientInputProps) {
+  const { t } = useI18n()
+  const effectivePlaceholder = placeholder ?? t("mail.addRecipient")
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
   const [inputText, setInputText] = useState("")
@@ -113,7 +115,7 @@ export function RecipientInput({
               }
             }}
             onSubmitEditing={handleSubmitEditing}
-            placeholder={recipients.length === 0 ? placeholder : ""}
+            placeholder={recipients.length === 0 ? effectivePlaceholder : ""}
             placeholderTextColor={colors.textMuted}
             keyboardAppearance={isDark ? "dark" : "light"}
             keyboardType="email-address"

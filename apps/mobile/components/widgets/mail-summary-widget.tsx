@@ -12,7 +12,9 @@ import {
   useMailboxes,
   useMailThreads,
   useTimezone,
+  useI18n,
 } from "@saturn/hooks"
+import type { TranslationKey } from "@saturn/i18n"
 import { formatThreadParticipants, parseDate } from "@saturn/core"
 import type { Thread } from "@saturn/api/saturn/mail/v1/mail"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
@@ -22,7 +24,8 @@ import { haptics } from "@/lib/haptics"
 
 function formatWidgetThreadTime(
   dateStr: string | undefined,
-  tz: ReturnType<typeof useTimezone>
+  tz: ReturnType<typeof useTimezone>,
+  t: (key: TranslationKey) => string
 ): string {
   if (!dateStr) return ""
   const parsed = parseDate(dateStr)
@@ -31,7 +34,7 @@ function formatWidgetThreadTime(
     return tz.formatTime(parsed)
   }
   if (tz.isYesterday(parsed)) {
-    return "Yesterday"
+    return t("common.yesterday")
   }
   return tz.format(parsed, { month: "short", day: "numeric" })
 }
@@ -41,6 +44,7 @@ export function MailSummaryWidget() {
   const styles = useThemedStyles(createStyles)
   const router = useRouter()
   const tz = useTimezone()
+  const { t } = useI18n()
 
   const { data: accountsData, isLoading: accountsLoading } =
     useConnectedAccounts()
@@ -128,13 +132,15 @@ export function MailSummaryWidget() {
         >
           <View style={styles.headerTitleRow}>
             <Mail size={16} color={colors.primary} />
-            <Text style={styles.titleText}>Unread Mail</Text>
+            <Text style={styles.titleText}>
+              {t("dashboard.widget.priority_mail.title")}
+            </Text>
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.subtitleText}>
               {inboxUnreadCount === 0
-                ? "Inbox zero"
-                : `${inboxUnreadCount} unread`}
+                ? t("mail.inboxZero")
+                : t("mail.unreadCount", { count: inboxUnreadCount })}
             </Text>
             <ChevronRight size={16} color={colors.textMuted} />
           </View>
@@ -164,7 +170,7 @@ export function MailSummaryWidget() {
           >
             <CheckCircle2 size={18} color={colors.success} />
             <Text style={styles.emptyText}>
-              All caught up. Tap to open inbox.
+              {t("dashboard.widget.priority_mail.empty")}
             </Text>
           </TouchableOpacity>
         ) : (
@@ -182,7 +188,8 @@ export function MailSummaryWidget() {
               })
               const timeStr = formatWidgetThreadTime(
                 thread.lastMessageAt || thread.updateTime,
-                tz
+                tz,
+                t
               )
 
               return (

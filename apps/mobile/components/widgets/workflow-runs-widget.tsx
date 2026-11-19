@@ -2,7 +2,7 @@ import { StyleSheet, View, Text, TouchableOpacity } from "react-native"
 import { useRouter } from "expo-router"
 import { Workflow, ChevronRight } from "lucide-react-native"
 import { useListFlowRunsQuery } from "@saturn/api/saturn/platform/workflow/v1/workflow"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { Card } from "@/components/ui/card"
 import { Badge, type BadgeVariant } from "@/components/ui/badge"
@@ -42,6 +42,7 @@ export function WorkflowRunsWidget() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { t } = useI18n()
 
   const { data: runsData, isLoading } = useListFlowRunsQuery(
     { pageSize: 5, pageToken: "" },
@@ -88,7 +89,9 @@ export function WorkflowRunsWidget() {
       >
         <View style={styles.headerLeft}>
           <Workflow size={16} color={colors.brandSecondary} />
-          <Text style={styles.headerTitle}>Workflow Runs</Text>
+          <Text style={styles.headerTitle}>
+            {t("dashboard.widget.workflow_runs.title")}
+          </Text>
         </View>
         <View style={styles.headerRight}>
           {failedCount > 0 && (
@@ -105,7 +108,7 @@ export function WorkflowRunsWidget() {
       {runs.length === 0 ? (
         <TouchableOpacity activeOpacity={0.7} onPress={navigateToWorkflows}>
           <Text style={styles.emptyText}>
-            No workflow runs yet. Tap to open automations and workflows.
+            {t("dashboard.widget.workflow_runs.empty")}
           </Text>
         </TouchableOpacity>
       ) : (

@@ -27,6 +27,7 @@ import {
   useSyncConnectedAccount,
   useDrafts,
   useTimezone,
+  useI18n,
 } from "@saturn/hooks"
 import type {
   Thread,
@@ -47,6 +48,7 @@ export default function MobileMailScreen() {
   const insets = useSafeAreaInsets()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
   const [selectedAccountId, setSelectedAccountId] = useState<
@@ -234,10 +236,10 @@ export default function MobileMailScreen() {
       },
     })
     toast.show({
-      title: "Conversation archived",
+      title: t("mail.conversationArchived"),
       type: "success",
       action: {
-        label: "Undo",
+        label: t("common.undo"),
         onPress: () => {
           modifyMutation.mutate({
             id: thread.id,
@@ -257,10 +259,10 @@ export default function MobileMailScreen() {
       },
     })
     toast.show({
-      title: "Conversation moved to trash",
+      title: t("mail.conversationTrash"),
       type: "success",
       action: {
-        label: "Undo",
+        label: t("common.undo"),
         onPress: () => {
           modifyMutation.mutate({
             id: thread.id,
@@ -315,7 +317,7 @@ export default function MobileMailScreen() {
               setSearchQuery(text)
               setDebouncedSearch(text)
             }}
-            placeholder="Search in mail..."
+            placeholder={t("common.search")}
             placeholderTextColor={colors.textMuted}
             keyboardAppearance={isDark ? "dark" : "light"}
             style={styles.searchInput}
@@ -330,7 +332,7 @@ export default function MobileMailScreen() {
                 setSearchQuery("")
                 setDebouncedSearch("")
               }}
-              accessibilityLabel="Clear search"
+              accessibilityLabel={t("mail.clearSearch")}
             >
               <X size={15} color={colors.textMuted} />
             </Pressable>
@@ -366,19 +368,19 @@ export default function MobileMailScreen() {
         ) : draftsError ? (
           <View style={styles.centerContainer}>
             <AlertCircle size={36} color={colors.destructive} />
-            <Text style={styles.errorText}>Failed to load drafts</Text>
+            <Text style={styles.errorText}>{t("mail.failedToLoadDrafts")}</Text>
             <Pressable style={styles.retryBtn} onPress={() => refetchDrafts()}>
-              <Text style={styles.retryBtnText}>Retry</Text>
+              <Text style={styles.retryBtnText}>{t("common.retry")}</Text>
             </Pressable>
           </View>
         ) : drafts.length === 0 ? (
           <View style={styles.centerContainer}>
             <FileEdit size={48} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>No drafts</Text>
+            <Text style={styles.emptyTitle}>{t("mail.noDrafts")}</Text>
             <Text style={styles.emptySubtitle}>
               {searchQuery
-                ? "No drafts matched your search query."
-                : "Saved message drafts will appear here."}
+                ? t("mail.noDraftsMatched")
+                : t("mail.draftsAppearHere")}
             </Text>
           </View>
         ) : (
@@ -388,7 +390,7 @@ export default function MobileMailScreen() {
             renderItem={({ item }) => {
               const recipientsLabel =
                 (item.to || []).map((p) => p.name || p.email).join(", ") ||
-                "(No recipients)"
+                t("mail.noRecipients")
               const previewText = stripHtmlToPlainText(
                 item.bodyHtml || item.bodyText || ""
               )
@@ -413,7 +415,9 @@ export default function MobileMailScreen() {
                   <View style={styles.draftRowBody}>
                     <View style={styles.draftRowTop}>
                       <Text numberOfLines={1} style={styles.draftRecipients}>
-                        <Text style={styles.draftTag}>Draft · </Text>
+                        <Text style={styles.draftTag}>
+                          {t("mail.draft")} ·{" "}
+                        </Text>
                         {recipientsLabel}
                       </Text>
                       {timeLabel ? (
@@ -421,7 +425,7 @@ export default function MobileMailScreen() {
                       ) : null}
                     </View>
                     <Text numberOfLines={1} style={styles.draftSubject}>
-                      {item.subject || "(No Subject)"}
+                      {item.subject || t("mail.noSubject")}
                     </Text>
                     {previewText ? (
                       <Text numberOfLines={1} style={styles.draftSnippet}>
@@ -453,19 +457,17 @@ export default function MobileMailScreen() {
       ) : error ? (
         <View style={styles.centerContainer}>
           <AlertCircle size={36} color={colors.destructive} />
-          <Text style={styles.errorText}>Failed to load messages</Text>
+          <Text style={styles.errorText}>{t("mail.couldNotLoad")}</Text>
           <Pressable style={styles.retryBtn} onPress={() => refetch()}>
-            <Text style={styles.retryBtnText}>Retry</Text>
+            <Text style={styles.retryBtnText}>{t("common.retry")}</Text>
           </Pressable>
         </View>
       ) : threads.length === 0 ? (
         <View style={styles.centerContainer}>
           <Inbox size={48} color={colors.textMuted} />
-          <Text style={styles.emptyTitle}>No conversations</Text>
+          <Text style={styles.emptyTitle}>{t("empty.mailTitle")}</Text>
           <Text style={styles.emptySubtitle}>
-            {searchQuery
-              ? "No emails matched your search query."
-              : "Your inbox is all caught up."}
+            {searchQuery ? t("mail.noMatches") : t("empty.mailDescription")}
           </Text>
         </View>
       ) : (
@@ -504,7 +506,7 @@ export default function MobileMailScreen() {
                 style={styles.loadMoreBtn}
                 onPress={() => fetchNextPage()}
               >
-                <Text style={styles.loadMoreText}>Load more conversations</Text>
+                <Text style={styles.loadMoreText}>{t("mail.loadMore")}</Text>
               </Pressable>
             ) : undefined
           }
@@ -524,7 +526,7 @@ export default function MobileMailScreen() {
       {/* Floating Compose Button */}
       <QuickCaptureFab
         testID="mail-fab-compose"
-        accessibilityLabel="Compose email"
+        accessibilityLabel={t("mail.compose")}
         icon={<PenSquare size={22} color={colors.primaryForeground} />}
         onPress={handleOpenCompose}
       />

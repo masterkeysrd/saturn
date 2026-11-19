@@ -1,5 +1,7 @@
 import { useState } from "react"
 import { Link, useLocation } from "react-router-dom"
+import type { TranslationKey } from "@saturn/i18n"
+import { useI18n } from "@saturn/hooks"
 import { useAuth } from "@/features/auth/use-auth"
 import { cn } from "@/lib/utils"
 import type { FeatureMenu, SidebarNavGroup } from "@/lib/navigation"
@@ -38,35 +40,93 @@ const allMenus: FeatureMenu[] = Object.values(menuModules).flatMap((module) => {
 
 const NAV_GROUPS: {
   id: SidebarNavGroup
-  label: string
+  labelKey: TranslationKey
   match: (group?: SidebarNavGroup) => boolean
 }[] = [
   {
     id: "pulse",
-    label: "Daily Pulse",
+    labelKey: "nav.group.pulse",
     match: (g) => !g || g === "pulse" || g === "main",
   },
   {
     id: "money",
-    label: "Money",
+    labelKey: "nav.group.money",
     match: (g) => g === "money",
   },
   {
     id: "automation",
-    label: "Automation",
+    labelKey: "nav.group.automation",
     match: (g) => g === "automation",
   },
   {
     id: "admin",
-    label: "Admin",
+    labelKey: "nav.group.admin",
     match: (g) => g === "admin",
   },
   {
     id: "docs",
-    label: "Docs",
+    labelKey: "nav.group.docs",
     match: (g) => g === "docs",
   },
 ]
+
+const URL_TO_NAV_KEY: Record<string, TranslationKey> = {
+  "/": "nav.overview",
+  "/mail": "nav.mail",
+  "/calendar": "nav.calendar",
+  "/space/ai/chat": "nav.ai",
+  "/finance/transactions": "nav.transactions",
+  "/finance/inbox": "nav.inbox",
+  "/finance/accounts": "nav.accounts",
+  "/finance/budgets": "nav.budgets",
+  "/finance/recurring": "nav.recurring",
+  "/finance/borrowings": "nav.borrowing",
+  "/finance/reconcile": "nav.reconciliation",
+  "/finance/rates": "nav.exchangeRates",
+  "/space/ai/agents": "nav.agents",
+  "/space/ai/models": "nav.models",
+  "/space/ai/mcp": "nav.mcp",
+}
+
+function getLocalizedMenuLabel(
+  title: string,
+  url: string | undefined,
+  t: (key: TranslationKey) => string,
+  language: "en" | "es",
+  isSubItem = false
+): string {
+  if (url === "/finance") {
+    return isSubItem ? t("nav.insights") : t("nav.finance")
+  }
+  if (url && url in URL_TO_NAV_KEY) {
+    return t(URL_TO_NAV_KEY[url])
+  }
+  if (title === "Workflows") return t("nav.workflows")
+  if (title === "Admin") return t("nav.group.admin")
+  if (language === "es") {
+    switch (url) {
+      case "/space/workflows":
+        return "Estudio"
+      case "/space/workflows/runs":
+        return "Historial de ejecuciones"
+      case "/space/ai/runs":
+        return "Ejecuciones"
+      case "/admin/users":
+        return "Gestión de usuarios"
+      case "/admin/scheduler":
+        return "Panel de tareas"
+      case "/admin/messages":
+        return "Cola de mensajes"
+      case "/admin/backups":
+        return "Copias de seguridad"
+      case "/admin/security":
+        return "Auditoría de seguridad"
+      default:
+        if (title === "AI Studio") return "Estudio IA"
+    }
+  }
+  return title
+}
 
 function SidebarNavItem({
   item,
@@ -77,6 +137,8 @@ function SidebarNavItem({
 }) {
   const { spaceId } = useActiveSpaceContext()
   const { isMobile, setOpenMobile } = useSidebar()
+  const { t, language } = useI18n()
+  const itemLabel = getLocalizedMenuLabel(item.title, item.url, t, language)
   const [open, setOpen] = useState(() => {
     if (item.items) {
       return item.items.some((sub) =>
@@ -100,10 +162,10 @@ function SidebarNavItem({
         <SidebarMenuButton
           onClick={() => setOpen(!open)}
           className="cursor-pointer"
-          tooltip={item.title}
+          tooltip={itemLabel}
         >
           <item.icon />
-          <span>{item.title}</span>
+          <span>{itemLabel}</span>
           <ChevronRightIcon
             className={cn(
               "ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
@@ -121,6 +183,13 @@ function SidebarNavItem({
                 subItem.requiresSpace ?? item.requiresSpace
               )
               const SubBadge = subItem.badge
+              const subLabel = getLocalizedMenuLabel(
+                subItem.title,
+                subItem.url,
+                t,
+                language,
+                true
+              )
               return (
                 <SidebarMenuSubItem key={subItem.title}>
                   <SidebarMenuSubButton
@@ -133,7 +202,7 @@ function SidebarNavItem({
                     }}
                   >
                     {subItem.icon && <subItem.icon />}
-                    <span className="truncate">{subItem.title}</span>
+                    <span className="truncate">{subLabel}</span>
                     {SubBadge && (
                       <span className="ml-auto">
                         <SubBadge />
@@ -164,7 +233,7 @@ function SidebarNavItem({
     <SidebarMenuItem>
       <SidebarMenuButton
         render={<Link to={resolvedItemUrl} />}
-        tooltip={item.title}
+        tooltip={itemLabel}
         isActive={isItemActive}
         onClick={() => {
           if (isMobile) {
@@ -173,7 +242,7 @@ function SidebarNavItem({
         }}
       >
         <item.icon />
-        <span>{item.title}</span>
+        <span>{itemLabel}</span>
       </SidebarMenuButton>
       {item.badge && (
         <SidebarMenuBadge>
@@ -189,10 +258,12 @@ export function AppSidebar() {
   const { state, isMobile, setOpenMobile } = useSidebar()
   const location = useLocation()
   const { spaceId } = useActiveSpaceContext()
+  const { t } = useI18n()
   const isCollapsed = state === "collapsed" && !isMobile
 
   const visibleGroups = NAV_GROUPS.map((group) => ({
     ...group,
+    label: t(group.labelKey),
     items: allMenus
       .filter(
         (item) =>
@@ -208,7 +279,7 @@ export function AppSidebar() {
       <SidebarHeader className="h-12 shrink-0 justify-center border-b border-sidebar-border/60 p-0 px-2">
         <Link
           to="/"
-          aria-label="Saturn Overview"
+          aria-label={`Saturn ${t("nav.overview")}`}
           onClick={() => {
             if (isMobile) {
               setOpenMobile(false)
@@ -252,7 +323,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               render={<Link to="/settings/account" />}
-              tooltip="Settings"
+              tooltip={t("nav.settings")}
               isActive={location.pathname.startsWith("/settings")}
               onClick={() => {
                 if (isMobile) {
@@ -261,7 +332,7 @@ export function AppSidebar() {
               }}
             >
               <SettingsIcon />
-              <span>Settings</span>
+              <span>{t("nav.settings")}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

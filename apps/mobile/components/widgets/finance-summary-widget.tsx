@@ -20,7 +20,11 @@ import {
   useGetInsightsQuery,
   useListInboxItemsQuery,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { useCurrencyConversionPreview, useTimezone } from "@saturn/hooks"
+import {
+  useCurrencyConversionPreview,
+  useI18n,
+  useTimezone,
+} from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { Card } from "@/components/ui/card"
 import { MonoAmount, Caption } from "@/components/ui/typography"
@@ -34,6 +38,7 @@ export function FinanceSummaryWidget() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { t } = useI18n()
 
   // 1. Fetch space finance settings (base currency)
   const { data: settingsData, isLoading: settingsLoading } =
@@ -153,7 +158,9 @@ export function FinanceSummaryWidget() {
         >
           <View style={styles.headerLeft}>
             <Landmark size={16} color={colors.primary} />
-            <Text style={styles.headerTitle}>Financial Snapshot</Text>
+            <Text style={styles.headerTitle}>
+              {t("dashboard.widget.net_worth.title")}
+            </Text>
           </View>
           <View style={styles.headerRight}>
             {accounts.length > 0 ? (
@@ -236,9 +243,9 @@ export function FinanceSummaryWidget() {
             <View style={styles.inboxCalloutLeft}>
               <Inbox size={14} color={colors.primary} />
               <Text style={styles.inboxCalloutText}>
-                {pendingInboxCount === 1
-                  ? "1 item awaiting review"
-                  : `${pendingInboxCount} items awaiting review`}
+                {t("dashboard.pendingInboxItems", {
+                  count: pendingInboxCount,
+                })}
               </Text>
             </View>
             <ChevronRight size={14} color={colors.primary} />

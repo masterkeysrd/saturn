@@ -1,14 +1,17 @@
 import { z } from "zod"
 import { nonEmptyString, positiveAmountString } from "../common"
+import { schemaError } from "../i18n"
 import { adjustBalanceShape } from "./adjust-balance"
 
 export const BorrowingSchema = z.compile(
   z.object({
     direction: z.enum(["LENT", "BORROWED", "DIRECTION_UNSPECIFIED"]),
-    counterparty: nonEmptyString("Counterparty name is required"),
+    counterparty: nonEmptyString("finance.counterpartyRequired"),
     contactInfo: z.string().optional(),
     amount: positiveAmountString(),
-    currency: z.string().min(1, { error: "Currency is required" }),
+    currency: z
+      .string()
+      .min(1, { error: schemaError("finance.currencyRequired") }),
     establishedAt: z.date(),
     hasDueDate: z.boolean(),
     dueAt: z.date().optional(),
@@ -34,7 +37,7 @@ export const RepaymentSchema = z.compile(
     ...baseBorrowingTxShape,
     borrowingId: z.string().optional(),
     type: baseBorrowingTxShape.type.optional(),
-    amount: positiveAmountString("Repayment amount is required"),
+    amount: positiveAmountString("finance.repaymentAmountRequired"),
     paymentDate: z.date(),
     accountId: z.string().optional(),
   })
@@ -55,7 +58,9 @@ export type AdjustBorrowingFormValues = z.infer<typeof AdjustBorrowingSchema>
 export const BorrowingTransactionSchema = z.compile(
   z.object({
     ...baseBorrowingTxShape,
-    accountId: z.string().min(1, { error: "Account is required" }),
+    accountId: z
+      .string()
+      .min(1, { error: schemaError("finance.accountRequired") }),
     transactionDate: z.date(),
   })
 )

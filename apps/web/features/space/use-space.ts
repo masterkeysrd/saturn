@@ -12,9 +12,18 @@ import {
   useListSpacesQuery,
   useGetSettingsQuery,
 } from "@saturn/api/gen/saturn/space/v1/space"
+import { useGetUserPreferencesQuery } from "@saturn/api/gen/saturn/identity/v1/identity"
 import { TimezoneProvider, useSpaceRole } from "@saturn/hooks"
 import { AuthContext } from "@/features/auth/auth-context"
 import { useAuth } from "@/features/auth/use-auth"
+import {
+  USER_PREFS_STORAGE_KEY,
+  USER_PREFS_UPDATED_EVENT,
+  getCachedUserPreferences,
+  normalizeCachedUserPreferences,
+  setCachedUserPreferences,
+  type CachedUserPreferences,
+} from "@/lib/user-preferences"
 
 const ACTIVE_SPACE_KEY = "active_space_id"
 const SPACE_META_KEY = "space_meta"
@@ -99,13 +108,78 @@ export function ActiveSpaceProvider({ children }: { children: ReactNode }) {
     { enabled: isAuthenticated && !!spaceId }
   )
 
+  const { data: userPrefs } = useGetUserPreferencesQuery(
+    {},
+    { enabled: isAuthenticated, staleTime: 1000 * 60 * 10 }
+  )
+
+  const [cachedPrefs, setCachedPrefsState] = useState<CachedUserPreferences>(
+    () => getCachedUserPreferences()
+  )
+
+  useEffect(() => {
+    const handlePrefsUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<CachedUserPreferences>).detail
+      if (detail) {
+        setCachedPrefsState(normalizeCachedUserPreferences(detail))
+      } else {
+        setCachedPrefsState(getCachedUserPreferences())
+      }
+    }
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === USER_PREFS_STORAGE_KEY) {
+        setCachedPrefsState(getCachedUserPreferences())
+      }
+    }
+    window.addEventListener(USER_PREFS_UPDATED_EVENT, handlePrefsUpdated)
+    window.addEventListener("storage", handleStorage)
+    return () => {
+      window.removeEventListener(USER_PREFS_UPDATED_EVENT, handlePrefsUpdated)
+      window.removeEventListener("storage", handleStorage)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isAuthenticated || !userPrefs) return
+    setCachedUserPreferences(
+      {
+        locale: userPrefs.locale,
+        hourCycle: userPrefs.hourCycle,
+        weekStartsOn: userPrefs.weekStartsOn,
+      },
+      { emit: false }
+    )
+  }, [isAuthenticated, userPrefs])
+
+  const resolvedPrefs = useMemo(() => {
+    if (isAuthenticated && userPrefs) {
+      return normalizeCachedUserPreferences(userPrefs, cachedPrefs.locale)
+    }
+    return cachedPrefs
+  }, [isAuthenticated, userPrefs, cachedPrefs])
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = resolvedPrefs.locale
+    }
+  }, [resolvedPrefs.locale])
+
   const browserTz = useMemo(() => getBrowserTimezone(), [])
   const timezone = settings?.timezone || browserTz
 
   return createElement(
     ActiveSpaceContext.Provider,
     { value: activeSpaceState },
-    createElement(TimezoneProvider, { timezone }, children)
+    createElement(
+      TimezoneProvider,
+      {
+        timezone,
+        locale: resolvedPrefs.locale,
+        hourCycle: resolvedPrefs.hourCycle,
+        weekStartsOn: resolvedPrefs.weekStartsOn,
+      },
+      children
+    )
   )
 }
 

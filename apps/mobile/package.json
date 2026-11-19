@@ -23,6 +23,7 @@
     "@saturn/api": "*",
     "@saturn/core": "*",
     "@saturn/hooks": "*",
+    "@saturn/i18n": "*",
     "@saturn/schemas": "*",
     "@saturn/tokens": "*",
     "@tanstack/query-async-storage-persister": "^5.103.2",

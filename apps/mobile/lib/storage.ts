@@ -10,6 +10,7 @@ const KEYS = {
   ACTIVE_SPACE_ID: "saturn_active_space_id",
   BIOMETRIC_ENABLED: "saturn_biometric_enabled",
   USER_PROFILE: "saturn_user_profile",
+  USER_PREFERENCES: "saturn_user_preferences",
   REMEMBERED_IDENTIFIER: "saturn_remembered_identifier",
   DEVICE_ID: "saturn_device_id",
   DEVICE_PUBLIC_KEY: "saturn_device_public_key",
@@ -224,4 +225,32 @@ export async function setRememberedIdentifier(
   } else {
     await secureDelete(KEYS.REMEMBERED_IDENTIFIER)
   }
+}
+
+export interface StoredUserPreferences {
+  locale: string
+  hourCycle: "h12" | "h23"
+  weekStartsOn: 0 | 1
+}
+
+export async function getUserPreferences(): Promise<StoredUserPreferences | null> {
+  try {
+    const raw = await secureGet(KEYS.USER_PREFERENCES)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<StoredUserPreferences>
+    if (typeof parsed !== "object" || parsed === null) return null
+    return {
+      locale: typeof parsed.locale === "string" ? parsed.locale : "en-US",
+      hourCycle: parsed.hourCycle === "h23" ? "h23" : "h12",
+      weekStartsOn: parsed.weekStartsOn === 1 ? 1 : 0,
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function setUserPreferences(
+  prefs: StoredUserPreferences
+): Promise<void> {
+  await secureSet(KEYS.USER_PREFERENCES, JSON.stringify(prefs))
 }

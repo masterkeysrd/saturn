@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react"
+import { useContext, useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
+import { QueryClientContext } from "@tanstack/react-query"
 import {
   ArrowLeftRight,
   Bot,
@@ -11,6 +12,7 @@ import {
   Home,
   Inbox,
   Landmark,
+  Languages,
   Layers,
   Mail,
   Monitor,
@@ -27,6 +29,9 @@ import {
   TrendingUp,
   Workflow,
 } from "lucide-react"
+import { SUPPORTED_UI_LOCALES, translate } from "@saturn/i18n"
+import { useI18n, useTimezone } from "@saturn/hooks"
+import { updateUserPreferences } from "@saturn/api/gen/saturn/identity/v1/identity"
 import {
   Command,
   CommandDialog,
@@ -38,12 +43,14 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command"
+import { toast } from "@/components/ui/toast"
 import { useTheme } from "@/components/theme-provider"
 import { useActiveSpaceContext, useMySpaces } from "@/features/space/use-space"
 import { useAuth } from "@/features/auth/use-auth"
 import { openAIDrawer } from "@/features/ai/lib/drawer-events"
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette-events"
 import { resolveNextSpaceRoute } from "@/lib/space-route"
+import { setCachedUserPreferences } from "@/lib/user-preferences"
 
 export interface CommandPaletteProps {
   open?: boolean
@@ -64,6 +71,9 @@ export function CommandPalette({
   const { user } = useAuth()
   const { spaceId, switchSpace } = useActiveSpaceContext()
   const { spaces } = useMySpaces()
+  const { t, locale, language } = useI18n()
+  const tz = useTimezone()
+  const queryClient = useContext(QueryClientContext)
 
   const isControlled = controlledOpen !== undefined
   const open = isControlled ? controlledOpen : internalOpen
@@ -102,147 +112,183 @@ export function CommandPalette({
     fn()
   }
 
+  const handleSwitchLanguage = async (nextLocale: string) => {
+    const next = setCachedUserPreferences({ locale: nextLocale })
+    queryClient?.setQueryData(
+      ["/api/v1/identity/users/me/preferences", {}],
+      next
+    )
+    if (user) {
+      try {
+        const updated = await updateUserPreferences({
+          userPreferences: {
+            locale: next.locale,
+            hourCycle: tz.hourCycle,
+            weekStartsOn: tz.weekStartsOn,
+          },
+          updateMask: { paths: ["locale"] },
+        })
+        const normalized = setCachedUserPreferences({
+          locale: updated.locale || next.locale,
+          hourCycle: updated.hourCycle || next.hourCycle,
+          weekStartsOn: updated.weekStartsOn ?? next.weekStartsOn,
+        })
+        queryClient?.setQueryData(
+          ["/api/v1/identity/users/me/preferences", {}],
+          normalized
+        )
+      } catch {
+        // Ignore API failure if offline or mocked; local cache already updated
+      }
+    }
+    toast.add({
+      type: "success",
+      title: translate(nextLocale, "settings.regional.saved"),
+    })
+  }
+
   const trimmedQuery = search.trim()
 
   const navDestinations = useMemo(() => {
     const base = [
       {
-        label: "Overview",
+        label: t("nav.overview"),
         url: "/",
         icon: Home,
         requiresSpace: false,
-        keywords: "dashboard home briefing",
+        keywords: "dashboard home briefing overview resumen",
       },
       {
-        label: "Mail",
+        label: t("nav.mail"),
         url: spaceId ? `/space/${spaceId}/mail` : "/mail",
         icon: Mail,
         requiresSpace: true,
-        keywords: "email inbox threads",
+        keywords: "email inbox threads mail correo",
       },
       {
-        label: "Calendar",
+        label: t("nav.calendar"),
         url: spaceId ? `/space/${spaceId}/calendar` : "/calendar",
         icon: Calendar,
         requiresSpace: true,
-        keywords: "schedule events agenda",
+        keywords: "schedule events agenda calendar calendario",
       },
       {
-        label: "Copilot",
+        label: t("nav.ai"),
         url: spaceId ? `/space/${spaceId}/ai/chat` : "/",
         icon: Sparkles,
         requiresSpace: true,
-        keywords: "ai assistant chat",
+        keywords: "ai assistant chat copilot saturn ia",
       },
       {
-        label: "Finance Insights",
+        label: t("nav.insights"),
         url: spaceId ? `/space/${spaceId}/finance` : "/",
         icon: TrendingUp,
         requiresSpace: true,
-        keywords: "analytics spending cashflow",
+        keywords: "analytics spending cashflow finance insights analisis",
       },
       {
-        label: "Transactions",
+        label: t("nav.transactions"),
         url: spaceId ? `/space/${spaceId}/finance/transactions` : "/",
         icon: ReceiptText,
         requiresSpace: true,
-        keywords: "ledger expenses income",
+        keywords: "ledger expenses income transactions transacciones",
       },
       {
-        label: "Review Queue",
+        label: t("nav.inbox"),
         url: spaceId ? `/space/${spaceId}/finance/inbox` : "/",
         icon: Inbox,
         requiresSpace: true,
-        keywords: "triage finance inbox receipts",
+        keywords: "triage finance inbox receipts review queue cola",
       },
       {
-        label: "Accounts",
+        label: t("nav.accounts"),
         url: spaceId ? `/space/${spaceId}/finance/accounts` : "/",
         icon: Landmark,
         requiresSpace: true,
-        keywords: "banks cards balances",
+        keywords: "banks cards balances accounts cuentas",
       },
       {
-        label: "Budgets",
+        label: t("nav.budgets"),
         url: spaceId ? `/space/${spaceId}/finance/budgets` : "/",
         icon: PiggyBank,
         requiresSpace: true,
-        keywords: "limits categories",
+        keywords: "limits categories budgets presupuestos",
       },
       {
-        label: "Recurring",
+        label: t("nav.recurring"),
         url: spaceId ? `/space/${spaceId}/finance/recurring` : "/",
         icon: RefreshCw,
         requiresSpace: true,
-        keywords: "subscriptions bills scheduled",
+        keywords: "subscriptions bills scheduled recurring recurrentes",
       },
       {
-        label: "Borrowings",
+        label: t("nav.borrowing"),
         url: spaceId ? `/space/${spaceId}/finance/borrowings` : "/",
         icon: HandCoins,
         requiresSpace: true,
-        keywords: "debts loans",
+        keywords: "debts loans borrowings prestamos",
       },
       {
-        label: "Reconciliation",
+        label: t("nav.reconciliation"),
         url: spaceId ? `/space/${spaceId}/finance/reconcile` : "/",
         icon: FileSpreadsheet,
         requiresSpace: true,
-        keywords: "statements csv pdf match",
+        keywords: "statements csv pdf match reconciliation conciliacion",
       },
       {
-        label: "Exchange Rates",
+        label: t("nav.exchangeRates"),
         url: spaceId ? `/space/${spaceId}/finance/rates` : "/",
         icon: ArrowLeftRight,
         requiresSpace: true,
-        keywords: "fx currency conversion",
+        keywords: "fx currency conversion exchange rates tasas",
       },
       {
-        label: "Workflows",
+        label: t("nav.workflows"),
         url: spaceId ? `/space/${spaceId}/workflows` : "/",
         icon: Workflow,
         requiresSpace: true,
-        keywords: "automation studio flows",
+        keywords: "automation studio flows workflows flujos",
       },
       {
-        label: "AI Agents",
+        label: t("nav.agents"),
         url: spaceId ? `/space/${spaceId}/ai/agents` : "/",
         icon: Bot,
         requiresSpace: true,
-        keywords: "studio assistants",
+        keywords: "studio assistants agents agentes",
       },
       {
-        label: "Models & Providers",
+        label: t("nav.models"),
         url: spaceId ? `/space/${spaceId}/ai/models` : "/",
         icon: Cpu,
         requiresSpace: true,
-        keywords: "llm openai anthropic",
+        keywords: "llm openai anthropic models modelos",
       },
       {
-        label: "MCP Servers",
+        label: t("nav.mcp"),
         url: spaceId ? `/space/${spaceId}/ai/mcp` : "/",
         icon: Plug,
         requiresSpace: true,
-        keywords: "tools integrations",
+        keywords: "tools integrations mcp conectores",
       },
       {
-        label: "Execution Runs",
+        label:
+          language === "es" ? "Historial de ejecuciones" : "Execution Runs",
         url: spaceId ? `/space/${spaceId}/ai/runs` : "/",
         icon: History,
         requiresSpace: true,
-        keywords: "traces logs history",
+        keywords: "traces logs history runs ejecuciones",
       },
       {
-        label: "Settings",
+        label: t("nav.settings"),
         url: "/settings/account",
         icon: Settings,
         requiresSpace: false,
-        keywords: "preferences security profile",
+        keywords: "preferences security profile settings configuracion",
       },
     ]
 
     return base.filter((item) => !item.requiresSpace || Boolean(spaceId))
-  }, [spaceId])
+  }, [spaceId, t, language])
 
   return (
     <CommandDialog
@@ -269,7 +315,7 @@ export function CommandPalette({
               }
             }
           }}
-          placeholder="Search views, actions, workspaces, or ask Saturn Copilot..."
+          placeholder={t("commandPalette.placeholder")}
         />
         <CommandList className="max-h-96">
           {Boolean(spaceId) && trimmedQuery.length > 0 && (
@@ -294,9 +340,9 @@ export function CommandPalette({
           )}
 
           {spaceId && (
-            <CommandGroup heading="Quick Actions">
+            <CommandGroup heading={t("commandPalette.quickActions")}>
               <CommandItem
-                value="Record Transaction expense income"
+                value="Record Transaction expense income registrar transaccion"
                 onSelect={() =>
                   runAction(() =>
                     navigate(`/space/${spaceId}/finance/transactions`)
@@ -304,37 +350,46 @@ export function CommandPalette({
                 }
               >
                 <Plus />
-                <span>Record Transaction</span>
-                <CommandShortcut>Finance</CommandShortcut>
+                <span>{t("commandPalette.recordTransaction")}</span>
+                <CommandShortcut>{t("nav.finance")}</CommandShortcut>
               </CommandItem>
               <CommandItem
-                value="Compose Email send message"
+                value="Compose Email send message redactar correo"
                 onSelect={() =>
                   runAction(() => navigate(`/space/${spaceId}/mail`))
                 }
               >
                 <PenSquare />
-                <span>Compose Email</span>
-                <CommandShortcut>Mail</CommandShortcut>
+                <span>{t("commandPalette.composeMail")}</span>
+                <CommandShortcut>{t("nav.mail")}</CommandShortcut>
               </CommandItem>
               <CommandItem
-                value="Create Calendar Event schedule meeting"
+                value="Create Calendar Event schedule meeting nuevo evento"
                 onSelect={() =>
                   runAction(() => navigate(`/space/${spaceId}/calendar`))
                 }
               >
                 <Calendar />
-                <span>Create Calendar Event</span>
-                <CommandShortcut>Calendar</CommandShortcut>
+                <span>{t("commandPalette.newEvent")}</span>
+                <CommandShortcut>{t("nav.calendar")}</CommandShortcut>
               </CommandItem>
               <CommandItem
-                value="New Workflow automation flow"
+                value="Toggle Saturn Copilot ai drawer asistente"
+                onSelect={() => runAction(() => openAIDrawer())}
+              >
+                <Sparkles />
+                <span>{t("commandPalette.toggleCopilot")}</span>
+              </CommandItem>
+              <CommandItem
+                value="New Workflow automation flow nuevo flujo"
                 onSelect={() =>
                   runAction(() => navigate(`/space/${spaceId}/workflows/new`))
                 }
               >
                 <Workflow />
-                <span>New Workflow</span>
+                <span>
+                  {language === "es" ? "Nuevo flujo" : "New Workflow"}
+                </span>
                 <CommandShortcut>Studio</CommandShortcut>
               </CommandItem>
             </CommandGroup>
@@ -342,12 +397,12 @@ export function CommandPalette({
 
           <CommandSeparator />
 
-          <CommandGroup heading="Navigate">
+          <CommandGroup heading={t("commandPalette.navigation")}>
             {navDestinations.map((item) => {
               const Icon = item.icon
               return (
                 <CommandItem
-                  key={item.label}
+                  key={item.url + item.label}
                   value={`${item.label} ${item.keywords}`}
                   onSelect={() => runAction(() => navigate(item.url))}
                 >
@@ -361,7 +416,7 @@ export function CommandPalette({
           {spaces.length > 0 && (
             <>
               <CommandSeparator />
-              <CommandGroup heading="Switch Workspace">
+              <CommandGroup heading={t("commandPalette.workspaces")}>
                 {spaces.map((space) => {
                   const nextSpaceId = space.id || ""
                   const isActive = nextSpaceId === spaceId
@@ -391,7 +446,9 @@ export function CommandPalette({
                     >
                       <Layers />
                       <span>{space.name}</span>
-                      {isActive && <CommandShortcut>Active</CommandShortcut>}
+                      {isActive && (
+                        <CommandShortcut>{t("common.active")}</CommandShortcut>
+                      )}
                     </CommandItem>
                   )
                 })}
@@ -401,32 +458,58 @@ export function CommandPalette({
 
           <CommandSeparator />
 
-          <CommandGroup heading="Appearance">
+          <CommandGroup heading={t("commandPalette.preferences")}>
             <CommandItem
-              value="Light Theme appearance"
+              value="Light Theme appearance tema claro"
               onSelect={() => runAction(() => setTheme("light"))}
             >
               <Sun />
-              <span>Light Theme</span>
+              <span>{language === "es" ? "Tema claro" : "Light Theme"}</span>
             </CommandItem>
             <CommandItem
-              value="Dark Theme appearance"
+              value="Dark Theme appearance tema oscuro"
               onSelect={() => runAction(() => setTheme("dark"))}
             >
               <Moon />
-              <span>Dark Theme</span>
+              <span>{language === "es" ? "Tema oscuro" : "Dark Theme"}</span>
             </CommandItem>
             <CommandItem
-              value="System Theme appearance"
+              value="System Theme appearance tema del sistema"
               onSelect={() => runAction(() => setTheme("system"))}
             >
               <Monitor />
-              <span>System Theme</span>
+              <span>
+                {language === "es" ? "Tema del sistema" : "System Theme"}
+              </span>
             </CommandItem>
+            {SUPPORTED_UI_LOCALES.map((opt) => {
+              const isCurrent = locale === opt.value
+              return (
+                <CommandItem
+                  key={opt.value}
+                  value={`language locale switch ${opt.label} ${opt.englishLabel} ${opt.value}`}
+                  onSelect={() =>
+                    runAction(() => {
+                      void handleSwitchLanguage(opt.value)
+                    })
+                  }
+                >
+                  <Languages />
+                  <span>
+                    {t("commandPalette.switchLanguage", {
+                      language: opt.label,
+                    })}
+                  </span>
+                  {isCurrent && (
+                    <CommandShortcut>{t("common.active")}</CommandShortcut>
+                  )}
+                </CommandItem>
+              )
+            })}
           </CommandGroup>
 
           <CommandEmpty className="py-6 text-center text-xs text-muted-foreground">
-            No matching commands found.
+            {t("commandPalette.noResults")}
           </CommandEmpty>
         </CommandList>
       </Command>

@@ -31,7 +31,7 @@ import type {
   InboxItem,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { formatAmount } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import {
@@ -67,6 +67,7 @@ function LeftApproveAction({
 }) {
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
 
   const containerStyle = useAnimatedStyle(() => {
     const opacity = interpolate(drag.value, [12, 32], [0, 1], "clamp")
@@ -88,7 +89,7 @@ function LeftApproveAction({
       >
         <Animated.View style={[styles.actionContent, contentStyle]}>
           <Check size={22} color={colors.primaryForeground} strokeWidth={2.5} />
-          <Text style={styles.actionText}>Approve</Text>
+          <Text style={styles.actionText}>{t("common.approve")}</Text>
         </Animated.View>
       </Pressable>
     </Animated.View>
@@ -106,6 +107,7 @@ function RightDiscardAction({
 }) {
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
 
   const containerStyle = useAnimatedStyle(() => {
     const opacity = interpolate(drag.value, [-32, -12], [1, 0], "clamp")
@@ -127,7 +129,7 @@ function RightDiscardAction({
       >
         <Animated.View style={[styles.actionContent, contentStyle]}>
           <Trash2 size={21} color={colors.primaryForeground} />
-          <Text style={styles.actionText}>Discard</Text>
+          <Text style={styles.actionText}>{t("common.discard")}</Text>
         </Animated.View>
       </Pressable>
     </Animated.View>
@@ -150,6 +152,7 @@ export function SwipeableInboxCard({
   const { colors, getBudgetColors } = useTheme()
   const styles = useThemedStyles(createStyles)
   const tz = useTimezone()
+  const { t } = useI18n()
   const swipeableRef = useRef<SwipeableMethods>(null)
 
   const txnType = resolveInboxTransactionType(item)
@@ -363,7 +366,7 @@ export function SwipeableInboxCard({
                 accessibilityLabel={`Discard ${item.vendorName || "item"}`}
               >
                 <Trash2 size={14} color={colors.destructive} />
-                <Text style={styles.discardBtnText}>Discard</Text>
+                <Text style={styles.discardBtnText}>{t("common.discard")}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -396,7 +399,9 @@ export function SwipeableInboxCard({
                     !readyForQuickApprove && styles.approveBtnTextReview,
                   ]}
                 >
-                  {readyForQuickApprove ? "Approve" : "Review & Approve"}
+                  {readyForQuickApprove
+                    ? t("common.approve")
+                    : "Review & Approve"}
                 </Text>
               </TouchableOpacity>
             </View>

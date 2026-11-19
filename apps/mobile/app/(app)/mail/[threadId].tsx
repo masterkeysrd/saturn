@@ -27,7 +27,12 @@ import {
   Download,
   Paperclip,
 } from "lucide-react-native"
-import { useMailThread, useModifyThread, useTimezone } from "@saturn/hooks"
+import {
+  useMailThread,
+  useModifyThread,
+  useTimezone,
+  useI18n,
+} from "@saturn/hooks"
 import type { Message, Attachment } from "@saturn/api/saturn/mail/v1/mail"
 import { formatAttachmentBytes } from "@saturn/core"
 import { getApiBaseUrl } from "@/lib/config"
@@ -48,6 +53,7 @@ export default function MobileThreadReaderScreen() {
   const { mutate: modifyThread } = modifyMutation
   const toast = useToast()
   const tz = useTimezone()
+  const { t } = useI18n()
 
   // Auto-mark conversation as read when opened
   const markedAsReadRef = useRef<Set<string>>(new Set())
@@ -124,10 +130,10 @@ export default function MobileThreadReaderScreen() {
     })
     router.back()
     toast.show({
-      title: "Conversation archived",
+      title: t("mail.conversationArchived"),
       type: "success",
       action: {
-        label: "Undo",
+        label: t("common.undo"),
         onPress: () => {
           modifyMutation.mutate({
             id: thread.id,
@@ -147,10 +153,10 @@ export default function MobileThreadReaderScreen() {
     })
     router.back()
     toast.show({
-      title: "Conversation moved to trash",
+      title: t("mail.conversationTrash"),
       type: "success",
       action: {
-        label: "Undo",
+        label: t("common.undo"),
         onPress: () => {
           modifyMutation.mutate({
             id: thread.id,
@@ -185,7 +191,7 @@ export default function MobileThreadReaderScreen() {
     router.push({
       pathname: "/modal/manage-event",
       params: {
-        initialTitle: thread.subject || "Meeting from email",
+        initialTitle: thread.subject || t("mail.meetingFromEmail"),
         initialDescription: `Created from email thread: ${thread.subject}\nSnippet: ${thread.snippet}`,
         sourceMailMessageId: latestMsg?.id || "",
         initialAttendees: JSON.stringify(attendees),
@@ -214,49 +220,61 @@ export default function MobileThreadReaderScreen() {
   }
 
   // Download & Share attachment via expo-file-system and expo-sharing
-  const handleDownloadAttachment = useCallback(async (att: Attachment) => {
-    if (!att.downloadUrl) return
-    haptics.selection()
+  const handleDownloadAttachment = useCallback(
+    async (att: Attachment) => {
+      if (!att.downloadUrl) return
+      haptics.selection()
 
-    const fullUrl = att.downloadUrl.startsWith("http")
-      ? att.downloadUrl
-      : `${getApiBaseUrl().replace(/\/$/, "")}${att.downloadUrl}`
+      const fullUrl = att.downloadUrl.startsWith("http")
+        ? att.downloadUrl
+        : `${getApiBaseUrl().replace(/\/$/, "")}${att.downloadUrl}`
 
-    if (Platform.OS === "web") {
-      Linking.openURL(fullUrl)
-      return
-    }
-
-    try {
-      const attKey = att.id || att.filename || "file"
-      setDownloadingId(attKey)
-      const filename = att.filename || "attachment"
-      const safeKey = attKey.replace(/[^a-zA-Z0-9._-]/g, "_")
-      const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_")
-      const destUri = `${FileSystem.cacheDirectory ?? ""}${safeKey}_${safeFilename}`
-
-      const downloadRes = await FileSystem.downloadAsync(fullUrl, destUri)
-
-      if (downloadRes.status === 200) {
-        const canShare = await Sharing.isAvailableAsync()
-        if (canShare) {
-          await Sharing.shareAsync(downloadRes.uri, {
-            mimeType: att.contentType || "application/octet-stream",
-            dialogTitle: `Share ${filename}`,
-          })
-        } else {
-          Alert.alert("Downloaded", `Saved attachment to ${filename}`)
-        }
-      } else {
-        Alert.alert("Download Error", "Could not download attachment.")
+      if (Platform.OS === "web") {
+        Linking.openURL(fullUrl)
+        return
       }
-    } catch (e: unknown) {
-      const err = e as Error
-      Alert.alert("Error", err.message || "Failed to download attachment")
-    } finally {
-      setDownloadingId(null)
-    }
-  }, [])
+
+      try {
+        const attKey = att.id || att.filename || "file"
+        setDownloadingId(attKey)
+        const filename = att.filename || "attachment"
+        const safeKey = attKey.replace(/[^a-zA-Z0-9._-]/g, "_")
+        const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_")
+        const destUri = `${FileSystem.cacheDirectory ?? ""}${safeKey}_${safeFilename}`
+
+        const downloadRes = await FileSystem.downloadAsync(fullUrl, destUri)
+
+        if (downloadRes.status === 200) {
+          const canShare = await Sharing.isAvailableAsync()
+          if (canShare) {
+            await Sharing.shareAsync(downloadRes.uri, {
+              mimeType: att.contentType || "application/octet-stream",
+              dialogTitle: t("mail.shareAttachment", { filename }),
+            })
+          } else {
+            Alert.alert(
+              t("mail.downloaded"),
+              t("mail.savedAttachmentTo", { filename })
+            )
+          }
+        } else {
+          Alert.alert(
+            t("mail.downloadError"),
+            t("mail.couldNotDownloadAttachment")
+          )
+        }
+      } catch (e: unknown) {
+        const err = e as Error
+        Alert.alert(
+          t("common.error"),
+          err.message || t("mail.failedToDownloadAttachment")
+        )
+      } finally {
+        setDownloadingId(null)
+      }
+    },
+    [t]
+  )
 
   if (isLoading) {
     return (
@@ -269,9 +287,9 @@ export default function MobileThreadReaderScreen() {
   if (error || !thread) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Conversation not found</Text>
+        <Text style={styles.errorText}>{t("mail.conversationNotFound")}</Text>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>Go back</Text>
+          <Text style={styles.backBtnText}>{t("common.back")}</Text>
         </Pressable>
       </View>
     )
@@ -288,7 +306,7 @@ export default function MobileThreadReaderScreen() {
                 unstable_headerRightItems: () => [
                   {
                     type: "button",
-                    label: thread.isStarred ? "Unstar" : "Star",
+                    label: thread.isStarred ? t("mail.unstar") : t("mail.star"),
                     icon: {
                       type: "sfSymbol",
                       name: thread.isStarred ? "star.fill" : "star",
@@ -300,20 +318,20 @@ export default function MobileThreadReaderScreen() {
                   },
                   {
                     type: "button",
-                    label: "Archive",
+                    label: t("mail.archive"),
                     icon: { type: "sfSymbol", name: "archivebox" },
                     onPress: handleArchive,
                   },
                   {
                     type: "button",
-                    label: "Delete",
+                    label: t("common.delete"),
                     icon: { type: "sfSymbol", name: "trash" },
                     tintColor: colors.destructive,
                     onPress: handleTrash,
                   },
                   {
                     type: "button",
-                    label: "Create Event",
+                    label: t("mail.createEventShort"),
                     icon: { type: "sfSymbol", name: "calendar.badge.plus" },
                     tintColor: colors.primary,
                     sharesBackground: false,
@@ -377,10 +395,12 @@ export default function MobileThreadReaderScreen() {
         {/* Thread Subject Header */}
         <View style={styles.subjectCard}>
           <Text style={styles.subjectText}>
-            {thread.subject || "(No Subject)"}
+            {thread.subject || t("mail.noSubject")}
           </Text>
           <Text style={styles.subjectMeta}>
-            {messages.length} {messages.length === 1 ? "message" : "messages"}
+            {messages.length === 1
+              ? t("mail.messageSingle", { count: messages.length })
+              : t("mail.messagesCount", { count: messages.length })}
           </Text>
         </View>
 
@@ -388,7 +408,8 @@ export default function MobileThreadReaderScreen() {
         <View style={styles.messagesList}>
           {messages.map((msg, index) => {
             const isExpanded = expandedIds.has(msg.id)
-            const senderName = msg.from?.name || msg.from?.email || "Unknown"
+            const senderName =
+              msg.from?.name || msg.from?.email || t("mail.unknown")
             const timeStr = msg.sentAt ? tz.formatDateTime(msg.sentAt) : ""
             const initials = senderName.slice(0, 2).toUpperCase()
 
@@ -441,8 +462,9 @@ export default function MobileThreadReaderScreen() {
                       <Text style={styles.msgTimeText}>{timeStr}</Text>
                     </View>
                     <Text numberOfLines={1} style={styles.recipientSubText}>
-                      to{" "}
-                      {msg.to?.map((t) => t.name || t.email).join(", ") || "me"}
+                      {t("mail.toPrefix")}{" "}
+                      {msg.to?.map((t) => t.name || t.email).join(", ") ||
+                        t("mail.me")}
                     </Text>
                   </View>
 
@@ -463,8 +485,10 @@ export default function MobileThreadReaderScreen() {
                 {msg.attachments && msg.attachments.length > 0 && (
                   <View style={styles.attachmentsSection}>
                     <Text style={styles.attachmentsTitle}>
-                      Attachments (
-                      {msg.attachments.filter((a) => !a.isInline).length})
+                      {t("mail.attachmentsTitle", {
+                        count: msg.attachments.filter((a) => !a.isInline)
+                          .length,
+                      })}
                     </Text>
                     <View style={styles.attachmentsGrid}>
                       {msg.attachments
@@ -517,7 +541,9 @@ export default function MobileThreadReaderScreen() {
                     style={styles.quickReplyBtn}
                   >
                     <Reply size={13} color={colors.textSecondary} />
-                    <Text style={styles.quickReplyBtnText}>Reply</Text>
+                    <Text style={styles.quickReplyBtnText}>
+                      {t("mail.reply")}
+                    </Text>
                   </Pressable>
                 </View>
               </View>
@@ -539,7 +565,7 @@ export default function MobileThreadReaderScreen() {
           style={styles.replyActionBarBtn}
         >
           <Reply size={15} color={colors.textPrimary} />
-          <Text style={styles.replyActionBarText}>Reply</Text>
+          <Text style={styles.replyActionBarText}>{t("mail.reply")}</Text>
         </Pressable>
 
         <Pressable
@@ -548,7 +574,7 @@ export default function MobileThreadReaderScreen() {
           style={styles.replyActionBarBtn}
         >
           <ReplyAll size={15} color={colors.textPrimary} />
-          <Text style={styles.replyActionBarText}>Reply All</Text>
+          <Text style={styles.replyActionBarText}>{t("mail.replyAll")}</Text>
         </Pressable>
 
         <Pressable
@@ -557,7 +583,7 @@ export default function MobileThreadReaderScreen() {
           style={styles.replyActionBarBtn}
         >
           <Forward size={15} color={colors.textPrimary} />
-          <Text style={styles.replyActionBarText}>Forward</Text>
+          <Text style={styles.replyActionBarText}>{t("mail.forward")}</Text>
         </Pressable>
       </View>
     </View>

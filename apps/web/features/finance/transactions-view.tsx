@@ -5,6 +5,7 @@ import { useUrlState } from "@/lib/use-url-state"
 import {
   invalidateFinanceQueries,
   useDebounce,
+  useI18n,
   useTimezone,
 } from "@saturn/hooks"
 import { useRegisterCopilotView } from "@saturn/hooks/ai"
@@ -274,6 +275,7 @@ export function TransactionsView() {
   const queryClient = useQueryClient()
   const { spaceId, isWritable } = useSpacePermissions()
   const tz = useTimezone()
+  const { t, language } = useI18n()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -1187,13 +1189,17 @@ export function TransactionsView() {
                 </div>
                 <h4 className="text-sm font-semibold text-foreground">
                   {hasActiveFilters
-                    ? "No matching transactions"
-                    : "No transactions recorded"}
+                    ? language === "es"
+                      ? "Sin transacciones coincidentes"
+                      : "No matching transactions"
+                    : t("empty.transactionsTitle")}
                 </h4>
                 <p className="mt-1 max-w-xs px-4 text-xs leading-relaxed text-muted-foreground">
                   {hasActiveFilters
-                    ? "Try adjusting or resetting your active search and filter criteria."
-                    : "Record an expense or income entry to start tracking your ledger."}
+                    ? language === "es"
+                      ? "Intenta ajustar o restablecer tus criterios de búsqueda y filtros."
+                      : "Try adjusting or resetting your active search and filter criteria."
+                    : t("empty.transactionsDescription")}
                 </p>
                 {hasActiveFilters && (
                   <Button

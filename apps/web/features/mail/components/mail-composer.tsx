@@ -26,6 +26,7 @@ import {
   useConnectedAccounts,
   useContactSuggestions,
   uploadDraftAttachment,
+  useI18n,
 } from "@saturn/hooks"
 import type { Draft, Attachment } from "@saturn/api/saturn/mail/v1/mail"
 import type { MailRecipientFormValues } from "@saturn/schemas"
@@ -57,52 +58,58 @@ function FormattingToolbar({
     cmd: Parameters<EmailRichEditorHandle["execFormat"]>[0]
   ) => void
 }) {
+  const { t } = useI18n()
   const buttons: Array<{
     cmd: Parameters<EmailRichEditorHandle["execFormat"]>[0]
     label: string
     active: boolean
     icon: typeof Bold
   }> = [
-    { cmd: "bold", label: "Bold", active: activeFormats.bold, icon: Bold },
+    {
+      cmd: "bold",
+      label: t("mail.format.bold"),
+      active: activeFormats.bold,
+      icon: Bold,
+    },
     {
       cmd: "italic",
-      label: "Italic",
+      label: t("mail.format.italic"),
       active: activeFormats.italic,
       icon: Italic,
     },
     {
       cmd: "underline",
-      label: "Underline",
+      label: t("mail.format.underline"),
       active: activeFormats.underline,
       icon: UnderlineIcon,
     },
     {
       cmd: "strike",
-      label: "Strikethrough",
+      label: t("mail.format.strike"),
       active: activeFormats.strike,
       icon: Strikethrough,
     },
     {
       cmd: "heading2",
-      label: "Heading",
+      label: t("mail.format.heading"),
       active: activeFormats.heading2,
       icon: Heading2,
     },
     {
       cmd: "bulletList",
-      label: "Bullet list",
+      label: t("mail.format.bulletList"),
       active: activeFormats.bulletList,
       icon: List,
     },
     {
       cmd: "orderedList",
-      label: "Numbered list",
+      label: t("mail.format.orderedList"),
       active: activeFormats.orderedList,
       icon: ListOrdered,
     },
     {
       cmd: "blockquote",
-      label: "Blockquote",
+      label: t("mail.format.blockquote"),
       active: activeFormats.blockquote,
       icon: Quote,
     },
@@ -191,6 +198,7 @@ export function MailComposer({
   onSaveDraft,
   onDiscard,
 }: MailComposerProps) {
+  const { t } = useI18n()
   const { data: accountsData } = useConnectedAccounts()
   const accounts = useMemo(() => {
     return (accountsData?.accounts || []).filter(
@@ -495,8 +503,8 @@ export function MailComposer({
       if (!currentDraftId) {
         if (!onSaveDraft) {
           toast.add({
-            title: "Cannot upload attachment",
-            description: "Draft saving is unavailable in this composer.",
+            title: t("mail.cannotUploadAttachment"),
+            description: t("mail.draftSavingUnavailable"),
             type: "error",
           })
           return
@@ -511,9 +519,11 @@ export function MailComposer({
           setDraftId(saved.id)
         } catch (err) {
           toast.add({
-            title: "Failed to save draft before uploading attachment",
+            title: t("mail.failedToSaveDraftBeforeUpload"),
             description:
-              err instanceof Error ? err.message : "Could not create draft",
+              err instanceof Error
+                ? err.message
+                : t("mail.couldNotCreateDraft"),
             type: "error",
           })
           return
@@ -524,7 +534,7 @@ export function MailComposer({
         const file = files[i]
         if (file.size > 25 * 1024 * 1024) {
           toast.add({
-            title: `File ${file.name} exceeds 25 MB maximum attachment size`,
+            title: t("mail.fileExceedsLimit", { name: file.name }),
             type: "error",
           })
           continue
@@ -542,9 +552,11 @@ export function MailComposer({
           ])
         } catch (err) {
           toast.add({
-            title: `Failed to upload ${file.name}`,
+            title: t("mail.failedToUploadFile", { name: file.name }),
             description:
-              err instanceof Error ? err.message : "Attachment upload failed",
+              err instanceof Error
+                ? err.message
+                : t("mail.attachmentUploadFailed"),
             type: "error",
           })
         }
@@ -574,7 +586,7 @@ export function MailComposer({
       bccRecipients.length === 0
     ) {
       toast.add({
-        title: "Please specify at least one recipient",
+        title: t("mail.recipientRequired"),
         type: "error",
       })
       return
@@ -601,8 +613,9 @@ export function MailComposer({
       onClose?.()
     } catch (err) {
       toast.add({
-        title: "Failed to send email",
-        description: err instanceof Error ? err.message : "An error occurred",
+        title: t("mail.failedToSend"),
+        description:
+          err instanceof Error ? err.message : t("mail.anErrorOccurred"),
         type: "error",
       })
     } finally {
@@ -640,7 +653,9 @@ export function MailComposer({
         {/* Reply Toolbar Header */}
         <div className="flex items-center justify-between gap-2 border-b border-border/30 px-3 py-2">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">From:</span>
+            <span className="text-xs text-muted-foreground">
+              {t("mail.fromLabel")}
+            </span>
             <select
               data-testid="composer-account-select"
               value={activeAccountId}
@@ -678,7 +693,7 @@ export function MailComposer({
 
         {/* Recipients: To */}
         <div className="flex flex-wrap items-center gap-1 border-b border-border/30 px-3 py-2 text-xs">
-          <span className="text-muted-foreground">To:</span>
+          <span className="text-muted-foreground">{t("mail.toLabel")}</span>
           {toRecipients.map((rec) => (
             <span
               key={rec.email}
@@ -718,7 +733,9 @@ export function MailComposer({
             onBlur={() => {
               if (toInput.includes("@")) addRecipient("to", toInput)
             }}
-            placeholder={toRecipients.length === 0 ? "Add recipients..." : ""}
+            placeholder={
+              toRecipients.length === 0 ? t("mail.addRecipients") : ""
+            }
             className="flex-1 bg-transparent px-1 py-0.5 text-xs text-foreground focus:outline-hidden"
           />
         </div>
@@ -766,7 +783,7 @@ export function MailComposer({
               onBlur={() => {
                 if (ccInput.includes("@")) addRecipient("cc", ccInput)
               }}
-              placeholder={ccRecipients.length === 0 ? "Add Cc..." : ""}
+              placeholder={ccRecipients.length === 0 ? t("mail.addCc") : ""}
               className="flex-1 bg-transparent px-1 py-0.5 text-xs text-foreground focus:outline-hidden"
             />
           </div>
@@ -815,7 +832,7 @@ export function MailComposer({
               onBlur={() => {
                 if (bccInput.includes("@")) addRecipient("bcc", bccInput)
               }}
-              placeholder={bccRecipients.length === 0 ? "Add Bcc..." : ""}
+              placeholder={bccRecipients.length === 0 ? t("mail.addBcc") : ""}
               className="flex-1 bg-transparent px-1 py-0.5 text-xs text-foreground focus:outline-hidden"
             />
           </div>
@@ -823,12 +840,14 @@ export function MailComposer({
 
         {/* Subject (Inline) */}
         <div className="flex items-center gap-2 border-b border-border/30 px-3 py-2 text-xs">
-          <span className="w-12 text-muted-foreground">Subject:</span>
+          <span className="w-12 text-muted-foreground">
+            {t("mail.subjectLabel")}
+          </span>
           <input
             data-testid="composer-subject-input"
             value={subject}
             onChange={(e) => setEditedSubject(e.target.value)}
-            placeholder="Subject"
+            placeholder={t("mail.subjectPlaceholder")}
             className="flex-1 bg-transparent px-1 py-0.5 text-xs font-medium text-foreground focus:outline-hidden"
           />
         </div>
@@ -848,7 +867,7 @@ export function MailComposer({
             >
               <span className="flex items-center gap-1.5">
                 <ImageIcon className="h-3.5 w-3.5 shrink-0" />
-                <span>Remote images in this draft are hidden.</span>
+                <span>{t("mail.remoteImagesHidden")}</span>
               </span>
               <button
                 type="button"
@@ -856,13 +875,14 @@ export function MailComposer({
                 onClick={handleLoadRemoteImages}
                 className="font-medium underline hover:opacity-80"
               >
-                Show images
+                {t("mail.showImages")}
               </button>
             </div>
           )}
           <EmailRichEditor
             ref={editorRef}
             testId="reply-editor-content"
+            placeholder={t("mail.editorPlaceholder")}
             bodyHtml={preparedContent.bodyHtml}
             stylesHtml={preparedContent.stylesHtml}
             minHeight={160}
@@ -917,7 +937,7 @@ export function MailComposer({
               ) : (
                 <Send className="h-3.5 w-3.5" />
               )}
-              <span>Send</span>
+              <span>{t("mail.send")}</span>
             </Button>
             <Button
               type="button"
@@ -925,7 +945,7 @@ export function MailComposer({
               size="icon-sm"
               onClick={() => fileInputRef.current?.click()}
               className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              title="Attach files"
+              title={t("mail.attachFiles")}
             >
               <Paperclip className="h-4 w-4" />
             </Button>
@@ -941,12 +961,12 @@ export function MailComposer({
           <div className="flex items-center gap-3">
             {saveStatus === "saving" && (
               <span className="animate-pulse text-[11px] text-muted-foreground">
-                Saving...
+                {t("common.saving")}
               </span>
             )}
             {saveStatus === "saved" && (
               <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <Check className="h-3 w-3 text-emerald-500" /> Saved
+                <Check className="h-3 w-3 text-emerald-500" /> {t("mail.saved")}
               </span>
             )}
             {onDiscard && (
@@ -958,14 +978,16 @@ export function MailComposer({
                 onClick={handleDiscard}
                 disabled={isDiscarding || isSending}
                 className="h-8 gap-1 text-xs text-muted-foreground hover:text-destructive"
-                title="Discard draft"
+                title={t("mail.discardDraft")}
               >
                 {isDiscarding ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <Trash2 className="h-3.5 w-3.5" />
                 )}
-                <span>{isDiscarding ? "Discarding..." : "Discard"}</span>
+                <span>
+                  {isDiscarding ? t("mail.discarding") : t("common.discard")}
+                </span>
               </Button>
             )}
           </div>
@@ -996,22 +1018,24 @@ export function MailComposer({
       {/* Modal Title Bar */}
       <div className="flex h-11 shrink-0 items-center justify-between rounded-t-xl border-b border-border/40 bg-muted/60 px-4">
         <span className="truncate text-xs font-semibold text-foreground">
-          {subject || "New Message"}
+          {subject || t("mail.newMessage")}
         </span>
         <div className="flex items-center gap-1 text-muted-foreground">
           {saveStatus === "saving" && (
-            <span className="text-[10px] text-muted-foreground">Saving...</span>
+            <span className="text-[10px] text-muted-foreground">
+              {t("common.saving")}
+            </span>
           )}
           {saveStatus === "saved" && (
             <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-              <Check className="h-3 w-3 text-emerald-500" /> Saved
+              <Check className="h-3 w-3 text-emerald-500" /> {t("mail.saved")}
             </span>
           )}
           <button
             type="button"
             onClick={() => setIsMinimized(!isMinimized)}
             className="rounded p-1 hover:bg-muted hover:text-foreground"
-            aria-label="Minimize"
+            aria-label={t("mail.minimize")}
           >
             <Minus className="h-3.5 w-3.5" />
           </button>
@@ -1022,7 +1046,7 @@ export function MailComposer({
               setIsMinimized(false)
             }}
             className="rounded p-1 hover:bg-muted hover:text-foreground"
-            aria-label="Maximize"
+            aria-label={t("mail.maximize")}
           >
             {isMaximized ? (
               <Minimize2 className="h-3.5 w-3.5" />
@@ -1035,7 +1059,7 @@ export function MailComposer({
             data-testid="composer-close-btn"
             onClick={onClose}
             className="rounded p-1 hover:bg-muted hover:text-foreground"
-            aria-label="Close"
+            aria-label={t("common.close")}
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -1048,7 +1072,9 @@ export function MailComposer({
           <div className="flex flex-col divide-y divide-border/30 border-b border-border/30 text-xs">
             {/* From */}
             <div className="flex items-center gap-2 px-4 py-2">
-              <span className="w-12 text-muted-foreground">From:</span>
+              <span className="w-12 text-muted-foreground">
+                {t("mail.fromLabel")}
+              </span>
               <select
                 data-testid="composer-account-select"
                 value={activeAccountId}
@@ -1085,7 +1111,9 @@ export function MailComposer({
 
             {/* To */}
             <div className="relative flex flex-wrap items-center gap-1.5 px-4 py-2">
-              <span className="w-12 text-muted-foreground">To:</span>
+              <span className="w-12 text-muted-foreground">
+                {t("mail.toLabel")}
+              </span>
               {toRecipients.map((rec) => (
                 <span
                   key={rec.email}
@@ -1125,7 +1153,11 @@ export function MailComposer({
                 onBlur={() => {
                   if (toInput.includes("@")) addRecipient("to", toInput)
                 }}
-                placeholder={toRecipients.length === 0 ? "Recipients..." : ""}
+                placeholder={
+                  toRecipients.length === 0
+                    ? t("mail.recipientsPlaceholder")
+                    : ""
+                }
                 className="min-w-[120px] flex-1 bg-transparent py-0.5 text-xs text-foreground focus:outline-hidden"
               />
               {/* Autocomplete dropdown */}
@@ -1257,12 +1289,14 @@ export function MailComposer({
 
             {/* Subject */}
             <div className="flex items-center gap-2 px-4 py-2">
-              <span className="w-12 text-muted-foreground">Subject:</span>
+              <span className="w-12 text-muted-foreground">
+                {t("mail.subjectLabel")}
+              </span>
               <Input
                 data-testid="composer-subject-input"
                 value={subject}
                 onChange={(e) => setEditedSubject(e.target.value)}
-                placeholder="Subject"
+                placeholder={t("mail.subjectPlaceholder")}
                 className="h-7 border-none bg-transparent px-0 text-xs font-medium shadow-none focus-visible:ring-0"
               />
             </div>
@@ -1283,7 +1317,7 @@ export function MailComposer({
               >
                 <span className="flex items-center gap-1.5">
                   <ImageIcon className="h-3.5 w-3.5 shrink-0" />
-                  <span>Remote images in this draft are hidden.</span>
+                  <span>{t("mail.remoteImagesHidden")}</span>
                 </span>
                 <button
                   type="button"
@@ -1291,13 +1325,14 @@ export function MailComposer({
                   onClick={handleLoadRemoteImages}
                   className="font-medium underline hover:opacity-80"
                 >
-                  Show images
+                  {t("mail.showImages")}
                 </button>
               </div>
             )}
             <EmailRichEditor
               ref={editorRef}
               testId="composer-editor-content"
+              placeholder={t("mail.editorPlaceholder")}
               bodyHtml={preparedContent.bodyHtml}
               stylesHtml={preparedContent.stylesHtml}
               minHeight={220}
@@ -1359,7 +1394,7 @@ export function MailComposer({
                 ) : (
                   <Send className="h-3.5 w-3.5" />
                 )}
-                <span>Send</span>
+                <span>{t("mail.send")}</span>
               </Button>
               <Button
                 type="button"
@@ -1368,7 +1403,7 @@ export function MailComposer({
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
                 className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                title="Attach files (up to 25 MB)"
+                title={t("mail.attachFilesWithLimit")}
               >
                 {isUploading ? (
                   <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -1395,7 +1430,7 @@ export function MailComposer({
                   onClick={handleDiscard}
                   disabled={isDiscarding || isSending}
                   className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  title="Discard draft"
+                  title={t("mail.discardDraft")}
                 >
                   {isDiscarding ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

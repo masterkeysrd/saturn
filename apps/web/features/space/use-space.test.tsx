@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { renderHook, cleanup } from "@testing-library/react"
 import type { ReactNode } from "react"
 import * as spaceApi from "@saturn/api/gen/saturn/space/v1/space"
+import * as identityApi from "@saturn/api/gen/saturn/identity/v1/identity"
 import * as hooks from "@saturn/hooks"
 import { useAuth } from "@/features/auth/use-auth"
+import { USER_PREFS_STORAGE_KEY } from "@/lib/user-preferences"
 import {
   ActiveSpaceProvider,
   useActiveSpaceContext,
@@ -13,6 +15,10 @@ import {
 vi.mock("@saturn/api/gen/saturn/space/v1/space", () => ({
   useListSpacesQuery: vi.fn(),
   useGetSettingsQuery: vi.fn(),
+}))
+
+vi.mock("@saturn/api/gen/saturn/identity/v1/identity", () => ({
+  useGetUserPreferencesQuery: vi.fn(),
 }))
 
 vi.mock("@saturn/hooks", async () => {
@@ -61,6 +67,10 @@ describe("useSpacePermissions & ActiveSpaceProvider", () => {
 
     vi.mocked(spaceApi.useGetSettingsQuery).mockReturnValue({
       data: { timezone: "America/New_York" },
+    } as never)
+
+    vi.mocked(identityApi.useGetUserPreferencesQuery).mockReturnValue({
+      data: undefined,
     } as never)
   })
 
@@ -162,5 +172,33 @@ describe("useSpacePermissions & ActiveSpaceProvider", () => {
     expect(result.current.ctx.timezone).toBeTruthy()
     expect(localStorage.getItem("active_space_id")).toBeNull()
     expect(localStorage.getItem("space_meta")).toBeNull()
+  })
+
+  it("syncs UserPreferences to TimezoneProvider, document.lang, and localStorage", () => {
+    vi.mocked(hooks.useSpaceRole).mockReturnValue({
+      role: "owner",
+      isLoading: false,
+    })
+    vi.mocked(identityApi.useGetUserPreferencesQuery).mockReturnValue({
+      data: {
+        locale: "es-ES",
+        hourCycle: "h23",
+        weekStartsOn: 1,
+      },
+    } as never)
+
+    const { result } = renderHook(() => hooks.useTimezone(), { wrapper })
+
+    expect(result.current.locale).toBe("es-ES")
+    expect(result.current.hourCycle).toBe("h23")
+    expect(result.current.weekStartsOn).toBe(1)
+    expect(document.documentElement.lang).toBe("es-ES")
+    expect(
+      JSON.parse(localStorage.getItem(USER_PREFS_STORAGE_KEY) || "{}")
+    ).toEqual({
+      locale: "es-ES",
+      hourCycle: "h23",
+      weekStartsOn: 1,
+    })
   })
 })

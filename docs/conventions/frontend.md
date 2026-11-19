@@ -10,10 +10,12 @@ Saturn uses a Turborepo monorepo with strict package boundaries between shared l
 packages/
 ├── tokens/     # @saturn/tokens: PURE design tokens (colors, radii, spacing, 12-hue palette)
 │               # (ZERO runtime dependencies — consumed by Web CSS and Mobile useTheme)
+├── i18n/       # @saturn/i18n: PURE localization catalogs (locales/*.json, enums/*.json, schemas/*.json)
+│               # (ZERO runtime dependencies — consumed by schemas, hooks, Web, and Mobile)
 ├── core/       # @saturn/core: PURE business logic, date/timezone math, formatting
 │               # (ZERO runtime dependencies — standard Web/Node APIs only)
 ├── hooks/      # @saturn/hooks: React context providers and shared custom hooks
-│               # (TimezoneProvider, useTimezone, useCurrencyConversion, etc.)
+│               # (TimezoneProvider, useTimezone, useCurrencyConversion, useI18n, etc.)
 ├── schemas/    # @saturn/schemas: Shared Zod validation schemas
 └── api/        # @saturn/api: Auto-generated TypeScript gRPC/HTTP clients & types
 apps/
@@ -24,8 +26,9 @@ apps/
 > [!IMPORTANT]
 > **Strict Monorepo Dependency Flow**:
 > - `apps/web` and `apps/mobile` may import from `@saturn/*`.
-> - `@saturn/hooks` may import from `@saturn/core`, `@saturn/tokens`, and `@saturn/api`.
-> - `@saturn/core` and `@saturn/tokens` must **NEVER** import React, hooks, or application packages, and `@saturn/core` must remain 100% UI-framework agnostic.
+> - `@saturn/hooks` may import from `@saturn/core`, `@saturn/i18n`, `@saturn/tokens`, `@saturn/schemas`, and `@saturn/api`.
+> - `@saturn/schemas` may import from `@saturn/core` and `@saturn/i18n`.
+> - `@saturn/core`, `@saturn/i18n`, and `@saturn/tokens` must **NEVER** import React, hooks, or application packages, must maintain **zero runtime dependencies**, and must remain 100% UI-framework agnostic.
 > - **NEVER** cross-import between `apps/web` and `apps/mobile`.
 
 ---

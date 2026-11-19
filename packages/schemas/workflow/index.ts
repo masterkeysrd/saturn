@@ -2,6 +2,7 @@ import { z } from "zod"
 import { isValidCronExpression } from "@saturn/core"
 import { nonEmptyString } from "../common"
 import { AI_MODEL_ROLES, GenerationConfigSchema } from "../ai"
+import { schemaError, schemaMessage } from "../i18n"
 
 export const TRIGGER_TYPES = ["event", "webhook", "schedule", "manual"] as const
 export type WorkflowTriggerType = (typeof TRIGGER_TYPES)[number]
@@ -34,13 +35,13 @@ export const FlowConfigSchema = z.object({
   timeoutSeconds: z
     .number()
     .int()
-    .min(0, { error: "Timeout must be >= 0 seconds" })
+    .min(0, { error: schemaError("workflow.timeoutMin") })
     .optional(),
   maxRetries: z
     .number()
     .int()
-    .min(0, { error: "Max retries must be >= 0" })
-    .max(10, { error: "Max retries must be <= 10" })
+    .min(0, { error: schemaError("workflow.maxRetriesMin") })
+    .max(10, { error: schemaError("workflow.maxRetriesMax") })
     .optional(),
 })
 
@@ -59,8 +60,8 @@ export type TriggerConfigValues = z.infer<typeof TriggerConfigSchema>
 export const TriggerSchema = z
   .object({
     id: z.string().optional(),
-    name: nonEmptyString("Trigger name is required").max(255, {
-      error: "Trigger name cannot exceed 255 characters",
+    name: nonEmptyString("workflow.triggerNameRequired").max(255, {
+      error: schemaError("workflow.triggerNameMaxLength"),
     }),
     type: z.enum(TRIGGER_TYPES),
     config: TriggerConfigSchema.optional().default({}),
@@ -71,7 +72,7 @@ export const TriggerSchema = z
       if (!val.config?.topic || !val.config.topic.trim()) {
         ctx.addIssue({
           code: "custom",
-          message: "Event trigger requires a topic",
+          message: schemaMessage("workflow.eventTriggerTopicRequired"),
           path: ["config", "topic"],
         })
       }
@@ -80,7 +81,7 @@ export const TriggerSchema = z
       if (!val.config?.cron || !isValidCronExpression(val.config.cron)) {
         ctx.addIssue({
           code: "custom",
-          message: "Schedule trigger requires a valid 5-field cron expression",
+          message: schemaMessage("workflow.scheduleTriggerCronInvalid"),
           path: ["config", "cron"],
         })
       }
@@ -90,7 +91,7 @@ export const TriggerSchema = z
 export type TriggerFormValues = z.infer<typeof TriggerSchema>
 
 export const SourceBindingSchema = z.object({
-  loader: nonEmptyString("Loader name is required"),
+  loader: nonEmptyString("workflow.loaderNameRequired"),
   params: z.record(z.string(), z.unknown()).optional(),
   required: z.boolean().optional(),
 })
@@ -118,8 +119,8 @@ export interface StepNodeValues {
 
 export const SwitchCaseSchema: z.ZodType<SwitchCaseValues> = z.lazy(() =>
   z.object({
-    name: nonEmptyString("Case name is required"),
-    condition: nonEmptyString("Case CEL condition is required"),
+    name: nonEmptyString("workflow.switchCaseNameRequired"),
+    condition: nonEmptyString("workflow.switchCaseConditionRequired"),
     steps: z.array(StepNodeSchema).optional(),
   })
 )
@@ -127,12 +128,14 @@ export const SwitchCaseSchema: z.ZodType<SwitchCaseValues> = z.lazy(() =>
 export const StepNodeSchema: z.ZodType<StepNodeValues> = z.lazy(() =>
   z
     .object({
-      id: nonEmptyString("Step ID is required").regex(WORKFLOW_STEP_ID_REGEX, {
-        error:
-          "Step ID must start with a letter or underscore (alphanumeric/underscore only)",
-      }),
+      id: nonEmptyString("workflow.stepIdRequired").regex(
+        WORKFLOW_STEP_ID_REGEX,
+        {
+          error: schemaError("workflow.stepIdFormat"),
+        }
+      ),
       name: z.string().trim().optional(),
-      type: nonEmptyString("Step type is required"),
+      type: nonEmptyString("workflow.stepTypeRequired"),
       onError: z.enum(ERROR_POLICIES).optional(),
       model: ModelConfigSchema.optional(),
       sources: z.record(z.string(), SourceBindingSchema).optional(),
@@ -147,7 +150,7 @@ export const StepNodeSchema: z.ZodType<StepNodeValues> = z.lazy(() =>
         if (typeof cond !== "string" || !cond.trim()) {
           ctx.addIssue({
             code: "custom",
-            message: "Filter step requires inputs.condition",
+            message: schemaMessage("workflow.filterConditionRequired"),
             path: ["inputs", "condition"],
           })
         }
@@ -156,7 +159,7 @@ export const StepNodeSchema: z.ZodType<StepNodeValues> = z.lazy(() =>
         if (!step.cases || step.cases.length === 0) {
           ctx.addIssue({
             code: "custom",
-            message: "Switch step requires at least one case",
+            message: schemaMessage("workflow.switchCaseRequired"),
             path: ["cases"],
           })
         } else {
@@ -165,7 +168,9 @@ export const StepNodeSchema: z.ZodType<StepNodeValues> = z.lazy(() =>
             if (seenNames.has(sc.name)) {
               ctx.addIssue({
                 code: "custom",
-                message: `Duplicate switch case name "${sc.name}"`,
+                message: schemaMessage("workflow.duplicateSwitchCase", {
+                  name: sc.name,
+                }),
                 path: ["cases", idx, "name"],
               })
             }
@@ -178,8 +183,7 @@ export const StepNodeSchema: z.ZodType<StepNodeValues> = z.lazy(() =>
         if (typeof alias !== "string" || !WORKFLOW_STEP_ID_REGEX.test(alias)) {
           ctx.addIssue({
             code: "custom",
-            message:
-              "For-each step requires a valid inputs.item_alias identifier",
+            message: schemaMessage("workflow.forEachAliasInvalid"),
             path: ["inputs", "item_alias"],
           })
         }
@@ -190,7 +194,7 @@ export const StepNodeSchema: z.ZodType<StepNodeValues> = z.lazy(() =>
         ) {
           ctx.addIssue({
             code: "custom",
-            message: "For-each step requires inputs.items",
+            message: schemaMessage("workflow.forEachItemsRequired"),
             path: ["inputs", "items"],
           })
         }
@@ -208,7 +212,7 @@ function collectStepIDDuplicates(
     if (seen.has(step.id)) {
       ctx.addIssue({
         code: "custom",
-        message: `Duplicate step ID "${step.id}"`,
+        message: schemaMessage("workflow.duplicateStepId", { id: step.id }),
         path: [...basePath, idx, "id"],
       })
     }
@@ -246,17 +250,17 @@ function collectStepIDDuplicates(
 
 export const FlowSchema = z
   .object({
-    name: nonEmptyString("Workflow name is required").max(255, {
-      error: "Workflow name cannot exceed 255 characters",
+    name: nonEmptyString("workflow.workflowNameRequired").max(255, {
+      error: schemaError("workflow.workflowNameMaxLength"),
     }),
     description: z.string().trim().optional().default(""),
     isEnabled: z.boolean().optional().default(true),
     config: FlowConfigSchema.optional(),
     inputSchema: z.record(z.string(), z.unknown()).optional(),
     triggers: z.array(TriggerSchema).optional().default([]),
-    steps: z
-      .array(StepNodeSchema)
-      .min(1, { error: "Workflow must contain at least one step" }),
+    steps: z.array(StepNodeSchema).min(1, {
+      error: schemaError("workflow.stepsRequired"),
+    }),
   })
   .superRefine((flow, ctx) => {
     collectStepIDDuplicates(flow.steps, new Set<string>(), ctx, ["steps"])
@@ -277,9 +281,9 @@ export interface JsonSchemaFieldValues {
 export const JsonSchemaFieldSchema: z.ZodType<JsonSchemaFieldValues> = z.lazy(
   () =>
     z.object({
-      name: nonEmptyString("Field name is required").regex(
+      name: nonEmptyString("workflow.fieldNameRequired").regex(
         WORKFLOW_STEP_ID_REGEX,
-        { error: "Field name must be a valid identifier" }
+        { error: schemaError("workflow.fieldNameFormat") }
       ),
       type: z.enum(JSON_SCHEMA_FIELD_TYPES),
       description: z.string().trim().optional(),
@@ -297,7 +301,7 @@ export const JsonSchemaEditorSchema = z.object({
       if (seen.has(f.name)) {
         ctx.addIssue({
           code: "custom",
-          message: `Duplicate field "${f.name}"`,
+          message: schemaMessage("workflow.duplicateField", { name: f.name }),
           path: [idx, "name"],
         })
       }

@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toast"
 import { MailView } from "./mail-view"
 import { MailUnreadBadge } from "./components/mail-unread-badge"
 import * as hooks from "@saturn/hooks"
+import * as aiHooks from "@saturn/hooks/ai"
 import * as financeApi from "@saturn/api/gen/saturn/finance/v1/finance"
 import type { Thread, Mailbox } from "@saturn/api/saturn/mail/v1/mail"
 
@@ -1189,5 +1190,97 @@ describe("MailView Web Feature", () => {
         })
       )
     })
+  })
+
+  it("renders Spanish translations across the email view when user locale is es-ES", async () => {
+    const copilotSpy = vi.spyOn(aiHooks, "useRegisterCopilotView")
+
+    render(
+      <MemoryRouter>
+        <hooks.TimezoneProvider timezone="UTC" locale="es-ES">
+          <MailView />
+        </hooks.TimezoneProvider>
+      </MemoryRouter>,
+      { wrapper: createWrapper() }
+    )
+
+    // Verify inbox agent suggestions registered in Spanish
+    expect(copilotSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        suggestions: [
+          "Resume mis correos no leídos",
+          "¿Qué correos necesitan respuesta hoy?",
+          "Busca recibos o facturas recientes en mi bandeja",
+        ],
+      })
+    )
+
+    // Verify Spanish compose button
+    const composeBtn = screen.getByTestId("compose-btn")
+    expect(composeBtn.textContent).toContain("Redactar")
+
+    // Verify Spanish bucket labels in the rail
+    expect(
+      screen.getByTestId("bucket-mailbox_role_inbox").textContent
+    ).toContain("Bandeja de entrada")
+    expect(
+      screen.getByTestId("bucket-mailbox_role_sent").textContent
+    ).toContain("Enviados")
+    expect(
+      screen.getByTestId("bucket-mailbox_role_trash").textContent
+    ).toContain("Papelera")
+
+    // Verify search input placeholder in Spanish
+    const searchInput = screen.getByTestId("mail-search-input")
+    expect(searchInput.getAttribute("placeholder")).toBe("Buscar correo... (/)")
+
+    // Verify All Accounts filter button in Spanish
+    const allAccBtn = screen.getByTestId("account-filter-all")
+    expect(allAccBtn.textContent).toContain("Todas las cuentas")
+
+    // Select a thread and verify thread reader translations
+    fireEvent.click(screen.getByTestId("thread-row-mth_101"))
+    expect(screen.getByTestId("thread-reader-pane")).toBeDefined()
+
+    // Verify thread-level agent suggestions in Spanish
+    expect(copilotSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        suggestions: [
+          "Resume este hilo y extrae los puntos de acción",
+          "Redacta una respuesta concisa",
+          "¿Se menciona alguna fecha límite o monto aquí?",
+        ],
+      })
+    )
+
+    // Action buttons in Spanish
+    expect(screen.getByTestId("archive-thread-btn").getAttribute("title")).toBe(
+      "Archivar (e)"
+    )
+    expect(screen.getByTestId("trash-thread-btn").getAttribute("title")).toBe(
+      "Eliminar (#)"
+    )
+    expect(screen.getByTestId("star-thread-btn").getAttribute("title")).toBe(
+      "Destacar (s)"
+    )
+    expect(screen.getByTestId("mark-unread-btn").getAttribute("title")).toBe(
+      "Marcar como no leído (u)"
+    )
+
+    // Message action buttons in Spanish
+    const [replyBtn] = screen.getAllByTestId("reply-msg-btn-msg_101_1")
+    expect(replyBtn.textContent).toContain("Responder")
+
+    const [forwardBtn] = screen.getAllByTestId("forward-msg-btn-msg_101_1")
+    expect(forwardBtn.textContent).toContain("Reenviar")
+
+    // Open compose modal and verify editor placeholder in Spanish
+    fireEvent.click(screen.getByTestId("compose-btn"))
+    const editorIframe = screen.getByTestId(
+      "composer-editor-content"
+    ) as HTMLIFrameElement
+    expect(
+      editorIframe.contentDocument?.body.getAttribute("data-placeholder")
+    ).toBe("Escribe tu correo aquí...")
   })
 })

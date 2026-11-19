@@ -1,5 +1,6 @@
 export * from "./finance"
 export * from "./timezone"
+export * from "./i18n"
 export * from "./connector"
 export * from "./calendar"
 export * from "./mail"

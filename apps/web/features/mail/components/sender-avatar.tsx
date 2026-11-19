@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
 import { Check, Copy, ExternalLink, Mail, ShieldCheck } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
 import {
   Popover,
   PopoverTrigger,
@@ -116,6 +117,7 @@ export function SenderAvatar({
   showPopover = true,
   onQuickReply,
 }: SenderAvatarProps) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [imgError, setImgError] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -211,7 +213,7 @@ export function SenderAvatar({
       {isVerifiedSender && (
         <span
           className="absolute -right-0.5 -bottom-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-600 text-[8px] text-white ring-1 ring-background"
-          title={`Verified organization: ${domain}`}
+          title={t("mail.verifiedOrg", { domain })}
         >
           <Check className="h-2 w-2 stroke-[3]" />
         </span>
@@ -228,7 +230,7 @@ export function SenderAvatar({
       <PopoverTrigger
         onClick={(e) => e.stopPropagation()}
         className="cursor-pointer rounded-full focus:ring-2 focus:ring-primary/40 focus:outline-none"
-        aria-label={`Sender info for ${name || email}`}
+        aria-label={t("mail.senderInfoFor", { name: name || email })}
       >
         {avatarElement}
       </PopoverTrigger>
@@ -270,7 +272,9 @@ export function SenderAvatar({
             {isVerifiedSender && (
               <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
                 <ShieldCheck className="h-3 w-3" />
-                <span className="truncate">Verified from {domain}</span>
+                <span className="truncate">
+                  {t("mail.verifiedFrom", { domain })}
+                </span>
               </div>
             )}
           </div>
@@ -286,12 +290,12 @@ export function SenderAvatar({
             {copied ? (
               <>
                 <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                <span>Copied</span>
+                <span>{t("mail.copied")}</span>
               </>
             ) : (
               <>
                 <Copy className="h-3 w-3" />
-                <span>Copy email</span>
+                <span>{t("mail.copyEmail")}</span>
               </>
             )}
           </Button>
@@ -307,7 +311,7 @@ export function SenderAvatar({
               className="h-7 gap-1 px-3 text-xs font-medium"
             >
               <Mail className="h-3 w-3" />
-              <span>Reply</span>
+              <span>{t("mail.reply")}</span>
             </Button>
           )}
 
@@ -317,7 +321,7 @@ export function SenderAvatar({
               target="_blank"
               rel="noreferrer"
               className="flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-              title={`Visit ${domain}`}
+              title={t("mail.visitDomain", { domain })}
             >
               <ExternalLink className="h-3 w-3" />
             </a>

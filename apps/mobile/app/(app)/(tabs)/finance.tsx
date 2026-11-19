@@ -33,7 +33,7 @@ import {
   parseDate,
   resolveFinancePeriodBounds,
 } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import {
   useListTransactionsQuery,
   useGetInsightsQuery,
@@ -109,6 +109,7 @@ export default function FinanceHubScreen() {
   const isViewer = !canWriteWorkspace(activeSpaceRole)
   const quickActionsRef = useRef<BottomSheet>(null)
   const tz = useTimezone()
+  const { t } = useI18n()
   const { colors, resolvedMode } = useTheme()
   const styles = useThemedStyles(createStyles)
   const [refreshing, setRefreshing] = useState(false)
@@ -438,7 +439,7 @@ export default function FinanceHubScreen() {
       >
         <View style={styles.topHeaderLeft}>
           <Text style={styles.topHeaderTitle} numberOfLines={1}>
-            Finance
+            {t("nav.finance")}
           </Text>
           <Badge size="sm" label={baseCurrency} />
         </View>
@@ -613,7 +614,7 @@ export default function FinanceHubScreen() {
               activeOpacity={0.7}
               onPress={() => navigateTo("/(app)/finance/transactions")}
             >
-              <Text style={styles.seeAllText}>See all</Text>
+              <Text style={styles.seeAllText}>{t("common.seeAll")}</Text>
               <ArrowRight size={13} color={colors.primary} />
             </TouchableOpacity>
           </View>
@@ -678,7 +679,7 @@ export default function FinanceHubScreen() {
               activeOpacity={0.7}
               onPress={() => navigateTo("/(app)/finance/accounts")}
             >
-              <Text style={styles.seeAllText}>See all</Text>
+              <Text style={styles.seeAllText}>{t("common.seeAll")}</Text>
               <ArrowRight size={13} color={colors.primary} />
             </TouchableOpacity>
           </View>
@@ -749,7 +750,7 @@ export default function FinanceHubScreen() {
               activeOpacity={0.7}
               onPress={() => navigateTo("/(app)/finance/budgets")}
             >
-              <Text style={styles.seeAllText}>See all</Text>
+              <Text style={styles.seeAllText}>{t("common.seeAll")}</Text>
               <ArrowRight size={13} color={colors.primary} />
             </TouchableOpacity>
           </View>
@@ -967,7 +968,7 @@ export default function FinanceHubScreen() {
               activeOpacity={0.7}
               onPress={() => navigateTo("/(app)/finance/recurring")}
             >
-              <Text style={styles.seeAllText}>See all</Text>
+              <Text style={styles.seeAllText}>{t("common.seeAll")}</Text>
               <ArrowRight size={13} color={colors.primary} />
             </TouchableOpacity>
           </View>
@@ -1138,7 +1139,7 @@ export default function FinanceHubScreen() {
               activeOpacity={0.7}
               onPress={() => navigateTo("/(app)/finance/borrowing")}
             >
-              <Text style={styles.seeAllText}>See all</Text>
+              <Text style={styles.seeAllText}>{t("common.seeAll")}</Text>
               <ArrowRight size={13} color={colors.primary} />
             </TouchableOpacity>
           </View>

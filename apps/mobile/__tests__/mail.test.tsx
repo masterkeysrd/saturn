@@ -13,8 +13,10 @@ import {
 import { buildMobileEditorDocumentHtml } from "../components/mail/email-editor-html"
 import {
   buildMobileMessageDocumentHtml,
+  INJECTED_EMAIL_LAYOUT_BEFORE_LOAD_JS,
   INJECTED_EMAIL_LAYOUT_JS,
 } from "../components/mail/message-webview-html"
+import { translate } from "@saturn/i18n"
 
 // Mock haptics
 vi.mock("../lib/haptics", () => ({
@@ -659,7 +661,8 @@ describe("Mobile Mail Feature Logic & Component Unit Tests", () => {
         /table\s*\{[^}]*max-width:\s*100%\s*!important/
       )
       expect(blockedDoc).toContain('img[align="absmiddle"]')
-      expect(blockedDoc).toContain("td img[width]")
+      expect(blockedDoc).not.toContain("td img[width]")
+      expect(blockedDoc).toContain('img[width="16"]')
       // Trailing empty <p><br></p> stripped and remote images blocked until opt-in
       expect(blockedDoc).not.toContain("<p><br></p>")
       expect(blockedDoc).toContain("data-saturn-remote-src=")
@@ -675,7 +678,72 @@ describe("Mobile Mail Feature Logic & Component Unit Tests", () => {
       // Layout script measures #saturn-email-root bounding rect and proportionally scales wide tables
       expect(INJECTED_EMAIL_LAYOUT_JS).toContain("getBoundingClientRect")
       expect(INJECTED_EMAIL_LAYOUT_JS).toContain("scale(")
+      expect(INJECTED_EMAIL_LAYOUT_JS).toContain("Math.max(0.25")
+      expect(INJECTED_EMAIL_LAYOUT_JS).toContain(
+        "(root.scrollHeight || 0) * currentScale"
+      )
+      expect(INJECTED_EMAIL_LAYOUT_BEFORE_LOAD_JS).toContain("DOMContentLoaded")
       expect(INJECTED_EMAIL_LAYOUT_JS).not.toContain("html.offsetHeight")
+    })
+
+    it("renders Amazon-style 640px promotional HTML without td img[width] clipping and rewrites loading=lazy to eager", () => {
+      const amazonHtml =
+        '<table width="640"><tr><td><a href="https://amazon.es"><img data-saturn-remote-src="https://m.media-amazon.com/hero.jpg" width="640" loading="lazy"></a></td></tr></table>'
+
+      const doc = buildMobileMessageDocumentHtml({
+        html: amazonHtml,
+        loadImages: false,
+      })
+
+      expect(doc).not.toContain("td img[width]")
+      expect(doc).toContain('img[width="16"]')
+      expect(doc).toContain('loading="eager"')
+      expect(doc).not.toContain('loading="lazy"')
+
+      const unblockedDoc = buildMobileMessageDocumentHtml({
+        html: amazonHtml,
+        loadImages: true,
+      })
+      expect(unblockedDoc).toContain(
+        'src="https://m.media-amazon.com/hero.jpg"'
+      )
+      expect(unblockedDoc).toContain('loading="eager"')
+    })
+  })
+
+  describe("Mobile Mail Localizations (Spanish / es-ES)", () => {
+    it("translates mobile mail placeholders, toasts, alerts, and action labels into Spanish", () => {
+      expect(translate("es-ES", "mail.composePlaceholder")).toBe(
+        "Redactar correo..."
+      )
+      expect(translate("es-ES", "mail.attachFile")).toBe("Adjuntar archivo")
+      expect(translate("es-ES", "mail.conversationNotFound")).toBe(
+        "Conversación no encontrada"
+      )
+      expect(translate("es-ES", "mail.missingRecipient")).toBe(
+        "Falta el destinatario"
+      )
+      expect(translate("es-ES", "mail.addAtLeastOneRecipient")).toBe(
+        "Por favor agrega al menos un destinatario en Para, Cc o Cco."
+      )
+      expect(translate("es-ES", "mail.noDrafts")).toBe("No hay borradores")
+      expect(translate("es-ES", "mail.inboxZero")).toBe("Bandeja al día")
+      expect(translate("es-ES", "mail.unreadCount", { count: 4 })).toBe(
+        "4 no leídos"
+      )
+      expect(translate("es-ES", "mail.attachmentsTitle", { count: 3 })).toBe(
+        "Archivos adjuntos (3)"
+      )
+      expect(translate("es-ES", "mail.messageSingle", { count: 1 })).toBe(
+        "1 mensaje"
+      )
+      expect(translate("es-ES", "mail.messagesCount", { count: 5 })).toBe(
+        "5 mensajes"
+      )
+      expect(translate("es-ES", "mail.clearSearch")).toBe("Borrar búsqueda")
+      expect(translate("es-ES", "mail.remoteImagesBlockedShort")).toBe(
+        "Imágenes remotas bloqueadas"
+      )
     })
   })
 })

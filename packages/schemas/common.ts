@@ -1,28 +1,35 @@
 import { z } from "zod"
+import type { SchemaTranslationKey } from "@saturn/i18n"
+import { schemaError } from "./i18n"
 
-export const nonEmptyString = (error: string) =>
-  z.string().trim().min(1, { error })
+export const nonEmptyString = (key: SchemaTranslationKey) =>
+  z
+    .string()
+    .trim()
+    .min(1, { error: schemaError(key) })
 
 export const positiveAmountString = (
-  requiredError = "Amount is required",
-  positiveError = "Amount must be greater than zero"
+  requiredKey: SchemaTranslationKey = "common.amountRequired",
+  positiveKey: SchemaTranslationKey = "common.amountPositive"
 ) =>
   z
     .string()
-    .min(1, { error: requiredError })
+    .min(1, { error: schemaError(requiredKey) })
     .refine(
       (val) => {
         const num = parseFloat(val)
         return !Number.isNaN(num) && num > 0
       },
-      { error: positiveError }
+      { error: schemaError(positiveKey) }
     )
 
 export const numericAmountString = (
-  requiredError = "Amount is required",
-  invalidError = "Amount must be a valid number"
+  requiredKey: SchemaTranslationKey = "common.amountRequired",
+  invalidKey: SchemaTranslationKey = "common.amountInvalid"
 ) =>
   z
     .string()
-    .min(1, { error: requiredError })
-    .refine((val) => !Number.isNaN(parseFloat(val)), { error: invalidError })
+    .min(1, { error: schemaError(requiredKey) })
+    .refine((val) => !Number.isNaN(parseFloat(val)), {
+      error: schemaError(invalidKey),
+    })

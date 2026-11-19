@@ -1,4 +1,10 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react"
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  type ReactNode,
+} from "react"
 import {
   type DateInput,
   MS_PER_HALF_DAY,
@@ -11,6 +17,9 @@ import {
   isSameDayInTimezone,
   parseDate,
 } from "@saturn/core"
+import { normalizeUserLocale } from "@saturn/i18n"
+import { setClientLocale } from "@saturn/api"
+import { configureZodLocale } from "@saturn/schemas"
 
 export type HourCycle = "h12" | "h23"
 export type WeekStartsOn = 0 | 1
@@ -45,14 +54,7 @@ export interface TimezoneProviderProps {
 }
 
 function sanitizeLocale(locale?: string | null): string {
-  const candidate = locale?.trim()
-  if (!candidate) return "en-US"
-  try {
-    Intl.NumberFormat.supportedLocalesOf([candidate])
-    return candidate
-  } catch {
-    return "en-US"
-  }
+  return normalizeUserLocale(locale)
 }
 
 export function formatMoneyWithLocale(
@@ -111,6 +113,11 @@ export function TimezoneProvider({
     }),
     [timezone, locale, hourCycle, weekStartsOn]
   )
+
+  useEffect(() => {
+    setClientLocale(value.locale)
+    configureZodLocale(value.locale)
+  }, [value.locale])
 
   return (
     <TimezoneContext.Provider value={value}>

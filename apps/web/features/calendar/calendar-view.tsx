@@ -212,7 +212,7 @@ export function CalendarView() {
 
     if (activeView === "month") {
       const weeks = getMonthMatrix(y, m, {
-        weekStartsOn: 0,
+        weekStartsOn: tz.weekStartsOn ?? 0,
         timeZone: tzName,
         fixedWeeks: true,
       })
@@ -227,8 +227,9 @@ export function CalendarView() {
 
     if (activeView === "week") {
       const days = getWeekDays(currentDate, {
-        weekStartsOn: 0,
+        weekStartsOn: tz.weekStartsOn ?? 0,
         timeZone: tzName,
+        locale: tz.locale || "en-US",
       })
       const firstDay = days[0].dateString
       const lastDay = days[days.length - 1].dateString
@@ -374,8 +375,9 @@ export function CalendarView() {
 
     if (activeView === "week") {
       const days = getWeekDays(currentDate, {
-        weekStartsOn: 0,
+        weekStartsOn: tz.weekStartsOn ?? 0,
         timeZone: tz.timezone,
+        locale: tz.locale || "en-US",
       })
       const first = days[0].date
       const last = days[6].date

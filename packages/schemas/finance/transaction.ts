@@ -1,11 +1,14 @@
 import { z } from "zod"
 import { nonEmptyString, positiveAmountString } from "../common"
+import { schemaError } from "../i18n"
 
 const baseTransactionShape = {
   accountId: z.string().optional(),
-  description: nonEmptyString("Description is required"),
+  description: nonEmptyString("finance.descriptionRequired"),
   amount: positiveAmountString(),
-  currency: z.string().min(1, { error: "Currency is required" }),
+  currency: z
+    .string()
+    .min(1, { error: schemaError("finance.currencyRequired") }),
   transactionDate: z.date(),
   hasCustomEffectiveDate: z.boolean(),
   effectiveDate: z.date(),
@@ -14,7 +17,9 @@ const baseTransactionShape = {
 export const TransactionSchema = z.compile(
   z.object({
     ...baseTransactionShape,
-    budgetId: z.string().min(1, { error: "Budget is required" }),
+    budgetId: z
+      .string()
+      .min(1, { error: schemaError("finance.budgetRequired") }),
   })
 )
 

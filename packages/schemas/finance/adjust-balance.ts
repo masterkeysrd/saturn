@@ -3,8 +3,8 @@ import { numericAmountString } from "../common"
 
 export const adjustBalanceShape = {
   targetBalance: numericAmountString(
-    "Target balance is required",
-    "Target balance must be a valid number"
+    "finance.targetBalanceRequired",
+    "finance.targetBalanceInvalid"
   ),
   notes: z.string().optional(),
 }

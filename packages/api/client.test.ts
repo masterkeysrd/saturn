@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import {
   configureClient,
+  getClientLocale,
   request,
   refreshSession,
   SaturnApiError,
+  setClientLocale,
 } from "./client"
 import { defaultStorage, type StorageAdapter } from "./storage"
 
@@ -38,6 +40,7 @@ describe("@saturn/api client", () => {
 
   afterEach(() => {
     globalThis.fetch = originalFetch
+    setClientLocale(undefined)
   })
 
   it("does not call onUnauthorized when post-refresh retry returns 400/403/404/409 and throws SaturnApiError", async () => {
@@ -239,5 +242,50 @@ describe("@saturn/api client", () => {
       vi.stubGlobal("window", originalWindow)
       vi.stubGlobal("localStorage", originalLocalStorage)
     }
+  })
+
+  it("sends Accept-Language header when setClientLocale or configureClient locale is set without overwriting explicit headers", async () => {
+    configureClient({
+      baseUrl: "https://api.example.com",
+      storage: makeStorage("valid_access"),
+    })
+    setClientLocale("es-ES")
+    expect(getClientLocale()).toBe("es-ES")
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), { status: 200 })
+      )
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    await request({ method: "GET", url: "/api/v1/spaces" })
+    const firstHeaders = (fetchMock.mock.calls[0][1] as RequestInit)
+      .headers as Record<string, string>
+    expect(firstHeaders["Accept-Language"]).toBe("es-ES")
+
+    // Explicit header takes precedence
+    await request({
+      method: "GET",
+      url: "/api/v1/spaces",
+      headers: { "Accept-Language": "fr-FR" },
+    })
+    const secondHeaders = (fetchMock.mock.calls[1][1] as RequestInit)
+      .headers as Record<string, string>
+    expect(secondHeaders["Accept-Language"]).toBe("fr-FR")
+
+    // Dynamic function locale in configureClient
+    configureClient({ locale: () => "es-419" })
+    expect(getClientLocale()).toBe("es-419")
+    await request({ method: "GET", url: "/api/v1/spaces" })
+    const thirdHeaders = (fetchMock.mock.calls[2][1] as RequestInit)
+      .headers as Record<string, string>
+    expect(thirdHeaders["Accept-Language"]).toBe("es-419")
   })
 })

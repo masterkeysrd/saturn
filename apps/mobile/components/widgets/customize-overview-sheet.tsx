@@ -19,17 +19,26 @@ import {
   DEFAULT_DASHBOARD_WIDGETS,
   type DashboardWidgetId,
 } from "@saturn/core"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import {
+  getLocalizedDashboardPresetMeta,
+  getLocalizedDashboardWidgetMeta,
+} from "@saturn/i18n"
+import { useI18n } from "@saturn/hooks"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../lib/theme"
+import { haptics } from "../../lib/haptics"
 import {
   applyDashboardPreset,
   findActiveDashboardPresetId,
   getOrderedDashboardRows,
   moveDashboardWidget,
   toggleDashboardWidget,
-} from "@/lib/overview-preferences"
-import { AppBottomSheet } from "@/components/ui/bottom-sheet"
-import { Button } from "@/components/ui/button"
+} from "../../lib/overview-preferences"
+import { AppBottomSheet } from "../ui/bottom-sheet"
+import { Button } from "../ui/button"
 
 const WIDGET_ICONS: Record<DashboardWidgetId, typeof Sparkles> = {
   ai_quick_ask: Sparkles,
@@ -59,6 +68,7 @@ export function CustomizeOverviewSheet({
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
   const insets = useSafeAreaInsets()
+  const { t, locale } = useI18n()
   const sheetRef = useRef<BottomSheet>(null)
 
   useEffect(() => {
@@ -82,7 +92,7 @@ export function CustomizeOverviewSheet({
   return (
     <AppBottomSheet
       ref={sheetRef}
-      title="Customize Overview"
+      title={t("dashboard.customizeTitle")}
       snapPoints={["80%"]}
       onClose={onClose}
     >
@@ -95,16 +105,22 @@ export function CustomizeOverviewSheet({
           {/* Presets Row */}
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Presets</Text>
-              {isSaving ? <Text style={styles.savingHint}>Saving…</Text> : null}
+              <Text style={styles.sectionTitle}>{t("dashboard.presets")}</Text>
+              {isSaving ? (
+                <Text style={styles.savingHint}>{t("common.saving")}</Text>
+              ) : null}
             </View>
             <Text style={styles.sectionSubtitle}>
-              Apply a curated widget arrangement for this workspace.
+              {t("dashboard.customizeDescription")}
             </Text>
 
             <View style={styles.presetsGrid}>
               {DASHBOARD_PRESETS.map((preset) => {
                 const isSelected = activePresetId === preset.id
+                const localizedPreset = getLocalizedDashboardPresetMeta(
+                  preset.id,
+                  locale
+                )
                 return (
                   <TouchableOpacity
                     key={preset.id}
@@ -125,10 +141,10 @@ export function CustomizeOverviewSheet({
                         isSelected && styles.presetLabelActive,
                       ]}
                     >
-                      {preset.label}
+                      {localizedPreset.label}
                     </Text>
                     <Text style={styles.presetDesc} numberOfLines={2}>
-                      {preset.description}
+                      {localizedPreset.description}
                     </Text>
                   </TouchableOpacity>
                 )
@@ -139,9 +155,9 @@ export function CustomizeOverviewSheet({
           {/* Widgets & Order List */}
           <View style={[styles.section, styles.sectionDivider]}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Widgets & Order</Text>
+              <Text style={styles.sectionTitle}>{t("dashboard.widgets")}</Text>
               <Text style={styles.activeCountText}>
-                {activeWidgets.length} active
+                {activeWidgets.length} {t("common.active").toLowerCase()}
               </Text>
             </View>
             <Text style={styles.sectionSubtitle}>
@@ -152,6 +168,10 @@ export function CustomizeOverviewSheet({
             <View style={styles.widgetsList}>
               {orderedRows.map((row, idx) => {
                 const WidgetIcon = WIDGET_ICONS[row.id]
+                const localizedWidget = getLocalizedDashboardWidgetMeta(
+                  row.id,
+                  locale
+                )
                 const isLastEnabled = row.enabled && activeWidgets.length <= 1
                 const canMoveUp = row.enabled && row.activeIndex > 0
                 const canMoveDown =
@@ -181,11 +201,11 @@ export function CustomizeOverviewSheet({
                           ]}
                           numberOfLines={1}
                         >
-                          {row.title}
+                          {localizedWidget.title}
                         </Text>
                       </View>
                       <Text style={styles.widgetDesc} numberOfLines={2}>
-                        {row.description}
+                        {localizedWidget.description}
                       </Text>
                     </View>
 
@@ -280,7 +300,7 @@ export function CustomizeOverviewSheet({
             style={styles.resetBtn}
             testID="overview-reset-default-btn"
           >
-            Reset to Default
+            {t("common.reset")}
           </Button>
           <Button
             variant="primary"
@@ -292,7 +312,7 @@ export function CustomizeOverviewSheet({
             style={styles.doneBtn}
             testID="overview-customize-done-btn"
           >
-            Done
+            {t("common.done")}
           </Button>
         </View>
       </View>

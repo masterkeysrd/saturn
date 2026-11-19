@@ -7,7 +7,25 @@ import {
   useChangeEmailMutation,
   useDeleteAccountMutation,
   useListMFAFactorsQuery,
+  useGetUserPreferencesQuery,
+  useUpdateUserPreferencesMutation,
+  type UserPreferences,
 } from "@saturn/api/gen/saturn/identity/v1/identity"
+import {
+  SUPPORTED_UI_LOCALES,
+  normalizeUserLocale,
+  translate,
+} from "@saturn/i18n"
+import {
+  useI18n,
+  useTimezone,
+  type HourCycle,
+  type WeekStartsOn,
+} from "@saturn/hooks"
+import {
+  setCachedUserPreferences,
+  type CachedUserPreferences,
+} from "@/lib/user-preferences"
 import {
   UserIcon,
   MailIcon,
@@ -23,11 +41,20 @@ import {
   Loader2Icon,
   AlertTriangleIcon,
   Trash2Icon,
+  GlobeIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { InputOTP } from "@/components/ui/input-otp"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -42,11 +69,25 @@ export function AccountSettingsView() {
   const { user, logoutUser } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { t } = useI18n()
+  const tz = useTimezone()
 
   // MFA Status
   const { data: mfaData } = useListMFAFactorsQuery({})
   const factors = mfaData?.factors || []
   const hasActiveMFA = factors.length > 0
+
+  // User Regional Preferences
+  const { data: userPrefsData } = useGetUserPreferencesQuery({})
+  const updateUserPrefsMutation = useUpdateUserPreferencesMutation()
+
+  const currentLocale = userPrefsData?.locale
+    ? normalizeUserLocale(userPrefsData.locale)
+    : tz.locale
+  const currentHourCycle: HourCycle =
+    (userPrefsData?.hourCycle ?? tz.hourCycle) === "h23" ? "h23" : "h12"
+  const currentWeekStartsOn: WeekStartsOn =
+    (userPrefsData?.weekStartsOn ?? tz.weekStartsOn) === 1 ? 1 : 0
 
   // Mutations
   const updateProfileMutation = useUpdateProfileMutation()
@@ -244,6 +285,71 @@ export function AccountSettingsView() {
     }
   }
 
+  const handleUpdateRegionalPrefs = async (
+    patch: Partial<CachedUserPreferences>,
+    paths: string[]
+  ) => {
+    const next: CachedUserPreferences = {
+      locale: patch.locale ?? currentLocale,
+      hourCycle: patch.hourCycle ?? currentHourCycle,
+      weekStartsOn: patch.weekStartsOn ?? currentWeekStartsOn,
+    }
+    const previous = queryClient.getQueryData<UserPreferences>([
+      "/api/v1/identity/users/me/preferences",
+      {},
+    ])
+    queryClient.setQueryData(
+      ["/api/v1/identity/users/me/preferences", {}],
+      next
+    )
+    setCachedUserPreferences(next)
+
+    try {
+      const updated = await updateUserPrefsMutation.mutateAsync({
+        userPreferences: {
+          locale: next.locale,
+          hourCycle: next.hourCycle,
+          weekStartsOn: next.weekStartsOn,
+        },
+        updateMask: { paths },
+      })
+      const normalizedUpdated: CachedUserPreferences = {
+        locale: normalizeUserLocale(updated?.locale || next.locale),
+        hourCycle:
+          (updated?.hourCycle ?? next.hourCycle) === "h23" ? "h23" : "h12",
+        weekStartsOn:
+          (updated?.weekStartsOn ?? next.weekStartsOn) === 1 ? 1 : 0,
+      }
+      queryClient.setQueryData(
+        ["/api/v1/identity/users/me/preferences", {}],
+        normalizedUpdated
+      )
+      setCachedUserPreferences(normalizedUpdated)
+      toast.add({
+        type: "success",
+        title: translate(normalizedUpdated.locale, "settings.regional.saved"),
+      })
+    } catch (err: unknown) {
+      if (previous) {
+        queryClient.setQueryData(
+          ["/api/v1/identity/users/me/preferences", {}],
+          previous
+        )
+        setCachedUserPreferences({
+          locale: normalizeUserLocale(previous.locale),
+          hourCycle: previous.hourCycle === "h23" ? "h23" : "h12",
+          weekStartsOn: previous.weekStartsOn === 1 ? 1 : 0,
+        })
+      }
+      const msg =
+        err instanceof Error ? err.message : "Failed to update preferences"
+      toast.add({
+        type: "error",
+        title: msg,
+      })
+    }
+  }
+
   return (
     <div className="space-y-8">
       {/* Profile Overview Banner */}
@@ -437,6 +543,133 @@ export function AccountSettingsView() {
           </div>
         )}
       </div>
+
+      {/* Language & Regional Format */}
+      <Card className="rounded-2xl border border-border/50 bg-card/60 p-6 shadow-xs select-none">
+        <div className="flex items-start gap-3.5 text-left">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <GlobeIcon className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-foreground">
+              {t("settings.regional.title")}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("settings.regional.description")}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-5 border-t border-border/40 pt-5 text-left sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label
+              htmlFor="regional-locale-select"
+              className="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+            >
+              {t("settings.regional.language")}
+            </Label>
+            <Select
+              value={currentLocale}
+              disabled={updateUserPrefsMutation.isPending}
+              onValueChange={(val) => {
+                if (val && val !== currentLocale) {
+                  void handleUpdateRegionalPrefs({ locale: val }, ["locale"])
+                }
+              }}
+            >
+              <SelectTrigger
+                id="regional-locale-select"
+                aria-label={t("settings.regional.language")}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SUPPORTED_UI_LOCALES.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label
+              htmlFor="regional-hour-cycle-select"
+              className="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+            >
+              {t("settings.regional.hourCycle")}
+            </Label>
+            <Select
+              value={currentHourCycle}
+              disabled={updateUserPrefsMutation.isPending}
+              onValueChange={(val) => {
+                if (
+                  (val === "h12" || val === "h23") &&
+                  val !== currentHourCycle
+                ) {
+                  void handleUpdateRegionalPrefs({ hourCycle: val }, [
+                    "hour_cycle",
+                  ])
+                }
+              }}
+            >
+              <SelectTrigger
+                id="regional-hour-cycle-select"
+                aria-label={t("settings.regional.hourCycle")}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="h12">
+                  {t("settings.regional.hour12")}
+                </SelectItem>
+                <SelectItem value="h23">
+                  {t("settings.regional.hour24")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label
+              htmlFor="regional-week-start-select"
+              className="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+            >
+              {t("settings.regional.weekStartsOn")}
+            </Label>
+            <Select
+              value={String(currentWeekStartsOn)}
+              disabled={updateUserPrefsMutation.isPending}
+              onValueChange={(val) => {
+                if (val === "0" || val === "1") {
+                  const nextDay: WeekStartsOn = val === "1" ? 1 : 0
+                  if (nextDay !== currentWeekStartsOn) {
+                    void handleUpdateRegionalPrefs({ weekStartsOn: nextDay }, [
+                      "week_starts_on",
+                    ])
+                  }
+                }
+              }}
+            >
+              <SelectTrigger
+                id="regional-week-start-select"
+                aria-label={t("settings.regional.weekStartsOn")}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">
+                  {t("settings.regional.sunday")}
+                </SelectItem>
+                <SelectItem value="1">
+                  {t("settings.regional.monday")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </Card>
 
       {/* Security & Logins Shortcut */}
       <div className="flex flex-col gap-4 rounded-2xl border border-border/50 bg-card/60 p-5 shadow-xs select-none sm:flex-row sm:items-center sm:justify-between">

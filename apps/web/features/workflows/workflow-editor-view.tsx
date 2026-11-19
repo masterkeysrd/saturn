@@ -7,6 +7,7 @@ import {
   createDefaultWorkflowStep,
   createEmptyWorkflowDraft,
 } from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import { FlowSchema } from "@saturn/schemas"
 import {
@@ -70,6 +71,7 @@ export function WorkflowEditorView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { spaceId } = useActiveSpaceContext()
+  const tz = useTimezone()
 
   const draftFromState = (location.state as { draftFlow?: Flow } | null)
     ?.draftFlow
@@ -78,7 +80,7 @@ export function WorkflowEditorView() {
     { id: flowId ?? "" },
     { enabled: !isNew }
   )
-  const { data: catalog } = useGetCatalogQuery({})
+  const { data: catalog } = useGetCatalogQuery({ locale: tz.locale })
 
   const [draftOverride, setDraftOverride] = useState<Flow | null>(() =>
     draftFromState ? draftFromState : null

@@ -14,6 +14,7 @@ import {
   type WebViewProps,
 } from "react-native-webview"
 import { stripHtmlToPlainText } from "@saturn/core"
+import { useI18n } from "@saturn/hooks"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import {
   buildMobileEditorDocumentHtml,
@@ -64,7 +65,7 @@ export const EmailRichEditor = forwardRef<
   {
     bodyHtml,
     stylesHtml = "",
-    placeholder = "Compose email...",
+    placeholder: explicitPlaceholder,
     minHeight = 220,
     autoFocus = false,
     testID = "mobile-composer-editor",
@@ -74,6 +75,8 @@ export const EmailRichEditor = forwardRef<
   },
   ref
 ) {
+  const { t } = useI18n()
+  const placeholder = explicitPlaceholder ?? t("mail.composePlaceholder")
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
   const webViewRef = useRef<WebViewHandle>(null)

@@ -9,7 +9,7 @@ import {
   Wallet,
   Menu,
 } from "lucide-react-native"
-import { useMailboxes } from "@saturn/hooks"
+import { useMailboxes, useI18n } from "@saturn/hooks"
 import { useListInboxItemsQuery } from "@saturn/api/saturn/finance/v1/finance"
 import { useListThreadsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { AppHeader } from "@/components/app-header"
@@ -29,6 +29,7 @@ export default function TabsLayout() {
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
   const { activeSpaceId } = useSpace()
+  const { t } = useI18n()
   const tabBarHeight = 56 + (insets.bottom > 0 ? insets.bottom : 8)
 
   const { data: mailboxesData } = useMailboxes(undefined, {
@@ -102,7 +103,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: "Overview",
+            title: t("nav.overview"),
             headerShown: true,
             header: () => <AppHeader />,
             tabBarBadge:
@@ -120,7 +121,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="calendar"
           options={{
-            title: "Calendar",
+            title: t("nav.calendar"),
             headerShown: false,
             tabBarIcon: ({ color, size }) => (
               <CalendarIcon
@@ -133,7 +134,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="mail"
           options={{
-            title: "Mail",
+            title: t("nav.mail"),
             headerShown: false,
             tabBarBadge: formatTabBadgeCount(unreadMailCount),
             tabBarIcon: ({ color, size }) => (
@@ -147,7 +148,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="finance"
           options={{
-            title: "Finance",
+            title: t("nav.finance"),
             headerShown: false,
             tabBarBadge: formatTabBadgeCount(pendingInboxCount),
             tabBarIcon: ({ color, size }) => (
@@ -161,7 +162,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="menu"
           options={{
-            title: "Menu",
+            title: t("nav.menu"),
             headerShown: false,
             tabBarIcon: ({ color, size }) => (
               <Menu

@@ -1,8 +1,12 @@
 import { z } from "zod"
 import { nonEmptyString } from "../common"
+import { schemaError } from "../i18n"
 
 export const MailRecipientSchema = z.object({
-  email: z.string().trim().email({ error: "Invalid email address" }),
+  email: z
+    .string()
+    .trim()
+    .email({ error: schemaError("mail.emailInvalid") }),
   displayName: z.string().trim().optional().default(""),
 })
 
@@ -10,7 +14,10 @@ export type MailRecipientFormValues = z.infer<typeof MailRecipientSchema>
 
 export const MailAttachmentMetaSchema = z.object({
   id: z.string().optional().default(""),
-  filename: z.string().trim().min(1, { error: "Filename is required" }),
+  filename: z
+    .string()
+    .trim()
+    .min(1, { error: schemaError("mail.filenameRequired") }),
   contentType: z.string().trim().default("application/octet-stream"),
   size: z.union([z.number(), z.string()]).default(0),
   contentId: z.string().optional().default(""),
@@ -24,7 +31,7 @@ export type MailAttachmentMetaFormValues = z.infer<
 
 export const ComposeMailSchema = z.compile(
   z.object({
-    connectedAccountId: nonEmptyString("Connected account is required"),
+    connectedAccountId: nonEmptyString("mail.connectedAccountRequired"),
     to: z.array(MailRecipientSchema).default([]),
     cc: z.array(MailRecipientSchema).default([]),
     bcc: z.array(MailRecipientSchema).default([]),
@@ -54,7 +61,7 @@ export type ComposeMailValues = z.infer<typeof ComposeMailSchema>
 export const SendMailSchema = ComposeMailSchema.refine(
   (data) => data.to.length > 0 || data.cc.length > 0 || data.bcc.length > 0,
   {
-    error: "At least one recipient is required to send",
+    error: schemaError("mail.recipientRequired"),
     path: ["to"],
   }
 )

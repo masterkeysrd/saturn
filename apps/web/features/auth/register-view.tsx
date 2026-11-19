@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { RegisterSchema, type RegisterFormValues } from "@saturn/schemas"
+import { useI18n } from "@saturn/hooks"
 import { useAuth } from "./use-auth"
 import { AuthCard } from "./components/auth-card"
 import { FormInput } from "./components/form-input"
@@ -15,6 +16,7 @@ export function RegisterView() {
 
   const { register: registerAuth, error, setError } = useAuth()
   const navigate = useNavigate()
+  const { t, language } = useI18n()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const {
@@ -51,7 +53,14 @@ export function RegisterView() {
   }
 
   return (
-    <AuthCard title="Get started" subtitle="Create your Saturn account today">
+    <AuthCard
+      title={t("auth.createAccount")}
+      subtitle={
+        language === "es"
+          ? "Crea tu cuenta de Saturn hoy"
+          : "Create your Saturn account today"
+      }
+    >
       <form
         onSubmit={handleSubmit(onRegisterSubmit)}
         className="flex flex-col space-y-4"
@@ -65,7 +74,7 @@ export function RegisterView() {
         <FormInput
           id="name"
           type="text"
-          label="Full Name"
+          label={language === "es" ? "Nombre completo" : "Full Name"}
           error={errors.name?.message}
           disabled={isSubmitting}
           {...register("name")}
@@ -74,7 +83,7 @@ export function RegisterView() {
         <FormInput
           id="username"
           type="text"
-          label="Username"
+          label={language === "es" ? "Usuario" : "Username"}
           error={errors.username?.message}
           disabled={isSubmitting}
           {...register("username")}
@@ -83,7 +92,7 @@ export function RegisterView() {
         <FormInput
           id="email"
           type="email"
-          label="Email Address"
+          label={t("auth.email")}
           error={errors.email?.message}
           disabled={isSubmitting}
           {...register("email")}
@@ -92,7 +101,7 @@ export function RegisterView() {
         <FormInput
           id="password"
           type="password"
-          label="Password"
+          label={t("auth.password")}
           error={errors.password?.message}
           disabled={isSubmitting}
           {...register("password")}
@@ -103,16 +112,18 @@ export function RegisterView() {
           className="w-full cursor-pointer rounded-2xl py-6 font-semibold shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99]"
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Creating account..." : "Create Account"}
+          {isSubmitting ? t("auth.creatingAccount") : t("auth.signUp")}
         </Button>
 
         <p className="text-center text-xs text-muted-foreground">
-          Already have an account?{" "}
+          {language === "es"
+            ? "¿Ya tienes una cuenta?"
+            : "Already have an account?"}{" "}
           <Link
             to="/login"
             className="font-medium text-primary hover:underline focus:outline-none"
           >
-            Sign in
+            {t("auth.signIn")}
           </Link>
         </p>
       </form>

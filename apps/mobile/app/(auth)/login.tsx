@@ -28,6 +28,7 @@ import {
   RecoveryCodeSchema,
   type LoginFormValues,
 } from "@saturn/schemas"
+import { useI18n } from "@saturn/hooks"
 import { useAuth } from "@/lib/auth-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Button } from "@/components/ui/button"
@@ -44,6 +45,7 @@ export default function LoginScreen() {
   const router = useRouter()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
   const { login, isDeviceEnrolled, biometricLabel, loginWithBiometrics } =
     useAuth()
   const toast = useToast()
@@ -411,7 +413,7 @@ export default function LoginScreen() {
                 <TextInput
                   control={loginForm.control}
                   name="identifier"
-                  label="Username or Email"
+                  label={t("auth.usernameOrEmail")}
                   placeholder="user@example.com or username"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -424,7 +426,7 @@ export default function LoginScreen() {
                 <TextInput
                   control={loginForm.control}
                   name="password"
-                  label="Password"
+                  label={t("auth.password")}
                   placeholder="••••••••"
                   isPassword
                   autoComplete="current-password"
@@ -436,7 +438,7 @@ export default function LoginScreen() {
                 <FormCheckboxRow
                   control={loginForm.control}
                   name="rememberMe"
-                  label="Remember me"
+                  label={t("auth.rememberMe")}
                 />
 
                 {error && <Text style={styles.errorText}>{error}</Text>}
@@ -451,7 +453,7 @@ export default function LoginScreen() {
                   }
                   style={styles.button}
                 >
-                  Sign In
+                  {loading ? t("auth.signingIn") : t("auth.signIn")}
                 </Button>
               </Card>
 
@@ -461,7 +463,9 @@ export default function LoginScreen() {
                 </Text>
                 <Link href="/(auth)/register" asChild>
                   <TouchableOpacity>
-                    <Text style={styles.linkText}>Create one</Text>
+                    <Text style={styles.linkText}>
+                      {t("auth.createAccount")}
+                    </Text>
                   </TouchableOpacity>
                 </Link>
               </View>

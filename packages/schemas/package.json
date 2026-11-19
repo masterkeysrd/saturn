@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@saturn/core": "*",
+    "@saturn/i18n": "*",
     "zod": "^4.6.5"
   },
   "devDependencies": {

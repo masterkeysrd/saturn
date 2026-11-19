@@ -17,7 +17,7 @@ import {
   type DashboardWidgetId,
 } from "@saturn/core"
 import { useGetDashboardPreferencesQuery } from "@saturn/api/gen/saturn/space/v1/space"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import { useAuth } from "@/features/auth/use-auth"
 import { useActiveSpaceContext } from "@/features/space/use-space"
@@ -41,6 +41,7 @@ export function DashboardView() {
   const { user } = useAuth()
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
+  const { t, language } = useI18n()
   const navigate = useNavigate()
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [previewWidgets, setPreviewWidgets] = useState<
@@ -58,6 +59,11 @@ export function DashboardView() {
 
   const getGreeting = () => {
     const hour = tz.parts()?.hour ?? 12
+    if (language === "es") {
+      if (hour < 12) return "Buenos días"
+      if (hour < 18) return "Buenas tardes"
+      return "Buenas noches"
+    }
     if (hour < 12) return "Good morning"
     if (hour < 18) return "Good afternoon"
     return "Good evening"
@@ -109,17 +115,23 @@ export function DashboardView() {
             <div className="mt-8 rounded-2xl border border-dashed border-border bg-card p-6 text-center">
               <Sparkles className="mx-auto size-7 text-primary" />
               <h2 className="mt-3 text-base font-semibold text-foreground">
-                Create your first Space
+                {language === "es"
+                  ? "Crea tu primer espacio"
+                  : "Create your first Space"}
               </h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                Saturn organizes your finances, mail, calendar, and automations
-                into isolated Spaces. Select an existing Space above or create
-                one to get started.
+                {language === "es"
+                  ? "Saturn organiza tus finanzas, correo, calendario y automatizaciones en espacios aislados. Selecciona un espacio existente arriba o crea uno para comenzar."
+                  : "Saturn organizes your finances, mail, calendar, and automations into isolated Spaces. Select an existing Space above or create one to get started."}
               </p>
               <div className="mt-5 flex justify-center">
                 <Link to="/settings/spaces">
                   <Button size="sm" className="cursor-pointer gap-1.5">
-                    <span>Manage Spaces</span>
+                    <span>
+                      {language === "es"
+                        ? "Gestionar espacios"
+                        : "Manage Spaces"}
+                    </span>
                     <ArrowRight className="size-3.5" />
                   </Button>
                 </Link>
@@ -143,7 +155,7 @@ export function DashboardView() {
               render={
                 <Button size="sm" className="cursor-pointer gap-1.5">
                   <Plus className="size-4" />
-                  <span>Quick Action</span>
+                  <span>{t("common.quickAction")}</span>
                   <ChevronDown className="size-3.5 opacity-75" />
                 </Button>
               }
@@ -151,23 +163,29 @@ export function DashboardView() {
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuItem onClick={() => setTxSheetOpen(true)}>
                 <ReceiptText className="size-4" />
-                <span>Record Transaction</span>
+                <span>{t("commandPalette.recordTransaction")}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setEventDialogOpen(true)}>
                 <Calendar className="size-4" />
-                <span>Create Event</span>
+                <span>
+                  {language === "es"
+                    ? t("commandPalette.newEvent")
+                    : "Create Event"}
+                </span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => navigate(`/space/${spaceId}/mail?compose=1`)}
               >
                 <PenSquare className="size-4" />
-                <span>Compose Email</span>
+                <span>{t("commandPalette.composeMail")}</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => navigate(`/space/${spaceId}/workflows/new`)}
               >
                 <Workflow className="size-4" />
-                <span>New Workflow</span>
+                <span>
+                  {language === "es" ? "Nuevo flujo" : "New Workflow"}
+                </span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -187,7 +205,7 @@ export function DashboardView() {
                 className="cursor-pointer gap-1.5"
               >
                 <SlidersHorizontal className="size-3.5" />
-                <span>Customize</span>
+                <span>{t("common.customize")}</span>
               </Button>
             }
           />

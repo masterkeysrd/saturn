@@ -1,4 +1,9 @@
-import { buildApiError, getClientConfig, refreshSession } from "./client"
+import {
+  buildApiError,
+  getClientConfig,
+  getClientLocale,
+  refreshSession,
+} from "./client"
 import { defaultStorage } from "./storage"
 
 export interface StreamSSEOptions<TEvent = unknown> {
@@ -121,8 +126,17 @@ export async function streamSSE<TEvent = unknown>({
     if (spaceId) {
       hdrs["Space-Id"] = spaceId
     }
+    const resolvedLocale = getClientLocale()
+    if (resolvedLocale) {
+      hdrs["Accept-Language"] = resolvedLocale
+    }
     if (customHeaders) {
-      Object.assign(hdrs, customHeaders)
+      for (const [k, v] of Object.entries(customHeaders)) {
+        if (k.toLowerCase() === "accept-language") {
+          delete hdrs["Accept-Language"]
+        }
+        hdrs[k] = v
+      }
     }
     return hdrs
   }

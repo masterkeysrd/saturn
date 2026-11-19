@@ -26,6 +26,11 @@
       "import": "./timezone/index.ts",
       "default": "./timezone/index.ts"
     },
+    "./i18n": {
+      "types": "./i18n/index.ts",
+      "import": "./i18n/index.ts",
+      "default": "./i18n/index.ts"
+    },
     "./connector": {
       "types": "./connector/index.ts",
       "import": "./connector/index.ts",
@@ -54,6 +59,8 @@
   "dependencies": {
     "@saturn/api": "*",
     "@saturn/core": "*",
+    "@saturn/i18n": "*",
+    "@saturn/schemas": "*",
     "@tanstack/react-query": "^5.102.8"
   },
   "peerDependencies": {

@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { schemaMessage } from "../i18n"
 
 export const InboxReviewSchema = z.compile(
   z
@@ -35,7 +36,7 @@ export const InboxReviewSchema = z.compile(
       if (!data.description || data.description.trim().length === 0) {
         ctx.issues.push({
           code: "custom",
-          message: "Vendor / Description is required",
+          message: schemaMessage("finance.vendorOrDescriptionRequired"),
           path: ["description"],
           input: ctx.value,
         })
@@ -44,7 +45,7 @@ export const InboxReviewSchema = z.compile(
       if (!data.amountStr || data.amountStr.trim().length === 0) {
         ctx.issues.push({
           code: "custom",
-          message: "Amount is required",
+          message: schemaMessage("common.amountRequired"),
           path: ["amountStr"],
           input: ctx.value,
         })
@@ -53,7 +54,7 @@ export const InboxReviewSchema = z.compile(
         if (Number.isNaN(num) || num <= 0) {
           ctx.issues.push({
             code: "custom",
-            message: "Amount must be greater than zero",
+            message: schemaMessage("common.amountPositive"),
             path: ["amountStr"],
             input: ctx.value,
           })

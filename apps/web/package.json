@@ -18,6 +18,7 @@
     "@saturn/api": "*",
     "@saturn/core": "*",
     "@saturn/hooks": "*",
+    "@saturn/i18n": "*",
     "@saturn/schemas": "*",
     "@saturn/tokens": "*",
     "@tailwindcss/vite": "^4",

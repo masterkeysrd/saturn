@@ -10,6 +10,7 @@ import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Sparkles } from "lucide-react-native"
 import { useListThreadsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
+import { useI18n } from "@saturn/hooks"
 import { Avatar } from "./ui/avatar"
 import { useToast } from "./ui/toast"
 import { useSpace } from "../lib/space-context"
@@ -74,6 +75,7 @@ export function SpaceAvatarButton({
   const styles = useThemedStyles(createStyles)
   const router = useRouter()
   const toast = useToast()
+  const { t } = useI18n()
   const { spaces, activeSpace, activeSpaceId, isSwitching, switchSpace } =
     useSpace()
 
@@ -134,7 +136,9 @@ export function SpaceAvatarButton({
       await switchSpace(nextSpace.id)
       toast.show({
         type: "info",
-        title: `Switched to ${nextSpace.name || "Workspace"}`,
+        title: t("space.switchedTo", {
+          name: nextSpace.name || "Workspace",
+        }),
       })
     }
   }

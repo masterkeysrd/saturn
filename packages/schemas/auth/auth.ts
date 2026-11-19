@@ -1,10 +1,13 @@
 import { z } from "zod"
 import { nonEmptyString } from "../common"
+import { schemaError } from "../i18n"
 
 export const LoginSchema = z.compile(
   z.object({
-    identifier: nonEmptyString("Username or email is required"),
-    password: z.string().min(1, { error: "Password is required" }),
+    identifier: nonEmptyString("auth.usernameOrEmailRequired"),
+    password: z
+      .string()
+      .min(1, { error: schemaError("auth.passwordRequired") }),
     rememberMe: z.boolean().optional(),
   })
 )
@@ -13,14 +16,14 @@ export type LoginFormValues = z.infer<typeof LoginSchema>
 
 export const RegisterSchema = z.compile(
   z.object({
-    name: nonEmptyString("Name is required"),
+    name: nonEmptyString("auth.nameRequired"),
     username: z.string().trim().optional(),
-    email: nonEmptyString("Email is required").pipe(
-      z.email({ error: "Please enter a valid email address" })
+    email: nonEmptyString("auth.emailRequired").pipe(
+      z.email({ error: schemaError("auth.emailInvalid") })
     ),
     password: z
       .string()
-      .min(6, { error: "Password must be at least 6 characters" }),
+      .min(6, { error: schemaError("auth.passwordMinLength") }),
   })
 )
 
@@ -31,22 +34,22 @@ export const ChangePasswordSchema = z.compile(
     .object({
       currentPassword: z
         .string()
-        .min(1, { error: "Current password is required" }),
-      newPassword: z
-        .string()
-        .min(8, { error: "New password must be at least 8 characters" }),
+        .min(1, { error: schemaError("auth.currentPasswordRequired") }),
+      newPassword: z.string().min(8, {
+        error: schemaError("auth.newPasswordMinLength"),
+      }),
       confirmPassword: z
         .string()
-        .min(1, { error: "Please confirm your new password" }),
+        .min(1, { error: schemaError("auth.confirmPasswordRequired") }),
       totpCode: z.string().optional(),
       revokeOtherSessions: z.boolean(),
     })
     .refine((data) => data.newPassword !== data.currentPassword, {
-      error: "New password cannot be the same as your current password",
+      error: schemaError("auth.newPasswordSameAsCurrent"),
       path: ["newPassword"],
     })
     .refine((data) => data.newPassword === data.confirmPassword, {
-      error: "Passwords do not match",
+      error: schemaError("auth.passwordsMismatch"),
       path: ["confirmPassword"],
     })
 )
@@ -55,7 +58,7 @@ export type ChangePasswordFormValues = z.infer<typeof ChangePasswordSchema>
 
 export const ServerSettingsSchema = z.compile(
   z.object({
-    serverUrl: nonEmptyString("Server URL is required"),
+    serverUrl: nonEmptyString("auth.serverUrlRequired"),
   })
 )
 
@@ -66,8 +69,8 @@ export const MfaStepUpSchema = z.compile(
     code: z
       .string()
       .trim()
-      .length(6, { error: "Please enter all 6 digits" })
-      .regex(/^\d+$/, { error: "Code must contain only numbers" }),
+      .length(6, { error: schemaError("auth.mfaCodeLength") })
+      .regex(/^\d+$/, { error: schemaError("auth.mfaCodeDigitsOnly") }),
   })
 )
 
@@ -75,7 +78,7 @@ export type MfaStepUpFormValues = z.infer<typeof MfaStepUpSchema>
 
 export const RecoveryCodeSchema = z.compile(
   z.object({
-    code: nonEmptyString("Please enter your recovery code"),
+    code: nonEmptyString("auth.recoveryCodeRequired"),
   })
 )
 

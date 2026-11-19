@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { ShieldAlert, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useI18n } from "@saturn/hooks"
 import type { Attachment } from "@saturn/api/saturn/mail/v1/mail"
 import { restoreRemoteImageSrc, sanitizeEmailHtml } from "@saturn/core"
 import { cn } from "@/lib/utils"
@@ -26,6 +27,7 @@ export function SandboxedEmailFrame({
   attachments = [],
   className = "",
 }: SandboxedEmailFrameProps) {
+  const { t } = useI18n()
   const [autoLoadImages, setAutoLoadImages] = useState<boolean>(() => {
     if (typeof localStorage === "undefined") return false
     return localStorage.getItem("saturn_mail_auto_load_images") === "true"
@@ -418,9 +420,7 @@ export function SandboxedEmailFrame({
         >
           <div className="flex items-center gap-1.5 truncate">
             <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-            <span className="truncate">
-              Remote images are blocked to protect your privacy.
-            </span>
+            <span className="truncate">{t("mail.remoteImagesBlocked")}</span>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <Button
@@ -432,7 +432,7 @@ export function SandboxedEmailFrame({
               className="h-6 gap-1 px-2 text-[11px] font-medium"
             >
               <ImageIcon className="h-3 w-3" />
-              <span>Load images</span>
+              <span>{t("mail.loadImages")}</span>
             </Button>
             <Button
               type="button"
@@ -452,15 +452,15 @@ export function SandboxedEmailFrame({
                 }
               }}
               className="h-6 px-1.5 text-[11px] text-amber-700 hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100"
-              title="Automatically load remote images for all messages"
+              title={t("mail.alwaysLoadTitle")}
             >
-              <span>Always load</span>
+              <span>{t("mail.alwaysLoad")}</span>
             </Button>
           </div>
         </div>
       ) : autoLoadImages && containsRemoteImages ? (
         <div className="mb-2 flex items-center gap-2 text-[11px] text-muted-foreground/80">
-          <span>Images auto-loaded</span>
+          <span>{t("mail.imagesAutoLoaded")}</span>
           <button
             type="button"
             onClick={() => {
@@ -475,7 +475,7 @@ export function SandboxedEmailFrame({
             }}
             className="text-primary hover:underline"
           >
-            (block by default)
+            {t("mail.blockByDefault")}
           </button>
         </div>
       ) : null}
@@ -491,7 +491,7 @@ export function SandboxedEmailFrame({
         <iframe
           ref={iframeRef}
           data-testid="sandboxed-email-frame"
-          title="Email content"
+          title={t("mail.emailContent")}
           sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
           referrerPolicy="no-referrer"
           scrolling="no"

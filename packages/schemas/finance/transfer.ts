@@ -1,28 +1,29 @@
 import { z } from "zod"
 import { positiveAmountString } from "../common"
+import { schemaError } from "../i18n"
 
 export const TransferSchema = z.compile(
   z
     .object({
       sourceAccountId: z
         .string()
-        .min(1, { error: "Source account is required" }),
+        .min(1, { error: schemaError("finance.sourceAccountRequired") }),
       destinationAccountId: z
         .string()
-        .min(1, { error: "Destination account is required" }),
+        .min(1, { error: schemaError("finance.destinationAccountRequired") }),
       sourceAmount: positiveAmountString(
-        "Source amount is required",
-        "Source amount must be greater than zero"
+        "finance.sourceAmountRequired",
+        "finance.sourceAmountPositive"
       ),
       destinationAmount: positiveAmountString(
-        "Destination amount is required",
-        "Destination amount must be greater than zero"
+        "finance.destinationAmountRequired",
+        "finance.destinationAmountPositive"
       ),
       transferDate: z.date(),
       notes: z.string().optional(),
     })
     .refine((data) => data.sourceAccountId !== data.destinationAccountId, {
-      error: "Source and destination accounts must be different",
+      error: schemaError("finance.differentAccounts"),
       path: ["destinationAccountId"],
     })
 )

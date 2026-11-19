@@ -33,7 +33,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { useTimezone, useConnectedAccounts, useMailThread } from "@saturn/hooks"
+import {
+  useTimezone,
+  useConnectedAccounts,
+  useMailThread,
+  useI18n,
+} from "@saturn/hooks"
 import {
   buildCopilotEntityKey,
   normalizeReplySubject,
@@ -108,6 +113,7 @@ export function ThreadReader({
   onDiscardDraft,
 }: ThreadReaderProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
   const { data: accountsData } = useConnectedAccounts()
   const accounts = useMemo(() => accountsData?.accounts || [], [accountsData])
 
@@ -361,7 +367,7 @@ export function ThreadReader({
     }
 
     onCreateEvent({
-      title: thread.subject || "Meeting from email",
+      title: thread.subject || t("mail.meetingFromEmail"),
       description: `Created from email thread: ${thread.subject}\nSnippet: ${thread.snippet}`,
       sourceMailMessageId: latestMsg?.id || "",
       attendees,
@@ -376,10 +382,10 @@ export function ThreadReader({
       >
         <Mail className="mb-3 h-10 w-10 text-muted-foreground/40" />
         <p className="font-semibold text-foreground">
-          No conversation selected
+          {t("mail.noConversationSelected")}
         </p>
         <p className="mt-1 text-muted-foreground">
-          Select a thread from the list to read its messages
+          {t("mail.selectThreadDescription")}
         </p>
       </div>
     )
@@ -396,7 +402,9 @@ export function ThreadReader({
         className="flex flex-1 flex-col items-center justify-center border-l border-border/40 bg-muted/15 p-8 text-center text-xs text-muted-foreground select-none"
       >
         <RefreshCw className="mb-3 h-6 w-6 animate-spin text-primary" />
-        <p className="font-medium text-foreground">Loading conversation...</p>
+        <p className="font-medium text-foreground">
+          {t("mail.loadingConversation")}
+        </p>
       </div>
     )
   }
@@ -412,9 +420,11 @@ export function ThreadReader({
         className="flex flex-1 flex-col items-center justify-center border-l border-border/40 bg-muted/15 p-8 text-center text-xs text-muted-foreground select-none"
       >
         <AlertCircle className="mb-3 h-8 w-8 text-destructive" />
-        <p className="font-semibold text-foreground">Could not load email</p>
+        <p className="font-semibold text-foreground">
+          {t("mail.couldNotLoad")}
+        </p>
         <p className="mt-1 max-w-sm text-muted-foreground">
-          There was an issue retrieving this conversation from the server.
+          {t("mail.couldNotLoadDescription")}
         </p>
         <Button
           variant="outline"
@@ -423,7 +433,7 @@ export function ThreadReader({
           className="mt-4 gap-1.5 border-border/60 bg-background text-xs text-foreground hover:bg-muted"
         >
           <RefreshCw className="h-3.5 w-3.5" />
-          <span>Retry</span>
+          <span>{t("common.retry")}</span>
         </Button>
       </div>
     )
@@ -437,10 +447,10 @@ export function ThreadReader({
       >
         <Mail className="mb-3 h-10 w-10 text-muted-foreground/40" />
         <p className="font-semibold text-foreground">
-          No conversation selected
+          {t("mail.noConversationSelected")}
         </p>
         <p className="mt-1 text-muted-foreground">
-          Select a thread from the list to read its messages
+          {t("mail.selectThreadDescription")}
         </p>
       </div>
     )
@@ -476,7 +486,7 @@ export function ThreadReader({
               className="h-8 shrink-0 gap-1 px-2 text-xs font-medium text-foreground hover:bg-muted"
             >
               <ArrowLeft className="h-4 w-4" />
-              <span>Back</span>
+              <span>{t("common.back")}</span>
             </Button>
           )}
           {account && (
@@ -490,7 +500,7 @@ export function ThreadReader({
             data-testid="thread-subject-heading"
             className="truncate text-base font-semibold tracking-tight text-foreground sm:text-lg"
           >
-            {thread.subject || "(no subject)"}
+            {thread.subject || t("mail.noSubject")}
           </h2>
         </div>
 
@@ -503,7 +513,7 @@ export function ThreadReader({
                 key: buildCopilotEntityKey("mail_thread", thread.id),
                 kind: "mail_thread",
                 id: thread.id,
-                label: thread.subject || "(No subject)",
+                label: thread.subject || t("mail.noSubject"),
                 summary: {
                   isUnread: Boolean(thread.isUnread),
                   messageCount: thread.messageCount,
@@ -516,22 +526,25 @@ export function ThreadReader({
             size="sm"
             onClick={() =>
               openAIDrawer({
-                prompt: `Summarize the email thread "${thread.subject || "(no subject)"}" (thread ID: ${thread.id}) and list any action items.`,
+                prompt: t("mail.summarizePrompt", {
+                  subject: thread.subject || t("mail.noSubject"),
+                  id: thread.id,
+                }),
                 autoSend: true,
               })
             }
-            title="Summarize thread with AI"
+            title={t("mail.summarizeThread")}
             className="h-8 cursor-pointer gap-1.5 rounded-full px-2.5 text-xs text-primary hover:bg-primary/10"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            <span className="hidden md:inline">Summarize</span>
+            <span className="hidden md:inline">{t("mail.summarize")}</span>
           </Button>
           <Button
             variant="ghost"
             size="icon-sm"
             data-testid="archive-thread-btn"
             onClick={() => onArchive(thread)}
-            title="Archive (e)"
+            title={t("mail.archiveShortcut")}
             className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <Archive className="h-4 w-4" />
@@ -541,7 +554,7 @@ export function ThreadReader({
             size="icon-sm"
             data-testid="trash-thread-btn"
             onClick={() => onTrash(thread)}
-            title="Delete (#)"
+            title={t("mail.deleteShortcut")}
             className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />
@@ -551,7 +564,7 @@ export function ThreadReader({
             size="icon-sm"
             data-testid="star-thread-btn"
             onClick={() => onToggleStar(thread)}
-            title="Star (s)"
+            title={t("mail.starShortcut")}
             className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-amber-500"
           >
             <Star
@@ -566,7 +579,7 @@ export function ThreadReader({
             size="icon-sm"
             data-testid="mark-unread-btn"
             onClick={() => onToggleRead(thread)}
-            title="Mark as unread (u)"
+            title={t("mail.markUnreadShortcut")}
             className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <Mail className="h-4 w-4" />
@@ -578,8 +591,8 @@ export function ThreadReader({
             onClick={handleToggleGlobalAutoLoadImages}
             title={
               autoLoadImages
-                ? "Remote images: Auto-loaded (click to block by default)"
-                : "Remote images: Blocked by default (click to always load)"
+                ? t("mail.imagesAutoLoadedTitle")
+                : t("mail.imagesBlockedTitle")
             }
             className={cn(
               "h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -596,8 +609,8 @@ export function ThreadReader({
               onClick={handleToggleExpandAll}
               title={
                 areAllExpanded
-                  ? "Collapse older messages"
-                  : "Expand all messages"
+                  ? t("mail.collapseOlderMessages")
+                  : t("mail.expandAllMessages")
               }
               className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
             >
@@ -617,10 +630,12 @@ export function ThreadReader({
               data-testid="stage-receipt-chip-btn"
               onClick={() => onStageToFinance?.(thread)}
               className="h-8 gap-1.5 border-primary/30 bg-primary/5 px-2.5 text-xs font-medium text-primary hover:bg-primary/10"
-              title="Stage Receipt to Finance Inbox"
+              title={t("mail.stageReceipt")}
             >
               <Receipt className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Stage Receipt</span>
+              <span className="hidden sm:inline">
+                {t("mail.stageReceiptShort")}
+              </span>
             </Button>
           )}
           {/* Create Calendar Event from Email Button */}
@@ -630,10 +645,12 @@ export function ThreadReader({
             data-testid="create-calendar-event-btn"
             onClick={handleCreateCalendarEvent}
             className="h-8 gap-1.5 border-border/60 bg-background px-2.5 text-xs font-medium text-foreground hover:bg-muted"
-            title="Create Calendar Event from Email"
+            title={t("mail.createEvent")}
           >
             <CalendarPlus className="h-3.5 w-3.5 text-primary" />
-            <span className="hidden sm:inline">Create Event</span>
+            <span className="hidden sm:inline">
+              {t("mail.createEventShort")}
+            </span>
           </Button>
         </div>
       </div>
@@ -666,30 +683,29 @@ export function ThreadReader({
                     <div className="flex items-center gap-3 overflow-hidden">
                       <SenderAvatar
                         email={account?.email || msg.from?.email}
-                        name={account?.displayName || "Me"}
+                        name={account?.displayName || t("mail.me")}
                         size="md"
                       />
                       <div className="flex flex-col truncate">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-foreground">
-                            {account?.displayName || "Me"}
+                            {account?.displayName || t("mail.me")}
                           </span>
                           <span className="rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
-                            Draft
+                            {t("mail.draft")}
                           </span>
                         </div>
                         <span className="text-[11px] text-muted-foreground">
                           {msg.updateTime || msg.sentAt
-                            ? `Last saved ${tz.format(
-                                msg.updateTime || msg.sentAt,
-                                {
+                            ? t("mail.lastSaved", {
+                                time: tz.format(msg.updateTime || msg.sentAt, {
                                   month: "short",
                                   day: "numeric",
                                   hour: "numeric",
                                   minute: "2-digit",
-                                }
-                              )}`
-                            : "Unsaved draft"}
+                                }),
+                              })
+                            : t("mail.unsavedDraft")}
                         </span>
                       </div>
                     </div>
@@ -758,7 +774,7 @@ export function ThreadReader({
                     <span className="shrink-0 text-xs font-semibold text-foreground">
                       {msg.from?.name ||
                         msg.from?.email?.split("@")[0] ||
-                        "Unknown"}
+                        t("mail.unknown")}
                     </span>
                     <span className="truncate text-xs text-muted-foreground">
                       {msg.snippet}
@@ -796,7 +812,7 @@ export function ThreadReader({
                         <span className="text-xs font-semibold text-foreground">
                           {msg.from?.name ||
                             msg.from?.email?.split("@")[0] ||
-                            "Unknown"}
+                            t("mail.unknown")}
                         </span>
                         {msg.from?.email && (
                           <span className="truncate text-xs font-normal text-muted-foreground">
@@ -805,13 +821,14 @@ export function ThreadReader({
                         )}
                         {msg.isDraft && (
                           <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">
-                            Draft
+                            {t("mail.draft")}
                           </span>
                         )}
                       </div>
                       {msg.to && msg.to.length > 0 && (
                         <span className="truncate text-[11px] text-muted-foreground">
-                          to: {msg.to.map((t) => t.name || t.email).join(", ")}
+                          {t("mail.toPrefix")}
+                          {msg.to.map((t) => t.name || t.email).join(", ")}
                         </span>
                       )}
                     </div>
@@ -829,7 +846,7 @@ export function ThreadReader({
                       size="icon-xs"
                       data-testid={`reply-quick-btn-${msg.id}`}
                       onClick={() => handleStartReply("reply", msg)}
-                      title="Reply"
+                      title={t("mail.reply")}
                       className="h-7 w-7 text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
                       <Reply className="h-3.5 w-3.5" />
@@ -841,7 +858,7 @@ export function ThreadReader({
                       size="icon-xs"
                       data-testid={`forward-quick-btn-${msg.id}`}
                       onClick={() => handleStartReply("forward", msg)}
-                      title="Forward"
+                      title={t("mail.forward")}
                       className="h-7 w-7 text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
                       <Forward className="h-3.5 w-3.5" />
@@ -855,7 +872,7 @@ export function ThreadReader({
                             variant="ghost"
                             size="icon-xs"
                             data-testid={`message-more-btn-${msg.id}`}
-                            title="More options"
+                            title={t("mail.moreOptions")}
                             className="h-7 w-7 text-muted-foreground hover:bg-muted hover:text-foreground"
                           >
                             <MoreHorizontal className="h-3.5 w-3.5" />
@@ -872,7 +889,7 @@ export function ThreadReader({
                           className="gap-2.5 px-2.5 py-1.5 text-xs text-foreground hover:bg-muted focus:bg-muted focus:text-foreground"
                         >
                           <Reply className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span>Reply</span>
+                          <span>{t("mail.reply")}</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           data-testid={`menu-reply-all-${msg.id}`}
@@ -880,7 +897,7 @@ export function ThreadReader({
                           className="gap-2.5 px-2.5 py-1.5 text-xs text-foreground hover:bg-muted focus:bg-muted focus:text-foreground"
                         >
                           <ReplyAll className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span>Reply All</span>
+                          <span>{t("mail.replyAll")}</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           data-testid={`menu-forward-${msg.id}`}
@@ -888,7 +905,7 @@ export function ThreadReader({
                           className="gap-2.5 px-2.5 py-1.5 text-xs text-foreground hover:bg-muted focus:bg-muted focus:text-foreground"
                         >
                           <Forward className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span>Forward</span>
+                          <span>{t("mail.forward")}</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="my-1 bg-border/40" />
                         {onStageToFinance && (
@@ -898,7 +915,7 @@ export function ThreadReader({
                             className="gap-2.5 px-2.5 py-1.5 text-xs text-foreground hover:bg-muted focus:bg-muted focus:text-foreground"
                           >
                             <Receipt className="h-3.5 w-3.5 text-primary" />
-                            <span>Stage to Finance Inbox</span>
+                            <span>{t("mail.stageToFinanceInbox")}</span>
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem
@@ -907,7 +924,7 @@ export function ThreadReader({
                           className="gap-2.5 px-2.5 py-1.5 text-xs text-foreground hover:bg-muted focus:bg-muted focus:text-foreground"
                         >
                           <Printer className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span>Print message</span>
+                          <span>{t("mail.printMessage")}</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           data-testid={`menu-copy-email-${msg.id}`}
@@ -915,7 +932,7 @@ export function ThreadReader({
                             if (msg.from?.email) {
                               navigator.clipboard.writeText(msg.from.email)
                               toast.add({
-                                title: "Email copied to clipboard",
+                                title: t("mail.emailCopied"),
                                 type: "success",
                               })
                             }
@@ -923,7 +940,7 @@ export function ThreadReader({
                           className="gap-2.5 px-2.5 py-1.5 text-xs text-foreground hover:bg-muted focus:bg-muted focus:text-foreground"
                         >
                           <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span>Copy sender address</span>
+                          <span>{t("mail.copySenderAddress")}</span>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -933,7 +950,7 @@ export function ThreadReader({
                       type="button"
                       onClick={() => toggleMessageExpanded(msg.id, true)}
                       className="ml-0.5 rounded p-1 text-muted-foreground/70 hover:bg-muted hover:text-foreground"
-                      aria-label="Collapse message"
+                      aria-label={t("mail.collapseMessage")}
                     >
                       <ChevronUp className="h-4 w-4" />
                     </button>
@@ -966,7 +983,7 @@ export function ThreadReader({
                       className="h-8 gap-1.5 border-border/60 bg-background px-3 text-xs font-medium text-foreground hover:bg-muted"
                     >
                       <Reply className="h-3.5 w-3.5" />
-                      <span>Reply</span>
+                      <span>{t("mail.reply")}</span>
                     </Button>
                     <Button
                       variant="outline"
@@ -976,7 +993,7 @@ export function ThreadReader({
                       className="h-8 gap-1.5 border-border/60 bg-background px-3 text-xs font-medium text-foreground hover:bg-muted"
                     >
                       <ReplyAll className="h-3.5 w-3.5" />
-                      <span>Reply All</span>
+                      <span>{t("mail.replyAll")}</span>
                     </Button>
                     <Button
                       variant="outline"
@@ -986,7 +1003,7 @@ export function ThreadReader({
                       className="h-8 gap-1.5 border-border/60 bg-background px-3 text-xs font-medium text-foreground hover:bg-muted"
                     >
                       <Forward className="h-3.5 w-3.5" />
-                      <span>Forward</span>
+                      <span>{t("mail.forward")}</span>
                     </Button>
                   </div>
                 </div>

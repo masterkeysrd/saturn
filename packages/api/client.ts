@@ -5,11 +5,13 @@ export interface RequestOptions<TData = unknown, TParams = unknown> {
   url: string
   data?: TData
   params?: TParams
+  headers?: Record<string, string>
 }
 
 export interface ClientConfig {
   baseUrl?: string
   storage?: StorageAdapter
+  locale?: string | (() => string | undefined)
   onUnauthorized?: () => void
   onRefreshed?: (accessToken: string) => void
 }
@@ -43,6 +45,23 @@ export function configureClient(config: Partial<ClientConfig>): void {
 
 export function getClientConfig(): ClientConfig {
   return clientConfig
+}
+
+export function setClientLocale(locale?: string): void {
+  const trimmed = locale?.trim()
+  clientConfig = {
+    ...clientConfig,
+    locale: trimmed || undefined,
+  }
+}
+
+export function getClientLocale(): string | undefined {
+  const raw =
+    typeof clientConfig.locale === "function"
+      ? clientConfig.locale()
+      : clientConfig.locale
+  const trimmed = raw?.trim()
+  return trimmed || undefined
 }
 
 export interface FieldViolation {
@@ -218,11 +237,33 @@ export async function request<TResponse, TData = unknown, TParams = unknown>({
   url,
   data,
   params,
+  headers: customHeaders,
 }: RequestOptions<TData, TParams>): Promise<TResponse> {
   const storage = clientConfig.storage || defaultStorage
   const session = await storage.getSession()
   const token = session.accessToken
   const spaceId = await storage.getActiveSpaceId()
+  const resolvedLocale = getClientLocale()
+
+  const buildHeaders = (authToken: string | null): Record<string, string> => {
+    const hdrs: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(authToken && { Authorization: `Bearer ${authToken}` }),
+      ...(spaceId && { "Space-Id": spaceId }),
+    }
+    if (resolvedLocale) {
+      hdrs["Accept-Language"] = resolvedLocale
+    }
+    if (customHeaders) {
+      for (const [k, v] of Object.entries(customHeaders)) {
+        if (k.toLowerCase() === "accept-language") {
+          delete hdrs["Accept-Language"]
+        }
+        hdrs[k] = v
+      }
+    }
+    return hdrs
+  }
 
   const baseUrl = clientConfig.baseUrl || ""
   let fullUrl = url.startsWith("http") ? url : `${baseUrl}${url}`
@@ -264,11 +305,7 @@ export async function request<TResponse, TData = unknown, TParams = unknown>({
 
   const response = await fetch(fullUrl, {
     method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...(spaceId && { "Space-Id": spaceId }),
-    },
+    headers: buildHeaders(token),
     ...(data && { body: JSON.stringify(data) }),
     credentials: "same-origin",
   })
@@ -299,11 +336,7 @@ export async function request<TResponse, TData = unknown, TParams = unknown>({
 
       const retryResponse = await fetch(fullUrl, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${newAccessToken}`,
-          ...(spaceId && { "Space-Id": spaceId }),
-        },
+        headers: buildHeaders(newAccessToken),
         ...(data && { body: JSON.stringify(data) }),
         credentials: "same-origin",
       })

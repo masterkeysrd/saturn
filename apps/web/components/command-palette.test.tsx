@@ -70,7 +70,7 @@ describe("CommandPalette", () => {
 
     fireEvent.keyDown(window, { key: "k", metaKey: true })
     expect(
-      screen.getByPlaceholderText(/Search views, actions, workspaces/i)
+      screen.getByPlaceholderText(/Type a command or search/i)
     ).toBeTruthy()
 
     fireEvent.click(screen.getByText("Transactions"))
@@ -86,9 +86,7 @@ describe("CommandPalette", () => {
       </MemoryRouter>
     )
 
-    const input = screen.getByPlaceholderText(
-      /Search views, actions, workspaces/i
-    )
+    const input = screen.getByPlaceholderText(/Type a command or search/i)
 
     const fullPrompt = "Spent $18 at Chipotle"
     let typed = ""

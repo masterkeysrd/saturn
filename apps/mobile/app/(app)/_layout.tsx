@@ -1,5 +1,6 @@
 import { ActivityIndicator, Platform, View } from "react-native"
 import { Redirect, Stack } from "expo-router"
+import { useI18n } from "@saturn/hooks"
 import { useAuth } from "@/lib/auth-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
@@ -10,6 +11,7 @@ export const unstable_settings = {
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth()
   const { colors, resolvedMode } = useTheme()
+  const { t } = useI18n()
   const styles = useThemedStyles(createStyles)
 
   if (isLoading) {
@@ -50,8 +52,8 @@ export default function AppLayout() {
         name="settings/index"
         options={{
           headerShown: true,
-          headerTitle: "Settings",
-          headerBackTitle: "Back",
+          headerTitle: t("nav.settings"),
+          headerBackTitle: t("common.back"),
         }}
       />
       <Stack.Screen
@@ -59,7 +61,7 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Workspace Settings",
-          headerBackTitle: "Settings",
+          headerBackTitle: t("nav.settings"),
         }}
       />
       <Stack.Screen
@@ -67,7 +69,7 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Active Sessions & Security",
-          headerBackTitle: "Settings",
+          headerBackTitle: t("nav.settings"),
         }}
       />
       <Stack.Screen
@@ -83,7 +85,7 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Connected Accounts",
-          headerBackTitle: "Settings",
+          headerBackTitle: t("nav.settings"),
         }}
       />
       <Stack.Screen
@@ -91,15 +93,15 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Design System",
-          headerBackTitle: "Menu",
+          headerBackTitle: t("nav.menu"),
         }}
       />
       <Stack.Screen
         name="finance/transactions/index"
         options={{
           headerShown: true,
-          headerTitle: "Transactions",
-          headerBackTitle: "Finance",
+          headerTitle: t("nav.transactions"),
+          headerBackTitle: t("nav.finance"),
         }}
       />
       <Stack.Screen
@@ -107,23 +109,23 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Transaction Details",
-          headerBackTitle: "Transactions",
+          headerBackTitle: t("nav.transactions"),
         }}
       />
       <Stack.Screen
         name="finance/inbox"
         options={{
           headerShown: true,
-          headerTitle: "Review Queue",
-          headerBackTitle: "Finance",
+          headerTitle: t("nav.inbox"),
+          headerBackTitle: t("nav.finance"),
         }}
       />
       <Stack.Screen
         name="finance/budgets"
         options={{
           headerShown: true,
-          headerTitle: "Budgets",
-          headerBackTitle: "Finance",
+          headerTitle: t("nav.budgets"),
+          headerBackTitle: t("nav.finance"),
         }}
       />
       <Stack.Screen
@@ -131,15 +133,15 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Budget Details",
-          headerBackTitle: "Budgets",
+          headerBackTitle: t("nav.budgets"),
         }}
       />
       <Stack.Screen
         name="finance/accounts"
         options={{
           headerShown: true,
-          headerTitle: "Accounts",
-          headerBackTitle: "Finance",
+          headerTitle: t("nav.accounts"),
+          headerBackTitle: t("nav.finance"),
         }}
       />
       <Stack.Screen
@@ -147,23 +149,23 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Account Details",
-          headerBackTitle: "Accounts",
+          headerBackTitle: t("nav.accounts"),
         }}
       />
       <Stack.Screen
         name="finance/recurring"
         options={{
           headerShown: true,
-          headerTitle: "Recurring & Bills",
-          headerBackTitle: "Finance",
+          headerTitle: t("nav.recurring"),
+          headerBackTitle: t("nav.finance"),
         }}
       />
       <Stack.Screen
         name="finance/borrowing"
         options={{
           headerShown: true,
-          headerTitle: "Debts & Loans",
-          headerBackTitle: "Finance",
+          headerTitle: t("nav.borrowing"),
+          headerBackTitle: t("nav.finance"),
         }}
       />
       <Stack.Screen
@@ -171,7 +173,7 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Agreement Details",
-          headerBackTitle: "Debts & Loans",
+          headerBackTitle: t("nav.borrowing"),
         }}
       />
       <Stack.Screen
@@ -179,15 +181,15 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Conversation",
-          headerBackTitle: "Mail",
+          headerBackTitle: t("nav.mail"),
         }}
       />
       <Stack.Screen
         name="workflows/index"
         options={{
           headerShown: true,
-          headerTitle: "Workflows",
-          headerBackTitle: "Back",
+          headerTitle: t("nav.workflows"),
+          headerBackTitle: t("common.back"),
         }}
       />
       <Stack.Screen
@@ -195,7 +197,7 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Workflow Editor",
-          headerBackTitle: "Workflows",
+          headerBackTitle: t("nav.workflows"),
         }}
       />
       <Stack.Screen
@@ -203,7 +205,7 @@ export default function AppLayout() {
         options={{
           headerShown: true,
           headerTitle: "Run Trace",
-          headerBackTitle: "Workflows",
+          headerBackTitle: t("nav.workflows"),
         }}
       />
     </Stack>

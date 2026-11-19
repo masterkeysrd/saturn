@@ -2,11 +2,12 @@ import { useMemo } from "react"
 import { Link } from "react-router-dom"
 import { ArrowRight, CalendarClock } from "lucide-react"
 import { getScheduledDisplayName, parseDate } from "@saturn/core"
+import { getLocalizedDashboardWidgetMeta } from "@saturn/i18n"
 import {
   useGetSettingsQuery,
   useListScheduledTransactionsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { Badge } from "@/components/ui/badge"
 import { MoneyAmount } from "@/components/ui/money-amount"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -18,6 +19,9 @@ const DAYS_14_MS = 14 * 24 * 60 * 60 * 1000
 export function UpcomingBillsWidget() {
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
+  const { locale, language } = useI18n()
+  const isEs = language === "es"
+  const widgetMeta = getLocalizedDashboardWidgetMeta("upcoming_bills", locale)
 
   const {
     data: settingsData,
@@ -72,11 +76,15 @@ export function UpcomingBillsWidget() {
 
   return (
     <DashboardWidgetCard
-      title="Upcoming Bills"
+      title={widgetMeta.title}
       icon={CalendarClock}
       badge={
         isFinanceConfigured && upcomingItems.length > 0 ? (
-          <Badge variant="neutral">Next 14d · {upcomingItems.length}</Badge>
+          <Badge variant="neutral">
+            {isEs
+              ? `Próx. 14d · ${upcomingItems.length}`
+              : `Next 14d · ${upcomingItems.length}`}
+          </Badge>
         ) : undefined
       }
       aiPrompt={
@@ -85,7 +93,7 @@ export function UpcomingBillsWidget() {
           : undefined
       }
       viewAllTo={spaceId ? `/space/${spaceId}/finance/recurring` : undefined}
-      viewAllLabel="Recurring"
+      viewAllLabel={isEs ? "Recurrentes" : "Recurring"}
       isLoading={isLoading}
       loadingSkeleton={
         <div className="space-y-2.5">
@@ -103,10 +111,12 @@ export function UpcomingBillsWidget() {
             </div>
             <div className="min-w-0 space-y-0.5">
               <p className="text-sm font-medium text-foreground">
-                Finance not initialized
+                {isEs ? "Finanzas sin configurar" : "Finance not initialized"}
               </p>
               <p className="text-xs text-muted-foreground">
-                Configure your base currency to track scheduled bills.
+                {isEs
+                  ? "Configura tu moneda base para seguir facturas programadas."
+                  : "Configure your base currency to track scheduled bills."}
               </p>
             </div>
           </div>
@@ -115,7 +125,7 @@ export function UpcomingBillsWidget() {
               to={`/space/${spaceId}/finance`}
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
             >
-              Set up base currency
+              {isEs ? "Configurar moneda base" : "Set up base currency"}
               <ArrowRight className="size-3.5" />
             </Link>
           </div>
@@ -128,10 +138,12 @@ export function UpcomingBillsWidget() {
             </div>
             <div className="min-w-0 space-y-0.5">
               <p className="text-sm font-medium text-foreground">
-                No bills due in the next 14 days
+                {widgetMeta.empty}
               </p>
               <p className="text-xs text-muted-foreground">
-                Scheduled recurring expenses and inflows will appear here.
+                {isEs
+                  ? "Los gastos e ingresos recurrentes programados aparecerán aquí."
+                  : "Scheduled recurring expenses and inflows will appear here."}
               </p>
             </div>
           </div>
@@ -161,13 +173,15 @@ export function UpcomingBillsWidget() {
                   </p>
                   {isOverdue ? (
                     <Badge variant="destructive" dot>
-                      Overdue
+                      {isEs ? "Vencida" : "Overdue"}
                     </Badge>
                   ) : isDueToday ? (
-                    <Badge variant="warning">Due today</Badge>
+                    <Badge variant="warning">
+                      {isEs ? "Vence hoy" : "Due today"}
+                    </Badge>
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      Due {tz.formatDate(item.dueDate)}
+                      {isEs ? "Vence" : "Due"} {tz.formatDate(item.dueDate)}
                     </p>
                   )}
                 </div>

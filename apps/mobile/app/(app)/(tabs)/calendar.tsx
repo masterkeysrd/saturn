@@ -19,6 +19,7 @@ import {
 } from "lucide-react-native"
 import {
   useTimezone,
+  useI18n,
   useCalendars,
   useCalendarEvents,
   useEnsureDefaultCalendar,
@@ -52,6 +53,7 @@ export default function CalendarScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
   const { activeSpaceRole } = useSpace()
@@ -328,7 +330,7 @@ export default function CalendarScreen() {
               testID="calendar-today-btn"
             >
               <RotateCcw size={13} color={colors.primary} />
-              <Text style={styles.todayButtonText}>Today</Text>
+              <Text style={styles.todayButtonText}>{t("common.today")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -438,6 +440,7 @@ export default function CalendarScreen() {
       <DateStrip
         selectedDate={currentDate}
         timeZone={tz.timezone}
+        locale={tz.locale}
         weekStartsOn={tz.weekStartsOn}
         isExpanded={isStripExpanded}
         onSelectDate={setCurrentDate}

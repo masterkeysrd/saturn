@@ -6,6 +6,57 @@ import {
   parseDate,
 } from "../timezone"
 
+const INTERVAL_LABELS: Record<string, string> = {
+  DAILY: "Daily",
+  INTERVAL_DAILY: "Daily",
+  WEEKLY: "Weekly",
+  INTERVAL_WEEKLY: "Weekly",
+  BIWEEKLY: "Biweekly",
+  INTERVAL_BIWEEKLY: "Biweekly",
+  MONTHLY: "Monthly",
+  INTERVAL_MONTHLY: "Monthly",
+  QUARTERLY: "Quarterly",
+  INTERVAL_QUARTERLY: "Quarterly",
+  YEARLY: "Yearly",
+  INTERVAL_YEARLY: "Yearly",
+  ONE_TIME: "One-Time",
+  INTERVAL_ONE_TIME: "One-Time",
+  UNSPECIFIED: "Monthly",
+  INTERVAL_UNSPECIFIED: "Monthly",
+  RECURRENCE_INTERVAL_UNSPECIFIED: "Monthly",
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "Active",
+  STATUS_ACTIVE: "Active",
+  RECURRING_EXPENSE_STATUS_ACTIVE: "Active",
+  RECURRING_TRANSACTION_STATUS_ACTIVE: "Active",
+  PAUSED: "Paused",
+  STATUS_PAUSED: "Paused",
+  RECURRING_EXPENSE_STATUS_PAUSED: "Paused",
+  RECURRING_TRANSACTION_STATUS_PAUSED: "Paused",
+  ARCHIVED: "Archived",
+  STATUS_ARCHIVED: "Archived",
+  CANCELLED: "Cancelled",
+  STATUS_CANCELLED: "Cancelled",
+  COMPLETED: "Completed",
+  STATUS_COMPLETED: "Completed",
+  PENDING: "Pending",
+  STATUS_PENDING: "Pending",
+  PAID: "Paid",
+  STATUS_PAID: "Paid",
+  SKIPPED: "Skipped",
+  STATUS_SKIPPED: "Skipped",
+  ENDED: "Ended",
+  STATUS_ENDED: "Ended",
+  CLOSED: "Closed",
+  STATUS_CLOSED: "Closed",
+  UNSPECIFIED: "Active",
+  STATUS_UNSPECIFIED: "Active",
+  RECURRING_EXPENSE_STATUS_UNSPECIFIED: "Active",
+  RECURRING_TRANSACTION_STATUS_UNSPECIFIED: "Active",
+}
+
 export function formatCents(cents: string | number | undefined | null): number {
   if (cents === undefined || cents === null) return 0
   const val = typeof cents === "number" ? cents : parseFloat(cents)
@@ -86,27 +137,10 @@ export function toCentsString(amountStr: string | number): string {
   return toCents(amountStr).toString()
 }
 
-const INTERVAL_LABELS: Record<string, string> = {
-  WEEKLY: "Weekly",
-  INTERVAL_WEEKLY: "Weekly",
-  BIWEEKLY: "Biweekly",
-  INTERVAL_BIWEEKLY: "Biweekly",
-  MONTHLY: "Monthly",
-  INTERVAL_MONTHLY: "Monthly",
-  QUARTERLY: "Quarterly",
-  INTERVAL_QUARTERLY: "Quarterly",
-  YEARLY: "Yearly",
-  INTERVAL_YEARLY: "Yearly",
-  ONE_TIME: "One-Time",
-  INTERVAL_ONE_TIME: "One-Time",
-  UNSPECIFIED: "Monthly",
-  INTERVAL_UNSPECIFIED: "Monthly",
-}
-
 export function formatInterval(interval: string | undefined | null): string {
-  if (!interval) return "Monthly"
+  if (!interval) return INTERVAL_LABELS.MONTHLY
   const key = interval.trim().toUpperCase()
-  if (key in INTERVAL_LABELS) {
+  if (Object.prototype.hasOwnProperty.call(INTERVAL_LABELS, key)) {
     return INTERVAL_LABELS[key]
   }
   const normalized = key.replace(/_/g, " ").toLowerCase()
@@ -131,29 +165,6 @@ export function formatNextDueDate(
   })
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  ACTIVE: "Active",
-  STATUS_ACTIVE: "Active",
-  RECURRING_EXPENSE_STATUS_ACTIVE: "Active",
-  RECURRING_TRANSACTION_STATUS_ACTIVE: "Active",
-  PAUSED: "Paused",
-  STATUS_PAUSED: "Paused",
-  RECURRING_EXPENSE_STATUS_PAUSED: "Paused",
-  RECURRING_TRANSACTION_STATUS_PAUSED: "Paused",
-  ARCHIVED: "Archived",
-  STATUS_ARCHIVED: "Archived",
-  CANCELLED: "Cancelled",
-  STATUS_CANCELLED: "Cancelled",
-  COMPLETED: "Completed",
-  STATUS_COMPLETED: "Completed",
-  PENDING: "Pending",
-  STATUS_PENDING: "Pending",
-  UNSPECIFIED: "Active",
-  STATUS_UNSPECIFIED: "Active",
-  RECURRING_EXPENSE_STATUS_UNSPECIFIED: "Active",
-  RECURRING_TRANSACTION_STATUS_UNSPECIFIED: "Active",
-}
-
 const ACTIVE_STATUS_KEYS = new Set([
   "ACTIVE",
   "STATUS_ACTIVE",
@@ -166,9 +177,9 @@ const ACTIVE_STATUS_KEYS = new Set([
 ])
 
 export function formatStatus(status: string | undefined | null): string {
-  if (!status) return "Active"
+  if (!status) return STATUS_LABELS.ACTIVE
   const key = status.trim().toUpperCase()
-  if (key in STATUS_LABELS) {
+  if (Object.prototype.hasOwnProperty.call(STATUS_LABELS, key)) {
     return STATUS_LABELS[key]
   }
   const normalized = key.replace(/_/g, " ").toLowerCase()

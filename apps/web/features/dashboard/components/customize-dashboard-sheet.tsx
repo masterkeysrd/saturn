@@ -23,9 +23,14 @@ import {
   type DashboardWidgetId,
 } from "@saturn/core"
 import {
+  getLocalizedDashboardPresetMeta,
+  getLocalizedDashboardWidgetMeta,
+} from "@saturn/i18n"
+import {
   useUpdateDashboardPreferencesMutation,
   type DashboardPreferences,
 } from "@saturn/api/gen/saturn/space/v1/space"
+import { useI18n } from "@saturn/hooks"
 import {
   Popover,
   PopoverContent,
@@ -71,6 +76,7 @@ export function CustomizeDashboardPopover({
   trigger,
 }: CustomizeDashboardPopoverProps) {
   const queryClient = useQueryClient()
+  const { t, locale, language } = useI18n()
   const [draftWidgets, setDraftWidgets] =
     useState<DashboardWidgetId[]>(activeWidgets)
   const [prevOpen, setPrevOpen] = useState(open)
@@ -88,15 +94,29 @@ export function CustomizeDashboardPopover({
     const enabledSet = new Set(draftWidgets)
     const disabled = DASHBOARD_WIDGET_CATALOG.filter(
       (w) => !enabledSet.has(w.id)
-    ).map((w) => ({ ...w, enabled: false }))
+    ).map((w) => ({
+      ...w,
+      ...getLocalizedDashboardWidgetMeta(w.id, locale),
+      enabled: false,
+    }))
 
     const enabled = draftWidgets.map((id) => ({
       ...DASHBOARD_WIDGET_MAP[id],
+      ...getLocalizedDashboardWidgetMeta(id, locale),
       enabled: true,
     }))
 
     return [...enabled, ...disabled]
-  }, [draftWidgets])
+  }, [draftWidgets, locale])
+
+  const localizedPresets = useMemo(
+    () =>
+      DASHBOARD_PRESETS.map((preset) => ({
+        ...preset,
+        ...getLocalizedDashboardPresetMeta(preset.id, locale),
+      })),
+    [locale]
+  )
 
   const activePresetId = useMemo(() => {
     for (const preset of DASHBOARD_PRESETS) {
@@ -204,7 +224,7 @@ export function CustomizeDashboardPopover({
               className="cursor-pointer gap-1.5"
             >
               <SlidersHorizontal className="size-3.5" />
-              <span>Customize</span>
+              <span>{t("common.customize")}</span>
             </Button>
           )
         }
@@ -217,10 +237,10 @@ export function CustomizeDashboardPopover({
         <PopoverHeader className="shrink-0 border-b border-border/60 px-4 py-3">
           <PopoverTitle className="flex items-center gap-2 text-sm font-semibold tracking-tight">
             <SlidersHorizontal className="size-4 text-primary" />
-            <span>Customize Dashboard</span>
+            <span>{t("dashboard.customizeTitle")}</span>
           </PopoverTitle>
           <PopoverDescription className="text-xs text-muted-foreground">
-            Choose and order widgets for your personal view of this workspace.
+            {t("dashboard.customizeDescription")}
           </PopoverDescription>
         </PopoverHeader>
 
@@ -229,14 +249,16 @@ export function CustomizeDashboardPopover({
           <section className="space-y-2.5 pb-4">
             <div>
               <h2 className="text-[13px] font-medium text-foreground">
-                Presets
+                {t("dashboard.presets")}
               </h2>
               <p className="text-xs text-muted-foreground">
-                Apply a curated widget arrangement in one click.
+                {language === "es"
+                  ? "Aplica una configuración predefinida en un clic."
+                  : "Apply a curated widget arrangement in one click."}
               </p>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {DASHBOARD_PRESETS.map((preset) => {
+              {localizedPresets.map((preset) => {
                 const isActive = activePresetId === preset.id
                 return (
                   <button
@@ -262,14 +284,16 @@ export function CustomizeDashboardPopover({
             <div className="flex items-center justify-between gap-2">
               <div>
                 <h2 className="text-[13px] font-medium text-foreground">
-                  Widgets &amp; Order
+                  {t("dashboard.widgets")}
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  At least one widget must remain enabled.
+                  {language === "es"
+                    ? "Debe permanecer activo al menos un widget."
+                    : "At least one widget must remain enabled."}
                 </p>
               </div>
               <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                {draftWidgets.length} active
+                {draftWidgets.length} {language === "es" ? "activos" : "active"}
               </span>
             </div>
 
@@ -305,7 +329,13 @@ export function CustomizeDashboardPopover({
                           {widget.title}
                         </span>
                         <span className="text-[11px] text-muted-foreground">
-                          {widget.span === "wide" ? "Wide" : "1 col"}
+                          {widget.span === "wide"
+                            ? language === "es"
+                              ? "Ancho"
+                              : "Wide"
+                            : language === "es"
+                              ? "1 col"
+                              : "1 col"}
                         </span>
                       </div>
                       <p className="line-clamp-2 text-[11px] text-muted-foreground">
@@ -322,7 +352,11 @@ export function CustomizeDashboardPopover({
                             size="icon-xs"
                             disabled={enabledIndex === 0}
                             onClick={() => handleMoveWidget(widget.id, "up")}
-                            aria-label={`Move ${widget.title} up`}
+                            aria-label={
+                              language === "es"
+                                ? `Mover ${widget.title} arriba`
+                                : `Move ${widget.title} up`
+                            }
                             className="cursor-pointer"
                           >
                             <ArrowUp className="size-3.5" />
@@ -333,7 +367,11 @@ export function CustomizeDashboardPopover({
                             size="icon-xs"
                             disabled={enabledIndex === draftWidgets.length - 1}
                             onClick={() => handleMoveWidget(widget.id, "down")}
-                            aria-label={`Move ${widget.title} down`}
+                            aria-label={
+                              language === "es"
+                                ? `Mover ${widget.title} abajo`
+                                : `Move ${widget.title} down`
+                            }
                             className="cursor-pointer"
                           >
                             <ArrowDown className="size-3.5" />
@@ -346,7 +384,11 @@ export function CustomizeDashboardPopover({
                         onCheckedChange={(checked) =>
                           handleToggleWidget(widget.id, checked)
                         }
-                        aria-label={`Toggle ${widget.title}`}
+                        aria-label={
+                          language === "es"
+                            ? `Alternar ${widget.title}`
+                            : `Toggle ${widget.title}`
+                        }
                         className="ml-1"
                       />
                     </div>
@@ -367,7 +409,7 @@ export function CustomizeDashboardPopover({
             className="cursor-pointer gap-1.5 text-muted-foreground hover:text-foreground"
           >
             <RotateCcw className="size-3.5" />
-            <span>Reset</span>
+            <span>{language === "es" ? "Restablecer" : "Reset"}</span>
           </Button>
 
           <div className="flex items-center gap-2">
@@ -378,7 +420,7 @@ export function CustomizeDashboardPopover({
               onClick={() => handlePopoverOpenChange(false)}
               disabled={updateMutation.isPending}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               type="button"
@@ -390,7 +432,9 @@ export function CustomizeDashboardPopover({
               {updateMutation.isPending && (
                 <Loader2 className="size-3.5 animate-spin" />
               )}
-              <span>Save Layout</span>
+              <span>
+                {language === "es" ? "Guardar diseño" : "Save Layout"}
+              </span>
             </Button>
           </div>
         </div>

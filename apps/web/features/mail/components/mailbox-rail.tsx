@@ -12,8 +12,9 @@ import {
   Layers,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useMailboxes, useConnectedAccounts } from "@saturn/hooks"
+import { useMailboxes, useConnectedAccounts, useI18n } from "@saturn/hooks"
 import type { MailboxRole, Mailbox } from "@saturn/api/saturn/mail/v1/mail"
+import type { TranslationKey } from "@saturn/i18n"
 import { cn } from "@/lib/utils"
 
 export interface MailboxRailProps {
@@ -28,18 +29,42 @@ export interface MailboxRailProps {
 
 interface BucketItem {
   role: MailboxRole
-  label: string
+  translationKey: TranslationKey
   icon: typeof Inbox
 }
 
 const SYSTEM_BUCKETS: BucketItem[] = [
-  { role: "MAILBOX_ROLE_INBOX", label: "Inbox", icon: Inbox },
-  { role: "MAILBOX_ROLE_STARRED", label: "Starred", icon: Star },
-  { role: "MAILBOX_ROLE_SENT", label: "Sent", icon: Send },
-  { role: "MAILBOX_ROLE_DRAFTS", label: "Drafts", icon: FileEdit },
-  { role: "MAILBOX_ROLE_ARCHIVE", label: "Archive", icon: Archive },
-  { role: "MAILBOX_ROLE_SPAM", label: "Spam", icon: AlertOctagon },
-  { role: "MAILBOX_ROLE_TRASH", label: "Trash", icon: Trash2 },
+  {
+    role: "MAILBOX_ROLE_INBOX",
+    translationKey: "mail.bucket.inbox",
+    icon: Inbox,
+  },
+  {
+    role: "MAILBOX_ROLE_STARRED",
+    translationKey: "mail.bucket.starred",
+    icon: Star,
+  },
+  { role: "MAILBOX_ROLE_SENT", translationKey: "mail.bucket.sent", icon: Send },
+  {
+    role: "MAILBOX_ROLE_DRAFTS",
+    translationKey: "mail.bucket.drafts",
+    icon: FileEdit,
+  },
+  {
+    role: "MAILBOX_ROLE_ARCHIVE",
+    translationKey: "mail.bucket.archive",
+    icon: Archive,
+  },
+  {
+    role: "MAILBOX_ROLE_SPAM",
+    translationKey: "mail.bucket.spam",
+    icon: AlertOctagon,
+  },
+  {
+    role: "MAILBOX_ROLE_TRASH",
+    translationKey: "mail.bucket.trash",
+    icon: Trash2,
+  },
 ]
 
 export function MailboxRail({
@@ -51,6 +76,7 @@ export function MailboxRail({
   onSelectMailbox,
   onOpenCompose,
 }: MailboxRailProps) {
+  const { t } = useI18n()
   const { data: mailboxesData } = useMailboxes(selectedAccountId)
   const { data: accountsData } = useConnectedAccounts()
 
@@ -94,13 +120,13 @@ export function MailboxRail({
         size="sm"
       >
         <Plus className="h-4 w-4" />
-        <span>Compose</span>
+        <span>{t("mail.compose")}</span>
       </Button>
 
       {/* System Buckets */}
       <div className="mt-4 flex flex-1 flex-col gap-0.5 overflow-y-auto">
         <div className="px-2 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-          Mailboxes
+          {t("mail.mailboxes")}
         </div>
         {SYSTEM_BUCKETS.map((bucket) => {
           const Icon = bucket.icon
@@ -127,7 +153,7 @@ export function MailboxRail({
                     isSelected ? "text-primary" : "text-muted-foreground"
                   )}
                 />
-                <span className="truncate">{bucket.label}</span>
+                <span className="truncate">{t(bucket.translationKey)}</span>
               </div>
               {count > 0 && (
                 <span
@@ -150,7 +176,7 @@ export function MailboxRail({
         {customMailboxes.length > 0 && (
           <div className="mt-4">
             <div className="px-2 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-              Folders
+              {t("mail.folders")}
             </div>
             {customMailboxes.map((mbx: Mailbox) => {
               const isSelected = selectedMailboxId === mbx.id
@@ -190,7 +216,7 @@ export function MailboxRail({
         {/* Accounts Filter */}
         <div className="mt-4 border-t border-border/40 pt-3">
           <div className="px-2 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-            Accounts
+            {t("mail.accounts")}
           </div>
           <button
             type="button"
@@ -204,7 +230,7 @@ export function MailboxRail({
             )}
           >
             <Layers className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span className="truncate">All Accounts</span>
+            <span className="truncate">{t("mail.allAccounts")}</span>
           </button>
 
           {accounts.map((acc) => {

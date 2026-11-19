@@ -48,6 +48,8 @@ import {
   useUpdateSettingsMutation as useUpdateFinanceSettingsMutation,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { FISCAL_YEAR_MONTHS, getFiscalMonthOption } from "@saturn/core"
+import { SUPPORTED_UI_LOCALES } from "@saturn/i18n"
+import { useI18n } from "@saturn/hooks"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
 import {
@@ -91,7 +93,16 @@ export default function SettingsScreen() {
     toggleBiometrics,
     serverUrl,
   } = useAuth()
-  const { activeSpace, activeSpaceRole, activeSpaceId } = useSpace()
+  const {
+    activeSpace,
+    activeSpaceRole,
+    activeSpaceId,
+    locale,
+    hourCycle,
+    weekStartsOn,
+    updateRegionalPreferences,
+  } = useSpace()
+  const { t, supportedLocales } = useI18n()
 
   // 1. Query active sessions for device count indicator
   const { data: sessionsData } = useListActiveSessionsQuery({})
@@ -118,6 +129,38 @@ export default function SettingsScreen() {
   const [enrollingWithMfa, setEnrollingWithMfa] = useState(false)
   const [mfaError, setMfaError] = useState<string | null>(null)
   const [fiscalYearModalVisible, setFiscalYearModalVisible] = useState(false)
+  const [languageModalVisible, setLanguageModalVisible] = useState(false)
+
+  const activeLocaleOption =
+    supportedLocales.find((opt) => opt.value === locale) ??
+    SUPPORTED_UI_LOCALES[0]
+
+  const handleUpdateRegional = async (
+    patch: Partial<{
+      locale: string
+      hourCycle: "h12" | "h23"
+      weekStartsOn: 0 | 1
+    }>
+  ) => {
+    try {
+      haptics.selection()
+      await updateRegionalPreferences(patch)
+      toast.show({
+        type: "success",
+        title: t("settings.regional.saved"),
+      })
+    } catch (err: unknown) {
+      haptics.error()
+      toast.show({
+        type: "error",
+        title: "Update Failed",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Failed to update regional preferences",
+      })
+    }
+  }
 
   const handleSelectFiscalYear = async (month: number) => {
     if (month === currentFiscalMonth) {
@@ -592,6 +635,136 @@ export default function SettingsScreen() {
           </Card>
         </View>
 
+        {/* Section 3B: Language & Regional Format */}
+        <View style={styles.section}>
+          <Text style={styles.sectionHeader}>
+            {t("settings.regional.title").toUpperCase()}
+          </Text>
+          <Card style={styles.menuGroup}>
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+              onPress={() => {
+                haptics.light()
+                setLanguageModalVisible(true)
+              }}
+              testID="settings-language-selector"
+              accessibilityRole="button"
+              accessibilityLabel={t("settings.regional.language")}
+            >
+              <View style={styles.menuLeft}>
+                <Globe size={18} color={colors.primary} />
+                <Text style={styles.menuLabel}>
+                  {t("settings.regional.language")}
+                </Text>
+              </View>
+              <View style={styles.menuRight}>
+                <Text style={styles.menuValue}>{activeLocaleOption.label}</Text>
+                <ChevronRight size={16} color={colors.textMuted} />
+              </View>
+            </TouchableOpacity>
+
+            <View style={[styles.regionalBlock, styles.menuItemBorder]}>
+              <Text style={styles.menuLabel}>
+                {t("settings.regional.hourCycle")}
+              </Text>
+              <View
+                style={styles.segmentedTrack}
+                testID="settings-hour-cycle-selector"
+              >
+                {(
+                  [
+                    { value: "h12", label: t("settings.regional.hour12") },
+                    { value: "h23", label: t("settings.regional.hour24") },
+                  ] as const
+                ).map((option) => {
+                  const isActive = hourCycle === option.value
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.segmentedOption,
+                        isActive && styles.segmentedOptionActive,
+                      ]}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isActive }}
+                      accessibilityLabel={option.label}
+                      onPress={() => {
+                        if (hourCycle !== option.value) {
+                          void handleUpdateRegional({
+                            hourCycle: option.value,
+                          })
+                        }
+                      }}
+                      testID={`settings-hour-cycle-${option.value}`}
+                    >
+                      <Text
+                        style={[
+                          styles.segmentedLabel,
+                          isActive && styles.segmentedLabelActive,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </View>
+
+            <View style={styles.regionalBlock}>
+              <Text style={styles.menuLabel}>
+                {t("settings.regional.weekStartsOn")}
+              </Text>
+              <View
+                style={styles.segmentedTrack}
+                testID="settings-week-start-selector"
+              >
+                {(
+                  [
+                    { value: 0, label: t("settings.regional.sunday") },
+                    { value: 1, label: t("settings.regional.monday") },
+                  ] as const
+                ).map((option) => {
+                  const isActive = weekStartsOn === option.value
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.segmentedOption,
+                        isActive && styles.segmentedOptionActive,
+                      ]}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isActive }}
+                      accessibilityLabel={option.label}
+                      onPress={() => {
+                        if (weekStartsOn !== option.value) {
+                          void handleUpdateRegional({
+                            weekStartsOn: option.value,
+                          })
+                        }
+                      }}
+                      testID={`settings-week-start-${option.value}`}
+                    >
+                      <Text
+                        style={[
+                          styles.segmentedLabel,
+                          isActive && styles.segmentedLabelActive,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </View>
+          </Card>
+        </View>
+
         {/* Section 4: Preferences & Integrations */}
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>PREFERENCES & AGENTS</Text>
@@ -674,16 +847,16 @@ export default function SettingsScreen() {
           leftIcon={<LogOut size={18} color={colors.destructive} />}
           onPress={() => setSignOutModalVisible(true)}
         >
-          Sign Out
+          {t("auth.signOut")}
         </Button>
 
         {/* Sign Out Confirmation Dialog */}
         <ConfirmDialog
           visible={signOutModalVisible}
-          title="Sign Out"
+          title={t("auth.signOut")}
           message="Are you sure you want to sign out from Saturn on this device?"
-          confirmText="Sign Out"
-          cancelText="Cancel"
+          confirmText={t("auth.signOut")}
+          cancelText={t("common.cancel")}
           isDestructive
           loading={signingOut}
           onConfirm={handleConfirmSignOut}
@@ -759,6 +932,81 @@ export default function SettingsScreen() {
                       </Text>
                       <Text style={styles.modalItemDescription}>
                         {item.description}
+                      </Text>
+                    </View>
+                    {isSelected && <Check size={18} color={colors.primary} />}
+                  </TouchableOpacity>
+                )
+              }}
+              contentContainerStyle={{ paddingBottom: 40 }}
+            />
+          </View>
+        </Modal>
+
+        {/* Language Selection Modal */}
+        <Modal
+          visible={languageModalVisible}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setLanguageModalVisible(false)}
+        >
+          <View
+            style={[
+              styles.modalContainer,
+              Platform.OS === "android" && {
+                paddingTop: Math.max(insets.top, 16),
+              },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>
+                  {t("settings.regional.language")}
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  {t("settings.regional.description")}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setLanguageModalVisible(false)}
+                style={styles.closeBtn}
+                accessibilityLabel={t("common.close")}
+              >
+                <X size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={[...supportedLocales]}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => {
+                const isSelected = item.value === locale
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.modalItem,
+                      isSelected && styles.modalItemActive,
+                    ]}
+                    onPress={() => {
+                      setLanguageModalVisible(false)
+                      if (item.value !== locale) {
+                        void handleUpdateRegional({ locale: item.value })
+                      }
+                    }}
+                    activeOpacity={0.7}
+                    testID={`settings-language-option-${item.value}`}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          styles.modalItemText,
+                          isSelected && styles.modalItemTextActive,
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                      <Text style={styles.modalItemDescription}>
+                        {item.value}
                       </Text>
                     </View>
                     {isSelected && <Check size={18} color={colors.primary} />}
@@ -884,6 +1132,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
   appearanceCard: {
     padding: 14,
     gap: 12,
+  },
+  regionalBlock: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 10,
   },
   appearanceHeader: {
     flexDirection: "row" as const,

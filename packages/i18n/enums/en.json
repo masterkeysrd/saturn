@@ -1,0 +1,59 @@
+{
+  "finance": {
+    "accountType": {
+      "CASH": "Cash",
+      "CHECKING": "Checking",
+      "CREDIT_CARD": "Credit Card",
+      "INVESTMENT": "Investment",
+      "LOAN": "Loan",
+      "SAVINGS": "Savings"
+    },
+    "interval": {
+      "BIWEEKLY": "Biweekly",
+      "DAILY": "Daily",
+      "MONTHLY": "Monthly",
+      "ONE_TIME": "One-Time",
+      "QUARTERLY": "Quarterly",
+      "WEEKLY": "Weekly",
+      "YEARLY": "Yearly"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "ARCHIVED": "Archived",
+      "CANCELLED": "Cancelled",
+      "CLOSED": "Closed",
+      "COMPLETED": "Completed",
+      "ENDED": "Ended",
+      "PAID": "Paid",
+      "PAUSED": "Paused",
+      "PENDING": "Pending",
+      "SKIPPED": "Skipped"
+    },
+    "transactionType": {
+      "EXPENSE": "Expense",
+      "INCOME": "Income",
+      "TRANSFER": "Transfer"
+    }
+  },
+  "space": {
+    "role": {
+      "ADMIN": "Admin",
+      "MEMBER": "Member",
+      "OWNER": "Owner",
+      "VIEWER": "Viewer"
+    }
+  },
+  "workflow": {
+    "runStatus": {
+      "CANCELLED": "Cancelled",
+      "COMPLETED": "Completed",
+      "FAILED": "Failed",
+      "FILTERED": "Filtered",
+      "PENDING": "Pending",
+      "RUNNING": "Running",
+      "STOPPED": "Stopped",
+      "SUCCEEDED": "Succeeded",
+      "WAITING": "Waiting"
+    }
+  }
+}

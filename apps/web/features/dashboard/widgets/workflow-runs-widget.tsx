@@ -1,45 +1,71 @@
 import { Link } from "react-router-dom"
 import { Workflow } from "lucide-react"
+import {
+  getLocalizedDashboardWidgetMeta,
+  getLocalizedWorkflowRunStatusLabel,
+} from "@saturn/i18n"
 import { useListFlowRunsQuery } from "@saturn/api/gen/saturn/platform/workflow/v1/workflow"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { DashboardWidgetCard } from "./widget-shell"
 
-function getRunStatusBadge(status?: string): {
+function getRunStatusBadge(
+  status: string | undefined,
+  locale: string
+): {
   variant: "success" | "destructive" | "info" | "warning" | "neutral"
   label: string
 } {
+  const isEs = locale.toLowerCase().startsWith("es")
   switch (status) {
     case "completed":
-      return { variant: "success", label: "Completed" }
+      return {
+        variant: "success",
+        label: getLocalizedWorkflowRunStatusLabel("completed", locale),
+      }
     case "failed":
-      return { variant: "destructive", label: "Failed" }
+      return {
+        variant: "destructive",
+        label: getLocalizedWorkflowRunStatusLabel("failed", locale),
+      }
     case "running":
-      return { variant: "info", label: "Running" }
+      return {
+        variant: "info",
+        label: getLocalizedWorkflowRunStatusLabel("running", locale),
+      }
     case "waiting":
     case "pending":
       return {
         variant: "warning",
-        label: status === "waiting" ? "Waiting" : "Pending",
+        label: getLocalizedWorkflowRunStatusLabel(status, locale),
       }
     case "filtered":
-      return { variant: "neutral", label: "Filtered" }
+      return {
+        variant: "neutral",
+        label: getLocalizedWorkflowRunStatusLabel("filtered", locale),
+      }
     case "stopped":
     case "cancelled":
       return {
         variant: "neutral",
-        label: status === "stopped" ? "Stopped" : "Cancelled",
+        label: getLocalizedWorkflowRunStatusLabel(status, locale),
       }
     default:
-      return { variant: "neutral", label: status || "Unknown" }
+      return {
+        variant: "neutral",
+        label: status || (isEs ? "Desconocido" : "Unknown"),
+      }
   }
 }
 
 export function WorkflowRunsWidget() {
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
+  const { locale, language } = useI18n()
+  const isEs = language === "es"
+  const widgetMeta = getLocalizedDashboardWidgetMeta("workflow_runs", locale)
 
   const { data: runsData, isLoading } = useListFlowRunsQuery(
     { pageSize: 5, pageToken: "" },
@@ -51,18 +77,18 @@ export function WorkflowRunsWidget() {
 
   return (
     <DashboardWidgetCard
-      title="Workflow Runs"
+      title={widgetMeta.title}
       icon={Workflow}
       badge={
         !isLoading && failedCount > 0 ? (
           <Badge variant="destructive" dot>
-            {failedCount} failed
+            {failedCount} {isEs ? "fallidos" : "failed"}
           </Badge>
         ) : undefined
       }
       aiPrompt="Inspect my recent workflow runs and explain any failures or bottlenecks"
       viewAllTo={spaceId ? `/space/${spaceId}/workflows/runs` : undefined}
-      viewAllLabel="Run History"
+      viewAllLabel={isEs ? "Historial" : "Run History"}
       isLoading={isLoading}
       loadingSkeleton={
         <div className="space-y-2.5">
@@ -80,11 +106,12 @@ export function WorkflowRunsWidget() {
             </div>
             <div className="min-w-0 space-y-0.5">
               <p className="text-sm font-medium text-foreground">
-                No workflow runs yet
+                {widgetMeta.empty}
               </p>
               <p className="text-xs text-muted-foreground">
-                Create an event-driven workflow to automate finance, mail, and
-                AI.
+                {isEs
+                  ? "Crea un flujo basado en eventos para automatizar finanzas, correo e IA."
+                  : "Create an event-driven workflow to automate finance, mail, and AI."}
               </p>
             </div>
           </div>
@@ -92,7 +119,7 @@ export function WorkflowRunsWidget() {
       ) : (
         <div className="divide-y divide-border/50">
           {runs.map((run) => {
-            const statusInfo = getRunStatusBadge(run.status)
+            const statusInfo = getRunStatusBadge(run.status, locale)
             const timestamp = run.startTime || run.createTime
             return (
               <Link

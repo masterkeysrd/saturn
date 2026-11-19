@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { nonEmptyString } from "../common"
+import { schemaError } from "../i18n"
 
 export const API_KEY_SCOPES = [
   "spaces:read",
@@ -157,16 +158,18 @@ export type APIKeyExpirationPreset =
 
 export const CreateAPIKeySchema = z.compile(
   z.object({
-    name: nonEmptyString("API key name is required").pipe(
-      z.string().max(255, { error: "Name must be 255 characters or less" })
+    name: nonEmptyString("auth.apiKeyNameRequired").pipe(
+      z.string().max(255, {
+        error: schemaError("auth.apiKeyNameMaxLength"),
+      })
     ),
     description: z.string().trim().max(1000).optional(),
     scopes: z
       .array(APIKeyScopeSchema)
-      .min(1, { error: "Select at least one permission scope" }),
+      .min(1, { error: schemaError("auth.apiKeyScopesRequired") }),
     spaceIds: z
-      .array(nonEmptyString("Workspace ID cannot be empty"))
-      .min(1, { error: "Select at least one workspace" }),
+      .array(nonEmptyString("auth.workspaceIdEmpty"))
+      .min(1, { error: schemaError("auth.workspacesRequired") }),
     expiresAt: z.string().datetime().optional(),
   })
 )
@@ -175,16 +178,18 @@ export type CreateAPIKeyValues = z.infer<typeof CreateAPIKeySchema>
 
 export const UpdateAPIKeySchema = z.compile(
   z.object({
-    name: nonEmptyString("API key name is required").pipe(
-      z.string().max(255, { error: "Name must be 255 characters or less" })
+    name: nonEmptyString("auth.apiKeyNameRequired").pipe(
+      z.string().max(255, {
+        error: schemaError("auth.apiKeyNameMaxLength"),
+      })
     ),
     description: z.string().trim().max(1000).optional(),
     scopes: z
       .array(APIKeyScopeSchema)
-      .min(1, { error: "Select at least one permission scope" }),
+      .min(1, { error: schemaError("auth.apiKeyScopesRequired") }),
     spaceIds: z
-      .array(nonEmptyString("Workspace ID cannot be empty"))
-      .min(1, { error: "Select at least one workspace" }),
+      .array(nonEmptyString("auth.workspaceIdEmpty"))
+      .min(1, { error: schemaError("auth.workspacesRequired") }),
   })
 )
 

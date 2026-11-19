@@ -1,0 +1,23 @@
+{
+  "name": "@saturn/i18n",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "import": "./index.ts",
+      "default": "./index.ts"
+    },
+    "./locales/*": "./locales/*.json"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"**/*.{ts,json}\""
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

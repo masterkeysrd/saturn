@@ -724,6 +724,43 @@ export interface UpdateProfileRequest {
 }
 
 /**
+ * UserPreferences stores user-scoped UI language and regional formatting preferences.
+ */
+export interface UserPreferences {
+  /**
+   * Optional. BCP 47 UI language and regional locale tag (e.g. "en-US", "es-ES", "es-419").
+   */
+  locale: string
+  /**
+   * Optional. Preferred clock hour cycle ("h12" for 12-hour, "h23" for 24-hour).
+   */
+  hourCycle: string
+  /**
+   * Optional. Preferred first day of the week (0 = Sunday, 1 = Monday).
+   */
+  weekStartsOn: number
+}
+
+/**
+ * Request message for Identity.GetUserPreferences.
+ */
+export type GetUserPreferencesRequest = Record<string, never>
+
+/**
+ * Request message for Identity.UpdateUserPreferences.
+ */
+export interface UpdateUserPreferencesRequest {
+  /**
+   * Required. Preferences payload containing fields to update.
+   */
+  userPreferences: UserPreferences
+  /**
+   * Optional. Field mask specifying which fields (`locale`, `hour_cycle`, `week_starts_on`) to update.
+   */
+  updateMask: { paths?: string[] }
+}
+
+/**
  * Request message for Identity.ChangeEmail.
  */
 export interface ChangeEmailRequest {
@@ -1468,6 +1505,61 @@ export function useUpdateProfileMutation(
 ) {
   return useMutation<User, Error, UpdateProfileRequest>({
     mutationFn: (req) => updateProfile(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Retrieves regional and UI language preferences for the current user.
+ */
+export async function getUserPreferences(
+  _req?: GetUserPreferencesRequest
+): Promise<UserPreferences> {
+  return request<UserPreferences>({
+    method: "GET",
+    url: "/api/v1/identity/users/me/preferences",
+  })
+}
+
+export function useGetUserPreferencesQuery(
+  req: GetUserPreferencesRequest,
+  options?: Omit<
+    UseQueryOptions<UserPreferences, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<UserPreferences, Error>({
+    queryKey: ["/api/v1/identity/users/me/preferences", req],
+    queryFn: () => getUserPreferences(req),
+    ...options,
+  })
+}
+
+/**
+ * Authenticated RPC: Updates regional and UI language preferences for the current user.
+ */
+export async function updateUserPreferences(
+  req: UpdateUserPreferencesRequest
+): Promise<UserPreferences> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).userPreferences
+  return request<UserPreferences>({
+    method: "PATCH",
+    url: "/api/v1/identity/users/me/preferences",
+    params: params,
+    data: req.userPreferences,
+  })
+}
+
+export function useUpdateUserPreferencesMutation(
+  options?: UseMutationOptions<
+    UserPreferences,
+    Error,
+    UpdateUserPreferencesRequest
+  >
+) {
+  return useMutation<UserPreferences, Error, UpdateUserPreferencesRequest>({
+    mutationFn: (req) => updateUserPreferences(req),
     ...options,
   })
 }

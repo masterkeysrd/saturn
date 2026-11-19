@@ -1,15 +1,18 @@
 import { z } from "zod"
 import { nonEmptyString } from "../common"
+import { schemaError } from "../i18n"
 
 export const CreateSpaceSchema = z.compile(
   z.object({
-    name: nonEmptyString("Workspace name is required").max(100, {
-      error: "Workspace name cannot exceed 100 characters",
+    name: nonEmptyString("space.workspaceNameRequired").max(100, {
+      error: schemaError("space.workspaceNameMaxLength"),
     }),
     description: z
       .string()
       .trim()
-      .max(500, { error: "Description cannot exceed 500 characters" })
+      .max(500, {
+        error: schemaError("space.descriptionMaxLength"),
+      })
       .optional(),
   })
 )
@@ -17,8 +20,8 @@ export type CreateSpaceFormValues = z.infer<typeof CreateSpaceSchema>
 
 export const SpaceDetailsSchema = z.compile(
   z.object({
-    name: nonEmptyString("Space name is required").max(255, {
-      error: "Space name cannot exceed 255 characters",
+    name: nonEmptyString("space.spaceNameRequired").max(255, {
+      error: schemaError("space.spaceNameMaxLength"),
     }),
     description: z.string().optional(),
   })
@@ -27,7 +30,7 @@ export type SpaceDetailsFormValues = z.infer<typeof SpaceDetailsSchema>
 
 export const AddMemberSchema = z.compile(
   z.object({
-    userId: nonEmptyString("User ID is required"),
+    userId: nonEmptyString("space.userIdRequired"),
     role: z.enum(["ADMIN", "MEMBER", "VIEWER"]),
   })
 )

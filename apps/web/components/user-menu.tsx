@@ -9,6 +9,7 @@ import {
   Sun,
   User,
 } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
 import { useAuth } from "@/features/auth/use-auth"
 import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
@@ -22,14 +23,20 @@ import {
 import { cn } from "@/lib/utils"
 
 const THEME_OPTIONS = [
-  { value: "light" as const, label: "Light", icon: Sun },
-  { value: "dark" as const, label: "Dark", icon: Moon },
-  { value: "system" as const, label: "System", icon: Monitor },
+  { value: "light" as const, labelEn: "Light", labelEs: "Claro", icon: Sun },
+  { value: "dark" as const, labelEn: "Dark", labelEs: "Oscuro", icon: Moon },
+  {
+    value: "system" as const,
+    labelEn: "System",
+    labelEs: "Sistema",
+    icon: Monitor,
+  },
 ]
 
 export function UserMenu() {
   const { user, logoutUser } = useAuth()
   const { theme, setTheme } = useTheme()
+  const { t, language } = useI18n()
 
   const initials = (user?.name || user?.username || "U")
     .substring(0, 2)
@@ -71,7 +78,7 @@ export function UserMenu() {
 
         <div className="px-2 py-1.5">
           <p className="mb-1.5 px-0.5 text-xs font-medium text-muted-foreground">
-            Appearance
+            {language === "es" ? "Apariencia" : "Appearance"}
           </p>
           <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
             {THEME_OPTIONS.map((option) => {
@@ -91,7 +98,9 @@ export function UserMenu() {
                   )}
                 >
                   <Icon className="size-3.5" />
-                  <span>{option.label}</span>
+                  <span>
+                    {language === "es" ? option.labelEs : option.labelEn}
+                  </span>
                 </button>
               )
             })}
@@ -105,21 +114,23 @@ export function UserMenu() {
           className="cursor-pointer"
         >
           <User className="size-4 text-muted-foreground" />
-          <span>Account</span>
+          <span>{t("nav.settings")}</span>
         </DropdownMenuItem>
         <DropdownMenuItem
           render={<Link to="/settings/security/credentials" />}
           className="cursor-pointer"
         >
           <ShieldCheck className="size-4 text-muted-foreground" />
-          <span>Security &amp; Logins</span>
+          <span>
+            {language === "es" ? "Seguridad y accesos" : "Security & Logins"}
+          </span>
         </DropdownMenuItem>
         <DropdownMenuItem
           render={<Link to="/settings/spaces" />}
           className="cursor-pointer"
         >
           <Layers className="size-4 text-muted-foreground" />
-          <span>Workspaces</span>
+          <span>{t("nav.spaces")}</span>
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
@@ -130,7 +141,7 @@ export function UserMenu() {
           className="cursor-pointer"
         >
           <LogOut className="size-4" />
-          <span>Log Out</span>
+          <span>{t("auth.signOut")}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

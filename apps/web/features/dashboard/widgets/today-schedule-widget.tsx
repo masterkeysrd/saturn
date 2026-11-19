@@ -2,7 +2,13 @@ import { useMemo } from "react"
 import { Link } from "react-router-dom"
 import { Calendar, Video } from "lucide-react"
 import { formatLocalDateString, parseDate } from "@saturn/core"
-import { useCalendarEvents, useCalendars, useTimezone } from "@saturn/hooks"
+import { getLocalizedDashboardWidgetMeta } from "@saturn/i18n"
+import {
+  useCalendarEvents,
+  useCalendars,
+  useI18n,
+  useTimezone,
+} from "@saturn/hooks"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useActiveSpaceContext } from "@/features/space/use-space"
@@ -11,6 +17,9 @@ import { DashboardWidgetCard } from "./widget-shell"
 export function TodayScheduleWidget() {
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
+  const { t, locale, language } = useI18n()
+  const isEs = language === "es"
+  const widgetMeta = getLocalizedDashboardWidgetMeta("today_schedule", locale)
 
   const todayStr = useMemo(
     () => formatLocalDateString(tz.now(), tz.timezone),
@@ -76,20 +85,30 @@ export function TodayScheduleWidget() {
 
   return (
     <DashboardWidgetCard
-      title="Today's Schedule"
+      title={widgetMeta.title}
       icon={Calendar}
       badge={
         !isLoading ? (
           <Badge variant="neutral">
             {todayEvents.length === 0
-              ? "Clear"
-              : `${todayEvents.length} ${todayEvents.length === 1 ? "event" : "events"}`}
+              ? isEs
+                ? "Libre"
+                : "Clear"
+              : `${todayEvents.length} ${
+                  isEs
+                    ? todayEvents.length === 1
+                      ? "evento"
+                      : "eventos"
+                    : todayEvents.length === 1
+                      ? "event"
+                      : "events"
+                }`}
           </Badge>
         ) : undefined
       }
       aiPrompt="Brief me on today's schedule, conflicts, and any preparation needed"
       viewAllTo={spaceId ? `/space/${spaceId}/calendar` : undefined}
-      viewAllLabel="Calendar"
+      viewAllLabel={t("nav.calendar")}
       isLoading={isLoading}
       loadingSkeleton={
         <div className="space-y-2.5">
@@ -107,10 +126,12 @@ export function TodayScheduleWidget() {
             </div>
             <div className="min-w-0 space-y-0.5">
               <p className="text-sm font-medium text-foreground">
-                Clear schedule today
+                {widgetMeta.empty}
               </p>
               <p className="text-xs text-muted-foreground">
-                You have no upcoming calendar events for the rest of today.
+                {isEs
+                  ? "No tienes más eventos de calendario para el resto de hoy."
+                  : "You have no upcoming calendar events for the rest of today."}
               </p>
             </div>
           </div>
@@ -133,11 +154,13 @@ export function TodayScheduleWidget() {
                     to={`/space/${spaceId}/calendar?date=${encodeURIComponent(todayStr)}&view=day`}
                     className="block truncate text-sm font-medium text-foreground hover:text-primary"
                   >
-                    {occ.title || "(No title)"}
+                    {occ.title || (isEs ? "(Sin título)" : "(No title)")}
                   </Link>
                   <p className="truncate font-mono text-xs text-muted-foreground tabular-nums">
                     {occ.isAllDay
-                      ? "All day"
+                      ? isEs
+                        ? "Todo el día"
+                        : "All day"
                       : occ.startTime
                         ? `${tz.formatTime(occ.startTime)}${occ.endTime ? ` – ${tz.formatTime(occ.endTime)}` : ""}`
                         : ""}
@@ -154,7 +177,7 @@ export function TodayScheduleWidget() {
                   className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-border/70 bg-background px-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   <Video className="size-3 text-primary" />
-                  <span>Join</span>
+                  <span>{isEs ? "Unirse" : "Join"}</span>
                 </a>
               )}
             </div>

@@ -9,6 +9,7 @@ import {
   useDeleteDraft,
   useConnectedAccounts,
   useSyncConnectedAccount,
+  useI18n,
 } from "@saturn/hooks"
 import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import { buildCopilotEntityKey } from "@saturn/core"
@@ -106,6 +107,7 @@ function MailSearchParamsSync({
 }
 
 export function MailView() {
+  const { t } = useI18n()
   const inRouter = useInRouterContext()
   const isDesktop = useIsDesktop()
   const { spaceId } = useActiveSpaceContext()
@@ -269,7 +271,7 @@ export function MailView() {
           key: buildCopilotEntityKey("mail_thread", activeThread.id),
           kind: "mail_thread",
           id: activeThread.id,
-          label: activeThread.subject || "(No subject)",
+          label: activeThread.subject || t("mail.noSubject"),
           summary: {
             isUnread: Boolean(activeThread.isUnread),
             messageCount: activeThread.messageCount,
@@ -278,14 +280,14 @@ export function MailView() {
       : undefined,
     suggestions: activeThread
       ? [
-          "Summarize this thread and extract action items",
-          "Draft a concise reply",
-          "Are there any deadlines or amounts mentioned here?",
+          t("mail.suggestion.threadSummarize"),
+          t("mail.suggestion.threadReply"),
+          t("mail.suggestion.threadDeadlines"),
         ]
       : [
-          "Summarize my unread emails",
-          "Which emails need a reply today?",
-          "Find recent receipts or invoices in my inbox",
+          t("mail.suggestion.inboxSummarize"),
+          t("mail.suggestion.inboxReplies"),
+          t("mail.suggestion.inboxReceipts"),
         ],
   })
 
@@ -293,7 +295,7 @@ export function MailView() {
   const modifyThreadMutation = useModifyThread({
     onError: (err) => {
       toast.add({
-        title: "Action failed",
+        title: t("mail.actionFailed"),
         description: err.message,
         type: "error",
       })
@@ -322,7 +324,7 @@ export function MailView() {
   const batchModifyMutation = useBatchModifyThreads({
     onError: (err) => {
       toast.add({
-        title: "Bulk action failed",
+        title: t("mail.bulkActionFailed"),
         description: err.message,
         type: "error",
       })
@@ -333,12 +335,12 @@ export function MailView() {
   const sendDraftMutation = useSendDraft()
   const deleteDraftMutation = useDeleteDraft({
     onSuccess: () => {
-      toast.add({ title: "Draft discarded", type: "success" })
+      toast.add({ title: t("mail.discarded"), type: "success" })
       refetchThreads()
     },
     onError: (err) => {
       toast.add({
-        title: "Failed to discard draft",
+        title: t("mail.failedToDiscardDraft"),
         description: err.message,
         type: "error",
       })
@@ -375,10 +377,10 @@ export function MailView() {
       })
 
       toast.add({
-        title: "Conversation archived",
+        title: t("mail.conversationArchived"),
         type: "success",
         actionProps: {
-          children: "Undo",
+          children: t("common.undo"),
           onClick: () => {
             modifyThreadMutation.mutate({
               id: thread.id,
@@ -387,14 +389,14 @@ export function MailView() {
             setSelectedThreadId(thread.id)
             setFocusedThreadId(thread.id)
             toast.add({
-              title: "Conversation restored to inbox",
+              title: t("mail.conversationRestoredToInbox"),
               type: "success",
             })
           },
         },
       })
     },
-    [selectedThreadId, threads, modifyThreadMutation]
+    [selectedThreadId, threads, modifyThreadMutation, t]
   )
 
   const handleTrashThread = useCallback(
@@ -412,10 +414,10 @@ export function MailView() {
       })
 
       toast.add({
-        title: "Conversation moved to trash",
+        title: t("mail.conversationTrash"),
         type: "success",
         actionProps: {
-          children: "Undo",
+          children: t("common.undo"),
           onClick: () => {
             modifyThreadMutation.mutate({
               id: thread.id,
@@ -423,12 +425,15 @@ export function MailView() {
             })
             setSelectedThreadId(thread.id)
             setFocusedThreadId(thread.id)
-            toast.add({ title: "Conversation restored", type: "success" })
+            toast.add({
+              title: t("mail.conversationRestored"),
+              type: "success",
+            })
           },
         },
       })
     },
-    [selectedThreadId, threads, modifyThreadMutation]
+    [selectedThreadId, threads, modifyThreadMutation, t]
   )
 
   const handleToggleStar = useCallback(
@@ -465,7 +470,7 @@ export function MailView() {
           inInbox: false,
         })
         toast.add({
-          title: `${threadIds.length} conversations archived`,
+          title: t("mail.conversationsArchived", { count: threadIds.length }),
           type: "success",
         })
       } else if (action === "trash") {
@@ -474,7 +479,7 @@ export function MailView() {
           inTrash: true,
         })
         toast.add({
-          title: `${threadIds.length} conversations moved to trash`,
+          title: t("mail.conversationsTrash", { count: threadIds.length }),
           type: "success",
         })
       } else if (action === "read") {
@@ -489,7 +494,7 @@ export function MailView() {
         })
       }
     },
-    [batchModifyMutation]
+    [batchModifyMutation, t]
   )
 
   // Undo Send (7s buffer timer)
@@ -596,13 +601,13 @@ export function MailView() {
       void sendDraftMutationRef.current
         .mutateAsync({ id: draftId })
         .then(() => {
-          toast.add({ title: "Email sent", type: "success" })
+          toast.add({ title: t("mail.emailSent"), type: "success" })
         })
         .catch((err: unknown) => {
           toast.add({
-            title: "Failed to send email",
+            title: t("mail.failedToSend"),
             description:
-              err instanceof Error ? err.message : "An error occurred",
+              err instanceof Error ? err.message : t("mail.anErrorOccurred"),
             type: "error",
           })
         })
@@ -614,11 +619,11 @@ export function MailView() {
     })
 
     toast.add({
-      title: "Sending email…",
+      title: t("mail.sending"),
       type: "info",
       timeout: UNDO_SEND_DELAY_MS,
       actionProps: {
-        children: "Undo",
+        children: t("common.undo"),
         onClick: () => {
           const pending = pendingSendsRef.current.get(draftId)
           if (!pending) return
@@ -627,7 +632,7 @@ export function MailView() {
           setReopenedDraft(pending.draft)
           setComposeOpen(true)
           toast.add({
-            title: "Send cancelled — draft reopened",
+            title: t("mail.sendCancelled"),
             type: "info",
           })
         },
@@ -970,7 +975,7 @@ export function MailView() {
         <div
           role="separator"
           aria-orientation="vertical"
-          aria-label="Resize thread list"
+          aria-label={t("mail.resizeThreadList")}
           aria-valuemin={MAIL_LIST_MIN_WIDTH}
           aria-valuemax={MAIL_LIST_MAX_WIDTH}
           aria-valuenow={listWidth}

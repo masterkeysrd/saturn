@@ -36,6 +36,7 @@ import {
   useSaveDraft,
   useSendDraft,
   uploadDraftAttachment,
+  useI18n,
   type SaveDraftVariables,
 } from "@saturn/hooks"
 import type { MailRecipientFormValues } from "@saturn/schemas"
@@ -73,6 +74,7 @@ function isLocalAttachment(att: Attachment): boolean {
 export default function ComposeMailModal() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { t } = useI18n()
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
   const params = useLocalSearchParams<{
@@ -482,15 +484,12 @@ export default function ComposeMailModal() {
       ccRecipients.length === 0 &&
       bccRecipients.length === 0
     ) {
-      Alert.alert(
-        "Missing Recipient",
-        "Please add at least one recipient in To, Cc, or Bcc."
-      )
+      Alert.alert(t("mail.missingRecipient"), t("mail.addAtLeastOneRecipient"))
       return
     }
 
     if (!selectedAccountId) {
-      Alert.alert("Missing Account", "Please select a sending account.")
+      Alert.alert(t("mail.missingAccount"), t("mail.selectSendingAccount"))
       return
     }
 
@@ -505,8 +504,8 @@ export default function ComposeMailModal() {
     } catch (err: unknown) {
       const e = err as Error
       Alert.alert(
-        "Failed to Send",
-        e.message || "An unexpected error occurred while sending."
+        t("mail.failedToSend"),
+        e.message || t("mail.unexpectedSendError")
       )
     } finally {
       setIsSending(false)
@@ -519,22 +518,22 @@ export default function ComposeMailModal() {
       return
     }
     Alert.alert(
-      "Unsaved Changes",
-      "Would you like to save this message as a draft or discard your changes?",
+      t("mail.unsavedChangesTitle"),
+      t("mail.unsavedChangesMessage"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Discard",
+          text: t("common.discard"),
           style: "destructive",
           onPress: () => router.back(),
         },
         {
-          text: "Save Draft",
+          text: t("mail.saveDraft"),
           onPress: async () => {
             if (!selectedAccountId) {
               Alert.alert(
-                "Missing Account",
-                "Please select an account before saving a draft."
+                t("mail.missingAccount"),
+                t("mail.selectAccountBeforeDraft")
               )
               return
             }
@@ -546,8 +545,8 @@ export default function ComposeMailModal() {
             } catch (err: unknown) {
               const e = err as Error
               Alert.alert(
-                "Failed to Save Draft",
-                e.message || "Could not save draft."
+                t("mail.failedToSaveDraft"),
+                e.message || t("mail.couldNotSaveDraft")
               )
             } finally {
               setIsSending(false)
@@ -582,10 +581,10 @@ export default function ComposeMailModal() {
 
           <Text style={styles.topBarTitle}>
             {params.mode === "DRAFT_MODE_FORWARD"
-              ? "Forward Message"
+              ? t("mail.forwardMessage")
               : params.mode?.includes("REPLY")
-                ? "Reply Message"
-                : "New Message"}
+                ? t("mail.replyMessage")
+                : t("mail.newMessage")}
           </Text>
 
           <Pressable
@@ -602,7 +601,7 @@ export default function ComposeMailModal() {
             ) : (
               <>
                 <Send size={15} color={colors.primaryForeground} />
-                <Text style={styles.sendBtnText}>Send</Text>
+                <Text style={styles.sendBtnText}>{t("mail.send")}</Text>
               </>
             )}
           </Pressable>
@@ -615,7 +614,7 @@ export default function ComposeMailModal() {
         >
           {/* From: Account Selector */}
           <View style={styles.fromRow}>
-            <Text style={styles.fieldLabel}>From:</Text>
+            <Text style={styles.fieldLabel}>{t("mail.fromLabel")}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -658,14 +657,14 @@ export default function ComposeMailModal() {
 
           {/* To: Recipients */}
           <RecipientInput
-            label="To"
+            label={t("mail.toLabelShort")}
             testID="mobile-composer-to-input"
             recipients={toRecipients}
             onChangeRecipients={(next) => {
               setToRecipients(next)
               setIsDirty(true)
             }}
-            placeholder="Add recipient email..."
+            placeholder={t("mail.addRecipientEmail")}
           />
 
           {/* Cc / Bcc Toggle Bar */}
@@ -704,7 +703,7 @@ export default function ComposeMailModal() {
 
           {/* Subject Line */}
           <View style={styles.subjectRow}>
-            <Text style={styles.fieldLabel}>Subject:</Text>
+            <Text style={styles.fieldLabel}>{t("mail.subjectLabel")}</Text>
             <TextInput
               testID="mobile-composer-subject-input"
               value={subject}
@@ -712,7 +711,7 @@ export default function ComposeMailModal() {
                 setSubject(text)
                 setIsDirty(true)
               }}
-              placeholder="Subject"
+              placeholder={t("mail.subjectPlaceholder")}
               placeholderTextColor={colors.textMuted}
               keyboardAppearance={isDark ? "dark" : "light"}
               style={styles.subjectInput}
@@ -755,18 +754,38 @@ export default function ComposeMailModal() {
           >
             {(
               [
-                { cmd: "bold", label: "Bold", Icon: Bold },
-                { cmd: "italic", label: "Italic", Icon: Italic },
-                { cmd: "underline", label: "Underline", Icon: Underline },
-                { cmd: "strike", label: "Strikethrough", Icon: Strikethrough },
-                { cmd: "heading2", label: "Heading", Icon: Heading2 },
-                { cmd: "bulletList", label: "Bullet list", Icon: List },
+                { cmd: "bold", label: t("mail.format.bold"), Icon: Bold },
+                { cmd: "italic", label: t("mail.format.italic"), Icon: Italic },
+                {
+                  cmd: "underline",
+                  label: t("mail.format.underline"),
+                  Icon: Underline,
+                },
+                {
+                  cmd: "strike",
+                  label: t("mail.format.strike"),
+                  Icon: Strikethrough,
+                },
+                {
+                  cmd: "heading2",
+                  label: t("mail.format.heading"),
+                  Icon: Heading2,
+                },
+                {
+                  cmd: "bulletList",
+                  label: t("mail.format.bulletList"),
+                  Icon: List,
+                },
                 {
                   cmd: "orderedList",
-                  label: "Numbered list",
+                  label: t("mail.format.orderedList"),
                   Icon: ListOrdered,
                 },
-                { cmd: "blockquote", label: "Blockquote", Icon: Quote },
+                {
+                  cmd: "blockquote",
+                  label: t("mail.format.blockquote"),
+                  Icon: Quote,
+                },
               ] as {
                 cmd: EmailEditorCommand
                 label: string
@@ -799,7 +818,7 @@ export default function ComposeMailModal() {
               <View style={styles.remoteBannerLeft}>
                 <ImageIcon size={14} color={colors.warning} />
                 <Text style={styles.remoteBannerText}>
-                  Remote images in this draft are hidden.
+                  {t("mail.remoteImagesHidden")}
                 </Text>
               </View>
               <Pressable
@@ -810,7 +829,9 @@ export default function ComposeMailModal() {
                   editorRef.current?.revealRemoteImages()
                 }}
               >
-                <Text style={styles.remoteBannerAction}>Show images</Text>
+                <Text style={styles.remoteBannerAction}>
+                  {t("mail.showImages")}
+                </Text>
               </Pressable>
             </View>
           )}
@@ -821,7 +842,7 @@ export default function ComposeMailModal() {
             testID="mobile-composer-body-input"
             bodyHtml={preparedContent.bodyHtml}
             stylesHtml={preparedContent.stylesHtml}
-            placeholder="Compose email..."
+            placeholder={t("mail.composePlaceholder")}
             minHeight={240}
             autoFocus={true}
             onContentChange={() => setIsDirty(true)}
@@ -842,12 +863,14 @@ export default function ComposeMailModal() {
             style={styles.toolbarBtn}
           >
             <Paperclip size={18} color={colors.textPrimary} />
-            <Text style={styles.toolbarBtnText}>Attach File</Text>
+            <Text style={styles.toolbarBtnText}>{t("mail.attachFile")}</Text>
           </Pressable>
 
           {(saveDraftMutation.isPending || draftId) && (
             <Text style={styles.draftIndicatorText}>
-              {saveDraftMutation.isPending ? "Saving draft..." : "Draft"}
+              {saveDraftMutation.isPending
+                ? t("mail.savingDraft")
+                : t("mail.draft")}
             </Text>
           )}
         </View>

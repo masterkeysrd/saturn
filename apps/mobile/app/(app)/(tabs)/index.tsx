@@ -16,7 +16,7 @@ import {
   useUpdateDashboardPreferencesMutation,
   type DashboardPreferences,
 } from "@saturn/api/saturn/space/v1/space"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { Send, SlidersHorizontal, Sparkles } from "lucide-react-native"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
@@ -51,6 +51,7 @@ export default function OverviewScreen() {
   const { user } = useAuth()
   const { activeSpaceId, refetchSpaces, activeSpaceRole } = useSpace()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
   const quickCaptureRef = useRef<BottomSheet>(null)
@@ -276,7 +277,9 @@ export default function OverviewScreen() {
               accessibilityLabel="Customize overview widgets"
             >
               <SlidersHorizontal size={14} color={colors.textSecondary} />
-              <Text style={styles.customizeBtnText}>Customize</Text>
+              <Text style={styles.customizeBtnText}>
+                {t("common.customize")}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -301,7 +304,7 @@ export default function OverviewScreen() {
       />
       <QuickCaptureSheet
         ref={quickCaptureRef}
-        title="Quick Capture"
+        title={t("common.quickAction")}
         actions={quickCaptureActions}
         onClose={() => quickCaptureRef.current?.close()}
       />

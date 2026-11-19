@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { useI18n } from "@saturn/hooks"
 import { stripHtmlToPlainText } from "@saturn/core"
 
 export type EmailEditorCommand =
@@ -239,7 +240,7 @@ export const EmailRichEditor = forwardRef<
   {
     bodyHtml,
     stylesHtml = "",
-    placeholder = "Write your email here...",
+    placeholder: explicitPlaceholder,
     minHeight = 160,
     maxHeight,
     autoFocus = false,
@@ -250,6 +251,8 @@ export const EmailRichEditor = forwardRef<
   },
   ref
 ) {
+  const { t } = useI18n()
+  const placeholder = explicitPlaceholder ?? t("mail.editorPlaceholder")
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const isDirtyRef = useRef(false)
   const hasAutoFocusedRef = useRef(false)

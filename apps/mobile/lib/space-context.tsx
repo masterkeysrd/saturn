@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react"
 import { useQueryClient } from "@tanstack/react-query"
@@ -13,12 +14,42 @@ import {
   useGetSettingsQuery,
   type Space,
 } from "@saturn/api/saturn/space/v1/space"
-import { TimezoneProvider, useSpaceRole } from "@saturn/hooks"
+import {
+  useGetUserPreferencesQuery,
+  useUpdateUserPreferencesMutation,
+  type UserPreferences,
+} from "@saturn/api/saturn/identity/v1/identity"
+import { normalizeUserLocale } from "@saturn/i18n"
+import {
+  TimezoneProvider,
+  useSpaceRole,
+  type HourCycle,
+  type WeekStartsOn,
+} from "@saturn/hooks"
 import { useAuth } from "./auth-context"
-import { mobileStorage } from "./storage"
+import {
+  mobileStorage,
+  getUserPreferences,
+  setUserPreferences,
+  type StoredUserPreferences,
+} from "./storage"
 import { haptics } from "./haptics"
 import { clearPersistedQueryCache } from "./query-persister"
 import { setPendingWorkflowDraft } from "@/components/workflows/workflow-draft-store"
+
+const USER_PREFERENCES_QUERY_KEY = [
+  "/api/v1/identity/users/me/preferences",
+  {},
+] as const
+
+function getDefaultDeviceLocale(): string {
+  try {
+    const resolved = Intl.DateTimeFormat().resolvedOptions().locale
+    return normalizeUserLocale(resolved)
+  } catch {
+    return "en-US"
+  }
+}
 
 export interface SpaceContextType {
   spaces: Space[]
@@ -30,6 +61,12 @@ export interface SpaceContextType {
   isOwner: boolean
   canManageMembers: boolean
   timezone: string
+  locale: string
+  hourCycle: HourCycle
+  weekStartsOn: WeekStartsOn
+  updateRegionalPreferences: (
+    patch: Partial<StoredUserPreferences>
+  ) => Promise<void>
   switchSpace: (spaceId: string) => Promise<void>
   refetchSpaces: () => void
 }
@@ -45,6 +82,135 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
   } = useAuth()
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null)
   const [isSwitching, setIsSwitching] = useState(false)
+  const [regionalPrefs, setRegionalPrefs] = useState<StoredUserPreferences>(
+    () => ({
+      locale: getDefaultDeviceLocale(),
+      hourCycle: "h12",
+      weekStartsOn: 0,
+    })
+  )
+  const regionalPrefsRef = useRef<StoredUserPreferences>(regionalPrefs)
+
+  // Restore cached regional preferences on mount (persisted across space switches and logouts)
+  useEffect(() => {
+    let mounted = true
+    async function restoreUserPrefs() {
+      const stored = await getUserPreferences()
+      if (mounted && stored) {
+        const normalized: StoredUserPreferences = {
+          locale: normalizeUserLocale(stored.locale),
+          hourCycle: stored.hourCycle === "h23" ? "h23" : "h12",
+          weekStartsOn: stored.weekStartsOn === 1 ? 1 : 0,
+        }
+        regionalPrefsRef.current = normalized
+        setRegionalPrefs(normalized)
+      }
+    }
+    void restoreUserPrefs()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  // Query user-scoped regional preferences from backend when authenticated
+  const { data: userPrefsData } = useGetUserPreferencesQuery(
+    {},
+    {
+      enabled: isAuthenticated,
+      staleTime: 1000 * 60 * 5,
+    }
+  )
+  const updateUserPreferencesMutation = useUpdateUserPreferencesMutation()
+
+  useEffect(() => {
+    if (!userPrefsData) return
+    const next: StoredUserPreferences = {
+      locale: userPrefsData.locale
+        ? normalizeUserLocale(userPrefsData.locale)
+        : getDefaultDeviceLocale(),
+      hourCycle: userPrefsData.hourCycle === "h23" ? "h23" : "h12",
+      weekStartsOn: userPrefsData.weekStartsOn === 1 ? 1 : 0,
+    }
+    regionalPrefsRef.current = next
+    setRegionalPrefs(next)
+    void setUserPreferences(next)
+  }, [userPrefsData])
+
+  const updateRegionalPreferences = useCallback(
+    async (patch: Partial<StoredUserPreferences>) => {
+      const previous = regionalPrefsRef.current
+      const next: StoredUserPreferences = {
+        locale:
+          patch.locale !== undefined
+            ? normalizeUserLocale(patch.locale)
+            : previous.locale,
+        hourCycle:
+          patch.hourCycle !== undefined
+            ? patch.hourCycle === "h23"
+              ? "h23"
+              : "h12"
+            : previous.hourCycle,
+        weekStartsOn:
+          patch.weekStartsOn !== undefined
+            ? patch.weekStartsOn === 1
+              ? 1
+              : 0
+            : previous.weekStartsOn,
+      }
+
+      const paths: string[] = []
+      if (patch.locale !== undefined) paths.push("locale")
+      if (patch.hourCycle !== undefined) paths.push("hour_cycle")
+      if (patch.weekStartsOn !== undefined) paths.push("week_starts_on")
+
+      const previousCached = queryClient.getQueryData<UserPreferences>(
+        USER_PREFERENCES_QUERY_KEY
+      )
+
+      regionalPrefsRef.current = next
+      setRegionalPrefs(next)
+      await setUserPreferences(next)
+      queryClient.setQueryData<UserPreferences>(
+        USER_PREFERENCES_QUERY_KEY,
+        next
+      )
+
+      if (!isAuthenticated || paths.length === 0) {
+        return
+      }
+
+      try {
+        const updated = await updateUserPreferencesMutation.mutateAsync({
+          userPreferences: next,
+          updateMask: { paths },
+        })
+        const synced: StoredUserPreferences = {
+          locale: updated.locale
+            ? normalizeUserLocale(updated.locale)
+            : next.locale,
+          hourCycle: updated.hourCycle === "h23" ? "h23" : "h12",
+          weekStartsOn: updated.weekStartsOn === 1 ? 1 : 0,
+        }
+        regionalPrefsRef.current = synced
+        setRegionalPrefs(synced)
+        await setUserPreferences(synced)
+        queryClient.setQueryData<UserPreferences>(
+          USER_PREFERENCES_QUERY_KEY,
+          synced
+        )
+      } catch (err) {
+        regionalPrefsRef.current = previous
+        setRegionalPrefs(previous)
+        await setUserPreferences(previous)
+        queryClient.setQueryData<UserPreferences | undefined>(
+          USER_PREFERENCES_QUERY_KEY,
+          previousCached
+        )
+        throw err
+      }
+    },
+    [isAuthenticated, queryClient, updateUserPreferencesMutation]
+  )
 
   // Query spaces for authenticated user
   const {
@@ -124,7 +290,8 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
         queryClient.removeQueries({
           predicate: (q) =>
             q.queryKey[0] !== "/api/v1/spaces" &&
-            q.queryKey[0] !== "/api/v1/identity/users/me",
+            q.queryKey[0] !== "/api/v1/identity/users/me" &&
+            q.queryKey[0] !== "/api/v1/identity/users/me/preferences",
         })
         await clearPersistedQueryCache()
         await haptics.success()
@@ -159,11 +326,22 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
         isOwner,
         canManageMembers,
         timezone,
+        locale: regionalPrefs.locale,
+        hourCycle: regionalPrefs.hourCycle,
+        weekStartsOn: regionalPrefs.weekStartsOn,
+        updateRegionalPreferences,
         switchSpace,
         refetchSpaces,
       }}
     >
-      <TimezoneProvider timezone={timezone}>{children}</TimezoneProvider>
+      <TimezoneProvider
+        timezone={timezone}
+        locale={regionalPrefs.locale}
+        hourCycle={regionalPrefs.hourCycle}
+        weekStartsOn={regionalPrefs.weekStartsOn}
+      >
+        {children}
+      </TimezoneProvider>
     </SpaceContext.Provider>
   )
 }

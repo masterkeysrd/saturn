@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { COMMON_TIMEZONES, isValidTimezone } from "@saturn/core"
 import { nonEmptyString } from "../common"
+import { schemaError } from "../i18n"
 
 export { COMMON_TIMEZONES }
 
@@ -8,27 +9,29 @@ export const HEX_COLOR_REGEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
 export const CalendarFormSchema = z.compile(
   z.object({
-    name: nonEmptyString("Calendar name is required").max(100, {
-      error: "Calendar name cannot exceed 100 characters",
+    name: nonEmptyString("calendar.nameRequired").max(100, {
+      error: schemaError("calendar.nameMaxLength"),
     }),
     description: z
       .string()
       .trim()
-      .max(500, { error: "Description cannot exceed 500 characters" })
+      .max(500, {
+        error: schemaError("calendar.descriptionMaxLength"),
+      })
       .optional()
       .default(""),
     color: z
       .string()
       .trim()
       .regex(HEX_COLOR_REGEX, {
-        error: "Color must be a valid hex color code (e.g. #3b82f6)",
+        error: schemaError("calendar.colorInvalid"),
       })
       .default("#3b82f6"),
     timezone: z
       .string()
       .trim()
       .refine((val) => isValidTimezone(val), {
-        error: "Invalid IANA timezone identifier",
+        error: schemaError("calendar.ianaTimezoneInvalid"),
       })
       .default("UTC"),
     isEnabled: z.boolean().default(true),
@@ -38,7 +41,10 @@ export const CalendarFormSchema = z.compile(
 export type CalendarFormValues = z.infer<typeof CalendarFormSchema>
 
 export const AttendeeSchema = z.object({
-  email: z.string().trim().email({ error: "Invalid email address" }),
+  email: z
+    .string()
+    .trim()
+    .email({ error: schemaError("calendar.emailInvalid") }),
   displayName: z.string().trim().optional().default(""),
   isOptional: z.boolean().optional().default(false),
   responseStatus: z
@@ -191,9 +197,9 @@ export function parseRRule(
 export const EventFormSchema = z.compile(
   z
     .object({
-      calendarId: nonEmptyString("Calendar is required"),
-      title: nonEmptyString("Event title is required").max(200, {
-        error: "Title cannot exceed 200 characters",
+      calendarId: nonEmptyString("calendar.calendarRequired"),
+      title: nonEmptyString("calendar.eventTitleRequired").max(200, {
+        error: schemaError("calendar.eventTitleMaxLength"),
       }),
       description: z.string().trim().max(5000).optional().default(""),
       location: z.string().trim().max(500).optional().default(""),
@@ -206,7 +212,7 @@ export const EventFormSchema = z.compile(
         .string()
         .trim()
         .refine((val) => !val || isValidTimezone(val), {
-          error: "Invalid timezone identifier",
+          error: schemaError("calendar.timezoneInvalid"),
         })
         .default("UTC"),
       rrule: z.string().optional().default(""),
@@ -226,7 +232,7 @@ export const EventFormSchema = z.compile(
         return true
       },
       {
-        error: "End time cannot be earlier than start time",
+        error: schemaError("calendar.endTimeBeforeStart"),
         path: ["endTime"],
       }
     )
@@ -239,7 +245,7 @@ export const EventFormSchema = z.compile(
         return true
       },
       {
-        error: "End date must be on or after start date",
+        error: schemaError("calendar.endDateBeforeStart"),
         path: ["endDate"],
       }
     )

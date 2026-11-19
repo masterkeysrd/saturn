@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { useTimezone, useConnectedAccounts } from "@saturn/hooks"
+import { useTimezone, useConnectedAccounts, useI18n } from "@saturn/hooks"
 import { formatThreadParticipants } from "@saturn/core"
 import type { Thread } from "@saturn/api/saturn/mail/v1/mail"
 import type { MailLayoutMode } from "../mail-utils"
@@ -81,6 +81,7 @@ export function ThreadList({
   onLoadMore,
 }: ThreadListProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
   const { data: accountsData } = useConnectedAccounts()
   const accounts = useMemo(() => accountsData?.accounts || [], [accountsData])
 
@@ -198,8 +199,12 @@ export function ThreadList({
             data-testid="mail-toggle-rail-btn"
             onClick={onToggleRail}
             className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-            title={railOpen ? "Collapse folders" : "Expand folders"}
-            aria-label={railOpen ? "Collapse folders" : "Expand folders"}
+            title={
+              railOpen ? t("mail.collapseFolders") : t("mail.expandFolders")
+            }
+            aria-label={
+              railOpen ? t("mail.collapseFolders") : t("mail.expandFolders")
+            }
           >
             <PanelLeft className="h-4 w-4" />
           </Button>
@@ -211,7 +216,7 @@ export function ThreadList({
             data-testid="mail-search-input"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search mail... (/)"
+            placeholder={t("mail.searchPlaceholder")}
             className="h-8 bg-background/80 pl-8 text-xs"
           />
         </div>
@@ -225,13 +230,13 @@ export function ThreadList({
             className="hidden h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground md:inline-flex"
             title={
               layoutMode === "split"
-                ? "Switch to list view"
-                : "Switch to split view"
+                ? t("mail.switchToList")
+                : t("mail.switchToSplit")
             }
             aria-label={
               layoutMode === "split"
-                ? "Switch to list view"
-                : "Switch to split view"
+                ? t("mail.switchToList")
+                : t("mail.switchToSplit")
             }
           >
             {layoutMode === "split" ? (
@@ -247,8 +252,8 @@ export function ThreadList({
             size="icon-sm"
             onClick={onRefresh}
             className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-            title="Refresh"
-            aria-label="Refresh mail"
+            title={t("mail.refresh")}
+            aria-label={t("mail.refreshMail")}
           >
             <RefreshCw
               className={cn(
@@ -272,12 +277,12 @@ export function ThreadList({
               type="button"
               onClick={handleToggleSelectAll}
               className="text-primary hover:text-primary/80"
-              aria-label="Deselect all"
+              aria-label={t("mail.deselectAll")}
             >
               <CheckSquare className="h-4 w-4" />
             </button>
             <span className="font-semibold text-primary">
-              {selectedIds.size} selected
+              {t("mail.selectedCount", { count: selectedIds.size })}
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -289,7 +294,7 @@ export function ThreadList({
                 onBulkAction("archive", Array.from(selectedIds))
                 setSelectedIds(new Set())
               }}
-              title="Archive selected"
+              title={t("mail.archiveSelected")}
               className="h-7 w-7"
             >
               <Archive className="h-3.5 w-3.5" />
@@ -302,7 +307,7 @@ export function ThreadList({
                 onBulkAction("trash", Array.from(selectedIds))
                 setSelectedIds(new Set())
               }}
-              title="Trash selected"
+              title={t("mail.trashSelected")}
               className="h-7 w-7 text-destructive hover:text-destructive"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -312,7 +317,7 @@ export function ThreadList({
               size="icon-sm"
               data-testid="bulk-read-btn"
               onClick={() => onBulkAction("read", Array.from(selectedIds))}
-              title="Mark as read"
+              title={t("mail.markAsRead")}
               className="h-7 w-7"
             >
               <MailCheck className="h-3.5 w-3.5" />
@@ -322,7 +327,7 @@ export function ThreadList({
               size="icon-sm"
               data-testid="bulk-unread-btn"
               onClick={() => onBulkAction("unread", Array.from(selectedIds))}
-              title="Mark as unread"
+              title={t("mail.markAsUnread")}
               className="h-7 w-7"
             >
               <Mail className="h-3.5 w-3.5" />
@@ -337,14 +342,17 @@ export function ThreadList({
               type="button"
               onClick={handleToggleSelectAll}
               className="text-muted-foreground hover:text-foreground"
-              aria-label="Select all"
+              aria-label={t("mail.selectAll")}
             >
               <Square className="h-3.5 w-3.5" />
             </button>
             <span>
               {totalCount && totalCount > threads.length
-                ? `${threads.length} of ${totalCount} conversations`
-                : `${threads.length} conversations`}
+                ? t("mail.conversationsCountOf", {
+                    count: threads.length,
+                    total: totalCount,
+                  })
+                : t("mail.conversationsCount", { count: threads.length })}
             </span>
           </div>
         </div>
@@ -369,9 +377,13 @@ export function ThreadList({
             className="flex flex-1 flex-col items-center justify-center p-6 text-center text-xs text-muted-foreground"
           >
             <Mail className="mb-2 h-8 w-8 text-muted-foreground/40" />
-            <p className="font-medium">No conversations</p>
+            <p className="font-medium">
+              {searchQuery ? t("mail.noMatches") : t("empty.mailTitle")}
+            </p>
             <p className="mt-1 text-[11px] text-muted-foreground/80">
-              {searchQuery ? "No matches found" : "Your inbox is clear"}
+              {searchQuery
+                ? t("mail.noMatchesDescription")
+                : t("empty.mailDescription")}
             </p>
           </div>
         ) : (
@@ -425,7 +437,7 @@ export function ThreadList({
                       "h-2 w-2 rounded-full transition-colors",
                       thread.isUnread ? "bg-primary" : "bg-transparent"
                     )}
-                    aria-label={thread.isUnread ? "Unread" : undefined}
+                    aria-label={thread.isUnread ? t("mail.unread") : undefined}
                   />
                 </div>
 
@@ -438,7 +450,7 @@ export function ThreadList({
                         type="button"
                         onClick={(e) => handleToggleSelectOne(thread.id, e)}
                         className="shrink-0 text-muted-foreground hover:text-foreground"
-                        aria-label="Select conversation"
+                        aria-label={t("mail.selectConversation")}
                       >
                         {isChecked ? (
                           <CheckSquare className="h-3.5 w-3.5 text-primary" />
@@ -454,7 +466,9 @@ export function ThreadList({
                           onToggleStar(thread)
                         }}
                         className="shrink-0 text-muted-foreground hover:text-amber-500"
-                        aria-label={thread.isStarred ? "Unstar" : "Star"}
+                        aria-label={
+                          thread.isStarred ? t("mail.unstar") : t("mail.star")
+                        }
                       >
                         <Star
                           className={cn(
@@ -510,7 +524,7 @@ export function ThreadList({
                         : "text-foreground/80"
                     )}
                   >
-                    {thread.subject || "(no subject)"}
+                    {thread.subject || t("mail.noSubject")}
                   </div>
 
                   {/* Snippet Preview */}
@@ -540,10 +554,10 @@ export function ThreadList({
               {isFetchingNextPage ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>Loading more...</span>
+                  <span>{t("common.loading")}</span>
                 </>
               ) : (
-                <span>Load more conversations</span>
+                <span>{t("mail.loadMore")}</span>
               )}
             </Button>
           </div>

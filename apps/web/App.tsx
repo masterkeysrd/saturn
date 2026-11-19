@@ -36,6 +36,7 @@ import { resolveBreadcrumbs } from "@/lib/breadcrumbs"
 import { useActiveSpaceContext, useMySpaces } from "@/features/space/use-space"
 import { useAuth } from "@/features/auth/use-auth"
 import { NoSpaceActiveScreen } from "@/components/no-space-active"
+import { useI18n } from "@saturn/hooks"
 import { CopilotContextProvider } from "@saturn/hooks/ai"
 import {
   DockedCopilotSidebar,
@@ -126,7 +127,8 @@ const featureRoutes = Object.values(routeModules).flatMap(
 function ProtectedAppShell() {
   const { spaceId } = useActiveSpaceContext()
   const location = useLocation()
-  const breadcrumbs = resolveBreadcrumbs(location.pathname)
+  const { locale, t } = useI18n()
+  const breadcrumbs = resolveBreadcrumbs(location.pathname, locale)
 
   return (
     <CopilotContextProvider spaceId={spaceId}>
@@ -192,7 +194,7 @@ function ProtectedAppShell() {
                   className="h-8 cursor-pointer gap-2 rounded-lg px-2.5 text-xs font-normal text-muted-foreground hover:text-foreground"
                 >
                   <Search className="size-3.5 shrink-0" />
-                  <span className="hidden md:inline">Search or jump…</span>
+                  <span className="hidden md:inline">{t("common.search")}</span>
                   <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
                 </Button>
                 <GlobalAIDrawer triggerOnly key={spaceId} />
@@ -222,7 +224,8 @@ export function App() {
           const firstKey = query.queryKey[0]
           return (
             firstKey !== "/api/v1/spaces" &&
-            firstKey !== "/api/v1/identity/users/me"
+            firstKey !== "/api/v1/identity/users/me" &&
+            firstKey !== "/api/v1/identity/users/me/preferences"
           )
         },
       })

@@ -8,7 +8,7 @@ import {
   useListAccountsQuery,
   useListBudgetsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
 import { toCents, toCentsString } from "@saturn/core"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import { Input } from "@/components/ui/input"
@@ -30,12 +30,6 @@ import type {
   StageFinanceDocType,
   StageToFinanceInitialData,
 } from "../mail-utils"
-
-const DOC_TYPE_LABELS: Record<StageFinanceDocType, string> = {
-  RECEIPT: "Receipt",
-  INVOICE: "Invoice",
-  BANK_NOTIFICATION: "Bank Notification",
-}
 
 function RouterNavigatorSync({
   navRef,
@@ -65,9 +59,16 @@ export function StageToFinanceDialog({
   spaceId,
   initialData,
 }: StageToFinanceDialogProps) {
+  const { t } = useI18n()
   const inRouter = useInRouterContext()
   const navRef = useRef<((path: string) => void) | null>(null)
   const queryClient = useQueryClient()
+
+  const docTypeLabels: Record<StageFinanceDocType, string> = {
+    RECEIPT: t("mail.stageFinance.receipt"),
+    INVOICE: t("mail.stageFinance.invoice"),
+    BANK_NOTIFICATION: t("mail.stageFinance.bankNotification"),
+  }
 
   const { data: financeSettings } = useGetSettingsQuery(
     {},
@@ -145,11 +146,11 @@ export function StageToFinanceDialog({
 
     const trimmedVendor = vendorName.trim()
     if (!trimmedVendor) {
-      setErrorMsg("Vendor name is required.")
+      setErrorMsg(t("mail.stageFinance.vendorRequired"))
       return
     }
     if (toCents(amountString) <= 0) {
-      setErrorMsg("Enter a positive amount.")
+      setErrorMsg(t("mail.stageFinance.positiveAmountRequired"))
       return
     }
 
@@ -181,12 +182,14 @@ export function StageToFinanceDialog({
       onOpenChange(false)
 
       toast.add({
-        title: "Staged to Finance Inbox",
-        description: `${trimmedVendor} queued for review.`,
+        title: t("mail.stageFinance.stagedTitle"),
+        description: t("mail.stageFinance.stagedDescription", {
+          vendor: trimmedVendor,
+        }),
         type: "success",
         actionProps: navRef.current
           ? {
-              children: "Review Inbox",
+              children: t("mail.stageFinance.reviewInbox"),
               onClick: () => {
                 navRef.current?.(
                   resolveSpacePath("/finance/inbox", spaceId, true)
@@ -197,7 +200,9 @@ export function StageToFinanceDialog({
       })
     } catch (err) {
       setErrorMsg(
-        err instanceof Error ? err.message : "Failed to stage inbox item."
+        err instanceof Error
+          ? err.message
+          : t("mail.stageFinance.failedToStage")
       )
     }
   }
@@ -208,10 +213,10 @@ export function StageToFinanceDialog({
       <FormDrawer
         open={open}
         onOpenChange={onOpenChange}
-        title="Stage to Finance Inbox"
-        description="Pre-fill and stage this email into your Finance Inbox for approval."
+        title={t("mail.stageFinance.title")}
+        description={t("mail.stageFinance.description")}
         icon={<Receipt className="h-4 w-4 text-primary" />}
-        submitLabel="Stage to Finance Inbox"
+        submitLabel={t("mail.stageFinance.submitLabel")}
         isPending={createInboxItemMutation.isPending}
         onSubmit={handleSubmit}
       >
@@ -222,17 +227,23 @@ export function StageToFinanceDialog({
             </p>
           )}
 
-          <FormFieldItem label="Vendor" id="stage-finance-vendor">
+          <FormFieldItem
+            label={t("mail.stageFinance.vendor")}
+            id="stage-finance-vendor"
+          >
             <Input
               id="stage-finance-vendor"
               data-testid="stage-finance-vendor-input"
               value={vendorName}
               onChange={(e) => setVendorName(e.target.value)}
-              placeholder="e.g. Stripe"
+              placeholder={t("mail.stageFinance.vendorPlaceholder")}
             />
           </FormFieldItem>
 
-          <FormFieldItem label="Document type" id="stage-finance-doc-type">
+          <FormFieldItem
+            label={t("mail.stageFinance.docType")}
+            id="stage-finance-doc-type"
+          >
             <Select
               value={docType}
               onValueChange={(val) =>
@@ -243,19 +254,26 @@ export function StageToFinanceDialog({
                 id="stage-finance-doc-type"
                 data-testid="stage-finance-doc-type-select"
               >
-                <SelectValue>{DOC_TYPE_LABELS[docType]}</SelectValue>
+                <SelectValue>{docTypeLabels[docType]}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="RECEIPT">Receipt</SelectItem>
-                <SelectItem value="INVOICE">Invoice</SelectItem>
+                <SelectItem value="RECEIPT">
+                  {t("mail.stageFinance.receipt")}
+                </SelectItem>
+                <SelectItem value="INVOICE">
+                  {t("mail.stageFinance.invoice")}
+                </SelectItem>
                 <SelectItem value="BANK_NOTIFICATION">
-                  Bank Notification
+                  {t("mail.stageFinance.bankNotification")}
                 </SelectItem>
               </SelectContent>
             </Select>
           </FormFieldItem>
 
-          <FormFieldItem label="Amount" id="stage-finance-amount">
+          <FormFieldItem
+            label={t("mail.stageFinance.amount")}
+            id="stage-finance-amount"
+          >
             <div className="grid grid-cols-[120px_1fr] gap-2.5">
               <CurrencyCombobox
                 value={currency}
@@ -273,28 +291,34 @@ export function StageToFinanceDialog({
             </div>
           </FormFieldItem>
 
-          <FormFieldItem label="Transaction date">
+          <FormFieldItem label={t("mail.stageFinance.transactionDate")}>
             <DatePicker date={txDate} setDate={setTxDate} />
           </FormFieldItem>
 
           <div className="space-y-4 border-t border-border/40 pt-4">
-            <FormFieldItem label="Account" optionalText="Optional">
+            <FormFieldItem
+              label={t("mail.stageFinance.account")}
+              optionalText={t("common.optional")}
+            >
               <AccountSelect
                 accounts={accounts}
                 value={accountId}
                 onValueChange={setAccountId}
                 allowNone
-                placeholder="Select account (optional)"
+                placeholder={t("mail.stageFinance.selectAccountPlaceholder")}
               />
             </FormFieldItem>
 
-            <FormFieldItem label="Budget" optionalText="Optional">
+            <FormFieldItem
+              label={t("mail.stageFinance.budget")}
+              optionalText={t("common.optional")}
+            >
               <BudgetSelect
                 budgets={budgets}
                 value={budgetId}
                 onValueChange={setBudgetId}
                 allowNone
-                placeholder="Select budget (optional)"
+                placeholder={t("mail.stageFinance.selectBudgetPlaceholder")}
               />
             </FormFieldItem>
           </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { sanitizeEmailHtml } from "./html"
+import { restoreRemoteImageSrc, sanitizeEmailHtml } from "./html"
 
 describe("sanitizeEmailHtml URI scheme sanitization", () => {
   it("preserves safe base64 raster data:image/* URIs on img src", () => {
@@ -64,5 +64,34 @@ describe("sanitizeEmailHtml URI scheme sanitization", () => {
       '<video poster="data:image/png;base64,iVBORw0KGgo="></video>'
     )
     expect(videoPoster.html).toBe("<video></video>")
+  })
+
+  it("rewrites loading=lazy to loading=eager, handles unquoted apostrophes, handles parens in CSS url(), and restores data-saturn-remote-style", () => {
+    const amazonHtml =
+      '<table summary=Amazon\'s width="640"><tr><td><style>.hero{background:url(\'https://m.media-amazon.com/images/G/30/hero_(1)_.jpg\')}</style><div style="background-image: url(\'https://m.media-amazon.com/images/G/30/deals_(1)_.jpg\'); padding: 12px;"><img data-saturn-remote-src="https://m.media-amazon.com/deal.jpg" loading="lazy" decoding="async" width="640"></div></td></tr></table>'
+
+    const blocked = sanitizeEmailHtml(amazonHtml, { allowRemoteImages: false })
+    expect(blocked.html).toContain("<table summary=Amazon's")
+    expect(blocked.html).toContain("<td>")
+    expect(blocked.html).toContain('loading="eager"')
+    expect(blocked.html).not.toContain('loading="lazy"')
+    expect(blocked.html).not.toContain('decoding="async"')
+    expect(blocked.html).toContain(".hero{background:none}")
+    expect(blocked.html).toContain(
+      'style="background-image: none; padding: 12px;"'
+    )
+    expect(blocked.html).not.toContain("_.jpg')")
+
+    const backendSanitized =
+      '<div style="background-image: none; padding: 20px;" data-saturn-remote-style="background-image: url(\'//m.media-amazon.com/hero_(1)_.jpg\'); padding: 20px;"><img data-saturn-remote-src="https://m.media-amazon.com/deal.jpg" loading="lazy" decoding="async" width="640"></div>'
+    const restored = restoreRemoteImageSrc(backendSanitized)
+    expect(restored).toContain(
+      "style=\"background-image: url('https://m.media-amazon.com/hero_(1)_.jpg'); padding: 20px;\""
+    )
+    expect(restored).not.toContain("data-saturn-remote-style")
+    expect(restored).toContain('src="https://m.media-amazon.com/deal.jpg"')
+    expect(restored).toContain('loading="eager"')
+    expect(restored).not.toContain('loading="lazy"')
+    expect(restored).not.toContain('decoding="async"')
   })
 })

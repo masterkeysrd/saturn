@@ -7,7 +7,11 @@ import {
   useGetSettingsQuery,
   useListBudgetsQuery,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { useCurrencyConversionPreview, useTimezone } from "@saturn/hooks"
+import {
+  useCurrencyConversionPreview,
+  useI18n,
+  useTimezone,
+} from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -26,6 +30,7 @@ export function BudgetPaceWidget() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { t } = useI18n()
 
   const { data: settingsData, isLoading: settingsLoading } =
     useGetSettingsQuery({}, { enabled: Boolean(activeSpaceId), retry: false })
@@ -169,7 +174,9 @@ export function BudgetPaceWidget() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <PiggyBank size={16} color={colors.brandSecondary} />
-          <Text style={styles.headerTitle}>Monthly Budget Pace</Text>
+          <Text style={styles.headerTitle}>
+            {t("dashboard.widget.budget_pace.title")}
+          </Text>
         </View>
         <View style={styles.headerRight}>
           {isFinanceConfigured && summary.totalCount > 0 && (
@@ -189,7 +196,7 @@ export function BudgetPaceWidget() {
         </Text>
       ) : summary.totalCount === 0 ? (
         <Text style={styles.emptyText}>
-          No active budgets yet. Tap to create spending limits.
+          {t("dashboard.widget.budget_pace.empty")}
         </Text>
       ) : (
         <View style={styles.body}>

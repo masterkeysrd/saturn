@@ -2,8 +2,10 @@ import { useMemo } from "react"
 import { Link } from "react-router-dom"
 import { Archive, ArrowRight, Mail, Star } from "lucide-react"
 import { formatThreadParticipants, parseDate } from "@saturn/core"
+import { getLocalizedDashboardWidgetMeta } from "@saturn/i18n"
 import {
   useConnectedAccounts,
+  useI18n,
   useInfiniteMailThreads,
   useMailboxes,
   useModifyThread,
@@ -19,6 +21,9 @@ import { DashboardWidgetCard } from "./widget-shell"
 export function PriorityMailWidget() {
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
+  const { locale, language } = useI18n()
+  const isEs = language === "es"
+  const widgetMeta = getLocalizedDashboardWidgetMeta("priority_mail", locale)
 
   const { data: accountsData, isLoading: accountsLoading } =
     useConnectedAccounts({ spaceId }, { enabled: Boolean(spaceId) })
@@ -89,12 +94,12 @@ export function PriorityMailWidget() {
 
   return (
     <DashboardWidgetCard
-      title="Priority Mail"
+      title={widgetMeta.title}
       icon={Mail}
       badge={
         hasMailAccount && !isLoading ? (
           <Badge variant={unreadCount > 0 ? "info" : "neutral"}>
-            {unreadCount} unread
+            {unreadCount} {isEs ? "sin leer" : "unread"}
           </Badge>
         ) : undefined
       }
@@ -104,7 +109,7 @@ export function PriorityMailWidget() {
           : undefined
       }
       viewAllTo={spaceId ? `/space/${spaceId}/mail` : undefined}
-      viewAllLabel="Inbox"
+      viewAllLabel={isEs ? "Bandeja" : "Inbox"}
       isLoading={isLoading}
       loadingSkeleton={
         <div className="space-y-2.5">
@@ -122,10 +127,14 @@ export function PriorityMailWidget() {
             </div>
             <div className="min-w-0 space-y-0.5">
               <p className="text-sm font-medium text-foreground">
-                No email account connected
+                {isEs
+                  ? "Sin cuenta de correo conectada"
+                  : "No email account connected"}
               </p>
               <p className="text-xs text-muted-foreground">
-                Connect Gmail or Google Workspace to triage mail here.
+                {isEs
+                  ? "Conecta Gmail o Google Workspace para gestionar tu correo aquí."
+                  : "Connect Gmail or Google Workspace to triage mail here."}
               </p>
             </div>
           </div>
@@ -134,7 +143,7 @@ export function PriorityMailWidget() {
               to="/settings/connected-accounts"
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
             >
-              Connect account
+              {isEs ? "Conectar cuenta" : "Connect account"}
               <ArrowRight className="size-3.5" />
             </Link>
           </div>
@@ -146,9 +155,11 @@ export function PriorityMailWidget() {
               <Mail className="size-4" />
             </div>
             <div className="min-w-0 space-y-0.5">
-              <p className="text-sm font-medium text-foreground">Inbox Zero</p>
+              <p className="text-sm font-medium text-foreground">
+                {isEs ? "Bandeja al día" : "Inbox Zero"}
+              </p>
               <p className="text-xs text-muted-foreground">
-                You have no unread or priority messages in your inbox.
+                {widgetMeta.empty}
               </p>
             </div>
           </div>

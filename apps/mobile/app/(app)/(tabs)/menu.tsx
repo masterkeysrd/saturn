@@ -1,4 +1,14 @@
-import { Text, View, ScrollView, TouchableOpacity, Alert } from "react-native"
+import { useState } from "react"
+import {
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  FlatList,
+  Platform,
+} from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
@@ -22,9 +32,14 @@ import {
   ShieldCheck,
   KeyRound,
   ArrowLeftRight,
+  Globe,
+  Check,
+  X,
 } from "lucide-react-native"
 import { useListInboxItemsQuery } from "@saturn/api/saturn/finance/v1/finance"
 import { useListThreadsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
+import { SUPPORTED_UI_LOCALES } from "@saturn/i18n"
+import { useI18n } from "@saturn/hooks"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
 import { formatTabBadgeCount } from "@/lib/tab-badges"
@@ -38,6 +53,7 @@ import { AIHeaderButton } from "@/components/app-header"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
+import { useToast } from "@/components/ui/toast"
 import { haptics } from "@/lib/haptics"
 
 const APPEARANCE_OPTIONS: readonly {
@@ -53,10 +69,44 @@ const APPEARANCE_OPTIONS: readonly {
 export default function MenuScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const toast = useToast()
   const { user } = useAuth()
-  const { activeSpace, activeSpaceId, activeSpaceRole } = useSpace()
+  const {
+    activeSpace,
+    activeSpaceId,
+    activeSpaceRole,
+    locale,
+    updateRegionalPreferences,
+  } = useSpace()
+  const { t, supportedLocales } = useI18n()
   const { mode, setMode, colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const [languageModalVisible, setLanguageModalVisible] = useState(false)
+
+  const activeLocaleOption =
+    supportedLocales.find((opt) => opt.value === locale) ??
+    SUPPORTED_UI_LOCALES[0]
+
+  const handleSelectLanguage = async (nextLocale: string) => {
+    setLanguageModalVisible(false)
+    if (nextLocale === locale) return
+    try {
+      haptics.selection()
+      await updateRegionalPreferences({ locale: nextLocale })
+      toast.show({
+        type: "success",
+        title: t("settings.regional.saved"),
+      })
+    } catch (err: unknown) {
+      haptics.error()
+      toast.show({
+        type: "error",
+        title: "Update Failed",
+        message:
+          err instanceof Error ? err.message : "Failed to update language",
+      })
+    }
+  }
 
   const { data: inboxData } = useListInboxItemsQuery(
     {
@@ -103,7 +153,7 @@ export default function MenuScreen() {
       <View
         style={[styles.topHeader, { paddingTop: Math.max(insets.top, 10) + 4 }]}
       >
-        <Text style={styles.topHeaderTitle}>Menu</Text>
+        <Text style={styles.topHeaderTitle}>{t("nav.menu")}</Text>
         <AIHeaderButton />
       </View>
       <ScrollView
@@ -175,7 +225,7 @@ export default function MenuScreen() {
             >
               <View style={styles.menuLeft}>
                 <Inbox size={18} color={colors.primary} />
-                <Text style={styles.menuLabel}>Review Queue (Inbox)</Text>
+                <Text style={styles.menuLabel}>{t("nav.inbox")}</Text>
               </View>
               <View style={styles.menuRight}>
                 {pendingInboxBadge !== undefined && (
@@ -215,7 +265,7 @@ export default function MenuScreen() {
             >
               <View style={styles.menuLeft}>
                 <Workflow size={18} color={colors.primary} />
-                <Text style={styles.menuLabel}>Workflows</Text>
+                <Text style={styles.menuLabel}>{t("nav.workflows")}</Text>
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -224,7 +274,7 @@ export default function MenuScreen() {
 
         {/* Section 2: Finance */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Finance</Text>
+          <Text style={styles.sectionHeader}>{t("nav.finance")}</Text>
           <Card style={styles.menuGroup}>
             <TouchableOpacity
               style={[styles.menuItem, styles.menuItemBorder]}
@@ -233,7 +283,7 @@ export default function MenuScreen() {
             >
               <View style={styles.menuLeft}>
                 <ReceiptText size={18} color={colors.primary} />
-                <Text style={styles.menuLabel}>Transactions</Text>
+                <Text style={styles.menuLabel}>{t("nav.transactions")}</Text>
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -245,7 +295,7 @@ export default function MenuScreen() {
             >
               <View style={styles.menuLeft}>
                 <PiggyBank size={18} color={colors.brandSecondary} />
-                <Text style={styles.menuLabel}>Budgets</Text>
+                <Text style={styles.menuLabel}>{t("nav.budgets")}</Text>
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -257,7 +307,7 @@ export default function MenuScreen() {
             >
               <View style={styles.menuLeft}>
                 <Landmark size={18} color={colors.success} />
-                <Text style={styles.menuLabel}>Accounts</Text>
+                <Text style={styles.menuLabel}>{t("nav.accounts")}</Text>
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -269,7 +319,7 @@ export default function MenuScreen() {
             >
               <View style={styles.menuLeft}>
                 <CalendarClock size={18} color={colors.warning} />
-                <Text style={styles.menuLabel}>Recurring & Subscriptions</Text>
+                <Text style={styles.menuLabel}>{t("nav.recurring")}</Text>
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -281,7 +331,7 @@ export default function MenuScreen() {
             >
               <View style={styles.menuLeft}>
                 <HandCoins size={18} color={colors.primary} />
-                <Text style={styles.menuLabel}>Borrowing & Debts</Text>
+                <Text style={styles.menuLabel}>{t("nav.borrowing")}</Text>
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -298,7 +348,7 @@ export default function MenuScreen() {
             >
               <View style={styles.menuLeft}>
                 <FileSpreadsheet size={18} color={colors.textMuted} />
-                <Text style={styles.menuLabel}>Reconciliation</Text>
+                <Text style={styles.menuLabel}>{t("nav.reconciliation")}</Text>
               </View>
               <View style={styles.menuRight}>
                 <Badge variant="outline" size="sm" label="Web Only" />
@@ -355,6 +405,29 @@ export default function MenuScreen() {
                 })}
               </View>
             </View>
+
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+              onPress={() => {
+                haptics.light()
+                setLanguageModalVisible(true)
+              }}
+              testID="menu-language-row"
+              accessibilityRole="button"
+              accessibilityLabel={t("settings.regional.language")}
+            >
+              <View style={styles.menuLeft}>
+                <Globe size={18} color={colors.primary} />
+                <Text style={styles.menuLabel}>
+                  {t("settings.regional.language")}
+                </Text>
+              </View>
+              <View style={styles.menuRight}>
+                <Text style={styles.menuValue}>{activeLocaleOption.label}</Text>
+                <ChevronRight size={16} color={colors.textMuted} />
+              </View>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.menuItem, styles.menuItemBorder]}
@@ -420,7 +493,7 @@ export default function MenuScreen() {
             >
               <View style={styles.menuLeft}>
                 <Settings size={18} color={colors.textSecondary} />
-                <Text style={styles.menuLabel}>Settings & Preferences</Text>
+                <Text style={styles.menuLabel}>{t("nav.settings")}</Text>
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -444,6 +517,75 @@ export default function MenuScreen() {
           </Card>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={languageModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setLanguageModalVisible(false)}
+      >
+        <View
+          style={[
+            styles.modalContainer,
+            Platform.OS === "android" && {
+              paddingTop: Math.max(insets.top, 16),
+            },
+          ]}
+        >
+          <View style={styles.modalHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.modalTitle}>
+                {t("settings.regional.language")}
+              </Text>
+              <Text style={styles.modalSubtitle}>
+                {t("settings.regional.description")}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setLanguageModalVisible(false)}
+              style={styles.closeBtn}
+              accessibilityLabel={t("common.close")}
+            >
+              <X size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={[...supportedLocales]}
+            keyExtractor={(item) => item.value}
+            renderItem={({ item }) => {
+              const isSelected = item.value === locale
+              return (
+                <TouchableOpacity
+                  style={[
+                    styles.modalItem,
+                    isSelected && styles.modalItemActive,
+                  ]}
+                  onPress={() => void handleSelectLanguage(item.value)}
+                  activeOpacity={0.7}
+                  testID={`menu-language-option-${item.value}`}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.modalItemText,
+                        isSelected && styles.modalItemTextActive,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                    <Text style={styles.modalItemDescription}>
+                      {item.value}
+                    </Text>
+                  </View>
+                  {isSelected && <Check size={18} color={colors.primary} />}
+                </TouchableOpacity>
+              )
+            }}
+            contentContainerStyle={{ paddingBottom: 40 }}
+          />
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -591,6 +733,10 @@ const createStyles = (t: SaturnMobileTheme) => ({
     alignItems: "center" as const,
     gap: 8,
   },
+  menuValue: {
+    fontSize: 13,
+    color: t.colors.textMuted,
+  },
   appearanceRow: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
@@ -626,5 +772,62 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   appearanceChipLabelActive: {
     color: t.colors.primaryForeground,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: t.colors.background,
+    paddingTop: 16,
+  },
+  modalHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: t.colors.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: t.colors.textMuted,
+    marginTop: 4,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: t.colors.surface,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  modalItem: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: t.colors.border,
+  },
+  modalItemActive: {
+    backgroundColor: t.colors.primarySubtle,
+  },
+  modalItemText: {
+    fontSize: 15,
+    color: t.colors.textPrimary,
+  },
+  modalItemTextActive: {
+    color: t.colors.primary,
+    fontWeight: "600" as const,
+  },
+  modalItemDescription: {
+    fontSize: 12,
+    color: t.colors.textMuted,
+    marginTop: 2,
   },
 })

@@ -2,13 +2,18 @@ import { useMemo } from "react"
 import { Link } from "react-router-dom"
 import { ArrowRight, Inbox, Landmark } from "lucide-react"
 import { calculateAccountMetrics } from "@saturn/core"
+import { getLocalizedDashboardWidgetMeta } from "@saturn/i18n"
 import {
   useGetInsightsQuery,
   useGetSettingsQuery,
   useListAccountsQuery,
   useListInboxItemsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
-import { useCurrencyConversionPreview, useTimezone } from "@saturn/hooks"
+import {
+  useCurrencyConversionPreview,
+  useI18n,
+  useTimezone,
+} from "@saturn/hooks"
 import { Badge } from "@/components/ui/badge"
 import { MoneyAmount } from "@/components/ui/money-amount"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -18,6 +23,8 @@ import { DashboardWidgetCard } from "./widget-shell"
 export function NetWorthWidget() {
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
+  const { t, locale, language } = useI18n()
+  const widgetMeta = getLocalizedDashboardWidgetMeta("net_worth", locale)
 
   const {
     data: settingsData,
@@ -87,7 +94,7 @@ export function NetWorthWidget() {
 
   return (
     <DashboardWidgetCard
-      title="Net Worth & Liquid Cash"
+      title={widgetMeta.title}
       icon={Landmark}
       badge={
         isFinanceConfigured ? (
@@ -100,7 +107,7 @@ export function NetWorthWidget() {
           : undefined
       }
       viewAllTo={spaceId ? `/space/${spaceId}/finance/accounts` : undefined}
-      viewAllLabel="Accounts"
+      viewAllLabel={t("nav.accounts")}
       isLoading={isLoading}
       loadingSkeleton={
         <div className="space-y-3">
@@ -120,10 +127,12 @@ export function NetWorthWidget() {
             </div>
             <div className="min-w-0 space-y-0.5">
               <p className="text-sm font-medium text-foreground">
-                Finance not initialized
+                {language === "es"
+                  ? "Finanzas sin configurar"
+                  : "Finance not initialized"}
               </p>
               <p className="text-xs text-muted-foreground">
-                Choose a base currency to track accounts and net worth.
+                {widgetMeta.empty}
               </p>
             </div>
           </div>
@@ -132,7 +141,9 @@ export function NetWorthWidget() {
               to={`/space/${spaceId}/finance`}
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
             >
-              Set up base currency
+              {language === "es"
+                ? "Configurar moneda base"
+                : "Set up base currency"}
               <ArrowRight className="size-3.5" />
             </Link>
           </div>
@@ -141,7 +152,11 @@ export function NetWorthWidget() {
         <div className="flex flex-1 flex-col gap-3.5">
           <div className="flex items-baseline justify-between gap-2">
             <div>
-              <p className="text-xs text-muted-foreground">Total Net Worth</p>
+              <p className="text-xs text-muted-foreground">
+                {language === "es"
+                  ? "Patrimonio neto total"
+                  : "Total Net Worth"}
+              </p>
               <MoneyAmount
                 cents={metrics.netWorthCents}
                 currency={baseCurrency}
@@ -150,13 +165,21 @@ export function NetWorthWidget() {
             </div>
             <span className="text-xs text-muted-foreground">
               {metrics.activeCount}{" "}
-              {metrics.activeCount === 1 ? "account" : "accounts"}
+              {language === "es"
+                ? metrics.activeCount === 1
+                  ? "cuenta"
+                  : "cuentas"
+                : metrics.activeCount === 1
+                  ? "account"
+                  : "accounts"}
             </span>
           </div>
 
           <div className="grid grid-cols-2 gap-3 border-t border-border/50 pt-3">
             <div className="space-y-0.5">
-              <p className="text-xs text-muted-foreground">Assets</p>
+              <p className="text-xs text-muted-foreground">
+                {language === "es" ? "Activos" : "Assets"}
+              </p>
               <MoneyAmount
                 cents={metrics.totalAssetsCents}
                 currency={baseCurrency}
@@ -165,7 +188,9 @@ export function NetWorthWidget() {
               />
             </div>
             <div className="space-y-0.5">
-              <p className="text-xs text-muted-foreground">Liabilities</p>
+              <p className="text-xs text-muted-foreground">
+                {language === "es" ? "Pasivos" : "Liabilities"}
+              </p>
               <MoneyAmount
                 cents={metrics.totalLiabilitiesCents}
                 currency={baseCurrency}
@@ -177,11 +202,13 @@ export function NetWorthWidget() {
 
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 pt-3">
             <span className="text-xs text-muted-foreground">
-              This Month ({currentMonthLabel})
+              {language === "es"
+                ? `Este mes (${currentMonthLabel})`
+                : `This Month (${currentMonthLabel})`}
             </span>
             <div className="flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <span>Inflow</span>
+                <span>{language === "es" ? "Ingresos" : "Inflow"}</span>
                 <MoneyAmount
                   cents={monthlyIncomeCents}
                   currency={baseCurrency}
@@ -191,7 +218,7 @@ export function NetWorthWidget() {
                 />
               </span>
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <span>Outflow</span>
+                <span>{language === "es" ? "Gastos" : "Outflow"}</span>
                 <MoneyAmount
                   cents={monthlyOutflowCents}
                   currency={baseCurrency}
@@ -211,8 +238,11 @@ export function NetWorthWidget() {
               <span className="inline-flex min-w-0 items-center gap-1.5 truncate">
                 <Inbox className="size-3.5 shrink-0" />
                 <span className="truncate">
-                  {pendingInboxLabel} staged{" "}
-                  {pendingInboxCount === 1 ? "item" : "items"} awaiting review
+                  {language === "es"
+                    ? t("dashboard.pendingInboxItems", {
+                        count: pendingInboxLabel,
+                      })
+                    : `${pendingInboxLabel} staged ${pendingInboxCount === 1 ? "item" : "items"} awaiting review`}
                 </span>
               </span>
               <ArrowRight className="size-3.5 shrink-0" />

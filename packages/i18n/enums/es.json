@@ -1,0 +1,59 @@
+{
+  "finance": {
+    "accountType": {
+      "CASH": "Efectivo",
+      "CHECKING": "Cuenta corriente",
+      "CREDIT_CARD": "Tarjeta de crédito",
+      "INVESTMENT": "Inversión",
+      "LOAN": "Préstamo",
+      "SAVINGS": "Ahorros"
+    },
+    "interval": {
+      "BIWEEKLY": "Quincenal",
+      "DAILY": "Diario",
+      "MONTHLY": "Mensual",
+      "ONE_TIME": "Única vez",
+      "QUARTERLY": "Trimestral",
+      "WEEKLY": "Semanal",
+      "YEARLY": "Anual"
+    },
+    "status": {
+      "ACTIVE": "Activo",
+      "ARCHIVED": "Archivado",
+      "CANCELLED": "Cancelado",
+      "CLOSED": "Cerrado",
+      "COMPLETED": "Completado",
+      "ENDED": "Finalizado",
+      "PAID": "Pagado",
+      "PAUSED": "Pausado",
+      "PENDING": "Pendiente",
+      "SKIPPED": "Omitido"
+    },
+    "transactionType": {
+      "EXPENSE": "Gasto",
+      "INCOME": "Ingreso",
+      "TRANSFER": "Transferencia"
+    }
+  },
+  "space": {
+    "role": {
+      "ADMIN": "Administrador",
+      "MEMBER": "Miembro",
+      "OWNER": "Propietario",
+      "VIEWER": "Observador"
+    }
+  },
+  "workflow": {
+    "runStatus": {
+      "CANCELLED": "Cancelado",
+      "COMPLETED": "Completado",
+      "FAILED": "Fallido",
+      "FILTERED": "Filtrado",
+      "PENDING": "Pendiente",
+      "RUNNING": "En ejecución",
+      "STOPPED": "Detenido",
+      "SUCCEEDED": "Exitoso",
+      "WAITING": "En espera"
+    }
+  }
+}

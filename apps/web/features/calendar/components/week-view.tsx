@@ -43,10 +43,11 @@ export function WeekView({
 
   const weekDays = useMemo(() => {
     return getWeekDays(currentDate, {
-      weekStartsOn: 0,
+      weekStartsOn: tz.weekStartsOn ?? 0,
       timeZone: tz.timezone,
+      locale: tz.locale || "en-US",
     })
-  }, [currentDate, tz.timezone])
+  }, [currentDate, tz.timezone, tz.weekStartsOn, tz.locale])
 
   const hourSlots = useMemo(() => getHourSlots(), [])
 

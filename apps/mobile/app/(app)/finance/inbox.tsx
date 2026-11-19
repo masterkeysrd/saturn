@@ -30,6 +30,7 @@ import {
 import {
   invalidateFinanceQueries,
   useDebounce,
+  useI18n,
   useTimezone,
 } from "@saturn/hooks"
 import { canWriteWorkspace } from "@/lib/quick-capture"
@@ -73,6 +74,7 @@ export default function FinanceInboxScreen() {
   const queryClient = useQueryClient()
   const toast = useToast()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
   const { activeSpaceId, activeSpaceRole } = useSpace()
@@ -468,7 +470,7 @@ export default function FinanceInboxScreen() {
                     active && styles.filterPillTextActive,
                   ]}
                 >
-                  {opt.label}
+                  {opt.value === "" ? t("common.all") : opt.label}
                 </Text>
               </TouchableOpacity>
             )
@@ -528,8 +530,8 @@ export default function FinanceInboxScreen() {
             ) : (
               <EmptyState
                 icon={<CheckCircle2 size={30} color={colors.success} />}
-                title="Inbox Zero"
-                description="All forwarded receipts, invoices, and bank alerts have been reviewed and reconciled into your ledger."
+                title={t("empty.inboxZeroTitle")}
+                description={t("empty.inboxZeroDescription")}
               />
             )
           }

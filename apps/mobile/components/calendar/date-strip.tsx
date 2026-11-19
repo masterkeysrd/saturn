@@ -8,12 +8,14 @@ import {
   type MonthDayCell,
   type WeekDayHeader,
 } from "@saturn/core"
+import { useTimezone } from "@saturn/hooks"
 import { useThemedStyles, type SaturnMobileTheme } from "../../lib/theme"
 import { haptics } from "../../lib/haptics"
 
 export interface DateStripProps {
   selectedDate: Date
   timeZone: string
+  locale?: string
   weekStartsOn?: 0 | 1
   isExpanded: boolean
   onSelectDate: (date: Date) => void
@@ -95,12 +97,15 @@ function extractTouchPoint(event: unknown): TouchPoint | null {
 export function DateStrip({
   selectedDate,
   timeZone,
+  locale,
   weekStartsOn = 0,
   isExpanded,
   onSelectDate,
   eventsByDate,
 }: DateStripProps) {
   const styles = useThemedStyles(createStyles)
+  const tz = useTimezone()
+  const activeLocale = locale ?? tz.locale
   const touchStartRef = useRef<TouchPoint | null>(null)
 
   const selectedParts = useMemo(
@@ -116,8 +121,9 @@ export function DateStrip({
     return getWeekDays(selectedDate, {
       timeZone,
       weekStartsOn,
+      locale: activeLocale,
     })
-  }, [selectedDate, timeZone, weekStartsOn])
+  }, [selectedDate, timeZone, weekStartsOn, activeLocale])
 
   const monthMatrix = useMemo<MonthDayCell[][]>(() => {
     if (!selectedParts) return []
@@ -156,10 +162,15 @@ export function DateStrip({
     touchStartRef.current = null
   }
 
-  const weekdayInitials =
-    weekStartsOn === 1
-      ? ["M", "T", "W", "T", "F", "S", "S"]
-      : ["S", "M", "T", "W", "T", "F", "S"]
+  const weekdayInitials = useMemo(
+    () =>
+      weekDays.length === 7
+        ? weekDays.map((d) => d.dayName.slice(0, 1).toUpperCase())
+        : weekStartsOn === 1
+          ? ["M", "T", "W", "T", "F", "S", "S"]
+          : ["S", "M", "T", "W", "T", "F", "S"],
+    [weekDays, weekStartsOn]
+  )
 
   return (
     <View

@@ -61,8 +61,9 @@ function parseTagHeader(html: string, ltIdx: number): ParsedTagHeader | null {
     return null
   }
 
-  // Scan to closing '>' while respecting single/double quoted attribute values
+  // Scan to closing '>' while respecting quoted attribute values (only enter quote state after '=')
   let quote: string | null = null
+  let expectQuote = false
   let gt = -1
   for (let j = i; j < len; j++) {
     const ch = html[j]
@@ -70,11 +71,17 @@ function parseTagHeader(html: string, ltIdx: number): ParsedTagHeader | null {
       if (ch === quote) {
         quote = null
       }
-    } else if (ch === '"' || ch === "'") {
+    } else if (expectQuote && (ch === '"' || ch === "'")) {
       quote = ch
-    } else if (ch === ">") {
-      gt = j
-      break
+      expectQuote = false
+    } else if (ch === "=") {
+      expectQuote = true
+    } else if (!isWhitespace(ch)) {
+      expectQuote = false
+      if (ch === ">") {
+        gt = j
+        break
+      }
     }
   }
 
@@ -200,16 +207,16 @@ function isRemoteHttpUrl(value: string): boolean {
 function stripRemoteCssUrls(css: string): string {
   if (!css) return css
   let out = css.replace(
-    /@import\s+(?:url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*))\s*\)|"([^"]*)"|'([^']*)')[^;]*;?/gi,
-    (full, u1, u2, u3, u4, u5) => {
-      const target = String(u1 ?? u2 ?? u3 ?? u4 ?? u5 ?? "")
+    /@import\s+(?:url\(\s*(?:"([^"]*)"|'([^']*)'|(?:&#0*39;|&apos;)([\s\S]*?)(?:&#0*39;|&apos;)|(?:&#0*34;|&quot;)([\s\S]*?)(?:&#0*34;|&quot;)|([^)'"]*))\s*\)|"([^"]*)"|'([^']*)')[^;{}]*;?/gi,
+    (full, u1, u2, u3, u4, u5, u6, u7) => {
+      const target = String(u1 ?? u2 ?? u3 ?? u4 ?? u5 ?? u6 ?? u7 ?? "")
       return isRemoteHttpUrl(target) ? "" : full
     }
   )
   out = out.replace(
-    /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*))\s*\)/gi,
-    (full, u1, u2, u3) => {
-      const target = String(u1 ?? u2 ?? u3 ?? "")
+    /url\(\s*(?:"([^"]*)"|'([^']*)'|(?:&#0*39;|&apos;)([\s\S]*?)(?:&#0*39;|&apos;)|(?:&#0*34;|&quot;)([\s\S]*?)(?:&#0*34;|&quot;)|([^)'"]*))\s*\)/gi,
+    (full, u1, u2, u3, u4, u5) => {
+      const target = String(u1 ?? u2 ?? u3 ?? u4 ?? u5 ?? "")
       return isRemoteHttpUrl(target) ? "none" : full
     }
   )
@@ -243,9 +250,24 @@ function sanitizeOpeningTag(
 
   const { attrs, selfClosing } = parseTagAttributes(html, ltIdx, header)
   const keptParts: string[] = []
+  const isMediaTag =
+    header.tagNameLower === "img" ||
+    header.tagNameLower === "source" ||
+    header.tagNameLower === "iframe"
 
   for (const attr of attrs) {
     if (isEventHandlerAttr(attr.nameLower)) {
+      continue
+    }
+    if (isMediaTag && attr.nameLower === "loading") {
+      keptParts.push('loading="eager"')
+      continue
+    }
+    if (
+      isMediaTag &&
+      attr.nameLower === "decoding" &&
+      attr.value.trim().toLowerCase() === "async"
+    ) {
       continue
     }
     if (URI_ATTRS.has(attr.nameLower)) {
@@ -1015,10 +1037,25 @@ function normalizeProtocolRelativeSrcset(srcset: string): string {
     .join(", ")
 }
 
+function normalizeProtocolRelativeCssUrls(css: string): string {
+  return css.replace(
+    /url\(\s*(?:"([^"]*)"|'([^']*)'|(?:&#0*39;|&apos;)([\s\S]*?)(?:&#0*39;|&apos;)|(?:&#0*34;|&quot;)([\s\S]*?)(?:&#0*34;|&quot;)|([^)'"]*))\s*\)/gi,
+    (full, u1, u2, u3, u4, u5) => {
+      const raw = u1 ?? u2 ?? u3 ?? u4 ?? u5 ?? ""
+      const trimmed = String(raw).trim()
+      if (!trimmed.startsWith("//")) return full
+      const normalized = `https:${trimmed}`
+      if (u1 !== undefined || u4 !== undefined) return `url("${normalized}")`
+      if (u2 !== undefined || u3 !== undefined) return `url('${normalized}')`
+      return `url(${normalized})`
+    }
+  )
+}
+
 /**
- * Rewrites `data-saturn-remote-src`, `data-saturn-remote-srcset`, and
- * `data-saturn-remote-background` attributes on HTML tags back to their live
- * attributes in linear time without regex backtracking.
+ * Rewrites `data-saturn-remote-src`, `data-saturn-remote-srcset`,
+ * `data-saturn-remote-background`, and `data-saturn-remote-style` attributes on
+ * HTML tags back to their live attributes in linear time without regex backtracking.
  */
 export function restoreRemoteImageSrc(html: string): string {
   if (!html || !html.toLowerCase().includes("data-saturn-remote-")) {
@@ -1050,6 +1087,10 @@ export function restoreRemoteImageSrc(html: string): string {
       const rawTag = html.slice(lt, header.tagEnd + 1)
       if (rawTag.toLowerCase().includes("data-saturn-remote-")) {
         const { attrs, selfClosing } = parseTagAttributes(html, lt, header)
+        const isMediaTag =
+          header.tagNameLower === "img" ||
+          header.tagNameLower === "source" ||
+          header.tagNameLower === "iframe"
         const hasRemoteSrc = attrs.some(
           (a) => a.nameLower === "data-saturn-remote-src"
         )
@@ -1059,14 +1100,26 @@ export function restoreRemoteImageSrc(html: string): string {
         const hasRemoteBg = attrs.some(
           (a) => a.nameLower === "data-saturn-remote-background"
         )
+        const hasRemoteStyle = attrs.some(
+          (a) => a.nameLower === "data-saturn-remote-style"
+        )
 
         const rebuiltAttrs: string[] = []
         for (const attr of attrs) {
           if (hasRemoteSrc && attr.nameLower === "src") continue
           if (hasRemoteSrcset && attr.nameLower === "srcset") continue
           if (hasRemoteBg && attr.nameLower === "background") continue
+          if (hasRemoteStyle && attr.nameLower === "style") continue
 
-          if (attr.nameLower === "data-saturn-remote-src") {
+          if (isMediaTag && attr.nameLower === "loading") {
+            rebuiltAttrs.push('loading="eager"')
+          } else if (
+            isMediaTag &&
+            attr.nameLower === "decoding" &&
+            attr.value.trim().toLowerCase() === "async"
+          ) {
+            continue
+          } else if (attr.nameLower === "data-saturn-remote-src") {
             const val = normalizeProtocolRelativeUrl(attr.value).replace(
               /"/g,
               "&quot;"
@@ -1084,6 +1137,12 @@ export function restoreRemoteImageSrc(html: string): string {
               "&quot;"
             )
             rebuiltAttrs.push(`background="${val}"`)
+          } else if (attr.nameLower === "data-saturn-remote-style") {
+            const val = normalizeProtocolRelativeCssUrls(attr.value).replace(
+              /"/g,
+              "&quot;"
+            )
+            rebuiltAttrs.push(`style="${val}"`)
           } else {
             rebuiltAttrs.push(attr.raw)
           }

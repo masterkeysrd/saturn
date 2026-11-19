@@ -12,6 +12,8 @@ import {
 } from "lucide-react-native"
 import type { MailboxRole } from "@saturn/api/saturn/mail/v1/mail"
 import type { ConnectedAccount } from "@saturn/api/saturn/platform/connector/v1/connector"
+import { useI18n } from "@saturn/hooks"
+import type { TranslationKey } from "@saturn/i18n"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
@@ -28,17 +30,37 @@ export interface AccountBucketBarProps {
 
 interface BucketChip {
   role: MailboxRole
-  label: string
+  translationKey: TranslationKey
   icon: typeof Inbox
 }
 
 const BUCKET_CHIPS: BucketChip[] = [
-  { role: "MAILBOX_ROLE_INBOX", label: "Inbox", icon: Inbox },
-  { role: "MAILBOX_ROLE_STARRED", label: "Starred", icon: Star },
-  { role: "MAILBOX_ROLE_SENT", label: "Sent", icon: Send },
-  { role: "MAILBOX_ROLE_DRAFTS", label: "Drafts", icon: FileEdit },
-  { role: "MAILBOX_ROLE_ARCHIVE", label: "Archive", icon: Archive },
-  { role: "MAILBOX_ROLE_TRASH", label: "Trash", icon: Trash2 },
+  {
+    role: "MAILBOX_ROLE_INBOX",
+    translationKey: "mail.bucket.inbox",
+    icon: Inbox,
+  },
+  {
+    role: "MAILBOX_ROLE_STARRED",
+    translationKey: "mail.bucket.starred",
+    icon: Star,
+  },
+  { role: "MAILBOX_ROLE_SENT", translationKey: "mail.bucket.sent", icon: Send },
+  {
+    role: "MAILBOX_ROLE_DRAFTS",
+    translationKey: "mail.bucket.drafts",
+    icon: FileEdit,
+  },
+  {
+    role: "MAILBOX_ROLE_ARCHIVE",
+    translationKey: "mail.bucket.archive",
+    icon: Archive,
+  },
+  {
+    role: "MAILBOX_ROLE_TRASH",
+    translationKey: "mail.bucket.trash",
+    icon: Trash2,
+  },
 ]
 
 export function AccountBucketBar({
@@ -51,6 +73,7 @@ export function AccountBucketBar({
   onToggleUnreadFilter,
   unreadCounts = {},
 }: AccountBucketBarProps) {
+  const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
 
@@ -97,7 +120,7 @@ export function AccountBucketBar({
                 !selectedAccountId && styles.accountChipTextActive,
               ]}
             >
-              All Accounts
+              {t("mail.allAccounts")}
             </Text>
           </Pressable>
 
@@ -155,7 +178,7 @@ export function AccountBucketBar({
               isUnreadFilter && styles.bucketChipTextActive,
             ]}
           >
-            Unread
+            {t("mail.unread")}
           </Text>
         </Pressable>
 
@@ -182,7 +205,7 @@ export function AccountBucketBar({
                   isSelected && styles.bucketChipTextActive,
                 ]}
               >
-                {chip.label}
+                {t(chip.translationKey)}
               </Text>
 
               {count > 0 && (
