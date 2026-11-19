@@ -178,18 +178,54 @@ export function SandboxedEmailFrame({
       background-color: #ffffff;
       color: #18181b;
       overflow-y: hidden !important;
-      word-break: break-word;
+      overflow-wrap: break-word;
     }
     body {
       overflow-x: auto;
       ${bodyPaddingCss}
     }
+    /* Preserve explicit icon heights & table-cell intrinsic widths (e.g. GitHub octicons/checks) like Gmail */
     img {
-      max-width: 100% !important;
-      height: auto !important;
+      max-width: 100%;
+    }
+    img:not([height]):not([style*="height"]) {
+      height: auto;
+    }
+    td img[width],
+    th img[width],
+    a > img[width],
+    span > img[width],
+    p > img[width],
+    li > img[width],
+    h1 > img[width],
+    h2 > img[width],
+    h3 > img[width],
+    h4 > img[width] {
+      max-width: none;
+    }
+    img[align="absmiddle"],
+    img[align="middle"] {
+      vertical-align: middle;
+    }
+    img[align="absbottom"] {
+      vertical-align: bottom;
+    }
+    img[align="texttop"] {
+      vertical-align: text-top;
     }
     table {
-      max-width: 100% !important;
+      line-height: normal;
+    }
+    img[data-saturn-remote-src]:not([src])[alt=""],
+    img[data-saturn-remote-src]:not([src])[width="1"],
+    img[data-saturn-remote-src]:not([src])[height="1"] {
+      display: none !important;
+    }
+    #saturn-email-root [style*="100vh"],
+    #saturn-email-root table[height="100%"],
+    #saturn-email-root td[height="100%"] {
+      height: auto !important;
+      min-height: 0 !important;
     }
     a {
       color: #2563eb;

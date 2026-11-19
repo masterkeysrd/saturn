@@ -8,30 +8,100 @@ import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
-export function AppHeader() {
+export interface SpaceSwitcherChipProps {
+  compact?: boolean
+  testID?: string
+}
+
+export function SpaceSwitcherChip({
+  compact = false,
+  testID = "space-switcher-chip",
+}: SpaceSwitcherChipProps) {
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
   const router = useRouter()
-  const insets = useSafeAreaInsets()
-  const { activeSpace, activeSpaceId } = useSpace()
-
-  const { data: threadsData } = useListThreadsQuery(
-    { isArchived: false, pageSize: 20, pageToken: "" },
-    { enabled: Boolean(activeSpaceId) }
-  )
-  const hasPendingApproval = (threadsData?.threads ?? []).some(
-    (t) => t.status === "awaiting_approval"
-  )
+  const { activeSpace } = useSpace()
 
   const handleSwitchSpace = () => {
     haptics.light()
     router.push("/modal/switch-space")
   }
 
+  return (
+    <TouchableOpacity
+      style={[styles.spacePill, compact && styles.spacePillCompact]}
+      activeOpacity={0.7}
+      onPress={handleSwitchSpace}
+      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+      accessibilityRole="button"
+      accessibilityLabel={`Switch workspace, current ${activeSpace?.name || "Personal"}`}
+      testID={testID}
+    >
+      <Text
+        style={[styles.spaceName, compact && styles.spaceNameCompact]}
+        numberOfLines={1}
+      >
+        {activeSpace?.name || "Personal"}
+      </Text>
+      <ChevronDown size={compact ? 12 : 13} color={colors.textMuted} />
+    </TouchableOpacity>
+  )
+}
+
+export interface AIHeaderButtonProps {
+  hasPendingApproval?: boolean
+  testID?: string
+}
+
+export function AIHeaderButton({
+  hasPendingApproval: hasPendingApprovalProp,
+  testID = "ai-header-button",
+}: AIHeaderButtonProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+  const router = useRouter()
+  const { activeSpaceId } = useSpace()
+
+  const { data: threadsData } = useListThreadsQuery(
+    { isArchived: false, pageSize: 20, pageToken: "" },
+    {
+      enabled: Boolean(activeSpaceId) && hasPendingApprovalProp === undefined,
+    }
+  )
+
+  const hasPendingApproval =
+    hasPendingApprovalProp !== undefined
+      ? hasPendingApprovalProp
+      : (threadsData?.threads ?? []).some(
+          (t) => t.status === "awaiting_approval"
+        )
+
   const handleOpenAI = () => {
     haptics.light()
     router.push("/(app)/ai" as never)
   }
+
+  return (
+    <TouchableOpacity
+      style={[styles.iconButton, styles.aiButton]}
+      activeOpacity={0.7}
+      onPress={handleOpenAI}
+      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+      accessibilityRole="button"
+      accessibilityLabel="Open AI Assistant"
+      testID={testID}
+    >
+      <Sparkles size={16} color={colors.primary} />
+      {hasPendingApproval && <View style={styles.approvalDot} />}
+    </TouchableOpacity>
+  )
+}
+
+export function AppHeader() {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+  const router = useRouter()
+  const insets = useSafeAreaInsets()
 
   const handleSettings = () => {
     haptics.light()
@@ -54,36 +124,18 @@ export function AppHeader() {
         <Text style={styles.brandTitle}>Saturn</Text>
       </View>
 
-      {/* Right controls: Space Switcher pill + Notification Bell + Settings */}
+      {/* Right controls: Space Switcher pill + AI Assistant + Settings */}
       <View style={styles.rightControls}>
-        <TouchableOpacity
-          style={styles.spacePill}
-          activeOpacity={0.7}
-          onPress={handleSwitchSpace}
-          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-        >
-          <Text style={styles.spaceName} numberOfLines={1}>
-            {activeSpace?.name || "Personal"}
-          </Text>
-          <ChevronDown size={13} color={colors.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.iconButton, styles.aiButton]}
-          activeOpacity={0.7}
-          onPress={handleOpenAI}
-          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-          accessibilityLabel="Open AI Assistant"
-        >
-          <Sparkles size={16} color={colors.primary} />
-          {hasPendingApproval && <View style={styles.approvalDot} />}
-        </TouchableOpacity>
+        <SpaceSwitcherChip />
+        <AIHeaderButton />
 
         <TouchableOpacity
           style={styles.iconButton}
           activeOpacity={0.7}
           onPress={handleSettings}
           hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          accessibilityRole="button"
+          accessibilityLabel="Open Settings"
         >
           <Settings size={17} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -144,11 +196,20 @@ const createStyles = (t: SaturnMobileTheme) => ({
     gap: 5,
     maxWidth: 120,
   },
+  spacePillCompact: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    gap: 4,
+    maxWidth: 96,
+  },
   spaceName: {
     fontSize: 13,
     fontWeight: "600" as const,
     color: t.colors.textPrimary,
     flexShrink: 1,
+  },
+  spaceNameCompact: {
+    fontSize: 12,
   },
   iconButton: {
     width: 32,

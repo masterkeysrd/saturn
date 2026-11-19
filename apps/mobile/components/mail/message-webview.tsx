@@ -12,6 +12,10 @@ import type { Attachment } from "@saturn/api/saturn/mail/v1/mail"
 import { getApiBaseUrl } from "@/lib/config"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
+import {
+  buildMobileMessageDocumentHtml,
+  INJECTED_EMAIL_LAYOUT_JS,
+} from "./message-webview-html"
 
 export interface MessageWebViewProps {
   html: string
@@ -20,36 +24,6 @@ export interface MessageWebViewProps {
   attachments?: Attachment[]
   onLinkPress?: (url: string) => void
 }
-
-const INJECTED_HEIGHT_MEASURE_JS = `
-(function() {
-  function postHeight() {
-    var body = document.body;
-    var html = document.documentElement;
-    var height = Math.max(
-      body ? body.scrollHeight : 0,
-      body ? body.offsetHeight : 0,
-      html ? html.scrollHeight : 0,
-      html ? html.offsetHeight : 0
-    );
-    if (window.ReactNativeWebView && height > 0) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'RESIZE', height: height }));
-    }
-  }
-
-  window.addEventListener('load', postHeight);
-  setTimeout(postHeight, 100);
-  setTimeout(postHeight, 500);
-  setTimeout(postHeight, 1500);
-
-  // Measure when images load
-  var images = document.images || [];
-  for (var i = 0; i < images.length; i++) {
-    images[i].addEventListener('load', postHeight);
-  }
-})();
-true;
-`
 
 export function MessageWebView({
   html,
@@ -61,104 +35,31 @@ export function MessageWebView({
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
   const [loadImages, setLoadImages] = useState(false)
-  const [webViewHeight, setWebViewHeight] = useState(100)
+  const [webViewHeight, setWebViewHeight] = useState(48)
   const [containerWidth, setContainerWidth] = useState(300)
 
   const containsRemoteImages = useMemo(() => {
     return Boolean(
       hasRemoteImages ||
-      (html && /data-saturn-remote-(?:src|srcset|background)/i.test(html))
+      (html &&
+        (/data-saturn-remote-(?:src|srcset|background)/i.test(html) ||
+          /<(?:img|image|source)\b[^>]*\b(?:src|srcset)\s*=\s*["']?(?:https?:|\/\/)/i.test(
+            html
+          )))
     )
   }, [hasRemoteImages, html])
 
-  const processedHtml = useMemo(() => {
-    let source = html?.trim()
-    if (!source && plainText) {
-      const escaped = plainText
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;")
-        .replace(/\n/g, "<br>")
-      source = `<div style="white-space: pre-wrap; font-family: -apple-system, system-ui; font-size: 14px; line-height: 1.5; color: #18181b;">${escaped}</div>`
-    }
-    if (!source)
-      return "<div style='color: #71717a; font-family: -apple-system, system-ui; font-size: 13px;'>(Empty message)</div>"
-
-    // 1. Resolve and rewrite cid: inline attachments
-    if (attachments && attachments.length > 0) {
-      const baseUrl = getApiBaseUrl().replace(/\/$/, "")
-      for (const att of attachments) {
-        if (!att.downloadUrl) continue
-        const resolvedUrl = att.downloadUrl.startsWith("http")
-          ? att.downloadUrl
-          : `${baseUrl}${att.downloadUrl}`
-        if (att.contentId) {
-          const cleanCid = att.contentId.replace(/^<|>$/g, "").trim()
-          source = source.replaceAll(`cid:${cleanCid}`, resolvedUrl)
-          source = source.replaceAll(`CID:${cleanCid}`, resolvedUrl)
-          source = source.replaceAll(`cid:<${cleanCid}>`, resolvedUrl)
-          source = source.replaceAll(`CID:<${cleanCid}>`, resolvedUrl)
-        }
-        if (att.filename && att.isInline) {
-          source = source.replaceAll(`cid:${att.filename}`, resolvedUrl)
-          source = source.replaceAll(`CID:${att.filename}`, resolvedUrl)
-        }
-      }
-    }
-
-    // 2. Unblock remote images when user opts in
-    if (loadImages) {
-      source = source.replace(
-        /data-saturn-remote-src=(["'])(.*?)\1/gi,
-        'src="$2"'
-      )
-    }
-
-    return source
-  }, [html, plainText, attachments, loadImages])
-
-  // Construct complete clean HTML document for native mobile viewing
-  const fullHtmlDocument = useMemo(() => {
-    return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <style>
-    :root {
-      color-scheme: light;
-    }
-    html, body {
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      font-size: 14px;
-      line-height: 1.55;
-      background-color: #ffffff;
-      color: #18181b;
-      word-break: break-word;
-      overflow-x: hidden;
-    }
-    img {
-      max-width: 100% !important;
-      height: auto !important;
-    }
-    table {
-      max-width: 100% !important;
-    }
-    a {
-      color: #2563eb;
-      text-decoration: underline;
-    }
-  </style>
-</head>
-<body>
-  ${processedHtml}
-</body>
-</html>`
-  }, [processedHtml])
+  const fullHtmlDocument = useMemo(
+    () =>
+      buildMobileMessageDocumentHtml({
+        html,
+        plainText,
+        attachments,
+        loadImages,
+        apiBaseUrl: getApiBaseUrl(),
+      }),
+    [html, plainText, attachments, loadImages]
+  )
 
   const handleMessage = useCallback(
     (event: { nativeEvent: { data: string } }) => {
@@ -169,7 +70,8 @@ export function MessageWebView({
           typeof data.height === "number" &&
           data.height > 0
         ) {
-          setWebViewHeight(Math.ceil(data.height) + 12)
+          const nextHeight = Math.max(36, Math.ceil(data.height))
+          setWebViewHeight((prev) => (prev === nextHeight ? prev : nextHeight))
         }
       } catch {
         // Ignore malformed messages
@@ -180,7 +82,6 @@ export function MessageWebView({
 
   const handleShouldStartLoadWithRequest = useCallback(
     (request: WebViewNavigation) => {
-      // Allow the initial internal blank load
       if (
         request.url === "about:blank" ||
         request.url.startsWith("about:blank") ||
@@ -189,7 +90,6 @@ export function MessageWebView({
         return true
       }
 
-      // External links must never navigate inside the email WebView
       if (
         request.url.startsWith("http://") ||
         request.url.startsWith("https://") ||
@@ -218,7 +118,6 @@ export function MessageWebView({
 
   return (
     <View style={styles.container} onLayout={handleLayout}>
-      {/* Remote images privacy banner */}
       {containsRemoteImages && !loadImages && (
         <View style={styles.bannerContainer}>
           <View style={styles.bannerTextRow}>
@@ -239,7 +138,6 @@ export function MessageWebView({
         </View>
       )}
 
-      {/* Sandboxed WebView Body */}
       <View
         style={[
           styles.webViewWrapper,
@@ -250,7 +148,7 @@ export function MessageWebView({
           testID="mobile-message-webview"
           originWhitelist={["about:blank", "https://*", "http://*"]}
           source={{ html: fullHtmlDocument, baseUrl: "about:blank" }}
-          injectedJavaScript={INJECTED_HEIGHT_MEASURE_JS}
+          injectedJavaScript={INJECTED_EMAIL_LAYOUT_JS}
           onMessage={handleMessage}
           onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
           scrollEnabled={false}

@@ -35,6 +35,10 @@ import {
   type CurrencyInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useSpace } from "@/lib/space-context"
+import {
+  resolveTransactionFlowType,
+  type TransactionFlowType,
+} from "@/lib/quick-capture"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import {
@@ -45,8 +49,7 @@ import {
   BorrowingForm,
 } from "@/components/finance/forms"
 
-export type TransactionFlowType =
-  "EXPENSE" | "INCOME" | "TRANSFER" | "SCHEDULED" | "BORROWING"
+export type { TransactionFlowType }
 
 export default function AddTransactionModal() {
   const router = useRouter()
@@ -56,23 +59,28 @@ export default function AddTransactionModal() {
   const {
     id: editTransactionId,
     type: initialType,
+    tab: initialTab,
     accountId: initialAccountId,
     budgetId: initialBudgetId,
     scheduledTransactionId: initialScheduledId,
     borrowingId: initialBorrowingId,
   } = useLocalSearchParams<{
     id?: string
-    type?: TransactionFlowType
+    type?: string
+    tab?: string
     accountId?: string
     budgetId?: string
     scheduledTransactionId?: string
     borrowingId?: string
   }>()
   const isEditMode = !!editTransactionId
-
-  const [activeType, setActiveType] = useState<TransactionFlowType>(
-    initialType || "EXPENSE"
+  const resolvedInitialType = resolveTransactionFlowType(
+    initialType,
+    initialTab
   )
+
+  const [activeType, setActiveType] =
+    useState<TransactionFlowType>(resolvedInitialType)
   const [selectedAccountId, setSelectedAccountId] = useState<
     string | undefined
   >(initialAccountId)
@@ -143,12 +151,16 @@ export default function AddTransactionModal() {
     { enabled: isEditMode }
   )
 
-  // Sync activeType if editing existing transaction
+  // Sync activeType if editing existing transaction or if route query params change
   useEffect(() => {
     if (existingTx) {
       setActiveType(existingTx.type === "INCOME" ? "INCOME" : "EXPENSE")
+      return
     }
-  }, [existingTx])
+    if (!isEditMode) {
+      setActiveType(resolvedInitialType)
+    }
+  }, [existingTx, isEditMode, resolvedInitialType])
 
   if (isEditMode && txLoading) {
     return (

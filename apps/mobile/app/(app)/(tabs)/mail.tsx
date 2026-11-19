@@ -10,10 +10,11 @@ import {
 } from "react-native"
 import { FlatList, RefreshControl } from "react-native-gesture-handler"
 import { useRouter } from "expo-router"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   Search,
   X,
-  Edit,
+  PenSquare,
   Inbox,
   AlertCircle,
   FileEdit,
@@ -33,6 +34,8 @@ import type {
   Draft,
 } from "@saturn/api/saturn/mail/v1/mail"
 import { stripHtmlToPlainText } from "@saturn/core"
+import { SpaceSwitcherChip, AIHeaderButton } from "@/components/app-header"
+import { QuickCaptureFab } from "@/components/ui/quick-capture-sheet"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -41,6 +44,7 @@ import { SwipeableThreadRow, AccountBucketBar } from "@/components/mail"
 
 export default function MobileMailScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
   const { colors, isDark } = useTheme()
@@ -288,7 +292,6 @@ export default function MobileMailScreen() {
   }
 
   const handleOpenCompose = () => {
-    haptics.selection()
     router.push({
       pathname: "/modal/compose-mail",
       params: {
@@ -299,23 +302,11 @@ export default function MobileMailScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Account & System Bucket Selector Bar */}
-      <AccountBucketBar
-        accounts={accounts}
-        selectedAccountId={selectedAccountId}
-        onSelectAccount={setSelectedAccountId}
-        selectedRole={selectedRole}
-        onSelectRole={(role) => {
-          setIsUnreadFilter(false)
-          setSelectedRole(role)
-        }}
-        isUnreadFilter={isUnreadFilter}
-        onToggleUnreadFilter={() => setIsUnreadFilter((prev) => !prev)}
-        unreadCounts={unreadCounts}
-      />
-
-      {/* Search Input Bar */}
-      <View style={styles.searchBarContainer}>
+      {/* Single-Row Safe-Area Mail Header: Space Switcher + Search + AI */}
+      <View
+        style={[styles.topHeader, { paddingTop: Math.max(insets.top, 10) + 4 }]}
+      >
+        <SpaceSwitcherChip compact />
         <View style={styles.searchInner}>
           <Search size={15} color={colors.textMuted} />
           <TextInput
@@ -336,15 +327,33 @@ export default function MobileMailScreen() {
             <Pressable
               hitSlop={8}
               onPress={() => {
+                haptics.light()
                 setSearchQuery("")
                 setDebouncedSearch("")
               }}
+              accessibilityLabel="Clear search"
             >
               <X size={15} color={colors.textMuted} />
             </Pressable>
           )}
         </View>
+        <AIHeaderButton />
       </View>
+
+      {/* Account & System Bucket Selector Bar */}
+      <AccountBucketBar
+        accounts={accounts}
+        selectedAccountId={selectedAccountId}
+        onSelectAccount={setSelectedAccountId}
+        selectedRole={selectedRole}
+        onSelectRole={(role) => {
+          setIsUnreadFilter(false)
+          setSelectedRole(role)
+        }}
+        isUnreadFilter={isUnreadFilter}
+        onToggleUnreadFilter={() => setIsUnreadFilter((prev) => !prev)}
+        unreadCounts={unreadCounts}
+      />
 
       {/* Thread / Drafts List */}
       {isDraftsBucket ? (
@@ -511,13 +520,12 @@ export default function MobileMailScreen() {
       )}
 
       {/* Floating Compose Button */}
-      <Pressable
-        testID="mobile-compose-fab"
+      <QuickCaptureFab
+        testID="mail-fab-compose"
+        accessibilityLabel="Compose email"
+        icon={<PenSquare size={22} color={colors.primaryForeground} />}
         onPress={handleOpenCompose}
-        style={styles.fab}
-      >
-        <Edit size={22} color={colors.primaryForeground} />
-      </Pressable>
+      />
     </View>
   )
 }
@@ -527,14 +535,19 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flex: 1,
     backgroundColor: t.colors.background,
   },
-  searchBarContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  topHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
     backgroundColor: t.colors.background,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: t.colors.border,
   },
   searchInner: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: "row" as const,
     alignItems: "center" as const,
     backgroundColor: t.colors.surface,
@@ -542,7 +555,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     borderColor: t.colors.border,
     borderRadius: t.radius.md,
     paddingHorizontal: 10,
-    height: 38,
+    height: 36,
     gap: 8,
   },
   searchInput: {
@@ -588,7 +601,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   listContent: {
     flexGrow: 1,
-    paddingBottom: 80,
+    paddingBottom: 96,
   },
   footerLoader: {
     paddingVertical: 16,
@@ -609,18 +622,6 @@ const createStyles = (t: SaturnMobileTheme) => ({
     fontSize: 13,
     fontWeight: "600" as const,
     color: t.colors.primary,
-  },
-  fab: {
-    position: "absolute" as const,
-    bottom: 24,
-    right: 20,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: t.colors.primary,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    ...t.shadows.lg,
   },
   draftRow: {
     flexDirection: "row" as const,

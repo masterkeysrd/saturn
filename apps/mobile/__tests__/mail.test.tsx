@@ -11,6 +11,10 @@ import {
   stripHtmlToPlainText,
 } from "@saturn/core"
 import { buildMobileEditorDocumentHtml } from "../components/mail/email-editor-html"
+import {
+  buildMobileMessageDocumentHtml,
+  INJECTED_EMAIL_LAYOUT_JS,
+} from "../components/mail/message-webview-html"
 
 // Mock haptics
 vi.mock("../lib/haptics", () => ({
@@ -621,6 +625,57 @@ describe("Mobile Mail Feature Logic & Component Unit Tests", () => {
           downloadUrl: "/api/v1/mail/attachments/tok_99",
         })
       ).toBe(false)
+    })
+  })
+
+  describe("Mobile Email HTML Document & GitHub Icon Alignment", () => {
+    it("isolates email height in #saturn-email-root, neutralizes 100vh/height:100% wrappers, and preserves inline icon dimensions", () => {
+      const githubHtml = `
+        <style>html, body { height: 100% !important; }</style>
+        <table height="100%" width="600">
+          <tr>
+            <td><img data-saturn-remote-src="https://github.githubassets.com/images/icons/check.png" width="16" height="16" align="absmiddle" alt="passed"></td>
+            <td>All checks have passed on pull request #42</td>
+          </tr>
+        </table>
+        <img data-saturn-remote-src="https://github.com/notifications/beacon/123.gif" width="1" height="1" alt="">
+        <p><br></p>
+      `
+
+      const blockedDoc = buildMobileMessageDocumentHtml({
+        html: githubHtml,
+        loadImages: false,
+      })
+
+      expect(blockedDoc).toContain('id="saturn-email-viewport"')
+      expect(blockedDoc).toContain('id="saturn-email-root"')
+      expect(blockedDoc).toContain("img-src data: blob:")
+      expect(blockedDoc).toContain(
+        "html, body { height: auto !important; min-height: 0 !important; }"
+      )
+      // Must NOT clobber explicit icon height="16" or crush table-cell icons with !important
+      expect(blockedDoc).not.toMatch(/img\s*\{[^}]*height:\s*auto\s*!important/)
+      expect(blockedDoc).not.toMatch(
+        /table\s*\{[^}]*max-width:\s*100%\s*!important/
+      )
+      expect(blockedDoc).toContain('img[align="absmiddle"]')
+      expect(blockedDoc).toContain("td img[width]")
+      // Trailing empty <p><br></p> stripped and remote images blocked until opt-in
+      expect(blockedDoc).not.toContain("<p><br></p>")
+      expect(blockedDoc).toContain("data-saturn-remote-src=")
+
+      const unblockedDoc = buildMobileMessageDocumentHtml({
+        html: githubHtml,
+        loadImages: true,
+      })
+      expect(unblockedDoc).toContain(
+        'src="https://github.githubassets.com/images/icons/check.png"'
+      )
+
+      // Layout script measures #saturn-email-root bounding rect and proportionally scales wide tables
+      expect(INJECTED_EMAIL_LAYOUT_JS).toContain("getBoundingClientRect")
+      expect(INJECTED_EMAIL_LAYOUT_JS).toContain("scale(")
+      expect(INJECTED_EMAIL_LAYOUT_JS).not.toContain("html.offsetHeight")
     })
   })
 })

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef } from "react"
 import {
   Text,
   View,
@@ -8,6 +8,8 @@ import {
   Alert,
 } from "react-native"
 import { useRouter } from "expo-router"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import BottomSheet from "@gorhom/bottom-sheet"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   ReceiptText,
@@ -52,6 +54,15 @@ import {
   type ListScheduledTransactionsRequest,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
+import { SpaceSwitcherChip, AIHeaderButton } from "@/components/app-header"
+import {
+  QuickCaptureFab,
+  QuickCaptureSheet,
+} from "@/components/ui/quick-capture-sheet"
+import {
+  canWriteWorkspace,
+  getFinanceQuickCaptureActions,
+} from "@/lib/quick-capture"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
@@ -92,12 +103,19 @@ const detailsIcon = Icon.select({
 
 export default function FinanceHubScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const queryClient = useQueryClient()
-  const { activeSpaceId } = useSpace()
+  const { activeSpaceId, activeSpaceRole } = useSpace()
+  const isViewer = !canWriteWorkspace(activeSpaceRole)
+  const quickActionsRef = useRef<BottomSheet>(null)
   const tz = useTimezone()
   const { colors, resolvedMode } = useTheme()
   const styles = useThemedStyles(createStyles)
   const [refreshing, setRefreshing] = useState(false)
+  const financeQuickActions = useMemo(
+    () => getFinanceQuickCaptureActions(activeSpaceRole),
+    [activeSpaceRole]
+  )
 
   // 1. Settings & Base Currency
   const { data: settingsData } = useGetSettingsQuery(
@@ -424,6 +442,20 @@ export default function FinanceHubScreen() {
 
   return (
     <View style={styles.safeArea}>
+      {/* Single-Row Safe-Area Finance Header */}
+      <View
+        style={[styles.topHeader, { paddingTop: Math.max(insets.top, 10) + 4 }]}
+      >
+        <View style={styles.topHeaderLeft}>
+          <SpaceSwitcherChip />
+          <Text style={styles.topHeaderTitle} numberOfLines={1}>
+            Finance
+          </Text>
+          <Badge size="sm" label={baseCurrency} />
+        </View>
+        <AIHeaderButton />
+      </View>
+
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -1250,6 +1282,24 @@ export default function FinanceHubScreen() {
           )}
         </View>
       </ScrollView>
+
+      {!isViewer && (
+        <>
+          <QuickCaptureFab
+            testID="finance-fab-add"
+            accessibilityLabel="Add transaction"
+            accessibilityHint="Tap to record an expense, or long press for more finance actions"
+            onPress={() => router.push("/modal/add-transaction?type=EXPENSE")}
+            onLongPress={() => quickActionsRef.current?.expand()}
+          />
+          <QuickCaptureSheet
+            ref={quickActionsRef}
+            title="Finance Quick Actions"
+            actions={financeQuickActions}
+            onClose={() => quickActionsRef.current?.close()}
+          />
+        </>
+      )}
     </View>
   )
 }
@@ -1259,6 +1309,31 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flex: 1,
     backgroundColor: t.colors.background,
   },
+  topHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+    backgroundColor: t.colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: t.colors.border,
+  },
+  topHeaderLeft: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    flex: 1,
+    minWidth: 0,
+  },
+  topHeaderTitle: {
+    fontSize: 18,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
+    letterSpacing: -0.4,
+    flexShrink: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: t.colors.background,
@@ -1266,7 +1341,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
   content: {
     padding: 16,
     paddingTop: 12,
-    paddingBottom: 80,
+    paddingBottom: 96,
     gap: 18,
   },
   pillsScroll: {

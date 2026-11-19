@@ -1,8 +1,6 @@
 import { Text, View, ScrollView, TouchableOpacity, Alert } from "react-native"
 import { useRouter } from "expo-router"
 import {
-  Calendar,
-  Mail,
   ReceiptText,
   PiggyBank,
   Landmark,
@@ -20,14 +18,22 @@ import {
   Sun,
   Moon,
   Smartphone,
+  ShieldCheck,
+  KeyRound,
+  ArrowLeftRight,
 } from "lucide-react-native"
+import { useListInboxItemsQuery } from "@saturn/api/saturn/finance/v1/finance"
+import { useListThreadsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
+import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
+import { formatTabBadgeCount } from "@/lib/tab-badges"
 import {
   useTheme,
   useThemedStyles,
   type SaturnMobileTheme,
   type ThemeMode,
 } from "@/lib/theme"
+import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { haptics } from "@/lib/haptics"
@@ -44,9 +50,36 @@ const APPEARANCE_OPTIONS: readonly {
 
 export default function MenuScreen() {
   const router = useRouter()
-  const { activeSpaceRole } = useSpace()
+  const { user } = useAuth()
+  const { activeSpace, activeSpaceId, activeSpaceRole } = useSpace()
   const { mode, setMode, colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+
+  const { data: inboxData } = useListInboxItemsQuery(
+    {
+      status: "PENDING",
+      pageSize: 50,
+      pageToken: "",
+      sort: "",
+      view: "BASIC",
+    },
+    { enabled: Boolean(activeSpaceId), retry: false }
+  )
+  const pendingInboxCount = inboxData?.inboxItems?.length ?? 0
+  const pendingInboxBadge = formatTabBadgeCount(pendingInboxCount)
+
+  const { data: threadsData } = useListThreadsQuery(
+    { isArchived: false, pageSize: 20, pageToken: "" },
+    { enabled: Boolean(activeSpaceId) }
+  )
+  const hasApprovalNeeded = (threadsData?.threads ?? []).some(
+    (t) => t.status === "awaiting_approval"
+  )
+
+  const displayName =
+    user?.name && user.name !== "User"
+      ? user.name
+      : user?.username || user?.email || "Saturn User"
 
   const navigateTo = (path: string) => {
     haptics.light()
@@ -69,39 +102,127 @@ export default function MenuScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Section 1: Calendar & Mail */}
+        {/* Profile & Workspace Switcher Card */}
+        <Card style={styles.profileCard}>
+          <TouchableOpacity
+            style={styles.profileTopRow}
+            activeOpacity={0.7}
+            onPress={() => navigateTo("/(app)/settings")}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile and settings"
+            testID="menu-profile-row"
+          >
+            <Avatar name={displayName} imageUri={user?.avatarUrl} size={44} />
+            <View style={styles.profileTextCol}>
+              <Text style={styles.profileName} numberOfLines={1}>
+                {displayName}
+              </Text>
+              {user?.email ? (
+                <Text style={styles.profileEmail} numberOfLines={1}>
+                  {user.email}
+                </Text>
+              ) : null}
+            </View>
+            <ChevronRight size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+
+          <View style={styles.workspaceRow}>
+            <View style={styles.workspaceInfo}>
+              <Text style={styles.workspaceCaption}>Active workspace</Text>
+              <View style={styles.workspaceTitleRow}>
+                <Text style={styles.workspaceName} numberOfLines={1}>
+                  {activeSpace?.name || "Personal"}
+                </Text>
+                <Badge
+                  variant={activeSpaceRole === "owner" ? "primary" : "default"}
+                  size="sm"
+                  label={activeSpaceRole.toUpperCase()}
+                />
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.switchBtn}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/modal/switch-space")}
+              accessibilityRole="button"
+              accessibilityLabel="Switch workspace"
+              testID="menu-switch-space-btn"
+            >
+              <ArrowLeftRight size={13} color={colors.primary} />
+              <Text style={styles.switchBtnText}>Switch</Text>
+            </TouchableOpacity>
+          </View>
+        </Card>
+
+        {/* Section 1: Triage & Automation */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>CALENDAR & MAIL</Text>
+          <Text style={styles.sectionHeader}>Triage & Automation</Text>
           <Card style={styles.menuGroup}>
             <TouchableOpacity
               style={[styles.menuItem, styles.menuItemBorder]}
               activeOpacity={0.7}
-              onPress={() => navigateTo("/(app)/(tabs)/calendar")}
+              onPress={() =>
+                showWebOnlyNotice(
+                  "Review Queue / Inbox",
+                  "Email-forwarded bank alerts and receipt ingestion review is an administrative workflow optimized for wide desktop screens."
+                )
+              }
+              testID="menu-review-queue"
             >
               <View style={styles.menuLeft}>
-                <Calendar size={18} color={colors.primary} />
-                <Text style={styles.menuLabel}>Calendar</Text>
+                <Inbox size={18} color={colors.primary} />
+                <Text style={styles.menuLabel}>Review Queue (Inbox)</Text>
               </View>
-              <ChevronRight size={16} color={colors.textMuted} />
+              <View style={styles.menuRight}>
+                {pendingInboxBadge !== undefined ? (
+                  <Badge
+                    variant="primary"
+                    size="sm"
+                    label={String(pendingInboxBadge)}
+                  />
+                ) : (
+                  <Badge variant="outline" size="sm" label="Web Only" />
+                )}
+                <ChevronRight size={16} color={colors.textMuted} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/ai")}
+              testID="menu-ai-assistant"
+            >
+              <View style={styles.menuLeft}>
+                <Sparkles size={18} color={colors.brandSecondary} />
+                <Text style={styles.menuLabel}>AI Assistant</Text>
+              </View>
+              <View style={styles.menuRight}>
+                {hasApprovalNeeded && (
+                  <Badge variant="warning" size="sm" label="Approval needed" />
+                )}
+                <ChevronRight size={16} color={colors.textMuted} />
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.menuItem}
               activeOpacity={0.7}
-              onPress={() => navigateTo("/(app)/(tabs)/mail")}
+              onPress={() => navigateTo("/(app)/workflows")}
+              testID="menu-workflows"
             >
               <View style={styles.menuLeft}>
-                <Mail size={18} color={colors.accent} />
-                <Text style={styles.menuLabel}>Mail</Text>
+                <Workflow size={18} color={colors.primary} />
+                <Text style={styles.menuLabel}>Workflows</Text>
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </Card>
         </View>
 
-        {/* Section 2: Finance (Web + Mobile Parity) */}
+        {/* Section 2: Finance */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>FINANCE</Text>
+          <Text style={styles.sectionHeader}>Finance</Text>
           <Card style={styles.menuGroup}>
             <TouchableOpacity
               style={[styles.menuItem, styles.menuItemBorder]}
@@ -121,7 +242,7 @@ export default function MenuScreen() {
               onPress={() => navigateTo("/(app)/finance/budgets")}
             >
               <View style={styles.menuLeft}>
-                <PiggyBank size={18} color={colors.accent} />
+                <PiggyBank size={18} color={colors.brandSecondary} />
                 <Text style={styles.menuLabel}>Budgets</Text>
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
@@ -164,26 +285,6 @@ export default function MenuScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.menuItem, styles.menuItemBorder]}
-              activeOpacity={0.7}
-              onPress={() =>
-                showWebOnlyNotice(
-                  "Review Queue / Inbox",
-                  "Email-forwarded bank alerts and receipt ingestion review is an administrative workflow optimized for wide desktop screens."
-                )
-              }
-            >
-              <View style={styles.menuLeft}>
-                <Inbox size={18} color={colors.accent} />
-                <Text style={styles.menuLabel}>Review Queue (Inbox)</Text>
-              </View>
-              <View style={styles.menuRight}>
-                <Badge variant="outline" size="sm" label="Web Only" />
-                <ChevronRight size={16} color={colors.textMuted} />
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
               style={styles.menuItem}
               activeOpacity={0.7}
               onPress={() =>
@@ -205,72 +306,9 @@ export default function MenuScreen() {
           </Card>
         </View>
 
-        {/* Section 3: Workspace */}
+        {/* Section 3: Workspace & Preferences */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>WORKSPACE</Text>
-          <Card style={styles.menuGroup}>
-            <TouchableOpacity
-              style={[styles.menuItem, styles.menuItemBorder]}
-              activeOpacity={0.7}
-              onPress={() => navigateTo("/(app)/settings/space")}
-            >
-              <View style={styles.menuLeft}>
-                <Users size={18} color={colors.accent} />
-                <Text style={styles.menuLabel}>
-                  Workspace Details & Members
-                </Text>
-              </View>
-              <View style={styles.menuRight}>
-                <Badge
-                  variant={activeSpaceRole === "owner" ? "primary" : "default"}
-                  size="sm"
-                  label={activeSpaceRole.toUpperCase()}
-                />
-                <ChevronRight size={16} color={colors.textMuted} />
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.menuItem, styles.menuItemBorder]}
-              activeOpacity={0.7}
-              onPress={() => navigateTo("/(app)/settings/connected-accounts")}
-            >
-              <View style={styles.menuLeft}>
-                <Link2 size={18} color={colors.primary} />
-                <Text style={styles.menuLabel}>Connected Accounts</Text>
-              </View>
-              <ChevronRight size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.menuItem, styles.menuItemBorder]}
-              activeOpacity={0.7}
-              onPress={() => navigateTo("/(app)/ai")}
-            >
-              <View style={styles.menuLeft}>
-                <Sparkles size={18} color={colors.primary} />
-                <Text style={styles.menuLabel}>AI Assistant</Text>
-              </View>
-              <ChevronRight size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              activeOpacity={0.7}
-              onPress={() => navigateTo("/(app)/workflows")}
-            >
-              <View style={styles.menuLeft}>
-                <Workflow size={18} color={colors.accent} />
-                <Text style={styles.menuLabel}>Workflows</Text>
-              </View>
-              <ChevronRight size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-          </Card>
-        </View>
-
-        {/* Section 4: Settings */}
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>SETTINGS</Text>
+          <Text style={styles.sectionHeader}>Workspace & Preferences</Text>
           <Card style={styles.menuGroup}>
             <View style={[styles.appearanceRow, styles.menuItemBorder]}>
               <View style={styles.menuLeft}>
@@ -315,6 +353,63 @@ export default function MenuScreen() {
                 })}
               </View>
             </View>
+
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/settings/connected-accounts")}
+            >
+              <View style={styles.menuLeft}>
+                <Link2 size={18} color={colors.primary} />
+                <Text style={styles.menuLabel}>Connected Accounts</Text>
+              </View>
+              <ChevronRight size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/settings/space")}
+            >
+              <View style={styles.menuLeft}>
+                <Users size={18} color={colors.brandSecondary} />
+                <Text style={styles.menuLabel}>
+                  Workspace Details & Members
+                </Text>
+              </View>
+              <View style={styles.menuRight}>
+                <Badge
+                  variant={activeSpaceRole === "owner" ? "primary" : "default"}
+                  size="sm"
+                  label={activeSpaceRole.toUpperCase()}
+                />
+                <ChevronRight size={16} color={colors.textMuted} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/settings/security")}
+            >
+              <View style={styles.menuLeft}>
+                <ShieldCheck size={18} color={colors.success} />
+                <Text style={styles.menuLabel}>Security & Biometrics</Text>
+              </View>
+              <ChevronRight size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/settings/api-keys")}
+            >
+              <View style={styles.menuLeft}>
+                <KeyRound size={18} color={colors.primary} />
+                <Text style={styles.menuLabel}>API Keys</Text>
+              </View>
+              <ChevronRight size={16} color={colors.textMuted} />
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.menuItem, __DEV__ && styles.menuItemBorder]}
@@ -366,15 +461,86 @@ const createStyles = (t: SaturnMobileTheme) => ({
     paddingBottom: 80,
     gap: 20,
   },
+  profileCard: {
+    overflow: "hidden" as const,
+  },
+  profileTopRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: t.colors.border,
+  },
+  profileTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  profileName: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
+  },
+  profileEmail: {
+    fontSize: 13,
+    color: t.colors.textMuted,
+  },
+  workspaceRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: t.colors.surfaceSubtle,
+  },
+  workspaceInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  workspaceCaption: {
+    fontSize: 11,
+    fontWeight: "500" as const,
+    color: t.colors.textMuted,
+  },
+  workspaceTitleRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+  },
+  workspaceName: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
+    flexShrink: 1,
+  },
+  switchBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.primarySubtle,
+    borderWidth: 1,
+    borderColor: `${t.colors.primary}40`,
+  },
+  switchBtnText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
+  },
   section: {
     gap: 8,
   },
   sectionHeader: {
-    fontSize: 11,
-    fontWeight: "700" as const,
+    fontSize: 13,
+    fontWeight: "600" as const,
     color: t.colors.textMuted,
     paddingHorizontal: 4,
-    letterSpacing: 0.8,
   },
   menuGroup: {
     overflow: "hidden" as const,
@@ -394,10 +560,13 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 12,
+    flex: 1,
+    minWidth: 0,
   },
   menuLabel: {
     fontSize: 15,
     color: t.colors.textPrimary,
+    flexShrink: 1,
   },
   menuRight: {
     flexDirection: "row" as const,

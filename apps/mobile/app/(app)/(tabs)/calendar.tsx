@@ -7,8 +7,9 @@ import {
   ActivityIndicator,
 } from "react-native"
 import { useRouter } from "expo-router"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import BottomSheet from "@gorhom/bottom-sheet"
-import { SlidersHorizontal, Plus, RotateCcw } from "lucide-react-native"
+import { SlidersHorizontal, RotateCcw } from "lucide-react-native"
 import {
   useTimezone,
   useCalendars,
@@ -23,6 +24,8 @@ import {
   parseDate,
 } from "@saturn/core"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
+import { SpaceSwitcherChip } from "@/components/app-header"
+import { QuickCaptureFab } from "@/components/ui/quick-capture-sheet"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -37,6 +40,7 @@ export type MobileCalendarViewMode = "agenda" | "day" | "three_day"
 
 export default function CalendarScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const tz = useTimezone()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
@@ -242,11 +246,50 @@ export default function CalendarScreen() {
     />
   )
 
+  const activeMonthTitle = useMemo(
+    () => tz.format(currentDate, { month: "short", year: "numeric" }),
+    [currentDate, tz]
+  )
+
   return (
     <View style={styles.container}>
-      {/* Top Calendar Subheader: Mode Switcher + Today + Filters */}
-      <View style={styles.topBar}>
-        {/* View Mode Segmented Controls */}
+      {/* Compact Safe-Area Calendar Header */}
+      <View
+        style={[styles.topBar, { paddingTop: Math.max(insets.top, 10) + 4 }]}
+      >
+        {/* Row 1: Space Switcher + Localized Month Title + Today + Filters */}
+        <View style={styles.topHeaderRow}>
+          <View style={styles.topLeftGroup}>
+            <SpaceSwitcherChip compact />
+            <Text style={styles.monthTitle} numberOfLines={1}>
+              {activeMonthTitle}
+            </Text>
+          </View>
+
+          <View style={styles.topActionsRow}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleJumpToToday}
+              style={styles.todayButton}
+              testID="calendar-today-btn"
+            >
+              <RotateCcw size={13} color={colors.primary} />
+              <Text style={styles.todayButtonText}>Today</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleOpenFilters}
+              style={styles.filterButton}
+              testID="calendar-filter-btn"
+              accessibilityLabel="Calendar filters"
+            >
+              <SlidersHorizontal size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Row 2: View Mode Segmented Controls */}
         <View style={styles.segmentedControl} testID="calendar-mode-switcher">
           <TouchableOpacity
             activeOpacity={0.7}
@@ -305,28 +348,6 @@ export default function CalendarScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-
-        {/* Right Actions: Jump to Today + Filters Button */}
-        <View style={styles.topActionsRow}>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handleJumpToToday}
-            style={styles.todayButton}
-            testID="calendar-today-btn"
-          >
-            <RotateCcw size={13} color={colors.primary} />
-            <Text style={styles.todayButtonText}>Today</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handleOpenFilters}
-            style={styles.filterButton}
-            testID="calendar-filter-btn"
-          >
-            <SlidersHorizontal size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
       </View>
 
       {/* Collapsible Date Strip (Synchronized with currentDate) */}
@@ -366,14 +387,13 @@ export default function CalendarScreen() {
 
       {/* Floating Action Button (FAB) to create event, hidden for viewer */}
       {!isViewer && (
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => handleOpenCreateEvent()}
-          style={styles.fab}
+        <QuickCaptureFab
           testID="calendar-fab-add"
-        >
-          <Plus size={24} color={colors.primaryForeground} />
-        </TouchableOpacity>
+          accessibilityLabel="New calendar event"
+          accessibilityHint="Tap to create an event, or long press to jump to today"
+          onPress={() => handleOpenCreateEvent()}
+          onLongPress={handleJumpToToday}
+        />
       )}
 
       {/* Calendar Filters Bottom Sheet */}
@@ -398,14 +418,32 @@ const createStyles = (t: SaturnMobileTheme) => ({
     backgroundColor: t.colors.background,
   },
   topBar: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+    gap: 8,
     borderBottomWidth: 1,
     borderBottomColor: t.colors.border,
     backgroundColor: t.colors.surface,
+  },
+  topHeaderRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    gap: 8,
+  },
+  topLeftGroup: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    flex: 1,
+    minWidth: 0,
+  },
+  monthTitle: {
+    fontSize: 16,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
+    letterSpacing: -0.3,
+    flexShrink: 1,
   },
   segmentedControl: {
     flexDirection: "row" as const,
@@ -416,8 +454,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
     borderColor: t.colors.border,
   },
   segmentBtn: {
+    flex: 1,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: t.radius.xs,
   },
   segmentBtnActive: {
@@ -434,13 +475,13 @@ const createStyles = (t: SaturnMobileTheme) => ({
   topActionsRow: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    gap: 8,
+    gap: 6,
   },
   todayButton: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: t.radius.sm,
     backgroundColor: t.colors.primarySubtle,
@@ -454,6 +495,8 @@ const createStyles = (t: SaturnMobileTheme) => ({
     padding: 6,
     borderRadius: t.radius.full,
     backgroundColor: t.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: t.colors.border,
   },
   viewContainer: {
     flex: 1,
@@ -462,18 +505,5 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flex: 1,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-  },
-  fab: {
-    position: "absolute" as const,
-    right: 20,
-    bottom: 24,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: t.colors.primary,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    ...t.shadows.lg,
-    zIndex: 10,
   },
 })

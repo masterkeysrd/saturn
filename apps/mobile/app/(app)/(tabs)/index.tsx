@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react"
+import React, { useState, useMemo, useRef } from "react"
 import {
   Text,
   View,
@@ -8,13 +8,19 @@ import {
   TextInput,
 } from "react-native"
 import { useRouter } from "expo-router"
+import BottomSheet from "@gorhom/bottom-sheet"
 import { useQueryClient } from "@tanstack/react-query"
 import { useTimezone } from "@saturn/hooks"
 import { Send, Sparkles } from "lucide-react-native"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
+import { getOverviewQuickCaptureActions } from "@/lib/quick-capture"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
+import {
+  QuickCaptureFab,
+  QuickCaptureSheet,
+} from "@/components/ui/quick-capture-sheet"
 import { FinanceSummaryWidget } from "@/components/widgets/finance-summary-widget"
 import { CalendarSummaryWidget } from "@/components/widgets/calendar-summary-widget"
 import { MailSummaryWidget } from "@/components/widgets/mail-summary-widget"
@@ -29,12 +35,17 @@ export default function OverviewScreen() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const { user } = useAuth()
-  const { refetchSpaces } = useSpace()
+  const { refetchSpaces, activeSpaceRole } = useSpace()
   const tz = useTimezone()
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const quickCaptureRef = useRef<BottomSheet>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [aiQuery, setAiQuery] = useState("")
+  const quickCaptureActions = useMemo(
+    () => getOverviewQuickCaptureActions(activeSpaceRole),
+    [activeSpaceRole]
+  )
 
   const openAIWithPrompt = (promptText?: string) => {
     haptics.light()
@@ -170,6 +181,19 @@ export default function OverviewScreen() {
         <MailSummaryWidget />
         <FinanceSummaryWidget />
       </ScrollView>
+
+      <QuickCaptureFab
+        testID="overview-fab-quick-capture"
+        accessibilityLabel="Quick capture"
+        accessibilityHint="Opens quick actions to record transactions, events, emails, or ask AI"
+        onPress={() => quickCaptureRef.current?.expand()}
+      />
+      <QuickCaptureSheet
+        ref={quickCaptureRef}
+        title="Quick Capture"
+        actions={quickCaptureActions}
+        onClose={() => quickCaptureRef.current?.close()}
+      />
     </View>
   )
 }
@@ -186,7 +210,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
   content: {
     padding: 16,
     paddingTop: 12,
-    paddingBottom: 80,
+    paddingBottom: 96,
     gap: 12,
   },
   greetingHeader: {
