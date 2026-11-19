@@ -375,8 +375,9 @@ func (m *mockSearchAccountReader) GetAccount(_ context.Context, spaceID, id stri
 }
 
 type mockRemoteSearchProvider struct {
-	searchFn func(ctx context.Context, accessToken, query string, limit int) ([]*domainmail.Thread, error)
-	fetchFn  func(ctx context.Context, accessToken, providerThreadID string) (*domainmail.Thread, []*domainmail.Message, error)
+	searchFn    func(ctx context.Context, accessToken, query string, limit int) ([]*domainmail.Thread, error)
+	fetchFn     func(ctx context.Context, accessToken, providerThreadID string) (*domainmail.Thread, []*domainmail.Message, error)
+	fetchBodyFn func(ctx context.Context, accessToken, providerMessageID string) (*domainmail.MessageBody, error)
 }
 
 func (m *mockRemoteSearchProvider) Provider() string { return "google" }
@@ -401,7 +402,10 @@ func (m *mockRemoteSearchProvider) FetchThread(ctx context.Context, accessToken,
 	}
 	return nil, nil, nil
 }
-func (m *mockRemoteSearchProvider) FetchMessageBody(context.Context, string, string) (*domainmail.MessageBody, error) {
+func (m *mockRemoteSearchProvider) FetchMessageBody(ctx context.Context, accessToken, providerMessageID string) (*domainmail.MessageBody, error) {
+	if m.fetchBodyFn != nil {
+		return m.fetchBodyFn(ctx, accessToken, providerMessageID)
+	}
 	return nil, nil
 }
 func (m *mockRemoteSearchProvider) ModifyThread(context.Context, string, string, []string, []string) error {
@@ -522,4 +526,85 @@ func TestAggregator_HybridSearch_OffsetCapAndPersistsRemoteStub(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, proj)
 	require.Len(t, proj.Messages, 1)
+}
+
+func TestAggregator_GetThread_AutoHealsPlainPreFallbackBody(t *testing.T) {
+	cipher, err := crypto.NewCipher("test-master-encryption-key-32b!!")
+	require.NoError(t, err)
+	encAccess, _ := cipher.Encrypt("access-tok")
+	encRefresh, _ := cipher.Encrypt("refresh-tok")
+
+	acc := &connector.ConnectedAccount{
+		ID:                  "acc_1",
+		SpaceID:             "spc_1",
+		Provider:            "google",
+		Status:              connector.AccountStatusHealthy,
+		EnabledCapabilities: []string{string(connector.CapabilityMail)},
+		AccessTokenEnc:      encAccess,
+		RefreshTokenEnc:     encRefresh,
+		TokenExpiry:         time.Now().Add(time.Hour),
+	}
+
+	thReader := &mockThreadReader{threads: map[string]*domainmail.Thread{
+		"mth_amazon": {
+			ID:                 "mth_amazon",
+			SpaceID:            "spc_1",
+			ConnectedAccountID: "acc_1",
+			Subject:            "Hoy arranca el Black Friday de Amazon",
+		},
+	}}
+	provMsgID := "gm_amazon_1"
+	msgReader := &mockMessageReader{
+		messages: map[string]*domainmail.Message{
+			"msg_amazon": {
+				ID:                 "msg_amazon",
+				ThreadID:           "mth_amazon",
+				ConnectedAccountID: "acc_1",
+				ProviderMessageID:  &provMsgID,
+				Subject:            "Hoy arranca el Black Friday de Amazon",
+			},
+		},
+		bodies: map[string]*domainmail.MessageBody{
+			"msg_amazon": {
+				MessageID:     "msg_amazon",
+				SpaceID:       "spc_1",
+				SanitizedHTML: `<pre style="white-space: pre-wrap;">Plain text fallback only</pre>`,
+				PlainText:     "Plain text fallback only",
+			},
+		},
+	}
+	mbxReader := &mockMailboxReader{mailboxes: make(map[string]*domainmail.Mailbox)}
+	dftReader := &mockDraftReader{drafts: make(map[string]*domainmail.Draft)}
+	accReader := &mockSearchAccountReader{accounts: map[string]*connector.ConnectedAccount{"acc_1": acc}}
+	connStore := &mockSearchConnectorStore{accounts: map[string]*connector.ConnectedAccount{"acc_1": acc}}
+	tokenMgr := connector.NewTokenManager(connStore, cipher, connector.NewProviderRegistry(), nil)
+
+	prov := &mockRemoteSearchProvider{
+		fetchBodyFn: func(_ context.Context, _ string, providerMessageID string) (*domainmail.MessageBody, error) {
+			assert.Equal(t, provMsgID, providerMessageID)
+			return &domainmail.MessageBody{
+				SanitizedHTML:   `<table><tr><td><img data-saturn-remote-src="https://m.media-amazon.com/hero.jpg"></td></tr></table>`,
+				PlainText:       "Hoy arranca el Black Friday de Amazon",
+				HasRemoteImages: true,
+			}, nil
+		},
+	}
+
+	svc := mailaggregator.NewService(
+		mbxReader,
+		thReader,
+		msgReader,
+		dftReader,
+		accReader,
+		tokenMgr,
+		map[string]domainmail.ExternalMailProvider{"google": prov},
+		[]byte("secret-key-32-bytes-long-for-testing"),
+	)
+
+	proj, err := svc.GetThread(context.Background(), "spc_1", "mth_amazon")
+	require.NoError(t, err)
+	require.Len(t, proj.Messages, 1)
+	assert.Contains(t, proj.Messages[0].BodyHTML, "https://m.media-amazon.com/hero.jpg")
+	assert.True(t, proj.Messages[0].Message.HasRemoteImages)
+	assert.Contains(t, msgReader.bodies["msg_amazon"].SanitizedHTML, "https://m.media-amazon.com/hero.jpg")
 }

@@ -129,23 +129,21 @@ export function buildMobileMessageDocumentHtml({
       height: auto !important;
       min-height: 0 !important;
     }
-    /* Preserve explicit icon heights & table-cell intrinsic widths (e.g. GitHub octicons/checks) like Gmail */
+    /* Preserve explicit icon heights & small icon intrinsic widths (e.g. GitHub octicons/checks) while allowing large banners to shrink */
     img {
       max-width: 100%;
     }
     img:not([height]):not([style*="height"]) {
       height: auto;
     }
-    td img[width],
-    th img[width],
-    a > img[width],
-    span > img[width],
-    p > img[width],
-    li > img[width],
-    h1 > img[width],
-    h2 > img[width],
-    h3 > img[width],
-    h4 > img[width] {
+    img[width="12"],
+    img[width="14"],
+    img[width="16"],
+    img[width="18"],
+    img[width="20"],
+    img[width="24"],
+    img[width="28"],
+    img[width="32"] {
       max-width: none;
     }
     img[align="absmiddle"],
@@ -184,6 +182,13 @@ export function buildMobileMessageDocumentHtml({
 
 export const INJECTED_EMAIL_LAYOUT_JS = `
 (function() {
+  if (window.__saturnEmailLayoutInit) {
+    if (window.__saturnEmailLayoutBind) window.__saturnEmailLayoutBind();
+    if (window.__saturnEmailLayoutMeasure) window.__saturnEmailLayoutMeasure();
+    return;
+  }
+  window.__saturnEmailLayoutInit = true;
+
   var lastPostedHeight = 0;
   var boundImages = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
   var rafPending = false;
@@ -231,16 +236,17 @@ export const INJECTED_EMAIL_LAYOUT_JS = `
 
     var availWidth = document.documentElement.clientWidth || window.innerWidth || 0;
     var naturalWidth = root.scrollWidth || 0;
+    var currentScale = 1;
 
     if (availWidth > 0 && naturalWidth > availWidth + 2) {
-      var scale = Math.max(0.45, availWidth / naturalWidth);
+      currentScale = Math.max(0.25, availWidth / naturalWidth);
       root.style.width = naturalWidth + 'px';
       root.style.transformOrigin = 'top left';
-      root.style.transform = 'scale(' + scale + ')';
+      root.style.transform = 'scale(' + currentScale + ')';
     }
 
     var rect = root.getBoundingClientRect();
-    var visualHeight = Math.ceil(rect.height);
+    var visualHeight = Math.ceil(Math.max(rect.height, (root.scrollHeight || 0) * currentScale));
     if (visualHeight > 0) {
       viewport.style.height = visualHeight + 'px';
       if (
@@ -265,17 +271,29 @@ export const INJECTED_EMAIL_LAYOUT_JS = `
     }
   }
 
+  function onImageSettled() {
+    scheduleMeasure();
+    setTimeout(scheduleMeasure, 80);
+  }
+
   function bindImages() {
     var images = document.images || [];
     for (var i = 0; i < images.length; i++) {
       var img = images[i];
       if (!img) continue;
+      var widthAttr = parseInt(img.getAttribute ? (img.getAttribute('width') || '') : '', 10);
+      if (widthAttr > 0 && widthAttr <= 48 && img.style) {
+        img.style.maxWidth = 'none';
+      }
       if (boundImages && boundImages.has(img)) continue;
       if (boundImages) boundImages.add(img);
-      img.addEventListener('load', scheduleMeasure);
-      img.addEventListener('error', scheduleMeasure);
+      img.addEventListener('load', onImageSettled);
+      img.addEventListener('error', onImageSettled);
     }
   }
+
+  window.__saturnEmailLayoutBind = bindImages;
+  window.__saturnEmailLayoutMeasure = scheduleMeasure;
 
   var root = document.getElementById('saturn-email-root');
   trimTrailingEmptyNodes(root);
@@ -300,6 +318,17 @@ export const INJECTED_EMAIL_LAYOUT_JS = `
   window.addEventListener('resize', scheduleMeasure);
   setTimeout(scheduleMeasure, 120);
   setTimeout(scheduleMeasure, 500);
+})();
+true;
+`
+
+export const INJECTED_EMAIL_LAYOUT_BEFORE_LOAD_JS = `
+(function() {
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('DOMContentLoaded', function() {
+      ${INJECTED_EMAIL_LAYOUT_JS}
+    }, { once: true });
+  }
 })();
 true;
 `

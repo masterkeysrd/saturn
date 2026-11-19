@@ -75,7 +75,7 @@ export function SandboxedEmailFrame({
     return Boolean(
       hasRemoteImages ||
       (html &&
-        (/data-saturn-remote-(?:src|srcset|background)/i.test(html) ||
+        (/data-saturn-remote-(?:src|srcset|background|style)/i.test(html) ||
           /<(?:img|image|source)\b[^>]*\b(?:src|srcset)\s*=\s*["']?(?:https?:|\/\/)/i.test(
             html
           ) ||
@@ -186,23 +186,21 @@ export function SandboxedEmailFrame({
       overflow-x: auto;
       ${bodyPaddingCss}
     }
-    /* Preserve explicit icon heights & table-cell intrinsic widths (e.g. GitHub octicons/checks) like Gmail */
+    /* Preserve explicit icon heights & small icon intrinsic widths (e.g. GitHub octicons/checks) while allowing large banners to shrink */
     img {
       max-width: 100%;
     }
     img:not([height]):not([style*="height"]) {
       height: auto;
     }
-    td img[width],
-    th img[width],
-    a > img[width],
-    span > img[width],
-    p > img[width],
-    li > img[width],
-    h1 > img[width],
-    h2 > img[width],
-    h3 > img[width],
-    h4 > img[width] {
+    img[width="12"],
+    img[width="14"],
+    img[width="16"],
+    img[width="18"],
+    img[width="20"],
+    img[width="24"],
+    img[width="28"],
+    img[width="32"] {
       max-width: none;
     }
     img[align="absmiddle"],
@@ -236,7 +234,9 @@ export function SandboxedEmailFrame({
   </style>
 </head>
 <body>
-  <div id="saturn-email-root" data-srcdoc-sig="${srcDocSig}" style="display: flow-root; width: 100%; height: auto !important; min-height: 0 !important;">${processedHtml}</div>
+  <div id="saturn-email-viewport" style="width: 100%; overflow-x: auto; overflow-y: hidden;">
+    <div id="saturn-email-root" data-srcdoc-sig="${srcDocSig}" style="display: flow-root; width: 100%; height: auto !important; min-height: 0 !important;">${processedHtml}</div>
+  </div>
   <style>html, body { height: auto !important; min-height: 0 !important; }</style>
 </body>
 </html>`
@@ -253,12 +253,53 @@ export function SandboxedEmailFrame({
       const body = doc.body
       if (!body) return
 
-      const root = doc.getElementById("saturn-email-root")
-      const contentHeight = root
-        ? Math.ceil(
-            Math.max(root.scrollHeight, root.getBoundingClientRect().height)
+      const viewport =
+        typeof doc.getElementById === "function"
+          ? doc.getElementById("saturn-email-viewport")
+          : null
+      const root =
+        typeof doc.getElementById === "function"
+          ? doc.getElementById("saturn-email-root")
+          : null
+
+      let contentHeight = 0
+      if (root) {
+        if (root.style) {
+          root.style.transform = "none"
+          root.style.width = "100%"
+        }
+        if (viewport?.style) {
+          viewport.style.height = "auto"
+        }
+
+        const availWidth =
+          viewport?.clientWidth || doc.documentElement?.clientWidth || 0
+        const naturalWidth = root.scrollWidth || 0
+        let scale = 1
+
+        if (availWidth > 0 && naturalWidth > availWidth + 2) {
+          scale = Math.max(0.55, availWidth / naturalWidth)
+          if (root.style) {
+            root.style.width = `${naturalWidth}px`
+            root.style.transformOrigin = "top left"
+            root.style.transform = `scale(${scale})`
+          }
+        }
+
+        contentHeight = Math.ceil(
+          Math.max(
+            root.getBoundingClientRect().height,
+            (root.scrollHeight || 0) * scale
           )
-        : Math.ceil(body.scrollHeight)
+        )
+
+        if (viewport?.style && scale < 1 && contentHeight > 0) {
+          viewport.style.height = `${contentHeight}px`
+        }
+      } else {
+        contentHeight = Math.ceil(body.scrollHeight)
+      }
+
       const verticalPadding = root && isAppDark ? 24 : 0
       const nextHeight = contentHeight + verticalPadding
 
@@ -280,10 +321,47 @@ export function SandboxedEmailFrame({
     let resizeObserver: ResizeObserver | null = null
     let mutationObserver: MutationObserver | null = null
     let rafId: number | null = null
+    let reflowRafId: number | null = null
+    let reflowTimerId: ReturnType<typeof setTimeout> | null = null
     let docCleanups: Array<() => void> = []
     const boundImages = new WeakSet<HTMLImageElement>()
 
+    const clearPendingReflows = () => {
+      if (reflowRafId !== null && typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(reflowRafId)
+        reflowRafId = null
+      }
+      if (reflowTimerId !== null) {
+        clearTimeout(reflowTimerId)
+        reflowTimerId = null
+      }
+    }
+
+    const scheduleUpdateHeight = () => {
+      updateHeight()
+      if (typeof requestAnimationFrame === "function") {
+        if (
+          reflowRafId !== null &&
+          typeof cancelAnimationFrame === "function"
+        ) {
+          cancelAnimationFrame(reflowRafId)
+        }
+        reflowRafId = requestAnimationFrame(() => {
+          reflowRafId = null
+          updateHeight()
+        })
+      }
+      if (reflowTimerId !== null) {
+        clearTimeout(reflowTimerId)
+      }
+      reflowTimerId = setTimeout(() => {
+        reflowTimerId = null
+        updateHeight()
+      }, 80)
+    }
+
     const teardownDocObservers = () => {
+      clearPendingReflows()
       if (resizeObserver) {
         resizeObserver.disconnect()
         resizeObserver = null
@@ -300,16 +378,34 @@ export function SandboxedEmailFrame({
 
     const bindImages = (doc: Document) => {
       const images = doc.images || []
+      let hasComplete = false
       for (let i = 0; i < images.length; i++) {
         const img = images[i]
         if (!img || boundImages.has(img)) continue
         boundImages.add(img)
-        img.addEventListener("load", updateHeight)
-        img.addEventListener("error", updateHeight)
+
+        const widthAttr = Number.parseInt(
+          typeof img.getAttribute === "function"
+            ? img.getAttribute("width") || ""
+            : "",
+          10
+        )
+        if (widthAttr > 0 && widthAttr <= 48 && img.style) {
+          img.style.maxWidth = "none"
+        }
+
+        if (img.complete) {
+          hasComplete = true
+        }
+        img.addEventListener("load", scheduleUpdateHeight)
+        img.addEventListener("error", scheduleUpdateHeight)
         docCleanups.push(() => {
-          img.removeEventListener("load", updateHeight)
-          img.removeEventListener("error", updateHeight)
+          img.removeEventListener("load", scheduleUpdateHeight)
+          img.removeEventListener("error", scheduleUpdateHeight)
         })
+      }
+      if (hasComplete) {
+        scheduleUpdateHeight()
       }
     }
 

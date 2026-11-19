@@ -859,6 +859,25 @@ func (p *Provider) mapGmailMessage(gm gmailMessage, threadID string, now time.Ti
 	}, nil
 }
 
+func isGmailBodyPart(part *gmailMessagePayload) bool {
+	if part == nil {
+		return false
+	}
+	if !strings.EqualFold(part.MimeType, "text/html") && !strings.EqualFold(part.MimeType, "text/plain") {
+		return false
+	}
+	if part.Filename != "" {
+		return false
+	}
+	for _, h := range part.Headers {
+		if strings.EqualFold(h.Name, "Content-Disposition") &&
+			strings.HasPrefix(strings.ToLower(strings.TrimSpace(h.Value)), "attachment") {
+			return false
+		}
+	}
+	return true
+}
+
 func extractAttachmentsFromPayload(p *gmailMessagePayload) []domainmail.AttachmentMeta {
 	var attachments []domainmail.AttachmentMeta
 
@@ -868,7 +887,7 @@ func extractAttachmentsFromPayload(p *gmailMessagePayload) []domainmail.Attachme
 			return
 		}
 
-		isAttachment := part.Filename != "" || (part.Body != nil && part.Body.AttachmentID != "")
+		isAttachment := !isGmailBodyPart(part) && (part.Filename != "" || (part.Body != nil && part.Body.AttachmentID != ""))
 		if isAttachment {
 			attID := ""
 			var size int64
@@ -948,7 +967,7 @@ func (p *Provider) FetchMessageBody(ctx context.Context, accessToken, providerMe
 		return nil, platformerrors.E(op, err)
 	}
 
-	rawHTML, rawPlain := extractBodiesFromPayload(msg.Payload)
+	rawHTML, rawPlain := p.extractBodiesWithAttachments(ctx, op, accessToken, providerMessageID, msg.Payload)
 
 	now := time.Now().UTC()
 	result := &domainmail.MessageBody{
@@ -986,8 +1005,13 @@ func (p *Provider) FetchMessageBody(ctx context.Context, accessToken, providerMe
 	return result, nil
 }
 
-func extractBodiesFromPayload(p *gmailMessagePayload) (html string, plain string) {
-	if p == nil {
+func (p *Provider) extractBodiesWithAttachments(
+	ctx context.Context,
+	op platformerrors.Op,
+	accessToken, providerMessageID string,
+	root *gmailMessagePayload,
+) (htmlBody string, plainBody string) {
+	if root == nil {
 		return "", ""
 	}
 
@@ -1011,18 +1035,38 @@ func extractBodiesFromPayload(p *gmailMessagePayload) (html string, plain string
 		return string(decoded)
 	}
 
+	fetchPartAttachmentText := func(attachmentID string) string {
+		stream, _, _, _, err := p.fetchAttachmentByID(ctx, op, accessToken, providerMessageID, attachmentID)
+		if err != nil || stream == nil {
+			return ""
+		}
+		defer stream.Close()
+		data, err := io.ReadAll(stream)
+		if err != nil {
+			return ""
+		}
+		return string(data)
+	}
+
 	var walk func(part *gmailMessagePayload)
 	walk = func(part *gmailMessagePayload) {
 		if part == nil {
 			return
 		}
 
-		if part.Body != nil && part.Body.Data != "" {
-			content := decodeData(part.Body.Data)
-			if strings.EqualFold(part.MimeType, "text/html") && html == "" {
-				html = content
-			} else if strings.EqualFold(part.MimeType, "text/plain") && plain == "" {
-				plain = content
+		if part.Body != nil {
+			if strings.EqualFold(part.MimeType, "text/html") && htmlBody == "" {
+				if part.Body.Data != "" {
+					htmlBody = decodeData(part.Body.Data)
+				} else if part.Body.AttachmentID != "" && isGmailBodyPart(part) {
+					htmlBody = fetchPartAttachmentText(part.Body.AttachmentID)
+				}
+			} else if strings.EqualFold(part.MimeType, "text/plain") && plainBody == "" {
+				if part.Body.Data != "" {
+					plainBody = decodeData(part.Body.Data)
+				} else if part.Body.AttachmentID != "" && isGmailBodyPart(part) {
+					plainBody = fetchPartAttachmentText(part.Body.AttachmentID)
+				}
 			}
 		}
 
@@ -1031,8 +1075,8 @@ func extractBodiesFromPayload(p *gmailMessagePayload) (html string, plain string
 		}
 	}
 
-	walk(p)
-	return html, plain
+	walk(root)
+	return htmlBody, plainBody
 }
 
 // SearchThreads queries remote threads on the upstream provider for hybrid search.
@@ -1579,7 +1623,7 @@ func findMatchingGmailAttachmentPart(root *gmailMessagePayload, meta *domainmail
 		if part == nil {
 			return
 		}
-		if part.Filename != "" || (part.Body != nil && part.Body.AttachmentID != "") {
+		if !isGmailBodyPart(part) && (part.Filename != "" || (part.Body != nil && part.Body.AttachmentID != "")) {
 			candidates = append(candidates, part)
 		}
 		for i := range part.Parts {

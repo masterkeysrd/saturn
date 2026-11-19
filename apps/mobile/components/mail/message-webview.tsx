@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react"
+import React, { useState, useMemo, useCallback, useRef } from "react"
 import {
   View,
   Text,
@@ -6,16 +6,30 @@ import {
   Linking,
   type LayoutChangeEvent,
 } from "react-native"
-import { WebView, type WebViewNavigation } from "react-native-webview"
+import {
+  WebView,
+  type WebViewNavigation,
+  type WebViewProps,
+} from "react-native-webview"
 import { ShieldAlert, Image as ImageIcon } from "lucide-react-native"
+import { useI18n } from "@saturn/hooks"
 import type { Attachment } from "@saturn/api/saturn/mail/v1/mail"
 import { getApiBaseUrl } from "@/lib/config"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import {
   buildMobileMessageDocumentHtml,
+  INJECTED_EMAIL_LAYOUT_BEFORE_LOAD_JS,
   INJECTED_EMAIL_LAYOUT_JS,
 } from "./message-webview-html"
+
+type WebViewHandle = {
+  injectJavaScript: (script: string) => void
+}
+
+const WebViewWithRef = WebView as unknown as React.ForwardRefExoticComponent<
+  WebViewProps & React.RefAttributes<WebViewHandle>
+>
 
 export interface MessageWebViewProps {
   html: string
@@ -32,8 +46,10 @@ export function MessageWebView({
   attachments = [],
   onLinkPress,
 }: MessageWebViewProps) {
+  const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const webViewRef = useRef<WebViewHandle>(null)
   const [loadImages, setLoadImages] = useState(false)
   const [webViewHeight, setWebViewHeight] = useState(48)
   const [containerWidth, setContainerWidth] = useState(300)
@@ -42,10 +58,11 @@ export function MessageWebView({
     return Boolean(
       hasRemoteImages ||
       (html &&
-        (/data-saturn-remote-(?:src|srcset|background)/i.test(html) ||
+        (/data-saturn-remote-(?:src|srcset|background|style)/i.test(html) ||
           /<(?:img|image|source)\b[^>]*\b(?:src|srcset)\s*=\s*["']?(?:https?:|\/\/)/i.test(
             html
-          )))
+          ) ||
+          /url\(\s*["']?https?:/i.test(html)))
     )
   }, [hasRemoteImages, html])
 
@@ -122,7 +139,9 @@ export function MessageWebView({
         <View style={styles.bannerContainer}>
           <View style={styles.bannerTextRow}>
             <ShieldAlert size={14} color={colors.warning} />
-            <Text style={styles.bannerText}>Remote images blocked</Text>
+            <Text style={styles.bannerText}>
+              {t("mail.remoteImagesBlockedShort")}
+            </Text>
           </View>
           <Pressable
             testID="mobile-load-remote-images-btn"
@@ -133,7 +152,7 @@ export function MessageWebView({
             style={styles.loadImagesBtn}
           >
             <ImageIcon size={12} color={colors.warning} />
-            <Text style={styles.loadImagesBtnText}>Load images</Text>
+            <Text style={styles.loadImagesBtnText}>{t("mail.loadImages")}</Text>
           </Pressable>
         </View>
       )}
@@ -144,11 +163,18 @@ export function MessageWebView({
           { height: webViewHeight, width: containerWidth },
         ]}
       >
-        <WebView
+        <WebViewWithRef
+          ref={webViewRef}
           testID="mobile-message-webview"
           originWhitelist={["about:blank", "https://*", "http://*"]}
           source={{ html: fullHtmlDocument, baseUrl: "about:blank" }}
+          injectedJavaScriptBeforeContentLoaded={
+            INJECTED_EMAIL_LAYOUT_BEFORE_LOAD_JS
+          }
           injectedJavaScript={INJECTED_EMAIL_LAYOUT_JS}
+          onLoadEnd={() => {
+            webViewRef.current?.injectJavaScript(INJECTED_EMAIL_LAYOUT_JS)
+          }}
           onMessage={handleMessage}
           onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
           scrollEnabled={false}

@@ -107,10 +107,17 @@ func TestSanitizeHTML(t *testing.T) {
 			expectedCIDs:         []string{"logo.png@example.com"},
 		},
 		{
-			name:                 "neutralizes CSS url(https://tracker...) in style attributes",
+			name:                 "neutralizes CSS url(https://tracker...) in style attributes while preserving data-saturn-remote-style",
 			input:                `<div style="background-image: url('https://tracker.example.com/bg.png'); color: red;">Styled</div>`,
-			expectedContains:     []string{"color: red", "Styled"},
-			expectedNotContains:  []string{"https://tracker.example.com/bg.png"},
+			expectedContains:     []string{` style="background-image: none; color: red;"`, `data-saturn-remote-style="background-image: url(&#39;https://tracker.example.com/bg.png&#39;); color: red;"`, "Styled"},
+			expectedNotContains:  []string{` style="background-image: url(`},
+			expectedRemoteImages: true,
+		},
+		{
+			name:                 "handles Amazon-style URLs with parentheses, @import rules, scroll-behavior, and data URIs cleanly",
+			input:                `<style>@import url('https://fonts.example.com/css'); .deal-grid { width: 100%; scroll-behavior: smooth; background: url('https://m.media-amazon.com/images/G/30/deals_(1)_.jpg'); }</style><body><table><tr><td><style>.nested-card { color: #111; }</style><div style="background-image: url('https://m.media-amazon.com/hero_(1)_.jpg'); padding: 20px;">Deals</div><div style="background-image: url('data:image/png;base64,iVBORw0KGgo='); color: blue;">InlineData</div></td></tr></table></body>`,
+			expectedContains:     []string{".deal-grid", "width: 100%", "scroll-behavior: smooth", "background: none", ` style="background-image: none; padding: 20px;"`, `data-saturn-remote-style="background-image: url(&#39;https://m.media-amazon.com/hero_(1)_.jpg&#39;); padding: 20px;"`, `url(&#39;data:image/png;base64,iVBORw0KGgo=&#39;)`, ".nested-card"},
+			expectedNotContains:  []string{"@import", "fonts.example.com", "deals_(1)_.jpg", `_.jpg')`, ` style="background-image: url(&#39;https://`},
 			expectedRemoteImages: true,
 		},
 		{
@@ -155,6 +162,12 @@ func TestSanitizeHTML(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("does not duplicate nested style blocks inside body", func(t *testing.T) {
+		res, err := SanitizeHTML(`<body><table><tr><td><style>.nested-only { color: #222; }</style><p>Hi</p></td></tr></table></body>`)
+		require.NoError(t, err)
+		assert.Equal(t, 1, strings.Count(res.SanitizedHTML, ".nested-only"))
+	})
 }
 
 func TestParseMIME(t *testing.T) {

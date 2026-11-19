@@ -315,25 +315,32 @@ func (s *Service) hydrateMessage(ctx context.Context, spaceID string, msg *domai
 	var bodyHTML, bodyPlain string
 
 	body, err := s.messageReader.GetBody(ctx, spaceID, msg.ID)
+	needsFetch := err != nil || body == nil
+	isPlainFallback := err == nil && body != nil && strings.HasPrefix(body.SanitizedHTML, "<pre style=\"white-space: pre-wrap;")
+
 	if err == nil && body != nil {
 		bodyHTML = body.SanitizedHTML
 		bodyPlain = body.PlainText
 		if !msg.HasRemoteImages && strings.Contains(strings.ToLower(bodyHTML), "data-saturn-remote-") {
 			msg.HasRemoteImages = true
 		}
-	} else if msg.ConnectedAccountID != "" && msg.ProviderMessageID != nil && *msg.ProviderMessageID != "" && s.accountReader != nil {
-		acc, err := s.accountReader.GetAccount(ctx, spaceID, msg.ConnectedAccountID)
-		if err == nil && acc != nil {
+	}
+
+	if (needsFetch || isPlainFallback) && msg.ConnectedAccountID != "" && msg.ProviderMessageID != nil && *msg.ProviderMessageID != "" && s.accountReader != nil {
+		acc, accErr := s.accountReader.GetAccount(ctx, spaceID, msg.ConnectedAccountID)
+		if accErr == nil && acc != nil {
 			if prov, ok := s.externalProviders[acc.Provider]; ok {
-				if token, err := s.tokenManager.TokenSource(ctx, spaceID, msg.ConnectedAccountID); err == nil {
-					if fetchedBody, err := prov.FetchMessageBody(ctx, token, *msg.ProviderMessageID); err == nil && fetchedBody != nil {
-						bodyHTML = fetchedBody.SanitizedHTML
-						bodyPlain = fetchedBody.PlainText
-						fetchedBody.MessageID = msg.ID
-						fetchedBody.SpaceID = spaceID
-						_ = s.messageReader.SaveBody(ctx, fetchedBody)
-						msg.BodyCached = true
-						msg.HasRemoteImages = fetchedBody.HasRemoteImages
+				if token, tokErr := s.tokenManager.TokenSource(ctx, spaceID, msg.ConnectedAccountID); tokErr == nil {
+					if fetchedBody, fetchErr := prov.FetchMessageBody(ctx, token, *msg.ProviderMessageID); fetchErr == nil && fetchedBody != nil {
+						if needsFetch || (fetchedBody.SanitizedHTML != "" && !strings.HasPrefix(fetchedBody.SanitizedHTML, "<pre style=\"white-space: pre-wrap;")) {
+							bodyHTML = fetchedBody.SanitizedHTML
+							bodyPlain = fetchedBody.PlainText
+							fetchedBody.MessageID = msg.ID
+							fetchedBody.SpaceID = spaceID
+							_ = s.messageReader.SaveBody(ctx, fetchedBody)
+							msg.BodyCached = true
+							msg.HasRemoteImages = fetchedBody.HasRemoteImages
+						}
 					}
 				}
 			}
@@ -345,9 +352,12 @@ func (s *Service) hydrateMessage(ctx context.Context, spaceID string, msg *domai
 		bodyPlain = msg.Snippet
 	}
 
-	// Mint 5-minute ephemeral signed download links for every attachment
+	// Mint 5-minute ephemeral signed download links for every attachment (skipping legacy unnamed body parts)
 	var attachmentProjections []*AttachmentProjection
 	for _, att := range msg.Attachments {
+		if att.Filename == "" && !att.IsInline && (strings.EqualFold(att.ContentType, "text/html") || strings.EqualFold(att.ContentType, "text/plain")) {
+			continue
+		}
 		disposition := "attachment"
 		if att.IsInline {
 			disposition = "inline"

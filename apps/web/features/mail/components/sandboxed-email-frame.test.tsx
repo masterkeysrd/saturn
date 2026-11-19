@@ -153,4 +153,70 @@ describe("SandboxedEmailFrame", () => {
       window.requestAnimationFrame = origRaf
     }
   })
+
+  it("renders 640px promotional Amazon HTML safely without td img[width] clipping while keeping small icons crisp and scaling wide tables", () => {
+    const amazonHtml =
+      '<table width="640"><tr><td><a href="https://amazon.es"><img data-saturn-remote-src="https://m.media-amazon.com/hero.jpg" width="640" loading="lazy"></a><img src="data:image/png;base64,iVBORw0KGgo=" width="16" height="16"></td></tr></table>'
+
+    render(<SandboxedEmailFrame html={amazonHtml} />)
+    const iframe = screen.getByTestId(
+      "sandboxed-email-frame"
+    ) as HTMLIFrameElement
+
+    expect(iframe.srcdoc).not.toContain("td img[width]")
+    expect(iframe.srcdoc).toContain('img[width="16"]')
+    expect(iframe.srcdoc).toContain('id="saturn-email-viewport"')
+    expect(iframe.srcdoc).toContain('loading="eager"')
+    expect(iframe.srcdoc).not.toContain('loading="lazy"')
+
+    const smallIcon = {
+      getAttribute: (name: string) => (name === "width" ? "16" : null),
+      style: { maxWidth: "" },
+      complete: false,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }
+    const wideBanner = {
+      getAttribute: (name: string) => (name === "width" ? "640" : null),
+      style: { maxWidth: "" },
+      complete: false,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }
+    const mockViewport = {
+      clientWidth: 400,
+      style: { height: "" },
+    }
+    const mockRoot = {
+      scrollWidth: 640,
+      scrollHeight: 800,
+      style: { transform: "", width: "", transformOrigin: "" },
+      getBoundingClientRect: () => ({ height: 500 }),
+    }
+    Object.defineProperty(iframe, "contentDocument", {
+      value: {
+        readyState: "complete",
+        body: { scrollHeight: 800 },
+        documentElement: { clientWidth: 400 },
+        getElementById: (id: string) => {
+          if (id === "saturn-email-viewport") return mockViewport
+          if (id === "saturn-email-root") return mockRoot
+          return null
+        },
+        images: [smallIcon, wideBanner],
+      },
+      configurable: true,
+    })
+
+    fireEvent.load(iframe)
+    expect(smallIcon.style.maxWidth).toBe("none")
+    expect(wideBanner.style.maxWidth).toBe("")
+    expect(mockRoot.style.width).toBe("640px")
+    expect(mockRoot.style.transform).toBe("scale(0.625)")
+    expect(iframe.style.height).toBe("500px")
+
+    fireEvent.click(screen.getByTestId("load-remote-images-btn"))
+    expect(iframe.srcdoc).toContain('src="https://m.media-amazon.com/hero.jpg"')
+    expect(iframe.srcdoc).toContain('loading="eager"')
+  })
 })

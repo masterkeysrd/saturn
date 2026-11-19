@@ -599,3 +599,112 @@ func TestProvider_FetchOlderThreads(t *testing.T) {
 		})
 	}
 }
+
+func TestProvider_LargeHTMLBodyPartViaAttachmentID(t *testing.T) {
+	largeHTML := `<html><body><table width="640"><tr><td><img src="https://m.media-amazon.com/images/G/30/deals_(1)_.jpg" alt="Black Friday"><h1>Hoy arranca el Black Friday de Amazon</h1></td></tr></table></body></html>`
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/users/me/threads/th_amazon", func(w http.ResponseWriter, r *http.Request) {
+		resp := gmailThread{
+			ID: "th_amazon",
+			Messages: []gmailMessage{
+				{
+					ID:           "msg_amazon",
+					ThreadID:     "th_amazon",
+					LabelIDs:     []string{"INBOX"},
+					Snippet:      "Hoy arranca el Black Friday de Amazon",
+					InternalDate: "1700000000000",
+					Payload: &gmailMessagePayload{
+						MimeType: "multipart/alternative",
+						Headers: []gmailHeader{
+							{Name: "Subject", Value: "🛒 Hoy arranca el Black Friday de Amazon"},
+							{Name: "From", Value: "Amazon <deals@amazon.es>"},
+						},
+						Parts: []gmailMessagePayload{
+							{
+								MimeType: "text/plain",
+								Body: &gmailMessagePartBody{
+									Data: base64.URLEncoding.EncodeToString([]byte("Hoy arranca el Black Friday de Amazon")),
+								},
+							},
+							{
+								MimeType: "text/html",
+								Body: &gmailMessagePartBody{
+									AttachmentID: "att_html_body",
+									Size:         int64(len(largeHTML)),
+								},
+							},
+							{
+								MimeType: "application/pdf",
+								Filename: "receipt.pdf",
+								Headers: []gmailHeader{
+									{Name: "Content-Disposition", Value: `attachment; filename="receipt.pdf"`},
+								},
+								Body: &gmailMessagePartBody{
+									AttachmentID: "att_real_pdf",
+									Size:         1234,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		_ = json.MarshalWrite(w, resp)
+	})
+
+	mux.HandleFunc("/users/me/messages/msg_amazon", func(w http.ResponseWriter, r *http.Request) {
+		resp := gmailMessage{
+			ID:       "msg_amazon",
+			ThreadID: "th_amazon",
+			Snippet:  "Hoy arranca el Black Friday de Amazon",
+			Payload: &gmailMessagePayload{
+				MimeType: "multipart/alternative",
+				Parts: []gmailMessagePayload{
+					{
+						MimeType: "text/plain",
+						Body: &gmailMessagePartBody{
+							Data: base64.URLEncoding.EncodeToString([]byte("Hoy arranca el Black Friday de Amazon")),
+						},
+					},
+					{
+						MimeType: "text/html",
+						Body: &gmailMessagePartBody{
+							AttachmentID: "att_html_body",
+							Size:         int64(len(largeHTML)),
+						},
+					},
+				},
+			},
+		}
+		_ = json.MarshalWrite(w, resp)
+	})
+
+	mux.HandleFunc("/users/me/messages/msg_amazon/attachments/att_html_body", func(w http.ResponseWriter, r *http.Request) {
+		resp := gmailAttachmentResponse{
+			Size: int64(len(largeHTML)),
+			Data: base64.URLEncoding.EncodeToString([]byte(largeHTML)),
+		}
+		_ = json.MarshalWrite(w, resp)
+	})
+
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	provider := NewProvider(Config{GmailURL: server.URL})
+
+	_, msgs, err := provider.FetchThread(context.Background(), "test-token", "th_amazon")
+	require.NoError(t, err)
+	require.Len(t, msgs, 1)
+	require.Len(t, msgs[0].Attachments, 1)
+	assert.Equal(t, "att_real_pdf", msgs[0].Attachments[0].ID)
+	assert.Equal(t, "receipt.pdf", msgs[0].Attachments[0].Filename)
+
+	body, err := provider.FetchMessageBody(context.Background(), "test-token", "msg_amazon")
+	require.NoError(t, err)
+	require.NotNil(t, body)
+	assert.Contains(t, body.SanitizedHTML, "Hoy arranca el Black Friday de Amazon")
+	assert.Contains(t, body.SanitizedHTML, `data-saturn-remote-src="https://m.media-amazon.com/images/G/30/deals_(1)_.jpg"`)
+	assert.NotContains(t, body.SanitizedHTML, `<pre style="white-space: pre-wrap;`)
+	assert.True(t, body.HasRemoteImages)
+}

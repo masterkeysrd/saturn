@@ -36,11 +36,14 @@ var (
 		atom.Frameset: true,
 	}
 
-	// Regexp to match CSS url(...) references.
-	cssURLRegex = regexp.MustCompile(`(?i)url\s*\(\s*([^)]*?)\s*\)`)
+	// Regexp to match CSS url(...) references cleanly, including URLs containing parentheses inside quotes.
+	cssURLRegex = regexp.MustCompile(`(?i)url\s*\(\s*(?:"([^"]*)"|'([^']*)'|([^)'"]*))\s*\)`)
 
-	// Regexp to match dangerous CSS properties/expressions.
-	cssDangerousRegex = regexp.MustCompile(`(?i)(expression|javascript|behavior|vbscript|-moz-binding|@import)`)
+	// Regexp to strip complete CSS @import statements without leaving broken url(...); syntax.
+	cssImportRegex = regexp.MustCompile(`(?i)@import\s+(?:url\s*\(\s*(?:"[^"]*"|'[^']*'|[^)'"]*)\s*\)|"[^"]*"|'[^']*')[^;{}]*;?`)
+
+	// Regexp to match dangerous CSS properties/expressions without clobbering safe properties like scroll-behavior.
+	cssDangerousRegex = regexp.MustCompile(`(?i)(?:expression\s*\(|javascript\s*:|vbscript\s*:|-moz-binding\s*:|(?:^|[;\s{])behavior\s*:)`)
 
 	// Regexp to detect whitespace collapsing in snippets.
 	whitespaceRegex = regexp.MustCompile(`\s+`)
@@ -118,6 +121,9 @@ func SanitizeHTML(rawHTML string, opts ...SanitizeOption) (*SanitizeResult, erro
 	findStyles(doc)
 
 	for _, st := range styles {
+		if st.Parent != nil {
+			st.Parent.RemoveChild(st)
+		}
 		if err := html.Render(&buf, st); err != nil {
 			return nil, errors.E(errors.Internal, "render sanitized style: %w", err)
 		}
@@ -333,7 +339,7 @@ func sanitizeElement(n *html.Node, opts *SanitizeOptions, res *SanitizeResult) {
 
 		// 7. Style attribute sanitization
 		if keyLower == "style" {
-			sanitizedStyle, hasRemote := sanitizeStyleAttribute(a.Val)
+			sanitizedStyle, remoteStyle, hasRemote := sanitizeStyleAttribute(a.Val)
 			if hasRemote {
 				res.HasRemoteImages = true
 			}
@@ -341,6 +347,12 @@ func sanitizeElement(n *html.Node, opts *SanitizeOptions, res *SanitizeResult) {
 				cleanAttrs = append(cleanAttrs, html.Attribute{
 					Key: "style",
 					Val: sanitizedStyle,
+				})
+			}
+			if hasRemote && remoteStyle != "" {
+				cleanAttrs = append(cleanAttrs, html.Attribute{
+					Key: "data-saturn-remote-style",
+					Val: remoteStyle,
 				})
 			}
 			continue
@@ -448,56 +460,114 @@ func isDangerousURI(raw string) bool {
 	return false
 }
 
-func sanitizeStyleAttribute(style string) (string, bool) {
+func extractCSSURLMatch(sub []string) string {
+	for i := 1; i < len(sub); i++ {
+		if sub[i] != "" {
+			return strings.TrimSpace(sub[i])
+		}
+	}
+	return ""
+}
+
+func splitCSSDeclarations(style string) []string {
+	var decls []string
+	var start int
+	var inSingle, inDouble bool
+	parenDepth := 0
+
+	for i := 0; i < len(style); i++ {
+		ch := style[i]
+		if ch == '\\' && (inSingle || inDouble) {
+			i++
+			continue
+		}
+		switch ch {
+		case '\'':
+			if !inDouble {
+				inSingle = !inSingle
+			}
+		case '"':
+			if !inSingle {
+				inDouble = !inDouble
+			}
+		case '(':
+			if !inSingle && !inDouble {
+				parenDepth++
+			}
+		case ')':
+			if !inSingle && !inDouble && parenDepth > 0 {
+				parenDepth--
+			}
+		case ';':
+			if !inSingle && !inDouble && parenDepth == 0 {
+				decls = append(decls, style[start:i])
+				start = i + 1
+			}
+		}
+	}
+	if start < len(style) {
+		decls = append(decls, style[start:])
+	}
+	return decls
+}
+
+func sanitizeStyleAttribute(style string) (string, string, bool) {
 	hasRemote := false
 
-	decls := strings.Split(style, ";")
+	decls := splitCSSDeclarations(style)
 	var cleanDecls []string
+	var remoteDecls []string
 	for _, decl := range decls {
 		trimmed := strings.TrimSpace(decl)
 		if trimmed == "" {
 			continue
 		}
 
-		// Discard dangerous declarations entirely (expression, behavior, -moz-binding, etc.)
-		if cssDangerousRegex.MatchString(trimmed) {
+		// Discard dangerous declarations entirely (expression, behavior, -moz-binding, @import, etc.)
+		if cssImportRegex.MatchString(trimmed) || cssDangerousRegex.MatchString(trimmed) {
 			continue
 		}
+
+		remoteDecl := trimmed
+		blockedDecl := trimmed
 
 		// Check and strip remote URLs in this declaration
 		if cssURLRegex.MatchString(trimmed) {
 			matches := cssURLRegex.FindAllStringSubmatch(trimmed, -1)
 			for _, m := range matches {
-				if len(m) > 1 {
-					urlPart := strings.Trim(strings.TrimSpace(m[1]), `'"`)
-					if isRemoteURL(urlPart) {
-						hasRemote = true
-					}
+				if isRemoteURL(extractCSSURLMatch(m)) {
+					hasRemote = true
 				}
 			}
-			trimmed = cssURLRegex.ReplaceAllStringFunc(trimmed, func(match string) string {
+			blockedDecl = cssURLRegex.ReplaceAllStringFunc(trimmed, func(match string) string {
 				sub := cssURLRegex.FindStringSubmatch(match)
-				if len(sub) > 1 {
-					urlPart := strings.Trim(strings.TrimSpace(sub[1]), `'"`)
-					if isRemoteURL(urlPart) {
-						return "none"
-					}
+				if isRemoteURL(extractCSSURLMatch(sub)) {
+					return "none"
 				}
 				return match
 			})
 		}
 
-		cleanDecls = append(cleanDecls, trimmed)
+		cleanDecls = append(cleanDecls, blockedDecl)
+		remoteDecls = append(remoteDecls, remoteDecl)
 	}
 
-	if len(cleanDecls) == 0 {
-		return "", hasRemote
+	var blockedOut, remoteOut string
+	if len(cleanDecls) > 0 {
+		blockedOut = strings.Join(cleanDecls, "; ") + ";"
 	}
-	return strings.Join(cleanDecls, "; ") + ";", hasRemote
+	if hasRemote && len(remoteDecls) > 0 {
+		remoteOut = strings.Join(remoteDecls, "; ") + ";"
+	}
+	return blockedOut, remoteOut, hasRemote
 }
 
 func sanitizeCSSContent(css string) (string, bool) {
 	hasRemote := false
+
+	if cssImportRegex.MatchString(css) {
+		css = cssImportRegex.ReplaceAllString(css, "")
+	}
 
 	if cssDangerousRegex.MatchString(css) {
 		css = cssDangerousRegex.ReplaceAllString(css, "")
@@ -506,20 +576,14 @@ func sanitizeCSSContent(css string) (string, bool) {
 	if cssURLRegex.MatchString(css) {
 		matches := cssURLRegex.FindAllStringSubmatch(css, -1)
 		for _, m := range matches {
-			if len(m) > 1 {
-				urlPart := strings.Trim(strings.TrimSpace(m[1]), `'"`)
-				if isRemoteURL(urlPart) {
-					hasRemote = true
-				}
+			if isRemoteURL(extractCSSURLMatch(m)) {
+				hasRemote = true
 			}
 		}
 		css = cssURLRegex.ReplaceAllStringFunc(css, func(match string) string {
 			sub := cssURLRegex.FindStringSubmatch(match)
-			if len(sub) > 1 {
-				urlPart := strings.Trim(strings.TrimSpace(sub[1]), `'"`)
-				if isRemoteURL(urlPart) {
-					return "none"
-				}
+			if isRemoteURL(extractCSSURLMatch(sub)) {
+				return "none"
 			}
 			return match
 		})
