@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useLocation, useNavigate, useParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   buildCopilotEntityKey,
@@ -21,8 +21,21 @@ import {
   type Flow_Trigger,
 } from "@saturn/api/gen/saturn/platform/workflow/v1/workflow"
 import { useActiveSpaceContext } from "@/features/space/use-space"
-import { PageLayout } from "@/components/ui/page-layout"
+import { StudioCanvasPage } from "@/components/ui/page-shells"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { Badge } from "@/components/ui/badge"
+import { Kbd } from "@/components/ui/kbd"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   FlowCanvas,
   type InsertTarget,
@@ -37,6 +50,7 @@ import {
   updateStepById,
 } from "./components/step-utils"
 import { TestRunDrawer } from "./components/test-run-drawer"
+import { normalizeFlowSnapshot } from "./workflow-templates"
 import { toast } from "@/components/ui/toast"
 import {
   ArrowLeft,
@@ -45,8 +59,8 @@ import {
   RotateCcw,
   History,
   Loader2,
-  Workflow,
   Settings2,
+  X,
 } from "lucide-react"
 
 export function WorkflowEditorView() {
@@ -69,10 +83,48 @@ export function WorkflowEditorView() {
   const [draftOverride, setDraftOverride] = useState<Flow | null>(() =>
     draftFromState ? draftFromState : null
   )
+  const [savedBaselineOverride, setSavedBaselineOverride] =
+    useState<Flow | null>(null)
   const [fallbackDraft] = useState<Flow>(() => createEmptyWorkflowDraft())
+
+  const baselineFlow = !isNew
+    ? (savedBaselineOverride ?? loadedFlow ?? null)
+    : null
+
   const draft =
-    draftOverride ?? (!isNew && loadedFlow ? loadedFlow : fallbackDraft)
-  const setDraft = (next: Flow) => setDraftOverride(next)
+    draftOverride ??
+    (!isNew
+      ? (savedBaselineOverride ?? loadedFlow ?? fallbackDraft)
+      : fallbackDraft)
+
+  const setDraft = useCallback((next: Flow) => {
+    setDraftOverride(next)
+  }, [])
+
+  const isDirty = useMemo(() => {
+    if (isNew) {
+      if (draftFromState) {
+        return savedBaselineOverride === null
+      }
+      return (
+        normalizeFlowSnapshot(draft) !== normalizeFlowSnapshot(fallbackDraft)
+      )
+    }
+    if (!baselineFlow) return false
+    if (draftOverride === null) return false
+    return (
+      normalizeFlowSnapshot(draftOverride) !==
+      normalizeFlowSnapshot(baselineFlow)
+    )
+  }, [
+    isNew,
+    draftFromState,
+    savedBaselineOverride,
+    draft,
+    fallbackDraft,
+    baselineFlow,
+    draftOverride,
+  ])
 
   useRegisterCopilotView({
     viewId: "workflows.editor",
@@ -98,24 +150,35 @@ export function WorkflowEditorView() {
   const [selectedNode, setSelectedNode] = useState<SelectedCanvasNode>({
     kind: "flow",
   })
+  const [mobilePane, setMobilePane] = useState<"canvas" | "inspector">("canvas")
   const [testOpen, setTestOpen] = useState(false)
   const [lastRun, setLastRun] = useState<FlowRun | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [pendingNavPath, setPendingNavPath] = useState<string | null>(null)
+  const [resetDialogOpen, setResetDialogOpen] = useState(false)
 
   const scopeKey = `${spaceId}:${flowId ?? "new"}`
-  const prevScopeKeyRef = useRef(scopeKey)
-  useEffect(() => {
-    if (prevScopeKeyRef.current !== scopeKey) {
-      prevScopeKeyRef.current = scopeKey
-      setDraftOverride(draftFromState ? draftFromState : null)
-      setSelectedNode({ kind: "flow" })
-      setTestOpen(false)
-      setLastRun(null)
-      setValidationError(null)
-    }
-  }, [scopeKey, draftFromState])
+  const [prevScopeKey, setPrevScopeKey] = useState(scopeKey)
+  if (prevScopeKey !== scopeKey) {
+    setPrevScopeKey(scopeKey)
+    setDraftOverride(draftFromState ? draftFromState : null)
+    setSavedBaselineOverride(null)
+    setSelectedNode({ kind: "flow" })
+    setMobilePane("canvas")
+    setTestOpen(false)
+    setLastRun(null)
+    setValidationError(null)
+    setPendingNavPath(null)
+    setResetDialogOpen(false)
+  }
 
-  const invalidateWorkflows = async () => {
+  const [prevLoadedFlow, setPrevLoadedFlow] = useState(loadedFlow)
+  if (prevLoadedFlow !== loadedFlow) {
+    setPrevLoadedFlow(loadedFlow)
+    setSavedBaselineOverride(null)
+  }
+
+  const invalidateWorkflows = useCallback(async () => {
     await queryClient.invalidateQueries({
       queryKey: ["/api/v1/platform/workflows"],
     })
@@ -124,7 +187,7 @@ export function WorkflowEditorView() {
         queryKey: [`/api/v1/platform/workflows/${flowId}`],
       })
     }
-  }
+  }, [queryClient, flowId, isNew])
 
   const createMutation = useCreateFlowMutation({
     onSuccess: invalidateWorkflows,
@@ -134,8 +197,10 @@ export function WorkflowEditorView() {
   })
   const resetMutation = useResetFlowMutation({
     onSuccess: async (resetFlow) => {
-      setDraftOverride(resetFlow)
+      setSavedBaselineOverride(resetFlow)
+      setDraftOverride(null)
       setSelectedNode({ kind: "flow" })
+      setResetDialogOpen(false)
       await invalidateWorkflows()
     },
   })
@@ -153,7 +218,10 @@ export function WorkflowEditorView() {
     return topics.find((t) => t.topic === evTrig.config?.topic)
   }, [draft.triggers, topics])
 
-  const handleSave = async () => {
+  const isSaving = createMutation.isPending || updateMutation.isPending
+
+  const handleSave = useCallback(async (): Promise<boolean> => {
+    if (isSaving) return false
     setValidationError(null)
     const parsed = FlowSchema.safeParse({
       name: draft.name,
@@ -169,7 +237,7 @@ export function WorkflowEditorView() {
       setValidationError(
         `${firstIssue?.path.join(".") || "flow"}: ${firstIssue?.message || "Invalid workflow"}`
       )
-      return
+      return false
     }
 
     try {
@@ -177,6 +245,8 @@ export function WorkflowEditorView() {
         const created = await createMutation.mutateAsync({
           flow: draft,
         })
+        setSavedBaselineOverride(created)
+        setDraftOverride(null)
         toast.add({
           title: "Workflow Created",
           description: `${created.name} saved successfully.`,
@@ -187,6 +257,7 @@ export function WorkflowEditorView() {
             replace: true,
           })
         }
+        return true
       } else if (draft.id) {
         const updated = await updateMutation.mutateAsync({
           id: draft.id,
@@ -206,19 +277,136 @@ export function WorkflowEditorView() {
             },
           },
         })
-        setDraft(updated)
+        setSavedBaselineOverride(updated)
+        setDraftOverride(null)
         toast.add({
           title: "Workflow Saved",
           description: `${updated.name} (v${updated.version ?? 1}) updated.`,
           type: "success",
         })
+        return true
       }
+      return false
     } catch (err) {
       toast.add({
         title: "Save failed",
         description: err instanceof Error ? err.message : "Unknown error",
         type: "error",
       })
+      return false
+    }
+  }, [
+    isSaving,
+    draft,
+    isNew,
+    createMutation,
+    spaceId,
+    navigate,
+    updateMutation,
+  ])
+
+  const handleSaveRef = useRef(handleSave)
+  useEffect(() => {
+    handleSaveRef.current = handleSave
+  }, [handleSave])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        !e.shiftKey &&
+        !e.altKey &&
+        e.key.toLowerCase() === "s"
+      ) {
+        e.preventDefault()
+        void handleSaveRef.current()
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [])
+
+  useEffect(() => {
+    if (!isDirty) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ""
+    }
+    window.addEventListener("beforeunload", onBeforeUnload)
+    return () => window.removeEventListener("beforeunload", onBeforeUnload)
+  }, [isDirty])
+
+  useEffect(() => {
+    if (!isDirty) return
+    const onDocumentClick = (e: MouseEvent) => {
+      if (
+        e.defaultPrevented ||
+        e.button !== 0 ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.shiftKey ||
+        e.altKey
+      ) {
+        return
+      }
+      const target = e.target
+      if (!(target instanceof Element)) return
+      const anchor = target.closest("a[href]")
+      if (!anchor) return
+      if (
+        anchor.getAttribute("target") === "_blank" ||
+        anchor.hasAttribute("download")
+      ) {
+        return
+      }
+      const rawHref = anchor.getAttribute("href")
+      if (!rawHref || rawHref.startsWith("#")) return
+      let url: URL
+      try {
+        url = new URL(
+          anchor instanceof HTMLAnchorElement ? anchor.href : rawHref,
+          window.location.href
+        )
+      } catch {
+        return
+      }
+      if (url.origin !== window.location.origin) return
+      const nextPath = `${url.pathname}${url.search}${url.hash}`
+      const currentPath = `${location.pathname}${location.search}${location.hash}`
+      if (nextPath === currentPath) return
+      e.preventDefault()
+      e.stopPropagation()
+      setPendingNavPath(nextPath)
+    }
+    document.addEventListener("click", onDocumentClick, true)
+    return () => document.removeEventListener("click", onDocumentClick, true)
+  }, [isDirty, location.pathname, location.search, location.hash])
+
+  const requestNavigation = useCallback(
+    (targetPath: string) => {
+      if (isDirty) {
+        setPendingNavPath(targetPath)
+        return
+      }
+      navigate(targetPath)
+    },
+    [isDirty, navigate]
+  )
+
+  const handleDiscardAndLeave = () => {
+    const target = pendingNavPath
+    setPendingNavPath(null)
+    if (target) {
+      navigate(target)
+    }
+  }
+
+  const handleSaveAndLeave = async () => {
+    const target = pendingNavPath
+    const ok = await handleSave()
+    if (ok && target) {
+      setPendingNavPath(null)
+      navigate(target)
     }
   }
 
@@ -349,138 +537,176 @@ export function WorkflowEditorView() {
     )
   }
 
-  const isSaving = createMutation.isPending || updateMutation.isPending
-
   return (
-    <PageLayout
-      title={isNew ? "New Workflow" : draft.name || "Workflow Editor"}
-      description={
-        draft.isSystem
-          ? `System blueprint (${draft.systemKey}) • v${draft.version ?? 1}`
-          : "Visual workflow canvas — click any trigger or step node to inspect and configure."
-      }
-      icon={Workflow}
-      className="max-w-none"
-      actions={
-        <div className="flex flex-wrap items-center gap-2">
-          {spaceId && (
-            <Button
-              variant="ghost"
-              size="sm"
-              nativeButton={false}
-              render={<Link to={`/space/${spaceId}/workflows`} />}
-              className="gap-1.5 rounded-xl text-xs"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant={selectedNode.kind === "flow" ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => setSelectedNode({ kind: "flow" })}
-            className="gap-1.5 rounded-xl text-xs"
-          >
-            <Settings2 className="h-3.5 w-3.5" />
-            Flow Settings
-          </Button>
-          {!isNew && spaceId && draft.id && (
-            <Button
-              variant="outline"
-              size="sm"
-              nativeButton={false}
-              render={
-                <Link
-                  to={`/space/${spaceId}/workflows/runs?flowId=${draft.id}`}
+    <>
+      <StudioCanvasPage
+        title={isNew ? "New Workflow" : draft.name || "Workflow Editor"}
+        mobilePane={mobilePane}
+        onMobilePaneChange={setMobilePane}
+        leading={
+          <div className="flex min-w-0 items-center gap-2">
+            {spaceId && (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Back to workflows"
+                  onClick={() =>
+                    requestNavigation(`/space/${spaceId}/workflows`)
+                  }
+                  className="h-7 shrink-0 gap-1 rounded-lg px-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <ArrowLeft className="size-3.5" />
+                  <span className="hidden sm:inline">Workflows</span>
+                </Button>
+                <span
+                  aria-hidden="true"
+                  className="h-4 w-px shrink-0 bg-border"
                 />
-              }
-              className="gap-1.5 rounded-xl text-xs"
-            >
-              <History className="h-3.5 w-3.5" />
-              Runs
-            </Button>
-          )}
-          {draft.isSystem && draft.id && (
+              </>
+            )}
+            <input
+              type="text"
+              value={draft.name}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              placeholder="Untitled Workflow"
+              aria-label="Workflow name"
+              className="h-7 w-full max-w-[260px] min-w-[110px] truncate rounded-md border border-transparent bg-transparent px-2 text-sm font-semibold text-foreground transition-colors outline-none hover:border-border hover:bg-control focus:border-ring focus:bg-control focus:ring-2 focus:ring-ring/40"
+            />
+            {draft.isSystem && (
+              <Badge variant="info" className="hidden shrink-0 sm:inline-flex">
+                System
+              </Badge>
+            )}
+          </div>
+        }
+        status={
+          <div className="flex shrink-0 items-center gap-2.5">
+            <div className="flex items-center gap-1.5">
+              <Switch
+                size="sm"
+                aria-label="Workflow active"
+                checked={Boolean(draft.isEnabled)}
+                onCheckedChange={(checked) =>
+                  setDraft({ ...draft, isEnabled: Boolean(checked) })
+                }
+              />
+              <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
+                {draft.isEnabled ? "Active" : "Paused"}
+              </span>
+            </div>
+            {isDirty ? (
+              <Badge
+                variant="warning"
+                dot
+                data-testid="workflow-unsaved-badge"
+                className="shrink-0"
+              >
+                Unsaved
+              </Badge>
+            ) : (
+              !isNew && (
+                <span className="hidden text-xs whitespace-nowrap text-muted-foreground md:inline">
+                  Saved · v{draft.version ?? 1}
+                </span>
+              )
+            )}
+          </div>
+        }
+        actions={
+          <>
             <Button
+              type="button"
+              variant={selectedNode.kind === "flow" ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => {
+                setSelectedNode({ kind: "flow" })
+                setMobilePane("inspector")
+              }}
+              className="h-8 gap-1.5 rounded-lg text-xs"
+            >
+              <Settings2 className="size-3.5" />
+              <span className="hidden xl:inline">Flow Settings</span>
+            </Button>
+            {!isNew && spaceId && draft.id && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  requestNavigation(
+                    `/space/${spaceId}/workflows/runs?flowId=${draft.id}`
+                  )
+                }
+                className="h-8 gap-1.5 rounded-lg text-xs"
+              >
+                <History className="size-3.5" />
+                <span className="hidden lg:inline">Runs</span>
+              </Button>
+            )}
+            {draft.isSystem && draft.id && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setResetDialogOpen(true)}
+                disabled={resetMutation.isPending}
+                className="h-8 gap-1.5 rounded-lg text-xs"
+              >
+                <RotateCcw className="size-3.5" />
+                <span className="hidden xl:inline">Reset Default</span>
+              </Button>
+            )}
+            <Button
+              type="button"
               variant="outline"
               size="sm"
-              onClick={handleResetSystemFlow}
-              disabled={resetMutation.isPending}
-              className="gap-1.5 rounded-xl text-xs"
+              onClick={() => setTestOpen(true)}
+              className="h-8 gap-1.5 rounded-lg text-xs"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Reset Default
+              <FlaskConical className="size-3.5" />
+              <span className="hidden md:inline">Test &amp; Run</span>
             </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setTestOpen(true)}
-            className="gap-1.5 rounded-xl text-xs"
-          >
-            <FlaskConical className="h-3.5 w-3.5" />
-            Test &amp; Run
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={isSaving}
-            className="gap-1.5 rounded-xl text-xs"
-          >
-            {isSaving ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Save className="h-3.5 w-3.5" />
-            )}
-            Save Workflow
-          </Button>
-        </div>
-      }
-    >
-      {validationError && (
-        <div className="rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-xs font-medium text-destructive">
-          {validationError}
-        </div>
-      )}
-
-      {/* Split Studio: Visual Dot-Grid Canvas + Right Inspector Panel */}
-      <div className="grid grid-cols-1 gap-4 lg:h-[calc(100vh-12.5rem)] lg:min-h-[600px] lg:grid-cols-12">
-        <div className="flex min-h-[480px] flex-col lg:col-span-7 xl:col-span-8">
-          <FlowCanvas
-            flowName={draft.name}
-            triggers={draft.triggers ?? []}
-            steps={draft.steps ?? []}
-            stepDescriptors={stepDescriptors}
-            selectedNode={selectedNode}
-            lastRun={lastRun}
-            onSelectNode={setSelectedNode}
-            onAddTrigger={handleAddTrigger}
-            onInsertStep={handleInsertStep}
-            onMoveStep={(stepId, dir) =>
-              setDraft({
-                ...draft,
-                steps: moveStepById(draft.steps ?? [], stepId, dir),
-              })
-            }
-            onDuplicateStep={handleDuplicateStep}
-            onRemoveStep={(stepId) => {
-              setDraft({
-                ...draft,
-                steps: removeStepById(draft.steps ?? [], stepId),
-              })
-              if (
-                selectedNode.kind === "step" &&
-                selectedNode.stepId === stepId
-              ) {
-                setSelectedNode({ kind: "flow" })
-              }
-            }}
-            onAddSwitchCase={handleAddSwitchCase}
-          />
-        </div>
-
-        <div className="min-h-[480px] lg:col-span-5 lg:min-h-0 xl:col-span-4">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void handleSave()}
+              disabled={isSaving}
+              aria-label="Save workflow"
+              className="h-8 gap-1.5 rounded-lg text-xs"
+            >
+              {isSaving ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Save className="size-3.5" />
+              )}
+              <span>Save</span>
+              <Kbd className="hidden bg-primary-foreground/15 text-primary-foreground sm:inline-flex">
+                ⌘S
+              </Kbd>
+            </Button>
+          </>
+        }
+        banner={
+          validationError && (
+            <div
+              role="alert"
+              className="flex shrink-0 items-center justify-between gap-3 border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-xs font-medium text-destructive"
+            >
+              <span className="min-w-0 truncate">{validationError}</span>
+              <button
+                type="button"
+                onClick={() => setValidationError(null)}
+                aria-label="Dismiss validation error"
+                className="shrink-0 cursor-pointer rounded-md p-0.5 text-destructive/80 hover:bg-destructive/15 hover:text-destructive"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          )
+        }
+        inspector={
           <NodeInspectorPanel
             draft={draft}
             selectedNode={selectedNode}
@@ -529,8 +755,43 @@ export function WorkflowEditorView() {
               setSelectedNode({ kind: "flow" })
             }}
           />
-        </div>
-      </div>
+        }
+      >
+        <FlowCanvas
+          flowName={draft.name}
+          triggers={draft.triggers ?? []}
+          steps={draft.steps ?? []}
+          stepDescriptors={stepDescriptors}
+          selectedNode={selectedNode}
+          lastRun={lastRun}
+          onSelectNode={(node) => {
+            setSelectedNode(node)
+            setMobilePane("inspector")
+          }}
+          onAddTrigger={handleAddTrigger}
+          onInsertStep={handleInsertStep}
+          onMoveStep={(stepId, dir) =>
+            setDraft({
+              ...draft,
+              steps: moveStepById(draft.steps ?? [], stepId, dir),
+            })
+          }
+          onDuplicateStep={handleDuplicateStep}
+          onRemoveStep={(stepId) => {
+            setDraft({
+              ...draft,
+              steps: removeStepById(draft.steps ?? [], stepId),
+            })
+            if (
+              selectedNode.kind === "step" &&
+              selectedNode.stepId === stepId
+            ) {
+              setSelectedNode({ kind: "flow" })
+            }
+          }}
+          onAddSwitchCase={handleAddSwitchCase}
+        />
+      </StudioCanvasPage>
 
       <TestRunDrawer
         open={testOpen}
@@ -538,6 +799,66 @@ export function WorkflowEditorView() {
         flow={draft}
         onRunComplete={setLastRun}
       />
-    </PageLayout>
+
+      {/* Unsaved Changes Navigation Guard */}
+      <AlertDialog
+        open={pendingNavPath !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingNavPath(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved workflow changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved edits to{" "}
+              <strong>{draft.name || "this workflow"}</strong>. Save your
+              changes before leaving, or discard them.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDiscardAndLeave}
+            >
+              Discard changes
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleSaveAndLeave()}
+              disabled={isSaving}
+            >
+              {isSaving && <Loader2 className="size-3.5 animate-spin" />}
+              Save &amp; leave
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* System Flow Reset Confirmation */}
+      <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset System Workflow?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Restores <strong>{draft.name}</strong> back to its factory
+              blueprint steps, triggers, and configuration. Your workflow ID and
+              historical runs are preserved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void handleResetSystemFlow()}
+              disabled={resetMutation.isPending}
+            >
+              Reset Workflow
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

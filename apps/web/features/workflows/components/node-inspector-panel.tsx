@@ -262,7 +262,7 @@ export function NodeInspectorPanel({
     if (!trig) return null
 
     return (
-      <div className="flex h-full flex-col rounded-2xl border border-border/50 bg-card/70 p-4">
+      <div className="flex h-full flex-col p-4">
         <div className="mb-4 flex items-center justify-between border-b border-border/40 pb-3">
           <div>
             <span className="text-[10px] font-bold tracking-wider text-emerald-500 uppercase">
@@ -351,7 +351,7 @@ export function NodeInspectorPanel({
     }
 
     return (
-      <div className="flex h-full flex-col rounded-2xl border border-border/50 bg-card/70 p-4">
+      <div className="flex h-full flex-col p-4">
         <div className="mb-3 flex items-center justify-between gap-2 border-b border-border/40 pb-3">
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -968,29 +968,17 @@ export function NodeInspectorPanel({
 
   // Flow Settings Inspector (single-column, flat hairline dividers, progressive disclosure)
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-border/50 bg-card/70 p-4">
+    <div className="flex h-full flex-col p-4">
       <div className="mb-4 border-b border-border/40 pb-3">
-        <span className="text-[10px] font-bold tracking-wider text-primary uppercase">
+        <span className="text-[11px] font-medium text-primary">
           Flow Settings
         </span>
-        <h3 className="text-sm font-bold text-foreground">
+        <h3 className="text-sm font-semibold text-foreground">
           {draft.name || "Untitled Workflow"}
         </h3>
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto pr-1">
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-muted-foreground">
-            Workflow Name
-          </Label>
-          <Input
-            value={draft.name}
-            onChange={(e) => onUpdateFlow({ ...draft, name: e.target.value })}
-            aria-label="Workflow name"
-            className="h-9 rounded-xl text-sm font-semibold"
-          />
-        </div>
-
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold text-muted-foreground">
             Description

@@ -1,4 +1,4 @@
-import { useEffect, type ElementType, type ReactNode } from "react"
+import { useEffect, useState, type ElementType, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 export interface DocumentPageProps {
@@ -151,13 +151,18 @@ export function SplitWorkspacePage({
   )
 }
 
+export type StudioMobilePane = "canvas" | "inspector"
+
 export interface StudioCanvasPageProps {
   title?: string
   leading?: ReactNode
   status?: ReactNode
   actions?: ReactNode
+  banner?: ReactNode
   inspector?: ReactNode
   inspectorClassName?: string
+  mobilePane?: StudioMobilePane
+  onMobilePaneChange?: (pane: StudioMobilePane) => void
   className?: string
   children: ReactNode
 }
@@ -167,11 +172,25 @@ export function StudioCanvasPage({
   leading,
   status,
   actions,
+  banner,
   inspector,
   inspectorClassName,
+  mobilePane: controlledMobilePane,
+  onMobilePaneChange,
   className,
   children,
 }: StudioCanvasPageProps) {
+  const [internalMobilePane, setInternalMobilePane] =
+    useState<StudioMobilePane>("canvas")
+  const activeMobilePane = controlledMobilePane ?? internalMobilePane
+
+  const setMobilePane = (next: StudioMobilePane) => {
+    if (controlledMobilePane === undefined) {
+      setInternalMobilePane(next)
+    }
+    onMobilePaneChange?.(next)
+  }
+
   useEffect(() => {
     if (title) {
       document.title = `${title} | Saturn`
@@ -184,24 +203,71 @@ export function StudioCanvasPage({
       className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", className)}
     >
       {(leading || status || actions) && (
-        <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-card/70 px-4">
-          <div className="flex min-w-0 items-center gap-3">
+        <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border/60 bg-card/70 px-3 sm:gap-3 sm:px-4">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             {leading}
             {status}
           </div>
           {actions && (
-            <div className="flex shrink-0 items-center gap-2">{actions}</div>
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              {actions}
+            </div>
           )}
         </header>
       )}
+      {banner}
+      {inspector && (
+        <div
+          role="tablist"
+          aria-label="Studio workspace view"
+          className="flex h-10 shrink-0 items-center border-b border-border/60 bg-card/50 px-3 lg:hidden"
+        >
+          <div className="inline-flex h-7 w-full max-w-xs items-center rounded-lg bg-muted p-0.5">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeMobilePane === "canvas"}
+              onClick={() => setMobilePane("canvas")}
+              className={cn(
+                "flex h-full flex-1 cursor-pointer items-center justify-center rounded-md text-xs font-medium transition-colors",
+                activeMobilePane === "canvas"
+                  ? "bg-card text-foreground shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Canvas
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeMobilePane === "inspector"}
+              onClick={() => setMobilePane("inspector")}
+              className={cn(
+                "flex h-full flex-1 cursor-pointer items-center justify-center rounded-md text-xs font-medium transition-colors",
+                activeMobilePane === "inspector"
+                  ? "bg-card text-foreground shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Inspector
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div className="relative min-w-0 flex-1 overflow-hidden">
+        <div
+          className={cn(
+            "relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden",
+            inspector && activeMobilePane !== "canvas" && "max-lg:hidden"
+          )}
+        >
           {children}
         </div>
         {inspector && (
           <aside
             className={cn(
-              "hidden w-80 shrink-0 flex-col overflow-y-auto border-l border-border/60 bg-card lg:flex xl:w-96",
+              "flex h-full w-80 shrink-0 flex-col overflow-y-auto bg-card max-lg:w-full lg:border-l lg:border-border/60 xl:w-96",
+              activeMobilePane !== "inspector" && "max-lg:hidden",
               inspectorClassName
             )}
           >

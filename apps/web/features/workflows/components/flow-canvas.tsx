@@ -32,7 +32,8 @@ import {
   XCircle,
   Filter,
   Settings2,
-  Sparkles,
+  GitBranch,
+  Repeat,
 } from "lucide-react"
 
 export type SelectedCanvasNode =
@@ -111,10 +112,12 @@ function StepInsertEdge({
   stepDescriptors,
   onInsert,
   label,
+  showEndArrow = true,
 }: {
   stepDescriptors: Catalog_Step[]
   onInsert: (type: string) => void
   label?: string
+  showEndArrow?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
@@ -133,13 +136,13 @@ function StepInsertEdge({
 
   return (
     <div className="flex flex-col items-center">
-      <div className="h-4 w-px bg-border/80" />
+      <div className="h-4 w-0.5 bg-muted-foreground/50" />
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={
             <button
               type="button"
-              className="group flex h-6 cursor-pointer items-center gap-1 rounded-full border border-border/70 bg-background px-2 text-[11px] font-semibold text-muted-foreground shadow-xs transition-all hover:scale-105 hover:border-primary hover:text-primary"
+              className="group flex h-6 cursor-pointer items-center gap-1 rounded-full border border-muted-foreground/40 bg-card px-2 text-[11px] font-semibold text-foreground/80 shadow-2xs transition-colors hover:border-primary hover:text-primary"
               title="Insert step here"
               aria-label={label || "Insert step"}
             />
@@ -191,7 +194,13 @@ function StepInsertEdge({
           </div>
         </PopoverContent>
       </Popover>
-      <div className="h-4 w-px bg-border/80" />
+      <div className="h-3.5 w-0.5 bg-muted-foreground/50" />
+      {showEndArrow && (
+        <div
+          aria-hidden="true"
+          className="h-0 w-0 border-x-4 border-t-[5px] border-x-transparent border-t-muted-foreground/65"
+        />
+      )}
     </div>
   )
 }
@@ -246,253 +255,383 @@ export function FlowCanvas({
     const sourceCount = Object.keys(step.sources ?? {}).length
     const sr = stepRunMap.get(step.id)
 
+    const switchLanes =
+      step.type === "switch"
+        ? [
+            ...(step.cases ?? []).map((sc, cIdx) => ({
+              kind: "case" as const,
+              name: sc.name || `branch_${cIdx + 1}`,
+              condition: sc.condition || "true",
+              steps: sc.steps ?? [],
+              caseIndex: cIdx,
+            })),
+            {
+              kind: "default" as const,
+              name: "Default",
+              condition: "else",
+              steps: step.default ?? [],
+              caseIndex: -1,
+            },
+          ]
+        : []
+
     return (
       <div key={`${step.id}-${index}`} className="flex flex-col items-center">
-        {/* Step Node Card */}
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => onSelectNode({ kind: "step", stepId: step.id })}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault()
-              onSelectNode({ kind: "step", stepId: step.id })
-            }
-          }}
-          className={`group relative w-full max-w-[360px] min-w-[270px] cursor-pointer rounded-2xl border bg-card/95 p-3.5 shadow-sm backdrop-blur-sm transition-all hover:shadow-md ${
-            isSelected
-              ? "border-primary ring-2 ring-primary/30"
-              : `${vTheme.borderClass} hover:border-foreground/30`
-          }`}
-        >
-          {/* Quick Hover Actions */}
+        {/* Step Node Card (+ anchored Add Branch button when switch) */}
+        <div className="relative flex flex-col items-center">
           <div
-            className="absolute -top-3 right-3 hidden items-center gap-0.5 rounded-full border border-border/60 bg-background/95 px-1.5 py-0.5 shadow-sm group-hover:flex"
-            onClick={(e) => e.stopPropagation()}
+            role="button"
+            tabIndex={0}
+            onClick={() => onSelectNode({ kind: "step", stepId: step.id })}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                onSelectNode({ kind: "step", stepId: step.id })
+              }
+            }}
+            className={`group relative w-[300px] cursor-pointer rounded-xl border bg-card p-3.5 shadow-2xs transition-colors sm:w-[320px] ${
+              isSelected
+                ? "border-primary ring-2 ring-primary/30"
+                : `${vTheme.borderClass} hover:border-foreground/30`
+            }`}
           >
-            <button
-              type="button"
-              disabled={index === 0}
-              onClick={() => onMoveStep(step.id, -1)}
-              className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
-              title="Move up"
-            >
-              <ArrowUp className="h-3 w-3" />
-            </button>
-            <button
-              type="button"
-              disabled={index === siblingCount - 1}
-              onClick={() => onMoveStep(step.id, 1)}
-              className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
-              title="Move down"
-            >
-              <ArrowDown className="h-3 w-3" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onDuplicateStep(step.id)}
-              className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground"
-              title="Duplicate step"
-            >
-              <Copy className="h-3 w-3" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onRemoveStep(step.id)}
-              className="cursor-pointer rounded p-1 text-muted-foreground hover:text-destructive"
-              title="Delete step"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
-          </div>
-
-          <div className="flex items-start gap-3">
+            {/* Quick Hover Actions */}
             <div
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${vTheme.badgeClass}`}
+              className="absolute -top-3 right-3 hidden items-center gap-0.5 rounded-lg border border-border bg-card px-1 py-0.5 shadow-sm group-hover:flex"
+              onClick={(e) => e.stopPropagation()}
             >
-              <StepIcon type={step.type} />
+              <button
+                type="button"
+                disabled={index === 0}
+                onClick={() => onMoveStep(step.id, -1)}
+                className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                title="Move up"
+              >
+                <ArrowUp className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                disabled={index === siblingCount - 1}
+                onClick={() => onMoveStep(step.id, 1)}
+                className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                title="Move down"
+              >
+                <ArrowDown className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onDuplicateStep(step.id)}
+                className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground"
+                title="Duplicate step"
+              >
+                <Copy className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onRemoveStep(step.id)}
+                className="cursor-pointer rounded p-1 text-muted-foreground hover:text-destructive"
+                title="Delete step"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
             </div>
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-xs font-bold text-foreground">
-                  {step.name || descriptor?.displayName || step.id}
-                </span>
-                <span
-                  className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase ${vTheme.badgeClass}`}
-                >
-                  {vTheme.categoryLabel}
-                </span>
+
+            <div className="flex items-start gap-3">
+              <div
+                className={`flex size-9 shrink-0 items-center justify-center rounded-lg border ${vTheme.badgeClass}`}
+              >
+                <StepIcon type={step.type} />
               </div>
-
-              <div className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
-                <span className="truncate">{step.id}</span>
-                <span>•</span>
-                <span className="truncate">{step.type}</span>
-              </div>
-
-              <p className="truncate pt-0.5 text-[11px] text-muted-foreground">
-                {summarizeStep(step)}
-              </p>
-
-              {(sourceCount > 0 || sr) && (
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  {sourceCount > 0 && (
-                    <span className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium text-foreground">
-                      <Database className="h-2.5 w-2.5 text-primary" />
-                      {sourceCount} source{sourceCount === 1 ? "" : "s"}
-                    </span>
-                  )}
-                  {sr && (
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
-                        sr.status === "completed"
-                          ? "bg-emerald-500/15 text-emerald-500"
-                          : sr.status === "failed"
-                            ? "bg-destructive/15 text-destructive"
-                            : "bg-amber-500/15 text-amber-500"
-                      }`}
-                    >
-                      {sr.status === "completed" ? (
-                        <CheckCircle2 className="h-2.5 w-2.5" />
-                      ) : sr.status === "failed" ? (
-                        <XCircle className="h-2.5 w-2.5" />
-                      ) : (
-                        <Filter className="h-2.5 w-2.5" />
-                      )}
-                      {sr.status}
-                      {sr.metadata?.duration_ms !== undefined
-                        ? ` (${String(sr.metadata.duration_ms)}ms)`
-                        : ""}
-                    </span>
-                  )}
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-xs font-semibold text-foreground">
+                    {step.name || descriptor?.displayName || step.id}
+                  </span>
+                  <span
+                    className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${vTheme.badgeClass}`}
+                  >
+                    {vTheme.categoryLabel}
+                  </span>
                 </div>
-              )}
+
+                <div className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
+                  <span className="truncate">{step.id}</span>
+                  <span>·</span>
+                  <span className="truncate">{step.type}</span>
+                </div>
+
+                <p className="truncate pt-0.5 text-[11px] text-muted-foreground">
+                  {summarizeStep(step)}
+                </p>
+
+                {(sourceCount > 0 || sr) && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    {sourceCount > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-foreground">
+                        <Database className="h-2.5 w-2.5 text-primary" />
+                        {sourceCount} source{sourceCount === 1 ? "" : "s"}
+                      </span>
+                    )}
+                    {sr && (
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
+                          sr.status === "completed"
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                            : sr.status === "failed"
+                              ? "bg-destructive/15 text-destructive"
+                              : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                        }`}
+                      >
+                        {sr.status === "completed" ? (
+                          <CheckCircle2 className="h-2.5 w-2.5" />
+                        ) : sr.status === "failed" ? (
+                          <XCircle className="h-2.5 w-2.5" />
+                        ) : (
+                          <Filter className="h-2.5 w-2.5" />
+                        )}
+                        {sr.status}
+                        {sr.metadata?.duration_ms !== undefined
+                          ? ` (${String(sr.metadata.duration_ms)}ms)`
+                          : ""}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
+
+            {step.type === "switch" && (
+              <span
+                aria-hidden="true"
+                className="absolute -bottom-1 left-1/2 z-10 size-2 -translate-x-1/2 rounded-full border-2 border-amber-500 bg-card"
+              />
+            )}
           </div>
+
+          {step.type === "switch" && (
+            <div className="mt-2 sm:absolute sm:top-1/2 sm:left-full sm:mt-0 sm:ml-2.5 sm:-translate-y-1/2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onAddSwitchCase(step.id)}
+                className="h-8 gap-1 rounded-lg border-dashed bg-card text-xs whitespace-nowrap shadow-2xs"
+              >
+                <Plus className="size-3.5" />
+                Add Branch
+              </Button>
+            </div>
+          )}
         </div>
 
-        {/* Visual Branch Lanes for `switch` */}
-        {step.type === "switch" && (
-          <div className="mt-0 flex flex-col items-center">
-            <div className="h-4 w-px bg-amber-500/50" />
-            <div className="relative flex flex-wrap items-start justify-center gap-5 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4">
-              {(step.cases ?? []).map((sc, cIdx) => (
-                <div
-                  key={`${sc.name}-${cIdx}`}
-                  className="flex min-w-[275px] flex-col items-center rounded-xl border border-border/50 bg-background/60 p-3"
-                >
-                  <div className="mb-2 flex w-full items-center justify-between gap-2 border-b border-border/40 pb-2">
-                    <span className="font-mono text-xs font-bold text-amber-400">
-                      {sc.name}
-                    </span>
-                    <code className="max-w-[160px] truncate rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                      {sc.condition}
-                    </code>
-                  </div>
+        {/* True DAG Fan-Out / Fan-In Branch Lanes for `switch` */}
+        {step.type === "switch" && switchLanes.length > 0 && (
+          <div
+            data-testid={`switch-branches-${step.id}`}
+            className="flex flex-col items-center"
+          >
+            {/* Top stem + absolutely anchored split junction dot (zero flex gap) */}
+            <div className="relative h-4 w-0.5 bg-muted-foreground/55">
+              {switchLanes.length > 1 && (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -bottom-1 left-1/2 z-10 size-2 -translate-x-1/2 rounded-full bg-muted-foreground ring-2 ring-background"
+                />
+              )}
+            </div>
 
-                  <StepInsertEdge
-                    stepDescriptors={stepDescriptors}
-                    onInsert={(t) =>
-                      onInsertStep(t, {
-                        kind: "case",
-                        switchId: step.id,
-                        caseIndex: cIdx,
-                        index: 0,
-                      })
-                    }
-                  />
+            {/* Side-by-side non-wrapping branch columns (zero outer horizontal padding so rails touch edge-to-edge) */}
+            <div className="flex flex-nowrap items-stretch justify-center">
+              {switchLanes.map((lane, laneIdx) => {
+                const isFirstLane = laneIdx === 0
+                const isLastLane = laneIdx === switchLanes.length - 1
+                const hasMultiLanes = switchLanes.length > 1
+                const isCase = lane.kind === "case"
 
-                  {(sc.steps ?? []).map((sub, subIdx) => (
-                    <div
-                      key={`${sub.id}-${subIdx}`}
-                      className="flex flex-col items-center"
-                    >
-                      {renderStepNode(sub, subIdx, (sc.steps ?? []).length)}
+                return (
+                  <div
+                    key={`${lane.kind}-${lane.name}-${laneIdx}`}
+                    className="relative flex flex-col items-center self-stretch"
+                  >
+                    {/* Top Fan-Out Bus (`╭───┴───╮`) — spans 100% of column width */}
+                    {hasMultiLanes ? (
+                      <div
+                        aria-hidden="true"
+                        className="relative h-5 w-full shrink-0"
+                      >
+                        {isFirstLane ? (
+                          <div className="absolute top-0 right-0 left-[calc(50%-1px)] h-5 rounded-tl-lg border-t-2 border-l-2 border-muted-foreground/55" />
+                        ) : isLastLane ? (
+                          <div className="absolute top-0 right-[calc(50%-1px)] left-0 h-5 rounded-tr-lg border-t-2 border-r-2 border-muted-foreground/55" />
+                        ) : (
+                          <>
+                            <div className="absolute inset-x-0 top-0 border-t-2 border-muted-foreground/55" />
+                            <div className="mx-auto h-5 w-0.5 bg-muted-foreground/55" />
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="h-4 w-0.5 shrink-0 bg-muted-foreground/55" />
+                    )}
+
+                    {/* Inner padded card & steps column */}
+                    <div className="flex flex-1 flex-col items-center px-3">
+                      <div
+                        aria-hidden="true"
+                        className="h-0 w-0 shrink-0 border-x-4 border-t-[5px] border-x-transparent border-t-muted-foreground/65"
+                      />
+
+                      {/* Branch Condition Pill Card */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onSelectNode({ kind: "step", stepId: step.id })
+                        }
+                        className={`flex w-[256px] shrink-0 cursor-pointer flex-col gap-1.5 rounded-xl border px-3 py-2 text-left shadow-2xs transition-colors ${
+                          isCase
+                            ? "border-amber-500/40 bg-card hover:border-amber-500/75"
+                            : "border-dashed border-border bg-card/85 hover:border-foreground/30"
+                        }`}
+                      >
+                        <div className="flex w-full items-center justify-between gap-2">
+                          <span
+                            className={`inline-flex min-w-0 items-center gap-1.5 truncate text-xs font-semibold ${
+                              isCase
+                                ? "text-amber-700 dark:text-amber-400"
+                                : "text-muted-foreground"
+                            }`}
+                          >
+                            <GitBranch className="size-3.5 shrink-0" />
+                            <span className="truncate">{lane.name}</span>
+                          </span>
+                          <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            {isCase ? `if` : `else`}
+                          </span>
+                        </div>
+                        <code
+                          title={lane.condition}
+                          className="block w-full truncate rounded-md bg-muted/60 px-2 py-0.5 font-mono text-[10px] text-muted-foreground"
+                        >
+                          {isCase
+                            ? lane.condition
+                            : "Fallback when no branch matches"}
+                        </code>
+                      </button>
+
+                      {/* First Insert Edge inside Branch */}
                       <StepInsertEdge
                         stepDescriptors={stepDescriptors}
+                        showEndArrow={lane.steps.length > 0}
                         onInsert={(t) =>
-                          onInsertStep(t, {
-                            kind: "case",
-                            switchId: step.id,
-                            caseIndex: cIdx,
-                            index: subIdx + 1,
-                          })
+                          onInsertStep(
+                            t,
+                            isCase
+                              ? {
+                                  kind: "case",
+                                  switchId: step.id,
+                                  caseIndex: lane.caseIndex,
+                                  index: 0,
+                                }
+                              : {
+                                  kind: "default",
+                                  switchId: step.id,
+                                  index: 0,
+                                }
+                          )
                         }
                       />
+
+                      {/* Steps inside Branch */}
+                      {lane.steps.map((sub, subIdx) => (
+                        <div
+                          key={`${sub.id}-${subIdx}`}
+                          className="flex flex-col items-center"
+                        >
+                          {renderStepNode(sub, subIdx, lane.steps.length)}
+                          <StepInsertEdge
+                            stepDescriptors={stepDescriptors}
+                            showEndArrow={subIdx < lane.steps.length - 1}
+                            onInsert={(t) =>
+                              onInsertStep(
+                                t,
+                                isCase
+                                  ? {
+                                      kind: "case",
+                                      switchId: step.id,
+                                      caseIndex: lane.caseIndex,
+                                      index: subIdx + 1,
+                                    }
+                                  : {
+                                      kind: "default",
+                                      switchId: step.id,
+                                      index: subIdx + 1,
+                                    }
+                              )
+                            }
+                          />
+                        </div>
+                      ))}
+
+                      {/* Auto-stretching continuation wire so uneven branches reach the merge bus cleanly */}
+                      <div
+                        aria-hidden="true"
+                        className="min-h-2 w-0.5 flex-1 bg-muted-foreground/50"
+                      />
                     </div>
-                  ))}
-                </div>
-              ))}
 
-              <div className="flex min-w-[275px] flex-col items-center rounded-xl border border-dashed border-border/60 bg-background/60 p-3">
-                <div className="mb-2 flex w-full items-center justify-between gap-2 border-b border-border/40 pb-2">
-                  <span className="font-mono text-xs font-bold text-muted-foreground">
-                    Default
-                  </span>
-                  <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                    fallback
-                  </span>
-                </div>
-
-                <StepInsertEdge
-                  stepDescriptors={stepDescriptors}
-                  onInsert={(t) =>
-                    onInsertStep(t, {
-                      kind: "default",
-                      switchId: step.id,
-                      index: 0,
-                    })
-                  }
-                />
-
-                {(step.default ?? []).map((sub, subIdx) => (
-                  <div
-                    key={`${sub.id}-${subIdx}`}
-                    className="flex flex-col items-center"
-                  >
-                    {renderStepNode(sub, subIdx, (step.default ?? []).length)}
-                    <StepInsertEdge
-                      stepDescriptors={stepDescriptors}
-                      onInsert={(t) =>
-                        onInsertStep(t, {
-                          kind: "default",
-                          switchId: step.id,
-                          index: subIdx + 1,
-                        })
-                      }
-                    />
+                    {/* Bottom Fan-In Merge Bus (`╰───┬───╯`) — spans 100% of column width */}
+                    {hasMultiLanes && (
+                      <div
+                        aria-hidden="true"
+                        className="relative h-5 w-full shrink-0"
+                      >
+                        {isFirstLane ? (
+                          <div className="absolute right-0 bottom-0 left-[calc(50%-1px)] h-5 rounded-bl-lg border-b-2 border-l-2 border-muted-foreground/55" />
+                        ) : isLastLane ? (
+                          <div className="absolute right-[calc(50%-1px)] bottom-0 left-0 h-5 rounded-br-lg border-r-2 border-b-2 border-muted-foreground/55" />
+                        ) : (
+                          <>
+                            <div className="mx-auto h-5 w-0.5 bg-muted-foreground/55" />
+                            <div className="absolute inset-x-0 bottom-0 border-b-2 border-muted-foreground/55" />
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-
-              <div className="flex flex-col items-center justify-center self-stretch">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onAddSwitchCase(step.id)}
-                  className="h-8 gap-1 rounded-xl border-dashed text-xs"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Branch
-                </Button>
-              </div>
+                )
+              })}
             </div>
+
+            {/* Bottom merge junction dot */}
+            {switchLanes.length > 1 && (
+              <div className="relative h-0 w-0.5">
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -top-1 left-1/2 z-10 size-2 -translate-x-1/2 rounded-full bg-muted-foreground ring-2 ring-background"
+                />
+              </div>
+            )}
           </div>
         )}
 
         {/* Visual Container Frame for `for_each` */}
         {step.type === "for_each" && (
           <div className="mt-0 flex flex-col items-center">
-            <div className="h-4 w-px bg-amber-500/50" />
-            <div className="flex min-w-[320px] flex-col items-center rounded-2xl border border-dashed border-amber-500/40 bg-amber-500/5 p-4">
-              <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold text-amber-400">
-                <Sparkles className="h-3 w-3" />
-                LOOP BODY ({String(step.inputs?.item_alias || "item")})
+            <div className="h-5 w-0.5 bg-muted-foreground/55" />
+            <div className="flex min-w-[330px] flex-col items-center rounded-xl border border-dashed border-amber-500/45 bg-card/50 px-5 py-4">
+              <div className="mb-1 inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                <Repeat className="size-3.5" />
+                <span>
+                  Loop each{" "}
+                  <code className="font-mono">
+                    {String(step.inputs?.item_alias || "item")}
+                  </code>
+                </span>
               </div>
 
               <StepInsertEdge
                 stepDescriptors={stepDescriptors}
+                showEndArrow={(step.steps ?? []).length > 0}
                 onInsert={(t) =>
                   onInsertStep(t, {
                     kind: "loop",
@@ -510,6 +649,7 @@ export function FlowCanvas({
                   {renderStepNode(sub, subIdx, (step.steps ?? []).length)}
                   <StepInsertEdge
                     stepDescriptors={stepDescriptors}
+                    showEndArrow={subIdx < (step.steps ?? []).length - 1}
                     onInsert={(t) =>
                       onInsertStep(t, {
                         kind: "loop",
@@ -529,7 +669,7 @@ export function FlowCanvas({
 
   return (
     <div
-      className="relative flex-1 overflow-auto rounded-2xl border border-border/50 bg-muted/20 p-6"
+      className="relative min-h-[420px] flex-1 overflow-auto bg-muted/20 p-6 lg:h-full lg:min-h-0"
       style={{
         backgroundImage:
           "radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.22) 1px, transparent 0)",
@@ -551,88 +691,147 @@ export function FlowCanvas({
           <span>{flowName || "Untitled Workflow"} — Flow Settings</span>
         </button>
 
-        {/* Triggers Stage */}
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          {triggers.map((trig, idx) => {
-            const isSelected =
-              selectedNode.kind === "trigger" && selectedNode.index === idx
-            const subtitle =
-              trig.type === "event"
-                ? trig.config?.topic || "Select topic"
-                : trig.type === "schedule"
-                  ? trig.config?.cron
-                    ? summarizeCron(trig.config.cron, tz.timezone)
-                    : "Schedule"
-                  : trig.type === "webhook"
-                    ? trig.id
-                      ? `/${trig.id.slice(0, 12)}…:webhook`
-                      : "Webhook (unsaved)"
-                    : "Callable / Manual"
-
-            return (
-              <button
-                key={trig.id ?? `trig-${idx}`}
-                type="button"
-                onClick={() => onSelectNode({ kind: "trigger", index: idx })}
-                className={`flex min-w-[190px] cursor-pointer items-center gap-2.5 rounded-2xl border bg-card/95 px-3.5 py-2.5 text-left shadow-sm transition-all hover:shadow-md ${
-                  isSelected
-                    ? "border-primary ring-2 ring-primary/30"
-                    : "border-emerald-500/30 hover:border-emerald-500/60"
-                }`}
-              >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/15 text-emerald-500">
-                  <TriggerIcon type={trig.type} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${trig.isEnabled ? "bg-emerald-500" : "bg-muted-foreground/40"}`}
-                    />
-                    <span className="truncate text-xs font-bold text-foreground">
-                      {trig.name}
-                    </span>
-                  </div>
-                  <div className="truncate font-mono text-[10px] text-muted-foreground">
-                    {subtitle}
-                  </div>
-                </div>
-              </button>
-            )
-          })}
-
-          <Popover open={addTrigOpen} onOpenChange={setAddTrigOpen}>
-            <PopoverTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-10 gap-1.5 rounded-2xl border-dashed bg-background/80 text-xs"
-                />
-              }
+        {/* Triggers Stage (centered on main spine with fan-in merge bus into Step 1) */}
+        <div className="relative flex flex-col items-center">
+          {triggers.length > 0 ? (
+            <div
+              data-testid="triggers-fan-in-row"
+              className="flex flex-nowrap items-stretch justify-center"
             >
-              <Plus className="h-3.5 w-3.5" />
-              Add Trigger
-            </PopoverTrigger>
-            <PopoverContent className="w-48 rounded-2xl p-1.5" align="center">
-              {(["event", "webhook", "schedule", "manual"] as const).map(
-                (type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => {
-                      onAddTrigger(type)
-                      setAddTrigOpen(false)
-                    }}
-                    className="flex w-full cursor-pointer items-center gap-2 rounded-xl px-2.5 py-2 text-left text-xs font-medium capitalize hover:bg-muted"
+              {triggers.map((trig, idx) => {
+                const isSelected =
+                  selectedNode.kind === "trigger" && selectedNode.index === idx
+                const isFirst = idx === 0
+                const isLast = idx === triggers.length - 1
+                const hasFanIn = triggers.length > 1
+                const subtitle =
+                  trig.type === "event"
+                    ? trig.config?.topic || "Select topic"
+                    : trig.type === "schedule"
+                      ? trig.config?.cron
+                        ? summarizeCron(trig.config.cron, tz.timezone)
+                        : "Schedule"
+                      : trig.type === "webhook"
+                        ? trig.id
+                          ? `/${trig.id.slice(0, 12)}…:webhook`
+                          : "Webhook (unsaved)"
+                        : "Callable / Manual"
+
+                return (
+                  <div
+                    key={trig.id ?? `trig-${idx}`}
+                    className="relative flex flex-col items-center"
                   >
-                    <TriggerIcon type={type} />
-                    <span>{type} trigger</span>
-                  </button>
+                    <div className="px-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onSelectNode({ kind: "trigger", index: idx })
+                        }
+                        className={`relative flex w-[220px] cursor-pointer items-center gap-2.5 rounded-xl border bg-card px-3.5 py-2.5 text-left shadow-2xs transition-colors ${
+                          isSelected
+                            ? "border-primary ring-2 ring-primary/30"
+                            : "border-emerald-500/45 hover:border-emerald-500/75"
+                        }`}
+                      >
+                        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/12 text-emerald-600 dark:text-emerald-400">
+                          <TriggerIcon type={trig.type} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`size-1.5 shrink-0 rounded-full ${trig.isEnabled ? "bg-emerald-500" : "bg-muted-foreground/40"}`}
+                            />
+                            <span className="truncate text-xs font-semibold text-foreground">
+                              {trig.name}
+                            </span>
+                          </div>
+                          <div className="truncate font-mono text-[10px] text-muted-foreground">
+                            {subtitle}
+                          </div>
+                        </div>
+                        {/* Trigger outlet port dot */}
+                        <span
+                          aria-hidden="true"
+                          className="absolute -bottom-1 left-1/2 z-10 size-2 -translate-x-1/2 rounded-full border-2 border-emerald-500 bg-card"
+                        />
+                      </button>
+                    </div>
+
+                    {hasFanIn && (
+                      <div
+                        data-testid="trigger-fan-in-connector"
+                        aria-hidden="true"
+                        className="relative h-6 w-full shrink-0"
+                      >
+                        {isFirst ? (
+                          <div className="absolute right-0 bottom-0 left-[calc(50%-1px)] h-6 rounded-bl-lg border-b-2 border-l-2 border-muted-foreground/55" />
+                        ) : isLast ? (
+                          <div className="absolute right-[calc(50%-1px)] bottom-0 left-0 h-6 rounded-br-lg border-r-2 border-b-2 border-muted-foreground/55" />
+                        ) : (
+                          <>
+                            <div className="mx-auto h-6 w-0.5 bg-muted-foreground/55" />
+                            <div className="absolute inset-x-0 bottom-0 border-b-2 border-muted-foreground/55" />
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )
-              )}
-            </PopoverContent>
-          </Popover>
+              })}
+            </div>
+          ) : null}
+
+          {triggers.length > 1 && (
+            <div className="relative h-0 w-0.5">
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute -top-1 left-1/2 z-10 size-2 -translate-x-1/2 rounded-full bg-muted-foreground ring-2 ring-background"
+              />
+            </div>
+          )}
+
+          <div
+            className={
+              triggers.length > 0
+                ? "mt-2 sm:absolute sm:top-1 sm:left-full sm:mt-0 sm:ml-2"
+                : ""
+            }
+          >
+            <Popover open={addTrigOpen} onOpenChange={setAddTrigOpen}>
+              <PopoverTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1.5 rounded-xl border-dashed bg-background/80 text-xs whitespace-nowrap"
+                  />
+                }
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Trigger
+              </PopoverTrigger>
+              <PopoverContent className="w-48 rounded-xl p-1.5" align="center">
+                {(["event", "webhook", "schedule", "manual"] as const).map(
+                  (type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        onAddTrigger(type)
+                        setAddTrigOpen(false)
+                      }}
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium capitalize hover:bg-muted"
+                    >
+                      <TriggerIcon type={type} />
+                      <span>{type} trigger</span>
+                    </button>
+                  )
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
 
         {/* Connector from Triggers into Step 0 */}

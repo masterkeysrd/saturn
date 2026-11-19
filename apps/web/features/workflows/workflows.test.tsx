@@ -11,9 +11,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import * as workflowApi from "@saturn/api/gen/saturn/platform/workflow/v1/workflow"
 import * as aiApi from "@saturn/api/gen/saturn/platform/ai/v1/ai"
 import * as identityApi from "@saturn/api/gen/saturn/identity/v1/identity"
+import { FlowSchema } from "@saturn/schemas"
 import { WorkflowsListView } from "./workflows-list-view"
 import { WorkflowEditorView } from "./workflow-editor-view"
 import { WorkflowRunsView } from "./workflow-runs-view"
+import { WORKFLOW_TEMPLATES } from "./workflow-templates"
 
 vi.mock("@saturn/api/gen/saturn/platform/workflow/v1/workflow", () => ({
   useListFlowsQuery: vi.fn(),
@@ -352,9 +354,15 @@ describe("Web Workflows Studio", () => {
       </QueryClientProvider>
     )
 
+    // Custom tab is active by default (no stacked System/Templates bloat)
+    expect(screen.getByText("Bill Calendar Sync")).toBeDefined()
+    expect(screen.queryByText("Finance Inbox Ingestion")).toBeNull()
+
+    // Switch to System tab -> shows built-in system workflows
+    fireEvent.click(screen.getByRole("tab", { name: /^System/i }))
     expect(screen.getByText("Finance Inbox Ingestion")).toBeDefined()
     expect(screen.getByText("Built-in")).toBeDefined()
-    expect(screen.getByText("Bill Calendar Sync")).toBeDefined()
+    expect(screen.queryByText("Bill Calendar Sync")).toBeNull()
 
     // Trigger Build with AI
     const promptInput = screen.getByLabelText("Build workflow with AI prompt")
@@ -586,5 +594,187 @@ describe("Web Workflows Studio", () => {
 
     fireEvent.click(screen.getByText("wfr_1"))
     expect(capturedSearch).toBe("?flowId=flw_usr_1&status=completed")
+  })
+
+  it("renders 48px Studio Bar with inline editable name, active switch, Unsaved badge, and saves on Ctrl+S / Cmd+S", async () => {
+    mutateUpdate.mockResolvedValueOnce({
+      ...mockCustomFlow,
+      name: "Renamed via Studio Bar",
+      isEnabled: false,
+      version: "3",
+    })
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/space/spc_1/workflows/flw_usr_1"]}>
+          <Routes>
+            <Route
+              path="/space/:spaceId/workflows/:flowId"
+              element={<WorkflowEditorView />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    const nameInput = screen.getByLabelText("Workflow name") as HTMLInputElement
+    expect(nameInput.value).toBe("Bill Calendar Sync")
+
+    const activeSwitch = screen.getByRole("switch", {
+      name: "Workflow active",
+    })
+    expect(activeSwitch.getAttribute("aria-checked")).toBe("true")
+    expect(screen.queryByTestId("workflow-unsaved-badge")).toBeNull()
+
+    // Edit inline name and toggle active switch -> Unsaved badge appears
+    fireEvent.change(nameInput, {
+      target: { value: "Renamed via Studio Bar" },
+    })
+    fireEvent.click(activeSwitch)
+
+    expect(screen.getByTestId("workflow-unsaved-badge")).toBeDefined()
+    expect(activeSwitch.getAttribute("aria-checked")).toBe("false")
+
+    // Press Ctrl+S -> saves and clears Unsaved badge
+    fireEvent.keyDown(window, { key: "s", ctrlKey: true })
+
+    await waitFor(() => {
+      expect(mutateUpdate).toHaveBeenCalledTimes(1)
+    })
+    await waitFor(() => {
+      expect(screen.queryByTestId("workflow-unsaved-badge")).toBeNull()
+    })
+    expect(screen.getByText("Saved · v3")).toBeDefined()
+
+    // Edit again and verify Meta+S (Cmd+S) also saves
+    mutateUpdate.mockResolvedValueOnce({
+      ...mockCustomFlow,
+      name: "Renamed via Cmd+S",
+      isEnabled: false,
+      version: "4",
+    })
+    fireEvent.change(nameInput, {
+      target: { value: "Renamed via Cmd+S" },
+    })
+    expect(screen.getByTestId("workflow-unsaved-badge")).toBeDefined()
+
+    fireEvent.keyDown(window, { key: "s", metaKey: true })
+
+    await waitFor(() => {
+      expect(mutateUpdate).toHaveBeenCalledTimes(2)
+    })
+    await waitFor(() => {
+      expect(screen.queryByTestId("workflow-unsaved-badge")).toBeNull()
+    })
+  })
+
+  it("guards unsaved changes when clicking Back to workflows and supports Keep editing and Discard changes", async () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/space/spc_1/workflows/flw_usr_1"]}>
+          <Routes>
+            <Route
+              path="/space/:spaceId/workflows"
+              element={<WorkflowsListView />}
+            />
+            <Route
+              path="/space/:spaceId/workflows/:flowId"
+              element={<WorkflowEditorView />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    const nameInput = screen.getByLabelText("Workflow name")
+    fireEvent.change(nameInput, {
+      target: { value: "Unsaved Draft Name" },
+    })
+    expect(screen.getByTestId("workflow-unsaved-badge")).toBeDefined()
+
+    // Click Back to workflows -> opens Unsaved workflow changes AlertDialog
+    fireEvent.click(screen.getByRole("button", { name: "Back to workflows" }))
+    expect(screen.getByText("Unsaved workflow changes")).toBeDefined()
+
+    // Keep editing -> stays on editor with edited name intact
+    fireEvent.click(screen.getByRole("button", { name: "Keep editing" }))
+    await waitFor(() => {
+      expect(screen.queryByText("Unsaved workflow changes")).toBeNull()
+    })
+    expect(
+      (screen.getByLabelText("Workflow name") as HTMLInputElement).value
+    ).toBe("Unsaved Draft Name")
+
+    // Click Back to workflows again and Discard changes -> navigates back to list
+    fireEvent.click(screen.getByRole("button", { name: "Back to workflows" }))
+    expect(screen.getByText("Unsaved workflow changes")).toBeDefined()
+
+    fireEvent.click(screen.getByRole("button", { name: "Discard changes" }))
+    await waitFor(() => {
+      expect(screen.getByText("Workflows Studio")).toBeDefined()
+    })
+  })
+
+  it("validates all starter templates with FlowSchema and loads a template into WorkflowEditorView via Use Template", async () => {
+    for (const template of WORKFLOW_TEMPLATES) {
+      const parsed = FlowSchema.safeParse(template.flow)
+      expect(parsed.success, `Template ${template.id} failed FlowSchema`).toBe(
+        true
+      )
+    }
+
+    vi.mocked(workflowApi.useListFlowsQuery).mockReturnValue({
+      data: { flows: [mockSystemFlow] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof workflowApi.useListFlowsQuery>)
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/space/spc_1/workflows"]}>
+          <Routes>
+            <Route
+              path="/space/:spaceId/workflows"
+              element={<WorkflowsListView />}
+            />
+            <Route
+              path="/space/:spaceId/workflows/new"
+              element={<WorkflowEditorView />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    // Empty Custom tab offers Browse Templates CTA to switch into the Templates tab
+    expect(screen.getByText("No custom workflows yet")).toBeDefined()
+    fireEvent.click(screen.getByRole("button", { name: /Browse Templates/i }))
+
+    expect(screen.getByText("Receipt Email to Finance Inbox")).toBeDefined()
+    expect(screen.getByText("Scheduled Bill Calendar Reminder")).toBeDefined()
+
+    const useTemplateButtons = screen.getAllByRole("button", {
+      name: /Use Template/i,
+    })
+    expect(useTemplateButtons).toHaveLength(4)
+
+    // Click Use Template on the first template (Receipt Email to Finance Inbox)
+    fireEvent.click(useTemplateButtons[0])
+
+    await waitFor(() => {
+      expect(
+        (screen.getByLabelText("Workflow name") as HTMLInputElement).value
+      ).toBe("Receipt Email to Finance Inbox")
+    })
+    expect(screen.getByText("Inbound Email Sync")).toBeDefined()
+    expect(screen.getByText("Extract Receipt Fields")).toBeDefined()
+    expect(screen.getByText("Is Valid Receipt")).toBeDefined()
+    expect(screen.getByText("Stage in Finance Inbox")).toBeDefined()
+    expect(screen.getByTestId("workflow-unsaved-badge")).toBeDefined()
+
+    // Adding a second trigger renders fan-in merge connectors from both triggers into Step 1
+    fireEvent.click(screen.getByRole("button", { name: /Add Trigger/i }))
+    const manualOption = await screen.findByText(/manual trigger/i)
+    fireEvent.click(manualOption)
+    expect(screen.getAllByTestId("trigger-fan-in-connector")).toHaveLength(2)
   })
 })
