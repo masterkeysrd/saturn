@@ -2,8 +2,6 @@ package ai
 
 import (
 	"maps"
-	"net/netip"
-	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -191,49 +189,6 @@ func (m *MCPServer) Validate(allowPrivateNetworks bool) error {
 		m.Discovery.HealthStatus = MCPHealthUnknown
 	}
 	m.HasAuthSecret = m.AuthSecret.HasCredentials() || (m.AuthSecretCiphertext != nil && *m.AuthSecretCiphertext != "")
-	return nil
-}
-
-// ValidateMCPURL validates an outbound HTTP(S) MCP endpoint URL against SSRF rules.
-func ValidateMCPURL(rawURL string, allowPrivateNetworks bool) error {
-	trimmed := strings.TrimSpace(rawURL)
-	if trimmed == "" {
-		return errors.E(ErrInvalidMCPURL, "MCP server URL is required")
-	}
-
-	u, err := url.Parse(trimmed)
-	if err != nil {
-		return errors.E(ErrInvalidMCPURL, err)
-	}
-
-	scheme := strings.ToLower(u.Scheme)
-	if scheme != "http" && scheme != "https" {
-		return errors.E(ErrInvalidMCPURL, "MCP server URL scheme must be http or https")
-	}
-
-	host := strings.ToLower(strings.TrimSpace(u.Hostname()))
-	if host == "" {
-		return errors.E(ErrInvalidMCPURL, "MCP server URL host is required")
-	}
-
-	// Unconditionally block cloud metadata endpoints.
-	if host == "169.254.169.254" || host == "fd00:ec2::254" || host == "metadata.google.internal" {
-		return ErrSSRFBlocked
-	}
-
-	if addr, err := netip.ParseAddr(host); err == nil {
-		if isBlockedSSRFIP(addr, allowPrivateNetworks) {
-			return ErrSSRFBlocked
-		}
-		return nil
-	}
-
-	if !allowPrivateNetworks {
-		if host == "localhost" || strings.HasSuffix(host, ".localhost") || strings.HasSuffix(host, ".local") || strings.HasSuffix(host, ".internal") {
-			return ErrSSRFBlocked
-		}
-	}
-
 	return nil
 }
 

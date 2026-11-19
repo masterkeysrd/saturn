@@ -129,14 +129,18 @@ func TestProvider_ApplyPatch_NilSecretSafetyAndBaseURLSSRF(t *testing.T) {
 
 	// BaseURL SSRF validation rejects metadata IP even with allowPrivateNetworks=true, and localhost when false.
 	metaProv := &Provider{Name: "Meta", Driver: DriverOpenAICompatible, Config: ProviderConfig{BaseURL: new("http://169.254.169.254/v1")}}
-	if err := metaProv.Validate(true); !errors.Is(err, ErrSSRFBlocked) {
-		t.Fatalf("expected ErrSSRFBlocked for metadata BaseURL, got %v", err)
+	if err := metaProv.Validate(true); !errors.Is(err, ErrProviderSSRFBlocked) {
+		t.Fatalf("expected ErrProviderSSRFBlocked for metadata BaseURL, got %v", err)
 	}
 	localProv := &Provider{Name: "Local", Driver: DriverOllama, Config: ProviderConfig{BaseURL: new("http://localhost:11434")}}
-	if err := localProv.Validate(false); !errors.Is(err, ErrSSRFBlocked) {
-		t.Fatalf("expected ErrSSRFBlocked for localhost BaseURL when allowPrivate=false, got %v", err)
+	if err := localProv.Validate(false); !errors.Is(err, ErrProviderSSRFBlocked) {
+		t.Fatalf("expected ErrProviderSSRFBlocked for localhost BaseURL when allowPrivate=false, got %v", err)
 	}
 	if err := localProv.Validate(true); err != nil {
 		t.Fatalf("expected localhost BaseURL allowed when allowPrivate=true, got %v", err)
+	}
+	badSchemeProv := &Provider{Name: "BadScheme", Driver: DriverOpenAICompatible, Config: ProviderConfig{BaseURL: new("ftp://example.com/v1")}}
+	if err := badSchemeProv.Validate(true); !errors.Is(err, ErrInvalidProviderURL) {
+		t.Fatalf("expected ErrInvalidProviderURL for ftp BaseURL, got %v", err)
 	}
 }

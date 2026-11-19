@@ -268,25 +268,27 @@ type Coordinator interface {
 
 // Dependencies groups collaborators required to construct an AI Coordinator.
 type Dependencies struct {
-	Store                ai.Store
-	Settings             SettingsClient
-	Invoker              ai.ModelInvoker
-	MCP                  ai.MCPConnector
-	Runtime              AIRuntime
-	ThreadRuntime        AIThreadRuntime
-	AllowPrivateNetworks bool
-	NowFunc              func() time.Time
+	Store                        ai.Store
+	Settings                     SettingsClient
+	Invoker                      ai.ModelInvoker
+	MCP                          ai.MCPConnector
+	Runtime                      AIRuntime
+	ThreadRuntime                AIThreadRuntime
+	AllowProviderPrivateNetworks bool
+	AllowMCPPrivateNetworks      bool
+	NowFunc                      func() time.Time
 }
 
 type coordinator struct {
-	store                ai.Store
-	settings             SettingsClient
-	invoker              ai.ModelInvoker
-	mcp                  ai.MCPConnector
-	runtime              AIRuntime
-	threadRuntime        AIThreadRuntime
-	allowPrivateNetworks bool
-	nowFn                func() time.Time
+	store                        ai.Store
+	settings                     SettingsClient
+	invoker                      ai.ModelInvoker
+	mcp                          ai.MCPConnector
+	runtime                      AIRuntime
+	threadRuntime                AIThreadRuntime
+	allowProviderPrivateNetworks bool
+	allowMCPPrivateNetworks      bool
+	nowFn                        func() time.Time
 }
 
 // NewCoordinator constructs a new AI application Coordinator.
@@ -296,14 +298,15 @@ func NewCoordinator(deps Dependencies) Coordinator {
 		nowFn = func() time.Time { return time.Now().UTC() }
 	}
 	return &coordinator{
-		store:                deps.Store,
-		settings:             deps.Settings,
-		invoker:              deps.Invoker,
-		mcp:                  deps.MCP,
-		runtime:              deps.Runtime,
-		threadRuntime:        deps.ThreadRuntime,
-		allowPrivateNetworks: deps.AllowPrivateNetworks,
-		nowFn:                nowFn,
+		store:                        deps.Store,
+		settings:                     deps.Settings,
+		invoker:                      deps.Invoker,
+		mcp:                          deps.MCP,
+		runtime:                      deps.Runtime,
+		threadRuntime:                deps.ThreadRuntime,
+		allowProviderPrivateNetworks: deps.AllowProviderPrivateNetworks,
+		allowMCPPrivateNetworks:      deps.AllowMCPPrivateNetworks,
+		nowFn:                        nowFn,
 	}
 }
 

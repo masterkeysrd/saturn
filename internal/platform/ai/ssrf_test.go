@@ -41,6 +41,63 @@ func TestIsBlockedSSRFIP(t *testing.T) {
 	}
 }
 
+func TestValidateOutboundURL_ProviderAndMCPPolicies(t *testing.T) {
+	tests := []struct {
+		name     string
+		validate func() error
+		wantErr  error
+		wantCode errors.Code
+	}{
+		{
+			name:     "provider rejects invalid scheme with provider error code",
+			validate: func() error { return ValidateProviderURL("ftp://example.com/v1", true) },
+			wantErr:  ErrInvalidProviderURL,
+			wantCode: CodeProviderInvalidURL,
+		},
+		{
+			name:     "provider blocks host.docker.internal when allowPrivate=false",
+			validate: func() error { return ValidateProviderURL("http://host.docker.internal:8000/v1", false) },
+			wantErr:  ErrProviderSSRFBlocked,
+			wantCode: CodeProviderSSRFBlocked,
+		},
+		{
+			name:     "provider allows host.docker.internal when allowPrivate=true",
+			validate: func() error { return ValidateProviderURL("http://host.docker.internal:8000/v1", true) },
+		},
+		{
+			name:     "mcp rejects invalid scheme with mcp error code",
+			validate: func() error { return ValidateMCPURL("ftp://example.com/mcp", true) },
+			wantErr:  ErrInvalidMCPURL,
+			wantCode: CodeMCPInvalidURL,
+		},
+		{
+			name:     "mcp blocks host.docker.internal when allowPrivate=false",
+			validate: func() error { return ValidateMCPURL("http://host.docker.internal:9000/mcp", false) },
+			wantErr:  ErrMCPSSRFBlocked,
+			wantCode: CodeMCPSSRFBlocked,
+		},
+		{
+			name:     "mcp allows host.docker.internal when allowPrivate=true",
+			validate: func() error { return ValidateMCPURL("http://host.docker.internal:9000/mcp", true) },
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.validate()
+			if tc.wantErr == nil {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if !errors.Is(err, tc.wantErr) || errors.CodeOf(err) != tc.wantCode {
+				t.Fatalf("got err=%v (code=%s), want err=%v (code=%s)", err, errors.CodeOf(err), tc.wantErr, tc.wantCode)
+			}
+		})
+	}
+}
+
 func TestSSRFSafeHTTPClient_DialAndRedirectBlocking(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -54,24 +111,32 @@ func TestSSRFSafeHTTPClient_DialAndRedirectBlocking(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Run("dialer Control blocks loopback when allowPrivate=false", func(t *testing.T) {
-		client := NewSSRFSafeHTTPClient(false, 2*time.Second)
+	t.Run("dialer Control blocks loopback for MCP policy when allowPrivate=false", func(t *testing.T) {
+		client := NewSSRFSafeHTTPClient(MCPURLPolicy(false), 2*time.Second)
 		_, err := client.Get(srv.URL)
-		if !errors.Is(err, ErrSSRFBlocked) {
-			t.Fatalf("expected ErrSSRFBlocked on dial to 127.0.0.1, got %v", err)
+		if !errors.Is(err, ErrMCPSSRFBlocked) {
+			t.Fatalf("expected ErrMCPSSRFBlocked on dial to 127.0.0.1, got %v", err)
+		}
+	})
+
+	t.Run("dialer Control blocks loopback for Provider policy when allowPrivate=false", func(t *testing.T) {
+		client := NewSSRFSafeHTTPClient(ProviderURLPolicy(false), 2*time.Second)
+		_, err := client.Get(srv.URL)
+		if !errors.Is(err, ErrProviderSSRFBlocked) {
+			t.Fatalf("expected ErrProviderSSRFBlocked on dial to 127.0.0.1, got %v", err)
 		}
 	})
 
 	t.Run("CheckRedirect blocks redirect to metadata IP even when allowPrivate=true", func(t *testing.T) {
-		client := NewSSRFSafeHTTPClient(true, 2*time.Second)
+		client := NewSSRFSafeHTTPClient(ProviderURLPolicy(true), 2*time.Second)
 		_, err := client.Get(srv.URL + "/redirect-meta")
-		if !errors.Is(err, ErrSSRFBlocked) {
-			t.Fatalf("expected ErrSSRFBlocked on redirect to metadata IP, got %v", err)
+		if !errors.Is(err, ErrProviderSSRFBlocked) {
+			t.Fatalf("expected ErrProviderSSRFBlocked on redirect to metadata IP, got %v", err)
 		}
 	})
 
 	t.Run("allows loopback when allowPrivate=true", func(t *testing.T) {
-		client := NewSSRFSafeHTTPClient(true, 2*time.Second)
+		client := NewSSRFSafeHTTPClient(ProviderURLPolicy(true), 2*time.Second)
 		resp, err := client.Get(srv.URL + "/ok")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

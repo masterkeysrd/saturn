@@ -30,7 +30,7 @@ func (c *coordinator) CreateMCPServer(ctx context.Context, req *CreateMCPServerR
 		AuthSecret:  req.AuthSecret.Clone(),
 		IsEnabled:   req.IsEnabled,
 	}
-	if err := srv.Validate(c.allowPrivateNetworks); err != nil {
+	if err := srv.Validate(c.allowMCPPrivateNetworks); err != nil {
 		return nil, errors.E(op, err)
 	}
 
@@ -57,7 +57,7 @@ func (c *coordinator) UpdateMCPServer(ctx context.Context, req *UpdateMCPServerR
 		return nil, errors.E(op, err)
 	}
 
-	if err := existing.ApplyPatch(req.MCPServer, req.UpdateMask, c.allowPrivateNetworks); err != nil {
+	if err := existing.ApplyPatch(req.MCPServer, req.UpdateMask, c.allowMCPPrivateNetworks); err != nil {
 		return nil, errors.E(op, err)
 	}
 	if err := c.store.MCPServers().Update(ctx, existing); err != nil {

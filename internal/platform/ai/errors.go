@@ -6,6 +6,8 @@ const (
 	CodeProviderNotFound       errors.Code = "AI_PROVIDER_NOT_FOUND"
 	CodeProviderDisabled       errors.Code = "AI_PROVIDER_DISABLED"
 	CodeProviderVerifyFailed   errors.Code = "AI_PROVIDER_VERIFY_FAILED"
+	CodeProviderInvalidURL     errors.Code = "AI_PROVIDER_INVALID_URL"
+	CodeProviderSSRFBlocked    errors.Code = "AI_PROVIDER_SSRF_BLOCKED"
 	CodeModelNotFound          errors.Code = "AI_MODEL_NOT_FOUND"
 	CodeModelDisabled          errors.Code = "AI_MODEL_DISABLED"
 	CodeModelNotConfigured     errors.Code = "AI_MODEL_NOT_CONFIGURED"
@@ -30,6 +32,8 @@ const (
 
 var (
 	ErrProviderNotFound      = errors.E(errors.NotExist, CodeProviderNotFound, "AI provider not found")
+	ErrInvalidProviderURL    = errors.E(errors.Invalid, CodeProviderInvalidURL)
+	ErrProviderSSRFBlocked   = errors.E(errors.Invalid, CodeProviderSSRFBlocked, "AI provider URL targets a blocked network address")
 	ErrModelNotFound         = errors.E(errors.NotExist, CodeModelNotFound, "AI model not found")
 	ErrModelNotConfigured    = errors.E(errors.Precondition, CodeModelNotConfigured, "no AI model is configured for this workspace")
 	ErrMCPServerNotFound     = errors.E(errors.NotExist, CodeMCPServerNotFound, "MCP server not found")
@@ -39,6 +43,7 @@ var (
 	ErrThreadNotFound        = errors.E(errors.NotExist, CodeThreadNotFound, "chat thread not found")
 	ErrRunNotFound           = errors.E(errors.NotExist, CodeRunNotFound, "AI run not found")
 	ErrMonthlyBudgetExceeded = errors.E(errors.ResourceExhausted, CodeMonthlyBudgetExceeded, "monthly workspace AI budget exceeded")
-	ErrInvalidMCPURL         = errors.E(errors.Invalid, CodeMCPInvalidURL, "invalid MCP server URL")
-	ErrSSRFBlocked           = errors.E(errors.Invalid, CodeMCPSSRFBlocked, "MCP server URL targets a blocked network address")
+	ErrInvalidMCPURL         = errors.E(errors.Invalid, CodeMCPInvalidURL)
+	ErrMCPSSRFBlocked        = errors.E(errors.Invalid, CodeMCPSSRFBlocked, "MCP server URL targets a blocked network address")
+	ErrSSRFBlocked           = errors.E(errors.Invalid, "outbound URL targets a blocked network address")
 )

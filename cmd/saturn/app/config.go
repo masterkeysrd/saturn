@@ -61,9 +61,15 @@ type Config struct {
 	AI        AIConfig
 }
 
-// AIConfig holds platform AI and MCP client settings.
+// AIConfig holds platform AI provider and MCP client settings.
 type AIConfig struct {
-	MCP AIMCPConfig `mapstructure:"mcp"`
+	Providers AIProvidersConfig `mapstructure:"providers"`
+	MCP       AIMCPConfig       `mapstructure:"mcp"`
+}
+
+// AIProvidersConfig configures outbound HTTP LLM provider behavior.
+type AIProvidersConfig struct {
+	AllowPrivateNetworks bool `mapstructure:"allow_private_networks"`
 }
 
 // AIMCPConfig configures outbound HTTP MCP client behavior.
@@ -304,6 +310,7 @@ func NewViper() *viper.Viper {
 	v.SetDefault("connector.microsoft.client_secret", "")
 	v.SetDefault("connector.microsoft.tenant_id", "common")
 
+	v.SetDefault("ai.providers.allow_private_networks", false)
 	v.SetDefault("ai.mcp.allow_private_networks", false)
 
 	return v

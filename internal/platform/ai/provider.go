@@ -131,7 +131,7 @@ func (p *Provider) Validate(allowPrivateNetworks ...bool) error {
 		if trimmed == "" {
 			p.Config.BaseURL = nil
 		} else {
-			if err := ValidateMCPURL(trimmed, allowPrivate); err != nil {
+			if err := ValidateProviderURL(trimmed, allowPrivate); err != nil {
 				return err
 			}
 			p.Config.BaseURL = new(trimmed)

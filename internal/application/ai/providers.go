@@ -87,7 +87,7 @@ func (c *coordinator) CreateProvider(ctx context.Context, req *CreateProviderReq
 		Secret:    req.Secret.Clone(),
 		IsEnabled: req.IsEnabled,
 	}
-	if err := p.Validate(c.allowPrivateNetworks); err != nil {
+	if err := p.Validate(c.allowProviderPrivateNetworks); err != nil {
 		return nil, errors.E(op, err)
 	}
 
@@ -125,7 +125,7 @@ func (c *coordinator) UpdateProvider(ctx context.Context, req *UpdateProviderReq
 		return nil, errors.E(op, err)
 	}
 
-	if err := existing.ApplyPatch(req.Provider, req.UpdateMask, c.allowPrivateNetworks); err != nil {
+	if err := existing.ApplyPatch(req.Provider, req.UpdateMask, c.allowProviderPrivateNetworks); err != nil {
 		return nil, errors.E(op, err)
 	}
 	if err := c.store.Providers().Update(ctx, existing); err != nil {

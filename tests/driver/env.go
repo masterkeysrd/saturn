@@ -199,6 +199,9 @@ func StartTestEnv() (*TestEnv, error) {
 			LocalDir: backupDir,
 		},
 		AI: app.AIConfig{
+			Providers: app.AIProvidersConfig{
+				AllowPrivateNetworks: true,
+			},
 			MCP: app.AIMCPConfig{
 				AllowPrivateNetworks: true,
 			},

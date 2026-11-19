@@ -163,7 +163,7 @@ func (c *UnifiedMCPConnector) connectHTTPSession(ctx context.Context, server *MC
 	if server.Config.TimeoutSeconds <= 0 {
 		timeout = 30 * time.Second
 	}
-	httpClient := NewSSRFSafeHTTPClient(c.allowPrivateNetworks, timeout)
+	httpClient := NewSSRFSafeHTTPClient(MCPURLPolicy(c.allowPrivateNetworks), timeout)
 	if headers := buildMCPAuthHeaders(server); len(headers) > 0 {
 		httpClient.Transport = &headerRoundTripper{
 			base:    httpClient.Transport,

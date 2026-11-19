@@ -116,18 +116,46 @@ func TestConfig_DBPoolEnvBindings(t *testing.T) {
 	}
 }
 
-func TestConfig_AIMCPAllowPrivateNetworks(t *testing.T) {
-	v := NewViper()
-	cfg := LoadConfig(v)
-	if cfg.AI.MCP.AllowPrivateNetworks {
-		t.Fatalf("expected AI.MCP.AllowPrivateNetworks default to be false")
+func TestConfig_AIAllowPrivateNetworks(t *testing.T) {
+	tests := []struct {
+		name             string
+		env              map[string]string
+		wantProviderBool bool
+		wantMCPBool      bool
+	}{
+		{
+			name:             "both default to false",
+			wantProviderBool: false,
+			wantMCPBool:      false,
+		},
+		{
+			name:             "provider private networks enabled independently",
+			env:              map[string]string{"SATURN_AI_PROVIDERS_ALLOW_PRIVATE_NETWORKS": "true"},
+			wantProviderBool: true,
+			wantMCPBool:      false,
+		},
+		{
+			name:             "mcp private networks enabled independently",
+			env:              map[string]string{"SATURN_AI_MCP_ALLOW_PRIVATE_NETWORKS": "true"},
+			wantProviderBool: false,
+			wantMCPBool:      true,
+		},
 	}
 
-	t.Setenv("SATURN_AI_MCP_ALLOW_PRIVATE_NETWORKS", "true")
-	v2 := NewViper()
-	cfg2 := LoadConfig(v2)
-	if !cfg2.AI.MCP.AllowPrivateNetworks {
-		t.Fatalf("expected AI.MCP.AllowPrivateNetworks=true from env override")
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			for k, val := range tc.env {
+				t.Setenv(k, val)
+			}
+			v := NewViper()
+			cfg := LoadConfig(v)
+			if cfg.AI.Providers.AllowPrivateNetworks != tc.wantProviderBool {
+				t.Fatalf("AI.Providers.AllowPrivateNetworks = %v, want %v", cfg.AI.Providers.AllowPrivateNetworks, tc.wantProviderBool)
+			}
+			if cfg.AI.MCP.AllowPrivateNetworks != tc.wantMCPBool {
+				t.Fatalf("AI.MCP.AllowPrivateNetworks = %v, want %v", cfg.AI.MCP.AllowPrivateNetworks, tc.wantMCPBool)
+			}
+		})
 	}
 }
 

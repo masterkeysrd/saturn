@@ -422,7 +422,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		return fmt.Errorf("init encrypted ai store: %w", err)
 	}
 	aiSettingsClient := settings.Bind(platformSettingsStore, ai.SettingsKey)
-	aiInvoker := ai.NewLoomClient(ai.NewSSRFSafeHTTPClient(cfg.AI.MCP.AllowPrivateNetworks, 0))
+	aiInvoker := ai.NewLoomClient(ai.NewSSRFSafeHTTPClient(ai.ProviderURLPolicy(cfg.AI.Providers.AllowPrivateNetworks), 0))
 	mcpConnector := ai.NewUnifiedMCPConnector(mcpServer.ConnectInMemory, cfg.AI.MCP.AllowPrivateNetworks)
 	aiRuntime := ai.NewRuntime(ai.RuntimeDependencies{
 		Store:    aiStore,
@@ -435,13 +435,14 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	aiCoordinator := aiapp.NewLoggingCoordinator(
 		aiapp.NewTransactionalCoordinator(
 			aiapp.NewCoordinator(aiapp.Dependencies{
-				Store:                aiStore,
-				Settings:             aiSettingsClient,
-				Invoker:              aiInvoker,
-				MCP:                  mcpConnector,
-				Runtime:              aiRuntime,
-				ThreadRuntime:        aiThreadRuntime,
-				AllowPrivateNetworks: cfg.AI.MCP.AllowPrivateNetworks,
+				Store:                        aiStore,
+				Settings:                     aiSettingsClient,
+				Invoker:                      aiInvoker,
+				MCP:                          mcpConnector,
+				Runtime:                      aiRuntime,
+				ThreadRuntime:                aiThreadRuntime,
+				AllowProviderPrivateNetworks: cfg.AI.Providers.AllowPrivateNetworks,
+				AllowMCPPrivateNetworks:      cfg.AI.MCP.AllowPrivateNetworks,
 			}),
 			dbClient,
 		),

@@ -828,8 +828,8 @@ func TestCoordinator_MCPValidationAndExecution(t *testing.T) {
 		},
 		IsEnabled: true,
 	})
-	if !errors.Is(err, ai.ErrSSRFBlocked) {
-		t.Fatalf("expected ErrSSRFBlocked, got %v", err)
+	if !errors.Is(err, ai.ErrMCPSSRFBlocked) {
+		t.Fatalf("expected ErrMCPSSRFBlocked, got %v", err)
 	}
 
 	// Valid public HTTP MCP succeeds
@@ -922,5 +922,84 @@ func TestCoordinator_PurgeExpiredRuns(t *testing.T) {
 	}
 	if _, err := st.Runs().Get(context.Background(), "spc_disabled", "air_keep", ""); err != nil {
 		t.Fatalf("expected air_keep to remain when retention=0, err=%v", err)
+	}
+}
+
+func TestCoordinator_IndependentPrivateNetworkPolicies(t *testing.T) {
+	tests := []struct {
+		name                 string
+		allowProviderPrivate bool
+		allowMCPPrivate      bool
+		wantProviderErr      error
+		wantMCPErr           error
+	}{
+		{
+			name:                 "both blocked by default",
+			allowProviderPrivate: false,
+			allowMCPPrivate:      false,
+			wantProviderErr:      ai.ErrProviderSSRFBlocked,
+			wantMCPErr:           ai.ErrMCPSSRFBlocked,
+		},
+		{
+			name:                 "provider allowed while mcp remains blocked",
+			allowProviderPrivate: true,
+			allowMCPPrivate:      false,
+			wantMCPErr:           ai.ErrMCPSSRFBlocked,
+		},
+		{
+			name:                 "mcp allowed while provider remains blocked",
+			allowProviderPrivate: false,
+			allowMCPPrivate:      true,
+			wantProviderErr:      ai.ErrProviderSSRFBlocked,
+		},
+		{
+			name:                 "both allowed",
+			allowProviderPrivate: true,
+			allowMCPPrivate:      true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			coord := aiapp.NewCoordinator(aiapp.Dependencies{
+				Store:                        newMemStore(),
+				Settings:                     newMemSettings(),
+				Invoker:                      ai.NewLoomClient(nil),
+				MCP:                          ai.NewUnifiedMCPConnector(nil, tc.allowMCPPrivate),
+				Runtime:                      &aiapp.AIRuntimeMock{},
+				ThreadRuntime:                &aiapp.AIThreadRuntimeMock{},
+				AllowProviderPrivateNetworks: tc.allowProviderPrivate,
+				AllowMCPPrivateNetworks:      tc.allowMCPPrivate,
+			})
+			adminCtx := spaceCtx("spc_1", "usr_admin", "admin")
+
+			_, provErr := coord.CreateProvider(adminCtx, &aiapp.CreateProviderRequest{
+				Name:      "Local LLM",
+				Driver:    ai.DriverOpenAICompatible,
+				Config:    ai.ProviderConfig{BaseURL: new("http://host.docker.internal:8000/v1")},
+				IsEnabled: true,
+			})
+			if tc.wantProviderErr != nil {
+				if !errors.Is(provErr, tc.wantProviderErr) {
+					t.Fatalf("CreateProvider() error = %v, want %v", provErr, tc.wantProviderErr)
+				}
+			} else if provErr != nil {
+				t.Fatalf("CreateProvider() unexpected error = %v", provErr)
+			}
+
+			_, mcpErr := coord.CreateMCPServer(adminCtx, &aiapp.CreateMCPServerRequest{
+				Slug:      "local-mcp",
+				Name:      "Local MCP",
+				Config:    ai.MCPServerConfig{URL: "http://host.docker.internal:9000/mcp"},
+				IsEnabled: true,
+			})
+			if tc.wantMCPErr != nil {
+				if !errors.Is(mcpErr, tc.wantMCPErr) {
+					t.Fatalf("CreateMCPServer() error = %v, want %v", mcpErr, tc.wantMCPErr)
+				}
+			} else if mcpErr != nil {
+				t.Fatalf("CreateMCPServer() unexpected error = %v", mcpErr)
+			}
+		})
 	}
 }
