@@ -1,7 +1,7 @@
-import { ActivityIndicator, Platform, View, StyleSheet } from "react-native"
+import { ActivityIndicator, Platform, View } from "react-native"
 import { Redirect, Stack } from "expo-router"
 import { useAuth } from "@/lib/auth-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -9,11 +9,13 @@ export const unstable_settings = {
 
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth()
+  const { colors, resolvedMode } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     )
   }
@@ -28,17 +30,17 @@ export default function AppLayout() {
         headerShown: false,
         headerStyle: {
           backgroundColor:
-            Platform.OS === "ios" ? "transparent" : theme.colors.background,
+            Platform.OS === "ios" ? "transparent" : colors.background,
         },
-        headerUserInterfaceStyle: "dark",
+        headerUserInterfaceStyle: resolvedMode,
         headerShadowVisible: false,
         headerBackButtonDisplayMode: "minimal",
-        headerTintColor: theme.colors.textPrimary,
+        headerTintColor: colors.textPrimary,
         headerTitleStyle: {
           fontWeight: "600",
         },
         contentStyle: {
-          backgroundColor: theme.colors.background,
+          backgroundColor: colors.background,
         },
       }}
     >
@@ -200,11 +202,11 @@ export default function AppLayout() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   loadingContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
 })

@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -14,7 +13,7 @@ import { useTimezone } from "@saturn/hooks"
 import { Send, Sparkles } from "lucide-react-native"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { FinanceSummaryWidget } from "@/components/widgets/finance-summary-widget"
 import { CalendarSummaryWidget } from "@/components/widgets/calendar-summary-widget"
@@ -32,6 +31,8 @@ export default function OverviewScreen() {
   const { user } = useAuth()
   const { refetchSpaces } = useSpace()
   const tz = useTimezone()
+  const { colors, isDark } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [refreshing, setRefreshing] = useState(false)
   const [aiQuery, setAiQuery] = useState("")
 
@@ -101,9 +102,9 @@ export default function OverviewScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-            progressBackgroundColor={theme.colors.surfaceElevated}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+            progressBackgroundColor={colors.surfaceElevated}
           />
         }
       >
@@ -118,13 +119,14 @@ export default function OverviewScreen() {
         {/* Quick AI Assistant Launcher */}
         <View style={styles.aiLauncherWrap}>
           <View style={styles.aiInputRow}>
-            <Sparkles size={16} color={theme.colors.primary} />
+            <Sparkles size={16} color={colors.primary} />
             <TextInput
               style={styles.aiInput}
               value={aiQuery}
               onChangeText={setAiQuery}
               placeholder="Ask Saturn AI anything..."
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
+              keyboardAppearance={isDark ? "dark" : "light"}
               returnKeyType="send"
               onSubmitEditing={() => {
                 const text = aiQuery
@@ -142,7 +144,7 @@ export default function OverviewScreen() {
               }}
               accessibilityLabel="Ask Saturn AI"
             >
-              <Send size={14} color={theme.colors.primaryForeground} />
+              <Send size={14} color={colors.primaryForeground} />
             </TouchableOpacity>
           </View>
           <ScrollView
@@ -172,14 +174,14 @@ export default function OverviewScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,
@@ -194,17 +196,17 @@ const styles = StyleSheet.create({
   dateLabel: {
     fontSize: 11,
     lineHeight: 14,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
-    textTransform: "uppercase",
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
+    textTransform: "uppercase" as const,
     letterSpacing: 0.8,
     includeFontPadding: false,
   },
   greetingTitle: {
     fontSize: 22,
     lineHeight: 26,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
     letterSpacing: -0.5,
     includeFontPadding: false,
   },
@@ -212,13 +214,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   aiInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.lg,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.lg,
     paddingLeft: 12,
     paddingRight: 6,
     paddingVertical: 6,
@@ -226,33 +228,33 @@ const styles = StyleSheet.create({
   aiInput: {
     flex: 1,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
     paddingVertical: 4,
   },
   aiSendBtn: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.primary,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   aiChipsRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
     paddingHorizontal: 2,
   },
   aiChip: {
     paddingHorizontal: 11,
     paddingVertical: 6,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   aiChipText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
+    fontWeight: "600" as const,
+    color: t.colors.textSecondary,
   },
 })

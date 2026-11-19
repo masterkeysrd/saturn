@@ -7,7 +7,7 @@ import type {
   Account,
   Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { theme } from "@/lib/theme"
+import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { MonoAmount } from "@/components/ui/typography"
 import { haptics } from "@/lib/haptics"
 
@@ -98,6 +98,7 @@ export function CardAccountItem({
   style,
   onPress,
 }: CardAccountItemProps) {
+  const styles = useThemedStyles(createStyles)
   const [logoError, setLogoError] = useState(false)
   const cardTheme = getCardTheme(acc.color)
   const isCredit = acc.type === "CREDIT_CARD"
@@ -288,19 +289,19 @@ export function CardAccountItem({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   cardContainer: {
     backgroundColor: "#0b0f19",
     borderRadius: 24,
     borderWidth: 1,
     padding: 20,
     minHeight: 190,
-    justifyContent: "space-between",
-    overflow: "hidden",
-    ...theme.shadows.md,
+    justifyContent: "space-between" as const,
+    overflow: "hidden" as const,
+    ...t.shadows.md,
   },
   ambientGlow: {
-    position: "absolute",
+    position: "absolute" as const,
     right: -30,
     bottom: -30,
     width: 160,
@@ -312,13 +313,13 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   topHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   institutionRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
     flex: 1,
     marginRight: 10,
@@ -330,9 +331,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.4)",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    overflow: "hidden" as const,
   },
   institutionLogo: {
     width: 22,
@@ -345,16 +346,16 @@ const styles = StyleSheet.create({
   },
   accountTitle: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     color: "rgba(255, 255, 255, 0.95)",
-    textTransform: "uppercase",
+    textTransform: "uppercase" as const,
     letterSpacing: 0.4,
   },
   accountTypeLabel: {
     fontSize: 10,
-    fontWeight: "600",
+    fontWeight: "600" as const,
     color: "rgba(255, 255, 255, 0.5)",
-    textTransform: "uppercase",
+    textTransform: "uppercase" as const,
     letterSpacing: 0.8,
   },
   defaultBadge: {
@@ -367,7 +368,7 @@ const styles = StyleSheet.create({
   },
   defaultBadgeText: {
     fontSize: 9,
-    fontWeight: "800",
+    fontWeight: "800" as const,
     color: "#fcd34d",
     letterSpacing: 0.8,
   },
@@ -376,8 +377,8 @@ const styles = StyleSheet.create({
   },
   maskedNumberText: {
     fontSize: 14,
-    fontFamily: theme.typography.mono,
-    fontWeight: "700",
+    fontFamily: t.typography.mono,
+    fontWeight: "700" as const,
     color: "rgba(255, 255, 255, 0.85)",
     letterSpacing: 2.8,
   },
@@ -385,51 +386,51 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   footerRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "flex-end" as const,
+    justifyContent: "space-between" as const,
   },
   footerLeft: {
     flex: 1,
     marginRight: 12,
   },
   footerRight: {
-    alignItems: "flex-end",
+    alignItems: "flex-end" as const,
   },
   footerSubText: {
     fontSize: 10,
-    fontWeight: "600",
+    fontWeight: "600" as const,
     color: "rgba(255, 255, 255, 0.4)",
     letterSpacing: 0.8,
-    textTransform: "uppercase",
+    textTransform: "uppercase" as const,
     marginBottom: 2,
   },
   holderName: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     color: "rgba(255, 255, 255, 0.9)",
   },
   balanceRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "flex-end",
+    flexDirection: "row" as const,
+    alignItems: "baseline" as const,
+    justifyContent: "flex-end" as const,
     gap: 5,
   },
   balanceText: {
     fontSize: 20,
-    fontWeight: "800",
+    fontWeight: "800" as const,
     letterSpacing: -0.3,
   },
   currencyBadge: {
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     color: "rgba(255, 255, 255, 0.6)",
-    textTransform: "uppercase",
+    textTransform: "uppercase" as const,
     marginBottom: 1,
   },
   convertedText: {
     fontSize: 10,
-    fontWeight: "500",
+    fontWeight: "500" as const,
     color: "rgba(255, 255, 255, 0.5)",
     marginTop: 2,
   },
@@ -441,24 +442,24 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: "rgba(255, 255, 255, 0.12)",
     borderRadius: 2,
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   limitBar: {
-    height: "100%",
+    height: "100%" as const,
     borderRadius: 2,
   },
   limitLabelsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
   },
   limitSubLabel: {
     fontSize: 10,
-    fontWeight: "500",
+    fontWeight: "500" as const,
     color: "rgba(255, 255, 255, 0.6)",
   },
   limitValueBold: {
-    fontWeight: "700",
+    fontWeight: "700" as const,
     color: "#ffffff",
   },
 })

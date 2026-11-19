@@ -1,6 +1,5 @@
 import { useState, useRef, useMemo } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -48,7 +47,7 @@ import {
   useCurrencyConversionPreview,
 } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
-import { theme, getNativeBudgetColors } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
 import { TextInput } from "@/components/ui/text-input"
@@ -70,6 +69,8 @@ export default function ManageBudgetModal() {
   const isEditMode = Boolean(editBudgetId)
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { colors, getBudgetColors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   // Bottom sheets
   const currencySheetRef = useRef<BottomSheet>(null)
@@ -185,7 +186,7 @@ export default function ManageBudgetModal() {
     createMutation.isPending || updateMutation.isPending || isSubmitting
   const isDeleting = deleteMutation.isPending
 
-  const activeColorMeta = getNativeBudgetColors(color)
+  const activeColorMeta = getBudgetColors(color)
 
   const selectedAccount = useMemo(
     () => accounts.find((a) => a.id === defaultAccountId),
@@ -316,7 +317,7 @@ export default function ManageBudgetModal() {
   if (isEditMode && isBudgetLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     )
   }
@@ -344,7 +345,7 @@ export default function ManageBudgetModal() {
                         element: (
                           <ActivityIndicator
                             size="small"
-                            color={theme.colors.primary}
+                            color={colors.primary}
                           />
                         ),
                       }
@@ -363,7 +364,7 @@ export default function ManageBudgetModal() {
                     style={styles.headerBtn}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <X size={20} color={theme.colors.textMuted} />
+                    <X size={20} color={colors.textMuted} />
                   </TouchableOpacity>
                 ),
                 headerRight: () => (
@@ -374,10 +375,7 @@ export default function ManageBudgetModal() {
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     {isSaving ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={theme.colors.primary}
-                      />
+                      <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
                       <Text style={styles.headerSaveBtnText}>Save</Text>
                     )}
@@ -431,7 +429,7 @@ export default function ManageBudgetModal() {
                 </View>
               ) : (
                 <View style={styles.conversionWarningRow}>
-                  <AlertTriangle size={14} color="#f59e0b" />
+                  <AlertTriangle size={14} color={colors.warning} />
                   <Text style={styles.conversionWarningText}>
                     {conversion.error}
                   </Text>
@@ -448,7 +446,7 @@ export default function ManageBudgetModal() {
               name="name"
               label="Budget Name"
               placeholder="e.g. Dining & Restaurants, Groceries, Rent"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               containerStyle={{ marginBottom: 16 }}
             />
 
@@ -559,16 +557,16 @@ export default function ManageBudgetModal() {
                     {
                       value: "PAUSED" as Budget_Status,
                       label: "Paused",
-                      activeBorder: "#f59e0b",
-                      activeBg: "rgba(245, 158, 11, 0.15)",
-                      activeTextColor: "#f59e0b",
+                      activeBorder: colors.warning,
+                      activeBg: colors.warningSubtle,
+                      activeTextColor: colors.warning,
                     },
                     {
                       value: "CLOSED" as Budget_Status,
                       label: "Closed",
-                      activeBorder: theme.colors.destructive,
-                      activeBg: theme.colors.destructiveSubtle,
-                      activeTextColor: theme.colors.destructive,
+                      activeBorder: colors.destructive,
+                      activeBg: colors.destructiveSubtle,
+                      activeTextColor: colors.destructive,
                     },
                   ]}
                   pillStyle={{ flex: 1 }}
@@ -607,7 +605,7 @@ export default function ManageBudgetModal() {
             <FormColorPicker
               control={control}
               name="color"
-              getColorHex={(c) => getNativeBudgetColors(c).bar}
+              getColorHex={(c) => getBudgetColors(c).bar}
               containerStyle={{ marginBottom: 18 }}
             />
 
@@ -664,9 +662,7 @@ export default function ManageBudgetModal() {
                     <IconComp
                       size={20}
                       color={
-                        isSelected
-                          ? activeColorMeta.bar
-                          : theme.colors.textMuted
+                        isSelected ? activeColorMeta.bar : colors.textMuted
                       }
                     />
                   </TouchableOpacity>
@@ -693,13 +689,10 @@ export default function ManageBudgetModal() {
                 style={styles.deleteBtn}
               >
                 {isDeleting ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.destructive}
-                  />
+                  <ActivityIndicator size="small" color={colors.destructive} />
                 ) : (
                   <>
-                    <Trash2 size={16} color={theme.colors.destructive} />
+                    <Trash2 size={16} color={colors.destructive} />
                     <Text style={styles.deleteBtnText}>Delete Budget</Text>
                   </>
                 )}
@@ -736,20 +729,20 @@ export default function ManageBudgetModal() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   loadingContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   keyboardView: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,
@@ -762,35 +755,35 @@ const styles = StyleSheet.create({
   headerSaveBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
+    backgroundColor: t.colors.primary,
+    borderRadius: t.radius.md,
   },
   headerSaveBtnText: {
     fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.primaryForeground,
+    fontWeight: "700" as const,
+    color: t.colors.primaryForeground,
   },
   amountCard: {
     padding: 16,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.radius.xl,
+    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.xl,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   sectionHeaderLabel: {
     fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     letterSpacing: 0.6,
     marginBottom: 10,
   },
   amountInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
   },
   currencySymbol: {
     fontSize: 32,
-    fontWeight: "800",
+    fontWeight: "800" as const,
     marginRight: 6,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
     flexShrink: 0,
@@ -806,22 +799,22 @@ const styles = StyleSheet.create({
   },
   amountInput: {
     fontSize: 32,
-    fontWeight: "800",
+    fontWeight: "800" as const,
     padding: 0,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
   },
   currencySelectButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     flexShrink: 0,
     gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceSubtle,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     minWidth: 68,
   },
   currencySelectButtonDisabled: {
@@ -830,73 +823,73 @@ const styles = StyleSheet.create({
   },
   currencySelectCode: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
     flexShrink: 0,
   },
   errorText: {
     fontSize: 12,
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
     marginTop: 6,
   },
   sectionCard: {
     padding: 16,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.radius.xl,
+    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.xl,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   fieldSubLabel: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
+    fontWeight: "600" as const,
+    color: t.colors.textSecondary,
     marginBottom: 8,
   },
   fieldHelperText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 6,
     lineHeight: 16,
   },
   intervalRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
   },
   intervalPill: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceSubtle,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   intervalPillActive: {
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: t.colors.surfaceSubtle,
   },
   intervalPillText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   intervalPillTextActive: {
-    fontWeight: "700",
+    fontWeight: "700" as const,
   },
   selectorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceSubtle,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   selectorLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
     flex: 1,
   },
@@ -904,54 +897,54 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 6,
-    backgroundColor: "rgba(56, 189, 248, 0.12)",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.primarySubtle,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   selectorValueText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
     flex: 1,
   },
   selectorPlaceholder: {
-    color: theme.colors.textMuted,
-    fontWeight: "400",
+    color: t.colors.textMuted,
+    fontWeight: "400" as const,
   },
   iconHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     marginBottom: 10,
   },
   iconPreviewBadge: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: theme.radius.full,
+    borderRadius: t.radius.full,
     borderWidth: 1,
   },
   iconPreviewText: {
     fontSize: 12,
-    fontWeight: "600",
-    textTransform: "capitalize",
+    fontWeight: "600" as const,
+    textTransform: "capitalize" as const,
   },
   iconGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 8,
   },
   iconGridItem: {
     width: 44,
     height: 44,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceSubtle,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   iconGridItemActive: {
     borderWidth: 1.5,
@@ -961,20 +954,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   deleteBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 8,
     paddingVertical: 14,
-    borderRadius: theme.radius.lg,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
     borderColor: "rgba(244, 63, 94, 0.3)",
-    backgroundColor: "rgba(244, 63, 94, 0.08)",
+    backgroundColor: t.colors.destructiveSubtle,
   },
   deleteBtnText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.destructive,
+    fontWeight: "600" as const,
+    color: t.colors.destructive,
   },
   conversionPreviewWrap: {
     marginTop: -8,
@@ -984,35 +977,35 @@ const styles = StyleSheet.create({
   conversionPreviewRow: {
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   conversionPreviewText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   conversionPreviewRate: {
     fontSize: 12,
-    fontWeight: "400",
-    color: theme.colors.textMuted,
+    fontWeight: "400" as const,
+    color: t.colors.textMuted,
   },
   conversionWarningRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.warningSubtle,
     borderWidth: 1,
     borderColor: "rgba(245, 158, 11, 0.3)",
   },
   conversionWarningText: {
     fontSize: 12,
-    color: "#f59e0b",
+    color: t.colors.warning,
     flex: 1,
   },
 })

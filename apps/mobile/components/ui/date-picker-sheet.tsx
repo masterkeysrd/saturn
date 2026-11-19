@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ChevronLeft, ChevronRight } from "lucide-react-native"
 import { formatLocalDateString, getTimezoneParts } from "@saturn/core"
 import { useTimezone } from "@saturn/hooks"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { BottomSheetHeader } from "./bottom-sheet"
 
@@ -95,6 +95,8 @@ export function DatePickerSheet({
   onChange,
   onClose,
 }: DatePickerSheetProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const insets = useSafeAreaInsets()
   const tz = useTimezone()
   const [calendarViewDate, setCalendarViewDate] = useState<Date>(value)
@@ -256,7 +258,7 @@ export function DatePickerSheet({
                 activeOpacity={0.6}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <ChevronLeft size={20} color={theme.colors.textPrimary} />
+                <ChevronLeft size={20} color={colors.textPrimary} />
               </TouchableOpacity>
 
               <Text style={styles.calendarMonthTitle}>
@@ -269,7 +271,7 @@ export function DatePickerSheet({
                 activeOpacity={0.6}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <ChevronRight size={20} color={theme.colors.textPrimary} />
+                <ChevronRight size={20} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
 
@@ -337,26 +339,26 @@ export function DatePickerSheet({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    justifyContent: "flex-end",
+    backgroundColor: t.isDark ? "rgba(0, 0, 0, 0.65)" : "rgba(15, 23, 42, 0.4)",
+    justifyContent: "flex-end" as const,
   },
   sheetContainer: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: t.colors.surface,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.borderStrong,
-    borderTopLeftRadius: theme.radius.xl,
-    borderTopRightRadius: theme.radius.xl,
+    borderTopColor: t.colors.borderStrong,
+    borderTopLeftRadius: t.radius.xl,
+    borderTopRightRadius: t.radius.xl,
     paddingTop: 10,
   },
   handleIndicator: {
-    backgroundColor: "#475569",
+    backgroundColor: t.colors.borderStrong,
     width: 36,
     height: 4,
     borderRadius: 2,
-    alignSelf: "center",
+    alignSelf: "center" as const,
     marginBottom: 8,
   },
   headerWrapper: {
@@ -367,7 +369,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   calendarPresetsRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
     marginBottom: 16,
   },
@@ -375,23 +377,23 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 7,
     paddingHorizontal: 4,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   calendarPresetChipText: {
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-    textAlign: "center",
+    fontWeight: "600" as const,
+    color: t.colors.textSecondary,
+    textAlign: "center" as const,
   },
   calendarMonthHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 4,
     marginBottom: 12,
   },
@@ -399,68 +401,68 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   calendarMonthTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   calendarWeekRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     marginBottom: 8,
   },
   calendarDayHeaderCell: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   calendarDayHeaderText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   calendarDaysGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
   },
   calendarDayCell: {
-    width: "14.2857%",
+    width: "14.2857%" as const,
     aspectRatio: 1,
     padding: 3,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   calendarDayCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   calendarDayToday: {
     borderWidth: 1.5,
-    borderColor: theme.colors.primary,
+    borderColor: t.colors.primary,
   },
   calendarDaySelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
+    borderColor: t.colors.primary,
   },
   calendarDayText: {
     fontSize: 14,
-    fontWeight: "500",
-    color: theme.colors.textPrimary,
+    fontWeight: "500" as const,
+    color: t.colors.textPrimary,
   },
   calendarDayTextToday: {
-    color: theme.colors.primary,
-    fontWeight: "700",
+    color: t.colors.primary,
+    fontWeight: "700" as const,
   },
   calendarDayTextSelected: {
-    color: "#ffffff",
-    fontWeight: "700",
+    color: t.colors.primaryForeground,
+    fontWeight: "700" as const,
   },
 })

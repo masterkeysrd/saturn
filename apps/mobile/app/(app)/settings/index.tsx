@@ -1,6 +1,5 @@
 import { useState } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -36,6 +35,9 @@ import {
   Link2,
   KeyRound,
   Workflow,
+  Sun,
+  Moon,
+  Smartphone,
 } from "lucide-react-native"
 import {
   useListActiveSessionsQuery,
@@ -48,7 +50,12 @@ import {
 import { FISCAL_YEAR_MONTHS, getFiscalMonthOption } from "@saturn/core"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+  type ThemeMode,
+} from "@/lib/theme"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
@@ -58,11 +65,23 @@ import { MfaStepUpModal } from "@/components/ui/mfa-stepup-modal"
 import { useToast } from "@/components/ui/toast"
 import { haptics } from "@/lib/haptics"
 
+const APPEARANCE_OPTIONS: readonly {
+  value: ThemeMode
+  label: string
+  Icon: typeof Sun
+}[] = [
+  { value: "light", label: "Light", Icon: Sun },
+  { value: "dark", label: "Dark", Icon: Moon },
+  { value: "system", label: "System", Icon: Smartphone },
+]
+
 export default function SettingsScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const toast = useToast()
   const queryClient = useQueryClient()
+  const { mode, setMode, colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const {
     user,
     logout,
@@ -361,14 +380,14 @@ export default function SettingsScreen() {
               onPress={() => router.push("/modal/switch-space")}
             >
               <View style={styles.menuLeft}>
-                <Layers size={18} color={theme.colors.primary} />
+                <Layers size={18} color={colors.primary} />
                 <Text style={styles.menuLabel}>Active Workspace</Text>
               </View>
               <View style={styles.menuRight}>
                 <Text style={styles.menuValue}>
                   {activeSpace?.name || "Personal"}
                 </Text>
-                <ChevronRight size={16} color={theme.colors.textMuted} />
+                <ChevronRight size={16} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
 
@@ -378,7 +397,7 @@ export default function SettingsScreen() {
               onPress={() => router.push("/(app)/settings/space")}
             >
               <View style={styles.menuLeft}>
-                <Users size={18} color={theme.colors.accent} />
+                <Users size={18} color={colors.accent} />
                 <Text style={styles.menuLabel}>
                   Workspace Details & Members
                 </Text>
@@ -389,7 +408,7 @@ export default function SettingsScreen() {
                   size="sm"
                   label={activeSpaceRole.toUpperCase()}
                 />
-                <ChevronRight size={16} color={theme.colors.textMuted} />
+                <ChevronRight size={16} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
 
@@ -402,11 +421,11 @@ export default function SettingsScreen() {
               }}
             >
               <View style={styles.menuLeft}>
-                <Link2 size={18} color={theme.colors.primary} />
+                <Link2 size={18} color={colors.primary} />
                 <Text style={styles.menuLabel}>Connected Accounts</Text>
               </View>
               <View style={styles.menuRight}>
-                <ChevronRight size={16} color={theme.colors.textMuted} />
+                <ChevronRight size={16} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
 
@@ -419,17 +438,17 @@ export default function SettingsScreen() {
               }}
             >
               <View style={styles.menuLeft}>
-                <Workflow size={18} color={theme.colors.accent} />
+                <Workflow size={18} color={colors.accent} />
                 <Text style={styles.menuLabel}>Workflows</Text>
               </View>
               <View style={styles.menuRight}>
-                <ChevronRight size={16} color={theme.colors.textMuted} />
+                <ChevronRight size={16} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
 
             <View style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuLeft}>
-                <Coins size={18} color={theme.colors.success} />
+                <Coins size={18} color={colors.success} />
                 <Text style={styles.menuLabel}>Base Currency</Text>
               </View>
               <View style={styles.menuRight}>
@@ -446,12 +465,12 @@ export default function SettingsScreen() {
               }}
             >
               <View style={styles.menuLeft}>
-                <Calendar size={18} color={theme.colors.info} />
+                <Calendar size={18} color={colors.info} />
                 <Text style={styles.menuLabel}>Fiscal Year Start</Text>
               </View>
               <View style={styles.menuRight}>
                 <Text style={styles.menuValue}>{fiscalMonthOption.name}</Text>
-                <ChevronRight size={16} color={theme.colors.textMuted} />
+                <ChevronRight size={16} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
           </Card>
@@ -464,7 +483,7 @@ export default function SettingsScreen() {
             {isBiometricSupported && (
               <View style={[styles.menuItem, styles.menuItemBorder]}>
                 <View style={styles.menuLeft}>
-                  <Fingerprint size={18} color={theme.colors.primary} />
+                  <Fingerprint size={18} color={colors.primary} />
                   <Text style={styles.menuLabel}>Biometric Unlock</Text>
                 </View>
                 <Switch
@@ -473,8 +492,8 @@ export default function SettingsScreen() {
                     handleToggleBiometrics(val)
                   }}
                   trackColor={{
-                    false: theme.colors.surfaceHighlight,
-                    true: theme.colors.primary,
+                    false: colors.surfaceHighlight,
+                    true: colors.primary,
                   }}
                   thumbColor="#ffffff"
                 />
@@ -487,7 +506,7 @@ export default function SettingsScreen() {
               onPress={() => router.push("/(app)/settings/security")}
             >
               <View style={styles.menuLeft}>
-                <ShieldCheck size={18} color={theme.colors.success} />
+                <ShieldCheck size={18} color={colors.success} />
                 <Text style={styles.menuLabel}>Active Sessions & Devices</Text>
               </View>
               <View style={styles.menuRight}>
@@ -496,7 +515,7 @@ export default function SettingsScreen() {
                   size="sm"
                   label={`${sessionCount} ${sessionCount === 1 ? "device" : "devices"}`}
                 />
-                <ChevronRight size={16} color={theme.colors.textMuted} />
+                <ChevronRight size={16} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
 
@@ -509,23 +528,77 @@ export default function SettingsScreen() {
               }}
             >
               <View style={styles.menuLeft}>
-                <KeyRound size={18} color={theme.colors.primary} />
+                <KeyRound size={18} color={colors.primary} />
                 <Text style={styles.menuLabel}>Personal API Keys</Text>
               </View>
               <View style={styles.menuRight}>
-                <ChevronRight size={16} color={theme.colors.textMuted} />
+                <ChevronRight size={16} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
           </Card>
         </View>
 
-        {/* Section 3: Preferences & Integrations */}
+        {/* Section 3: Appearance */}
+        <View style={styles.section}>
+          <Text style={styles.sectionHeader}>APPEARANCE</Text>
+          <Card style={styles.appearanceCard}>
+            <View style={styles.appearanceHeader}>
+              <Text style={styles.menuLabel}>Theme Mode</Text>
+              <Text style={styles.menuValue}>
+                {mode === "system"
+                  ? "Matches device"
+                  : mode === "light"
+                    ? "Light"
+                    : "Dark"}
+              </Text>
+            </View>
+            <View style={styles.segmentedTrack}>
+              {APPEARANCE_OPTIONS.map(({ value, label, Icon }) => {
+                const isActive = mode === value
+                return (
+                  <TouchableOpacity
+                    key={value}
+                    style={[
+                      styles.segmentedOption,
+                      isActive && styles.segmentedOptionActive,
+                    ]}
+                    activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isActive }}
+                    accessibilityLabel={`${label} theme`}
+                    onPress={() => {
+                      haptics.selection()
+                      setMode(value)
+                    }}
+                  >
+                    <Icon
+                      size={15}
+                      color={
+                        isActive ? colors.primaryForeground : colors.textMuted
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.segmentedLabel,
+                        isActive && styles.segmentedLabelActive,
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+          </Card>
+        </View>
+
+        {/* Section 4: Preferences & Integrations */}
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>PREFERENCES & AGENTS</Text>
           <Card style={styles.menuGroup}>
             <View style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuLeft}>
-                <Bell size={18} color={theme.colors.warning} />
+                <Bell size={18} color={colors.warning} />
                 <Text style={styles.menuLabel}>Notifications & Alerts</Text>
               </View>
               <Badge size="sm" label="Soon" />
@@ -540,15 +613,15 @@ export default function SettingsScreen() {
               }}
             >
               <View style={styles.menuLeft}>
-                <Sparkles size={18} color={theme.colors.accent} />
+                <Sparkles size={18} color={colors.accent} />
                 <Text style={styles.menuLabel}>AI Agents & Providers</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </Card>
         </View>
 
-        {/* Section 4: Storage & System Controls */}
+        {/* Section 5: Storage & System Controls */}
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>STORAGE & SYSTEM</Text>
           <Card style={styles.menuGroup}>
@@ -558,14 +631,14 @@ export default function SettingsScreen() {
               onPress={() => router.push("/server-settings")}
             >
               <View style={styles.menuLeft}>
-                <Globe size={18} color={theme.colors.primary} />
+                <Globe size={18} color={colors.primary} />
                 <Text style={styles.menuLabel}>Server Host</Text>
               </View>
               <View style={styles.menuRight}>
                 <Text style={styles.menuValue} numberOfLines={1}>
                   {serverUrl.replace(/^https?:\/\//, "")}
                 </Text>
-                <ChevronRight size={16} color={theme.colors.textMuted} />
+                <ChevronRight size={16} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
 
@@ -576,15 +649,15 @@ export default function SettingsScreen() {
               disabled={clearingCache}
             >
               <View style={styles.menuLeft}>
-                <HardDrive size={18} color={theme.colors.info} />
+                <HardDrive size={18} color={colors.info} />
                 <Text style={styles.menuLabel}>Clear Offline Cache</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
 
             <View style={styles.menuItem}>
               <View style={styles.menuLeft}>
-                <Info size={18} color={theme.colors.textMuted} />
+                <Info size={18} color={colors.textMuted} />
                 <Text style={styles.menuLabel}>App Version</Text>
               </View>
               <View style={styles.menuRight}>
@@ -598,7 +671,7 @@ export default function SettingsScreen() {
         <Button
           variant="destructive"
           size="lg"
-          leftIcon={<LogOut size={18} color={theme.colors.destructive} />}
+          leftIcon={<LogOut size={18} color={colors.destructive} />}
           onPress={() => setSignOutModalVisible(true)}
         >
           Sign Out
@@ -657,7 +730,7 @@ export default function SettingsScreen() {
                 onPress={() => setFiscalYearModalVisible(false)}
                 style={styles.closeBtn}
               >
-                <X size={20} color={theme.colors.textMuted} />
+                <X size={20} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -688,9 +761,7 @@ export default function SettingsScreen() {
                         {item.description}
                       </Text>
                     </View>
-                    {isSelected && (
-                      <Check size={18} color={theme.colors.primary} />
-                    )}
+                    {isSelected && <Check size={18} color={colors.primary} />}
                   </TouchableOpacity>
                 )
               }}
@@ -703,14 +774,14 @@ export default function SettingsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     paddingHorizontal: 16,
@@ -719,26 +790,26 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   profileCard: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     padding: 16,
     gap: 16,
   },
   avatarWrapper: {
-    position: "relative",
+    position: "relative" as const,
   },
   verifiedBadge: {
-    position: "absolute",
+    position: "absolute" as const,
     bottom: -2,
     right: -2,
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: theme.colors.success,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.success,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderWidth: 2,
-    borderColor: theme.colors.surface,
+    borderColor: t.colors.surface,
   },
   profileInfo: {
     flex: 1,
@@ -746,125 +817,163 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: theme.colors.textPrimary,
+    fontWeight: "bold" as const,
+    color: t.colors.textPrimary,
   },
   profileUsername: {
     fontSize: 12,
-    color: theme.colors.primary,
-    fontWeight: "500",
+    color: t.colors.primary,
+    fontWeight: "500" as const,
   },
   profileEmail: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   profileId: {
     fontSize: 10,
     fontFamily: "monospace",
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     opacity: 0.7,
   },
   profileBadgeRow: {
     marginTop: 4,
-    flexDirection: "row",
+    flexDirection: "row" as const,
   },
   section: {
     gap: 8,
   },
   sectionHeader: {
     fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     paddingHorizontal: 4,
     letterSpacing: 0.8,
   },
   menuGroup: {
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
   menuItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   menuLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
   },
   menuLabel: {
     fontSize: 15,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   menuRight: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   menuValue: {
     fontSize: 14,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
+  },
+  appearanceCard: {
+    padding: 14,
+    gap: 12,
+  },
+  appearanceHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+  },
+  segmentedTrack: {
+    flexDirection: "row" as const,
+    backgroundColor: t.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    padding: 3,
+    gap: 4,
+  },
+  segmentedOption: {
+    flex: 1,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: t.radius.sm,
+  },
+  segmentedOptionActive: {
+    backgroundColor: t.colors.primary,
+  },
+  segmentedLabel: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
+  },
+  segmentedLabelActive: {
+    color: t.colors.primaryForeground,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
     paddingTop: 16,
   },
   modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   modalSubtitle: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 4,
   },
   closeBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: theme.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surface,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   modalItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   modalItemActive: {
-    backgroundColor: theme.colors.primarySubtle,
+    backgroundColor: t.colors.primarySubtle,
   },
   modalItemText: {
     fontSize: 15,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   modalItemTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "600",
+    color: t.colors.primary,
+    fontWeight: "600" as const,
   },
   modalItemDescription: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
   },
 })

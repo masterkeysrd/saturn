@@ -1,6 +1,5 @@
 import React, { useState } from "react"
 import {
-  StyleSheet,
   View,
   Text,
   TouchableOpacity,
@@ -21,8 +20,8 @@ import {
   type Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { getInstitutionLogoUrl } from "@saturn/core"
-import { theme } from "@/lib/theme"
-import { formStyles } from "./forms/form-styles"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
+import { useFormStyles } from "./forms/form-styles"
 
 export interface AccountIconProps {
   account?: Account | null
@@ -37,10 +36,13 @@ export function AccountIcon({
   account,
   institution,
   size = 16,
-  color = theme.colors.textMuted,
+  color,
   fallbackIcon,
   style,
 }: AccountIconProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+  const resolvedColor = color ?? colors.textMuted
   const [hasError, setHasError] = useState(false)
   const inst = institution || account?.institution
   const logoUrl =
@@ -90,7 +92,7 @@ export function AccountIcon({
       <View
         style={[styles.iconContainer, { width: size, height: size }, style]}
       >
-        <Landmark size={size} color={color} />
+        <Landmark size={size} color={resolvedColor} />
       </View>
     )
   }
@@ -98,13 +100,13 @@ export function AccountIcon({
   const renderIcon = () => {
     switch (account.type) {
       case "CREDIT_CARD":
-        return <CreditCard size={size} color={color} />
+        return <CreditCard size={size} color={resolvedColor} />
       case "CASH":
-        return <Coins size={size} color={color} />
+        return <Coins size={size} color={resolvedColor} />
       case "DIGITAL_ACCOUNT":
-        return <Wallet size={size} color={color} />
+        return <Wallet size={size} color={resolvedColor} />
       default:
-        return <Landmark size={size} color={color} />
+        return <Landmark size={size} color={resolvedColor} />
     }
   }
 
@@ -138,6 +140,10 @@ export function AccountRow({
   error,
   style,
 }: AccountRowProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+  const formStyles = useFormStyles()
+
   return (
     <View style={style}>
       <TouchableOpacity
@@ -151,7 +157,7 @@ export function AccountRow({
             account={account}
             institution={institution}
             size={16}
-            color={theme.colors.textMuted}
+            color={colors.textMuted}
             fallbackIcon={fallbackIcon}
           />
           <Text style={formStyles.formRowLabel}>{label}</Text>
@@ -166,12 +172,12 @@ export function AccountRow({
           >
             {account ? `${account.name} (${account.currency})` : placeholder}
           </Text>
-          <ChevronRight size={14} color={theme.colors.textMuted} />
+          <ChevronRight size={14} color={colors.textMuted} />
         </View>
       </TouchableOpacity>
       {error ? (
         <View style={styles.errorRow}>
-          <AlertCircle size={12} color={theme.colors.destructive} />
+          <AlertCircle size={12} color={colors.destructive} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : null}
@@ -200,6 +206,9 @@ export function AccountCardSelect({
   error,
   style,
 }: AccountCardSelectProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+
   return (
     <View style={style}>
       <TouchableOpacity
@@ -214,7 +223,7 @@ export function AccountCardSelect({
               account={account}
               institution={institution}
               size={20}
-              color={account ? theme.colors.primary : theme.colors.textMuted}
+              color={account ? colors.primary : colors.textMuted}
             />
           </View>
           <View style={styles.cardSelectTextCol}>
@@ -234,11 +243,11 @@ export function AccountCardSelect({
             </Text>
           </View>
         </View>
-        <ChevronRight size={16} color={theme.colors.textMuted} />
+        <ChevronRight size={16} color={colors.textMuted} />
       </TouchableOpacity>
       {error ? (
         <View style={styles.errorRow}>
-          <AlertCircle size={12} color={theme.colors.destructive} />
+          <AlertCircle size={12} color={colors.destructive} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : null}
@@ -246,23 +255,23 @@ export function AccountCardSelect({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   iconContainer: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   disabled: {
     opacity: 0.5,
   },
   cardSelectRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingVertical: 8,
   },
   cardSelectLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
     flex: 1,
   },
@@ -270,11 +279,11 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   cardSelectTextCol: {
     flex: 1,
@@ -282,19 +291,19 @@ const styles = StyleSheet.create({
   },
   cardSelectTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   cardSelectSubtitle: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   cardSelectPlaceholder: {
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   errorRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingHorizontal: 16,
     paddingBottom: 8,
@@ -302,7 +311,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    color: theme.colors.destructive,
-    fontWeight: "500",
+    color: t.colors.destructive,
+    fontWeight: "500" as const,
   },
 })

@@ -3,7 +3,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -14,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useGenerateFlowMutation } from "@saturn/api/saturn/platform/workflow/v1/workflow"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { setPendingWorkflowDraft } from "@/components/workflows/workflow-draft-store"
 import { Sparkles } from "lucide-react-native"
@@ -23,6 +22,8 @@ export default function GenerateWorkflowModalScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const toast = useToast()
+  const { colors, isDark } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [prompt, setPrompt] = useState("")
   const [role, setRole] = useState<"default" | "fast" | "reasoning">("default")
   const generateMutation = useGenerateFlowMutation()
@@ -66,7 +67,7 @@ export default function GenerateWorkflowModalScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Sparkles size={20} color={theme.colors.primary} />
+          <Sparkles size={20} color={colors.primary} />
           <Text style={styles.title}>Build Workflow with AI</Text>
         </View>
         <Text style={styles.subtitle}>
@@ -80,7 +81,8 @@ export default function GenerateWorkflowModalScreen() {
           value={prompt}
           onChangeText={setPrompt}
           placeholder="e.g. Every weekday at 9am, check pending bills and summarize them..."
-          placeholderTextColor={theme.colors.textMuted}
+          placeholderTextColor={colors.textMuted}
+          keyboardAppearance={isDark ? "dark" : "light"}
         />
 
         <View style={styles.roleRow}>
@@ -106,9 +108,7 @@ export default function GenerateWorkflowModalScreen() {
           onPress={handleGenerate}
           loading={generateMutation.isPending}
           disabled={!prompt.trim()}
-          leftIcon={
-            <Sparkles size={16} color={theme.colors.primaryForeground} />
-          }
+          leftIcon={<Sparkles size={16} color={colors.primaryForeground} />}
         >
           Generate Draft
         </Button>
@@ -117,10 +117,10 @@ export default function GenerateWorkflowModalScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   keyboardAvoid: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   scroll: {
     flex: 1,
@@ -131,55 +131,55 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
   },
   title: {
     fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   subtitle: {
     fontSize: 13,
     lineHeight: 19,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
   },
   input: {
     minHeight: 130,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.lg,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.lg,
     padding: 14,
     fontSize: 14,
-    color: theme.colors.textPrimary,
-    textAlignVertical: "top",
+    color: t.colors.textPrimary,
+    textAlignVertical: "top" as const,
   },
   roleRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
   },
   rolePill: {
     flex: 1,
     paddingVertical: 8,
-    borderRadius: theme.radius.md,
+    borderRadius: t.radius.md,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: "center",
+    borderColor: t.colors.border,
+    backgroundColor: t.colors.surfaceElevated,
+    alignItems: "center" as const,
   },
   rolePillActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySubtle,
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
   },
   roleText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-    textTransform: "capitalize",
+    fontWeight: "600" as const,
+    color: t.colors.textSecondary,
+    textTransform: "capitalize" as const,
   },
   roleTextActive: {
-    color: theme.colors.primary,
+    color: t.colors.primary,
   },
 })

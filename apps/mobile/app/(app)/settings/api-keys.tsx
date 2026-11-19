@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -25,7 +24,7 @@ import {
 } from "@saturn/api/saturn/identity/v1/identity"
 import { useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -41,6 +40,8 @@ export default function APIKeysScreen() {
   const tz = useTimezone()
   const queryClient = useQueryClient()
   const { spaces } = useSpace()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   const [refreshing, setRefreshing] = useState(false)
   const [keyToDelete, setKeyToDelete] = useState<APIKey | null>(null)
@@ -124,15 +125,15 @@ export default function APIKeysScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
       >
         <Card style={styles.headerCard}>
           <View style={styles.headerRow}>
             <View style={styles.iconCircle}>
-              <Key size={20} color={theme.colors.primary} />
+              <Key size={20} color={colors.primary} />
             </View>
             <View style={styles.headerText}>
               <Text style={styles.headerTitle}>Personal API Keys</Text>
@@ -145,7 +146,7 @@ export default function APIKeysScreen() {
           <Button
             variant="primary"
             size="md"
-            leftIcon={<Plus size={16} color={theme.colors.primaryForeground} />}
+            leftIcon={<Plus size={16} color={colors.primaryForeground} />}
             onPress={handleOpenCreate}
           >
             Create API Key
@@ -156,7 +157,7 @@ export default function APIKeysScreen() {
           <SkeletonCard />
         ) : apiKeys.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <Key size={28} color={theme.colors.textMuted} />
+            <Key size={28} color={colors.textMuted} />
             <Text style={styles.emptyTitle}>No API Keys</Text>
             <Text style={styles.emptySubtitle}>
               Create a fine-grained key for Shortcuts, webhooks, or scripts.
@@ -181,7 +182,7 @@ export default function APIKeysScreen() {
                         onPress={() => handleOpenEdit(apiKey)}
                         accessibilityLabel={`Edit ${apiKey.name}`}
                       >
-                        <Pencil size={16} color={theme.colors.textSecondary} />
+                        <Pencil size={16} color={colors.textSecondary} />
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.deleteBtn}
@@ -191,7 +192,7 @@ export default function APIKeysScreen() {
                         }}
                         accessibilityLabel={`Revoke ${apiKey.name}`}
                       >
-                        <Trash2 size={16} color={theme.colors.destructive} />
+                        <Trash2 size={16} color={colors.destructive} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -209,10 +210,7 @@ export default function APIKeysScreen() {
                         size="sm"
                         label="No Active Spaces"
                         icon={
-                          <AlertTriangle
-                            size={11}
-                            color={theme.colors.warning}
-                          />
+                          <AlertTriangle size={11} color={colors.warning} />
                         }
                       />
                     ) : (
@@ -237,7 +235,7 @@ export default function APIKeysScreen() {
 
                   <View style={styles.metaRow}>
                     <View style={styles.metaItem}>
-                      <Clock size={12} color={theme.colors.textMuted} />
+                      <Clock size={12} color={colors.textMuted} />
                       <Text style={styles.metaText}>
                         Last used:{" "}
                         {apiKey.lastUsedAt
@@ -274,10 +272,10 @@ export default function APIKeysScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
@@ -291,17 +289,17 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
   },
   iconCircle: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: theme.colors.primarySubtle,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.primarySubtle,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   headerText: {
     flex: 1,
@@ -309,28 +307,28 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     lineHeight: 18,
   },
   emptyCard: {
     padding: 28,
-    alignItems: "center",
+    alignItems: "center" as const,
     gap: 8,
   },
   emptyTitle: {
     fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: theme.colors.textMuted,
-    textAlign: "center",
+    color: t.colors.textMuted,
+    textAlign: "center" as const,
   },
   list: {
     gap: 12,
@@ -340,9 +338,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   keyTopRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    justifyContent: "space-between" as const,
     gap: 8,
   },
   keyTitleBlock: {
@@ -351,54 +349,54 @@ const styles = StyleSheet.create({
   },
   keyName: {
     fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   keyPrefix: {
     fontSize: 12,
     fontFamily: "monospace",
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   actionRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
   },
   iconBtn: {
     padding: 8,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.surfaceElevated,
   },
   deleteBtn: {
     padding: 8,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.destructiveSubtle,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.destructiveSubtle,
   },
   keyDescription: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
   },
   badgesWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 6,
   },
   metaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    justifyContent: "space-between" as const,
     gap: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
   },
   metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 5,
   },
   metaText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
 })

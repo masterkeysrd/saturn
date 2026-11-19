@@ -12,7 +12,7 @@ import {
 } from "lucide-react-native"
 import type { MailboxRole } from "@saturn/api/saturn/mail/v1/mail"
 import type { ConnectedAccount } from "@saturn/api/saturn/platform/connector/v1/connector"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 export interface AccountBucketBarProps {
@@ -51,6 +51,9 @@ export function AccountBucketBar({
   onToggleUnreadFilter,
   unreadCounts = {},
 }: AccountBucketBarProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+
   const handleSelectAccount = (id?: string) => {
     haptics.selection()
     onSelectAccount(id)
@@ -86,11 +89,7 @@ export function AccountBucketBar({
           >
             <Layers
               size={14}
-              color={
-                !selectedAccountId
-                  ? theme.colors.primary
-                  : theme.colors.textMuted
-              }
+              color={!selectedAccountId ? colors.primary : colors.textMuted}
             />
             <Text
               style={[
@@ -105,7 +104,7 @@ export function AccountBucketBar({
           {/* Individual Connected Accounts */}
           {accounts.map((acc) => {
             const isSelected = selectedAccountId === acc.id
-            const dotColor = acc.color || theme.colors.primary
+            const dotColor = acc.color || colors.primary
             return (
               <Pressable
                 key={acc.id}
@@ -148,9 +147,7 @@ export function AccountBucketBar({
         >
           <Mail
             size={13}
-            color={
-              isUnreadFilter ? theme.colors.primary : theme.colors.textMuted
-            }
+            color={isUnreadFilter ? colors.primary : colors.textMuted}
           />
           <Text
             style={[
@@ -177,9 +174,7 @@ export function AccountBucketBar({
             >
               <Icon
                 size={13}
-                color={
-                  isSelected ? theme.colors.primary : theme.colors.textMuted
-                }
+                color={isSelected ? colors.primary : colors.textMuted}
               />
               <Text
                 style={[
@@ -219,32 +214,32 @@ export function AccountBucketBar({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   accountRow: {
     paddingHorizontal: 16,
     paddingVertical: 6,
     gap: 8,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   accountChip: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surface,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   accountChipActive: {
-    backgroundColor: theme.colors.primarySubtle,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: t.colors.primary,
   },
   accountDot: {
     width: 7,
@@ -253,42 +248,42 @@ const styles = StyleSheet.create({
   },
   accountChipText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontWeight: "500",
+    color: t.colors.textSecondary,
+    fontWeight: "500" as const,
   },
   accountChipTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "700",
+    color: t.colors.primary,
+    fontWeight: "700" as const,
   },
   bucketRow: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     gap: 8,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   bucketChip: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 5,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surface,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   bucketChipActive: {
-    backgroundColor: theme.colors.primarySubtle,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: t.colors.primary,
   },
   bucketChipText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
-    fontWeight: "500",
+    color: t.colors.textMuted,
+    fontWeight: "500" as const,
   },
   bucketChipTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "700",
+    color: t.colors.primary,
+    fontWeight: "700" as const,
   },
   badgeContainer: {
     paddingHorizontal: 5,
@@ -297,19 +292,19 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   badgeContainerActive: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
   },
   badgeContainerInactive: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
   },
   badgeText: {
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: "700" as const,
   },
   badgeTextActive: {
-    color: theme.colors.primaryForeground,
+    color: t.colors.primaryForeground,
   },
   badgeTextInactive: {
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
 })

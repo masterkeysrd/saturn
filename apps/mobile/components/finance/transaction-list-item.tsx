@@ -1,5 +1,5 @@
 import React from "react"
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native"
+import { Text, View, TouchableOpacity } from "react-native"
 import {
   ArrowUpRight,
   ArrowDownLeft,
@@ -14,7 +14,7 @@ import {
   type Budget,
   type Account,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { theme, getNativeBudgetColors } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { BudgetCategoryIcon } from "@/lib/budget-icons"
 import { MonoAmount } from "@/components/ui/typography"
 
@@ -41,6 +41,9 @@ export function TransactionListItem({
   showBudget = true,
   showAccount = true,
 }: TransactionListItemProps) {
+  const { colors, getBudgetColors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+
   const isExpense = item.type === "EXPENSE"
   const isIncome = item.type === "INCOME"
   const displaySign = isExpense ? "-" : isIncome ? "+" : ""
@@ -60,7 +63,7 @@ export function TransactionListItem({
   const budgetName = budget?.name || item.budget?.name
   const budgetColor = budget?.color || "indigo"
   const budgetIcon = budget?.icon
-  const nativeBudgetColors = getNativeBudgetColors(budgetColor)
+  const nativeBudgetColors = getBudgetColors(budgetColor)
   const hasBudget = Boolean(budgetName || budgetIcon)
 
   const tz = useTimezone()
@@ -111,12 +114,12 @@ export function TransactionListItem({
           style={[
             styles.tagPill,
             {
-              backgroundColor: theme.colors.successSubtle,
-              borderColor: "rgba(16, 185, 129, 0.25)",
+              backgroundColor: colors.successSubtle,
+              borderColor: `${colors.success}40`,
             },
           ]}
         >
-          <Text style={[styles.tagText, { color: theme.colors.success }]}>
+          <Text style={[styles.tagText, { color: colors.success }]}>
             Income
           </Text>
         </View>
@@ -127,13 +130,15 @@ export function TransactionListItem({
           style={[
             styles.tagPill,
             {
-              backgroundColor: "rgba(99, 102, 241, 0.12)",
-              borderColor: "rgba(99, 102, 241, 0.3)",
+              backgroundColor: `${colors.accent}1F`,
+              borderColor: `${colors.accent}4D`,
             },
           ]}
         >
-          <Repeat size={10} color="#818cf8" />
-          <Text style={[styles.tagText, { color: "#818cf8" }]}>Recurring</Text>
+          <Repeat size={10} color={colors.accent} />
+          <Text style={[styles.tagText, { color: colors.accent }]}>
+            Recurring
+          </Text>
         </View>
       )}
 
@@ -142,13 +147,13 @@ export function TransactionListItem({
           style={[
             styles.tagPill,
             {
-              backgroundColor: "rgba(245, 158, 11, 0.12)",
-              borderColor: "rgba(245, 158, 11, 0.3)",
+              backgroundColor: colors.warningSubtle,
+              borderColor: `${colors.warning}4D`,
             },
           ]}
         >
-          <Coins size={10} color="#fbbf24" />
-          <Text style={[styles.tagText, { color: "#fbbf24" }]}>
+          <Coins size={10} color={colors.warning} />
+          <Text style={[styles.tagText, { color: colors.warning }]}>
             {borrowingRole === "REPAYMENT"
               ? "Repayment"
               : borrowingRole === "INITIAL_FUNDING" && isExpense
@@ -178,10 +183,10 @@ export function TransactionListItem({
               }
             : {
                 backgroundColor: isExpense
-                  ? theme.colors.destructiveSubtle
+                  ? colors.destructiveSubtle
                   : isIncome
-                    ? theme.colors.successSubtle
-                    : theme.colors.primarySubtle,
+                    ? colors.successSubtle
+                    : colors.primarySubtle,
               },
         ]}
       >
@@ -193,11 +198,11 @@ export function TransactionListItem({
             color={nativeBudgetColors.bar}
           />
         ) : isExpense ? (
-          <ArrowUpRight size={16} color={theme.colors.destructive} />
+          <ArrowUpRight size={16} color={colors.destructive} />
         ) : isIncome ? (
-          <ArrowDownLeft size={16} color={theme.colors.success} />
+          <ArrowDownLeft size={16} color={colors.success} />
         ) : (
-          <ReceiptText size={16} color={theme.colors.primary} />
+          <ReceiptText size={16} color={colors.primary} />
         )}
       </View>
 
@@ -212,10 +217,10 @@ export function TransactionListItem({
             size="md"
             color={
               isExpense
-                ? theme.colors.textPrimary
+                ? colors.textPrimary
                 : isIncome
-                  ? theme.colors.success
-                  : theme.colors.accent
+                  ? colors.success
+                  : colors.accent
             }
             style={styles.mainAmount}
           >
@@ -275,23 +280,23 @@ export function TransactionListItem({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   borderBottom: {
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   iconBadge: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     marginRight: 12,
     marginTop: 2,
   },
@@ -300,74 +305,74 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   row1: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
   },
   description: {
     flex: 1,
     fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
     marginRight: 8,
   },
   mainAmount: {
     flexShrink: 0,
   },
   row2: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
   },
   metaLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     flex: 1,
     marginRight: 8,
     minWidth: 0,
   },
   accountText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     flexShrink: 1,
     minWidth: 0,
   },
   metaDot: {
     fontSize: 10,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginHorizontal: 4,
     flexShrink: 0,
   },
   dateText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     flexShrink: 0,
   },
   baseAmountText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
-    fontFamily: theme.typography.mono,
+    color: t.colors.textMuted,
+    fontFamily: t.typography.mono,
     flexShrink: 0,
   },
   tagsContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    flexWrap: "wrap" as const,
     gap: 6,
     flex: 1,
     marginRight: 8,
     minWidth: 0,
   },
   row3: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    flexWrap: "wrap" as const,
     gap: 6,
     marginTop: 2,
   },
   tagPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
     paddingHorizontal: 7,
     paddingVertical: 2.5,
@@ -381,8 +386,8 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 10,
-    fontWeight: "700",
-    textTransform: "uppercase",
+    fontWeight: "700" as const,
+    textTransform: "uppercase" as const,
     letterSpacing: 0.3,
   },
 })

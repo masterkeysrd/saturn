@@ -1,6 +1,5 @@
 import { useRef, useMemo } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -58,7 +57,7 @@ import {
   useCurrencyConversionPreview,
 } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
-import { theme, getNativeBudgetColors } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
 import { TextInput } from "@/components/ui/text-input"
@@ -84,6 +83,8 @@ export default function ManageRecurringModal() {
   const isEditMode = Boolean(editRecurringId)
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { colors, getBudgetColors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   // Sheet references
   const currencySheetRef = useRef<BottomSheet>(null)
@@ -367,7 +368,7 @@ export default function ManageRecurringModal() {
   if (isEditMode && isRecurringLoading && !existingRecurring) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     )
   }
@@ -395,7 +396,7 @@ export default function ManageRecurringModal() {
                         element: (
                           <ActivityIndicator
                             size="small"
-                            color={theme.colors.primary}
+                            color={colors.primary}
                           />
                         ),
                       }
@@ -414,7 +415,7 @@ export default function ManageRecurringModal() {
                     style={styles.headerBtn}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <X size={20} color={theme.colors.textMuted} />
+                    <X size={20} color={colors.textMuted} />
                   </TouchableOpacity>
                 ),
                 headerRight: () => (
@@ -425,10 +426,7 @@ export default function ManageRecurringModal() {
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     {isSaving ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={theme.colors.primary}
-                      />
+                      <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
                       <Text style={styles.headerSaveBtnText}>Save</Text>
                     )}
@@ -439,7 +437,7 @@ export default function ManageRecurringModal() {
       />
 
       <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: theme.colors.background }}
+        style={{ flex: 1, backgroundColor: colors.background }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
@@ -463,9 +461,7 @@ export default function ManageRecurringModal() {
               <ArrowUpRight
                 size={16}
                 color={
-                  type === "EXPENSE"
-                    ? theme.colors.destructive
-                    : theme.colors.textMuted
+                  type === "EXPENSE" ? colors.destructive : colors.textMuted
                 }
               />
               <Text
@@ -491,11 +487,7 @@ export default function ManageRecurringModal() {
             >
               <ArrowDownLeft
                 size={16}
-                color={
-                  type === "INCOME"
-                    ? theme.colors.success
-                    : theme.colors.textMuted
-                }
+                color={type === "INCOME" ? colors.success : colors.textMuted}
               />
               <Text
                 style={[
@@ -545,13 +537,13 @@ export default function ManageRecurringModal() {
                 activeOpacity={0.7}
               >
                 <Text style={styles.currencyPillText}>{currency}</Text>
-                <ChevronRight size={14} color={theme.colors.textMuted} />
+                <ChevronRight size={14} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
             {conversionPreview !== null ? (
               <View style={styles.conversionBadge}>
-                <Sparkles size={13} color={theme.colors.textSecondary} />
+                <Sparkles size={13} color={colors.textSecondary} />
                 <Text style={styles.conversionText}>
                   ≈ {conversionPreview.toFixed(2)} {baseCurrency} (Base)
                 </Text>
@@ -568,7 +560,7 @@ export default function ManageRecurringModal() {
               options={RECURRING_INTERVAL_OPTIONS.map((opt) => ({
                 label: opt.label,
                 value: opt.value as RecurringTransaction_Interval,
-                icon: <Clock size={14} color={theme.colors.primary} />,
+                icon: <Clock size={14} color={colors.primary} />,
               }))}
             />
           </Card>
@@ -581,7 +573,7 @@ export default function ManageRecurringModal() {
               name="nextDueDate"
               label="Target execution schedule"
               title="Select Due Date"
-              icon={<Calendar size={18} color={theme.colors.primary} />}
+              icon={<Calendar size={18} color={colors.primary} />}
               containerStyle={{ paddingHorizontal: 0, paddingVertical: 6 }}
             />
           </Card>
@@ -601,7 +593,7 @@ export default function ManageRecurringModal() {
                 <View style={styles.pickerSelectorLeft}>
                   {selectedBudget ? (
                     (() => {
-                      const colors = getNativeBudgetColors(
+                      const budgetPalette = getBudgetColors(
                         selectedBudget.color || "indigo"
                       )
                       const IconComp = getBudgetIcon(
@@ -612,23 +604,23 @@ export default function ManageRecurringModal() {
                         <View
                           style={[
                             styles.budgetIconCircle,
-                            { backgroundColor: colors.bg },
+                            { backgroundColor: budgetPalette.bg },
                           ]}
                         >
-                          <IconComp size={16} color={colors.text} />
+                          <IconComp size={16} color={budgetPalette.text} />
                         </View>
                       )
                     })()
                   ) : (
                     <View style={styles.pickerIconWrapper}>
-                      <Tag size={18} color={theme.colors.textMuted} />
+                      <Tag size={18} color={colors.textMuted} />
                     </View>
                   )}
                   <View>
                     <Text
                       style={[
                         styles.pickerValueText,
-                        !selectedBudget && { color: theme.colors.textMuted },
+                        !selectedBudget && { color: colors.textMuted },
                       ]}
                     >
                       {selectedBudget?.name || "Select Budget Category"}
@@ -638,7 +630,7 @@ export default function ManageRecurringModal() {
                     </Text>
                   </View>
                 </View>
-                <ChevronRight size={16} color={theme.colors.textMuted} />
+                <ChevronRight size={16} color={colors.textMuted} />
               </TouchableOpacity>
               {errors.budgetId ? (
                 <Text style={styles.errorText}>{errors.budgetId.message}</Text>
@@ -715,8 +707,8 @@ export default function ManageRecurringModal() {
                     })
                   }}
                   trackColor={{
-                    false: theme.colors.surfaceElevated,
-                    true: theme.colors.primary,
+                    false: colors.surfaceElevated,
+                    true: colors.primary,
                   }}
                   thumbColor="#ffffff"
                 />
@@ -731,13 +723,10 @@ export default function ManageRecurringModal() {
                 activeOpacity={0.7}
               >
                 {isDeleting ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.destructive}
-                  />
+                  <ActivityIndicator size="small" color={colors.destructive} />
                 ) : (
                   <>
-                    <Trash2 size={16} color={theme.colors.destructive} />
+                    <Trash2 size={16} color={colors.destructive} />
                     <Text style={styles.deleteBtnText}>
                       Delete Recurring Template
                     </Text>
@@ -787,10 +776,10 @@ export default function ManageRecurringModal() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,
@@ -799,9 +788,9 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    backgroundColor: t.colors.background,
   },
   headerBtn: {
     paddingHorizontal: 8,
@@ -810,54 +799,54 @@ const styles = StyleSheet.create({
   headerSaveBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.primarySubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.primarySubtle,
     borderWidth: 1,
     borderColor: "rgba(99, 102, 241, 0.3)",
   },
   headerSaveBtnText: {
     fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.primary,
+    fontWeight: "700" as const,
+    color: t.colors.primary,
   },
   segmentedControl: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
+    flexDirection: "row" as const,
+    backgroundColor: t.colors.surface,
     padding: 4,
-    borderRadius: theme.radius.lg,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 6,
   },
   segmentBtn: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingVertical: 10,
-    borderRadius: theme.radius.md,
+    borderRadius: t.radius.md,
     gap: 6,
   },
   segmentBtnActiveExpense: {
-    backgroundColor: theme.colors.destructiveSubtle,
+    backgroundColor: t.colors.destructiveSubtle,
     borderWidth: 1,
     borderColor: "rgba(244, 63, 94, 0.3)",
   },
   segmentBtnActiveIncome: {
-    backgroundColor: theme.colors.successSubtle,
+    backgroundColor: t.colors.successSubtle,
     borderWidth: 1,
     borderColor: "rgba(16, 185, 129, 0.3)",
   },
   segmentText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   segmentTextActiveExpense: {
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
   },
   segmentTextActiveIncome: {
-    color: theme.colors.success,
+    color: t.colors.success,
   },
   fieldCard: {
     padding: 16,
@@ -865,16 +854,16 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     letterSpacing: 0.5,
   },
   textInput: {
     fontSize: 15,
   },
   amountRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
   },
   amountInputWrapper: {
@@ -882,78 +871,78 @@ const styles = StyleSheet.create({
   },
   amountInput: {
     fontSize: 22,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   currencyPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 6,
   },
   currencyPillText: {
     fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   conversionBadge: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignSelf: "flex-start",
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.surfaceElevated,
+    alignSelf: "flex-start" as const,
   },
   conversionText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontWeight: "500",
+    color: t.colors.textSecondary,
+    fontWeight: "500" as const,
   },
   frequencyRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
   },
   frequencyChip: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingVertical: 10,
     paddingHorizontal: 8,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 6,
   },
   frequencyChipActive: {
-    backgroundColor: theme.colors.primarySubtle,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: t.colors.primary,
   },
   frequencyChipText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   frequencyChipTextActive: {
-    color: theme.colors.primary,
+    color: t.colors.primary,
   },
   pickerSelectorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingVertical: 8,
   },
   pickerSelectorLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
     flex: 1,
   },
@@ -961,33 +950,33 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surfaceElevated,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   budgetIconCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   pickerValueText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   pickerHintText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
   },
   toggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     gap: 16,
   },
   toggleInfo: {
@@ -995,58 +984,58 @@ const styles = StyleSheet.create({
   },
   toggleTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   toggleDescription: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
   },
   graceChipsRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 6,
   },
   graceChip: {
     paddingVertical: 6,
     paddingHorizontal: 10,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   graceChipActive: {
-    backgroundColor: theme.colors.primarySubtle,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: t.colors.primary,
   },
   graceChipText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   graceChipTextActive: {
-    color: theme.colors.primary,
+    color: t.colors.primary,
   },
   divider: {
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: t.colors.border,
     marginVertical: 4,
   },
   deleteBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingVertical: 10,
     gap: 8,
   },
   deleteBtnText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.destructive,
+    fontWeight: "600" as const,
+    color: t.colors.destructive,
   },
   errorText: {
     fontSize: 12,
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
     marginTop: -4,
   },
 })

@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react"
 import {
-  StyleSheet,
   View,
   Text,
   ScrollView,
@@ -20,7 +19,7 @@ import {
 } from "@saturn/schemas"
 import { useAuth } from "@/lib/auth-context"
 import { DEFAULT_SERVER_URL } from "@/lib/config"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
 import { TextInput } from "@/components/ui/text-input"
 import { useToast } from "@/components/ui/toast"
@@ -30,6 +29,8 @@ export default function ServerSettingsScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const toast = useToast()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const { serverUrl, updateServerUrl } = useAuth()
   const [saving, setSaving] = useState(false)
 
@@ -114,7 +115,7 @@ export default function ServerSettingsScreen() {
                         element: (
                           <ActivityIndicator
                             size="small"
-                            color={theme.colors.primary}
+                            color={colors.primary}
                           />
                         ),
                       }
@@ -137,7 +138,7 @@ export default function ServerSettingsScreen() {
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     accessibilityLabel="Close"
                   >
-                    <X size={20} color={theme.colors.textMuted} />
+                    <X size={20} color={colors.textMuted} />
                   </TouchableOpacity>
                 ),
                 headerRight: () => (
@@ -152,10 +153,7 @@ export default function ServerSettingsScreen() {
                     accessibilityLabel="Save Server Settings"
                   >
                     {isPending ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={theme.colors.primary}
-                      />
+                      <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
                       <Text style={styles.headerSaveBtnText}>Save</Text>
                     )}
@@ -188,7 +186,7 @@ export default function ServerSettingsScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="url"
-                leftIcon={<Globe size={18} color={theme.colors.primary} />}
+                leftIcon={<Globe size={18} color={colors.primary} />}
               />
               <Text style={styles.fieldHint}>
                 Specify the base URL of your Saturn instance (e.g.
@@ -202,14 +200,14 @@ export default function ServerSettingsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   keyboardAvoid: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,
@@ -220,8 +218,8 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     paddingHorizontal: 4,
     letterSpacing: 0.8,
   },
@@ -231,7 +229,7 @@ const styles = StyleSheet.create({
   },
   fieldHint: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     lineHeight: 18,
     paddingHorizontal: 2,
   },
@@ -245,7 +243,7 @@ const styles = StyleSheet.create({
   },
   headerSaveBtnText: {
     fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
 })

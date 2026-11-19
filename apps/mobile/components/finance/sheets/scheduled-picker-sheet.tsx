@@ -14,9 +14,10 @@ import {
 import { formatAmount, getScheduledDisplayName } from "@saturn/core"
 import { useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
+import { useTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
-import { sheetStyles } from "./sheet-styles"
+import { useSheetStyles } from "./sheet-styles"
 
 export interface ScheduledPickerSheetProps {
   scheduledTransactions: ScheduledTransaction[]
@@ -42,6 +43,8 @@ export const ScheduledPickerSheet = forwardRef<
     },
     ref
   ) => {
+    const { colors } = useTheme()
+    const sheetStyles = useSheetStyles()
     const insets = useSafeAreaInsets()
     const tz = useTimezone()
     const { activeSpaceId } = useSpace()
@@ -81,7 +84,7 @@ export const ScheduledPickerSheet = forwardRef<
             isLoading ? (
               <ActivityIndicator
                 size="small"
-                color="#6366f1"
+                color={colors.accent}
                 style={{ marginVertical: 20 }}
               />
             ) : (
@@ -111,7 +114,7 @@ export const ScheduledPickerSheet = forwardRef<
                 }}
               >
                 <View style={sheetStyles.accountIconBadge}>
-                  <CalendarClock size={18} color="#6366f1" />
+                  <CalendarClock size={18} color={colors.accent} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={sheetStyles.accountItemTitle} numberOfLines={1}>

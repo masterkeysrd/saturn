@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   Image,
@@ -30,7 +29,7 @@ import {
   type LoginFormValues,
 } from "@saturn/schemas"
 import { useAuth } from "@/lib/auth-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Button } from "@/components/ui/button"
 import { TextInput } from "@/components/ui/text-input"
 import { Card } from "@/components/ui/card"
@@ -43,6 +42,8 @@ import { haptics } from "@/lib/haptics"
 
 export default function LoginScreen() {
   const router = useRouter()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const { login, isDeviceEnrolled, biometricLabel, loginWithBiometrics } =
     useAuth()
   const toast = useToast()
@@ -260,7 +261,7 @@ export default function LoginScreen() {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityLabel="Server Settings"
         >
-          <Settings size={18} color={theme.colors.textSecondary} />
+          <Settings size={18} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -278,9 +279,9 @@ export default function LoginScreen() {
               <View style={styles.header}>
                 <View style={[styles.logoWrapper, styles.mfaIconWrapper]}>
                   {useBackupCode ? (
-                    <KeyRound size={28} color={theme.colors.primary} />
+                    <KeyRound size={28} color={colors.primary} />
                   ) : (
-                    <ShieldCheck size={28} color={theme.colors.primary} />
+                    <ShieldCheck size={28} color={colors.primary} />
                   )}
                 </View>
                 <Header1 style={styles.brandTitle}>
@@ -302,9 +303,7 @@ export default function LoginScreen() {
                     placeholder="ABCD-EFGH"
                     autoCapitalize="characters"
                     autoCorrect={false}
-                    leftIcon={
-                      <KeyRound size={18} color={theme.colors.textMuted} />
-                    }
+                    leftIcon={<KeyRound size={18} color={colors.textMuted} />}
                   />
                 ) : (
                   <View style={styles.otpWrapper}>
@@ -332,10 +331,7 @@ export default function LoginScreen() {
                   loading={loading}
                   onPress={mfaForm.handleSubmit(handleVerifyMfa)}
                   leftIcon={
-                    <ShieldCheck
-                      size={18}
-                      color={theme.colors.primaryForeground}
-                    />
+                    <ShieldCheck size={18} color={colors.primaryForeground} />
                   }
                   style={styles.button}
                 >
@@ -364,7 +360,7 @@ export default function LoginScreen() {
                   activeOpacity={0.7}
                   onPress={handleBackToLogin}
                 >
-                  <ArrowLeft size={16} color={theme.colors.textSecondary} />
+                  <ArrowLeft size={16} color={colors.textSecondary} />
                   <Text style={styles.backButtonText}>Back to sign in</Text>
                 </TouchableOpacity>
               </Card>
@@ -395,7 +391,7 @@ export default function LoginScreen() {
                       loading={biometricLoading}
                       onPress={handleBiometricLogin}
                       leftIcon={
-                        <Fingerprint size={18} color={theme.colors.primary} />
+                        <Fingerprint size={18} color={colors.primary} />
                       }
                       style={styles.biometricButton}
                     >
@@ -422,7 +418,7 @@ export default function LoginScreen() {
                   autoComplete="username"
                   textContentType="username"
                   importantForAutofill="yes"
-                  leftIcon={<User size={18} color={theme.colors.textMuted} />}
+                  leftIcon={<User size={18} color={colors.textMuted} />}
                 />
 
                 <TextInput
@@ -434,7 +430,7 @@ export default function LoginScreen() {
                   autoComplete="current-password"
                   textContentType="password"
                   importantForAutofill="yes"
-                  leftIcon={<Lock size={18} color={theme.colors.textMuted} />}
+                  leftIcon={<Lock size={18} color={colors.textMuted} />}
                 />
 
                 <FormCheckboxRow
@@ -451,7 +447,7 @@ export default function LoginScreen() {
                   loading={loading}
                   onPress={loginForm.handleSubmit(handleLogin)}
                   leftIcon={
-                    <LogIn size={18} color={theme.colors.primaryForeground} />
+                    <LogIn size={18} color={colors.primaryForeground} />
                   }
                   style={styles.button}
                 >
@@ -477,18 +473,18 @@ export default function LoginScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   keyboardAvoid: {
     flex: 1,
   },
   topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "flex-end" as const,
     paddingHorizontal: 20,
     paddingTop: 4,
   },
@@ -496,41 +492,41 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   container: {
     flexGrow: 1,
     padding: 24,
-    justifyContent: "center",
+    justifyContent: "center" as const,
   },
   header: {
-    alignItems: "center",
+    alignItems: "center" as const,
     marginBottom: 32,
   },
   logoWrapper: {
     width: 64,
     height: 64,
     borderRadius: 18,
-    overflow: "hidden",
+    overflow: "hidden" as const,
     borderWidth: 1.5,
-    borderColor: "rgba(255, 255, 255, 0.15)",
+    borderColor: t.colors.border,
     marginBottom: 14,
-    ...theme.shadows.md,
+    ...t.shadows.md,
   },
   logoImage: {
-    width: "100%",
-    height: "100%",
+    width: "100%" as const,
+    height: "100%" as const,
   },
   brandTitle: {
-    textAlign: "center",
+    textAlign: "center" as const,
   },
   subtitle: {
     marginTop: 6,
-    textAlign: "center",
+    textAlign: "center" as const,
   },
   formCard: {
     padding: 20,
@@ -538,61 +534,61 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 13,
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
   },
   button: {
     marginTop: 4,
   },
   footer: {
-    flexDirection: "row",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    justifyContent: "center" as const,
     marginTop: 24,
   },
   footerText: {
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     fontSize: 14,
   },
   linkText: {
-    color: theme.colors.primary,
+    color: t.colors.primary,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "600" as const,
   },
   mfaIconWrapper: {
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surfaceElevated,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   switchModeButton: {
     paddingVertical: 6,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   switchModeText: {
     fontSize: 13,
-    color: theme.colors.primary,
-    fontWeight: "500",
-    textAlign: "center",
+    color: t.colors.primary,
+    fontWeight: "500" as const,
+    textAlign: "center" as const,
   },
   backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 6,
     paddingVertical: 8,
     marginTop: 4,
   },
   backButtonText: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
-    fontWeight: "500",
+    color: t.colors.textSecondary,
+    fontWeight: "500" as const,
   },
   otpWrapper: {
     marginVertical: 4,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   otpLabel: {
     fontSize: 13,
-    fontWeight: "500",
-    color: theme.colors.textSecondary,
+    fontWeight: "500" as const,
+    color: t.colors.textSecondary,
     marginBottom: 12,
   },
   biometricSection: {
@@ -600,22 +596,22 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   biometricButton: {
-    borderColor: theme.colors.borderStrong,
+    borderColor: t.colors.borderStrong,
   },
   dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
     marginVertical: 4,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: t.colors.border,
   },
   dividerText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
-    fontWeight: "500",
+    color: t.colors.textMuted,
+    fontWeight: "500" as const,
   },
 })

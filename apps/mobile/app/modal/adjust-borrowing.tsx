@@ -38,7 +38,7 @@ import {
 import { formatAmount, formatCents, toCentsString } from "@saturn/core"
 import { invalidateFinanceQueries } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
 import { TextInput } from "@/components/ui/text-input"
@@ -56,6 +56,8 @@ export default function AdjustBorrowingModal() {
   const queryClient = useQueryClient()
   const toast = useToast()
   const accountSheetRef = useRef<BottomSheet>(null)
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   const { data: borrowing, isLoading } = useGetBorrowingQuery(
     { id: borrowingId || "" },
@@ -182,7 +184,7 @@ export default function AdjustBorrowingModal() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     )
   }
@@ -190,7 +192,7 @@ export default function AdjustBorrowingModal() {
   if (!borrowing) {
     return (
       <View style={styles.errorContainer}>
-        <AlertCircle size={32} color={theme.colors.destructive} />
+        <AlertCircle size={32} color={colors.destructive} />
         <Text style={styles.errorTitle}>Debt Agreement Not Found</Text>
       </View>
     )
@@ -219,7 +221,7 @@ export default function AdjustBorrowingModal() {
                     style={styles.headerBtn}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <X size={20} color={theme.colors.textMuted} />
+                    <X size={20} color={colors.textMuted} />
                   </TouchableOpacity>
                 ),
               }),
@@ -243,15 +245,15 @@ export default function AdjustBorrowingModal() {
                   styles.scaleIconWrap,
                   {
                     backgroundColor: isLent
-                      ? theme.colors.successSubtle
-                      : "rgba(245, 158, 11, 0.15)",
+                      ? colors.successSubtle
+                      : colors.warningSubtle,
                   },
                 ]}
               >
                 {isLent ? (
-                  <TrendingUp size={20} color={theme.colors.success} />
+                  <TrendingUp size={20} color={colors.success} />
                 ) : (
-                  <TrendingDown size={20} color="#f59e0b" />
+                  <TrendingDown size={20} color={colors.warning} />
                 )}
               </View>
               <View style={{ flex: 1 }}>
@@ -271,7 +273,7 @@ export default function AdjustBorrowingModal() {
                 style={[
                   styles.currentBalValue,
                   {
-                    color: isLent ? theme.colors.success : "#f59e0b",
+                    color: isLent ? colors.success : colors.warning,
                   },
                 ]}
               >
@@ -292,7 +294,7 @@ export default function AdjustBorrowingModal() {
               control={control}
               name="targetBalance"
               placeholder="0.00"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
               containerStyle={{ marginTop: 8 }}
             />
@@ -311,11 +313,11 @@ export default function AdjustBorrowingModal() {
           >
             <View style={styles.summaryTop}>
               {differenceCents === 0 ? (
-                <CheckCircle2 size={20} color={theme.colors.success} />
+                <CheckCircle2 size={20} color={colors.success} />
               ) : differenceCents > 0 ? (
-                <TrendingUp size={20} color={theme.colors.success} />
+                <TrendingUp size={20} color={colors.success} />
               ) : (
-                <TrendingDown size={20} color={theme.colors.destructive} />
+                <TrendingDown size={20} color={colors.destructive} />
               )}
               <Text style={styles.summaryTitle}>
                 {differenceCents === 0
@@ -352,7 +354,7 @@ export default function AdjustBorrowingModal() {
               control={control}
               name="adjustmentDate"
               label="Adjustment Date"
-              icon={<Calendar size={16} color={theme.colors.textMuted} />}
+              icon={<Calendar size={16} color={colors.textMuted} />}
               title="Select Adjustment Date"
             />
             <View style={styles.rowDivider} />
@@ -374,7 +376,7 @@ export default function AdjustBorrowingModal() {
               control={control}
               name="notes"
               placeholder="Reason for balance adjustment..."
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
             />
           </Card>
 
@@ -409,24 +411,24 @@ export default function AdjustBorrowingModal() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   loadingContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   errorContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 12,
   },
   errorTitle: {
     fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   headerBtn: {
     padding: 8,
@@ -434,7 +436,7 @@ const styles = StyleSheet.create({
   },
   keyboardView: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
@@ -445,16 +447,16 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   agreementCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     padding: 16,
     borderRadius: 16,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
   },
   agreementCardLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
     flex: 1,
   },
@@ -462,57 +464,57 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   counterpartyText: {
     fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   directionText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
   },
   currentBalWrap: {
-    alignItems: "flex-end",
+    alignItems: "flex-end" as const,
     marginLeft: 8,
   },
   currentBalLabel: {
     fontSize: 11,
-    color: theme.colors.textMuted,
-    textTransform: "uppercase",
-    fontWeight: "600",
+    color: t.colors.textMuted,
+    textTransform: "uppercase" as const,
+    fontWeight: "600" as const,
     letterSpacing: 0.5,
   },
   currentBalValue: {
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
     marginTop: 2,
   },
   sectionCard: {
     padding: 16,
     borderRadius: 16,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     gap: 8,
   },
   sectionHeaderLabel: {
     fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     letterSpacing: 0.8,
   },
   fieldDesc: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
     lineHeight: 18,
     marginBottom: 4,
   },
   rowDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: theme.colors.border,
+    backgroundColor: t.colors.border,
     marginVertical: 4,
   },
   summaryCard: {
@@ -521,39 +523,39 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   summaryCardEqual: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   summaryCardPositive: {
-    backgroundColor: theme.colors.successSubtle,
+    backgroundColor: t.colors.successSubtle,
     borderWidth: 1,
     borderColor: "rgba(16, 185, 129, 0.3)",
   },
   summaryCardNegative: {
-    backgroundColor: theme.colors.destructiveSubtle,
+    backgroundColor: t.colors.destructiveSubtle,
     borderWidth: 1,
     borderColor: "rgba(239, 68, 68, 0.3)",
   },
   summaryTop: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   summaryTitle: {
     fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   summaryAmount: {
     fontSize: 24,
-    fontWeight: "800",
+    fontWeight: "800" as const,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   summaryDesc: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
     lineHeight: 18,
   },
   actionFooter: {

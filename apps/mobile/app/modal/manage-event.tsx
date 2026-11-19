@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useRef } from "react"
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   Switch,
@@ -47,7 +46,7 @@ import {
   parseDate,
 } from "@saturn/core"
 import type { RecurrenceScope } from "@saturn/api/saturn/calendar/v1/calendar"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 
@@ -176,6 +175,8 @@ function toInclusiveEndDate(dateStr: string, startDateStr: string): string {
 export default function ManageEventModal() {
   const router = useRouter()
   const tz = useTimezone()
+  const { colors, isDark } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const params = useLocalSearchParams<ManageEventParams>()
   const isEditMode = Boolean(params.eventId)
 
@@ -684,7 +685,7 @@ export default function ManageEventModal() {
                         element: (
                           <ActivityIndicator
                             size="small"
-                            color={theme.colors.primary}
+                            color={colors.primary}
                           />
                         ),
                       }
@@ -706,7 +707,7 @@ export default function ManageEventModal() {
                     style={styles.headerBtn}
                     testID="manage-event-close-btn"
                   >
-                    <X size={20} color={theme.colors.textMuted} />
+                    <X size={20} color={colors.textMuted} />
                   </TouchableOpacity>
                 ),
                 headerRight: () => (
@@ -717,10 +718,7 @@ export default function ManageEventModal() {
                     testID="manage-event-save-btn"
                   >
                     {isSaving ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={theme.colors.primary}
-                      />
+                      <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
                       <Text style={styles.headerSaveBtnText}>Save</Text>
                     )}
@@ -767,7 +765,7 @@ export default function ManageEventModal() {
                     <View
                       style={[
                         styles.calendarDot,
-                        { backgroundColor: cal.color || theme.colors.primary },
+                        { backgroundColor: cal.color || colors.primary },
                       ]}
                     />
                     <Text
@@ -792,7 +790,8 @@ export default function ManageEventModal() {
               value={title}
               onChangeText={setTitle}
               placeholder="Add event title"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
+              keyboardAppearance={isDark ? "dark" : "light"}
               style={styles.textInput}
               testID="manage-event-title-input"
             />
@@ -808,8 +807,8 @@ export default function ManageEventModal() {
                 setIsAllDay(val)
               }}
               trackColor={{
-                false: theme.colors.surfaceHighlight,
-                true: theme.colors.primary,
+                false: colors.surfaceHighlight,
+                true: colors.primary,
               }}
               thumbColor="#ffffff"
               testID="manage-event-allday-switch"
@@ -826,7 +825,8 @@ export default function ManageEventModal() {
                   value={startDate}
                   onChangeText={setStartDate}
                   placeholder="YYYY-MM-DD"
-                  placeholderTextColor={theme.colors.textMuted}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardAppearance={isDark ? "dark" : "light"}
                   style={styles.dateInput}
                   testID="manage-event-start-date"
                 />
@@ -835,7 +835,8 @@ export default function ManageEventModal() {
                     value={startTime}
                     onChangeText={setStartTime}
                     placeholder="HH:mm"
-                    placeholderTextColor={theme.colors.textMuted}
+                    placeholderTextColor={colors.textMuted}
+                    keyboardAppearance={isDark ? "dark" : "light"}
                     style={styles.timeInput}
                     testID="manage-event-start-time"
                   />
@@ -851,7 +852,8 @@ export default function ManageEventModal() {
                   value={endDate}
                   onChangeText={setEndDate}
                   placeholder="YYYY-MM-DD"
-                  placeholderTextColor={theme.colors.textMuted}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardAppearance={isDark ? "dark" : "light"}
                   style={styles.dateInput}
                   testID="manage-event-end-date"
                 />
@@ -860,7 +862,8 @@ export default function ManageEventModal() {
                     value={endTime}
                     onChangeText={setEndTime}
                     placeholder="HH:mm"
-                    placeholderTextColor={theme.colors.textMuted}
+                    placeholderTextColor={colors.textMuted}
+                    keyboardAppearance={isDark ? "dark" : "light"}
                     style={styles.timeInput}
                     testID="manage-event-end-time"
                   />
@@ -879,7 +882,7 @@ export default function ManageEventModal() {
                 style={styles.timezoneRow}
                 testID="manage-event-tz-trigger"
               >
-                <Globe size={14} color={theme.colors.textMuted} />
+                <Globe size={14} color={colors.textMuted} />
                 <Text style={styles.timezoneText} numberOfLines={1}>
                   {eventTimezone}
                 </Text>
@@ -936,7 +939,8 @@ export default function ManageEventModal() {
               value={location}
               onChangeText={setLocation}
               placeholder="Add physical or virtual location"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
+              keyboardAppearance={isDark ? "dark" : "light"}
               style={styles.textInput}
               testID="manage-event-location-input"
             />
@@ -949,7 +953,8 @@ export default function ManageEventModal() {
               value={meetUrl}
               onChangeText={setMeetUrl}
               placeholder="e.g. https://meet.google.com/..."
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
+              keyboardAppearance={isDark ? "dark" : "light"}
               style={styles.textInput}
               autoCapitalize="none"
               testID="manage-event-meet-input"
@@ -963,9 +968,9 @@ export default function ManageEventModal() {
                 }}
                 style={styles.meetPreviewBtn}
               >
-                <Video size={14} color={theme.colors.primary} />
+                <Video size={14} color={colors.primary} />
                 <Text style={styles.meetPreviewBtnText}>Open Video Link</Text>
-                <ExternalLink size={12} color={theme.colors.primary} />
+                <ExternalLink size={12} color={colors.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -978,7 +983,8 @@ export default function ManageEventModal() {
                 value={attendeeSearchQuery}
                 onChangeText={setAttendeeSearchQuery}
                 placeholder="Add contact by name or email"
-                placeholderTextColor={theme.colors.textMuted}
+                placeholderTextColor={colors.textMuted}
+                keyboardAppearance={isDark ? "dark" : "light"}
                 style={[styles.textInput, { flex: 1 }]}
                 autoCapitalize="none"
                 keyboardType="email-address"
@@ -994,7 +1000,7 @@ export default function ManageEventModal() {
                 ]}
                 testID="manage-event-attendee-add-btn"
               >
-                <Plus size={16} color={theme.colors.primaryForeground} />
+                <Plus size={16} color={colors.primaryForeground} />
               </TouchableOpacity>
             </View>
 
@@ -1045,7 +1051,7 @@ export default function ManageEventModal() {
                       onPress={() => handleRemoveAttendee(index)}
                       style={styles.attendeeBadgeRemove}
                     >
-                      <X size={12} color={theme.colors.textMuted} />
+                      <X size={12} color={colors.textMuted} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -1060,7 +1066,8 @@ export default function ManageEventModal() {
               value={description}
               onChangeText={setDescription}
               placeholder="Notes or agenda"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
+              keyboardAppearance={isDark ? "dark" : "light"}
               style={[styles.textInput, styles.textArea]}
               multiline
               numberOfLines={4}
@@ -1076,7 +1083,7 @@ export default function ManageEventModal() {
               style={styles.deleteButton}
               testID="manage-event-delete-btn"
             >
-              <Trash2 size={16} color={theme.colors.destructive} />
+              <Trash2 size={16} color={colors.destructive} />
               <Text style={styles.deleteButtonText}>Delete Event</Text>
             </TouchableOpacity>
           )}
@@ -1108,7 +1115,7 @@ export default function ManageEventModal() {
                 >
                   {tzName}
                 </Text>
-                {isSelected && <Check size={16} color={theme.colors.primary} />}
+                {isSelected && <Check size={16} color={colors.primary} />}
               </TouchableOpacity>
             )
           })}
@@ -1181,10 +1188,10 @@ export default function ManageEventModal() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   keyboardView: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
@@ -1197,48 +1204,48 @@ const styles = StyleSheet.create({
   },
   headerBtn: {
     padding: 6,
-    borderRadius: theme.radius.full,
+    borderRadius: t.radius.full,
   },
   headerSaveBtn: {
     paddingHorizontal: 14,
     paddingVertical: 6,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.sm,
+    backgroundColor: t.colors.primary,
+    borderRadius: t.radius.sm,
   },
   headerSaveBtnText: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.primaryForeground,
+    fontWeight: "700" as const,
+    color: t.colors.primaryForeground,
   },
   formGroup: {
     gap: 6,
   },
   label: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
-    textTransform: "uppercase",
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
+    textTransform: "uppercase" as const,
     letterSpacing: 0.5,
   },
   calendarsRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
     paddingVertical: 2,
   },
   calendarPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   calendarPillSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySubtle,
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
   },
   calendarDot: {
     width: 8,
@@ -1247,253 +1254,253 @@ const styles = StyleSheet.create({
   },
   calendarPillText: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
-    fontWeight: "500",
+    color: t.colors.textSecondary,
+    fontWeight: "500" as const,
   },
   calendarPillTextSelected: {
-    color: theme.colors.primary,
-    fontWeight: "600",
+    color: t.colors.primary,
+    fontWeight: "600" as const,
   },
   textInput: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   textArea: {
     minHeight: 80,
-    textAlignVertical: "top",
+    textAlignVertical: "top" as const,
   },
   switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingVertical: 4,
   },
   switchLabel: {
     fontSize: 14,
-    fontWeight: "500",
-    color: theme.colors.textPrimary,
+    fontWeight: "500" as const,
+    color: t.colors.textPrimary,
   },
   dateTimeCard: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.md,
     padding: 12,
     gap: 12,
   },
   dateTimeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   dateTimeLabel: {
     fontSize: 14,
-    fontWeight: "500",
-    color: theme.colors.textPrimary,
+    fontWeight: "500" as const,
+    color: t.colors.textPrimary,
   },
   dateTimeInputsRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
   },
   dateInput: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.sm,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.sm,
     paddingHorizontal: 10,
     paddingVertical: 6,
     fontSize: 13,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
     minWidth: 105,
-    textAlign: "center",
+    textAlign: "center" as const,
   },
   timeInput: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.sm,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.sm,
     paddingHorizontal: 8,
     paddingVertical: 6,
     fontSize: 13,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
     minWidth: 65,
-    textAlign: "center",
+    textAlign: "center" as const,
   },
   timezoneRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingTop: 4,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
   },
   timezoneText: {
     fontSize: 12,
-    color: theme.colors.primary,
-    fontWeight: "500",
+    color: t.colors.primary,
+    fontWeight: "500" as const,
   },
   recurrencePillsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 6,
   },
   recurrencePill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   recurrencePillSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
+    borderColor: t.colors.primary,
   },
   recurrencePillText: {
     fontSize: 12,
-    fontWeight: "500",
-    color: theme.colors.textSecondary,
+    fontWeight: "500" as const,
+    color: t.colors.textSecondary,
   },
   recurrencePillTextSelected: {
-    color: theme.colors.primaryForeground,
-    fontWeight: "600",
+    color: t.colors.primaryForeground,
+    fontWeight: "600" as const,
   },
   meetPreviewBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     marginTop: 4,
   },
   meetPreviewBtnText: {
     fontSize: 12,
-    color: theme.colors.primary,
-    fontWeight: "500",
+    color: t.colors.primary,
+    fontWeight: "500" as const,
   },
   attendeeInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   addAttendeeBtn: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
     width: 38,
     height: 38,
-    borderRadius: theme.radius.md,
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: t.radius.md,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   suggestionsContainer: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.borderStrong,
+    borderRadius: t.radius.md,
     marginTop: 4,
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   suggestionRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
     gap: 8,
   },
   suggestionAvatar: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: theme.colors.surfaceHighlight,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surfaceHighlight,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   suggestionAvatarText: {
     fontSize: 10,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   suggestionInfo: {
     flex: 1,
   },
   suggestionName: {
     fontSize: 13,
-    color: theme.colors.textPrimary,
-    fontWeight: "500",
+    color: t.colors.textPrimary,
+    fontWeight: "500" as const,
   },
   suggestionEmail: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   attendeesBadgeList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 6,
     marginTop: 6,
   },
   attendeeBadge: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: theme.radius.sm,
+    borderRadius: t.radius.sm,
   },
   attendeeBadgeText: {
     fontSize: 12,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
     maxWidth: 200,
   },
   attendeeBadgeRemove: {
     padding: 2,
   },
   deleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 8,
     paddingVertical: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.destructiveSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.destructiveSubtle,
     borderWidth: 1,
-    borderColor: theme.colors.destructive,
+    borderColor: t.colors.destructive,
     marginTop: 12,
   },
   deleteButtonText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.destructive,
+    fontWeight: "600" as const,
+    color: t.colors.destructive,
   },
   tzList: {
     paddingHorizontal: 16,
     paddingBottom: 32,
   },
   tzRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   tzRowSelected: {
-    backgroundColor: theme.colors.primarySubtle,
+    backgroundColor: t.colors.primarySubtle,
   },
   tzLabel: {
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   tzLabelSelected: {
-    color: theme.colors.primary,
-    fontWeight: "600",
+    color: t.colors.primary,
+    fontWeight: "600" as const,
   },
   scopeContainer: {
     paddingHorizontal: 16,
@@ -1502,21 +1509,21 @@ const styles = StyleSheet.create({
   },
   scopePromptText: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
     marginBottom: 4,
   },
   scopeButton: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
   },
   scopeButtonText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
 })

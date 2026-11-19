@@ -2,7 +2,6 @@ import { useMemo } from "react"
 import {
   View,
   Text,
-  StyleSheet,
   SectionList,
   ScrollView,
   TouchableOpacity,
@@ -19,7 +18,7 @@ import {
 import { useConnectedAccounts } from "@saturn/hooks"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
 import { useAuth } from "@/lib/auth-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import {
   groupEventsByDate,
@@ -45,6 +44,8 @@ export function AgendaList({
   refreshControl,
   canCreate = true,
 }: AgendaListProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const { user } = useAuth()
   const { data: accountsData } = useConnectedAccounts()
   const selfEmails = useMemo(() => {
@@ -69,7 +70,7 @@ export function AgendaList({
         testID="agenda-empty-state"
       >
         <View style={styles.emptyIconCircle}>
-          <CalendarIcon size={28} color={theme.colors.textMuted} />
+          <CalendarIcon size={28} color={colors.textMuted} />
         </View>
         <Text style={styles.emptyTitle}>No Scheduled Events</Text>
         <Text style={styles.emptySubtitle}>
@@ -131,7 +132,7 @@ export function AgendaList({
         )
       }}
       renderItem={({ item: occ }) => {
-        const eventColor = occ.color || theme.colors.primary
+        const eventColor = occ.color || colors.primary
         const selfAttendee = findSelfAttendee(occ.attendees, selfEmails)
         const rsvpStatus = selfAttendee?.responseStatus
 
@@ -173,7 +174,7 @@ export function AgendaList({
 
                 {occ.location ? (
                   <View style={styles.metaBadge}>
-                    <MapPin size={12} color={theme.colors.textMuted} />
+                    <MapPin size={12} color={colors.textMuted} />
                     <Text numberOfLines={1} style={styles.metaBadgeText}>
                       {occ.location}
                     </Text>
@@ -182,7 +183,7 @@ export function AgendaList({
 
                 {occ.meetUrl ? (
                   <View style={styles.metaBadge}>
-                    <Video size={12} color={theme.colors.primary} />
+                    <Video size={12} color={colors.primary} />
                     <Text style={styles.metaBadgeTextPrimary}>Video</Text>
                   </View>
                 ) : null}
@@ -190,17 +191,17 @@ export function AgendaList({
                 {/* RSVP response indicator icon */}
                 {rsvpStatus === "ATTENDEE_RESPONSE_STATUS_ACCEPTED" && (
                   <View style={styles.rsvpBadgeAccepted}>
-                    <Check size={11} color={theme.colors.success} />
+                    <Check size={11} color={colors.success} />
                   </View>
                 )}
                 {rsvpStatus === "ATTENDEE_RESPONSE_STATUS_DECLINED" && (
                   <View style={styles.rsvpBadgeDeclined}>
-                    <X size={11} color={theme.colors.destructive} />
+                    <X size={11} color={colors.destructive} />
                   </View>
                 )}
                 {rsvpStatus === "ATTENDEE_RESPONSE_STATUS_TENTATIVE" && (
                   <View style={styles.rsvpBadgeTentative}>
-                    <HelpCircle size={11} color={theme.colors.warning} />
+                    <HelpCircle size={11} color={colors.warning} />
                   </View>
                 )}
               </View>
@@ -212,63 +213,63 @@ export function AgendaList({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   listContent: {
     paddingBottom: 40,
   },
   sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   dayBadge: {
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surfaceElevated,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   dayBadgeToday: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
   },
   dayBadgeText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   dayBadgeTextToday: {
-    color: theme.colors.primaryForeground,
+    color: t.colors.primaryForeground,
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   todayPill: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.primarySubtle,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.primarySubtle,
   },
   todayPillText: {
     fontSize: 10,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   itemRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
+    flexDirection: "row" as const,
+    alignItems: "stretch" as const,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderBottomColor: t.colors.border,
+    backgroundColor: t.colors.surface,
   },
   colorStrip: {
     width: 4,
@@ -277,77 +278,77 @@ const styles = StyleSheet.create({
   },
   itemContent: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "center" as const,
   },
   itemHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     gap: 8,
   },
   itemTitle: {
     flex: 1,
     fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   calendarTag: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: theme.radius.xs,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.xs,
+    backgroundColor: t.colors.surfaceElevated,
   },
   calendarTagText: {
     fontSize: 10,
-    fontWeight: "500",
-    color: theme.colors.textMuted,
+    fontWeight: "500" as const,
+    color: t.colors.textMuted,
   },
   itemMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    flexWrap: "wrap" as const,
     gap: 8,
     marginTop: 4,
   },
   itemTime: {
     fontSize: 12,
-    fontWeight: "500",
-    color: theme.colors.textMuted,
+    fontWeight: "500" as const,
+    color: t.colors.textMuted,
   },
   metaBadge: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 3,
   },
   metaBadgeText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     maxWidth: 120,
   },
   metaBadgeTextPrimary: {
     fontSize: 11,
-    color: theme.colors.primary,
-    fontWeight: "500",
+    color: t.colors.primary,
+    fontWeight: "500" as const,
   },
   rsvpBadgeAccepted: {
     padding: 2,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.successSubtle,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.successSubtle,
   },
   rsvpBadgeDeclined: {
     padding: 2,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.destructiveSubtle,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.destructiveSubtle,
   },
   rsvpBadgeTentative: {
     padding: 2,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.warningSubtle,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.warningSubtle,
   },
   emptyContainer: {
     flexGrow: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingHorizontal: 32,
     paddingVertical: 60,
   },
@@ -355,34 +356,34 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surfaceElevated,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
     marginBottom: 6,
-    textAlign: "center",
+    textAlign: "center" as const,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: theme.colors.textMuted,
-    textAlign: "center",
+    color: t.colors.textMuted,
+    textAlign: "center" as const,
     lineHeight: 18,
     marginBottom: 20,
   },
   emptyActionButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: theme.radius.md,
+    borderRadius: t.radius.md,
   },
   emptyActionText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.primaryForeground,
+    fontWeight: "600" as const,
+    color: t.colors.primaryForeground,
   },
 })

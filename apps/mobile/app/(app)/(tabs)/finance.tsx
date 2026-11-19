@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -54,7 +53,7 @@ import {
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
 import { Icon } from "@expo/ui"
 import { ActionMenu } from "@/components/ui/action-menu"
@@ -96,6 +95,8 @@ export default function FinanceHubScreen() {
   const queryClient = useQueryClient()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { colors, resolvedMode } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [refreshing, setRefreshing] = useState(false)
 
   // 1. Settings & Base Currency
@@ -430,9 +431,9 @@ export default function FinanceHubScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-            progressBackgroundColor={theme.colors.surfaceElevated}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+            progressBackgroundColor={colors.surfaceElevated}
           />
         }
       >
@@ -447,7 +448,7 @@ export default function FinanceHubScreen() {
             activeOpacity={0.7}
             onPress={() => navigateTo("/(app)/finance/transactions")}
           >
-            <ReceiptText size={15} color={theme.colors.primary} />
+            <ReceiptText size={15} color={colors.primary} />
             <Text style={styles.navPillText}>Transactions</Text>
           </TouchableOpacity>
 
@@ -456,7 +457,7 @@ export default function FinanceHubScreen() {
             activeOpacity={0.7}
             onPress={() => navigateTo("/(app)/finance/budgets")}
           >
-            <PiggyBank size={15} color={theme.colors.accent} />
+            <PiggyBank size={15} color={colors.accent} />
             <Text style={styles.navPillText}>Budgets</Text>
           </TouchableOpacity>
 
@@ -465,7 +466,7 @@ export default function FinanceHubScreen() {
             activeOpacity={0.7}
             onPress={() => navigateTo("/(app)/finance/accounts")}
           >
-            <Landmark size={15} color={theme.colors.success} />
+            <Landmark size={15} color={colors.success} />
             <Text style={styles.navPillText}>Accounts</Text>
           </TouchableOpacity>
 
@@ -474,7 +475,7 @@ export default function FinanceHubScreen() {
             activeOpacity={0.7}
             onPress={() => navigateTo("/(app)/finance/recurring")}
           >
-            <CalendarClock size={15} color={theme.colors.warning} />
+            <CalendarClock size={15} color={colors.warning} />
             <Text style={styles.navPillText}>Recurring</Text>
           </TouchableOpacity>
 
@@ -483,7 +484,7 @@ export default function FinanceHubScreen() {
             activeOpacity={0.7}
             onPress={() => navigateTo("/(app)/finance/borrowing")}
           >
-            <HandCoins size={15} color={theme.colors.primary} />
+            <HandCoins size={15} color={colors.primary} />
             <Text style={styles.navPillText}>Borrowing</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -496,7 +497,7 @@ export default function FinanceHubScreen() {
             onPress={showInboxInfo}
           >
             <View style={styles.inboxBannerIconContainer}>
-              <Inbox size={18} color="#818cf8" />
+              <Inbox size={18} color={colors.accent} />
             </View>
             <View style={styles.inboxBannerTextContainer}>
               <View style={styles.inboxBannerHeaderRow}>
@@ -513,7 +514,7 @@ export default function FinanceHubScreen() {
                 Review and resolve on the web app
               </Text>
             </View>
-            <ChevronRight size={16} color={theme.colors.textMuted} />
+            <ChevronRight size={16} color={colors.textMuted} />
           </TouchableOpacity>
         )}
 
@@ -521,7 +522,7 @@ export default function FinanceHubScreen() {
         <Card style={styles.netWorthCard}>
           <View style={styles.netWorthHeader}>
             <View style={styles.netWorthHeaderLeft}>
-              <Wallet size={15} color={theme.colors.primary} />
+              <Wallet size={15} color={colors.primary} />
               <Caption style={styles.netWorthTitle}>NET LIQUIDITY</Caption>
             </View>
             <TouchableOpacity
@@ -530,7 +531,7 @@ export default function FinanceHubScreen() {
               onPress={() => navigateTo("/(app)/finance/accounts")}
             >
               <Text style={styles.seeAllText}>Accounts</Text>
-              <ChevronRight size={13} color={theme.colors.textMuted} />
+              <ChevronRight size={13} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -541,7 +542,7 @@ export default function FinanceHubScreen() {
           <View style={styles.assetsLiabilitiesRow}>
             <View style={styles.assetItem}>
               <Caption>Total Assets</Caption>
-              <MonoAmount size="sm" color={theme.colors.success}>
+              <MonoAmount size="sm" color={colors.success}>
                 +{formatAmount(String(metrics.totalAssetsCents), baseCurrency)}
               </MonoAmount>
             </View>
@@ -553,9 +554,9 @@ export default function FinanceHubScreen() {
             >
               <View style={styles.assetItemHeader}>
                 <Caption>Total Debt</Caption>
-                <ChevronRight size={11} color={theme.colors.textMuted} />
+                <ChevronRight size={11} color={colors.textMuted} />
               </View>
-              <MonoAmount size="sm" color={theme.colors.destructive}>
+              <MonoAmount size="sm" color={colors.destructive}>
                 -
                 {formatAmount(
                   String(metrics.totalLiabilitiesCents),
@@ -576,7 +577,7 @@ export default function FinanceHubScreen() {
               onPress={() => navigateTo("/(app)/finance/transactions")}
             >
               <Text style={styles.seeAllText}>See all</Text>
-              <ArrowRight size={13} color={theme.colors.primary} />
+              <ArrowRight size={13} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -593,7 +594,7 @@ export default function FinanceHubScreen() {
                   router.push("/modal/add-transaction")
                 }}
               >
-                <Plus size={14} color={theme.colors.primary} />
+                <Plus size={14} color={colors.primary} />
                 <Text style={styles.emptyActionText}>Add Transaction</Text>
               </TouchableOpacity>
             </Card>
@@ -624,7 +625,7 @@ export default function FinanceHubScreen() {
                   router.push("/modal/add-transaction")
                 }}
               >
-                <Plus size={14} color={theme.colors.primary} />
+                <Plus size={14} color={colors.primary} />
                 <Text style={styles.cardFooterActionText}>Add Transaction</Text>
               </TouchableOpacity>
             </Card>
@@ -641,7 +642,7 @@ export default function FinanceHubScreen() {
               onPress={() => navigateTo("/(app)/finance/accounts")}
             >
               <Text style={styles.seeAllText}>See all</Text>
-              <ArrowRight size={13} color={theme.colors.primary} />
+              <ArrowRight size={13} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -712,7 +713,7 @@ export default function FinanceHubScreen() {
               onPress={() => navigateTo("/(app)/finance/budgets")}
             >
               <Text style={styles.seeAllText}>See all</Text>
-              <ArrowRight size={13} color={theme.colors.primary} />
+              <ArrowRight size={13} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -731,7 +732,7 @@ export default function FinanceHubScreen() {
               <View style={styles.budgetStatsHeader}>
                 <View style={styles.budgetStatsSpendCol}>
                   <View style={styles.budgetStatsLabelRow}>
-                    <PiggyBank size={15} color={theme.colors.accent} />
+                    <PiggyBank size={15} color={colors.accent} />
                     <Caption style={styles.budgetStatsCaption}>
                       TOTAL SPENT THIS MONTH
                     </Caption>
@@ -759,10 +760,10 @@ export default function FinanceHubScreen() {
                   label={`${budgetStats.rawPercentage}%`}
                   bg={
                     budgetStats.isOver
-                      ? theme.colors.destructiveSubtle
+                      ? colors.destructiveSubtle
                       : budgetStats.isWarning
-                        ? theme.colors.warningSubtle
-                        : theme.colors.primarySubtle
+                        ? colors.warningSubtle
+                        : colors.primarySubtle
                   }
                   border={
                     budgetStats.isOver
@@ -773,10 +774,10 @@ export default function FinanceHubScreen() {
                   }
                   color={
                     budgetStats.isOver
-                      ? theme.colors.destructive
+                      ? colors.destructive
                       : budgetStats.isWarning
-                        ? theme.colors.warning
-                        : theme.colors.primary
+                        ? colors.warning
+                        : colors.primary
                   }
                 />
               </View>
@@ -789,10 +790,10 @@ export default function FinanceHubScreen() {
                     {
                       width: `${budgetStats.progressPercentage}%`,
                       backgroundColor: budgetStats.isOver
-                        ? theme.colors.destructive
+                        ? colors.destructive
                         : budgetStats.isWarning
-                          ? theme.colors.warning
-                          : theme.colors.primary,
+                          ? colors.warning
+                          : colors.primary,
                     },
                   ]}
                 />
@@ -809,9 +810,7 @@ export default function FinanceHubScreen() {
                   <MonoAmount
                     size="sm"
                     color={
-                      budgetStats.isOver
-                        ? theme.colors.destructive
-                        : theme.colors.success
+                      budgetStats.isOver ? colors.destructive : colors.success
                     }
                   >
                     {budgetStats.isOver ? "-" : "+"}
@@ -834,7 +833,7 @@ export default function FinanceHubScreen() {
                       <View
                         style={[
                           styles.healthDot,
-                          { backgroundColor: theme.colors.success },
+                          { backgroundColor: colors.success },
                         ]}
                       />
                       <Text style={styles.healthPillText}>
@@ -847,7 +846,7 @@ export default function FinanceHubScreen() {
                       <View
                         style={[
                           styles.healthDot,
-                          { backgroundColor: theme.colors.warning },
+                          { backgroundColor: colors.warning },
                         ]}
                       />
                       <Text style={styles.healthPillText}>
@@ -860,7 +859,7 @@ export default function FinanceHubScreen() {
                       <View
                         style={[
                           styles.healthDot,
-                          { backgroundColor: theme.colors.destructive },
+                          { backgroundColor: colors.destructive },
                         ]}
                       />
                       <Text style={styles.healthPillText}>
@@ -885,8 +884,8 @@ export default function FinanceHubScreen() {
                       size={13}
                       color={
                         budgetStats.topCritical.usagePercentage > 100
-                          ? theme.colors.destructive
-                          : theme.colors.warning
+                          ? colors.destructive
+                          : colors.warning
                       }
                     />
                     <Text
@@ -913,7 +912,7 @@ export default function FinanceHubScreen() {
                       )
                     </Text>
                   </View>
-                  <ChevronRight size={13} color={theme.colors.textMuted} />
+                  <ChevronRight size={13} color={colors.textMuted} />
                 </View>
               )}
             </Card>
@@ -932,7 +931,7 @@ export default function FinanceHubScreen() {
               onPress={() => navigateTo("/(app)/finance/recurring")}
             >
               <Text style={styles.seeAllText}>See all</Text>
-              <ArrowRight size={13} color={theme.colors.primary} />
+              <ArrowRight size={13} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -981,21 +980,15 @@ export default function FinanceHubScreen() {
                               styles.actionIconBadge,
                               {
                                 backgroundColor: isIncome
-                                  ? theme.colors.successSubtle
-                                  : theme.colors.primarySubtle,
+                                  ? colors.successSubtle
+                                  : colors.primarySubtle,
                               },
                             ]}
                           >
                             {isIncome ? (
-                              <ArrowDownLeft
-                                size={16}
-                                color={theme.colors.success}
-                              />
+                              <ArrowDownLeft size={16} color={colors.success} />
                             ) : (
-                              <CalendarClock
-                                size={16}
-                                color={theme.colors.primary}
-                              />
+                              <CalendarClock size={16} color={colors.primary} />
                             )}
                           </View>
                           <View style={styles.itemInfo}>
@@ -1012,9 +1005,9 @@ export default function FinanceHubScreen() {
                                 <Badge
                                   size="sm"
                                   label="Deposit Due"
-                                  bg={theme.colors.successSubtle}
+                                  bg={colors.successSubtle}
                                   border="rgba(16, 185, 129, 0.3)"
-                                  color={theme.colors.success}
+                                  color={colors.success}
                                 />
                               ) : dueBadge ? (
                                 <Badge
@@ -1022,24 +1015,24 @@ export default function FinanceHubScreen() {
                                   label={dueBadge.label}
                                   bg={
                                     dueBadge.isOverdue
-                                      ? theme.colors.destructiveSubtle
+                                      ? colors.destructiveSubtle
                                       : dueBadge.isToday
-                                        ? theme.colors.warningSubtle
-                                        : theme.colors.surfaceHighlight
+                                        ? colors.warningSubtle
+                                        : colors.surfaceHighlight
                                   }
                                   border={
                                     dueBadge.isOverdue
                                       ? "rgba(244, 63, 94, 0.3)"
                                       : dueBadge.isToday
                                         ? "rgba(245, 158, 11, 0.3)"
-                                        : theme.colors.border
+                                        : colors.border
                                   }
                                   color={
                                     dueBadge.isOverdue
-                                      ? theme.colors.destructive
+                                      ? colors.destructive
                                       : dueBadge.isToday
-                                        ? theme.colors.warning
-                                        : theme.colors.textMuted
+                                        ? colors.warning
+                                        : colors.textMuted
                                   }
                                 />
                               ) : null}
@@ -1049,11 +1042,7 @@ export default function FinanceHubScreen() {
 
                         <MonoAmount
                           size="sm"
-                          color={
-                            isIncome
-                              ? theme.colors.success
-                              : theme.colors.textPrimary
-                          }
+                          color={isIncome ? colors.success : colors.textPrimary}
                         >
                           {isIncome ? "+" : "-"}
                           {formatAmount(st.amount, st.currency || baseCurrency)}
@@ -1062,7 +1051,7 @@ export default function FinanceHubScreen() {
 
                       <ActionMenu
                         title={getScheduledDisplayName(st, recurringTemplates)}
-                        colorScheme="dark"
+                        colorScheme={resolvedMode}
                         style={styles.menuTriggerWrapper}
                         onPressAction={({ nativeEvent }) => {
                           if (nativeEvent.event === "confirm") {
@@ -1097,10 +1086,7 @@ export default function FinanceHubScreen() {
                         ]}
                       >
                         <View style={styles.dotsBtn}>
-                          <MoreVertical
-                            size={18}
-                            color={theme.colors.textMuted}
-                          />
+                          <MoreVertical size={18} color={colors.textMuted} />
                         </View>
                       </ActionMenu>
                     </View>
@@ -1122,7 +1108,7 @@ export default function FinanceHubScreen() {
               onPress={() => navigateTo("/(app)/finance/borrowing")}
             >
               <Text style={styles.seeAllText}>See all</Text>
-              <ArrowRight size={13} color={theme.colors.primary} />
+              <ArrowRight size={13} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -1164,18 +1150,14 @@ export default function FinanceHubScreen() {
                             styles.actionIconBadge,
                             {
                               backgroundColor: isLent
-                                ? theme.colors.successSubtle
-                                : theme.colors.destructiveSubtle,
+                                ? colors.successSubtle
+                                : colors.destructiveSubtle,
                             },
                           ]}
                         >
                           <HandCoins
                             size={16}
-                            color={
-                              isLent
-                                ? theme.colors.success
-                                : theme.colors.destructive
-                            }
+                            color={isLent ? colors.success : colors.destructive}
                           />
                         </View>
                         <View style={styles.itemInfo}>
@@ -1188,8 +1170,8 @@ export default function FinanceHubScreen() {
                               label={isLent ? "Owed to you" : "You owe"}
                               bg={
                                 isLent
-                                  ? theme.colors.successSubtle
-                                  : theme.colors.destructiveSubtle
+                                  ? colors.successSubtle
+                                  : colors.destructiveSubtle
                               }
                               border={
                                 isLent
@@ -1197,9 +1179,7 @@ export default function FinanceHubScreen() {
                                   : "rgba(244, 63, 94, 0.3)"
                               }
                               color={
-                                isLent
-                                  ? theme.colors.success
-                                  : theme.colors.destructive
+                                isLent ? colors.success : colors.destructive
                               }
                             />
                             {b.dueAt ? (
@@ -1213,11 +1193,7 @@ export default function FinanceHubScreen() {
 
                       <MonoAmount
                         size="sm"
-                        color={
-                          isLent
-                            ? theme.colors.success
-                            : theme.colors.destructive
-                        }
+                        color={isLent ? colors.success : colors.destructive}
                       >
                         {formatAmount(
                           b.remainingAmount || b.totalAmount,
@@ -1228,7 +1204,7 @@ export default function FinanceHubScreen() {
 
                     <ActionMenu
                       title={b.counterparty || "Borrowing"}
-                      colorScheme="dark"
+                      colorScheme={resolvedMode}
                       style={styles.menuTriggerWrapper}
                       onPressAction={({ nativeEvent }) => {
                         if (nativeEvent.event === "pay") {
@@ -1264,10 +1240,7 @@ export default function FinanceHubScreen() {
                       ]}
                     >
                       <View style={styles.dotsBtn}>
-                        <MoreVertical
-                          size={18}
-                          color={theme.colors.textMuted}
-                        />
+                        <MoreVertical size={18} color={colors.textMuted} />
                       </View>
                     </ActionMenu>
                   </View>
@@ -1281,14 +1254,14 @@ export default function FinanceHubScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,
@@ -1301,112 +1274,112 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   navPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 7,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    borderRadius: theme.radius.full,
+    borderRadius: t.radius.full,
   },
   navPillText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   netWorthCard: {
     padding: 18,
     gap: 12,
   },
   netWorthHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   netWorthHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
   },
   netWorthTitle: {
     letterSpacing: 0.8,
-    fontWeight: "600",
+    fontWeight: "600" as const,
   },
   netWorthAmount: {
     marginTop: 2,
   },
   assetsLiabilitiesRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
   },
   assetItem: {
     flex: 1,
     gap: 3,
   },
   assetItemHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
   },
   divider: {
     width: 1,
     height: 28,
-    backgroundColor: theme.colors.border,
+    backgroundColor: t.colors.border,
     marginHorizontal: 12,
   },
   section: {
     gap: 10,
   },
   sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 4,
   },
   sectionHeader: {
     letterSpacing: 0.8,
   },
   seeAllBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 3,
   },
   seeAllText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   listCard: {
     padding: 0,
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   txRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingLeft: 14,
     paddingRight: 10,
     paddingVertical: 10,
   },
   txMainPressable: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     flex: 1,
     marginRight: 6,
   },
   rowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   txLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
     flex: 1,
     marginRight: 10,
@@ -1415,36 +1388,36 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   actionIconBadge: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   itemInfo: {
     flex: 1,
     gap: 2,
   },
   badgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     marginTop: 2,
   },
   menuTriggerWrapper: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   dotsBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   horizontalAccountsScroll: {
     marginHorizontal: -16,
@@ -1455,61 +1428,61 @@ const styles = StyleSheet.create({
   },
   txName: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   txMeta: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
   },
   emptyCard: {
     padding: 20,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   emptyText: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   emptyActionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     marginTop: 12,
     paddingHorizontal: 14,
     paddingVertical: 7,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   emptyActionText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   cardFooterAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 6,
     paddingVertical: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.02)",
+    backgroundColor: t.colors.surfaceSubtle,
   },
   cardFooterActionText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   budgetStatsCard: {
     padding: 16,
     gap: 12,
   },
   budgetStatsHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    justifyContent: "space-between" as const,
   },
   budgetStatsSpendCol: {
     flex: 1,
@@ -1517,18 +1490,18 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   budgetStatsLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
   },
   budgetStatsCaption: {
     letterSpacing: 0.8,
-    fontWeight: "600",
+    fontWeight: "600" as const,
   },
   budgetStatsAmountRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    alignItems: "baseline" as const,
+    flexWrap: "wrap" as const,
     marginTop: 2,
   },
   budgetStatsSpentAmount: {
@@ -1536,47 +1509,47 @@ const styles = StyleSheet.create({
   },
   budgetStatsLimitText: {
     fontSize: 13,
-    color: theme.colors.textMuted,
-    fontWeight: "500",
+    color: t.colors.textMuted,
+    fontWeight: "500" as const,
   },
   budgetStatsProgressTrack: {
     height: 8,
-    backgroundColor: theme.colors.surfaceHighlight,
+    backgroundColor: t.colors.surfaceHighlight,
     borderRadius: 4,
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   budgetStatsProgressBar: {
-    height: "100%",
+    height: "100%" as const,
     borderRadius: 4,
   },
   budgetStatsFooterRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
   },
   budgetStatsRemaining: {
     gap: 2,
   },
   budgetHealthPills: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
+    flexWrap: "wrap" as const,
+    justifyContent: "flex-end" as const,
   },
   healthPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 5,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: theme.radius.full,
+    borderRadius: t.radius.full,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   healthDot: {
     width: 6,
@@ -1585,49 +1558,49 @@ const styles = StyleSheet.create({
   },
   healthPillText: {
     fontSize: 11,
-    color: theme.colors.textSecondary,
-    fontWeight: "500",
+    color: t.colors.textSecondary,
+    fontWeight: "500" as const,
   },
   criticalCalloutRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "rgba(245, 158, 11, 0.08)",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    backgroundColor: t.colors.warningSubtle,
     borderWidth: 1,
-    borderColor: "rgba(245, 158, 11, 0.2)",
-    borderRadius: theme.radius.sm,
+    borderColor: "rgba(245, 158, 11, 0.25)",
+    borderRadius: t.radius.sm,
     paddingHorizontal: 10,
     paddingVertical: 7,
     marginTop: 2,
     gap: 8,
   },
   criticalCalloutRowOver: {
-    backgroundColor: "rgba(244, 63, 94, 0.08)",
-    borderColor: "rgba(244, 63, 94, 0.2)",
+    backgroundColor: t.colors.destructiveSubtle,
+    borderColor: "rgba(244, 63, 94, 0.25)",
   },
   criticalCalloutLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     flex: 1,
     marginRight: 4,
   },
   criticalCalloutText: {
     fontSize: 11,
-    color: theme.colors.warning,
-    fontWeight: "500",
+    color: t.colors.warning,
+    fontWeight: "500" as const,
     flex: 1,
   },
   criticalCalloutTextOver: {
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
   },
   inboxBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(99, 102, 241, 0.08)",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    backgroundColor: t.colors.primarySubtle,
     borderWidth: 1,
-    borderColor: "rgba(99, 102, 241, 0.25)",
-    borderRadius: theme.radius.lg,
+    borderColor: t.colors.borderStrong,
+    borderRadius: t.radius.lg,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 16,
@@ -1637,41 +1610,41 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(99, 102, 241, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.primarySubtle,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   inboxBannerTextContainer: {
     flex: 1,
     gap: 2,
   },
   inboxBannerHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   inboxBannerTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   inboxBannerBadge: {
-    backgroundColor: "rgba(99, 102, 241, 0.2)",
+    backgroundColor: t.colors.primarySubtle,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "rgba(99, 102, 241, 0.35)",
+    borderColor: t.colors.borderStrong,
   },
   inboxBannerBadgeText: {
     fontSize: 10,
-    fontWeight: "700",
-    color: "#a5b4fc",
-    textTransform: "uppercase",
+    fontWeight: "700" as const,
+    color: t.colors.accent,
+    textTransform: "uppercase" as const,
     letterSpacing: 0.5,
   },
   inboxBannerSubtitle: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
 })

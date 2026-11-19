@@ -1,14 +1,16 @@
 import React from "react"
-import { StyleSheet, View, Text, Image, TouchableOpacity } from "react-native"
+import { View, Text, Image, TouchableOpacity } from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ChevronDown, Sparkles, Settings } from "lucide-react-native"
 import { useListThreadsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 export function AppHeader() {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { activeSpace, activeSpaceId } = useSpace()
@@ -63,7 +65,7 @@ export function AppHeader() {
           <Text style={styles.spaceName} numberOfLines={1}>
             {activeSpace?.name || "Personal"}
           </Text>
-          <ChevronDown size={13} color={theme.colors.textMuted} />
+          <ChevronDown size={13} color={colors.textMuted} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -73,7 +75,7 @@ export function AppHeader() {
           hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
           accessibilityLabel="Open AI Assistant"
         >
-          <Sparkles size={16} color={theme.colors.primary} />
+          <Sparkles size={16} color={colors.primary} />
           {hasPendingApproval && <View style={styles.approvalDot} />}
         </TouchableOpacity>
 
@@ -83,94 +85,94 @@ export function AppHeader() {
           onPress={handleSettings}
           hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
         >
-          <Settings size={17} color={theme.colors.textSecondary} />
+          <Settings size={17} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
     paddingHorizontal: 16,
     paddingBottom: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   brandContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
   },
   logoWrapper: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    overflow: "hidden",
+    overflow: "hidden" as const,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
-    ...theme.shadows.sm,
+    borderColor: t.colors.border,
+    ...t.shadows.sm,
   },
   logoImage: {
-    width: "100%",
-    height: "100%",
+    width: "100%" as const,
+    height: "100%" as const,
   },
   brandTitle: {
     fontSize: 19,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
     letterSpacing: -0.5,
   },
   rightControls: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
   },
   spacePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surfaceElevated,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     paddingHorizontal: 9,
     paddingVertical: 6,
-    borderRadius: theme.radius.full,
+    borderRadius: t.radius.full,
     gap: 5,
     maxWidth: 120,
   },
   spaceName: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
     flexShrink: 1,
   },
   iconButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   aiButton: {
-    backgroundColor: theme.colors.primarySubtle,
-    borderColor: "rgba(56, 189, 248, 0.35)",
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: `${t.colors.primary}59`,
   },
   approvalDot: {
-    position: "absolute",
+    position: "absolute" as const,
     top: -1,
     right: -1,
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: theme.colors.warning,
+    backgroundColor: t.colors.warning,
     borderWidth: 1.5,
-    borderColor: theme.colors.background,
+    borderColor: t.colors.background,
   },
 })

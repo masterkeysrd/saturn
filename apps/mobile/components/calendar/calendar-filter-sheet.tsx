@@ -2,7 +2,6 @@ import { forwardRef, useState, useMemo } from "react"
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   Switch,
   ScrollView,
@@ -18,7 +17,7 @@ import {
   type Calendar,
 } from "@saturn/hooks"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 export interface CalendarFilterSheetProps {
@@ -41,6 +40,8 @@ export const CalendarFilterSheet = forwardRef<
   BottomSheet,
   CalendarFilterSheetProps
 >(({ onClose, canManage = true }, ref) => {
+  const { colors, isDark } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const tz = useTimezone()
   const { data: calendarsData, isLoading } = useCalendars()
   const updateCalendarMutation = useUpdateCalendar()
@@ -118,7 +119,7 @@ export const CalendarFilterSheet = forwardRef<
       >
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <ActivityIndicator size="small" color={colors.primary} />
           </View>
         ) : (
           <>
@@ -136,7 +137,7 @@ export const CalendarFilterSheet = forwardRef<
                     style={styles.addButton}
                     testID="calendar-filter-add-btn"
                   >
-                    <Plus size={14} color={theme.colors.primary} />
+                    <Plus size={14} color={colors.primary} />
                     <Text style={styles.addButtonText}>New</Text>
                   </TouchableOpacity>
                 )}
@@ -152,7 +153,8 @@ export const CalendarFilterSheet = forwardRef<
                     value={newCalendarName}
                     onChangeText={setNewCalendarName}
                     placeholder="Calendar Name"
-                    placeholderTextColor={theme.colors.textMuted}
+                    placeholderTextColor={colors.textMuted}
+                    keyboardAppearance={isDark ? "dark" : "light"}
                     style={styles.createInput}
                     autoFocus
                     testID="calendar-name-input"
@@ -207,7 +209,7 @@ export const CalendarFilterSheet = forwardRef<
                       {createCalendarMutation.isPending ? (
                         <ActivityIndicator
                           size="small"
-                          color={theme.colors.primaryForeground}
+                          color={colors.primaryForeground}
                         />
                       ) : (
                         <Text style={styles.submitBtnText}>Create</Text>
@@ -226,7 +228,7 @@ export const CalendarFilterSheet = forwardRef<
                         style={[
                           styles.calendarColorDot,
                           {
-                            backgroundColor: cal.color || theme.colors.primary,
+                            backgroundColor: cal.color || colors.primary,
                           },
                         ]}
                       />
@@ -243,8 +245,8 @@ export const CalendarFilterSheet = forwardRef<
                       value={cal.isEnabled}
                       onValueChange={() => handleToggleCalendar(cal)}
                       trackColor={{
-                        false: theme.colors.surfaceHighlight,
-                        true: theme.colors.primary,
+                        false: colors.surfaceHighlight,
+                        true: colors.primary,
                       }}
                       thumbColor="#ffffff"
                       testID={`calendar-toggle-${cal.id}`}
@@ -266,8 +268,7 @@ export const CalendarFilterSheet = forwardRef<
                           style={[
                             styles.calendarColorDot,
                             {
-                              backgroundColor:
-                                cal.color || theme.colors.primary,
+                              backgroundColor: cal.color || colors.primary,
                             },
                           ]}
                         />
@@ -284,8 +285,8 @@ export const CalendarFilterSheet = forwardRef<
                         value={cal.isEnabled}
                         onValueChange={() => handleToggleCalendar(cal)}
                         trackColor={{
-                          false: theme.colors.surfaceHighlight,
-                          true: theme.colors.primary,
+                          false: colors.surfaceHighlight,
+                          true: colors.primary,
                         }}
                         thumbColor="#ffffff"
                         testID={`calendar-toggle-${cal.id}`}
@@ -304,7 +305,7 @@ export const CalendarFilterSheet = forwardRef<
 
 CalendarFilterSheet.displayName = "CalendarFilterSheet"
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
   },
@@ -315,126 +316,126 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     paddingVertical: 40,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   section: {
     gap: 10,
   },
   sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   sectionTitle: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
-    textTransform: "uppercase",
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
+    textTransform: "uppercase" as const,
     letterSpacing: 0.5,
   },
   addButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
     paddingVertical: 2,
     paddingHorizontal: 6,
-    borderRadius: theme.radius.xs,
-    backgroundColor: theme.colors.primarySubtle,
+    borderRadius: t.radius.xs,
+    backgroundColor: t.colors.primarySubtle,
   },
   addButtonText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   createCard: {
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.md,
     padding: 12,
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
+    borderColor: t.colors.borderStrong,
     gap: 10,
   },
   createCardTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   createInput: {
-    backgroundColor: theme.colors.surfaceSubtle,
+    backgroundColor: t.colors.surfaceSubtle,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.sm,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.sm,
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   colorPaletteRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
-    flexWrap: "wrap",
+    flexWrap: "wrap" as const,
   },
   colorCircle: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   colorCircleSelected: {
     borderWidth: 2,
-    borderColor: "#ffffff",
+    borderColor: t.colors.textPrimary,
   },
   createActionsRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+    flexDirection: "row" as const,
+    justifyContent: "flex-end" as const,
     gap: 8,
     marginTop: 4,
   },
   cancelBtn: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.surfaceSubtle,
   },
   cancelBtnText: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   submitBtn: {
     paddingVertical: 6,
     paddingHorizontal: 14,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.primary,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.primary,
   },
   submitBtnDisabled: {
     opacity: 0.5,
   },
   submitBtnText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.primaryForeground,
+    fontWeight: "600" as const,
+    color: t.colors.primaryForeground,
   },
   calendarList: {
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderRadius: theme.radius.md,
+    backgroundColor: t.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
+    borderColor: t.colors.border,
+    overflow: "hidden" as const,
   },
   calendarRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   calendarInfo: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
     flex: 1,
     marginRight: 8,
@@ -446,19 +447,19 @@ const styles = StyleSheet.create({
   },
   calendarName: {
     fontSize: 14,
-    fontWeight: "500",
-    color: theme.colors.textPrimary,
+    fontWeight: "500" as const,
+    color: t.colors.textPrimary,
     flexShrink: 1,
   },
   defaultBadge: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: theme.radius.xs,
+    borderRadius: t.radius.xs,
   },
   defaultBadgeText: {
     fontSize: 10,
-    color: theme.colors.textMuted,
-    fontWeight: "500",
+    color: t.colors.textMuted,
+    fontWeight: "500" as const,
   },
 })

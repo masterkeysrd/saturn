@@ -17,7 +17,7 @@ import { AuthProvider, useAuth } from "@/lib/auth-context"
 import { SpaceProvider } from "@/lib/space-context"
 import { ToastProvider } from "@/components/ui/toast"
 import { queryClient, persistOptions } from "@/lib/query-persister"
-import { MobileThemeProvider, theme, useTheme } from "@/lib/theme"
+import { MobileThemeProvider, useTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 void SplashScreen.preventAutoHideAsync().catch(() => {})
@@ -49,7 +49,7 @@ function SplashScreenController({ isLayoutReady }: { isLayoutReady: boolean }) {
   return null
 }
 
-function modalCloseHeaderOptions() {
+function modalCloseHeaderOptions(iconColor: string) {
   return Platform.OS === "ios"
     ? {
         unstable_headerLeftItems: () => [
@@ -75,7 +75,7 @@ function modalCloseHeaderOptions() {
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityLabel="Close"
           >
-            <X size={20} color={theme.colors.textMuted} />
+            <X size={20} color={iconColor} />
           </TouchableOpacity>
         ),
       }
@@ -141,7 +141,7 @@ function RootNavigationShell({
                       options={{
                         presentation: "modal",
                         headerTitle: "New Transaction",
-                        ...modalCloseHeaderOptions(),
+                        ...modalCloseHeaderOptions(colors.textMuted),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
                             backgroundColor: colors.surface,
@@ -154,7 +154,7 @@ function RootNavigationShell({
                       options={{
                         presentation: "formSheet",
                         headerTitle: "Switch Workspace",
-                        ...modalCloseHeaderOptions(),
+                        ...modalCloseHeaderOptions(colors.textMuted),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
                             backgroundColor: colors.surface,
@@ -178,7 +178,7 @@ function RootNavigationShell({
                       options={{
                         presentation: "modal",
                         headerTitle: "Create Workspace",
-                        ...modalCloseHeaderOptions(),
+                        ...modalCloseHeaderOptions(colors.textMuted),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
                             backgroundColor: colors.surface,
@@ -288,7 +288,7 @@ function RootNavigationShell({
                       options={{
                         presentation: "modal",
                         headerTitle: "API Key",
-                        ...modalCloseHeaderOptions(),
+                        ...modalCloseHeaderOptions(colors.textMuted),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
                             backgroundColor: colors.surface,
@@ -301,7 +301,7 @@ function RootNavigationShell({
                       options={{
                         presentation: "modal",
                         headerTitle: "Generate Workflow",
-                        ...modalCloseHeaderOptions(),
+                        ...modalCloseHeaderOptions(colors.textMuted),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
                             backgroundColor: colors.surface,

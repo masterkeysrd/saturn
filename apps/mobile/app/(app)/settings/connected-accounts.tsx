@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -46,7 +45,7 @@ import {
   type ConnectorCapability,
 } from "@saturn/schemas"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -128,6 +127,8 @@ export default function ConnectedAccountsScreen() {
   const queryClient = useQueryClient()
   const { activeSpaceId, activeSpaceRole } = useSpace()
   const tz = useTimezone()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   const isWritable = activeSpaceRole === "owner" || activeSpaceRole === "admin"
 
@@ -398,7 +399,7 @@ export default function ConnectedAccountsScreen() {
         {/* Read-only banner for viewers and members */}
         {!isWritable && (
           <View style={styles.readOnlyBanner}>
-            <Lock size={16} color={theme.colors.warning} />
+            <Lock size={16} color={colors.warning} />
             <Text style={styles.readOnlyText}>
               Viewing in read-only mode. Workspace Admin or Owner privileges are
               required to manage connected accounts.
@@ -434,19 +435,19 @@ export default function ConnectedAccountsScreen() {
               <Badge
                 variant="outline"
                 size="sm"
-                icon={<Calendar size={11} color={theme.colors.textMuted} />}
+                icon={<Calendar size={11} color={colors.textMuted} />}
                 label="Calendars"
               />
               <Badge
                 variant="outline"
                 size="sm"
-                icon={<Mail size={11} color={theme.colors.textMuted} />}
+                icon={<Mail size={11} color={colors.textMuted} />}
                 label="Mail"
               />
               <Badge
                 variant="outline"
                 size="sm"
-                icon={<Contact size={11} color={theme.colors.textMuted} />}
+                icon={<Contact size={11} color={colors.textMuted} />}
                 label="Contacts"
               />
             </View>
@@ -478,7 +479,7 @@ export default function ConnectedAccountsScreen() {
                 variant="outline"
                 size="sm"
                 fullWidth
-                leftIcon={<Lock size={14} color={theme.colors.textMuted} />}
+                leftIcon={<Lock size={14} color={colors.textMuted} />}
                 disabled
               >
                 Admin Only
@@ -507,19 +508,19 @@ export default function ConnectedAccountsScreen() {
               <Badge
                 variant="outline"
                 size="sm"
-                icon={<Calendar size={11} color={theme.colors.textMuted} />}
+                icon={<Calendar size={11} color={colors.textMuted} />}
                 label="Calendars"
               />
               <Badge
                 variant="outline"
                 size="sm"
-                icon={<Mail size={11} color={theme.colors.textMuted} />}
+                icon={<Mail size={11} color={colors.textMuted} />}
                 label="Mail"
               />
               <Badge
                 variant="outline"
                 size="sm"
-                icon={<Contact size={11} color={theme.colors.textMuted} />}
+                icon={<Contact size={11} color={colors.textMuted} />}
                 label="Contacts"
               />
             </View>
@@ -548,7 +549,7 @@ export default function ConnectedAccountsScreen() {
           ) : accounts.length === 0 ? (
             <Card style={styles.emptyCard}>
               <View style={styles.emptyIconCircle}>
-                <Link2 size={24} color={theme.colors.textMuted} />
+                <Link2 size={24} color={colors.textMuted} />
               </View>
               <Text style={styles.emptyTitle}>No Connected Accounts</Text>
               <Text style={styles.emptySubtitle}>
@@ -563,7 +564,7 @@ export default function ConnectedAccountsScreen() {
               const isRateLimited = status === "rate_limited"
               const isError = status === "error" || status === "revoked"
               const isHealthy = status === "healthy"
-              const accountAccentColor = account.color || theme.colors.primary
+              const accountAccentColor = account.color || colors.primary
               const isSyncingThis = syncingAccountId === account.id
 
               return (
@@ -658,10 +659,7 @@ export default function ConnectedAccountsScreen() {
                             variant="success"
                             size="sm"
                             icon={
-                              <CheckCircle2
-                                size={12}
-                                color={theme.colors.success}
-                              />
+                              <CheckCircle2 size={12} color={colors.success} />
                             }
                             label="Active"
                           />
@@ -671,10 +669,7 @@ export default function ConnectedAccountsScreen() {
                             variant="warning"
                             size="sm"
                             icon={
-                              <AlertTriangle
-                                size={12}
-                                color={theme.colors.warning}
-                              />
+                              <AlertTriangle size={12} color={colors.warning} />
                             }
                             label="Reconnect Required"
                           />
@@ -683,9 +678,7 @@ export default function ConnectedAccountsScreen() {
                           <Badge
                             variant="warning"
                             size="sm"
-                            icon={
-                              <Clock size={12} color={theme.colors.warning} />
-                            }
+                            icon={<Clock size={12} color={colors.warning} />}
                             label="Rate Limited"
                           />
                         )}
@@ -696,7 +689,7 @@ export default function ConnectedAccountsScreen() {
                             icon={
                               <AlertCircle
                                 size={12}
-                                color={theme.colors.destructive}
+                                color={colors.destructive}
                               />
                             }
                             label="Error"
@@ -714,10 +707,7 @@ export default function ConnectedAccountsScreen() {
                     {isReauthRequired && (
                       <View style={styles.reconnectBanner}>
                         <View style={styles.reconnectLeft}>
-                          <AlertTriangle
-                            size={16}
-                            color={theme.colors.warning}
-                          />
+                          <AlertTriangle size={16} color={colors.warning} />
                           <Text style={styles.reconnectText}>
                             Tokens have expired or authorization was revoked.
                             Please reconnect to resume synchronization.
@@ -760,10 +750,7 @@ export default function ConnectedAccountsScreen() {
                             <View key={cap} style={styles.capabilityRow}>
                               <View style={styles.capLeft}>
                                 <View style={styles.capIconCircle}>
-                                  <Icon
-                                    size={14}
-                                    color={theme.colors.textMuted}
-                                  />
+                                  <Icon size={14} color={colors.textMuted} />
                                 </View>
                                 <View style={styles.capTextContainer}>
                                   <Text style={styles.capTitle}>
@@ -777,7 +764,7 @@ export default function ConnectedAccountsScreen() {
                               {isUpdating ? (
                                 <ActivityIndicator
                                   size="small"
-                                  color={theme.colors.primary}
+                                  color={colors.primary}
                                 />
                               ) : (
                                 <Switch
@@ -787,8 +774,8 @@ export default function ConnectedAccountsScreen() {
                                     handleToggleCapability(account, cap)
                                   }
                                   trackColor={{
-                                    false: theme.colors.surfaceHighlight,
-                                    true: theme.colors.primary,
+                                    false: colors.surfaceHighlight,
+                                    true: colors.primary,
                                   }}
                                   thumbColor="#ffffff"
                                 />
@@ -811,8 +798,8 @@ export default function ConnectedAccountsScreen() {
                           size={14}
                           color={
                             isSyncingThis
-                              ? theme.colors.primary
-                              : theme.colors.textSecondary
+                              ? colors.primary
+                              : colors.textSecondary
                           }
                         />
                         <Text style={styles.actionButtonText}>
@@ -832,7 +819,7 @@ export default function ConnectedAccountsScreen() {
                             setAccountToDisconnect(account)
                           }}
                         >
-                          <Trash2 size={14} color={theme.colors.destructive} />
+                          <Trash2 size={14} color={colors.destructive} />
                           <Text style={styles.destructiveActionText}>
                             Disconnect
                           </Text>
@@ -921,10 +908,10 @@ export default function ConnectedAccountsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
@@ -935,11 +922,11 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   readOnlyBanner: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
-    backgroundColor: theme.colors.warningSubtle,
-    borderRadius: theme.radius.md,
+    backgroundColor: t.colors.warningSubtle,
+    borderRadius: t.radius.md,
     padding: 12,
     borderWidth: 1,
     borderColor: "rgba(245, 158, 11, 0.2)",
@@ -947,7 +934,7 @@ const styles = StyleSheet.create({
   readOnlyText: {
     flex: 1,
     fontSize: 12,
-    color: theme.colors.warning,
+    color: t.colors.warning,
     lineHeight: 16,
   },
   section: {
@@ -959,40 +946,40 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
     letterSpacing: -0.2,
   },
   sectionDescription: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     lineHeight: 18,
   },
   catalogCard: {
     padding: 16,
     gap: 14,
-    borderRadius: theme.radius.lg,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderColor: t.colors.border,
+    backgroundColor: t.colors.surface,
   },
   catalogCardDisabled: {
     opacity: 0.8,
   },
   catalogHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
   },
   brandIconContainer: {
     width: 44,
     height: 44,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceHighlight,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceHighlight,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   catalogInfo: {
     flex: 1,
@@ -1000,65 +987,65 @@ const styles = StyleSheet.create({
   },
   catalogTitle: {
     fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   catalogSubtitle: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   titleWithBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     gap: 8,
   },
   pillsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 6,
   },
   skeletonContainer: {
     gap: 12,
   },
   emptyCard: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     padding: 32,
     gap: 8,
-    borderRadius: theme.radius.lg,
+    borderRadius: t.radius.lg,
   },
   emptyIconCircle: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: theme.colors.surfaceHighlight,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surfaceHighlight,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     marginBottom: 4,
   },
   emptyTitle: {
     fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: theme.colors.textMuted,
-    textAlign: "center",
+    color: t.colors.textMuted,
+    textAlign: "center" as const,
     maxWidth: 280,
     lineHeight: 18,
   },
   accountCard: {
-    position: "relative",
-    borderRadius: theme.radius.lg,
+    position: "relative" as const,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    overflow: "hidden",
+    borderColor: t.colors.border,
+    backgroundColor: t.colors.surface,
+    overflow: "hidden" as const,
   },
   accentBar: {
-    position: "absolute",
+    position: "absolute" as const,
     left: 0,
     top: 0,
     bottom: 0,
@@ -1071,65 +1058,65 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   accountHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    justifyContent: "space-between" as const,
     gap: 10,
   },
   accountIdentity: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
   },
   avatarWrapper: {
-    position: "relative",
+    position: "relative" as const,
   },
   avatarImage: {
     width: 42,
     height: 42,
     borderRadius: 21,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   avatarCircle: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   avatarLetter: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     color: "#ffffff",
   },
   avatarProviderBadge: {
-    position: "absolute",
+    position: "absolute" as const,
     bottom: -2,
     right: -2,
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.borderStrong,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   accountMeta: {
     flex: 1,
     gap: 2,
   },
   accountNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   accountName: {
     fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
     flexShrink: 1,
   },
   colorPickerDot: {
@@ -1137,48 +1124,48 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   metaSubtitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 5,
-    flexWrap: "wrap",
+    flexWrap: "wrap" as const,
   },
   accountEmail: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   bulletSeparator: {
     fontSize: 10,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   providerTagRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
   },
   providerName: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
-    textTransform: "capitalize",
-    fontWeight: "500",
+    color: t.colors.textSecondary,
+    textTransform: "capitalize" as const,
+    fontWeight: "500" as const,
   },
   badgeContainer: {
-    alignItems: "flex-end",
+    alignItems: "flex-end" as const,
     gap: 4,
     flexShrink: 0,
   },
   lastSyncedText: {
     fontSize: 10,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   reconnectBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.colors.warningSubtle,
-    borderRadius: theme.radius.md,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    backgroundColor: t.colors.warningSubtle,
+    borderRadius: t.radius.md,
     padding: 12,
     borderWidth: 1,
     borderColor: "rgba(245, 158, 11, 0.3)",
@@ -1186,58 +1173,58 @@ const styles = StyleSheet.create({
   },
   reconnectLeft: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   reconnectText: {
     flex: 1,
     fontSize: 12,
-    color: theme.colors.warning,
+    color: t.colors.warning,
     lineHeight: 16,
   },
   reconnectButton: {
-    backgroundColor: theme.colors.warning,
+    backgroundColor: t.colors.warning,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: theme.radius.sm,
+    borderRadius: t.radius.sm,
   },
   reconnectButtonText: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     color: "#000000",
   },
   capabilityGroup: {
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderRadius: theme.radius.md,
+    backgroundColor: t.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     padding: 12,
     gap: 10,
   },
   capabilityHeader: {
     fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     letterSpacing: 0.6,
   },
   capabilityList: {
     gap: 8,
   },
   capabilityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.sm,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    backgroundColor: t.colors.surface,
+    borderRadius: t.radius.sm,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     padding: 10,
   },
   capLeft: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
     marginRight: 8,
   },
@@ -1245,85 +1232,85 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: theme.colors.surfaceHighlight,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surfaceHighlight,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   capTextContainer: {
     flex: 1,
   },
   capTitle: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   capDesc: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 1,
   },
   actionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
     paddingTop: 10,
   },
   actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingVertical: 6,
     paddingHorizontal: 8,
-    borderRadius: theme.radius.sm,
+    borderRadius: t.radius.sm,
   },
   actionButtonText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
+    fontWeight: "600" as const,
+    color: t.colors.textSecondary,
   },
   destructiveAction: {
-    backgroundColor: theme.colors.destructiveSubtle,
+    backgroundColor: t.colors.destructiveSubtle,
   },
   destructiveActionText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.destructive,
+    fontWeight: "600" as const,
+    color: t.colors.destructive,
   },
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.65)",
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     padding: 24,
   },
   modalCard: {
-    width: "100%",
+    width: "100%" as const,
     maxWidth: 320,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.radius.lg,
+    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
+    borderColor: t.colors.borderStrong,
     padding: 20,
     gap: 12,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   modalTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   modalSubtitle: {
     fontSize: 12,
-    color: theme.colors.textMuted,
-    textAlign: "center",
+    color: t.colors.textMuted,
+    textAlign: "center" as const,
     lineHeight: 16,
   },
   colorsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    justifyContent: "center" as const,
     gap: 12,
     paddingVertical: 12,
   },
@@ -1331,13 +1318,13 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderWidth: 2,
     borderColor: "transparent",
   },
   colorSwatchActive: {
-    borderColor: theme.colors.textPrimary,
+    borderColor: t.colors.textPrimary,
     transform: [{ scale: 1.08 }],
   },
 })

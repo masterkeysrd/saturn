@@ -16,7 +16,7 @@ import {
   ChangePasswordSchema,
   type ChangePasswordFormValues,
 } from "@saturn/schemas"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Button } from "./button"
 import { TextInput } from "./text-input"
 import { OTPInput } from "./otp-input"
@@ -37,6 +37,8 @@ export function ChangePasswordModal({
   onClose,
   hasActiveMfa,
 }: ChangePasswordModalProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const toast = useToast()
   const { updateSessionTokens } = useAuth()
   const changePasswordMutation = useChangePasswordMutation()
@@ -148,7 +150,7 @@ export function ChangePasswordModal({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.iconContainer}>
-              <KeyRound size={22} color={theme.colors.primary} />
+              <KeyRound size={22} color={colors.primary} />
             </View>
             <View style={styles.headerText}>
               <Text style={styles.title}>Change Password</Text>
@@ -161,7 +163,7 @@ export function ChangePasswordModal({
               style={styles.closeButton}
               disabled={isPending}
             >
-              <X size={20} color={theme.colors.textMuted} />
+              <X size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -172,7 +174,7 @@ export function ChangePasswordModal({
           >
             {error && (
               <View style={styles.errorBox}>
-                <ShieldAlert size={16} color={theme.colors.destructive} />
+                <ShieldAlert size={16} color={colors.destructive} />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
@@ -257,54 +259,54 @@ export function ChangePasswordModal({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: t.isDark ? "rgba(0, 0, 0, 0.6)" : "rgba(15, 23, 42, 0.45)",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
     padding: 16,
   },
   backdrop: {
     ...StyleSheet.absoluteFill,
   },
   content: {
-    width: "100%",
+    width: "100%" as const,
     maxWidth: 440,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: t.colors.surface,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    maxHeight: "90%",
-    overflow: "hidden",
+    borderColor: t.colors.border,
+    maxHeight: "90%" as const,
+    overflow: "hidden" as const,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
     gap: 12,
   },
   iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: theme.colors.primarySubtle,
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: t.colors.primarySubtle,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
   },
   headerText: {
     flex: 1,
   },
   title: {
     fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   subtitle: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
   },
   closeButton: {
@@ -318,20 +320,20 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   errorBox: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
     padding: 12,
     borderRadius: 10,
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    backgroundColor: t.colors.destructiveSubtle,
     borderWidth: 1,
-    borderColor: "rgba(239, 68, 68, 0.25)",
+    borderColor: `${t.colors.destructive}40`,
     marginBottom: 14,
   },
   errorText: {
     flex: 1,
     fontSize: 13,
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
   },
   inputSpacing: {
     marginBottom: 14,
@@ -339,29 +341,29 @@ const styles = StyleSheet.create({
   mfaContainer: {
     padding: 14,
     borderRadius: 12,
-    backgroundColor: theme.colors.surfaceHighlight,
+    backgroundColor: t.colors.surfaceHighlight,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     marginBottom: 14,
   },
   mfaLabel: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   mfaHelper: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
     marginBottom: 10,
   },
   otpSpacing: {
-    alignSelf: "center",
+    alignSelf: "center" as const,
   },
   switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingVertical: 8,
     gap: 12,
   },
@@ -370,19 +372,19 @@ const styles = StyleSheet.create({
   },
   switchTitle: {
     fontSize: 14,
-    fontWeight: "500",
-    color: theme.colors.textPrimary,
+    fontWeight: "500" as const,
+    color: t.colors.textPrimary,
   },
   switchSubtitle: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
   },
   actions: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
     gap: 10,
   },
   actionBtn: {

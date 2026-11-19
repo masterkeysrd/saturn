@@ -1,12 +1,6 @@
 import React from "react"
-import {
-  View,
-  Text,
-  StyleSheet,
-  type StyleProp,
-  type ViewStyle,
-} from "react-native"
-import { theme } from "@/lib/theme"
+import { View, Text, type StyleProp, type ViewStyle } from "react-native"
+import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Button } from "./button"
 
 export interface EmptyStateProps {
@@ -26,6 +20,8 @@ export function EmptyState({
   onAction,
   style,
 }: EmptyStateProps) {
+  const styles = useThemedStyles(createStyles)
+
   return (
     <View style={[styles.container, style]}>
       <View style={styles.iconCircle}>{icon}</View>
@@ -45,10 +41,10 @@ export function EmptyState({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingVertical: 48,
     paddingHorizontal: 24,
   },
@@ -56,24 +52,24 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     marginBottom: 16,
   },
   title: {
     fontSize: 17,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    textAlign: "center",
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
+    textAlign: "center" as const,
     marginBottom: 6,
   },
   description: {
     fontSize: 14,
-    color: theme.colors.textMuted,
-    textAlign: "center",
+    color: t.colors.textMuted,
+    textAlign: "center" as const,
     lineHeight: 20,
     marginBottom: 20,
     maxWidth: 280,

@@ -8,7 +8,7 @@ import {
   type ViewStyle,
   type ImageStyle,
 } from "react-native"
-import { getAvatarColor, theme } from "@/lib/theme"
+import { getAvatarColor, useTheme } from "@/lib/theme"
 
 export interface AvatarProps {
   name: string
@@ -18,6 +18,8 @@ export interface AvatarProps {
 }
 
 export function Avatar({ name, imageUri, size = 36, style }: AvatarProps) {
+  const { colors } = useTheme()
+
   const getInitials = (str: string) => {
     if (!str) return "S"
     const parts = str.trim().split(/\s+/)
@@ -40,7 +42,7 @@ export function Avatar({ name, imageUri, size = 36, style }: AvatarProps) {
             width: size,
             height: size,
             borderRadius: size / 2,
-            backgroundColor: theme.colors.surfaceElevated,
+            backgroundColor: colors.surfaceElevated,
           },
           style,
         ]}

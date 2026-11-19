@@ -1,12 +1,12 @@
 import { forwardRef } from "react"
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { Text, TouchableOpacity, View } from "react-native"
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import {
   useListAgentsQuery,
   useListModelsQuery,
 } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { ProviderLogo } from "./provider-logo"
 import { Bot, Check, Sparkles } from "lucide-react-native"
@@ -24,6 +24,8 @@ export const AgentModelSheet = forwardRef<BottomSheet, AgentModelSheetProps>(
     { selectedAgentId, selectedModelId, onSelectAgent, onSelectModel, onClose },
     ref
   ) => {
+    const { colors } = useTheme()
+    const styles = useThemedStyles(createStyles)
     const { data: agentsData } = useListAgentsQuery({})
     const { data: modelsData } = useListModelsQuery({ isEnabled: true })
 
@@ -53,7 +55,7 @@ export const AgentModelSheet = forwardRef<BottomSheet, AgentModelSheetProps>(
               >
                 <Bot
                   size={16}
-                  color={active ? theme.colors.primary : theme.colors.textMuted}
+                  color={active ? colors.primary : colors.textMuted}
                 />
                 <View style={styles.rowText}>
                   <Text style={styles.rowTitle}>{a.name}</Text>
@@ -61,7 +63,7 @@ export const AgentModelSheet = forwardRef<BottomSheet, AgentModelSheetProps>(
                     {a.description || a.slug}
                   </Text>
                 </View>
-                {active && <Check size={16} color={theme.colors.primary} />}
+                {active && <Check size={16} color={colors.primary} />}
               </TouchableOpacity>
             )
           })}
@@ -75,14 +77,12 @@ export const AgentModelSheet = forwardRef<BottomSheet, AgentModelSheetProps>(
               onClose()
             }}
           >
-            <Sparkles size={16} color={theme.colors.primary} />
+            <Sparkles size={16} color={colors.primary} />
             <View style={styles.rowText}>
               <Text style={styles.rowTitle}>Workspace Default</Text>
               <Text style={styles.rowSub}>Uses workspace default model</Text>
             </View>
-            {!selectedModelId && (
-              <Check size={16} color={theme.colors.primary} />
-            )}
+            {!selectedModelId && <Check size={16} color={colors.primary} />}
           </TouchableOpacity>
 
           {models.map((m) => {
@@ -102,7 +102,7 @@ export const AgentModelSheet = forwardRef<BottomSheet, AgentModelSheetProps>(
                   <Text style={styles.rowTitle}>{m.displayName}</Text>
                   <Text style={styles.rowSub}>{m.providerName}</Text>
                 </View>
-                {active && <Check size={16} color={theme.colors.primary} />}
+                {active && <Check size={16} color={colors.primary} />}
               </TouchableOpacity>
             )
           })}
@@ -114,7 +114,7 @@ export const AgentModelSheet = forwardRef<BottomSheet, AgentModelSheetProps>(
 
 AgentModelSheet.displayName = "AgentModelSheet"
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   body: {
     paddingHorizontal: 16,
     paddingBottom: 32,
@@ -122,27 +122,27 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     letterSpacing: 0.6,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginBottom: 4,
   },
   sectionSpaced: {
     marginTop: 12,
   },
   row: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
     padding: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   rowActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySubtle,
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
   },
   rowText: {
     flex: 1,
@@ -150,11 +150,11 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   rowSub: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
 })

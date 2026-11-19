@@ -1,9 +1,9 @@
 import { useEffect } from "react"
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { Text, TouchableOpacity, View } from "react-native"
 import { describeToolCall } from "@saturn/core"
 import type { PendingToolApproval } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { ShieldAlert, Check, X } from "lucide-react-native"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 interface ToolApprovalCardProps {
@@ -17,6 +17,9 @@ export function ToolApprovalCard({
   onApprove,
   onReject,
 }: ToolApprovalCardProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+
   useEffect(() => {
     haptics.warning()
   }, [])
@@ -31,7 +34,7 @@ export function ToolApprovalCard({
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <ShieldAlert size={16} color={theme.colors.warning} />
+        <ShieldAlert size={16} color={colors.warning} />
         <Text style={styles.title}>
           Confirm {desc.label} ({desc.domainLabel})
         </Text>
@@ -65,7 +68,7 @@ export function ToolApprovalCard({
           accessibilityRole="button"
           accessibilityLabel={`Reject ${approval.toolName}`}
         >
-          <X size={14} color={theme.colors.textSecondary} />
+          <X size={14} color={colors.textSecondary} />
           <Text style={styles.rejectText}>Reject</Text>
         </TouchableOpacity>
 
@@ -78,7 +81,7 @@ export function ToolApprovalCard({
           accessibilityRole="button"
           accessibilityLabel={`Approve ${approval.toolName}`}
         >
-          <Check size={14} color={theme.colors.primaryForeground} />
+          <Check size={14} color={colors.primaryForeground} />
           <Text style={styles.approveText}>Approve</Text>
         </TouchableOpacity>
       </View>
@@ -86,78 +89,78 @@ export function ToolApprovalCard({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   card: {
-    backgroundColor: theme.colors.warningSubtle,
+    backgroundColor: t.colors.warningSubtle,
     borderWidth: 1,
-    borderColor: theme.colors.warning,
-    borderRadius: theme.radius.lg,
+    borderColor: t.colors.warning,
+    borderRadius: t.radius.lg,
     padding: 12,
     gap: 8,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   title: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   toolLine: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
   },
   toolName: {
-    fontFamily: theme.typography.mono,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontFamily: t.typography.mono,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   serverName: {
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   argsBox: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
+    backgroundColor: t.colors.surface,
+    borderRadius: t.radius.md,
     padding: 10,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   argsText: {
-    fontFamily: theme.typography.mono,
+    fontFamily: t.typography.mono,
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
   },
   actions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+    flexDirection: "row" as const,
+    justifyContent: "flex-end" as const,
     gap: 8,
   },
   btn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 5,
     paddingHorizontal: 11,
     paddingVertical: 6,
-    borderRadius: theme.radius.md,
+    borderRadius: t.radius.md,
   },
   rejectBtn: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   rejectText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
+    fontWeight: "600" as const,
+    color: t.colors.textSecondary,
   },
   approveBtn: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
   },
   approveText: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.primaryForeground,
+    fontWeight: "700" as const,
+    color: t.colors.primaryForeground,
   },
 })

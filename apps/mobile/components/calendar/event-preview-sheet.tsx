@@ -1,12 +1,5 @@
 import { forwardRef, useMemo } from "react"
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Linking,
-} from "react-native"
+import { View, Text, TouchableOpacity, ScrollView, Linking } from "react-native"
 import BottomSheet from "@gorhom/bottom-sheet"
 import {
   Clock,
@@ -28,7 +21,7 @@ import {
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 import { useToast } from "@/components/ui/toast"
 import { useAuth } from "@/lib/auth-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { formatEventTime, findSelfAttendee } from "./calendar-utils"
 
@@ -44,6 +37,8 @@ export const EventPreviewSheet = forwardRef<
   BottomSheet,
   EventPreviewSheetProps
 >(({ occurrence, timeZone, canEdit = true, onEdit, onClose }, ref) => {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const respondMutation = useRespondToEvent()
   const { user } = useAuth()
   const { data: accountsData } = useConnectedAccounts()
@@ -107,7 +102,7 @@ export const EventPreviewSheet = forwardRef<
     )
   }
 
-  const eventColor = occurrence.color || theme.colors.primary
+  const eventColor = occurrence.color || colors.primary
   const timeFormatted = formatEventTime(occurrence, timeZone)
 
   return (
@@ -144,14 +139,14 @@ export const EventPreviewSheet = forwardRef<
 
         {/* Date & Time */}
         <View style={styles.infoRow}>
-          <Clock size={16} color={theme.colors.textMuted} />
+          <Clock size={16} color={colors.textMuted} />
           <Text style={styles.infoText}>{timeFormatted}</Text>
         </View>
 
         {/* Location */}
         {occurrence.location ? (
           <View style={styles.infoRow}>
-            <MapPin size={16} color={theme.colors.textMuted} />
+            <MapPin size={16} color={colors.textMuted} />
             <Text style={styles.infoText}>{occurrence.location}</Text>
           </View>
         ) : null}
@@ -164,11 +159,11 @@ export const EventPreviewSheet = forwardRef<
             style={styles.meetButton}
             testID="event-meet-button"
           >
-            <Video size={16} color={theme.colors.primary} />
+            <Video size={16} color={colors.primary} />
             <Text style={styles.meetButtonText} numberOfLines={1}>
               Join Video Call
             </Text>
-            <ExternalLink size={14} color={theme.colors.primary} />
+            <ExternalLink size={14} color={colors.primary} />
           </TouchableOpacity>
         ) : null}
 
@@ -184,7 +179,7 @@ export const EventPreviewSheet = forwardRef<
         {occurrence.attendees && occurrence.attendees.length > 0 && (
           <View style={styles.attendeesSection}>
             <View style={styles.attendeesHeader}>
-              <Users size={16} color={theme.colors.textMuted} />
+              <Users size={16} color={colors.textMuted} />
               <Text style={styles.sectionLabel}>
                 Attendees ({occurrence.attendees.length})
               </Text>
@@ -242,8 +237,8 @@ export const EventPreviewSheet = forwardRef<
                   size={14}
                   color={
                     currentRsvp === "ATTENDEE_RESPONSE_STATUS_ACCEPTED"
-                      ? theme.colors.success
-                      : theme.colors.textMuted
+                      ? colors.success
+                      : colors.textMuted
                   }
                 />
                 <Text
@@ -273,8 +268,8 @@ export const EventPreviewSheet = forwardRef<
                   size={14}
                   color={
                     currentRsvp === "ATTENDEE_RESPONSE_STATUS_TENTATIVE"
-                      ? theme.colors.warning
-                      : theme.colors.textMuted
+                      ? colors.warning
+                      : colors.textMuted
                   }
                 />
                 <Text
@@ -304,8 +299,8 @@ export const EventPreviewSheet = forwardRef<
                   size={14}
                   color={
                     currentRsvp === "ATTENDEE_RESPONSE_STATUS_DECLINED"
-                      ? theme.colors.destructive
-                      : theme.colors.textMuted
+                      ? colors.destructive
+                      : colors.textMuted
                   }
                 />
                 <Text
@@ -333,7 +328,7 @@ export const EventPreviewSheet = forwardRef<
             style={styles.editButton}
             testID="event-edit-button"
           >
-            <Edit3 size={16} color={theme.colors.textPrimary} />
+            <Edit3 size={16} color={colors.textPrimary} />
             <Text style={styles.editButtonText}>Edit Event</Text>
           </TouchableOpacity>
         )}
@@ -344,7 +339,7 @@ export const EventPreviewSheet = forwardRef<
 
 EventPreviewSheet.displayName = "EventPreviewSheet"
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
   },
@@ -355,18 +350,18 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     padding: 30,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   emptyText: {
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     fontSize: 14,
   },
   headerSection: {
     gap: 6,
   },
   calendarTagRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
   },
   calendarDot: {
@@ -376,42 +371,42 @@ const styles = StyleSheet.create({
   },
   calendarNameText: {
     fontSize: 12,
-    fontWeight: "500",
-    color: theme.colors.textMuted,
+    fontWeight: "500" as const,
+    color: t.colors.textMuted,
   },
   allDayBadge: {
     paddingHorizontal: 6,
     paddingVertical: 1,
-    borderRadius: theme.radius.xs,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.xs,
+    backgroundColor: t.colors.surfaceElevated,
   },
   allDayBadgeText: {
     fontSize: 10,
-    color: theme.colors.textSecondary,
-    fontWeight: "500",
+    color: t.colors.textSecondary,
+    fontWeight: "500" as const,
   },
   titleText: {
     fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
   },
   infoText: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
   },
   meetButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.colors.primarySubtle,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    backgroundColor: t.colors.primarySubtle,
     borderWidth: 1,
-    borderColor: theme.colors.borderFocus,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.borderFocus,
+    borderRadius: t.radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
@@ -419,144 +414,144 @@ const styles = StyleSheet.create({
   meetButtonText: {
     flex: 1,
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   descriptionSection: {
     gap: 4,
   },
   sectionLabel: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
-    textTransform: "uppercase",
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
+    textTransform: "uppercase" as const,
     letterSpacing: 0.5,
   },
   descriptionText: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
     lineHeight: 20,
   },
   attendeesSection: {
     gap: 8,
   },
   attendeesHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
   },
   attendeesList: {
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderRadius: theme.radius.md,
+    backgroundColor: t.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
+    borderColor: t.colors.border,
+    overflow: "hidden" as const,
   },
   attendeeRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
     gap: 10,
   },
   attendeeAvatar: {
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surfaceElevated,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   attendeeAvatarText: {
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   attendeeInfo: {
     flex: 1,
   },
   attendeeName: {
     fontSize: 13,
-    fontWeight: "500",
-    color: theme.colors.textPrimary,
+    fontWeight: "500" as const,
+    color: t.colors.textPrimary,
   },
   attendeeEmail: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   organizerBadge: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: theme.radius.xs,
+    borderRadius: t.radius.xs,
   },
   organizerBadgeText: {
     fontSize: 10,
-    color: theme.colors.primary,
-    fontWeight: "600",
+    color: t.colors.primary,
+    fontWeight: "600" as const,
   },
   rsvpSection: {
     gap: 8,
   },
   rsvpButtonsRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
   },
   rsvpBtn: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 6,
     paddingVertical: 10,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceSubtle,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   rsvpBtnAccepted: {
-    borderColor: theme.colors.success,
-    backgroundColor: theme.colors.successSubtle,
+    borderColor: t.colors.success,
+    backgroundColor: t.colors.successSubtle,
   },
   rsvpBtnTentative: {
-    borderColor: theme.colors.warning,
-    backgroundColor: theme.colors.warningSubtle,
+    borderColor: t.colors.warning,
+    backgroundColor: t.colors.warningSubtle,
   },
   rsvpBtnDeclined: {
-    borderColor: theme.colors.destructive,
-    backgroundColor: theme.colors.destructiveSubtle,
+    borderColor: t.colors.destructive,
+    backgroundColor: t.colors.destructiveSubtle,
   },
   rsvpBtnText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   rsvpBtnTextAccepted: {
-    color: theme.colors.success,
+    color: t.colors.success,
   },
   rsvpBtnTextTentative: {
-    color: theme.colors.warning,
+    color: t.colors.warning,
   },
   rsvpBtnTextDeclined: {
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
   },
   editButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 8,
     paddingVertical: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
+    borderColor: t.colors.borderStrong,
     marginTop: 4,
   },
   editButtonText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
 })

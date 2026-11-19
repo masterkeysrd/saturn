@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react"
 import {
-  StyleSheet,
   View,
   ScrollView,
   RefreshControl,
@@ -19,7 +18,7 @@ import {
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Caption } from "@/components/ui/typography"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -29,6 +28,8 @@ import { haptics } from "@/lib/haptics"
 export default function AccountsScreen() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [refreshing, setRefreshing] = useState(false)
 
   const { data: settingsData } = useGetSettingsQuery(
@@ -159,7 +160,7 @@ export default function AccountsScreen() {
                     type: "button",
                     label: "Transfer",
                     icon: { type: "sfSymbol", name: "arrow.left.arrow.right" },
-                    tintColor: theme.colors.primary,
+                    tintColor: colors.primary,
                     onPress: () => {
                       haptics.light()
                       router.push({
@@ -172,7 +173,7 @@ export default function AccountsScreen() {
                     type: "button",
                     label: "New Account",
                     icon: { type: "sfSymbol", name: "plus" },
-                    tintColor: theme.colors.primary,
+                    tintColor: colors.primary,
                     onPress: () => {
                       haptics.light()
                       router.push("/modal/manage-account")
@@ -194,7 +195,7 @@ export default function AccountsScreen() {
                       style={styles.headerIconBtn}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                      <ArrowRightLeft size={18} color={theme.colors.primary} />
+                      <ArrowRightLeft size={18} color={colors.primary} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => {
@@ -204,7 +205,7 @@ export default function AccountsScreen() {
                       style={styles.headerIconBtn}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                      <Plus size={20} color={theme.colors.primary} />
+                      <Plus size={20} color={colors.primary} />
                     </TouchableOpacity>
                   </View>
                 ),
@@ -219,9 +220,9 @@ export default function AccountsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-            progressBackgroundColor={theme.colors.surfaceElevated}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+            progressBackgroundColor={colors.surfaceElevated}
           />
         }
       >
@@ -232,7 +233,7 @@ export default function AccountsScreen() {
           </View>
         ) : accounts.length === 0 ? (
           <EmptyState
-            icon={<Landmark size={28} color={theme.colors.textMuted} />}
+            icon={<Landmark size={28} color={colors.textMuted} />}
             title="No accounts registered"
             description="Active accounts in this workspace will appear here."
           />
@@ -255,14 +256,14 @@ export default function AccountsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   headerRightActions: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
   },
   headerIconBtn: {
@@ -270,7 +271,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,

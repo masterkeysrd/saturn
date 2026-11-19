@@ -1,19 +1,15 @@
-import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
+import { ActivityIndicator, ScrollView, Text, View } from "react-native"
 import { useLocalSearchParams } from "expo-router"
 import { useTimezone } from "@saturn/hooks"
 import { useGetFlowRunQuery } from "@saturn/api/saturn/platform/workflow/v1/workflow"
 import { Badge } from "@/components/ui/badge"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 export default function WorkflowRunDetailScreen() {
   const { runId } = useLocalSearchParams<{ runId: string }>()
   const tz = useTimezone()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   const { data: run, isLoading } = useGetFlowRunQuery(
     { id: runId ?? "" },
@@ -23,7 +19,7 @@ export default function WorkflowRunDetailScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingWrap}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     )
   }
@@ -167,16 +163,16 @@ export default function WorkflowRunDetailScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   loadingWrap: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   content: {
     padding: 16,
@@ -185,102 +181,102 @@ const styles = StyleSheet.create({
   },
   headerCard: {
     padding: 14,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surface,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 6,
   },
   rowBetween: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     gap: 8,
   },
   title: {
     fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
     flex: 1,
   },
   monoMeta: {
     fontSize: 11,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textMuted,
+    fontFamily: t.typography.mono,
+    color: t.colors.textMuted,
   },
   metaText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
   },
   statsRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 12,
   },
   sectionLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     letterSpacing: 0.8,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 4,
   },
   stepCard: {
     padding: 14,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surface,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 8,
   },
   stepTitle: {
     fontSize: 13,
-    fontWeight: "700",
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    fontFamily: t.typography.mono,
+    color: t.colors.textPrimary,
   },
   sourcesWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 6,
   },
   sourcePill: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.surfaceElevated,
   },
   sourceText: {
     fontSize: 10,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textSecondary,
+    fontFamily: t.typography.mono,
+    color: t.colors.textSecondary,
   },
   codeBlock: {
     fontSize: 11,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surfaceElevated,
+    fontFamily: t.typography.mono,
+    color: t.colors.textPrimary,
+    backgroundColor: t.colors.surfaceElevated,
     padding: 10,
-    borderRadius: theme.radius.md,
+    borderRadius: t.radius.md,
   },
   errorCard: {
     padding: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.destructiveSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.destructiveSubtle,
     borderWidth: 1,
-    borderColor: theme.colors.destructive,
+    borderColor: t.colors.destructive,
     gap: 4,
   },
   errorTitle: {
     fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.destructive,
+    fontWeight: "700" as const,
+    color: t.colors.destructive,
   },
   errorBody: {
     fontSize: 12,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.destructive,
+    fontFamily: t.typography.mono,
+    color: t.colors.destructive,
   },
   emptyText: {
     fontSize: 14,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
 })

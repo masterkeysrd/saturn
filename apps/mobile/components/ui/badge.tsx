@@ -2,13 +2,12 @@ import React from "react"
 import {
   View,
   Text,
-  StyleSheet,
   type ViewProps,
   type StyleProp,
   type ViewStyle,
   type TextStyle,
 } from "react-native"
-import { theme } from "@/lib/theme"
+import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 export type BadgeVariant =
   "default" | "primary" | "success" | "destructive" | "warning" | "outline"
@@ -38,6 +37,8 @@ export function Badge({
   textStyle,
   ...props
 }: BadgeProps) {
+  const styles = useThemedStyles(createStyles)
+
   const customStyles: ViewStyle = {
     ...(bg ? { backgroundColor: bg } : undefined),
     ...(border ? { borderColor: border, borderWidth: 1 } : undefined),
@@ -64,12 +65,12 @@ export function Badge({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   base: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    borderRadius: theme.radius.full,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    alignSelf: "flex-start" as const,
+    borderRadius: t.radius.full,
     borderWidth: 1,
     borderColor: "transparent",
   },
@@ -77,7 +78,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   text: {
-    fontWeight: "600",
+    fontWeight: "600" as const,
   },
   // Sizes
   sm: {
@@ -96,45 +97,45 @@ const styles = StyleSheet.create({
   },
   // Variants
   default: {
-    backgroundColor: theme.colors.surfaceElevated,
-    borderColor: theme.colors.border,
+    backgroundColor: t.colors.surfaceElevated,
+    borderColor: t.colors.border,
   },
   defaultText: {
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
   },
   primary: {
-    backgroundColor: "rgba(56, 189, 248, 0.12)",
-    borderColor: "rgba(56, 189, 248, 0.3)",
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: `${t.colors.primary}4D`,
   },
   primaryText: {
-    color: theme.colors.primary,
+    color: t.colors.primary,
   },
   success: {
-    backgroundColor: theme.colors.successSubtle,
-    borderColor: "rgba(16, 185, 129, 0.3)",
+    backgroundColor: t.colors.successSubtle,
+    borderColor: `${t.colors.success}4D`,
   },
   successText: {
-    color: theme.colors.success,
+    color: t.colors.success,
   },
   destructive: {
-    backgroundColor: theme.colors.destructiveSubtle,
-    borderColor: "rgba(244, 63, 94, 0.3)",
+    backgroundColor: t.colors.destructiveSubtle,
+    borderColor: `${t.colors.destructive}4D`,
   },
   destructiveText: {
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
   },
   warning: {
-    backgroundColor: theme.colors.warningSubtle,
-    borderColor: "rgba(245, 158, 11, 0.3)",
+    backgroundColor: t.colors.warningSubtle,
+    borderColor: `${t.colors.warning}4D`,
   },
   warningText: {
-    color: theme.colors.warning,
+    color: t.colors.warning,
   },
   outline: {
     backgroundColor: "transparent",
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   outlineText: {
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
 })

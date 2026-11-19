@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { StyleSheet, View, TouchableOpacity, Text, Linking } from "react-native"
+import { View, TouchableOpacity, Text, Linking } from "react-native"
 import { useRouter } from "expo-router"
 import {
   Calendar as CalendarIcon,
@@ -12,11 +12,13 @@ import { useTimezone, useCalendars, useCalendarEvents } from "@saturn/hooks"
 import { formatLocalDateString, parseDate } from "@saturn/core"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton-loader"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { formatEventTime } from "@/components/calendar/calendar-utils"
 
 export function CalendarSummaryWidget() {
+  const { colors, radius } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const router = useRouter()
   const tz = useTimezone()
 
@@ -101,7 +103,7 @@ export function CalendarSummaryWidget() {
           testID="calendar-widget-header-btn"
         >
           <View style={styles.headerTitleRow}>
-            <CalendarIcon size={16} color={theme.colors.primary} />
+            <CalendarIcon size={16} color={colors.primary} />
             <Text style={styles.titleText}>{"Today's Schedule"}</Text>
           </View>
           <View style={styles.headerRight}>
@@ -110,7 +112,7 @@ export function CalendarSummaryWidget() {
                 ? "No events"
                 : `${todayEvents.length} event${todayEvents.length === 1 ? "" : "s"}`}
             </Text>
-            <ChevronRight size={16} color={theme.colors.textMuted} />
+            <ChevronRight size={16} color={colors.textMuted} />
           </View>
         </TouchableOpacity>
       </CardHeader>
@@ -122,12 +124,12 @@ export function CalendarSummaryWidget() {
             <Skeleton
               width="100%"
               height={38}
-              style={{ borderRadius: theme.radius.sm }}
+              style={{ borderRadius: radius.sm }}
             />
             <Skeleton
               width="100%"
               height={38}
-              style={{ borderRadius: theme.radius.sm, marginTop: 8 }}
+              style={{ borderRadius: radius.sm, marginTop: 8 }}
             />
           </View>
         ) : todayEvents.length === 0 ? (
@@ -136,7 +138,7 @@ export function CalendarSummaryWidget() {
             onPress={handleNavigateCalendar}
             style={styles.emptyContainer}
           >
-            <CheckCircle2 size={18} color={theme.colors.success} />
+            <CheckCircle2 size={18} color={colors.success} />
             <Text style={styles.emptyText}>
               All clear for today. Tap to view calendar.
             </Text>
@@ -144,7 +146,7 @@ export function CalendarSummaryWidget() {
         ) : (
           <View style={styles.eventsList}>
             {visibleEvents.map((occ) => {
-              const color = occ.color || theme.colors.primary
+              const color = occ.color || colors.primary
               const timeStr = formatEventTime(occ, tz.timezone)
 
               return (
@@ -160,7 +162,7 @@ export function CalendarSummaryWidget() {
                       {occ.title || "(No title)"}
                     </Text>
                     <View style={styles.eventMetaRow}>
-                      <Clock size={11} color={theme.colors.textMuted} />
+                      <Clock size={11} color={colors.textMuted} />
                       <Text style={styles.eventTimeText}>{timeStr}</Text>
                     </View>
                   </View>
@@ -171,7 +173,7 @@ export function CalendarSummaryWidget() {
                       style={styles.meetBtn}
                       testID="calendar-widget-meet-btn"
                     >
-                      <Video size={13} color={theme.colors.primary} />
+                      <Video size={13} color={colors.primary} />
                       <Text style={styles.meetBtnText}>Join</Text>
                     </TouchableOpacity>
                   ) : null}
@@ -197,10 +199,10 @@ export function CalendarSummaryWidget() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   card: {
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.border,
+    backgroundColor: t.colors.surface,
+    borderColor: t.colors.border,
   },
   header: {
     paddingHorizontal: 16,
@@ -208,29 +210,29 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   headerButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     gap: 8,
   },
   headerTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
   },
   titleText: {
     fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   subtitleText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   content: {
     paddingHorizontal: 16,
@@ -241,21 +243,21 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   emptyContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
     paddingVertical: 6,
   },
   emptyText: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
   },
   eventsList: {
     gap: 7,
   },
   eventRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
     borderLeftWidth: 3,
     paddingLeft: 10,
@@ -267,41 +269,41 @@ const styles = StyleSheet.create({
   },
   eventTitle: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   eventMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
   },
   eventTimeText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   meetBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: theme.radius.xs,
-    backgroundColor: theme.colors.primarySubtle,
+    borderRadius: t.radius.xs,
+    backgroundColor: t.colors.primarySubtle,
     borderWidth: 1,
-    borderColor: theme.colors.borderFocus,
+    borderColor: t.colors.borderFocus,
   },
   meetBtnText: {
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   moreFooter: {
-    alignItems: "center",
+    alignItems: "center" as const,
     paddingTop: 4,
   },
   moreFooterText: {
     fontSize: 12,
-    fontWeight: "500",
-    color: theme.colors.primary,
+    fontWeight: "500" as const,
+    color: t.colors.primary,
   },
 })

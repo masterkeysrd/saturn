@@ -10,7 +10,6 @@ import {
   Text,
   Animated,
   useAnimatedValue,
-  StyleSheet,
   TouchableOpacity,
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -21,7 +20,7 @@ import {
   AlertTriangle,
   X,
 } from "lucide-react-native"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 export type ToastType = "success" | "error" | "info" | "warning"
@@ -45,6 +44,8 @@ interface ToastContextType {
 const ToastContext = createContext<ToastContextType | undefined>(undefined)
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const insets = useSafeAreaInsets()
   const [toast, setToast] = useState<ToastOptions | null>(null)
   const translateY = useAnimatedValue(-120)
@@ -104,13 +105,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const renderIcon = (type: ToastType = "info") => {
     switch (type) {
       case "success":
-        return <CheckCircle2 size={20} color={theme.colors.success} />
+        return <CheckCircle2 size={20} color={colors.success} />
       case "error":
-        return <AlertCircle size={20} color={theme.colors.destructive} />
+        return <AlertCircle size={20} color={colors.destructive} />
       case "warning":
-        return <AlertTriangle size={20} color={theme.colors.warning} />
+        return <AlertTriangle size={20} color={colors.warning} />
       default:
-        return <Info size={20} color={theme.colors.info} />
+        return <Info size={20} color={colors.info} />
     }
   }
 
@@ -153,7 +154,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               onPress={hide}
               style={styles.closeBtn}
             >
-              <X size={16} color={theme.colors.textMuted} />
+              <X size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -170,23 +171,23 @@ export function useToast() {
   return context
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
-    position: "absolute",
+    position: "absolute" as const,
     top: 0,
     left: 16,
     right: 16,
     zIndex: 9999,
   },
   toastCard: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.borderStrong,
+    borderRadius: t.radius.md,
     padding: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    ...theme.shadows.md,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    ...t.shadows.md,
   },
   iconContainer: {
     marginRight: 10,
@@ -196,12 +197,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   message: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
   },
   closeBtn: {
@@ -211,15 +212,15 @@ const styles = StyleSheet.create({
   actionBtn: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: theme.colors.surfaceHighlight,
-    borderRadius: theme.radius.sm,
+    backgroundColor: t.colors.surfaceHighlight,
+    borderRadius: t.radius.sm,
     marginLeft: 8,
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
+    borderColor: t.colors.borderStrong,
   },
   actionBtnText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.primary,
+    fontWeight: "700" as const,
+    color: t.colors.primary,
   },
 })

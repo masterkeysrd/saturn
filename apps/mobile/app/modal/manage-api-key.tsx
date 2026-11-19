@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -29,7 +28,7 @@ import {
   type APIKeyScope,
 } from "@saturn/schemas"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
 import { BaseTextInput } from "@/components/ui/text-input"
 import { Button } from "@/components/ui/button"
@@ -56,6 +55,8 @@ export default function ManageAPIKeyModal() {
   const queryClient = useQueryClient()
   const { id } = useLocalSearchParams<{ id?: string }>()
   const isEditing = Boolean(id)
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   const { spaces } = useSpace()
   const { data: existingKey } = useGetAPIKeyQuery(
@@ -230,7 +231,7 @@ export default function ManageAPIKeyModal() {
       >
         <Card style={styles.revealCard}>
           <View style={styles.warningBanner}>
-            <AlertTriangle size={18} color={theme.colors.warning} />
+            <AlertTriangle size={18} color={colors.warning} />
             <Text style={styles.warningText}>
               Copy your API key now. For your security, it will never be shown
               again.
@@ -248,9 +249,9 @@ export default function ManageAPIKeyModal() {
             size="lg"
             leftIcon={
               copied ? (
-                <Check size={18} color={theme.colors.primaryForeground} />
+                <Check size={18} color={colors.primaryForeground} />
               ) : (
-                <Copy size={18} color={theme.colors.primaryForeground} />
+                <Copy size={18} color={colors.primaryForeground} />
               )
             }
             onPress={handleCopySecret}
@@ -299,7 +300,7 @@ export default function ManageAPIKeyModal() {
             placeholder="e.g. iOS Shortcut"
             value={name}
             onChangeText={setName}
-            leftIcon={<Key size={18} color={theme.colors.primary} />}
+            leftIcon={<Key size={18} color={colors.primary} />}
           />
 
           <BaseTextInput
@@ -404,10 +405,7 @@ export default function ManageAPIKeyModal() {
                         ]}
                       >
                         {active && (
-                          <Check
-                            size={14}
-                            color={theme.colors.primaryForeground}
-                          />
+                          <Check size={14} color={colors.primaryForeground} />
                         )}
                       </View>
                     </TouchableOpacity>
@@ -423,7 +421,7 @@ export default function ManageAPIKeyModal() {
             variant="secondary"
             size="lg"
             style={styles.cancelBtn}
-            leftIcon={<X size={18} color={theme.colors.textMuted} />}
+            leftIcon={<X size={18} color={colors.textMuted} />}
             onPress={() => {
               haptics.light()
               router.back()
@@ -436,9 +434,7 @@ export default function ManageAPIKeyModal() {
             size="lg"
             style={styles.saveBtn}
             loading={isPending}
-            leftIcon={
-              <Check size={18} color={theme.colors.primaryForeground} />
-            }
+            leftIcon={<Check size={18} color={colors.primaryForeground} />}
             onPress={handleSave}
           >
             {isEditing ? "Save Changes" : "Create Key"}
@@ -449,10 +445,10 @@ export default function ManageAPIKeyModal() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   keyboardAvoid: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     padding: 16,
@@ -460,14 +456,14 @@ const styles = StyleSheet.create({
   },
   errorBanner: {
     padding: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.destructiveSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.destructiveSubtle,
     borderWidth: 1,
-    borderColor: theme.colors.destructive,
+    borderColor: t.colors.destructive,
   },
   errorText: {
     fontSize: 13,
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
   },
   formCard: {
     padding: 16,
@@ -481,40 +477,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 8,
   },
   chip: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: theme.radius.md,
+    borderRadius: t.radius.md,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderColor: t.colors.border,
+    backgroundColor: t.colors.surface,
   },
   chipActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySubtle,
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
   },
   chipText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
+    fontWeight: "600" as const,
+    color: t.colors.textSecondary,
   },
   chipTextActive: {
-    color: theme.colors.primary,
+    color: t.colors.primary,
   },
   scopeHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 4,
   },
   selectAllText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   scopesCard: {
     padding: 12,
@@ -525,21 +521,21 @@ const styles = StyleSheet.create({
   },
   scopeGroupTitle: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   scopeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     padding: 10,
-    borderRadius: theme.radius.sm,
+    borderRadius: t.radius.sm,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderColor: t.colors.border,
+    backgroundColor: t.colors.surfaceElevated,
   },
   scopeRowActive: {
-    borderColor: theme.colors.primary,
+    borderColor: t.colors.primary,
   },
   scopeInfo: {
     flex: 1,
@@ -547,29 +543,29 @@ const styles = StyleSheet.create({
   },
   scopeLabel: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   scopeCode: {
     fontSize: 11,
     fontFamily: "monospace",
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   checkBox: {
     width: 22,
     height: 22,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.borderStrong,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   checkBoxActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
+    borderColor: t.colors.primary,
   },
   actionsRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 12,
     marginTop: 8,
   },
@@ -584,29 +580,29 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   warningBanner: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
     padding: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.warningSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.warningSubtle,
   },
   warningText: {
     flex: 1,
     fontSize: 13,
-    color: theme.colors.warning,
+    color: t.colors.warning,
     lineHeight: 18,
   },
   secretBox: {
     padding: 14,
-    borderRadius: theme.radius.md,
+    borderRadius: t.radius.md,
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderColor: t.colors.borderStrong,
+    backgroundColor: t.colors.surfaceElevated,
   },
   secretText: {
     fontFamily: "monospace",
     fontSize: 13,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
 })

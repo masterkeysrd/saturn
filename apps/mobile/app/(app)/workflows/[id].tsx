@@ -2,7 +2,6 @@ import { useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
   ScrollView,
-  StyleSheet,
   Switch,
   Text,
   TextInput,
@@ -34,7 +33,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useToast } from "@/components/ui/toast"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { ModelConfigSheet } from "@/components/workflows/model-config-sheet"
 import { TriggerSheet } from "@/components/workflows/trigger-sheet"
@@ -56,6 +55,8 @@ export default function WorkflowDetailEditorScreen() {
   const router = useRouter()
   const toast = useToast()
   const queryClient = useQueryClient()
+  const { colors, isDark } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   const { data: fetchedFlow, isLoading } = useGetFlowQuery(
     { id: id ?? "" },
@@ -214,7 +215,7 @@ export default function WorkflowDetailEditorScreen() {
   if (!isNew && isLoading) {
     return (
       <View style={styles.loadingWrap}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     )
   }
@@ -232,8 +233,8 @@ export default function WorkflowDetailEditorScreen() {
                 setDraftOverride({ ...draft, isEnabled })
               }}
               trackColor={{
-                false: theme.colors.surfaceHighlight,
-                true: theme.colors.primary,
+                false: colors.surfaceHighlight,
+                true: colors.primary,
               }}
             />
           </View>
@@ -243,7 +244,8 @@ export default function WorkflowDetailEditorScreen() {
             value={draft.name}
             onChangeText={(name) => setDraftOverride({ ...draft, name })}
             placeholder="Workflow name"
-            placeholderTextColor={theme.colors.textMuted}
+            placeholderTextColor={colors.textMuted}
+            keyboardAppearance={isDark ? "dark" : "light"}
           />
 
           <TextInput
@@ -254,7 +256,8 @@ export default function WorkflowDetailEditorScreen() {
               setDraftOverride({ ...draft, description })
             }
             placeholder="Describe what this workflow automates..."
-            placeholderTextColor={theme.colors.textMuted}
+            placeholderTextColor={colors.textMuted}
+            keyboardAppearance={isDark ? "dark" : "light"}
           />
 
           <TouchableOpacity
@@ -265,10 +268,10 @@ export default function WorkflowDetailEditorScreen() {
             }}
           >
             <View style={styles.rowLeft}>
-              <Settings2 size={16} color={theme.colors.primary} />
+              <Settings2 size={16} color={colors.primary} />
               <Text style={styles.configText}>Default Model & Config</Text>
             </View>
-            <ChevronRight size={16} color={theme.colors.textMuted} />
+            <ChevronRight size={16} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -311,7 +314,7 @@ export default function WorkflowDetailEditorScreen() {
                 <Text style={styles.itemTitle}>{t.name}</Text>
                 <Badge size="sm" label={t.type.toUpperCase()} />
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
           ))}
         </View>
@@ -355,7 +358,7 @@ export default function WorkflowDetailEditorScreen() {
                     {s.id} • {s.type}
                   </Text>
                 </View>
-                <ChevronRight size={16} color={theme.colors.textMuted} />
+                <ChevronRight size={16} color={colors.textMuted} />
               </TouchableOpacity>
 
               <View style={styles.reorderRow}>
@@ -366,11 +369,7 @@ export default function WorkflowDetailEditorScreen() {
                 >
                   <ArrowUp
                     size={14}
-                    color={
-                      idx === 0
-                        ? theme.colors.textMuted
-                        : theme.colors.textPrimary
-                    }
+                    color={idx === 0 ? colors.textMuted : colors.textPrimary}
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -382,8 +381,8 @@ export default function WorkflowDetailEditorScreen() {
                     size={14}
                     color={
                       idx === (draft.steps?.length ?? 0) - 1
-                        ? theme.colors.textMuted
-                        : theme.colors.textPrimary
+                        ? colors.textMuted
+                        : colors.textPrimary
                     }
                   />
                 </TouchableOpacity>
@@ -405,9 +404,7 @@ export default function WorkflowDetailEditorScreen() {
             variant="secondary"
             onPress={handleDryTest}
             loading={testMutation.isPending}
-            leftIcon={
-              <FlaskConical size={16} color={theme.colors.textPrimary} />
-            }
+            leftIcon={<FlaskConical size={16} color={colors.textPrimary} />}
           >
             Run Dry Test
           </Button>
@@ -419,7 +416,7 @@ export default function WorkflowDetailEditorScreen() {
                 haptics.light()
                 setResetDialogVisible(true)
               }}
-              leftIcon={<RotateCcw size={16} color={theme.colors.warning} />}
+              leftIcon={<RotateCcw size={16} color={colors.warning} />}
             >
               Reset System Default
             </Button>
@@ -552,16 +549,16 @@ export default function WorkflowDetailEditorScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   loadingWrap: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   content: {
     padding: 16,
@@ -570,92 +567,92 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: 14,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surface,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 10,
   },
   section: {
     gap: 10,
   },
   rowBetween: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   rowLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   sectionLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     letterSpacing: 0.8,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   addLink: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.primary,
+    fontWeight: "700" as const,
+    color: t.colors.primary,
   },
   input: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   multiline: {
     minHeight: 68,
-    textAlignVertical: "top",
+    textAlignVertical: "top" as const,
   },
   configRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingTop: 6,
   },
   configText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   itemRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     padding: 14,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surface,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   itemLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
   },
   itemTitle: {
     fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   stepCard: {
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surface,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
+    borderColor: t.colors.border,
+    overflow: "hidden" as const,
   },
   stepMain: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     padding: 14,
   },
   stepInfo: {
@@ -663,17 +660,17 @@ const styles = StyleSheet.create({
   },
   stepSub: {
     fontSize: 12,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textMuted,
+    fontFamily: t.typography.mono,
+    color: t.colors.textMuted,
   },
   reorderRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
   },
   reorderBtn: {
     flex: 1,
-    alignItems: "center",
+    alignItems: "center" as const,
     paddingVertical: 8,
   },
   actionStack: {

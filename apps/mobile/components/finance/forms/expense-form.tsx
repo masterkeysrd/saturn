@@ -30,7 +30,7 @@ import {
   type ExchangeRate,
   type Transaction,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { theme, getNativeBudgetColors } from "@/lib/theme"
+import { useTheme } from "@/lib/theme"
 import { BudgetCategoryIcon } from "@/lib/budget-icons"
 import { haptics } from "@/lib/haptics"
 import { Button } from "@/components/ui/button"
@@ -49,7 +49,7 @@ import {
   FormRowInput,
   FormEffectiveDateSection,
 } from "@/components/ui/form-primitives"
-import { formStyles } from "./form-styles"
+import { useFormStyles } from "./form-styles"
 
 export interface ExpenseFormProps {
   existingTx?: Transaction | null
@@ -80,6 +80,8 @@ export function ExpenseForm({
   initialAccountId,
   onAccountChange,
 }: ExpenseFormProps) {
+  const { colors, getBudgetColors } = useTheme()
+  const formStyles = useFormStyles()
   const insets = useSafeAreaInsets()
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -178,7 +180,7 @@ export function ExpenseForm({
     () => budgets.find((b) => b.id === selectedBudgetId),
     [budgets, selectedBudgetId]
   )
-  const selectedBudgetColors = getNativeBudgetColors(
+  const selectedBudgetColors = getBudgetColors(
     selectedBudget?.color || "indigo"
   )
 
@@ -303,7 +305,7 @@ export function ExpenseForm({
             currencySheetRef.current?.expand()
           }}
           autoFocus={!isEditMode}
-          accentColor={theme.colors.destructive}
+          accentColor={colors.destructive}
         />
 
         {/* Currency Conversion Preview */}
@@ -313,7 +315,7 @@ export function ExpenseForm({
               <View style={formStyles.conversionAlert}>
                 <AlertTriangle
                   size={16}
-                  color="#f59e0b"
+                  color={colors.warning}
                   style={{ marginTop: 2 }}
                 />
                 <View style={{ flex: 1 }}>
@@ -329,7 +331,7 @@ export function ExpenseForm({
               <View style={formStyles.conversionBox}>
                 <Globe
                   size={16}
-                  color={theme.colors.primary}
+                  color={colors.primary}
                   style={{ marginTop: 2 }}
                 />
                 <View style={{ flex: 1 }}>
@@ -367,7 +369,7 @@ export function ExpenseForm({
             }}
           >
             <View style={formStyles.formRowLabelGroup}>
-              <Tag size={16} color={theme.colors.textMuted} />
+              <Tag size={16} color={colors.textMuted} />
               <Text style={formStyles.formRowLabel}>Budget</Text>
             </View>
             <View style={formStyles.formRowValueGroup}>
@@ -420,7 +422,7 @@ export function ExpenseForm({
               ) : (
                 <Text style={formStyles.placeholderText}>Select a budget</Text>
               )}
-              <ChevronRight size={14} color={theme.colors.textMuted} />
+              <ChevronRight size={14} color={colors.textMuted} />
             </View>
           </TouchableOpacity>
           {errors.budgetId ? (
@@ -433,11 +435,11 @@ export function ExpenseForm({
                 paddingBottom: 8,
               }}
             >
-              <AlertCircle size={12} color={theme.colors.destructive} />
+              <AlertCircle size={12} color={colors.destructive} />
               <Text
                 style={{
                   fontSize: 12,
-                  color: theme.colors.destructive,
+                  color: colors.destructive,
                   fontWeight: "500",
                 }}
               >
@@ -464,7 +466,7 @@ export function ExpenseForm({
             control={control}
             name="description"
             label="Description"
-            icon={<FileText size={16} color={theme.colors.textMuted} />}
+            icon={<FileText size={16} color={colors.textMuted} />}
             placeholder="e.g. Amazon Web Services, Restaurant Dinner"
             returnKeyType="done"
           />
@@ -477,7 +479,7 @@ export function ExpenseForm({
         {/* Error Box */}
         {submissionError && (
           <View style={formStyles.errorBox}>
-            <AlertCircle size={15} color={theme.colors.destructive} />
+            <AlertCircle size={15} color={colors.destructive} />
             <Text style={formStyles.errorText}>{submissionError}</Text>
           </View>
         )}

@@ -19,7 +19,7 @@ import {
   type Account,
   type ExchangeRate,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { theme } from "@/lib/theme"
+import { useTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -30,7 +30,7 @@ import { invalidateFinanceQueries } from "@saturn/hooks"
 import { AccountRow } from "../account-select"
 import { HeroAmountInput } from "@/components/ui/amount-input"
 import { FormRowInput, FormDateRow } from "@/components/ui/form-primitives"
-import { formStyles } from "./form-styles"
+import { useFormStyles } from "./form-styles"
 
 export interface TransferFormProps {
   accounts: Account[]
@@ -47,6 +47,8 @@ export function TransferForm({
   initialFromAccountId,
   onAccountChange,
 }: TransferFormProps) {
+  const { colors } = useTheme()
+  const formStyles = useFormStyles()
   const insets = useSafeAreaInsets()
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -197,21 +199,25 @@ export function TransferForm({
           currency={sourceAccount?.currency || "USD"}
           currencySymbol={currentSymbol}
           currencyDisabled
-          accentColor={theme.colors.primary}
+          accentColor={colors.primary}
           autoFocus
         />
 
         {/* Cross Currency Preview Alert */}
         {isCrossCurrency && (
           <View style={[formStyles.conversionAlert, { marginBottom: 12 }]}>
-            <AlertTriangle size={16} color="#f59e0b" style={{ marginTop: 2 }} />
+            <AlertTriangle
+              size={16}
+              color={colors.warning}
+              style={{ marginTop: 2 }}
+            />
             <View style={{ flex: 1 }}>
               <Text style={formStyles.conversionAlertTitle}>
                 CROSS-CURRENCY TRANSFER
               </Text>
               <Text style={formStyles.conversionAlertText}>
                 {destinationAccount?.name} will receive approx.{" "}
-                <Text style={{ fontWeight: "800", color: "#f59e0b" }}>
+                <Text style={{ fontWeight: "800", color: colors.warning }}>
                   {getCurrencySymbol(destinationAccount?.currency || "")}
                   {transferDestinationAmount} {destinationAccount?.currency}
                 </Text>
@@ -230,9 +236,7 @@ export function TransferForm({
             onPress={() => {
               transferFromSheetRef.current?.expand()
             }}
-            fallbackIcon={
-              <ArrowUpRight size={16} color={theme.colors.destructive} />
-            }
+            fallbackIcon={<ArrowUpRight size={16} color={colors.destructive} />}
           />
 
           <View style={formStyles.rowDivider} />
@@ -245,9 +249,7 @@ export function TransferForm({
             onPress={() => {
               transferToSheetRef.current?.expand()
             }}
-            fallbackIcon={
-              <ArrowDownLeft size={16} color={theme.colors.success} />
-            }
+            fallbackIcon={<ArrowDownLeft size={16} color={colors.success} />}
           />
         </Card>
 
@@ -266,7 +268,7 @@ export function TransferForm({
             control={control}
             name="notes"
             label="Notes"
-            icon={<FileText size={16} color={theme.colors.textMuted} />}
+            icon={<FileText size={16} color={colors.textMuted} />}
             placeholder="Reason or memo (optional)"
             returnKeyType="done"
           />
@@ -275,7 +277,7 @@ export function TransferForm({
         {/* Error Box */}
         {submissionError && (
           <View style={formStyles.errorBox}>
-            <AlertCircle size={15} color={theme.colors.destructive} />
+            <AlertCircle size={15} color={colors.destructive} />
             <Text style={formStyles.errorText}>{submissionError}</Text>
           </View>
         )}

@@ -8,11 +8,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Check } from "lucide-react-native"
 import { type Budget } from "@saturn/api/saturn/finance/v1/finance"
 import { formatAmount, formatInterval } from "@saturn/core"
-import { theme, getNativeBudgetColors } from "@/lib/theme"
+import { useTheme } from "@/lib/theme"
 import { getBudgetIcon } from "@/lib/budget-icons"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
-import { sheetStyles } from "./sheet-styles"
+import { useSheetStyles } from "./sheet-styles"
 
 export interface BudgetPickerSheetProps {
   budgets: Budget[]
@@ -36,6 +36,8 @@ export const BudgetPickerSheet = forwardRef<
     },
     ref
   ) => {
+    const { colors, getBudgetColors } = useTheme()
+    const sheetStyles = useSheetStyles()
     const insets = useSafeAreaInsets()
 
     const handleClose = () => {
@@ -65,7 +67,7 @@ export const BudgetPickerSheet = forwardRef<
             isLoading ? (
               <ActivityIndicator
                 size="small"
-                color={theme.colors.primary}
+                color={colors.primary}
                 style={{ marginVertical: 20 }}
               />
             ) : (
@@ -77,7 +79,7 @@ export const BudgetPickerSheet = forwardRef<
             )
           }
           renderItem={({ item: b }) => {
-            const bColors = getNativeBudgetColors(b.color || "indigo")
+            const bColors = getBudgetColors(b.color || "indigo")
             const BIcon = getBudgetIcon(b.icon, b.name)
             const isSelected = selectedBudgetId === b.id
 
@@ -167,7 +169,7 @@ export const BudgetPickerSheet = forwardRef<
                         {
                           width: `${percentage}%`,
                           backgroundColor: isOver
-                            ? theme.colors.destructive
+                            ? colors.destructive
                             : bColors.bar,
                         },
                       ]}

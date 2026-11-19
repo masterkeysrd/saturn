@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router"
-import { View, StyleSheet } from "react-native"
+import { View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   Home,
@@ -10,7 +10,7 @@ import {
 } from "lucide-react-native"
 import { AppHeader } from "@/components/app-header"
 import { OfflineIndicator } from "@/components/offline-indicator"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 export const unstable_settings = {
   anchor: "index",
@@ -18,6 +18,8 @@ export const unstable_settings = {
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const tabBarHeight = 56 + (insets.bottom > 0 ? insets.bottom : 8)
 
   return (
@@ -28,15 +30,15 @@ export default function TabsLayout() {
           headerShown: true,
           header: () => <AppHeader />,
           tabBarStyle: {
-            backgroundColor: theme.colors.tabBar,
-            borderTopColor: theme.colors.tabBarBorder,
+            backgroundColor: colors.tabBar,
+            borderTopColor: colors.tabBarBorder,
             borderTopWidth: 1,
             height: tabBarHeight,
             paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
             paddingTop: 6,
           },
-          tabBarActiveTintColor: theme.colors.tabBarActive,
-          tabBarInactiveTintColor: theme.colors.tabBarInactive,
+          tabBarActiveTintColor: colors.tabBarActive,
+          tabBarInactiveTintColor: colors.tabBarInactive,
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: "500",
@@ -109,9 +111,9 @@ export default function TabsLayout() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
 })

@@ -45,6 +45,15 @@ export function buildMobileEditorDocumentHtml(params: {
   placeholder: string
   minHeight: number
   autoFocus?: boolean
+  isDark?: boolean
+  colors?: {
+    background: string
+    textPrimary: string
+    textMuted: string
+    textSecondary: string
+    primary: string
+    border: string
+  }
 }): string {
   const {
     bodyHtml,
@@ -52,7 +61,16 @@ export function buildMobileEditorDocumentHtml(params: {
     placeholder,
     minHeight,
     autoFocus = false,
+    isDark = false,
+    colors,
   } = params
+  const bg = colors?.background ?? (isDark ? "#0f172a" : "#ffffff")
+  const textColor = colors?.textPrimary ?? (isDark ? "#f8fafc" : "#18181b")
+  const placeholderColor = colors?.textMuted ?? (isDark ? "#94a3b8" : "#a1a1aa")
+  const quoteBorder = colors?.border ?? (isDark ? "#334155" : "#d4d4d8")
+  const quoteColor = colors?.textSecondary ?? (isDark ? "#94a3b8" : "#52525b")
+  const linkColor = colors?.primary ?? (isDark ? "#38bdf8" : "#2563eb")
+  const colorScheme = isDark ? "dark" : "light"
   const isEmpty = isHtmlEffectivelyEmpty(bodyHtml)
   const escapedPlaceholder = placeholder
     .replace(/&/g, "&amp;")
@@ -67,12 +85,12 @@ export function buildMobileEditorDocumentHtml(params: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     :root {
-      color-scheme: light;
+      color-scheme: ${colorScheme};
     }
     html {
       margin: 0;
       padding: 0;
-      background: #ffffff;
+      background: ${bg};
     }
     body {
       margin: 0;
@@ -82,8 +100,8 @@ export function buildMobileEditorDocumentHtml(params: {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       font-size: 15px;
       line-height: 1.55;
-      background-color: #ffffff;
-      color: #18181b;
+      background-color: ${bg};
+      color: ${textColor};
       outline: none;
       word-break: break-word;
       overflow-x: hidden;
@@ -92,7 +110,7 @@ export function buildMobileEditorDocumentHtml(params: {
     }
     body[data-empty="true"]::before {
       content: attr(data-placeholder);
-      color: #a1a1aa;
+      color: ${placeholderColor};
       pointer-events: none;
       display: block;
       height: 0;
@@ -120,10 +138,10 @@ export function buildMobileEditorDocumentHtml(params: {
       margin: 0.375rem 0 0.5rem 0;
     }
     blockquote {
-      border-left: 2px solid #d4d4d8;
+      border-left: 2px solid ${quoteBorder};
       padding-left: 0.75rem;
       margin: 0.5rem 0;
-      color: #52525b;
+      color: ${quoteColor};
     }
     img {
       max-width: 100% !important;
@@ -133,7 +151,7 @@ export function buildMobileEditorDocumentHtml(params: {
       max-width: 100% !important;
     }
     a {
-      color: #2563eb;
+      color: ${linkColor};
       text-decoration: underline;
     }
   </style>

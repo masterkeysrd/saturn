@@ -1,14 +1,15 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { ScrollView, Text, View } from "react-native"
 import { useLocalSearchParams } from "expo-router"
 import { useGetRunQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { useTimezone } from "@saturn/hooks"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { theme } from "@/lib/theme"
+import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 export default function MobileAIRunTraceScreen() {
   const { runId } = useLocalSearchParams<{ runId: string }>()
   const tz = useTimezone()
+  const styles = useThemedStyles(createStyles)
   const { data: run, isLoading } = useGetRunQuery(
     { id: runId ?? "" },
     { enabled: Boolean(runId) }
@@ -67,10 +68,10 @@ export default function MobileAIRunTraceScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,
@@ -82,33 +83,33 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   rowBetween: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     gap: 8,
   },
   title: {
     fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   stepTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    fontFamily: t.typography.mono,
+    color: t.colors.textPrimary,
   },
   mono: {
     fontSize: 12,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textSecondary,
+    fontFamily: t.typography.mono,
+    color: t.colors.textSecondary,
   },
   muted: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   errorText: {
     fontSize: 12,
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
   },
 })

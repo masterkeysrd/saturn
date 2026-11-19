@@ -2,7 +2,6 @@ import React, { useState, useMemo, useCallback } from "react"
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   Linking,
   type LayoutChangeEvent,
@@ -11,7 +10,7 @@ import { WebView, type WebViewNavigation } from "react-native-webview"
 import { ShieldAlert, Image as ImageIcon } from "lucide-react-native"
 import type { Attachment } from "@saturn/api/saturn/mail/v1/mail"
 import { getApiBaseUrl } from "@/lib/config"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 export interface MessageWebViewProps {
@@ -59,6 +58,8 @@ export function MessageWebView({
   attachments = [],
   onLinkPress,
 }: MessageWebViewProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [loadImages, setLoadImages] = useState(false)
   const [webViewHeight, setWebViewHeight] = useState(100)
   const [containerWidth, setContainerWidth] = useState(300)
@@ -221,7 +222,7 @@ export function MessageWebView({
       {containsRemoteImages && !loadImages && (
         <View style={styles.bannerContainer}>
           <View style={styles.bannerTextRow}>
-            <ShieldAlert size={14} color={theme.colors.warning} />
+            <ShieldAlert size={14} color={colors.warning} />
             <Text style={styles.bannerText}>Remote images blocked</Text>
           </View>
           <Pressable
@@ -232,7 +233,7 @@ export function MessageWebView({
             }}
             style={styles.loadImagesBtn}
           >
-            <ImageIcon size={12} color={theme.colors.warning} />
+            <ImageIcon size={12} color={colors.warning} />
             <Text style={styles.loadImagesBtnText}>Load images</Text>
           </Pressable>
         </View>
@@ -265,51 +266,53 @@ export function MessageWebView({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
-    width: "100%",
+    width: "100%" as const,
   },
   bannerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.colors.warningSubtle,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    backgroundColor: t.colors.warningSubtle,
     borderWidth: 1,
-    borderColor: "rgba(245, 158, 11, 0.3)",
-    borderRadius: theme.radius.sm,
+    borderColor: `${t.colors.warning}4D`,
+    borderRadius: t.radius.sm,
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginBottom: 8,
   },
   bannerTextRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     flex: 1,
   },
   bannerText: {
     fontSize: 12,
-    color: theme.colors.warning,
-    fontWeight: "500",
+    color: t.colors.warning,
+    fontWeight: "500" as const,
   },
   loadImagesBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
-    backgroundColor: "rgba(245, 158, 11, 0.15)",
+    backgroundColor: `${t.colors.warning}26`,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: theme.radius.xs,
+    borderRadius: t.radius.xs,
   },
   loadImagesBtnText: {
     fontSize: 11,
-    color: theme.colors.warning,
-    fontWeight: "600",
+    color: t.colors.warning,
+    fontWeight: "600" as const,
   },
   webViewWrapper: {
     backgroundColor: "#ffffff",
-    borderRadius: theme.radius.sm,
-    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.sm,
+    overflow: "hidden" as const,
   },
   webView: {
     flex: 1,

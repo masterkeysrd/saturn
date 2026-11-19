@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
@@ -25,7 +24,7 @@ import {
 } from "@saturn/core"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { DateStrip } from "@/components/calendar/date-strip"
 import { TimelineGrid } from "@/components/calendar/timeline-grid"
@@ -39,6 +38,8 @@ export type MobileCalendarViewMode = "agenda" | "day" | "three_day"
 export default function CalendarScreen() {
   const router = useRouter()
   const tz = useTimezone()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const { activeSpaceRole } = useSpace()
   const isViewer = activeSpaceRole === "viewer"
 
@@ -236,8 +237,8 @@ export default function CalendarScreen() {
     <RefreshControl
       refreshing={refreshing}
       onRefresh={handleRefresh}
-      tintColor={theme.colors.primary}
-      colors={[theme.colors.primary]}
+      tintColor={colors.primary}
+      colors={[colors.primary]}
     />
   )
 
@@ -313,7 +314,7 @@ export default function CalendarScreen() {
             style={styles.todayButton}
             testID="calendar-today-btn"
           >
-            <RotateCcw size={13} color={theme.colors.primary} />
+            <RotateCcw size={13} color={colors.primary} />
             <Text style={styles.todayButtonText}>Today</Text>
           </TouchableOpacity>
 
@@ -323,7 +324,7 @@ export default function CalendarScreen() {
             style={styles.filterButton}
             testID="calendar-filter-btn"
           >
-            <SlidersHorizontal size={16} color={theme.colors.textSecondary} />
+            <SlidersHorizontal size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -340,7 +341,7 @@ export default function CalendarScreen() {
       <View style={styles.viewContainer}>
         {eventsLoading && occurrences.length === 0 ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : viewMode === "agenda" ? (
           <AgendaList
@@ -371,7 +372,7 @@ export default function CalendarScreen() {
           style={styles.fab}
           testID="calendar-fab-add"
         >
-          <Plus size={24} color={theme.colors.primaryForeground} />
+          <Plus size={24} color={colors.primaryForeground} />
         </TouchableOpacity>
       )}
 
@@ -391,92 +392,88 @@ export default function CalendarScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderBottomColor: t.colors.border,
+    backgroundColor: t.colors.surface,
   },
   segmentedControl: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderRadius: theme.radius.sm,
+    flexDirection: "row" as const,
+    backgroundColor: t.colors.surfaceSubtle,
+    borderRadius: t.radius.sm,
     padding: 2,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   segmentBtn: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: theme.radius.xs,
+    borderRadius: t.radius.xs,
   },
   segmentBtnActive: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
   },
   segmentBtnText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   segmentBtnTextActive: {
-    color: theme.colors.primaryForeground,
+    color: t.colors.primaryForeground,
   },
   topActionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   todayButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 5,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.primarySubtle,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.primarySubtle,
   },
   todayButtonText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   filterButton: {
     padding: 6,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
   },
   viewContainer: {
     flex: 1,
   },
   loadingContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   fab: {
-    position: "absolute",
+    position: "absolute" as const,
     right: 20,
     bottom: 24,
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    backgroundColor: t.colors.primary,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    ...t.shadows.lg,
     zIndex: 10,
   },
 })

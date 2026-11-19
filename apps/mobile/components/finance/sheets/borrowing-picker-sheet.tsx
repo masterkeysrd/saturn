@@ -8,9 +8,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { HandCoins } from "lucide-react-native"
 import { type Borrowing } from "@saturn/api/saturn/finance/v1/finance"
 import { formatAmount } from "@saturn/core"
+import { useTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
-import { sheetStyles } from "./sheet-styles"
+import { useSheetStyles } from "./sheet-styles"
 
 export interface BorrowingPickerSheetProps {
   borrowings: Borrowing[]
@@ -34,6 +35,8 @@ export const BorrowingPickerSheet = forwardRef<
     },
     ref
   ) => {
+    const { colors } = useTheme()
+    const sheetStyles = useSheetStyles()
     const insets = useSafeAreaInsets()
 
     const handleClose = () => {
@@ -66,7 +69,7 @@ export const BorrowingPickerSheet = forwardRef<
             isLoading ? (
               <ActivityIndicator
                 size="small"
-                color="#f59e0b"
+                color={colors.warning}
                 style={{ marginVertical: 20 }}
               />
             ) : (
@@ -95,7 +98,7 @@ export const BorrowingPickerSheet = forwardRef<
                 }}
               >
                 <View style={sheetStyles.accountIconBadge}>
-                  <HandCoins size={18} color="#f59e0b" />
+                  <HandCoins size={18} color={colors.warning} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={sheetStyles.accountItemTitle}>

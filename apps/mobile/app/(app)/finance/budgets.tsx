@@ -39,7 +39,7 @@ import {
 } from "@saturn/api/saturn/finance/v1/finance"
 import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
-import { theme, getNativeBudgetColors } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { getBudgetIcon } from "@/lib/budget-icons"
 import { Card } from "@/components/ui/card"
 import { Caption, MonoAmount } from "@/components/ui/typography"
@@ -96,6 +96,8 @@ export default function BudgetsScreen() {
   const tz = useTimezone()
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { colors, resolvedMode, isDark, getBudgetColors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [refreshing, setRefreshing] = useState(false)
   const [statusFilter, setStatusFilter] = useState<
     "ACTIVE" | "PAUSED" | "CLOSED" | "ALL"
@@ -307,7 +309,7 @@ export default function BudgetsScreen() {
                     type: "button",
                     label: "New Budget",
                     icon: { type: "sfSymbol", name: "plus" },
-                    tintColor: theme.colors.primary,
+                    tintColor: colors.primary,
                     onPress: () => {
                       haptics.light()
                       router.push("/modal/manage-budget")
@@ -325,7 +327,7 @@ export default function BudgetsScreen() {
                     style={styles.headerAddBtn}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <Plus size={20} color={theme.colors.primary} />
+                    <Plus size={20} color={colors.primary} />
                   </TouchableOpacity>
                 ),
               }),
@@ -338,9 +340,9 @@ export default function BudgetsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-            progressBackgroundColor={theme.colors.surfaceElevated}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+            progressBackgroundColor={colors.surfaceElevated}
           />
         }
       >
@@ -348,19 +350,19 @@ export default function BudgetsScreen() {
         <Card style={styles.summaryCard}>
           <View style={styles.summaryTopRow}>
             <View style={styles.summaryIconBadge}>
-              <PieChart size={20} color={theme.colors.primary} />
+              <PieChart size={20} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.summaryLabel}>ACTIVE LIMITS TOTAL</Text>
-              <MonoAmount size="lg" color={theme.colors.textPrimary}>
+              <MonoAmount size="lg" color={colors.textPrimary}>
                 {formatAmount(totalLimitBaseCents, baseCurrency)}
               </MonoAmount>
             </View>
             <Badge
               size="sm"
               label={baseCurrency}
-              bg={theme.colors.primarySubtle}
-              color={theme.colors.primary}
+              bg={colors.primarySubtle}
+              color={colors.primary}
             />
           </View>
 
@@ -382,10 +384,10 @@ export default function BudgetsScreen() {
                     width: `${overallUtilization}%`,
                     backgroundColor:
                       overallUtilization >= 100
-                        ? theme.colors.destructive
+                        ? colors.destructive
                         : overallUtilization >= 85
-                          ? "#f59e0b"
-                          : theme.colors.primary,
+                          ? colors.warning
+                          : colors.primary,
                   },
                 ]}
               />
@@ -403,11 +405,12 @@ export default function BudgetsScreen() {
 
         {/* 2. Search Bar */}
         <View style={styles.searchBar}>
-          <Search size={16} color={theme.colors.textMuted} />
+          <Search size={16} color={colors.textMuted} />
           <RNTextInput
             style={styles.searchInput}
             placeholder="Search budgets, currency, accounts..."
-            placeholderTextColor={theme.colors.textMuted}
+            placeholderTextColor={colors.textMuted}
+            keyboardAppearance={isDark ? "dark" : "light"}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCapitalize="none"
@@ -418,7 +421,7 @@ export default function BudgetsScreen() {
               onPress={() => setSearchQuery("")}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <X size={16} color={theme.colors.textMuted} />
+              <X size={16} color={colors.textMuted} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -479,7 +482,7 @@ export default function BudgetsScreen() {
           </View>
         ) : filteredBudgets.length === 0 ? (
           <EmptyState
-            icon={<PiggyBank size={28} color={theme.colors.textMuted} />}
+            icon={<PiggyBank size={28} color={colors.textMuted} />}
             title={
               searchQuery.trim() ? "No matching budgets" : "No budgets created"
             }
@@ -492,7 +495,7 @@ export default function BudgetsScreen() {
         ) : (
           <View style={styles.budgetList}>
             {filteredBudgets.map((b: Budget) => {
-              const nativeColors = getNativeBudgetColors(b.color || "indigo")
+              const nativeColors = getBudgetColors(b.color || "indigo")
               const BIcon = getBudgetIcon(b.icon, b.name)
 
               const spentCents = Number(b.currentPeriod?.spentAmount || "0")
@@ -548,9 +551,9 @@ export default function BudgetsScreen() {
                     : ""
 
               const barColor = isOver
-                ? theme.colors.destructive
+                ? colors.destructive
                 : isNearLimit
-                  ? "#f59e0b"
+                  ? colors.warning
                   : nativeColors.bar
 
               // Cross-currency conversion check
@@ -620,7 +623,7 @@ export default function BudgetsScreen() {
                                 <Text
                                   style={[
                                     styles.intervalText,
-                                    { color: theme.colors.destructive },
+                                    { color: colors.destructive },
                                   ]}
                                 >
                                   Closed
@@ -631,7 +634,7 @@ export default function BudgetsScreen() {
                                 style={[
                                   styles.intervalBadge,
                                   {
-                                    backgroundColor: "rgba(245, 158, 11, 0.15)",
+                                    backgroundColor: colors.warningSubtle,
                                     borderColor: "rgba(245, 158, 11, 0.3)",
                                   },
                                 ]}
@@ -639,7 +642,7 @@ export default function BudgetsScreen() {
                                 <Text
                                   style={[
                                     styles.intervalText,
-                                    { color: "#f59e0b" },
+                                    { color: colors.warning },
                                   ]}
                                 >
                                   Paused
@@ -652,7 +655,7 @@ export default function BudgetsScreen() {
                               <View style={styles.accountBadge}>
                                 <CreditCard
                                   size={10}
-                                  color={theme.colors.textMuted}
+                                  color={colors.textMuted}
                                 />
                                 <Text
                                   style={styles.accountBadgeText}
@@ -665,10 +668,7 @@ export default function BudgetsScreen() {
                           </View>
                           {dateRangeStr ? (
                             <View style={styles.periodRow}>
-                              <Calendar
-                                size={11}
-                                color={theme.colors.textMuted}
-                              />
+                              <Calendar size={11} color={colors.textMuted} />
                               <Text style={styles.periodText}>
                                 {dateRangeStr}
                               </Text>
@@ -687,9 +687,9 @@ export default function BudgetsScreen() {
                           label={`${actualPercentage}%`}
                           bg={
                             isOver
-                              ? theme.colors.destructiveSubtle
+                              ? colors.destructiveSubtle
                               : isNearLimit
-                                ? "rgba(245, 158, 11, 0.15)"
+                                ? colors.warningSubtle
                                 : nativeColors.bg
                           }
                           border={
@@ -701,9 +701,9 @@ export default function BudgetsScreen() {
                           }
                           color={
                             isOver
-                              ? theme.colors.destructive
+                              ? colors.destructive
                               : isNearLimit
-                                ? "#f59e0b"
+                                ? colors.warning
                                 : nativeColors.text
                           }
                         />
@@ -713,7 +713,7 @@ export default function BudgetsScreen() {
                     {/* Native 3-Dots Quick Action Menu (sibling of TouchableOpacity) */}
                     <ActionMenu
                       title={b.name}
-                      colorScheme="dark"
+                      colorScheme={resolvedMode}
                       style={styles.menuTriggerWrapper}
                       onPressAction={({ nativeEvent }) => {
                         if (nativeEvent.event === "details") {
@@ -810,10 +810,7 @@ export default function BudgetsScreen() {
                       ]}
                     >
                       <View style={styles.dotsBtn}>
-                        <MoreVertical
-                          size={18}
-                          color={theme.colors.textMuted}
-                        />
+                        <MoreVertical size={18} color={colors.textMuted} />
                       </View>
                     </ActionMenu>
                   </View>
@@ -826,7 +823,7 @@ export default function BudgetsScreen() {
                     {/* Missing Exchange Rate Warning Banner */}
                     {isRateMissing ? (
                       <View style={styles.exchangeRateWarning}>
-                        <AlertTriangle size={13} color="#f59e0b" />
+                        <AlertTriangle size={13} color={colors.warning} />
                         <Text style={styles.exchangeRateWarningText}>
                           Exchange Rate Required: No conversion rate configured
                           from {b.currency} to {baseCurrency}.
@@ -867,7 +864,7 @@ export default function BudgetsScreen() {
                         <Text
                           style={[
                             styles.whiteText,
-                            isOver && { color: theme.colors.destructive },
+                            isOver && { color: colors.destructive },
                           ]}
                         >
                           {formatAmount(String(spentCents), b.currency)}
@@ -887,7 +884,7 @@ export default function BudgetsScreen() {
 
                     {!isOver && dailyAllowanceCents > 0 ? (
                       <View style={styles.allowanceSubRow}>
-                        <Sparkles size={11} color={theme.colors.primary} />
+                        <Sparkles size={11} color={colors.primary} />
                         <Text style={styles.allowanceSubText}>
                           Pace:{" "}
                           <Text style={styles.allowanceSubBold}>
@@ -912,10 +909,10 @@ export default function BudgetsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   headerAddBtn: {
     paddingHorizontal: 8,
@@ -923,7 +920,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,
@@ -933,26 +930,26 @@ const styles = StyleSheet.create({
   summaryCard: {
     padding: 16,
     borderRadius: 18,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     gap: 12,
   },
   summaryTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
   },
   summaryIconBadge: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: theme.colors.primarySubtle,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.primarySubtle,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   summaryLabel: {
     fontSize: 10,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     letterSpacing: 0.6,
     marginBottom: 2,
   },
@@ -961,63 +958,63 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   summaryProgressHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
   },
   summaryProgressSpent: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontWeight: "500",
+    color: t.colors.textSecondary,
+    fontWeight: "500" as const,
   },
   summaryProgressPercent: {
     fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.primary,
+    fontWeight: "700" as const,
+    color: t.colors.primary,
   },
   summaryProgressTrack: {
     height: 6,
-    backgroundColor: theme.colors.surfaceHighlight,
+    backgroundColor: t.colors.surfaceHighlight,
     borderRadius: 3,
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   summaryProgressBar: {
-    height: "100%",
+    height: "100%" as const,
     borderRadius: 3,
   },
   summaryFooterRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
     paddingTop: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
   },
   summaryFooterText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   summaryFooterBase: {
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
-    textTransform: "uppercase",
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
+    textTransform: "uppercase" as const,
   },
   searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
     height: 42,
     paddingHorizontal: 12,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   searchInput: {
     flex: 1,
     fontSize: 13,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
     padding: 0,
   },
   sectionHeader: {
@@ -1032,15 +1029,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   budgetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     gap: 8,
   },
   budgetHeaderMain: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     flex: 1,
     gap: 10,
   },
@@ -1048,8 +1045,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   budgetLeftGroup: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
     flex: 1,
   },
@@ -1058,8 +1055,8 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: 19,
     borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     flexShrink: 0,
   },
   budgetTitleCol: {
@@ -1067,186 +1064,186 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   budgetNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
-    flexWrap: "wrap",
+    flexWrap: "wrap" as const,
   },
   budgetName: {
     fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   intervalBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   intervalText: {
     fontSize: 9,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
-    textTransform: "uppercase",
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
+    textTransform: "uppercase" as const,
   },
   accountBadge: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     maxWidth: 120,
   },
   accountBadgeText: {
     fontSize: 9,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   periodRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
   },
   periodText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   budgetRightGroup: {
-    alignItems: "flex-end",
+    alignItems: "flex-end" as const,
     gap: 4,
   },
   limitAmountText: {
     fontSize: 15,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
+    fontWeight: "800" as const,
+    color: t.colors.textPrimary,
   },
   menuTriggerWrapper: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   dotsBtn: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   exchangeRateWarning: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    backgroundColor: t.colors.warningSubtle,
     borderWidth: 1,
     borderColor: "rgba(245, 158, 11, 0.3)",
   },
   exchangeRateWarningText: {
     fontSize: 11,
-    color: "#f59e0b",
+    color: t.colors.warning,
     flex: 1,
     lineHeight: 15,
   },
   crossCurrencyStrip: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   crossCurrencyRateText: {
     fontSize: 10,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   crossCurrencyLimitText: {
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
+    fontWeight: "600" as const,
+    color: t.colors.textSecondary,
   },
   progressTrack: {
     height: 8,
-    backgroundColor: theme.colors.surfaceHighlight,
+    backgroundColor: t.colors.surfaceHighlight,
     borderRadius: 4,
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   progressBar: {
-    height: "100%",
+    height: "100%" as const,
     borderRadius: 4,
   },
   budgetFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
   },
   spentText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   whiteText: {
-    color: theme.colors.textPrimary,
-    fontWeight: "700",
+    color: t.colors.textPrimary,
+    fontWeight: "700" as const,
   },
   remainingText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.success,
+    fontWeight: "700" as const,
+    color: t.colors.success,
   },
   overText: {
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
   },
   allowanceSubRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingTop: 8,
     marginTop: 8,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.06)",
+    borderTopColor: t.colors.border,
   },
   allowanceSubText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   allowanceSubBold: {
-    fontWeight: "700",
-    color: theme.colors.primary,
+    fontWeight: "700" as const,
+    color: t.colors.primary,
   },
   filterRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
     marginBottom: 4,
   },
   filterPill: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surface,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   filterPillActive: {
-    backgroundColor: theme.colors.primarySubtle,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: t.colors.primary,
   },
   filterPillText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   filterPillTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "700",
+    color: t.colors.primary,
+    fontWeight: "700" as const,
   },
 })

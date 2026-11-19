@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   SectionList,
@@ -42,7 +41,7 @@ import {
 } from "@saturn/core"
 import { useDebounce, useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
 import { TransactionListItem } from "@/components/finance/transaction-list-item"
@@ -57,6 +56,8 @@ export default function TransactionsScreen() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   // State
   const [search, setSearch] = useState("")
@@ -264,7 +265,13 @@ export default function TransactionsScreen() {
         </Card>
       )
     },
-    [accountsMap, budgetsMap, baseCurrency, handleOpenDetail]
+    [
+      accountsMap,
+      budgetsMap,
+      baseCurrency,
+      handleOpenDetail,
+      styles.transactionCardWrapper,
+    ]
   )
 
   return (
@@ -277,7 +284,7 @@ export default function TransactionsScreen() {
               placeholder="Search by merchant or description..."
               value={search}
               onChangeText={setSearch}
-              leftIcon={<Search size={18} color={theme.colors.textMuted} />}
+              leftIcon={<Search size={18} color={colors.textMuted} />}
               inputContainerStyle={{ minHeight: 44 }}
             />
           </View>
@@ -296,9 +303,7 @@ export default function TransactionsScreen() {
             <SlidersHorizontal
               size={18}
               color={
-                activeFilterCount > 0
-                  ? theme.colors.primary
-                  : theme.colors.textSecondary
+                activeFilterCount > 0 ? colors.primary : colors.textSecondary
               }
             />
             {activeFilterCount > 0 && (
@@ -318,7 +323,7 @@ export default function TransactionsScreen() {
               onPress={() => handleStepMonth(-1)}
               activeOpacity={0.7}
             >
-              <ChevronLeft size={16} color={theme.colors.textSecondary} />
+              <ChevronLeft size={16} color={colors.textSecondary} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -332,9 +337,9 @@ export default function TransactionsScreen() {
               }}
               activeOpacity={0.7}
             >
-              <CalendarIcon size={13} color={theme.colors.textMuted} />
+              <CalendarIcon size={13} color={colors.textMuted} />
               <Text style={styles.monthCenterText}>{periodBounds.label}</Text>
-              <ChevronDown size={13} color={theme.colors.textMuted} />
+              <ChevronDown size={13} color={colors.textMuted} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -343,7 +348,7 @@ export default function TransactionsScreen() {
               onPress={() => handleStepMonth(1)}
               activeOpacity={0.7}
             >
-              <ChevronRight size={16} color={theme.colors.textSecondary} />
+              <ChevronRight size={16} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -356,7 +361,7 @@ export default function TransactionsScreen() {
               <Text style={styles.quickChipTextActive}>
                 {selectedType === "EXPENSE" ? "Expenses" : "Income"}
               </Text>
-              <X size={12} color={theme.colors.primary} />
+              <X size={12} color={colors.primary} />
             </TouchableOpacity>
           ) : null}
 
@@ -369,7 +374,7 @@ export default function TransactionsScreen() {
               <Text style={styles.quickChipTextActive}>
                 {accountsMap.get(selectedAccountId)?.name || "Account"}
               </Text>
-              <X size={12} color={theme.colors.primary} />
+              <X size={12} color={colors.primary} />
             </TouchableOpacity>
           ) : null}
 
@@ -382,7 +387,7 @@ export default function TransactionsScreen() {
               <Text style={styles.quickChipTextActive}>
                 {budgetsMap.get(selectedBudgetId)?.name || "Budget"}
               </Text>
-              <X size={12} color={theme.colors.primary} />
+              <X size={12} color={colors.primary} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -413,15 +418,15 @@ export default function TransactionsScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor={theme.colors.primary}
-              colors={[theme.colors.primary]}
-              progressBackgroundColor={theme.colors.surfaceElevated}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+              progressBackgroundColor={colors.surfaceElevated}
             />
           }
           ListFooterComponent={
             isFetchingNextPage ? (
               <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <ActivityIndicator size="small" color={colors.primary} />
                 <Text style={styles.footerLoaderText}>
                   Loading more transactions...
                 </Text>
@@ -430,7 +435,7 @@ export default function TransactionsScreen() {
           }
           ListEmptyComponent={
             <EmptyState
-              icon={<ReceiptText size={32} color={theme.colors.textMuted} />}
+              icon={<ReceiptText size={32} color={colors.textMuted} />}
               title="No transactions found"
               description={
                 search || activeFilterCount > 0
@@ -459,7 +464,7 @@ export default function TransactionsScreen() {
           router.push("/modal/add-transaction")
         }}
       >
-        <Plus size={24} color="#090d16" />
+        <Plus size={24} color={colors.primaryForeground} />
       </TouchableOpacity>
 
       {/* Filter Bottom Sheet */}
@@ -523,7 +528,7 @@ export default function TransactionsScreen() {
                     setPickerYear((y) => y - 1)
                   }}
                 >
-                  <ChevronLeft size={16} color={theme.colors.textSecondary} />
+                  <ChevronLeft size={16} color={colors.textSecondary} />
                 </TouchableOpacity>
                 <Text style={styles.yearHeaderText}>{pickerYear}</Text>
                 <TouchableOpacity
@@ -534,7 +539,7 @@ export default function TransactionsScreen() {
                     setPickerYear((y) => y + 1)
                   }}
                 >
-                  <ChevronRight size={16} color={theme.colors.textSecondary} />
+                  <ChevronRight size={16} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
@@ -743,22 +748,22 @@ export default function TransactionsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   headerBlock: {
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 8,
     gap: 10,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   searchBarRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 10,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   searchWrapper: {
     flex: 1,
@@ -766,152 +771,152 @@ const styles = StyleSheet.create({
   filterButton: {
     width: 44,
     height: 44,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    position: "relative" as const,
   },
   filterButtonActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySubtle,
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
   },
   filterBadge: {
-    position: "absolute",
+    position: "absolute" as const,
     top: -4,
     right: -4,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
     borderRadius: 8,
     minWidth: 16,
     height: 16,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingHorizontal: 3,
   },
   filterBadgeText: {
     fontSize: 10,
-    fontWeight: "700",
-    color: "#090d16",
+    fontWeight: "700" as const,
+    color: t.colors.primaryForeground,
   },
   periodAndChipsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 8,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   monthStepper: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     height: 34,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
+    borderColor: t.colors.border,
+    overflow: "hidden" as const,
   },
   monthStepBtn: {
     width: 32,
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
+    height: "100%" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   monthCenterBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
-    height: "100%",
+    height: "100%" as const,
     paddingHorizontal: 10,
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   monthCenterText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   monthGridCard: {
     marginTop: 4,
     padding: 10,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 8,
   },
   yearHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   yearNavBtn: {
     width: 28,
     height: 28,
-    borderRadius: theme.radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: t.radius.sm,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   yearHeaderText: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   monthGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 6,
   },
   monthCell: {
-    width: "23%",
+    width: "23%" as const,
     paddingVertical: 7,
-    borderRadius: theme.radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: t.radius.sm,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderWidth: 1,
     borderColor: "transparent",
   },
   monthCellCurrent: {
-    borderColor: theme.colors.primary,
+    borderColor: t.colors.primary,
   },
   monthCellActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
+    borderColor: t.colors.primary,
   },
   monthCellText: {
     fontSize: 12,
-    fontWeight: "500",
-    color: theme.colors.textSecondary,
+    fontWeight: "500" as const,
+    color: t.colors.textSecondary,
   },
   monthCellTextActive: {
-    color: "#090d16",
-    fontWeight: "700",
+    color: t.colors.primaryForeground,
+    fontWeight: "700" as const,
   },
   quickChip: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   quickChipActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySubtle,
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
   },
   quickChipText: {
     fontSize: 12,
-    fontWeight: "500",
-    color: theme.colors.textSecondary,
+    fontWeight: "500" as const,
+    color: t.colors.textSecondary,
   },
   quickChipTextActive: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   loaderContainer: {
     padding: 16,
@@ -923,29 +928,29 @@ const styles = StyleSheet.create({
   },
   transactionCardWrapper: {
     padding: 0,
-    overflow: "hidden",
+    overflow: "hidden" as const,
     marginBottom: 8,
   },
   footerLoader: {
     paddingVertical: 20,
-    alignItems: "center",
+    alignItems: "center" as const,
     gap: 8,
   },
   footerLoaderText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   fab: {
-    position: "absolute",
+    position: "absolute" as const,
     right: 20,
     bottom: 24,
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    ...theme.shadows.lg,
+    backgroundColor: t.colors.primary,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    ...t.shadows.lg,
   },
   filterSheetContent: {
     paddingHorizontal: 16,
@@ -957,65 +962,65 @@ const styles = StyleSheet.create({
   },
   filterSectionTitle: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
-    textTransform: "uppercase",
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
+    textTransform: "uppercase" as const,
     letterSpacing: 0.5,
   },
   filterOptionsRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
   },
   filterOptionBtn: {
     flex: 1,
     paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    alignItems: "center" as const,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   filterOptionBtnActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySubtle,
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
   },
   filterOptionText: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
-    fontWeight: "500",
+    color: t.colors.textSecondary,
+    fontWeight: "500" as const,
   },
   filterOptionTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "600",
+    color: t.colors.primary,
+    fontWeight: "600" as const,
   },
   filterPillsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 8,
   },
   filterPill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   filterPillActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySubtle,
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
   },
   filterPillText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontWeight: "500",
+    color: t.colors.textSecondary,
+    fontWeight: "500" as const,
   },
   filterPillTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "600",
+    color: t.colors.primary,
+    fontWeight: "600" as const,
   },
   filterFooter: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 12,
     marginTop: 8,
   },

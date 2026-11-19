@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from "react"
-import { StyleSheet, Text, View, Platform } from "react-native"
+import { Text, View, Platform } from "react-native"
 import { WifiOff } from "lucide-react-native"
 import { onlineManager } from "@tanstack/react-query"
 import NetInfo from "@react-native-community/netinfo"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 interface OfflineIndicatorProps {
   bottomOffset?: number
 }
 
 export function OfflineIndicator({ bottomOffset = 0 }: OfflineIndicatorProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [isOffline, setIsOffline] = useState(false)
 
   useEffect(() => {
@@ -42,33 +45,35 @@ export function OfflineIndicator({ bottomOffset = 0 }: OfflineIndicatorProps) {
       ]}
       pointerEvents="none"
     >
-      <WifiOff size={13} color="#f59e0b" />
+      <WifiOff size={13} color={colors.warning} />
       <Text style={styles.text}>Offline Mode — Showing cached data</Text>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   dockedBar: {
-    position: "absolute",
+    position: "absolute" as const,
     left: 0,
     right: 0,
     zIndex: 100,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 6,
     height: 26,
-    backgroundColor: "rgba(24, 21, 15, 0.96)",
+    backgroundColor: t.isDark
+      ? "rgba(24, 21, 15, 0.96)"
+      : "rgba(254, 243, 199, 0.96)",
     borderTopWidth: 1,
-    borderTopColor: "rgba(245, 158, 11, 0.35)",
+    borderTopColor: `${t.colors.warning}59`,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(245, 158, 11, 0.2)",
+    borderBottomColor: `${t.colors.warning}33`,
   },
   text: {
     fontSize: 11,
-    fontWeight: "600",
-    color: "#fbbf24",
+    fontWeight: "600" as const,
+    color: t.colors.warning,
     letterSpacing: 0.2,
   },
 })

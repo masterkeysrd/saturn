@@ -1,16 +1,10 @@
-import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  TouchableOpacity,
-} from "react-native"
+import { Text, View, ScrollView, TouchableOpacity } from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Check, Plus } from "lucide-react-native"
 import { useSpace } from "@/lib/space-context"
 import { useAuth } from "@/lib/auth-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar } from "@/components/ui/avatar"
@@ -24,6 +18,8 @@ export default function SwitchSpaceModal() {
   const toast = useToast()
   const { user } = useAuth()
   const { spaces, activeSpaceId, switchSpace, isLoading } = useSpace()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   const handleSelectSpace = async (spaceId: string, spaceName: string) => {
     await switchSpace(spaceId)
@@ -83,7 +79,7 @@ export default function SwitchSpaceModal() {
                     </Text>
                   </View>
                 </View>
-                {isSelected && <Check size={20} color={theme.colors.primary} />}
+                {isSelected && <Check size={20} color={colors.primary} />}
               </TouchableOpacity>
             )
           })}
@@ -103,7 +99,7 @@ export default function SwitchSpaceModal() {
       <Button
         variant="primary"
         size="lg"
-        leftIcon={<Plus size={18} color={theme.colors.primaryForeground} />}
+        leftIcon={<Plus size={18} color={colors.primaryForeground} />}
         onPress={() => router.replace("/modal/create-space")}
       >
         Create New Workspace
@@ -112,10 +108,10 @@ export default function SwitchSpaceModal() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 20,
@@ -123,29 +119,29 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     lineHeight: 20,
   },
   loadingContainer: {
     gap: 12,
   },
   list: {
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   spaceItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   spaceItemActive: {
-    backgroundColor: theme.colors.surfaceHighlight,
+    backgroundColor: t.colors.surfaceHighlight,
   },
   spaceLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
     flex: 1,
     marginRight: 8,
@@ -155,22 +151,22 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   spaceName: {
     fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   spaceDescription: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   emptyState: {
     padding: 20,
-    alignItems: "center",
+    alignItems: "center" as const,
     gap: 4,
   },
 })

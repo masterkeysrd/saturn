@@ -5,7 +5,6 @@ import {
   TextInput as RNTextInput,
   TouchableOpacity,
   Keyboard,
-  StyleSheet,
   Platform,
   type StyleProp,
   type ViewStyle,
@@ -20,7 +19,11 @@ import {
   type FieldValues,
   type Path,
 } from "react-hook-form"
-import { theme } from "../../lib/theme"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../lib/theme"
 import { haptics } from "../../lib/haptics"
 
 export function normalizeOtpInput(
@@ -82,6 +85,8 @@ const OTPSlots = React.forwardRef<OTPTextInputRef, OTPSlotsProps>(
     },
     ref
   ) {
+    const { colors, isDark } = useTheme()
+    const styles = useThemedStyles(createStyles)
     const internalRef = useRef<OTPTextInputRef>(null)
     const pasteHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const isFocusedRef = useRef(false)
@@ -293,6 +298,7 @@ const OTPSlots = React.forwardRef<OTPTextInputRef, OTPSlotsProps>(
             value={value}
             onChangeText={handleChangeText}
             keyboardType="number-pad"
+            keyboardAppearance={isDark ? "dark" : "light"}
             textContentType="oneTimeCode"
             autoComplete={
               Platform.OS === "android" ? "2fa-app-otp" : "one-time-code"
@@ -337,7 +343,7 @@ const OTPSlots = React.forwardRef<OTPTextInputRef, OTPSlotsProps>(
           accessibilityRole="button"
           accessibilityLabel="Paste verification code"
         >
-          <ClipboardPaste size={14} color={theme.colors.primary} />
+          <ClipboardPaste size={14} color={colors.primary} />
           <Text style={styles.pasteButtonText}>Paste code</Text>
         </TouchableOpacity>
 
@@ -406,26 +412,26 @@ export const OTPInput = React.forwardRef(function OTPInput<
   props: OTPInputProps<TFieldValues> & { ref?: React.Ref<OTPTextInputRef> }
 ) => React.ReactElement
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
-    width: "100%",
-    alignItems: "center",
+    width: "100%" as const,
+    alignItems: "center" as const,
   },
   label: {
     fontSize: 13,
-    fontWeight: "500",
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-    alignSelf: "center",
+    fontWeight: "500" as const,
+    color: t.colors.textSecondary,
+    marginBottom: t.spacing.sm,
+    alignSelf: "center" as const,
   },
   inputWrapper: {
-    position: "relative",
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
+    position: "relative" as const,
+    width: "100%" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   hiddenInput: {
-    position: "absolute",
+    position: "absolute" as const,
     top: 0,
     right: 0,
     bottom: 0,
@@ -437,98 +443,98 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   pasteButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
-    marginTop: theme.spacing.sm,
+    marginTop: t.spacing.sm,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.primarySubtle,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.primarySubtle,
   },
   pasteButtonDisabled: {
     opacity: 0.5,
   },
   pasteButtonText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   pasteHintText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
-    marginTop: theme.spacing.xs,
-    textAlign: "center",
+    color: t.colors.textMuted,
+    marginTop: t.spacing.xs,
+    textAlign: "center" as const,
   },
   slotsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   slotGroup: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
   },
   slot: {
     width: 44,
     height: 54,
-    borderRadius: theme.radius.md,
+    borderRadius: t.radius.md,
     borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    backgroundColor: t.colors.surfaceElevated,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   slotFilled: {
-    borderColor: theme.colors.borderStrong,
-    backgroundColor: theme.colors.surfaceHighlight,
+    borderColor: t.colors.borderStrong,
+    backgroundColor: t.colors.surfaceHighlight,
   },
   slotActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surfaceHighlight,
-    shadowColor: theme.colors.primary,
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.surfaceHighlight,
+    shadowColor: t.colors.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.35,
     shadowRadius: 5,
     elevation: 3,
   },
   slotError: {
-    borderColor: theme.colors.destructive,
+    borderColor: t.colors.destructive,
   },
   slotDisabled: {
     opacity: 0.5,
   },
   digitText: {
     fontSize: 22,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    fontVariant: ["tabular-nums"],
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
+    fontVariant: ["tabular-nums"] as "tabular-nums"[],
   },
   cursor: {
     width: 2,
     height: 22,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
     borderRadius: 1,
   },
   separatorContainer: {
     paddingHorizontal: 8,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   separatorDash: {
     width: 8,
     height: 2,
-    backgroundColor: theme.colors.textMuted,
+    backgroundColor: t.colors.textMuted,
     borderRadius: 1,
     opacity: 0.6,
   },
   separatorDashError: {
-    backgroundColor: theme.colors.destructive,
+    backgroundColor: t.colors.destructive,
   },
   errorText: {
     fontSize: 12,
-    color: theme.colors.destructive,
-    marginTop: theme.spacing.xs,
-    textAlign: "center",
+    color: t.colors.destructive,
+    marginTop: t.spacing.xs,
+    textAlign: "center" as const,
   },
 })

@@ -34,7 +34,7 @@ import type {
 } from "@saturn/api/saturn/mail/v1/mail"
 import { stripHtmlToPlainText } from "@saturn/core"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { useToast } from "@/components/ui/toast"
 import { SwipeableThreadRow, AccountBucketBar } from "@/components/mail"
@@ -43,6 +43,8 @@ export default function MobileMailScreen() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { colors, isDark } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [selectedAccountId, setSelectedAccountId] = useState<
     string | undefined
   >()
@@ -84,10 +86,10 @@ export default function MobileMailScreen() {
   const accountColorMap = useMemo(() => {
     const map = new Map<string, string>()
     for (const a of accounts) {
-      if (a.id) map.set(a.id, a.color || theme.colors.primary)
+      if (a.id) map.set(a.id, a.color || colors.primary)
     }
     return map
-  }, [accounts])
+  }, [accounts, colors.primary])
 
   const accountEmailMap = useMemo(() => {
     const map = new Map<string, string>()
@@ -315,7 +317,7 @@ export default function MobileMailScreen() {
       {/* Search Input Bar */}
       <View style={styles.searchBarContainer}>
         <View style={styles.searchInner}>
-          <Search size={15} color={theme.colors.textMuted} />
+          <Search size={15} color={colors.textMuted} />
           <TextInput
             testID="mobile-mail-search-input"
             value={searchQuery}
@@ -324,7 +326,8 @@ export default function MobileMailScreen() {
               setDebouncedSearch(text)
             }}
             placeholder="Search in mail..."
-            placeholderTextColor={theme.colors.textMuted}
+            placeholderTextColor={colors.textMuted}
+            keyboardAppearance={isDark ? "dark" : "light"}
             style={styles.searchInput}
             returnKeyType="search"
             autoCapitalize="none"
@@ -337,7 +340,7 @@ export default function MobileMailScreen() {
                 setDebouncedSearch("")
               }}
             >
-              <X size={15} color={theme.colors.textMuted} />
+              <X size={15} color={colors.textMuted} />
             </Pressable>
           )}
         </View>
@@ -347,11 +350,11 @@ export default function MobileMailScreen() {
       {isDraftsBucket ? (
         isDraftsLoading && !isDraftsRefetching ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : draftsError ? (
           <View style={styles.centerContainer}>
-            <AlertCircle size={36} color={theme.colors.destructive} />
+            <AlertCircle size={36} color={colors.destructive} />
             <Text style={styles.errorText}>Failed to load drafts</Text>
             <Pressable style={styles.retryBtn} onPress={() => refetchDrafts()}>
               <Text style={styles.retryBtnText}>Retry</Text>
@@ -359,7 +362,7 @@ export default function MobileMailScreen() {
           </View>
         ) : drafts.length === 0 ? (
           <View style={styles.centerContainer}>
-            <FileEdit size={48} color={theme.colors.textMuted} />
+            <FileEdit size={48} color={colors.textMuted} />
             <Text style={styles.emptyTitle}>No drafts</Text>
             <Text style={styles.emptySubtitle}>
               {searchQuery
@@ -379,8 +382,7 @@ export default function MobileMailScreen() {
                 item.bodyHtml || item.bodyText || ""
               )
               const accColor =
-                accountColorMap.get(item.connectedAccountId) ||
-                theme.colors.primary
+                accountColorMap.get(item.connectedAccountId) || colors.primary
               const timeLabel = item.updateTime
                 ? tz.format(item.updateTime, { month: "short", day: "numeric" })
                 : ""
@@ -425,8 +427,8 @@ export default function MobileMailScreen() {
               <RefreshControl
                 refreshing={isManualRefreshing}
                 onRefresh={handleRefresh}
-                tintColor={theme.colors.primary}
-                colors={[theme.colors.primary]}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
                 progressViewOffset={Platform.OS === "android" ? 30 : 0}
               />
             }
@@ -435,11 +437,11 @@ export default function MobileMailScreen() {
         )
       ) : isLoading && !isRefetching ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>
-          <AlertCircle size={36} color={theme.colors.destructive} />
+          <AlertCircle size={36} color={colors.destructive} />
           <Text style={styles.errorText}>Failed to load messages</Text>
           <Pressable style={styles.retryBtn} onPress={() => refetch()}>
             <Text style={styles.retryBtnText}>Retry</Text>
@@ -447,7 +449,7 @@ export default function MobileMailScreen() {
         </View>
       ) : threads.length === 0 ? (
         <View style={styles.centerContainer}>
-          <Inbox size={48} color={theme.colors.textMuted} />
+          <Inbox size={48} color={colors.textMuted} />
           <Text style={styles.emptyTitle}>No conversations</Text>
           <Text style={styles.emptySubtitle}>
             {searchQuery
@@ -463,8 +465,7 @@ export default function MobileMailScreen() {
             <SwipeableThreadRow
               thread={item}
               accountColor={
-                accountColorMap.get(item.connectedAccountId) ||
-                theme.colors.primary
+                accountColorMap.get(item.connectedAccountId) || colors.primary
               }
               accountEmail={accountEmailMap.get(item.connectedAccountId)}
               onPress={handleThreadPress}
@@ -485,7 +486,7 @@ export default function MobileMailScreen() {
           ListFooterComponent={
             isFetchingNextPage ? (
               <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <ActivityIndicator size="small" color={colors.primary} />
               </View>
             ) : hasNextPage ? (
               <Pressable
@@ -500,8 +501,8 @@ export default function MobileMailScreen() {
             <RefreshControl
               refreshing={isManualRefreshing}
               onRefresh={handleRefresh}
-              tintColor={theme.colors.primary}
-              colors={[theme.colors.primary]}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
               progressViewOffset={Platform.OS === "android" ? 30 : 0}
             />
           }
@@ -515,31 +516,31 @@ export default function MobileMailScreen() {
         onPress={handleOpenCompose}
         style={styles.fab}
       >
-        <Edit size={22} color={theme.colors.primaryForeground} />
+        <Edit size={22} color={colors.primaryForeground} />
       </Pressable>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   searchBarContainer: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   searchInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.md,
     paddingHorizontal: 10,
     height: 38,
     gap: 8,
@@ -547,43 +548,43 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 13,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
     paddingVertical: 0,
   },
   centerContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
     padding: 24,
     gap: 8,
   },
   errorText: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
-    fontWeight: "500",
+    color: t.colors.textSecondary,
+    fontWeight: "500" as const,
   },
   retryBtn: {
     marginTop: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: theme.colors.surfaceHighlight,
-    borderRadius: theme.radius.sm,
+    backgroundColor: t.colors.surfaceHighlight,
+    borderRadius: t.radius.sm,
   },
   retryBtnText: {
     fontSize: 13,
-    color: theme.colors.primary,
-    fontWeight: "600",
+    color: t.colors.primary,
+    fontWeight: "600" as const,
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
     marginTop: 6,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: theme.colors.textMuted,
-    textAlign: "center",
+    color: t.colors.textMuted,
+    textAlign: "center" as const,
   },
   listContent: {
     flexGrow: 1,
@@ -591,8 +592,8 @@ const styles = StyleSheet.create({
   },
   footerLoader: {
     paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   loadMoreBtn: {
     marginHorizontal: 16,
@@ -600,39 +601,35 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   loadMoreText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   fab: {
-    position: "absolute",
+    position: "absolute" as const,
     bottom: 24,
     right: 20,
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 8,
+    backgroundColor: t.colors.primary,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    ...t.shadows.lg,
   },
   draftRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
+    flexDirection: "row" as const,
+    alignItems: "stretch" as const,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderBottomColor: t.colors.border,
+    backgroundColor: t.colors.surface,
     gap: 10,
   },
   draftAccountBar: {
@@ -644,32 +641,32 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   draftRowTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     gap: 8,
   },
   draftRecipients: {
     flex: 1,
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   draftTag: {
-    color: theme.colors.destructive,
-    fontWeight: "700",
+    color: t.colors.destructive,
+    fontWeight: "700" as const,
   },
   draftTime: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   draftSubject: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
+    fontWeight: "600" as const,
+    color: t.colors.textSecondary,
   },
   draftSnippet: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
 })

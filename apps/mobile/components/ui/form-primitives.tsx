@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Switch,
   Keyboard,
-  StyleSheet,
   type TextInputProps as RNTextInputProps,
   type StyleProp,
   type ViewStyle,
@@ -27,7 +26,7 @@ import {
 } from "react-hook-form"
 import { AVAILABLE_COLORS, COLOR_HEX_MAP } from "@saturn/core"
 import { useTimezone } from "@saturn/hooks"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { DatePickerSheet, formatDisplayDate } from "./date-picker-sheet"
 
@@ -59,6 +58,9 @@ export function FormRowInput<TFieldValues extends FieldValues = FieldValues>({
   onBlur,
   ...rest
 }: FormRowInputProps<TFieldValues>) {
+  const { colors, isDark } = useTheme()
+  const styles = useThemedStyles(createStyles)
+
   return (
     <Controller
       control={control}
@@ -75,7 +77,8 @@ export function FormRowInput<TFieldValues extends FieldValues = FieldValues>({
               <RNTextInput
                 ref={field.ref}
                 style={[styles.formRowInput, inputStyle]}
-                placeholderTextColor={theme.colors.textMuted}
+                placeholderTextColor={colors.textMuted}
+                keyboardAppearance={isDark ? "dark" : "light"}
                 value={
                   field.value !== undefined && field.value !== null
                     ? String(field.value)
@@ -94,7 +97,7 @@ export function FormRowInput<TFieldValues extends FieldValues = FieldValues>({
             </View>
             {fieldError ? (
               <View style={styles.inlineError}>
-                <AlertCircle size={12} color={theme.colors.destructive} />
+                <AlertCircle size={12} color={colors.destructive} />
                 <Text style={styles.errorText}>{fieldError}</Text>
               </View>
             ) : null}
@@ -134,6 +137,9 @@ export function FormSwitchRow<TFieldValues extends FieldValues = FieldValues>({
   activeTrackColor,
   onValueChange,
 }: FormSwitchRowProps<TFieldValues>) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+
   return (
     <Controller
       control={control}
@@ -164,8 +170,8 @@ export function FormSwitchRow<TFieldValues extends FieldValues = FieldValues>({
             }}
             disabled={disabled}
             trackColor={{
-              false: theme.colors.surfaceElevated,
-              true: activeTrackColor || theme.colors.primary,
+              false: colors.surfaceElevated,
+              true: activeTrackColor || colors.primary,
             }}
             thumbColor="#ffffff"
           />
@@ -220,12 +226,19 @@ export function FormPillGroup<
   readOnly = false,
   containerStyle,
   pillStyle,
-  activeColor = theme.colors.primary,
-  activeBg = "rgba(99, 102, 241, 0.15)",
-  activeBorder = theme.colors.primary,
-  activeTextColor = theme.colors.primary,
+  activeColor,
+  activeBg,
+  activeBorder,
+  activeTextColor,
   onValueChange,
 }: FormPillGroupProps<TFieldValues, T>) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+  const resolvedActiveColor = activeColor ?? colors.primary
+  const resolvedActiveBg = activeBg ?? colors.primarySubtle
+  const resolvedActiveBorder = activeBorder ?? colors.primary
+  const resolvedActiveTextColor = activeTextColor ?? colors.primary
+
   return (
     <Controller
       control={control}
@@ -243,18 +256,18 @@ export function FormPillGroup<
                 const pillBorderColor = isSelected
                   ? opt.activeBorder ||
                     opt.activeColor ||
-                    activeBorder ||
-                    activeColor
-                  : theme.colors.border
+                    resolvedActiveBorder ||
+                    resolvedActiveColor
+                  : colors.border
                 const pillBg = isSelected
-                  ? opt.activeBg || activeBg
-                  : theme.colors.surfaceElevated
+                  ? opt.activeBg || resolvedActiveBg
+                  : colors.surfaceElevated
                 const pillTextColor = isSelected
                   ? opt.activeTextColor ||
                     opt.activeColor ||
-                    activeTextColor ||
-                    activeColor
-                  : theme.colors.textMuted
+                    resolvedActiveTextColor ||
+                    resolvedActiveColor
+                  : colors.textMuted
 
                 return (
                   <TouchableOpacity
@@ -297,7 +310,7 @@ export function FormPillGroup<
             </View>
             {fieldError ? (
               <View style={styles.inlineError}>
-                <AlertCircle size={12} color={theme.colors.destructive} />
+                <AlertCircle size={12} color={colors.destructive} />
                 <Text style={styles.errorText}>{fieldError}</Text>
               </View>
             ) : null}
@@ -333,6 +346,8 @@ export function FormDateRow<TFieldValues extends FieldValues = FieldValues>({
   containerStyle,
   title,
 }: FormDateRowProps<TFieldValues>) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [isOpen, setIsOpen] = useState(false)
   const tz = useTimezone()
 
@@ -364,19 +379,19 @@ export function FormDateRow<TFieldValues extends FieldValues = FieldValues>({
               disabled={disabled}
             >
               <View style={styles.formRowLabelGroup}>
-                {icon ?? <Calendar size={16} color={theme.colors.textMuted} />}
+                {icon ?? <Calendar size={16} color={colors.textMuted} />}
                 <Text style={styles.formRowLabel}>{label}</Text>
               </View>
               <View style={styles.formRowValueGroup}>
                 <Text style={styles.formRowValueText}>
                   {formatDisplayDate(dateVal, tz.timezone)}
                 </Text>
-                <ChevronRight size={14} color={theme.colors.textMuted} />
+                <ChevronRight size={14} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
             {fieldError ? (
               <View style={styles.inlineError}>
-                <AlertCircle size={12} color={theme.colors.destructive} />
+                <AlertCircle size={12} color={colors.destructive} />
                 <Text style={styles.errorText}>{fieldError}</Text>
               </View>
             ) : null}
@@ -421,6 +436,8 @@ export function FormEffectiveDateSection<
   switchLabel = "Different effective date?",
   disabled = false,
 }: FormEffectiveDateSectionProps<TFieldValues>) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [activeTarget, setActiveTarget] = useState<"date" | "effective" | null>(
     null
   )
@@ -469,25 +486,19 @@ export function FormEffectiveDateSection<
                         disabled={disabled}
                       >
                         <View style={styles.formRowLabelGroup}>
-                          <Calendar size={16} color={theme.colors.textMuted} />
+                          <Calendar size={16} color={colors.textMuted} />
                           <Text style={styles.formRowLabel}>{dateLabel}</Text>
                         </View>
                         <View style={styles.formRowValueGroup}>
                           <Text style={styles.formRowValueText}>
                             {formatDisplayDate(parsedDate, tz.timezone)}
                           </Text>
-                          <ChevronRight
-                            size={14}
-                            color={theme.colors.textMuted}
-                          />
+                          <ChevronRight size={14} color={colors.textMuted} />
                         </View>
                       </TouchableOpacity>
                       {dateState.error ? (
                         <View style={styles.inlineError}>
-                          <AlertCircle
-                            size={12}
-                            color={theme.colors.destructive}
-                          />
+                          <AlertCircle size={12} color={colors.destructive} />
                           <Text style={styles.errorText}>
                             {dateState.error.message}
                           </Text>
@@ -504,10 +515,7 @@ export function FormEffectiveDateSection<
                           { flex: 1, paddingRight: 8 },
                         ]}
                       >
-                        <CalendarClock
-                          size={16}
-                          color={theme.colors.textMuted}
-                        />
+                        <CalendarClock size={16} color={colors.textMuted} />
                         <Text style={styles.formRowLabel} numberOfLines={2}>
                           {switchLabel}
                         </Text>
@@ -523,8 +531,8 @@ export function FormEffectiveDateSection<
                         }}
                         disabled={disabled}
                         trackColor={{
-                          false: theme.colors.surfaceElevated,
-                          true: theme.colors.primary,
+                          false: colors.surfaceElevated,
+                          true: colors.primary,
                         }}
                         thumbColor="#ffffff"
                       />
@@ -545,11 +553,11 @@ export function FormEffectiveDateSection<
                           disabled={disabled}
                         >
                           <View style={styles.formRowLabelGroup}>
-                            <Calendar size={16} color={theme.colors.primary} />
+                            <Calendar size={16} color={colors.primary} />
                             <Text
                               style={[
                                 styles.formRowLabel,
-                                { color: theme.colors.primary },
+                                { color: colors.primary },
                               ]}
                             >
                               {effectiveDateLabel}
@@ -559,23 +567,17 @@ export function FormEffectiveDateSection<
                             <Text
                               style={[
                                 styles.formRowValueText,
-                                { color: theme.colors.primary },
+                                { color: colors.primary },
                               ]}
                             >
                               {formatDisplayDate(parsedEffective, tz.timezone)}
                             </Text>
-                            <ChevronRight
-                              size={14}
-                              color={theme.colors.primary}
-                            />
+                            <ChevronRight size={14} color={colors.primary} />
                           </View>
                         </TouchableOpacity>
                         {effState.error ? (
                           <View style={styles.inlineError}>
-                            <AlertCircle
-                              size={12}
-                              color={theme.colors.destructive}
-                            />
+                            <AlertCircle size={12} color={colors.destructive} />
                             <Text style={styles.errorText}>
                               {effState.error.message}
                             </Text>
@@ -642,6 +644,9 @@ export function FormCheckboxRow<
   containerStyle,
   onValueChange,
 }: FormCheckboxRowProps<TFieldValues>) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+
   return (
     <Controller
       control={control}
@@ -661,7 +666,11 @@ export function FormCheckboxRow<
           >
             <View style={[styles.checkbox, checked && styles.checkboxActive]}>
               {checked ? (
-                <Check size={13} color="#090d16" strokeWidth={3} />
+                <Check
+                  size={13}
+                  color={colors.primaryForeground}
+                  strokeWidth={3}
+                />
               ) : null}
             </View>
             <Text style={styles.checkboxText}>{label}</Text>
@@ -698,6 +707,8 @@ export function FormColorPicker<
   containerStyle,
   onValueChange,
 }: FormColorPickerProps<TFieldValues>) {
+  const styles = useThemedStyles(createStyles)
+
   return (
     <Controller
       control={control}
@@ -733,58 +744,58 @@ export function FormColorPicker<
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   formRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 12,
   },
   formRowLabelGroup: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
     flexShrink: 0,
   },
   formRowLabel: {
     fontSize: 14,
-    fontWeight: "500",
-    color: theme.colors.textMuted,
+    fontWeight: "500" as const,
+    color: t.colors.textMuted,
   },
   formRowInput: {
     flex: 1,
     fontSize: 14,
-    fontWeight: "500",
-    color: theme.colors.textPrimary,
-    textAlign: "right",
+    fontWeight: "500" as const,
+    color: t.colors.textPrimary,
+    textAlign: "right" as const,
     paddingVertical: 0,
     paddingHorizontal: 0,
     marginLeft: 16,
   },
   formRowValueGroup: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "flex-end" as const,
     gap: 6,
   },
   formRowValueText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    textAlign: "right",
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
+    textAlign: "right" as const,
     flexShrink: 1,
   },
   rowDivider: {
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: t.colors.border,
     marginLeft: 42,
   },
   inlineError: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingHorizontal: 16,
     paddingBottom: 8,
@@ -792,12 +803,12 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    color: theme.colors.destructive,
-    fontWeight: "500",
+    color: t.colors.destructive,
+    fontWeight: "500" as const,
   },
   switchSubtitle: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
   },
   pillGroupContainer: {
@@ -805,31 +816,31 @@ const styles = StyleSheet.create({
   },
   pillGroupLabel: {
     fontSize: 13,
-    fontWeight: "500",
-    color: theme.colors.textSecondary,
+    fontWeight: "500" as const,
+    color: t.colors.textSecondary,
     marginBottom: 4,
   },
   pillRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 8,
   },
   pill: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: theme.radius.md,
+    borderRadius: t.radius.md,
     borderWidth: 1,
   },
   pillText: {
     fontSize: 13,
   },
   checkboxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    alignSelf: "flex-start" as const,
     gap: 10,
     marginTop: 6,
     marginBottom: 4,
@@ -840,23 +851,23 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: theme.colors.borderStrong,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.borderStrong,
+    backgroundColor: t.colors.surfaceElevated,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   checkboxActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
+    borderColor: t.colors.primary,
   },
   checkboxText: {
     fontSize: 14,
-    fontWeight: "500",
-    color: theme.colors.textSecondary,
+    fontWeight: "500" as const,
+    color: t.colors.textSecondary,
   },
   colorPaletteRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 10,
     paddingVertical: 4,
   },
@@ -864,13 +875,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderWidth: 2,
     borderColor: "transparent",
   },
   colorCircleSelected: {
-    borderColor: "#ffffff",
+    borderColor: t.colors.textPrimary,
     transform: [{ scale: 1.08 }],
   },
 })

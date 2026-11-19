@@ -8,6 +8,7 @@ import React, {
   type ReactNode,
 } from "react"
 import {
+  Appearance,
   Platform,
   StyleSheet,
   useColorScheme,
@@ -28,8 +29,11 @@ import {
 
 export type ThemeMode = "light" | "dark" | "system"
 export type ResolvedThemeMode = "light" | "dark"
+export type CategoricalModeColors = ReturnType<
+  typeof getCategoricalColor
+>["dark"]
 
-const THEME_MODE_STORAGE_KEY = "saturn_mobile_theme_mode"
+export const THEME_MODE_STORAGE_KEY = "saturn_mobile_theme_mode"
 
 export const radius = {
   xs: radii.xs,
@@ -40,7 +44,13 @@ export const radius = {
   full: radii.full,
 } as const
 
-export const shadows = {
+export interface ShadowScale {
+  sm: ViewStyle
+  md: ViewStyle
+  lg: ViewStyle
+}
+
+export const darkShadows: ShadowScale = {
   sm: {
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -62,7 +72,33 @@ export const shadows = {
     shadowRadius: 15,
     elevation: 8,
   },
-} as const
+}
+
+export const lightShadows: ShadowScale = {
+  sm: {
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  md: {
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  lg: {
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 5,
+  },
+}
+
+export const shadows = darkShadows
 
 export const typography = {
   mono: Platform.select({
@@ -72,17 +108,18 @@ export const typography = {
   }),
 } as const
 
+export const budgetColorsMap = CATEGORICAL_HEX_MAP as Record<string, string>
+
 /**
- * Backward-compatible static dark theme singleton for screens not yet migrated to useTheme().
+ * Returns native hex/rgba colors for a given budget color name in the active theme mode.
  */
-export const theme = {
-  colors: darkColors,
-  spacing,
-  radius,
-  shadows,
-  budgetColors: CATEGORICAL_HEX_MAP as Record<string, string>,
-  typography,
-} as const
+export function getNativeBudgetColors(
+  colorName: string,
+  mode: ResolvedThemeMode = "dark"
+): CategoricalModeColors {
+  const token = getCategoricalColor(colorName)
+  return mode === "light" ? token.light : token.dark
+}
 
 export interface SaturnMobileTheme {
   mode: ThemeMode
@@ -91,15 +128,45 @@ export interface SaturnMobileTheme {
   colors: SemanticColorPalette
   spacing: typeof spacing
   radius: typeof radius
-  shadows: typeof shadows
+  shadows: ShadowScale
+  budgetColors: Record<string, string>
+  getBudgetColors: (colorName: string) => CategoricalModeColors
   typography: typeof typography
   isDark: boolean
+}
+
+/**
+ * Backward-compatible static dark theme singleton for non-React fallbacks.
+ */
+export const theme: SaturnMobileTheme = {
+  mode: "dark",
+  resolvedMode: "dark",
+  setMode: () => {},
+  colors: darkColors,
+  spacing,
+  radius,
+  shadows: darkShadows,
+  budgetColors: budgetColorsMap,
+  getBudgetColors: (colorName: string) =>
+    getNativeBudgetColors(colorName, "dark"),
+  typography,
+  isDark: true,
 }
 
 const ThemeContext = createContext<SaturnMobileTheme | null>(null)
 
 function isThemeMode(value: string | null): value is ThemeMode {
   return value === "light" || value === "dark" || value === "system"
+}
+
+function syncNativeAppearance(mode: ThemeMode) {
+  try {
+    if (typeof Appearance?.setColorScheme === "function") {
+      Appearance.setColorScheme(mode === "system" ? "unspecified" : mode)
+    }
+  } catch {
+    // Ignore in environments where native Appearance override is unsupported
+  }
 }
 
 export function MobileThemeProvider({
@@ -118,6 +185,7 @@ export function MobileThemeProvider({
       .then((stored) => {
         if (active && isThemeMode(stored)) {
           setModeState(stored)
+          syncNativeAppearance(stored)
         }
       })
       .catch(() => {})
@@ -128,6 +196,7 @@ export function MobileThemeProvider({
 
   const setMode = useCallback((nextMode: ThemeMode) => {
     setModeState(nextMode)
+    syncNativeAppearance(nextMode)
     AsyncStorage.setItem(THEME_MODE_STORAGE_KEY, nextMode).catch(() => {})
   }, [])
 
@@ -143,7 +212,10 @@ export function MobileThemeProvider({
       colors: isDark ? darkColors : lightColors,
       spacing,
       radius,
-      shadows,
+      shadows: isDark ? darkShadows : lightShadows,
+      budgetColors: budgetColorsMap,
+      getBudgetColors: (colorName: string) =>
+        getNativeBudgetColors(colorName, resolvedMode),
       typography,
       isDark,
     }
@@ -170,7 +242,10 @@ export function useTheme(): SaturnMobileTheme {
       colors: isDark ? darkColors : lightColors,
       spacing,
       radius,
-      shadows,
+      shadows: isDark ? darkShadows : lightShadows,
+      budgetColors: budgetColorsMap,
+      getBudgetColors: (colorName: string) =>
+        getNativeBudgetColors(colorName, resolvedMode),
       typography,
       isDark,
     }
@@ -192,17 +267,6 @@ export function useThemedStyles<T extends NamedStyles<T>>(
 }
 
 export { lightColors, darkColors }
-
-/**
- * Returns native hex/rgba colors for a given budget color name
- */
-export function getNativeBudgetColors(
-  colorName: string,
-  mode: ResolvedThemeMode = "dark"
-) {
-  const token = getCategoricalColor(colorName)
-  return mode === "light" ? token.light : token.dark
-}
 
 /**
  * Returns semantic color based on cashflow / balance amount

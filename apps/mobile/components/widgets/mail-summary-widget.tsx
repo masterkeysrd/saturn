@@ -17,7 +17,7 @@ import { formatThreadParticipants, parseDate } from "@saturn/core"
 import type { Thread } from "@saturn/api/saturn/mail/v1/mail"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton-loader"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 function formatWidgetThreadTime(
@@ -37,6 +37,8 @@ function formatWidgetThreadTime(
 }
 
 export function MailSummaryWidget() {
+  const { colors, radius } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const router = useRouter()
   const tz = useTimezone()
 
@@ -56,10 +58,10 @@ export function MailSummaryWidget() {
   const accountColorMap = useMemo(() => {
     const map = new Map<string, string>()
     for (const a of mailAccounts) {
-      if (a.id) map.set(a.id, a.color || theme.colors.primary)
+      if (a.id) map.set(a.id, a.color || colors.primary)
     }
     return map
-  }, [mailAccounts])
+  }, [mailAccounts, colors.primary])
 
   const accountEmailMap = useMemo(() => {
     const map = new Map<string, string>()
@@ -125,7 +127,7 @@ export function MailSummaryWidget() {
           testID="mail-widget-header-btn"
         >
           <View style={styles.headerTitleRow}>
-            <Mail size={16} color={theme.colors.primary} />
+            <Mail size={16} color={colors.primary} />
             <Text style={styles.titleText}>Unread Mail</Text>
           </View>
           <View style={styles.headerRight}>
@@ -134,7 +136,7 @@ export function MailSummaryWidget() {
                 ? "Inbox zero"
                 : `${inboxUnreadCount} unread`}
             </Text>
-            <ChevronRight size={16} color={theme.colors.textMuted} />
+            <ChevronRight size={16} color={colors.textMuted} />
           </View>
         </TouchableOpacity>
       </CardHeader>
@@ -146,12 +148,12 @@ export function MailSummaryWidget() {
             <Skeleton
               width="100%"
               height={38}
-              style={{ borderRadius: theme.radius.sm }}
+              style={{ borderRadius: radius.sm }}
             />
             <Skeleton
               width="100%"
               height={38}
-              style={{ borderRadius: theme.radius.sm, marginTop: 8 }}
+              style={{ borderRadius: radius.sm, marginTop: 8 }}
             />
           </View>
         ) : visibleThreads.length === 0 ? (
@@ -160,7 +162,7 @@ export function MailSummaryWidget() {
             onPress={handleNavigateMail}
             style={styles.emptyContainer}
           >
-            <CheckCircle2 size={18} color={theme.colors.success} />
+            <CheckCircle2 size={18} color={colors.success} />
             <Text style={styles.emptyText}>
               All caught up. Tap to open inbox.
             </Text>
@@ -169,8 +171,7 @@ export function MailSummaryWidget() {
           <View style={styles.threadsList}>
             {visibleThreads.map((thread, idx) => {
               const color =
-                accountColorMap.get(thread.connectedAccountId) ||
-                theme.colors.primary
+                accountColorMap.get(thread.connectedAccountId) || colors.primary
               const accountEmail = accountEmailMap.get(
                 thread.connectedAccountId
               )
@@ -203,7 +204,7 @@ export function MailSummaryWidget() {
                       </Text>
                       <View style={styles.threadMetaRight}>
                         {thread.hasAttachments ? (
-                          <Paperclip size={11} color={theme.colors.textMuted} />
+                          <Paperclip size={11} color={colors.textMuted} />
                         ) : null}
                         {timeStr ? (
                           <Text style={styles.timeText}>{timeStr}</Text>
@@ -224,10 +225,10 @@ export function MailSummaryWidget() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   card: {
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.border,
+    backgroundColor: t.colors.surface,
+    borderColor: t.colors.border,
   },
   header: {
     paddingHorizontal: 16,
@@ -235,29 +236,29 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   headerButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     gap: 8,
   },
   headerTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
   },
   titleText: {
     fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   subtitleText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   content: {
     paddingHorizontal: 16,
@@ -268,27 +269,27 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   emptyContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
     paddingVertical: 6,
   },
   emptyText: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
   },
   threadsList: {
     gap: 0,
   },
   threadRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
     paddingVertical: 6,
   },
   threadRowDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   colorDot: {
     width: 8,
@@ -300,28 +301,28 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   threadTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     gap: 8,
   },
   senderText: {
     flex: 1,
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   threadMetaRight: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
   },
   timeText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   subjectText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
   },
 })

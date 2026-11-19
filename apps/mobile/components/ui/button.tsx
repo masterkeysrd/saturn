@@ -3,12 +3,11 @@ import {
   TouchableOpacity,
   Text,
   ActivityIndicator,
-  StyleSheet,
   type TouchableOpacityProps,
   type StyleProp,
   type TextStyle,
 } from "react-native"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 export type ButtonVariant =
@@ -46,6 +45,9 @@ export function Button({
   onPress,
   ...props
 }: ButtonProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+
   const handlePress: NonNullable<TouchableOpacityProps["onPress"]> = (e) => {
     if (disabled || loading) return
     if (haptic === "light") haptics.light()
@@ -73,8 +75,10 @@ export function Button({
 
   const spinnerColor =
     variant === "primary"
-      ? theme.colors.primaryForeground
-      : theme.colors.textPrimary
+      ? colors.primaryForeground
+      : variant === "destructive"
+        ? colors.destructive
+        : colors.textPrimary
 
   const isTextChild =
     typeof children === "string" ||
@@ -110,16 +114,16 @@ export function Button({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   base: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: theme.radius.md,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    borderRadius: t.radius.md,
     gap: 8,
   },
   fullWidth: {
-    width: "100%",
+    width: "100%" as const,
   },
   // Sizes
   sm: {
@@ -136,17 +140,17 @@ const styles = StyleSheet.create({
   },
   // Variants
   primary: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
   },
   secondary: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   destructive: {
-    backgroundColor: theme.colors.destructiveSubtle,
+    backgroundColor: t.colors.destructiveSubtle,
     borderWidth: 1,
-    borderColor: "rgba(244, 63, 94, 0.3)",
+    borderColor: `${t.colors.destructive}4D`,
   },
   ghost: {
     backgroundColor: "transparent",
@@ -154,14 +158,14 @@ const styles = StyleSheet.create({
   outline: {
     backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
+    borderColor: t.colors.borderStrong,
   },
   disabled: {
     opacity: 0.5,
   },
   // Text sizes
   textBase: {
-    fontWeight: "600",
+    fontWeight: "600" as const,
   },
   smText: {
     fontSize: 13,
@@ -174,21 +178,21 @@ const styles = StyleSheet.create({
   },
   // Text colors
   primaryText: {
-    color: theme.colors.primaryForeground,
+    color: t.colors.primaryForeground,
   },
   secondaryText: {
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   destructiveText: {
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
   },
   ghostText: {
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   outlineText: {
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   disabledText: {
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
 })

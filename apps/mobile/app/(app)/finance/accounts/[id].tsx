@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   SectionList,
@@ -31,7 +30,7 @@ import { formatAmount, groupTransactionsByDate } from "@saturn/core"
 import { useTimezone } from "@saturn/hooks"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Caption } from "@/components/ui/typography"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -45,6 +44,8 @@ export default function AccountDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [refreshing, setRefreshing] = useState(false)
 
   // Fetch settings & base currency
@@ -140,7 +141,7 @@ export default function AccountDetailScreen() {
   if (isAccountLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     )
   }
@@ -148,7 +149,7 @@ export default function AccountDetailScreen() {
   if (!account) {
     return (
       <View style={styles.errorContainer}>
-        <AlertCircle size={36} color={theme.colors.destructive} />
+        <AlertCircle size={36} color={colors.destructive} />
         <Text style={styles.errorTitle}>Account Not Found</Text>
         <Text style={styles.errorSubtitle}>
           The requested financial account could not be loaded.
@@ -212,7 +213,7 @@ export default function AccountDetailScreen() {
           style={styles.actionBtn}
         >
           <View style={[styles.actionIconWrap, styles.iconTransfer]}>
-            <ArrowRightLeft size={18} color={theme.colors.primary} />
+            <ArrowRightLeft size={18} color={colors.primary} />
           </View>
           <Text style={styles.actionBtnText}>Transfer</Text>
         </TouchableOpacity>
@@ -228,7 +229,7 @@ export default function AccountDetailScreen() {
           style={styles.actionBtn}
         >
           <View style={[styles.actionIconWrap, styles.iconAdjust]}>
-            <Scale size={18} color="#10b981" />
+            <Scale size={18} color={colors.success} />
           </View>
           <Text style={styles.actionBtnText}>Adjust Balance</Text>
         </TouchableOpacity>
@@ -247,7 +248,7 @@ export default function AccountDetailScreen() {
           style={styles.actionBtn}
         >
           <View style={[styles.actionIconWrap, styles.iconExpense]}>
-            <Plus size={18} color={theme.colors.destructive} />
+            <Plus size={18} color={colors.destructive} />
           </View>
           <Text style={styles.actionBtnText}>Add Tx</Text>
         </TouchableOpacity>
@@ -263,7 +264,7 @@ export default function AccountDetailScreen() {
           style={styles.actionBtn}
         >
           <View style={[styles.actionIconWrap, styles.iconEdit]}>
-            <Edit3 size={18} color={theme.colors.textPrimary} />
+            <Edit3 size={18} color={colors.textPrimary} />
           </View>
           <Text style={styles.actionBtnText}>Edit</Text>
         </TouchableOpacity>
@@ -327,9 +328,9 @@ export default function AccountDetailScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor={theme.colors.primary}
-              colors={[theme.colors.primary]}
-              progressBackgroundColor={theme.colors.surfaceElevated}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+              progressBackgroundColor={colors.surfaceElevated}
             />
           }
           renderSectionHeader={({ section: { title } }) => (
@@ -361,9 +362,7 @@ export default function AccountDetailScreen() {
             ) : (
               <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
                 <EmptyState
-                  icon={
-                    <ReceiptText size={28} color={theme.colors.textMuted} />
-                  }
+                  icon={<ReceiptText size={28} color={colors.textMuted} />}
                   title="No transactions found"
                   description="Transactions booked under this account will appear here."
                 />
@@ -376,48 +375,48 @@ export default function AccountDetailScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   loadingContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   errorContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     padding: 24,
     gap: 12,
   },
   errorTitle: {
     fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   errorSubtitle: {
     fontSize: 14,
-    color: theme.colors.textMuted,
-    textAlign: "center",
+    color: t.colors.textMuted,
+    textAlign: "center" as const,
   },
   backToAccountsBtn: {
     marginTop: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderRadius: theme.radius.md,
+    backgroundColor: t.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   backToAccountsText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   listContent: {
     paddingBottom: 40,
@@ -428,8 +427,8 @@ const styles = StyleSheet.create({
   },
   headerEditBtnText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   headerSection: {
     padding: 16,
@@ -438,19 +437,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   actionGrid: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 10,
   },
   actionBtn: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingVertical: 10,
     paddingHorizontal: 4,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 4,
     minHeight: 74,
   },
@@ -458,26 +457,26 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   iconTransfer: {
-    backgroundColor: "rgba(56, 189, 248, 0.12)",
+    backgroundColor: t.colors.primarySubtle,
   },
   iconAdjust: {
-    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    backgroundColor: t.colors.successSubtle,
   },
   iconExpense: {
-    backgroundColor: "rgba(244, 63, 94, 0.12)",
+    backgroundColor: t.colors.destructiveSubtle,
   },
   iconEdit: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: t.colors.surfaceHighlight,
   },
   actionBtnText: {
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    textAlign: "center",
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
+    textAlign: "center" as const,
     lineHeight: 14,
   },
   ledgerHeader: {

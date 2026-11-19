@@ -23,10 +23,12 @@ import { useSpace } from "@/lib/space-context"
 import { Card } from "@/components/ui/card"
 import { MonoAmount, Caption } from "@/components/ui/typography"
 import { Skeleton } from "@/components/ui/skeleton-loader"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 export function FinanceSummaryWidget() {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const router = useRouter()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
@@ -135,7 +137,7 @@ export function FinanceSummaryWidget() {
           testID="finance-widget-header-btn"
         >
           <View style={styles.headerLeft}>
-            <Landmark size={16} color={theme.colors.primary} />
+            <Landmark size={16} color={colors.primary} />
             <Text style={styles.headerTitle}>Financial Snapshot</Text>
           </View>
           <View style={styles.headerRight}>
@@ -145,7 +147,7 @@ export function FinanceSummaryWidget() {
                 {accounts.length === 1 ? "account" : "accounts"}
               </Text>
             ) : null}
-            <ChevronRight size={16} color={theme.colors.textMuted} />
+            <ChevronRight size={16} color={colors.textMuted} />
           </View>
         </TouchableOpacity>
 
@@ -163,10 +165,10 @@ export function FinanceSummaryWidget() {
             <View
               style={[
                 styles.statIconBadge,
-                { backgroundColor: theme.colors.successSubtle },
+                { backgroundColor: colors.successSubtle },
               ]}
             >
-              <ArrowDownLeft size={14} color={theme.colors.success} />
+              <ArrowDownLeft size={14} color={colors.success} />
             </View>
             <View>
               <Caption style={styles.statLabel}>
@@ -174,7 +176,7 @@ export function FinanceSummaryWidget() {
               </Caption>
               <MonoAmount
                 size="sm"
-                color={theme.colors.success}
+                color={colors.success}
                 style={styles.statAmount}
               >
                 +{formatAmount(totalIncomeCents, baseCurrency)}
@@ -186,10 +188,10 @@ export function FinanceSummaryWidget() {
             <View
               style={[
                 styles.statIconBadge,
-                { backgroundColor: theme.colors.destructiveSubtle },
+                { backgroundColor: colors.destructiveSubtle },
               ]}
             >
-              <ArrowUpRight size={14} color={theme.colors.destructive} />
+              <ArrowUpRight size={14} color={colors.destructive} />
             </View>
             <View>
               <Caption style={styles.statLabel}>
@@ -197,7 +199,7 @@ export function FinanceSummaryWidget() {
               </Caption>
               <MonoAmount
                 size="sm"
-                color={theme.colors.destructive}
+                color={colors.destructive}
                 style={styles.statAmount}
               >
                 -{formatAmount(totalSpentCents, baseCurrency)}
@@ -216,17 +218,17 @@ export function FinanceSummaryWidget() {
           router.push("/modal/add-transaction")
         }}
       >
-        <Plus size={15} color={theme.colors.primary} />
+        <Plus size={15} color={colors.primary} />
         <Text style={styles.cardFooterText}>Add Transaction</Text>
       </TouchableOpacity>
     </Card>
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   card: {
     padding: 0,
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   cardBody: {
     paddingHorizontal: 16,
@@ -235,29 +237,29 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     gap: 8,
   },
   headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   headerTitle: {
     fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   balanceSection: {
     gap: 0,
@@ -273,17 +275,17 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
     gap: 12,
     paddingTop: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
   },
   statItem: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
   },
   statLabel: {
@@ -298,31 +300,31 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   cardFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderTopColor: t.colors.border,
+    backgroundColor: t.colors.surfaceElevated,
   },
   cardFooterText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   footerSkeleton: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingVertical: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderTopColor: t.colors.border,
+    backgroundColor: t.colors.surfaceElevated,
   },
 })

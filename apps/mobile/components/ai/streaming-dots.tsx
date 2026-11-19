@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { StyleSheet, View } from "react-native"
+import { View } from "react-native"
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -8,9 +8,10 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated"
-import { theme } from "@/lib/theme"
+import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 function PulseDot({ delayMs }: { delayMs: number }) {
+  const styles = useThemedStyles(createStyles)
   const opacity = useSharedValue(0.35)
   const scale = useSharedValue(0.85)
 
@@ -48,6 +49,7 @@ function PulseDot({ delayMs }: { delayMs: number }) {
 }
 
 export function StreamingDots() {
+  const styles = useThemedStyles(createStyles)
   return (
     <View style={styles.row} accessibilityLabel="Streaming indicator">
       <PulseDot delayMs={0} />
@@ -57,10 +59,10 @@ export function StreamingDots() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   row: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
     paddingVertical: 2,
   },
@@ -68,6 +70,6 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
   },
 })

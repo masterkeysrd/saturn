@@ -9,7 +9,7 @@ import {
 } from "react-native"
 import * as Clipboard from "expo-clipboard"
 import { Check, Copy } from "lucide-react-native"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import {
   parseMarkdownBlocks,
@@ -63,6 +63,7 @@ function parseInlineTokens(text: string): InlineToken[] {
 }
 
 function InlineText({ text, baseStyle }: { text: string; baseStyle: object }) {
+  const styles = useThemedStyles(createStyles)
   const tokens = parseInlineTokens(text)
   return (
     <Text style={baseStyle} selectable>
@@ -115,6 +116,8 @@ function CodeBlockView({
   language?: string
   code: string
 }) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -135,9 +138,9 @@ function CodeBlockView({
           accessibilityLabel="Copy code block"
         >
           {copied ? (
-            <Check size={12} color={theme.colors.success} />
+            <Check size={12} color={colors.success} />
           ) : (
-            <Copy size={12} color={theme.colors.textMuted} />
+            <Copy size={12} color={colors.textMuted} />
           )}
           <Text style={[styles.copyText, copied && styles.copiedText]}>
             {copied ? "Copied" : "Copy"}
@@ -164,6 +167,7 @@ function TableBlockView({
   alignments: TableAlignment[]
   rows: string[][]
 }) {
+  const styles = useThemedStyles(createStyles)
   const colWidths = headers.map((h, colIdx) => {
     let maxLen = stripMarkdownSyntax(h).length
     for (const row of rows) {
@@ -253,6 +257,7 @@ function TableBlockView({
 }
 
 export function MarkdownText({ text }: { text: string }) {
+  const styles = useThemedStyles(createStyles)
   const blocks = parseMarkdownBlocks(text)
   if (blocks.length === 0) return null
 
@@ -324,160 +329,160 @@ export function MarkdownText({ text }: { text: string }) {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   root: {
     gap: 8,
   },
   body: {
     fontSize: 15,
     lineHeight: 22,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   h1: {
     fontSize: 18,
     lineHeight: 24,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
     marginTop: 4,
   },
   h2: {
     fontSize: 16,
     lineHeight: 22,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
     marginTop: 2,
   },
   h3: {
     fontSize: 15,
     lineHeight: 21,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   bold: {
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   italic: {
-    fontStyle: "italic",
+    fontStyle: "italic" as const,
   },
   inlineCode: {
-    fontFamily: theme.typography.mono,
+    fontFamily: t.typography.mono,
     fontSize: 13,
-    backgroundColor: theme.colors.surfaceHighlight,
-    color: theme.colors.primary,
+    backgroundColor: t.colors.surfaceHighlight,
+    color: t.colors.primary,
   },
   link: {
-    color: theme.colors.primary,
-    textDecorationLine: "underline",
+    color: t.colors.primary,
+    textDecorationLine: "underline" as const,
   },
   blockquote: {
     borderLeftWidth: 2,
-    borderLeftColor: theme.colors.primary,
+    borderLeftColor: t.colors.primary,
     paddingLeft: 10,
     paddingVertical: 2,
   },
   quoteText: {
     fontSize: 14,
     lineHeight: 20,
-    color: theme.colors.textSecondary,
-    fontStyle: "italic",
+    color: t.colors.textSecondary,
+    fontStyle: "italic" as const,
   },
   list: {
     gap: 4,
   },
   listRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
     gap: 8,
   },
   bullet: {
     fontSize: 14,
     lineHeight: 22,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
     minWidth: 14,
   },
   listItemBody: {
     flex: 1,
   },
   codeCard: {
-    borderRadius: theme.radius.md,
+    borderRadius: t.radius.md,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    overflow: "hidden",
+    borderColor: t.colors.border,
+    backgroundColor: t.colors.surface,
+    overflow: "hidden" as const,
   },
   codeHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceSubtle,
+    borderBottomColor: t.colors.border,
+    backgroundColor: t.colors.surfaceSubtle,
   },
   codeLang: {
     fontSize: 11,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textMuted,
-    textTransform: "lowercase",
+    fontFamily: t.typography.mono,
+    color: t.colors.textMuted,
+    textTransform: "lowercase" as const,
   },
   copyBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
   },
   copyText: {
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   copiedText: {
-    color: theme.colors.success,
+    color: t.colors.success,
   },
   codeBody: {
-    fontFamily: theme.typography.mono,
+    fontFamily: t.typography.mono,
     fontSize: 12,
     lineHeight: 18,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
     padding: 10,
   },
   hr: {
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: t.colors.border,
     marginVertical: 4,
   },
   tableWrap: {
     marginVertical: 4,
-    borderRadius: theme.radius.md,
+    borderRadius: t.radius.md,
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
-    backgroundColor: theme.colors.surface,
-    overflow: "hidden",
+    borderColor: t.colors.borderStrong,
+    backgroundColor: t.colors.surface,
+    overflow: "hidden" as const,
   },
   tableFullWidth: {
-    width: "100%",
+    width: "100%" as const,
   },
   tableRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
   },
   tableHeaderRow: {
-    backgroundColor: theme.colors.surfaceHighlight,
+    backgroundColor: t.colors.surfaceHighlight,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderStrong,
+    borderBottomColor: t.colors.borderStrong,
   },
   tableRowAlt: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
   },
   tableRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.borderStrong,
+    borderBottomColor: t.colors.borderStrong,
   },
   tableCell: {
     paddingHorizontal: 10,
     paddingVertical: 9,
-    justifyContent: "center",
+    justifyContent: "center" as const,
   },
   tableCellFirst: {
     paddingLeft: 12,
@@ -488,13 +493,13 @@ const styles = StyleSheet.create({
   tableHeaderText: {
     fontSize: 12,
     lineHeight: 16,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     letterSpacing: 0.2,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   tableCellText: {
     fontSize: 13,
     lineHeight: 19,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
 })

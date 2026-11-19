@@ -10,7 +10,7 @@ import {
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import type { MenuAction, MenuComponentProps } from "@expo/ui/community/menu"
-import { theme } from "@/lib/theme"
+import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 function canRenderNativeMenuView(): boolean {
@@ -72,6 +72,7 @@ export function ActionMenu({
   children,
   ...rest
 }: MenuComponentProps) {
+  const styles = useThemedStyles(createStyles)
   const [sheetVisible, setSheetVisible] = useState(false)
   const insets = useSafeAreaInsets()
 
@@ -184,63 +185,65 @@ export function ActionMenu({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.55)",
-    justifyContent: "flex-end",
+    backgroundColor: t.isDark
+      ? "rgba(0, 0, 0, 0.55)"
+      : "rgba(15, 23, 42, 0.35)",
+    justifyContent: "flex-end" as const,
     paddingHorizontal: 12,
   },
   sheetContainer: {
     gap: 8,
   },
   actionsCard: {
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.radius.lg,
+    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
+    borderColor: t.colors.border,
+    overflow: "hidden" as const,
   },
   titleRow: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   titleText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   actionRow: {
     paddingVertical: 15,
     paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   actionRowBorder: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
   },
   actionText: {
     fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   actionTextDestructive: {
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
   },
   cancelButton: {
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.radius.lg,
+    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     paddingVertical: 15,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   cancelText: {
     fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
 })

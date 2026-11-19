@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -36,7 +35,7 @@ import {
   type CurrencyInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import {
   ExpenseForm,
@@ -52,6 +51,8 @@ export type TransactionFlowType =
 export default function AddTransactionModal() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const {
     id: editTransactionId,
     type: initialType,
@@ -152,7 +153,7 @@ export default function AddTransactionModal() {
   if (isEditMode && txLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading transaction...</Text>
       </View>
     )
@@ -184,7 +185,7 @@ export default function AddTransactionModal() {
                 }
               : {
                   headerStyle: {
-                    backgroundColor: theme.colors.background,
+                    backgroundColor: colors.background,
                   },
                   headerLeft: () => (
                     <TouchableOpacity
@@ -196,11 +197,11 @@ export default function AddTransactionModal() {
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       accessibilityLabel="Close"
                     >
-                      <X size={20} color={theme.colors.textMuted} />
+                      <X size={20} color={colors.textMuted} />
                     </TouchableOpacity>
                   ),
                 }),
-            headerTintColor: theme.colors.textPrimary,
+            headerTintColor: colors.textPrimary,
           }}
         />
 
@@ -228,8 +229,8 @@ export default function AddTransactionModal() {
                   size={14}
                   color={
                     activeType === "EXPENSE"
-                      ? theme.colors.destructive
-                      : theme.colors.textMuted
+                      ? colors.destructive
+                      : colors.textMuted
                   }
                 />
                 <Text
@@ -258,9 +259,7 @@ export default function AddTransactionModal() {
                 <ArrowUpRight
                   size={14}
                   color={
-                    activeType === "INCOME"
-                      ? theme.colors.success
-                      : theme.colors.textMuted
+                    activeType === "INCOME" ? colors.success : colors.textMuted
                   }
                 />
                 <Text
@@ -289,8 +288,8 @@ export default function AddTransactionModal() {
                   size={14}
                   color={
                     activeType === "TRANSFER"
-                      ? theme.colors.primary
-                      : theme.colors.textMuted
+                      ? colors.primary
+                      : colors.textMuted
                   }
                 />
                 <Text
@@ -320,8 +319,8 @@ export default function AddTransactionModal() {
                   size={14}
                   color={
                     activeType === "SCHEDULED"
-                      ? "#818cf8"
-                      : theme.colors.textMuted
+                      ? colors.accent
+                      : colors.textMuted
                   }
                 />
                 <Text
@@ -354,8 +353,8 @@ export default function AddTransactionModal() {
                   size={14}
                   color={
                     activeType === "BORROWING"
-                      ? "#f59e0b"
-                      : theme.colors.textMuted
+                      ? colors.warning
+                      : colors.textMuted
                   }
                 />
                 <Text
@@ -450,26 +449,26 @@ export default function AddTransactionModal() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   loadingContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    backgroundColor: t.colors.background,
     gap: 12,
   },
   loadingText: {
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     fontSize: 14,
   },
   typeSwitcherWrapper: {
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   typeSwitcherContent: {
     paddingHorizontal: 16,
@@ -477,59 +476,59 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   typePill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingHorizontal: 13,
     paddingVertical: 7,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   typePillText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   typePillExpenseActive: {
-    borderColor: theme.colors.destructive,
-    backgroundColor: theme.colors.destructiveSubtle,
+    borderColor: t.colors.destructive,
+    backgroundColor: t.colors.destructiveSubtle,
   },
   typePillExpenseTextActive: {
-    color: theme.colors.destructive,
-    fontWeight: "700",
+    color: t.colors.destructive,
+    fontWeight: "700" as const,
   },
   typePillIncomeActive: {
-    borderColor: theme.colors.success,
-    backgroundColor: theme.colors.successSubtle,
+    borderColor: t.colors.success,
+    backgroundColor: t.colors.successSubtle,
   },
   typePillIncomeTextActive: {
-    color: theme.colors.success,
-    fontWeight: "700",
+    color: t.colors.success,
+    fontWeight: "700" as const,
   },
   typePillTransferActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySubtle,
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
   },
   typePillTransferTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "700",
+    color: t.colors.primary,
+    fontWeight: "700" as const,
   },
   typePillScheduledActive: {
-    borderColor: "#818cf8",
-    backgroundColor: "rgba(129, 140, 248, 0.15)",
+    borderColor: t.colors.accent,
+    backgroundColor: t.colors.primarySubtle,
   },
   typePillScheduledTextActive: {
-    color: "#818cf8",
-    fontWeight: "700",
+    color: t.colors.accent,
+    fontWeight: "700" as const,
   },
   typePillBorrowingActive: {
-    borderColor: "#f59e0b",
-    backgroundColor: "rgba(245, 158, 11, 0.15)",
+    borderColor: t.colors.warning,
+    backgroundColor: t.colors.warningSubtle,
   },
   typePillBorrowingTextActive: {
-    color: "#f59e0b",
-    fontWeight: "700",
+    color: t.colors.warning,
+    fontWeight: "700" as const,
   },
 })

@@ -1,12 +1,6 @@
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native"
+import { ScrollView, Text, TouchableOpacity, View } from "react-native"
 import { insertVariableToken, type WorkflowVariable } from "@saturn/core"
-import { theme } from "@/lib/theme"
+import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 interface VariableChipPickerProps {
@@ -22,6 +16,8 @@ export function VariableChipPicker({
   onInsert,
   rawMode = false,
 }: VariableChipPickerProps) {
+  const styles = useThemedStyles(createStyles)
+
   if (variables.length === 0) return null
 
   return (
@@ -58,33 +54,33 @@ export function VariableChipPicker({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     gap: 6,
   },
   label: {
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     letterSpacing: 0.6,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   chipsRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
     paddingVertical: 2,
   },
   chip: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.primarySubtle,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.primarySubtle,
     borderWidth: 1,
-    borderColor: theme.colors.primaryDark,
+    borderColor: t.colors.primaryDark,
   },
   chipText: {
     fontSize: 11,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.primary,
-    fontWeight: "600",
+    fontFamily: t.typography.mono,
+    color: t.colors.primary,
+    fontWeight: "600" as const,
   },
 })

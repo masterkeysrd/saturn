@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -38,7 +37,7 @@ import {
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useSpace } from "@/lib/space-context"
 import { useTimezone } from "@saturn/hooks"
-import { theme, getNativeBudgetColors } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { BudgetCategoryIcon } from "@/lib/budget-icons"
 import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
@@ -57,6 +56,8 @@ export default function TransactionDetailScreen() {
   const queryClient = useQueryClient()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { colors, getBudgetColors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   const formatDateString = (dateStr?: string): string => {
     if (!dateStr) return "N/A"
@@ -118,7 +119,7 @@ export default function TransactionDetailScreen() {
   )
   const budgetName = budget?.name || tx?.budget?.name
   const budgetColor = budget?.color || "indigo"
-  const nativeBudgetColors = getNativeBudgetColors(budgetColor)
+  const nativeBudgetColors = getBudgetColors(budgetColor)
   const hasBudget = Boolean(budget || tx?.budget)
 
   const { data: eventsData } = useListTransactionEventsQuery(
@@ -249,7 +250,7 @@ export default function TransactionDetailScreen() {
   if (txError || !tx) {
     return (
       <View style={styles.emptyContainer}>
-        <ReceiptText size={48} color={theme.colors.textMuted} />
+        <ReceiptText size={48} color={colors.textMuted} />
         <Text style={styles.emptyTitle}>Transaction Not Found</Text>
         <Text style={styles.emptySubtitle}>
           The requested transaction could not be loaded or may have been
@@ -281,7 +282,7 @@ export default function TransactionDetailScreen() {
                     type: "button",
                     label: "Delete",
                     icon: { type: "sfSymbol", name: "trash" },
-                    tintColor: theme.colors.destructive,
+                    tintColor: colors.destructive,
                     sharesBackground: false,
                     onPress: handleDeletePrompt,
                   },
@@ -296,7 +297,7 @@ export default function TransactionDetailScreen() {
                       hitSlop={8}
                       activeOpacity={0.7}
                     >
-                      <Edit3 size={18} color={theme.colors.textPrimary} />
+                      <Edit3 size={18} color={colors.textPrimary} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={handleDeletePrompt}
@@ -304,7 +305,7 @@ export default function TransactionDetailScreen() {
                       hitSlop={8}
                       activeOpacity={0.7}
                     >
-                      <Trash2 size={18} color={theme.colors.destructive} />
+                      <Trash2 size={18} color={colors.destructive} />
                     </TouchableOpacity>
                   </View>
                 ),
@@ -332,16 +333,16 @@ export default function TransactionDetailScreen() {
                   }
                 : isExpense
                   ? {
-                      backgroundColor: theme.colors.destructiveSubtle,
+                      backgroundColor: colors.destructiveSubtle,
                       borderColor: "rgba(244, 63, 94, 0.25)",
                     }
                   : isIncome
                     ? {
-                        backgroundColor: theme.colors.successSubtle,
+                        backgroundColor: colors.successSubtle,
                         borderColor: "rgba(16, 185, 129, 0.25)",
                       }
                     : {
-                        backgroundColor: theme.colors.primarySubtle,
+                        backgroundColor: colors.primarySubtle,
                         borderColor: "rgba(56, 189, 248, 0.25)",
                       },
             ]}
@@ -354,11 +355,11 @@ export default function TransactionDetailScreen() {
                 color={nativeBudgetColors.bar}
               />
             ) : isExpense ? (
-              <ArrowUpRight size={28} color={theme.colors.destructive} />
+              <ArrowUpRight size={28} color={colors.destructive} />
             ) : isIncome ? (
-              <ArrowDownLeft size={28} color={theme.colors.success} />
+              <ArrowDownLeft size={28} color={colors.success} />
             ) : (
-              <ReceiptText size={28} color={theme.colors.primary} />
+              <ReceiptText size={28} color={colors.primary} />
             )}
           </View>
 
@@ -372,10 +373,10 @@ export default function TransactionDetailScreen() {
             size="xl"
             color={
               isExpense
-                ? theme.colors.textPrimary
+                ? colors.textPrimary
                 : isIncome
-                  ? theme.colors.success
-                  : theme.colors.accent
+                  ? colors.success
+                  : colors.accent
             }
             style={styles.heroAmountText}
           >
@@ -437,7 +438,7 @@ export default function TransactionDetailScreen() {
           {/* Account */}
           <View style={styles.tableRow}>
             <View style={styles.rowLabelGroup}>
-              <Landmark size={15} color={theme.colors.textMuted} />
+              <Landmark size={15} color={colors.textMuted} />
               <Text style={styles.rowLabel}>Account</Text>
             </View>
             <Text style={styles.rowValue} numberOfLines={1}>
@@ -453,7 +454,7 @@ export default function TransactionDetailScreen() {
               <View style={styles.rowDivider} />
               <View style={styles.tableRow}>
                 <View style={styles.rowLabelGroup}>
-                  <Tag size={15} color={theme.colors.textMuted} />
+                  <Tag size={15} color={colors.textMuted} />
                   <Text style={styles.rowLabel}>Budget</Text>
                 </View>
                 {hasBudget ? (
@@ -499,7 +500,7 @@ export default function TransactionDetailScreen() {
           {/* Date */}
           <View style={styles.tableRow}>
             <View style={styles.rowLabelGroup}>
-              <Calendar size={15} color={theme.colors.textMuted} />
+              <Calendar size={15} color={colors.textMuted} />
               <Text style={styles.rowLabel}>Date</Text>
             </View>
             <Text style={styles.rowValue}>
@@ -512,7 +513,7 @@ export default function TransactionDetailScreen() {
           {/* Time */}
           <View style={styles.tableRow}>
             <View style={styles.rowLabelGroup}>
-              <Clock size={15} color={theme.colors.textMuted} />
+              <Clock size={15} color={colors.textMuted} />
               <Text style={styles.rowLabel}>Time</Text>
             </View>
             <Text style={styles.rowValue}>
@@ -525,7 +526,7 @@ export default function TransactionDetailScreen() {
           {/* Settlement */}
           <View style={styles.tableRow}>
             <View style={styles.rowLabelGroup}>
-              <Zap size={15} color={theme.colors.textMuted} />
+              <Zap size={15} color={colors.textMuted} />
               <Text style={styles.rowLabel}>Settlement</Text>
             </View>
             <Text style={styles.rowValue}>
@@ -544,7 +545,7 @@ export default function TransactionDetailScreen() {
             onPress={handleCopyId}
           >
             <View style={styles.rowLabelGroup}>
-              <ReceiptText size={15} color={theme.colors.textMuted} />
+              <ReceiptText size={15} color={colors.textMuted} />
               <Text style={styles.rowLabel}>Transaction ID</Text>
             </View>
             <View style={styles.copyableRow}>
@@ -552,7 +553,7 @@ export default function TransactionDetailScreen() {
                 {tx.id}
               </Text>
               <View style={styles.copyBadge}>
-                <Copy size={12} color={theme.colors.primary} />
+                <Copy size={12} color={colors.primary} />
               </View>
             </View>
           </TouchableOpacity>
@@ -570,7 +571,7 @@ export default function TransactionDetailScreen() {
                 <>
                   <View style={styles.tableRow}>
                     <View style={styles.rowLabelGroup}>
-                      <Coins size={15} color={theme.colors.textMuted} />
+                      <Coins size={15} color={colors.textMuted} />
                       <Text style={styles.rowLabel}>Effective Rate</Text>
                     </View>
                     <Text style={styles.rowValue}>{exchangeRateText}</Text>
@@ -581,7 +582,7 @@ export default function TransactionDetailScreen() {
 
               <View style={styles.tableRow}>
                 <View style={styles.rowLabelGroup}>
-                  <Landmark size={15} color={theme.colors.textMuted} />
+                  <Landmark size={15} color={colors.textMuted} />
                   <Text style={styles.rowLabel}>Base Equivalent</Text>
                 </View>
                 <Text style={styles.rowValue}>
@@ -604,7 +605,7 @@ export default function TransactionDetailScreen() {
               {events.map((evt, idx) => (
                 <View key={evt.id || idx}>
                   <View style={styles.eventRow}>
-                    <CheckCircle2 size={15} color={theme.colors.success} />
+                    <CheckCircle2 size={15} color={colors.success} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.eventTitle}>{evt.eventType}</Text>
                       <Text style={styles.eventTime}>
@@ -639,14 +640,14 @@ export default function TransactionDetailScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   navActionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
     marginRight: 4,
   },
@@ -654,39 +655,39 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   navDeleteBtn: {
     borderColor: "rgba(244, 63, 94, 0.3)",
-    backgroundColor: theme.colors.destructiveSubtle,
+    backgroundColor: t.colors.destructiveSubtle,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   emptyContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     padding: 24,
     gap: 12,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: theme.colors.textMuted,
-    textAlign: "center",
+    color: t.colors.textMuted,
+    textAlign: "center" as const,
     marginBottom: 8,
   },
   content: {
@@ -694,7 +695,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   heroSection: {
-    alignItems: "center",
+    alignItems: "center" as const,
     paddingTop: 10,
     paddingBottom: 8,
     gap: 10,
@@ -704,45 +705,45 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 32,
     borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     marginBottom: 2,
   },
   heroMerchantTitle: {
     fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    textAlign: "center",
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
+    textAlign: "center" as const,
     paddingHorizontal: 20,
   },
   heroAmountText: {
     fontSize: 38,
-    fontWeight: "800",
+    fontWeight: "800" as const,
     letterSpacing: -1,
   },
   heroBaseAmountText: {
     fontSize: 13,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textMuted,
-    fontWeight: "500",
+    fontFamily: t.typography.mono,
+    color: t.colors.textMuted,
+    fontWeight: "500" as const,
     marginTop: -2,
   },
   heroBadgesRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
     gap: 8,
     marginTop: 6,
   },
   statusPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 5,
     paddingHorizontal: 9,
     paddingVertical: 4,
-    borderRadius: theme.radius.full,
-    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.successSubtle,
     borderWidth: 1,
     borderColor: "rgba(16, 185, 129, 0.3)",
   },
@@ -750,12 +751,12 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: theme.colors.success,
+    backgroundColor: t.colors.success,
   },
   statusText: {
     fontSize: 10,
-    fontWeight: "800",
-    color: theme.colors.success,
+    fontWeight: "800" as const,
+    color: t.colors.success,
     letterSpacing: 0.5,
   },
   sectionHeaderRow: {
@@ -765,54 +766,54 @@ const styles = StyleSheet.create({
   sectionHeader: {
     letterSpacing: 0.8,
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "700" as const,
   },
   insetCard: {
     paddingHorizontal: 16,
     paddingVertical: 4,
-    borderRadius: theme.radius.lg,
+    borderRadius: t.radius.lg,
   },
   tableRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingVertical: 12,
   },
   rowLabelGroup: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   rowLabel: {
     fontSize: 13,
-    fontWeight: "500",
-    color: theme.colors.textMuted,
+    fontWeight: "500" as const,
+    color: t.colors.textMuted,
   },
   rowValue: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    maxWidth: "60%",
-    textAlign: "right",
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
+    maxWidth: "60%" as const,
+    textAlign: "right" as const,
   },
   rowMutedValue: {
     fontSize: 13,
-    color: theme.colors.textMuted,
-    fontStyle: "italic",
+    color: t.colors.textMuted,
+    fontStyle: "italic" as const,
   },
   rowDivider: {
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: t.colors.border,
   },
   budgetPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 5,
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
-    maxWidth: "60%",
+    maxWidth: "60%" as const,
   },
   budgetPillDot: {
     width: 6,
@@ -821,55 +822,55 @@ const styles = StyleSheet.create({
   },
   budgetPillText: {
     fontSize: 11,
-    fontWeight: "700",
-    textTransform: "uppercase",
+    fontWeight: "700" as const,
+    textTransform: "uppercase" as const,
     letterSpacing: 0.3,
   },
   copyableRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "flex-end" as const,
     gap: 8,
     flexShrink: 1,
-    maxWidth: "60%",
+    maxWidth: "60%" as const,
   },
   monoIdText: {
     fontSize: 12,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textMuted,
+    fontFamily: t.typography.mono,
+    color: t.colors.textMuted,
     flexShrink: 1,
   },
   copyBadge: {
     width: 26,
     height: 26,
     borderRadius: 6,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     flexShrink: 0,
   },
   eventRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
     paddingVertical: 10,
   },
   eventTitle: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    textTransform: "capitalize",
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
+    textTransform: "capitalize" as const,
   },
   eventTime: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
   },
   eventDivider: {
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: t.colors.border,
     marginLeft: 25,
   },
 })

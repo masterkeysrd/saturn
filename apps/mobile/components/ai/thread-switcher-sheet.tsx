@@ -1,11 +1,11 @@
 import { forwardRef } from "react"
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { Text, TouchableOpacity, View } from "react-native"
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useListThreadsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { useTimezone } from "@saturn/hooks"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 import { Button } from "@/components/ui/button"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { MessageSquare, Plus } from "lucide-react-native"
 
@@ -19,6 +19,8 @@ export const ThreadSwitcherSheet = forwardRef<
   BottomSheet,
   ThreadSwitcherSheetProps
 >(({ activeThreadId, onSelectThread, onClose }, ref) => {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const tz = useTimezone()
   const { data } = useListThreadsQuery({
     isArchived: false,
@@ -38,7 +40,7 @@ export const ThreadSwitcherSheet = forwardRef<
         <Button
           variant="primary"
           size="md"
-          leftIcon={<Plus size={16} color={theme.colors.primaryForeground} />}
+          leftIcon={<Plus size={16} color={colors.primaryForeground} />}
           onPress={() => {
             haptics.light()
             onSelectThread(null)
@@ -66,9 +68,7 @@ export const ThreadSwitcherSheet = forwardRef<
               >
                 <MessageSquare
                   size={16}
-                  color={
-                    selected ? theme.colors.primary : theme.colors.textMuted
-                  }
+                  color={selected ? colors.primary : colors.textMuted}
                 />
                 <View style={styles.rowText}>
                   <Text style={styles.rowTitle} numberOfLines={1}>
@@ -90,31 +90,31 @@ export const ThreadSwitcherSheet = forwardRef<
 
 ThreadSwitcherSheet.displayName = "ThreadSwitcherSheet"
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   body: {
     paddingHorizontal: 16,
     paddingBottom: 32,
     gap: 10,
   },
   emptyText: {
-    textAlign: "center",
+    textAlign: "center" as const,
     paddingVertical: 20,
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   row: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
     padding: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   rowActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySubtle,
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
   },
   rowText: {
     flex: 1,
@@ -122,11 +122,11 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   rowSub: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
 })

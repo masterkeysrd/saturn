@@ -20,7 +20,7 @@ import {
 import type { Thread } from "@saturn/api/saturn/mail/v1/mail"
 import { formatThreadParticipants, parseDate } from "@saturn/core"
 import { useTimezone } from "@saturn/hooks"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 export interface SwipeableThreadRowProps {
@@ -108,6 +108,7 @@ function ThreadAvatar({
   isVerified,
   accountColor,
 }: ThreadAvatarProps) {
+  const styles = useThemedStyles(createStyles)
   const [imgError, setImgError] = useState(false)
   const initials = getInitials(name, email)
   const palette = getPalette(name || email || "sender")
@@ -156,6 +157,7 @@ interface LeftSwipeActionProps {
 }
 
 function LeftSwipeAction({ drag, testID, onPress }: LeftSwipeActionProps) {
+  const styles = useThemedStyles(createStyles)
   const containerStyle = useAnimatedStyle(() => {
     // Only fade in container background after deliberate horizontal drag
     const opacity = interpolate(drag.value, [12, 32], [0, 1], "clamp")
@@ -199,6 +201,8 @@ function RightSwipeActions({
   onToggleRead,
   onTrash,
 }: RightSwipeActionsProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const containerStyle = useAnimatedStyle(() => {
     // Only fade in container background after deliberate horizontal drag
     const opacity = interpolate(drag.value, [-32, -12], [1, 0], "clamp")
@@ -217,10 +221,7 @@ function RightSwipeActions({
       <Pressable
         testID={`thread-row-read-action-${threadId}`}
         onPress={onToggleRead}
-        style={[
-          styles.rightAction,
-          { backgroundColor: theme.colors.primaryDark },
-        ]}
+        style={[styles.rightAction, { backgroundColor: colors.primaryDark }]}
       >
         <Animated.View style={[styles.actionContent, contentStyle]}>
           {isUnread ? (
@@ -236,10 +237,7 @@ function RightSwipeActions({
       <Pressable
         testID={`thread-row-trash-action-${threadId}`}
         onPress={onTrash}
-        style={[
-          styles.rightAction,
-          { backgroundColor: theme.colors.destructive },
-        ]}
+        style={[styles.rightAction, { backgroundColor: colors.destructive }]}
       >
         <Animated.View style={[styles.actionContent, contentStyle]}>
           <Trash2 size={20} color="#ffffff" />
@@ -252,7 +250,7 @@ function RightSwipeActions({
 
 export function SwipeableThreadRow({
   thread,
-  accountColor = theme.colors.primary,
+  accountColor,
   accountEmail,
   onPress,
   onArchive,
@@ -260,6 +258,9 @@ export function SwipeableThreadRow({
   onToggleRead,
   onToggleStar,
 }: SwipeableThreadRowProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+  const resolvedAccountColor = accountColor ?? colors.primary
   const swipeableRef = useRef<SwipeableMethods>(null)
 
   const handleArchive = () => {
@@ -353,7 +354,7 @@ export function SwipeableThreadRow({
           email={primarySender?.email}
           avatarUrl={primarySender?.avatarUrl}
           isVerified={primarySender?.isVerified}
-          accountColor={accountColor}
+          accountColor={resolvedAccountColor}
         />
 
         {/* Main Content Area */}
@@ -377,9 +378,12 @@ export function SwipeableThreadRow({
             </View>
 
             <View style={styles.timeRow}>
-              {accountColor && (
+              {resolvedAccountColor && (
                 <View
-                  style={[styles.accountDot, { backgroundColor: accountColor }]}
+                  style={[
+                    styles.accountDot,
+                    { backgroundColor: resolvedAccountColor },
+                  ]}
                 />
               )}
               <Text style={styles.timeText}>{timeDisplay}</Text>
@@ -406,7 +410,7 @@ export function SwipeableThreadRow({
             <View style={styles.iconTray}>
               {thread.hasAttachments && (
                 <View style={styles.metaIcon}>
-                  <Paperclip size={13} color={theme.colors.textMuted} />
+                  <Paperclip size={13} color={colors.textMuted} />
                 </View>
               )}
 
@@ -418,8 +422,8 @@ export function SwipeableThreadRow({
               >
                 <Star
                   size={16}
-                  color={thread.isStarred ? "#eab308" : theme.colors.textMuted}
-                  fill={thread.isStarred ? "#eab308" : "transparent"}
+                  color={thread.isStarred ? colors.warning : colors.textMuted}
+                  fill={thread.isStarred ? colors.warning : "transparent"}
                 />
               </Pressable>
             </View>
@@ -430,22 +434,22 @@ export function SwipeableThreadRow({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   rowContainer: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
+    flexDirection: "row" as const,
+    backgroundColor: t.colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    alignItems: "flex-start",
+    alignItems: "flex-start" as const,
     gap: 12,
   },
   rowUnread: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
   },
   rowPressed: {
-    backgroundColor: theme.colors.surfaceHighlight,
+    backgroundColor: t.colors.surfaceHighlight,
   },
   avatarWrapper: {
     width: 38,
@@ -453,51 +457,51 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     borderWidth: 1.5,
     borderColor: "transparent",
-    position: "relative",
+    position: "relative" as const,
     marginTop: 2,
   },
   avatarImage: {
-    width: "100%",
-    height: "100%",
+    width: "100%" as const,
+    height: "100%" as const,
     borderRadius: 19,
     backgroundColor: "#ffffff",
   },
   avatarFallback: {
-    width: "100%",
-    height: "100%",
+    width: "100%" as const,
+    height: "100%" as const,
     borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   avatarInitialsText: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "700" as const,
   },
   verifiedCheckBadge: {
-    position: "absolute",
+    position: "absolute" as const,
     bottom: -1,
     right: -1,
     width: 14,
     height: 14,
     borderRadius: 7,
     backgroundColor: "#2563eb",
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderWidth: 1.5,
-    borderColor: theme.colors.surface,
+    borderColor: t.colors.surface,
   },
   contentArea: {
     flex: 1,
     gap: 3,
   },
   topRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   senderContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     flex: 1,
     marginRight: 8,
   },
@@ -505,27 +509,27 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
     marginRight: 6,
   },
   senderText: {
     fontSize: 14,
-    color: theme.colors.textPrimary,
-    fontWeight: "400",
+    color: t.colors.textPrimary,
+    fontWeight: "400" as const,
     flexShrink: 1,
   },
   senderTextBold: {
-    fontWeight: "700",
+    fontWeight: "700" as const,
   },
   messageCount: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginLeft: 4,
-    fontWeight: "500",
+    fontWeight: "500" as const,
   },
   timeRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 5,
   },
   accountDot: {
@@ -535,71 +539,71 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
-    fontWeight: "400",
+    color: t.colors.textMuted,
+    fontWeight: "400" as const,
   },
   subjectText: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
-    fontWeight: "400",
+    color: t.colors.textSecondary,
+    fontWeight: "400" as const,
   },
   subjectTextBold: {
-    color: theme.colors.textPrimary,
-    fontWeight: "600",
+    color: t.colors.textPrimary,
+    fontWeight: "600" as const,
   },
   bottomRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    justifyContent: "space-between" as const,
     marginTop: 1,
   },
   snippetText: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     lineHeight: 17,
     flex: 1,
     marginRight: 12,
   },
   iconTray: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
     paddingTop: 2,
   },
   metaIcon: {
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
   },
   starButton: {
     padding: 2,
   },
   leftAction: {
-    backgroundColor: theme.colors.success,
+    backgroundColor: t.colors.success,
     width: 80,
   },
   actionPressable: {
     flex: 1,
-    width: "100%",
-    justifyContent: "center",
-    alignItems: "center",
+    width: "100%" as const,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
   },
   rightActionsContainer: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     width: 140,
   },
   rightAction: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
   },
   actionContent: {
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
     gap: 4,
   },
   actionText: {
     color: "#ffffff",
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "600" as const,
   },
 })

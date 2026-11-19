@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -48,7 +47,7 @@ import { useTimezone } from "@saturn/hooks"
 import { COMMON_TIMEZONES, SPACE_ROLE_OPTIONS } from "@saturn/core"
 import { useSpace } from "@/lib/space-context"
 import { useAuth } from "@/lib/auth-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
 import { TextInput } from "@/components/ui/text-input"
 import { FormPillGroup } from "@/components/ui/form-primitives"
@@ -66,6 +65,8 @@ export default function SpaceSettingsScreen() {
   const toast = useToast()
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const { colors, isDark } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const {
     activeSpace,
     activeSpaceId,
@@ -326,7 +327,7 @@ export default function SpaceSettingsScreen() {
               name="name"
               label="Workspace Name"
               editable={canManageMembers}
-              leftIcon={<Layers size={18} color={theme.colors.primary} />}
+              leftIcon={<Layers size={18} color={colors.primary} />}
             />
 
             <TextInput
@@ -340,7 +341,7 @@ export default function SpaceSettingsScreen() {
 
             <View style={styles.metadataRow}>
               <View style={styles.metadataItem}>
-                <Key size={14} color={theme.colors.textMuted} />
+                <Key size={14} color={colors.textMuted} />
                 <Text style={styles.metadataText} numberOfLines={1}>
                   ID: {activeSpaceId || "None"}
                 </Text>
@@ -363,9 +364,7 @@ export default function SpaceSettingsScreen() {
                   updateSpaceMutation.isPending ||
                   spaceForm.formState.isSubmitting
                 }
-                leftIcon={
-                  <Check size={16} color={theme.colors.primaryForeground} />
-                }
+                leftIcon={<Check size={16} color={colors.primaryForeground} />}
                 onPress={spaceForm.handleSubmit(handleSaveSpace)}
                 style={{ marginTop: 8 }}
               >
@@ -381,7 +380,7 @@ export default function SpaceSettingsScreen() {
           <Card style={styles.card}>
             <View style={styles.timezoneRow}>
               <View style={styles.timezoneIconCol}>
-                <Clock size={20} color={theme.colors.primary} />
+                <Clock size={20} color={colors.primary} />
               </View>
               <View style={styles.timezoneInfoCol}>
                 <Text style={styles.timezoneLabel}>Workspace Timezone</Text>
@@ -397,7 +396,7 @@ export default function SpaceSettingsScreen() {
               <Button
                 variant="secondary"
                 size="sm"
-                leftIcon={<Globe size={14} color={theme.colors.textPrimary} />}
+                leftIcon={<Globe size={14} color={colors.textPrimary} />}
                 onPress={() => {
                   haptics.light()
                   setTimezoneModalVisible(true)
@@ -420,9 +419,7 @@ export default function SpaceSettingsScreen() {
               <Button
                 variant="secondary"
                 size="sm"
-                leftIcon={
-                  <UserPlus size={14} color={theme.colors.textPrimary} />
-                }
+                leftIcon={<UserPlus size={14} color={colors.textPrimary} />}
                 onPress={() => {
                   haptics.light()
                   memberForm.reset({ userId: "", role: "MEMBER" })
@@ -485,7 +482,7 @@ export default function SpaceSettingsScreen() {
                         }}
                         style={styles.removeBtn}
                       >
-                        <Trash2 size={16} color={theme.colors.destructive} />
+                        <Trash2 size={16} color={colors.destructive} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -494,7 +491,7 @@ export default function SpaceSettingsScreen() {
 
               {members.length === 0 && (
                 <View style={styles.emptyMembers}>
-                  <Users size={24} color={theme.colors.textMuted} />
+                  <Users size={24} color={colors.textMuted} />
                   <Text style={styles.emptyText}>No additional members</Text>
                 </View>
               )}
@@ -557,14 +554,14 @@ export default function SpaceSettingsScreen() {
                       style={styles.removeBtn}
                       accessibilityLabel={`Revoke ${grant.keyName}`}
                     >
-                      <Trash2 size={16} color={theme.colors.destructive} />
+                      <Trash2 size={16} color={colors.destructive} />
                     </TouchableOpacity>
                   </View>
                 ))}
 
                 {apiKeyGrants.length === 0 && (
                   <View style={styles.emptyMembers}>
-                    <Key size={24} color={theme.colors.textMuted} />
+                    <Key size={24} color={colors.textMuted} />
                     <Text style={styles.emptyText}>
                       No active API key grants on this workspace
                     </Text>
@@ -664,15 +661,16 @@ export default function SpaceSettingsScreen() {
                 onPress={() => setTimezoneModalVisible(false)}
                 style={styles.closeBtn}
               >
-                <X size={20} color={theme.colors.textMuted} />
+                <X size={20} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.tzSearchWrapper}>
-              <Search size={18} color={theme.colors.textMuted} />
+              <Search size={18} color={colors.textMuted} />
               <RNTextInput
                 placeholder="Search timezones (e.g. New_York, Santo_Domingo)..."
-                placeholderTextColor={theme.colors.textMuted}
+                placeholderTextColor={colors.textMuted}
+                keyboardAppearance={isDark ? "dark" : "light"}
                 value={timezoneSearch}
                 onChangeText={setTimezoneSearch}
                 style={styles.tzSearchInput}
@@ -700,9 +698,7 @@ export default function SpaceSettingsScreen() {
                     >
                       {item}
                     </Text>
-                    {isSelected && (
-                      <Check size={18} color={theme.colors.primary} />
-                    )}
+                    {isSelected && <Check size={18} color={colors.primary} />}
                   </TouchableOpacity>
                 )
               }}
@@ -741,10 +737,10 @@ export default function SpaceSettingsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,
@@ -762,43 +758,43 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   metadataRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
   },
   metadataItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     flex: 1,
     marginRight: 8,
   },
   metadataText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   membersHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   membersList: {
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   memberRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   memberLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
     flex: 1,
     marginRight: 8,
@@ -808,92 +804,92 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   nameBadgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   memberName: {
     fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   memberSub: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   removeBtn: {
     padding: 8,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.destructiveSubtle,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.destructiveSubtle,
   },
   emptyMembers: {
     padding: 24,
-    alignItems: "center",
+    alignItems: "center" as const,
     gap: 8,
   },
   emptyText: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   inviteOverlay: {
-    position: "absolute",
+    position: "absolute" as const,
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
     padding: 20,
     zIndex: 100,
   },
   inviteCard: {
-    width: "100%",
+    width: "100%" as const,
     maxWidth: 360,
     padding: 20,
     gap: 14,
   },
   inviteSubtitle: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     lineHeight: 18,
   },
   rolePickerSection: {
     gap: 8,
   },
   roleButtons: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
   },
   roleBtn: {
     flex: 1,
     paddingVertical: 8,
-    alignItems: "center",
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.surfaceElevated,
+    alignItems: "center" as const,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   roleBtnActive: {
-    backgroundColor: "rgba(56, 189, 248, 0.15)",
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: t.colors.primary,
   },
   roleBtnText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   roleBtnTextActive: {
-    color: theme.colors.primary,
+    color: t.colors.primary,
   },
   inviteActions: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 10,
     marginTop: 8,
   },
   timezoneRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
     gap: 12,
   },
   timezoneIconCol: {
@@ -905,46 +901,46 @@ const styles = StyleSheet.create({
   },
   timezoneLabel: {
     fontSize: 13,
-    color: theme.colors.textMuted,
-    fontWeight: "500",
+    color: t.colors.textMuted,
+    fontWeight: "500" as const,
   },
   timezoneValue: {
     fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   timezoneHelp: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     lineHeight: 16,
     marginTop: 2,
   },
   tzModalContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
     padding: 20,
   },
   tzModalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "flex-start" as const,
     marginBottom: 16,
   },
   tzModalSubtitle: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 4,
   },
   closeBtn: {
     padding: 8,
   },
   tzSearchWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.radius.md,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.md,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     paddingHorizontal: 12,
     marginBottom: 12,
   },
@@ -952,28 +948,28 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 0,
     backgroundColor: "transparent",
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
     fontSize: 14,
     paddingVertical: 10,
   },
   tzItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   tzItemActive: {
-    backgroundColor: "rgba(56, 189, 248, 0.1)",
+    backgroundColor: t.colors.primarySubtle,
   },
   tzItemText: {
     fontSize: 15,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   tzItemTextActive: {
-    fontWeight: "600",
-    color: theme.colors.primary,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
 })

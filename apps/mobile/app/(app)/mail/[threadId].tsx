@@ -31,7 +31,7 @@ import { useMailThread, useModifyThread, useTimezone } from "@saturn/hooks"
 import type { Message, Attachment } from "@saturn/api/saturn/mail/v1/mail"
 import { formatAttachmentBytes } from "@saturn/core"
 import { getApiBaseUrl } from "@/lib/config"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { useToast } from "@/components/ui/toast"
 import { MessageWebView } from "@/components/mail/message-webview"
@@ -40,6 +40,8 @@ export default function MobileThreadReaderScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { threadId } = useLocalSearchParams<{ threadId: string }>()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   const { data: thread, isLoading, error } = useMailThread(threadId)
   const modifyMutation = useModifyThread()
@@ -259,7 +261,7 @@ export default function MobileThreadReaderScreen() {
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     )
   }
@@ -293,7 +295,7 @@ export default function MobileThreadReaderScreen() {
                     },
                     tintColor: thread.isStarred
                       ? "#eab308"
-                      : theme.colors.textPrimary,
+                      : colors.textPrimary,
                     onPress: handleToggleStar,
                   },
                   {
@@ -306,14 +308,14 @@ export default function MobileThreadReaderScreen() {
                     type: "button",
                     label: "Delete",
                     icon: { type: "sfSymbol", name: "trash" },
-                    tintColor: theme.colors.destructive,
+                    tintColor: colors.destructive,
                     onPress: handleTrash,
                   },
                   {
                     type: "button",
                     label: "Create Event",
                     icon: { type: "sfSymbol", name: "calendar.badge.plus" },
-                    tintColor: theme.colors.primary,
+                    tintColor: colors.primary,
                     sharesBackground: false,
                     onPress: handleCreateEvent,
                   },
@@ -330,9 +332,7 @@ export default function MobileThreadReaderScreen() {
                     >
                       <Star
                         size={19}
-                        color={
-                          thread.isStarred ? "#eab308" : theme.colors.textMuted
-                        }
+                        color={thread.isStarred ? "#eab308" : colors.textMuted}
                         fill={thread.isStarred ? "#eab308" : "transparent"}
                       />
                     </Pressable>
@@ -343,7 +343,7 @@ export default function MobileThreadReaderScreen() {
                       onPress={handleArchive}
                       style={styles.headerBtn}
                     >
-                      <Archive size={19} color={theme.colors.textMuted} />
+                      <Archive size={19} color={colors.textMuted} />
                     </Pressable>
 
                     <Pressable
@@ -352,7 +352,7 @@ export default function MobileThreadReaderScreen() {
                       onPress={handleTrash}
                       style={styles.headerBtn}
                     >
-                      <Trash2 size={19} color={theme.colors.textMuted} />
+                      <Trash2 size={19} color={colors.textMuted} />
                     </Pressable>
 
                     {/* Create Calendar Event from Email Button */}
@@ -362,7 +362,7 @@ export default function MobileThreadReaderScreen() {
                       onPress={handleCreateEvent}
                       style={[styles.headerBtn, styles.createEventBtn]}
                     >
-                      <CalendarPlus size={18} color={theme.colors.primary} />
+                      <CalendarPlus size={18} color={colors.primary} />
                     </Pressable>
                   </View>
                 ),
@@ -411,7 +411,7 @@ export default function MobileThreadReaderScreen() {
                     <Text numberOfLines={1} style={styles.collapsedSnippet}>
                       {msg.snippet || ""}
                     </Text>
-                    <ChevronRight size={15} color={theme.colors.textMuted} />
+                    <ChevronRight size={15} color={colors.textMuted} />
                   </View>
                 </Pressable>
               )
@@ -446,7 +446,7 @@ export default function MobileThreadReaderScreen() {
                     </Text>
                   </View>
 
-                  <ChevronDown size={16} color={theme.colors.textMuted} />
+                  <ChevronDown size={16} color={colors.textMuted} />
                 </Pressable>
 
                 {/* Message Body View */}
@@ -482,10 +482,7 @@ export default function MobileThreadReaderScreen() {
                               onPress={() => handleDownloadAttachment(att)}
                               style={styles.attachmentChip}
                             >
-                              <Paperclip
-                                size={14}
-                                color={theme.colors.primary}
-                              />
+                              <Paperclip size={14} color={colors.primary} />
                               <View style={styles.attDetails}>
                                 <Text
                                   numberOfLines={1}
@@ -500,13 +497,10 @@ export default function MobileThreadReaderScreen() {
                               {isDownloading ? (
                                 <ActivityIndicator
                                   size="small"
-                                  color={theme.colors.primary}
+                                  color={colors.primary}
                                 />
                               ) : (
-                                <Download
-                                  size={14}
-                                  color={theme.colors.textMuted}
-                                />
+                                <Download size={14} color={colors.textMuted} />
                               )}
                             </Pressable>
                           )
@@ -522,7 +516,7 @@ export default function MobileThreadReaderScreen() {
                     onPress={() => handleReply("DRAFT_MODE_REPLY", msg)}
                     style={styles.quickReplyBtn}
                   >
-                    <Reply size={13} color={theme.colors.textSecondary} />
+                    <Reply size={13} color={colors.textSecondary} />
                     <Text style={styles.quickReplyBtnText}>Reply</Text>
                   </Pressable>
                 </View>
@@ -544,7 +538,7 @@ export default function MobileThreadReaderScreen() {
           onPress={() => handleReply("DRAFT_MODE_REPLY")}
           style={styles.replyActionBarBtn}
         >
-          <Reply size={15} color={theme.colors.textPrimary} />
+          <Reply size={15} color={colors.textPrimary} />
           <Text style={styles.replyActionBarText}>Reply</Text>
         </Pressable>
 
@@ -553,7 +547,7 @@ export default function MobileThreadReaderScreen() {
           onPress={() => handleReply("DRAFT_MODE_REPLY_ALL")}
           style={styles.replyActionBarBtn}
         >
-          <ReplyAll size={15} color={theme.colors.textPrimary} />
+          <ReplyAll size={15} color={colors.textPrimary} />
           <Text style={styles.replyActionBarText}>Reply All</Text>
         </Pressable>
 
@@ -562,7 +556,7 @@ export default function MobileThreadReaderScreen() {
           onPress={() => handleReply("DRAFT_MODE_FORWARD")}
           style={styles.replyActionBarBtn}
         >
-          <Forward size={15} color={theme.colors.textPrimary} />
+          <Forward size={15} color={colors.textPrimary} />
           <Text style={styles.replyActionBarText}>Forward</Text>
         </Pressable>
       </View>
@@ -570,14 +564,14 @@ export default function MobileThreadReaderScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   headerRightActions: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 14,
     paddingRight: 6,
   },
@@ -585,32 +579,32 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   createEventBtn: {
-    backgroundColor: theme.colors.primarySubtle,
-    borderRadius: theme.radius.sm,
+    backgroundColor: t.colors.primarySubtle,
+    borderRadius: t.radius.sm,
     padding: 4,
   },
   centerContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: t.colors.background,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
     padding: 24,
   },
   errorText: {
     fontSize: 15,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
     marginBottom: 12,
   },
   backBtn: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: theme.colors.surfaceHighlight,
-    borderRadius: theme.radius.sm,
+    backgroundColor: t.colors.surfaceHighlight,
+    borderRadius: t.radius.sm,
   },
   backBtnText: {
     fontSize: 13,
-    color: theme.colors.primary,
-    fontWeight: "600",
+    color: t.colors.primary,
+    fontWeight: "600" as const,
   },
   scrollView: {
     flex: 1,
@@ -622,18 +616,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderBottomColor: t.colors.border,
+    backgroundColor: t.colors.surface,
   },
   subjectText: {
     fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
     lineHeight: 24,
   },
   subjectMeta: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 4,
   },
   messagesList: {
@@ -644,93 +638,93 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.md,
   },
   collapsedHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   avatarTiny: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surfaceElevated,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   avatarTinyText: {
     fontSize: 9,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
+    fontWeight: "700" as const,
+    color: t.colors.textSecondary,
   },
   collapsedSender: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
     width: 90,
   },
   collapsedSnippet: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     flex: 1,
   },
   expandedCard: {
     marginHorizontal: 12,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.lg,
-    overflow: "hidden",
+    borderColor: t.colors.border,
+    borderRadius: t.radius.lg,
+    overflow: "hidden" as const,
   },
   expandedHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
     gap: 10,
   },
   avatar: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: theme.colors.primarySubtle,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.primarySubtle,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   avatarText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.primary,
+    fontWeight: "700" as const,
+    color: t.colors.primary,
   },
   senderCol: {
     flex: 1,
     gap: 2,
   },
   nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   senderFullName: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
     flex: 1,
     marginRight: 6,
   },
   msgTimeText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   recipientSubText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   bodyWrapper: {
     paddingHorizontal: 14,
@@ -741,27 +735,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderTopColor: t.colors.border,
+    backgroundColor: t.colors.surface,
   },
   attachmentsTitle: {
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
     marginBottom: 8,
-    textTransform: "uppercase",
+    textTransform: "uppercase" as const,
     letterSpacing: 0.5,
   },
   attachmentsGrid: {
     gap: 8,
   },
   attachmentChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surfaceElevated,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.sm,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.sm,
     paddingHorizontal: 10,
     paddingVertical: 8,
     gap: 8,
@@ -771,58 +765,58 @@ const styles = StyleSheet.create({
   },
   attFilename: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   attSize: {
     fontSize: 10,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   msgFooter: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+    flexDirection: "row" as const,
+    justifyContent: "flex-end" as const,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderTopColor: t.colors.border,
+    backgroundColor: t.colors.surface,
   },
   quickReplyBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: theme.radius.sm,
+    borderRadius: t.radius.sm,
   },
   quickReplyBtnText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontWeight: "500",
+    color: t.colors.textSecondary,
+    fontWeight: "500" as const,
   },
   bottomActionBar: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: t.colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.border,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
+    borderTopColor: t.colors.border,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-around" as const,
     paddingHorizontal: 16,
     paddingTop: 10,
   },
   replyActionBarBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.surfaceHighlight,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.surfaceHighlight,
   },
   replyActionBarText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
 })

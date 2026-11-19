@@ -2,7 +2,6 @@ import { useState } from "react"
 import {
   ActivityIndicator,
   ScrollView,
-  StyleSheet,
   Switch,
   Text,
   TouchableOpacity,
@@ -21,7 +20,7 @@ import {
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/toast"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { setPendingWorkflowDraft } from "@/components/workflows/workflow-draft-store"
 import {
@@ -38,6 +37,8 @@ export default function WorkflowsIndexScreen() {
   const tz = useTimezone()
   const toast = useToast()
   const queryClient = useQueryClient()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [tab, setTab] = useState<"flows" | "runs">("flows")
 
   const { data: flowsData, isLoading: flowsLoading } = useListFlowsQuery({})
@@ -98,8 +99,8 @@ export default function WorkflowsIndexScreen() {
           value={flow.isEnabled}
           onValueChange={(val) => handleToggle(flow, val)}
           trackColor={{
-            false: theme.colors.surfaceHighlight,
-            true: theme.colors.primary,
+            false: colors.surfaceHighlight,
+            true: colors.primary,
           }}
         />
       </View>
@@ -115,7 +116,7 @@ export default function WorkflowsIndexScreen() {
           {flow.triggers?.length ?? 0} triggers • {flow.steps?.length ?? 0}{" "}
           steps • {flow.stats?.totalRuns7d ?? 0} runs (7d)
         </Text>
-        <ChevronRight size={16} color={theme.colors.textMuted} />
+        <ChevronRight size={16} color={colors.textMuted} />
       </View>
     </TouchableOpacity>
   )
@@ -133,7 +134,7 @@ export default function WorkflowsIndexScreen() {
               router.push("/modal/generate-workflow" as never)
             }}
           >
-            <Sparkles size={16} color={theme.colors.primaryForeground} />
+            <Sparkles size={16} color={colors.primaryForeground} />
             <Text style={styles.aiButtonText}>Generate with AI</Text>
           </TouchableOpacity>
 
@@ -146,7 +147,7 @@ export default function WorkflowsIndexScreen() {
               router.push("/(app)/workflows/new" as never)
             }}
           >
-            <Plus size={16} color={theme.colors.primary} />
+            <Plus size={16} color={colors.primary} />
             <Text style={styles.createButtonText}>Create Workflow</Text>
           </TouchableOpacity>
         </View>
@@ -162,9 +163,7 @@ export default function WorkflowsIndexScreen() {
           >
             <Zap
               size={14}
-              color={
-                tab === "flows" ? theme.colors.primary : theme.colors.textMuted
-              }
+              color={tab === "flows" ? colors.primary : colors.textMuted}
             />
             <Text
               style={[
@@ -185,9 +184,7 @@ export default function WorkflowsIndexScreen() {
           >
             <History
               size={14}
-              color={
-                tab === "runs" ? theme.colors.primary : theme.colors.textMuted
-              }
+              color={tab === "runs" ? colors.primary : colors.textMuted}
             />
             <Text
               style={[
@@ -204,13 +201,13 @@ export default function WorkflowsIndexScreen() {
           flowsLoading ? (
             <ActivityIndicator
               size="large"
-              color={theme.colors.primary}
+              color={colors.primary}
               style={styles.loader}
             />
           ) : (
             <View style={styles.listGap}>
               <View style={styles.sectionHeaderRow}>
-                <ShieldCheck size={14} color={theme.colors.primary} />
+                <ShieldCheck size={14} color={colors.primary} />
                 <Text style={styles.sectionTitle}>SYSTEM WORKFLOWS</Text>
               </View>
               {systemFlows.map(renderFlowRow)}
@@ -231,7 +228,7 @@ export default function WorkflowsIndexScreen() {
         ) : runsLoading ? (
           <ActivityIndicator
             size="large"
-            color={theme.colors.primary}
+            color={colors.primary}
             style={styles.loader}
           />
         ) : runs.length === 0 ? (
@@ -288,10 +285,10 @@ export default function WorkflowsIndexScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,
@@ -299,69 +296,69 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   actionsRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 10,
   },
   aiButton: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 8,
     paddingVertical: 12,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.primary,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.primary,
   },
   aiButtonText: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.primaryForeground,
+    fontWeight: "700" as const,
+    color: t.colors.primaryForeground,
   },
   createButton: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 8,
     paddingVertical: 12,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surface,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.primaryDark,
+    borderColor: t.colors.primaryDark,
   },
   createButtonText: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.primary,
+    fontWeight: "700" as const,
+    color: t.colors.primary,
   },
   segmentRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: t.colors.surface,
     padding: 4,
-    borderRadius: theme.radius.lg,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   segmentBtn: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 6,
     paddingVertical: 9,
-    borderRadius: theme.radius.md,
+    borderRadius: t.radius.md,
   },
   segmentActive: {
-    backgroundColor: theme.colors.surfaceHighlight,
+    backgroundColor: t.colors.surfaceHighlight,
   },
   segmentLabel: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   segmentLabelActive: {
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   loader: {
     marginTop: 40,
@@ -370,68 +367,68 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
   },
   sectionTitle: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     letterSpacing: 0.8,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 4,
   },
   flowCard: {
     padding: 14,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surface,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 8,
   },
   flowTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     gap: 8,
   },
   flowTitleWrap: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   flowName: {
     fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
     flexShrink: 1,
   },
   flowDesc: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
   },
   flowMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   metaText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   metaMono: {
     fontSize: 11,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textMuted,
+    fontFamily: t.typography.mono,
+    color: t.colors.textMuted,
   },
   emptyCard: {
     padding: 20,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   emptyText: {
     fontSize: 13,
-    color: theme.colors.textMuted,
-    textAlign: "center",
+    color: t.colors.textMuted,
+    textAlign: "center" as const,
   },
 })

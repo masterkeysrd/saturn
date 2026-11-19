@@ -50,7 +50,7 @@ import {
   stripHtmlToPlainText,
   formatAttachmentBytes,
 } from "@saturn/core"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { RecipientInput } from "@/components/mail/recipient-input"
 import {
@@ -73,6 +73,8 @@ function isLocalAttachment(att: Attachment): boolean {
 export default function ComposeMailModal() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { colors, isDark } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const params = useLocalSearchParams<{
     draftId?: string
     threadId?: string
@@ -575,7 +577,7 @@ export default function ComposeMailModal() {
             onPress={handleClose}
             style={styles.iconBtn}
           >
-            <X size={20} color={theme.colors.textPrimary} />
+            <X size={20} color={colors.textPrimary} />
           </Pressable>
 
           <Text style={styles.topBarTitle}>
@@ -595,11 +597,11 @@ export default function ComposeMailModal() {
             {isSending ? (
               <ActivityIndicator
                 size="small"
-                color={theme.colors.primaryForeground}
+                color={colors.primaryForeground}
               />
             ) : (
               <>
-                <Send size={15} color={theme.colors.primaryForeground} />
+                <Send size={15} color={colors.primaryForeground} />
                 <Text style={styles.sendBtnText}>Send</Text>
               </>
             )}
@@ -636,7 +638,7 @@ export default function ComposeMailModal() {
                     <View
                       style={[
                         styles.accDot,
-                        { backgroundColor: acc.color || theme.colors.primary },
+                        { backgroundColor: acc.color || colors.primary },
                       ]}
                     />
                     <Text
@@ -711,7 +713,8 @@ export default function ComposeMailModal() {
                 setIsDirty(true)
               }}
               placeholder="Subject"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
+              keyboardAppearance={isDark ? "dark" : "light"}
               style={styles.subjectInput}
             />
           </View>
@@ -723,7 +726,7 @@ export default function ComposeMailModal() {
                 const sizeBytes = parseInt(att.size || "0", 10) || 0
                 return (
                   <View key={`${att.filename}-${index}`} style={styles.attItem}>
-                    <Paperclip size={14} color={theme.colors.primary} />
+                    <Paperclip size={14} color={colors.primary} />
                     <Text numberOfLines={1} style={styles.attFilename}>
                       {att.filename}
                     </Text>
@@ -734,7 +737,7 @@ export default function ComposeMailModal() {
                       onPress={() => handleRemoveAttachment(index)}
                       style={styles.attRemoveBtn}
                     >
-                      <Trash2 size={13} color={theme.colors.destructive} />
+                      <Trash2 size={13} color={colors.destructive} />
                     </Pressable>
                   </View>
                 )
@@ -783,9 +786,7 @@ export default function ComposeMailModal() {
                 >
                   <Icon
                     size={16}
-                    color={
-                      isActive ? theme.colors.primary : theme.colors.textMuted
-                    }
+                    color={isActive ? colors.primary : colors.textMuted}
                   />
                 </Pressable>
               )
@@ -796,7 +797,7 @@ export default function ComposeMailModal() {
           {preparedContent.hasRemoteImages && !remoteImagesRevealed && (
             <View style={styles.remoteBanner}>
               <View style={styles.remoteBannerLeft}>
-                <ImageIcon size={14} color={theme.colors.warning} />
+                <ImageIcon size={14} color={colors.warning} />
                 <Text style={styles.remoteBannerText}>
                   Remote images in this draft are hidden.
                 </Text>
@@ -840,7 +841,7 @@ export default function ComposeMailModal() {
             onPress={handlePickAttachment}
             style={styles.toolbarBtn}
           >
-            <Paperclip size={18} color={theme.colors.textPrimary} />
+            <Paperclip size={18} color={colors.textPrimary} />
             <Text style={styles.toolbarBtnText}>Attach File</Text>
           </Pressable>
 
@@ -855,49 +856,49 @@ export default function ComposeMailModal() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   keyboardContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderBottomColor: t.colors.border,
+    backgroundColor: t.colors.surface,
   },
   iconBtn: {
     padding: 6,
   },
   topBarTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   sendBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 7,
-    borderRadius: theme.radius.full,
+    borderRadius: t.radius.full,
   },
   sendBtnDisabled: {
     opacity: 0.6,
   },
   sendBtnText: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.primaryForeground,
+    fontWeight: "700" as const,
+    color: t.colors.primaryForeground,
   },
   formScroll: {
     flex: 1,
@@ -906,37 +907,37 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   fromRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   fieldLabel: {
     fontSize: 13,
-    color: theme.colors.textMuted,
-    fontWeight: "500",
+    color: t.colors.textMuted,
+    fontWeight: "500" as const,
     width: 60,
   },
   accountPills: {
     gap: 6,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   accountPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 5,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.full,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.full,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   accountPillActive: {
-    backgroundColor: theme.colors.primarySubtle,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: t.colors.primary,
   },
   accDot: {
     width: 6,
@@ -945,36 +946,36 @@ const styles = StyleSheet.create({
   },
   accountPillText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontWeight: "500",
+    color: t.colors.textSecondary,
+    fontWeight: "500" as const,
   },
   accountPillTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "700",
+    color: t.colors.primary,
+    fontWeight: "700" as const,
   },
   ccBccToggle: {
-    alignSelf: "flex-end",
+    alignSelf: "flex-end" as const,
     paddingHorizontal: 16,
     paddingVertical: 4,
   },
   ccBccToggleText: {
     fontSize: 12,
-    color: theme.colors.primary,
-    fontWeight: "600",
+    color: t.colors.primary,
+    fontWeight: "600" as const,
   },
   subjectRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   subjectInput: {
     flex: 1,
     fontSize: 14,
-    color: theme.colors.textPrimary,
-    fontWeight: "600",
+    color: t.colors.textPrimary,
+    fontWeight: "600" as const,
     paddingVertical: 4,
   },
   attachmentsSection: {
@@ -982,39 +983,39 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   attItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.radius.sm,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.sm,
     paddingHorizontal: 10,
     paddingVertical: 6,
     gap: 8,
   },
   attFilename: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
     flex: 1,
   },
   attSize: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   attRemoveBtn: {
     padding: 2,
   },
   formattingBar: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderBottomColor: t.colors.border,
+    backgroundColor: t.colors.surface,
     maxHeight: 42,
   },
   formattingBarContent: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 12,
     paddingVertical: 6,
     gap: 4,
@@ -1022,69 +1023,69 @@ const styles = StyleSheet.create({
   formatBtn: {
     paddingHorizontal: 8,
     paddingVertical: 5,
-    borderRadius: theme.radius.xs,
+    borderRadius: t.radius.xs,
   },
   formatBtnActive: {
-    backgroundColor: theme.colors.primarySubtle,
+    backgroundColor: t.colors.primarySubtle,
   },
   remoteBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     marginHorizontal: 12,
     marginVertical: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.warningSubtle,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.warningSubtle,
     borderWidth: 1,
     borderColor: "rgba(245, 158, 11, 0.3)",
   },
   remoteBannerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     flex: 1,
     marginRight: 8,
   },
   remoteBannerText: {
     fontSize: 12,
-    color: theme.colors.warning,
-    fontWeight: "500",
+    color: t.colors.warning,
+    fontWeight: "500" as const,
     flexShrink: 1,
   },
   remoteBannerAction: {
     fontSize: 12,
-    color: theme.colors.warning,
-    fontWeight: "700",
-    textDecorationLine: "underline",
+    color: t.colors.warning,
+    fontWeight: "700" as const,
+    textDecorationLine: "underline" as const,
   },
   bottomToolbar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderTopColor: t.colors.border,
+    backgroundColor: t.colors.surface,
   },
   toolbarBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
-    backgroundColor: theme.colors.surfaceHighlight,
+    backgroundColor: t.colors.surfaceHighlight,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: theme.radius.sm,
+    borderRadius: t.radius.sm,
   },
   toolbarBtnText: {
     fontSize: 12,
-    color: theme.colors.textPrimary,
-    fontWeight: "500",
+    color: t.colors.textPrimary,
+    fontWeight: "500" as const,
   },
   draftIndicatorText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
 })

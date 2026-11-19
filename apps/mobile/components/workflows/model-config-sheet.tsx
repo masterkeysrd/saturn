@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useState } from "react"
-import { StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native"
+import { Switch, Text, TouchableOpacity, View } from "react-native"
 import BottomSheet, {
   BottomSheetScrollView,
   BottomSheetTextInput,
@@ -9,7 +9,7 @@ import type { ModelConfig } from "@saturn/api/saturn/platform/workflow/v1/workfl
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 import { Button } from "@/components/ui/button"
 import { ProviderLogo } from "@/components/ai/provider-logo"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 interface ModelConfigSheetProps {
@@ -23,6 +23,8 @@ type ModelStrategy = "default" | "role" | "model"
 
 export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
   ({ value, defaultLabel = "Workspace Default", onSave, onClose }, ref) => {
+    const { colors, isDark } = useTheme()
+    const styles = useThemedStyles(createStyles)
     const { data: modelsData } = useListModelsQuery({ isEnabled: true })
     const models = modelsData?.models ?? []
 
@@ -199,8 +201,9 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
                 value={tempStr}
                 onChangeText={setTempStr}
                 keyboardType="decimal-pad"
+                keyboardAppearance={isDark ? "dark" : "light"}
                 placeholder="Model default"
-                placeholderTextColor={theme.colors.textMuted}
+                placeholderTextColor={colors.textMuted}
               />
 
               <View style={styles.switchRow}>
@@ -212,8 +215,8 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
                     setThinkingEnabled(v)
                   }}
                   trackColor={{
-                    false: theme.colors.surfaceHighlight,
-                    true: theme.colors.primary,
+                    false: colors.surfaceHighlight,
+                    true: colors.primary,
                   }}
                 />
               </View>
@@ -231,95 +234,95 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
 
 ModelConfigSheet.displayName = "ModelConfigSheet"
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   body: {
     paddingHorizontal: 16,
     paddingBottom: 32,
     gap: 16,
   },
   segmentRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
   },
   segmentBtn: {
     flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 8,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
   },
   segmentBtnActive: {
-    backgroundColor: theme.colors.primarySubtle,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: t.colors.primary,
   },
   segmentText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
+    fontWeight: "600" as const,
+    color: t.colors.textSecondary,
   },
   segmentTextActive: {
-    color: theme.colors.primary,
+    color: t.colors.primary,
   },
   listSection: {
     gap: 10,
   },
   fieldLabel: {
     fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
+    fontWeight: "700" as const,
+    color: t.colors.textSecondary,
   },
   hintText: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   optionRow: {
     padding: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    borderColor: t.colors.border,
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
   },
   optionRowActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySubtle,
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
   },
   modelLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
     flex: 1,
   },
   optionTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   optionSub: {
     fontSize: 12,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textMuted,
+    fontFamily: t.typography.mono,
+    color: t.colors.textMuted,
   },
   input: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textPrimary,
+    fontFamily: t.typography.mono,
+    color: t.colors.textPrimary,
   },
   switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingVertical: 4,
   },
   saveBtn: {

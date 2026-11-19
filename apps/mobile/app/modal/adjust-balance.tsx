@@ -1,6 +1,5 @@
 import { useMemo } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -32,7 +31,7 @@ import {
 import { formatAmount, formatCents, toCentsString } from "@saturn/core"
 import { invalidateFinanceQueries } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
 import { TextInput } from "@/components/ui/text-input"
@@ -45,6 +44,8 @@ export default function AdjustBalanceModal() {
   const { accountId } = useLocalSearchParams<{ accountId: string }>()
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   const { data: account, isLoading } = useGetAccountQuery(
     { id: accountId || "" },
@@ -141,7 +142,7 @@ export default function AdjustBalanceModal() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     )
   }
@@ -149,7 +150,7 @@ export default function AdjustBalanceModal() {
   if (!account) {
     return (
       <View style={styles.errorContainer}>
-        <AlertCircle size={32} color={theme.colors.destructive} />
+        <AlertCircle size={32} color={colors.destructive} />
         <Text style={styles.errorTitle}>Account Not Found</Text>
       </View>
     )
@@ -178,7 +179,7 @@ export default function AdjustBalanceModal() {
                     style={styles.headerBtn}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <X size={20} color={theme.colors.textMuted} />
+                    <X size={20} color={colors.textMuted} />
                   </TouchableOpacity>
                 ),
               }),
@@ -198,7 +199,7 @@ export default function AdjustBalanceModal() {
           <Card style={styles.accountCard}>
             <View style={styles.accountCardLeft}>
               <View style={styles.scaleIconWrap}>
-                <Scale size={20} color={theme.colors.primary} />
+                <Scale size={20} color={colors.primary} />
               </View>
               <View>
                 <Text style={styles.accountName}>{account.name}</Text>
@@ -228,7 +229,7 @@ export default function AdjustBalanceModal() {
               control={control}
               name="targetBalance"
               placeholder="0.00"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
               containerStyle={{ marginTop: 8 }}
             />
@@ -247,11 +248,11 @@ export default function AdjustBalanceModal() {
           >
             <View style={styles.summaryTop}>
               {differenceCents === 0 ? (
-                <CheckCircle2 size={20} color={theme.colors.success} />
+                <CheckCircle2 size={20} color={colors.success} />
               ) : differenceCents > 0 ? (
-                <TrendingUp size={20} color={theme.colors.success} />
+                <TrendingUp size={20} color={colors.success} />
               ) : (
-                <TrendingDown size={20} color={theme.colors.destructive} />
+                <TrendingDown size={20} color={colors.destructive} />
               )}
               <Text style={styles.summaryTitle}>
                 {differenceCents === 0
@@ -284,7 +285,7 @@ export default function AdjustBalanceModal() {
               control={control}
               name="notes"
               placeholder="Reason for balance adjustment..."
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
             />
           </Card>
 
@@ -307,28 +308,28 @@ export default function AdjustBalanceModal() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   loadingContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   errorContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 8,
   },
   errorTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   keyboardView: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
@@ -342,18 +343,18 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   accountCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     padding: 16,
-    borderRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.xl,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   accountCardLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
     flex: 1,
   },
@@ -361,93 +362,93 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: theme.colors.primarySubtle,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.primarySubtle,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   accountName: {
     fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   accountType: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
-    textTransform: "capitalize",
+    textTransform: "capitalize" as const,
   },
   currentBalWrap: {
-    alignItems: "flex-end",
+    alignItems: "flex-end" as const,
   },
   currentBalLabel: {
     fontSize: 11,
-    color: theme.colors.textMuted,
-    fontWeight: "600",
-    textTransform: "uppercase",
+    color: t.colors.textMuted,
+    fontWeight: "600" as const,
+    textTransform: "uppercase" as const,
     letterSpacing: 0.5,
   },
   currentBalValue: {
     fontSize: 16,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
+    fontWeight: "800" as const,
+    color: t.colors.textPrimary,
     marginTop: 2,
   },
   sectionCard: {
     padding: 16,
-    borderRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.xl,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   sectionHeaderLabel: {
     fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     letterSpacing: 0.8,
     marginBottom: 6,
   },
   fieldDesc: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
     lineHeight: 18,
   },
   summaryCard: {
     padding: 16,
-    borderRadius: theme.radius.xl,
+    borderRadius: t.radius.xl,
     borderWidth: 1,
     gap: 10,
   },
   summaryCardEqual: {
-    backgroundColor: "rgba(16, 185, 129, 0.05)",
-    borderColor: "rgba(16, 185, 129, 0.2)",
+    backgroundColor: t.colors.successSubtle,
+    borderColor: "rgba(16, 185, 129, 0.25)",
   },
   summaryCardPositive: {
-    backgroundColor: "rgba(16, 185, 129, 0.08)",
-    borderColor: "rgba(16, 185, 129, 0.3)",
+    backgroundColor: t.colors.successSubtle,
+    borderColor: "rgba(16, 185, 129, 0.35)",
   },
   summaryCardNegative: {
-    backgroundColor: "rgba(244, 63, 94, 0.08)",
-    borderColor: "rgba(244, 63, 94, 0.3)",
+    backgroundColor: t.colors.destructiveSubtle,
+    borderColor: "rgba(244, 63, 94, 0.35)",
   },
   summaryTop: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   summaryTitle: {
     fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   summaryAmount: {
     fontSize: 28,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
+    fontWeight: "800" as const,
+    color: t.colors.textPrimary,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
   },
   summaryDesc: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
     lineHeight: 18,
   },
   actionFooter: {

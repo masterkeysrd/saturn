@@ -1,10 +1,11 @@
 import { Redirect, Stack } from "expo-router"
 import { Platform } from "react-native"
 import { useAuth } from "@/lib/auth-context"
-import { theme } from "@/lib/theme"
+import { useTheme } from "@/lib/theme"
 
 export default function AuthLayout() {
   const { isAuthenticated, isLoading } = useAuth()
+  const { colors, resolvedMode } = useTheme()
 
   if (!isLoading && isAuthenticated) {
     return <Redirect href="/(app)/(tabs)" />
@@ -15,17 +16,17 @@ export default function AuthLayout() {
       screenOptions={{
         headerStyle: {
           backgroundColor:
-            Platform.OS === "ios" ? "transparent" : theme.colors.background,
+            Platform.OS === "ios" ? "transparent" : colors.background,
         },
-        headerUserInterfaceStyle: "dark",
+        headerUserInterfaceStyle: resolvedMode,
         headerShadowVisible: false,
         headerBackButtonDisplayMode: "minimal",
-        headerTintColor: theme.colors.textPrimary,
+        headerTintColor: colors.textPrimary,
         headerTitleStyle: {
           fontWeight: "600",
         },
         contentStyle: {
-          backgroundColor: theme.colors.background,
+          backgroundColor: colors.background,
         },
       }}
     >

@@ -1,6 +1,5 @@
 import { useState, useRef, useMemo } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -50,7 +49,7 @@ import {
 } from "@saturn/core"
 import { invalidateFinanceQueries } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
 import { TextInput } from "@/components/ui/text-input"
@@ -147,6 +146,8 @@ export default function ManageAccountModal() {
   const isEditMode = Boolean(editAccountId)
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   // Bottom sheets
   const currencySheetRef = useRef<BottomSheet>(null)
@@ -390,7 +391,7 @@ export default function ManageAccountModal() {
   if (isEditMode && isAccountLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     )
   }
@@ -418,7 +419,7 @@ export default function ManageAccountModal() {
                         element: (
                           <ActivityIndicator
                             size="small"
-                            color={theme.colors.primary}
+                            color={colors.primary}
                           />
                         ),
                       }
@@ -437,7 +438,7 @@ export default function ManageAccountModal() {
                     style={styles.headerBtn}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <X size={20} color={theme.colors.textMuted} />
+                    <X size={20} color={colors.textMuted} />
                   </TouchableOpacity>
                 ),
                 headerRight: () => (
@@ -448,10 +449,7 @@ export default function ManageAccountModal() {
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     {isSaving ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={theme.colors.primary}
-                      />
+                      <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
                       <Text style={styles.headerSaveBtnText}>Save</Text>
                     )}
@@ -490,7 +488,7 @@ export default function ManageAccountModal() {
               <View style={styles.selectorRow}>
                 <View style={styles.selectorLeft}>
                   <View style={styles.selectorIconWrap}>
-                    <SelectedTypeIcon size={16} color={theme.colors.primary} />
+                    <SelectedTypeIcon size={16} color={colors.primary} />
                   </View>
                   <Text style={styles.selectorValueText}>
                     {selectedTypeInfo?.label || type}
@@ -517,11 +515,7 @@ export default function ManageAccountModal() {
                     >
                       <IconComponent
                         size={20}
-                        color={
-                          isSelected
-                            ? theme.colors.primary
-                            : theme.colors.textMuted
-                        }
+                        color={isSelected ? colors.primary : colors.textMuted}
                       />
                       <Text
                         style={[
@@ -548,7 +542,7 @@ export default function ManageAccountModal() {
               name="name"
               label="Account Name"
               placeholder="e.g. Chase Total Checking, Apple Card"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               containerStyle={{ marginBottom: 16 }}
             />
 
@@ -571,7 +565,7 @@ export default function ManageAccountModal() {
                       onError={() => setInstLogoError(true)}
                     />
                   ) : (
-                    <Landmark size={16} color={theme.colors.primary} />
+                    <Landmark size={16} color={colors.primary} />
                   )}
                 </View>
                 <Text
@@ -586,7 +580,7 @@ export default function ManageAccountModal() {
                     : "Select Bank / Institution (Optional)"}
                 </Text>
               </View>
-              <ChevronDown size={16} color={theme.colors.textMuted} />
+              <ChevronDown size={16} color={colors.textMuted} />
             </TouchableOpacity>
 
             {/* Currency Selector */}
@@ -628,9 +622,9 @@ export default function ManageAccountModal() {
                 </Text>
               </View>
               {isEditMode ? (
-                <Lock size={16} color={theme.colors.textMuted} />
+                <Lock size={16} color={colors.textMuted} />
               ) : (
-                <ChevronDown size={16} color={theme.colors.textMuted} />
+                <ChevronDown size={16} color={colors.textMuted} />
               )}
             </TouchableOpacity>
           </Card>
@@ -645,19 +639,17 @@ export default function ManageAccountModal() {
               label={isEditMode ? "Initial Balance" : "Starting Balance"}
               editable={!isEditMode}
               placeholder="0.00"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
               inputContainerStyle={
                 isEditMode
                   ? {
                       opacity: 0.75,
-                      backgroundColor: theme.colors.surfaceSubtle,
+                      backgroundColor: colors.surfaceSubtle,
                     }
                   : undefined
               }
-              style={
-                isEditMode ? { color: theme.colors.textSecondary } : undefined
-              }
+              style={isEditMode ? { color: colors.textSecondary } : undefined}
               containerStyle={{ marginBottom: 16 }}
             />
 
@@ -667,7 +659,7 @@ export default function ManageAccountModal() {
                 name="creditLimit"
                 label="Credit Limit"
                 placeholder="e.g. 5000.00"
-                placeholderTextColor={theme.colors.textMuted}
+                placeholderTextColor={colors.textMuted}
                 keyboardType="decimal-pad"
                 containerStyle={{ marginBottom: 16 }}
               />
@@ -678,7 +670,7 @@ export default function ManageAccountModal() {
               name="lastFour"
               label="Last 4 Digits (Optional)"
               placeholder="e.g. 4210"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               keyboardType="number-pad"
               maxLength={4}
             />
@@ -708,13 +700,10 @@ export default function ManageAccountModal() {
                 style={styles.deleteBtn}
               >
                 {isDeleting ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.destructive}
-                  />
+                  <ActivityIndicator size="small" color={colors.destructive} />
                 ) : (
                   <>
-                    <Trash2 size={16} color={theme.colors.destructive} />
+                    <Trash2 size={16} color={colors.destructive} />
                     <Text style={styles.deleteBtnText}>Delete Account</Text>
                   </>
                 )}
@@ -750,20 +739,20 @@ export default function ManageAccountModal() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   loadingContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   keyboardView: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,
@@ -776,18 +765,18 @@ const styles = StyleSheet.create({
   headerSaveBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
+    backgroundColor: t.colors.primary,
+    borderRadius: t.radius.md,
   },
   headerSaveBtnText: {
     fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.primaryForeground,
+    fontWeight: "700" as const,
+    color: t.colors.primaryForeground,
   },
   sectionHeaderLabel: {
     fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     letterSpacing: 0.6,
     marginBottom: 8,
   },
@@ -796,66 +785,66 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     padding: 16,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.radius.xl,
+    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.xl,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   typeGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 8,
   },
   typeGridItem: {
-    width: "48%",
-    flexDirection: "row",
-    alignItems: "center",
+    width: "48%" as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
     paddingVertical: 12,
     paddingHorizontal: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceSubtle,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   typeGridItemActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: "rgba(56, 189, 248, 0.1)",
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
   },
   typeGridItemText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
     flexShrink: 1,
   },
   typeGridItemTextActive: {
-    color: theme.colors.textPrimary,
-    fontWeight: "700",
+    color: t.colors.textPrimary,
+    fontWeight: "700" as const,
   },
   fieldSubLabel: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
+    fontWeight: "600" as const,
+    color: t.colors.textSecondary,
     marginBottom: 8,
   },
   selectorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceSubtle,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   selectorRowDisabled: {
     opacity: 0.75,
-    backgroundColor: theme.colors.surfaceSubtle,
+    backgroundColor: t.colors.surfaceSubtle,
   },
   selectorLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
     flex: 1,
   },
@@ -864,51 +853,51 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     height: 28,
     borderRadius: 6,
-    backgroundColor: "rgba(56, 189, 248, 0.12)",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.primarySubtle,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     flexShrink: 0,
   },
   selectorIconWrapDisabled: {
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: t.colors.surfaceSubtle,
   },
   currencyIconSymbol: {
     fontSize: 14,
-    fontWeight: "800",
-    color: theme.colors.primary,
+    fontWeight: "800" as const,
+    color: t.colors.primary,
     flexShrink: 0,
   },
   selectorValueText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
     flex: 1,
   },
   selectorValueTextDisabled: {
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
   },
   selectorPlaceholder: {
-    color: theme.colors.textMuted,
-    fontWeight: "400",
+    color: t.colors.textMuted,
+    fontWeight: "400" as const,
   },
   actionFooter: {
     marginTop: 8,
     gap: 12,
   },
   deleteBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 8,
     paddingVertical: 14,
-    borderRadius: theme.radius.lg,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
     borderColor: "rgba(244, 63, 94, 0.3)",
-    backgroundColor: "rgba(244, 63, 94, 0.08)",
+    backgroundColor: t.colors.destructiveSubtle,
   },
   deleteBtnText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.destructive,
+    fontWeight: "600" as const,
+    color: t.colors.destructive,
   },
 })

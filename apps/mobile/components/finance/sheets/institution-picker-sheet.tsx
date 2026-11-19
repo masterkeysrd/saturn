@@ -9,10 +9,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Check, Landmark, Search } from "lucide-react-native"
 import type { Account_InstitutionInfo } from "@saturn/api/saturn/finance/v1/finance"
 import { getInstitutionLogoUrl } from "@saturn/core"
-import { theme } from "@/lib/theme"
+import { useTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
-import { sheetStyles } from "./sheet-styles"
+import { useSheetStyles } from "./sheet-styles"
 
 export interface InstitutionPickerSheetProps {
   title?: string
@@ -40,6 +40,8 @@ export const InstitutionPickerSheet = forwardRef<
     },
     ref
   ) => {
+    const { colors, isDark } = useTheme()
+    const sheetStyles = useSheetStyles()
     const insets = useSafeAreaInsets()
     const [search, setSearch] = useState("")
 
@@ -94,12 +96,13 @@ export const InstitutionPickerSheet = forwardRef<
 
               {/* Search Bar */}
               <View style={sheetStyles.accountSearchContainer}>
-                <Search size={16} color={theme.colors.textMuted} />
+                <Search size={16} color={colors.textMuted} />
                 <BottomSheetTextInput
                   value={search}
                   onChangeText={setSearch}
                   placeholder="Search institutions..."
-                  placeholderTextColor={theme.colors.textMuted}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardAppearance={isDark ? "dark" : "light"}
                   style={sheetStyles.accountSearchInput}
                   clearButtonMode="while-editing"
                 />
@@ -116,7 +119,7 @@ export const InstitutionPickerSheet = forwardRef<
                   activeOpacity={0.7}
                 >
                   <View style={sheetStyles.accountIconBadge}>
-                    <Landmark size={18} color={theme.colors.textMuted} />
+                    <Landmark size={18} color={colors.textMuted} />
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={sheetStyles.accountItemTitle}>
@@ -128,7 +131,7 @@ export const InstitutionPickerSheet = forwardRef<
                   </View>
 
                   {!selectedInstitutionId && (
-                    <Check size={18} color={theme.colors.primary} />
+                    <Check size={18} color={colors.primary} />
                   )}
                 </TouchableOpacity>
               )}
@@ -137,7 +140,7 @@ export const InstitutionPickerSheet = forwardRef<
           ListEmptyComponent={
             isLoading ? (
               <View style={sheetStyles.emptySheetBox}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <ActivityIndicator size="small" color={colors.primary} />
               </View>
             ) : (
               <View style={sheetStyles.emptySheetBox}>
@@ -169,7 +172,7 @@ export const InstitutionPickerSheet = forwardRef<
                       resizeMode="contain"
                     />
                   ) : (
-                    <Landmark size={18} color={theme.colors.textPrimary} />
+                    <Landmark size={18} color={colors.textPrimary} />
                   )}
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
@@ -186,7 +189,7 @@ export const InstitutionPickerSheet = forwardRef<
                   ) : null}
                 </View>
 
-                {isSelected && <Check size={18} color={theme.colors.primary} />}
+                {isSelected && <Check size={18} color={colors.primary} />}
               </TouchableOpacity>
             )
           }}

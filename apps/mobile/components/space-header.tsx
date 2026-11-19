@@ -1,10 +1,10 @@
 import React from "react"
-import { TouchableOpacity, View, Text, StyleSheet } from "react-native"
+import { TouchableOpacity, View, Text } from "react-native"
 import { useRouter } from "expo-router"
 import { ChevronDown } from "lucide-react-native"
 import { useSpace } from "@/lib/space-context"
 import { Avatar } from "@/components/ui/avatar"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 export interface SpaceHeaderProps {
@@ -12,6 +12,8 @@ export interface SpaceHeaderProps {
 }
 
 export function SpaceHeader({ onPress }: SpaceHeaderProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const router = useRouter()
   const { activeSpace } = useSpace()
 
@@ -38,21 +40,21 @@ export function SpaceHeader({ onPress }: SpaceHeaderProps) {
           {spaceName}
         </Text>
       </View>
-      <ChevronDown size={16} color={theme.colors.textMuted} />
+      <ChevronDown size={16} color={colors.textMuted} />
     </TouchableOpacity>
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surfaceElevated,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: theme.radius.full,
+    borderRadius: t.radius.full,
     gap: 8,
     maxWidth: 220,
   },
@@ -61,7 +63,7 @@ const styles = StyleSheet.create({
   },
   spaceName: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
 })

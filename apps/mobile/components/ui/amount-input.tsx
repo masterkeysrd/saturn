@@ -5,7 +5,6 @@ import {
   TextInput as RNTextInput,
   TouchableOpacity,
   Keyboard,
-  StyleSheet,
   Platform,
   type StyleProp,
   type ViewStyle,
@@ -17,7 +16,7 @@ import {
   type FieldValues,
   type Path,
 } from "react-hook-form"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 export function sanitizeAmountString(val: string): string {
   if (!val) return ""
@@ -59,11 +58,15 @@ export function HeroAmountInput<
   currencySymbol = "$",
   onPressCurrency,
   currencyDisabled = false,
-  accentColor = theme.colors.destructive,
+  accentColor,
   placeholder = "0.00",
   autoFocus = false,
   containerStyle,
 }: HeroAmountInputProps<TFieldValues>) {
+  const { colors, isDark } = useTheme()
+  const styles = useThemedStyles(createStyles)
+  const resolvedAccentColor = accentColor ?? colors.destructive
+
   return (
     <Controller
       control={control}
@@ -81,24 +84,28 @@ export function HeroAmountInput<
             ) : null}
             <View style={styles.amountInputRow}>
               <Text
-                style={[styles.amountCurrencyPrefix, { color: accentColor }]}
+                style={[
+                  styles.amountCurrencyPrefix,
+                  { color: resolvedAccentColor },
+                ]}
               >
                 {currencySymbol}
               </Text>
               <RNTextInput
                 ref={field.ref}
-                style={[styles.amountInput, { color: accentColor }]}
+                style={[styles.amountInput, { color: resolvedAccentColor }]}
                 keyboardType="decimal-pad"
+                keyboardAppearance={isDark ? "dark" : "light"}
                 value={
                   field.value !== undefined && field.value !== null
                     ? String(field.value)
                     : ""
                 }
                 placeholder={placeholder}
-                placeholderTextColor={theme.colors.textMuted}
+                placeholderTextColor={colors.textMuted}
                 onChangeText={handleChangeText}
                 autoFocus={autoFocus}
-                selectionColor={accentColor}
+                selectionColor={resolvedAccentColor}
               />
 
               {currency ? (
@@ -117,14 +124,14 @@ export function HeroAmountInput<
                     {currency.toUpperCase()}
                   </Text>
                   {onPressCurrency && !currencyDisabled && (
-                    <ChevronDown size={14} color={theme.colors.textMuted} />
+                    <ChevronDown size={14} color={colors.textMuted} />
                   )}
                 </TouchableOpacity>
               ) : null}
             </View>
             {fieldError ? (
               <View style={styles.errorRow}>
-                <AlertCircle size={13} color={theme.colors.destructive} />
+                <AlertCircle size={13} color={colors.destructive} />
                 <Text style={styles.errorText}>{fieldError}</Text>
               </View>
             ) : null}
@@ -135,30 +142,30 @@ export function HeroAmountInput<
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   amountCard: {
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.radius.xl,
+    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.xl,
     padding: 16,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     marginBottom: 12,
   },
   fieldSectionLabel: {
     fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     letterSpacing: 0.6,
     marginBottom: 6,
   },
   amountInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   amountCurrencyPrefix: {
     fontSize: 34,
-    fontWeight: "800",
+    fontWeight: "800" as const,
     marginRight: 4,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
     flexShrink: 0,
@@ -166,40 +173,40 @@ const styles = StyleSheet.create({
   amountInput: {
     flex: 1,
     fontSize: 34,
-    fontWeight: "800",
+    fontWeight: "800" as const,
     padding: 0,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
   },
   currencySelectButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     flexShrink: 0,
     gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.background,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.background,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     minWidth: 68,
   },
   currencySelectCode: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
     letterSpacing: 0.5,
     flexShrink: 0,
   },
   errorRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     marginTop: 8,
   },
   errorText: {
     fontSize: 12,
-    color: theme.colors.destructive,
-    fontWeight: "500",
+    color: t.colors.destructive,
+    fontWeight: "500" as const,
   },
 })

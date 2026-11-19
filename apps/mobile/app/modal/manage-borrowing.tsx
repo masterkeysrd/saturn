@@ -47,7 +47,7 @@ import {
 import { formatCents, getCurrencySymbol, toCentsString } from "@saturn/core"
 import { invalidateFinanceQueries } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -57,7 +57,6 @@ import {
   AccountPickerSheet,
 } from "@/components/finance/sheets"
 import { AccountRow } from "@/components/finance/account-select"
-import { formStyles } from "@/components/finance/forms/form-styles"
 import { HeroAmountInput } from "@/components/ui/amount-input"
 import {
   FormRowInput,
@@ -72,6 +71,8 @@ export default function ManageBorrowingModal() {
   const isEditMode = Boolean(editBorrowingId)
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   // Sheet references
   const currencySheetRef = useRef<BottomSheet>(null)
@@ -309,7 +310,7 @@ export default function ManageBorrowingModal() {
   if (isEditMode && isExistingLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     )
   }
@@ -338,16 +339,16 @@ export default function ManageBorrowingModal() {
                     onPress={() => router.back()}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <X size={20} color={theme.colors.textPrimary} />
+                    <X size={20} color={colors.textPrimary} />
                   </TouchableOpacity>
                 ),
               }),
           ...(Platform.OS !== "ios" && {
             headerStyle: {
-              backgroundColor: theme.colors.background,
+              backgroundColor: colors.background,
             },
           }),
-          headerTintColor: theme.colors.textPrimary,
+          headerTintColor: colors.textPrimary,
         }}
       />
 
@@ -375,7 +376,7 @@ export default function ManageBorrowingModal() {
             >
               <TrendingUp
                 size={16}
-                color={isLent ? theme.colors.success : theme.colors.textMuted}
+                color={isLent ? colors.success : colors.textMuted}
               />
               <Text
                 style={[
@@ -400,9 +401,7 @@ export default function ManageBorrowingModal() {
             >
               <TrendingDown
                 size={16}
-                color={
-                  !isLent ? theme.colors.destructive : theme.colors.textMuted
-                }
+                color={!isLent ? colors.destructive : colors.textMuted}
               />
               <Text
                 style={[
@@ -425,58 +424,56 @@ export default function ManageBorrowingModal() {
               Keyboard.dismiss()
               currencySheetRef.current?.expand()
             }}
-            accentColor={
-              isLent ? theme.colors.success : theme.colors.destructive
-            }
+            accentColor={isLent ? colors.success : colors.destructive}
             autoFocus
           />
 
           {/* 3. Agreement Details Card */}
-          <Card style={formStyles.formGroupCard}>
+          <Card style={styles.formGroupCard}>
             {/* Counterparty Name */}
             <FormRowInput
               control={control}
               name="counterparty"
               label={isLent ? "Borrower" : "Lender"}
-              icon={<User size={16} color={theme.colors.textMuted} />}
+              icon={<User size={16} color={colors.textMuted} />}
               placeholder="Name of contact / institution"
               returnKeyType="next"
             />
 
             {/* Contact Info (Optional) */}
-            <View style={formStyles.rowDivider} />
+            <View style={styles.rowDivider} />
             <FormRowInput
               control={control}
               name="contactInfo"
               label="Contact"
-              icon={<Phone size={16} color={theme.colors.textMuted} />}
+              icon={<Phone size={16} color={colors.textMuted} />}
               placeholder="Email, phone or handle (optional)"
               returnKeyType="next"
             />
 
             {/* Date Established */}
-            <View style={formStyles.rowDivider} />
+            <View style={styles.rowDivider} />
             <FormDateRow
               control={control}
               name="establishedAt"
               label="Established Date"
-              icon={<Calendar size={16} color={theme.colors.textMuted} />}
+              icon={<Calendar size={16} color={colors.textMuted} />}
               title="Select Established Date"
             />
 
             {/* Has Due Date Toggle */}
-            <View style={formStyles.rowDivider} />
+            <View style={styles.rowDivider} />
             <FormSwitchRow
               control={control}
               name="hasDueDate"
               label="Set Due Date"
-              icon={<CalendarClock size={16} color={theme.colors.textMuted} />}
+              icon={<CalendarClock size={16} color={colors.textMuted} />}
             />
 
             {/* Due Date Picker (if enabled) */}
             {hasDueDate && (
               <>
-                <View style={formStyles.rowDivider} />
+                <View style={styles.rowDivider} />
                 <FormDateRow
                   control={control}
                   name="dueAt"
@@ -484,9 +481,7 @@ export default function ManageBorrowingModal() {
                   icon={
                     <CalendarClock
                       size={16}
-                      color={
-                        isLent ? theme.colors.success : theme.colors.destructive
-                      }
+                      color={isLent ? colors.success : colors.destructive}
                     />
                   }
                   title="Select Target Due Date"
@@ -497,7 +492,7 @@ export default function ManageBorrowingModal() {
 
           {/* 4. Ledger Integration (Initial transaction movement, new records only) */}
           {!isEditMode && (
-            <Card style={[formStyles.formGroupCard, { marginTop: 12 }]}>
+            <Card style={[styles.formGroupCard, { marginTop: 12 }]}>
               <FormSwitchRow
                 control={control}
                 name="createAsTransaction"
@@ -507,7 +502,7 @@ export default function ManageBorrowingModal() {
                     ? "Record disbursement from bank balance"
                     : "Record loan receipt to bank balance"
                 }
-                icon={<Landmark size={16} color={theme.colors.textMuted} />}
+                icon={<Landmark size={16} color={colors.textMuted} />}
                 onValueChange={(val) => {
                   if (val && !accountId && accounts.length > 0) {
                     setValue("accountId", accounts[0].id || "", {
@@ -519,7 +514,7 @@ export default function ManageBorrowingModal() {
 
               {createAsTransaction && (
                 <>
-                  <View style={formStyles.rowDivider} />
+                  <View style={styles.rowDivider} />
                   <AccountRow
                     label="Account"
                     account={selectedAccount}
@@ -535,12 +530,12 @@ export default function ManageBorrowingModal() {
           )}
 
           {/* 5. Notes Card */}
-          <Card style={[formStyles.formGroupCard, { marginTop: 12 }]}>
+          <Card style={[styles.formGroupCard, { marginTop: 12 }]}>
             <FormRowInput
               control={control}
               name="notes"
               label="Notes"
-              icon={<FileText size={16} color={theme.colors.textMuted} />}
+              icon={<FileText size={16} color={colors.textMuted} />}
               placeholder="Collateral, payment schedule, terms..."
               multiline
               numberOfLines={3}
@@ -557,13 +552,10 @@ export default function ManageBorrowingModal() {
               activeOpacity={0.7}
             >
               {isDeleting ? (
-                <ActivityIndicator
-                  size="small"
-                  color={theme.colors.destructive}
-                />
+                <ActivityIndicator size="small" color={colors.destructive} />
               ) : (
                 <>
-                  <Trash2 size={16} color={theme.colors.destructive} />
+                  <Trash2 size={16} color={colors.destructive} />
                   <Text style={styles.deleteBtnText}>
                     Delete Debt Agreement
                   </Text>
@@ -619,86 +611,94 @@ export default function ManageBorrowingModal() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   loadingContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.background,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   keyboardView: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,
     paddingBottom: 40,
   },
+  formGroupCard: {
+    padding: 0,
+    overflow: "hidden" as const,
+  },
+  rowDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: t.colors.border,
+  },
   directionToggleContainer: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
     marginBottom: 12,
   },
   directionToggleBtn: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 8,
     paddingVertical: 12,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   directionToggleBtnLentActive: {
-    borderColor: theme.colors.success,
-    backgroundColor: theme.colors.successSubtle,
+    borderColor: t.colors.success,
+    backgroundColor: t.colors.successSubtle,
   },
   directionToggleBtnBorrowedActive: {
-    borderColor: theme.colors.destructive,
-    backgroundColor: theme.colors.destructiveSubtle,
+    borderColor: t.colors.destructive,
+    backgroundColor: t.colors.destructiveSubtle,
   },
   directionToggleText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   directionToggleTextLentActive: {
-    color: theme.colors.success,
-    fontWeight: "700",
+    color: t.colors.success,
+    fontWeight: "700" as const,
   },
   directionToggleTextBorrowedActive: {
-    color: theme.colors.destructive,
-    fontWeight: "700",
+    color: t.colors.destructive,
+    fontWeight: "700" as const,
   },
   amountCard: {
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.radius.xl,
+    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.xl,
     padding: 16,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     marginBottom: 12,
   },
   fieldSectionLabel: {
     fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     letterSpacing: 0.6,
     marginBottom: 6,
   },
   amountInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   amountCurrencyPrefix: {
     fontSize: 34,
-    fontWeight: "800",
+    fontWeight: "800" as const,
     marginRight: 4,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
     flexShrink: 0,
@@ -706,78 +706,78 @@ const styles = StyleSheet.create({
   amountInput: {
     flex: 1,
     fontSize: 34,
-    fontWeight: "800",
+    fontWeight: "800" as const,
     padding: 0,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
   },
   currencySelectButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     flexShrink: 0,
     gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.background,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.background,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     minWidth: 68,
   },
   currencySelectCode: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
     letterSpacing: 0.5,
     flexShrink: 0,
   },
   subtext: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
   },
   notesInput: {
-    textAlign: "left",
+    textAlign: "left" as const,
     minHeight: 48,
     paddingTop: 8,
   },
   errorText: {
     fontSize: 12,
-    color: theme.colors.destructive,
-    fontWeight: "500",
+    color: t.colors.destructive,
+    fontWeight: "500" as const,
     marginTop: 6,
   },
   deleteBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 8,
     marginTop: 16,
     paddingVertical: 14,
-    borderRadius: theme.radius.lg,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
     borderColor: "rgba(244, 63, 94, 0.3)",
-    backgroundColor: theme.colors.destructiveSubtle,
+    backgroundColor: t.colors.destructiveSubtle,
   },
   deleteBtnText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.destructive,
+    fontWeight: "600" as const,
+    color: t.colors.destructive,
   },
   bottomDock: {
     paddingHorizontal: 16,
     paddingTop: 10,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
   },
   submitBtn: {
-    width: "100%",
+    width: "100%" as const,
   },
   submitBtnLent: {
-    backgroundColor: theme.colors.success,
+    backgroundColor: t.colors.success,
   },
   submitBtnBorrowed: {
-    backgroundColor: "#d97706",
+    backgroundColor: t.colors.warning,
   },
 })

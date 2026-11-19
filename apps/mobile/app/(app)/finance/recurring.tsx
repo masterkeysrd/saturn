@@ -1,6 +1,5 @@
 import { useState, useMemo, useCallback } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -48,7 +47,7 @@ import {
 import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -146,6 +145,8 @@ export default function RecurringScreen() {
   const tz = useTimezone()
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { colors, resolvedMode } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   const [refreshing, setRefreshing] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>("upcoming")
@@ -444,7 +445,7 @@ export default function RecurringScreen() {
                     type: "button",
                     label: "New Recurring",
                     icon: { type: "sfSymbol", name: "plus" },
-                    tintColor: theme.colors.primary,
+                    tintColor: colors.primary,
                     onPress: () => {
                       haptics.light()
                       router.push("/modal/manage-recurring")
@@ -462,7 +463,7 @@ export default function RecurringScreen() {
                     style={styles.headerAddBtn}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <Plus size={20} color={theme.colors.primary} />
+                    <Plus size={20} color={colors.primary} />
                   </TouchableOpacity>
                 ),
               }),
@@ -476,9 +477,9 @@ export default function RecurringScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-            progressBackgroundColor={theme.colors.surfaceElevated}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+            progressBackgroundColor={colors.surfaceElevated}
           />
         }
       >
@@ -489,16 +490,14 @@ export default function RecurringScreen() {
               <View
                 style={[
                   styles.metricIconCircle,
-                  { backgroundColor: theme.colors.successSubtle },
+                  { backgroundColor: colors.successSubtle },
                 ]}
               >
-                <TrendingUp size={16} color={theme.colors.success} />
+                <TrendingUp size={16} color={colors.success} />
               </View>
               <Caption style={styles.overviewLabel}>RECURRING INCOME</Caption>
             </View>
-            <Text
-              style={[styles.overviewAmount, { color: theme.colors.success }]}
-            >
+            <Text style={[styles.overviewAmount, { color: colors.success }]}>
               +
               {monthlyIncomes.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
@@ -513,18 +512,15 @@ export default function RecurringScreen() {
               <View
                 style={[
                   styles.metricIconCircle,
-                  { backgroundColor: theme.colors.destructiveSubtle },
+                  { backgroundColor: colors.destructiveSubtle },
                 ]}
               >
-                <TrendingDown size={16} color={theme.colors.destructive} />
+                <TrendingDown size={16} color={colors.destructive} />
               </View>
               <Caption style={styles.overviewLabel}>FIXED OVERHEAD</Caption>
             </View>
             <Text
-              style={[
-                styles.overviewAmount,
-                { color: theme.colors.textPrimary },
-              ]}
+              style={[styles.overviewAmount, { color: colors.textPrimary }]}
             >
               -
               {monthlyExpenses.toLocaleString(undefined, {
@@ -539,7 +535,7 @@ export default function RecurringScreen() {
         {/* 30-Day Outflow Highlight */}
         <Card style={styles.forecastCard}>
           <View style={styles.forecastLeft}>
-            <Calendar size={18} color={theme.colors.warning} />
+            <Calendar size={18} color={colors.warning} />
             <View>
               <Text style={styles.forecastTitle}>Next 30 Days Outflows</Text>
               <Text style={styles.forecastSubtitle}>
@@ -547,7 +543,7 @@ export default function RecurringScreen() {
               </Text>
             </View>
           </View>
-          <MonoAmount size="md" color={theme.colors.warning}>
+          <MonoAmount size="md" color={colors.warning}>
             {next30DaysOutflows.toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
@@ -572,9 +568,7 @@ export default function RecurringScreen() {
             <Clock
               size={14}
               color={
-                activeTab === "upcoming"
-                  ? theme.colors.primary
-                  : theme.colors.textMuted
+                activeTab === "upcoming" ? colors.primary : colors.textMuted
               }
             />
             <Text
@@ -601,9 +595,7 @@ export default function RecurringScreen() {
             <Layers
               size={14}
               color={
-                activeTab === "templates"
-                  ? theme.colors.primary
-                  : theme.colors.textMuted
+                activeTab === "templates" ? colors.primary : colors.textMuted
               }
             />
             <Text
@@ -664,7 +656,7 @@ export default function RecurringScreen() {
           /* TAB 1: Upcoming Scheduled Instances */
           filteredScheduled.length === 0 ? (
             <EmptyState
-              icon={<CalendarClock size={32} color={theme.colors.textMuted} />}
+              icon={<CalendarClock size={32} color={colors.textMuted} />}
               title="No upcoming scheduled items"
               description={
                 typeFilter === "ALL"
@@ -707,21 +699,15 @@ export default function RecurringScreen() {
                             styles.actionIconBadge,
                             {
                               backgroundColor: isIncome
-                                ? theme.colors.successSubtle
-                                : theme.colors.primarySubtle,
+                                ? colors.successSubtle
+                                : colors.primarySubtle,
                             },
                           ]}
                         >
                           {isIncome ? (
-                            <ArrowDownLeft
-                              size={16}
-                              color={theme.colors.success}
-                            />
+                            <ArrowDownLeft size={16} color={colors.success} />
                           ) : (
-                            <CalendarClock
-                              size={16}
-                              color={theme.colors.primary}
-                            />
+                            <CalendarClock size={16} color={colors.primary} />
                           )}
                         </View>
                         <View style={styles.itemInfo}>
@@ -741,9 +727,9 @@ export default function RecurringScreen() {
                               <Badge
                                 size="sm"
                                 label="Deposit Due"
-                                bg={theme.colors.successSubtle}
+                                bg={colors.successSubtle}
                                 border="rgba(16, 185, 129, 0.3)"
-                                color={theme.colors.success}
+                                color={colors.success}
                               />
                             ) : dueBadge ? (
                               <Badge
@@ -751,24 +737,24 @@ export default function RecurringScreen() {
                                 label={dueBadge.label}
                                 bg={
                                   dueBadge.isOverdue
-                                    ? theme.colors.destructiveSubtle
+                                    ? colors.destructiveSubtle
                                     : dueBadge.isToday
-                                      ? theme.colors.warningSubtle
-                                      : theme.colors.surfaceHighlight
+                                      ? colors.warningSubtle
+                                      : colors.surfaceHighlight
                                 }
                                 border={
                                   dueBadge.isOverdue
                                     ? "rgba(244, 63, 94, 0.3)"
                                     : dueBadge.isToday
                                       ? "rgba(245, 158, 11, 0.3)"
-                                      : theme.colors.border
+                                      : colors.border
                                 }
                                 color={
                                   dueBadge.isOverdue
-                                    ? theme.colors.destructive
+                                    ? colors.destructive
                                     : dueBadge.isToday
-                                      ? theme.colors.warning
-                                      : theme.colors.textMuted
+                                      ? colors.warning
+                                      : colors.textMuted
                                 }
                               />
                             ) : null}
@@ -778,11 +764,7 @@ export default function RecurringScreen() {
 
                       <MonoAmount
                         size="sm"
-                        color={
-                          isIncome
-                            ? theme.colors.success
-                            : theme.colors.textPrimary
-                        }
+                        color={isIncome ? colors.success : colors.textPrimary}
                       >
                         {isIncome ? "+" : "-"}
                         {formatAmount(st.amount, st.currency || baseCurrency)}
@@ -791,7 +773,7 @@ export default function RecurringScreen() {
 
                     <ActionMenu
                       title={title}
-                      colorScheme="dark"
+                      colorScheme={resolvedMode}
                       style={styles.menuTriggerWrapper}
                       onPressAction={({ nativeEvent }) => {
                         if (nativeEvent.event === "confirm") {
@@ -824,10 +806,7 @@ export default function RecurringScreen() {
                       ]}
                     >
                       <View style={styles.dotsBtn}>
-                        <MoreVertical
-                          size={18}
-                          color={theme.colors.textMuted}
-                        />
+                        <MoreVertical size={18} color={colors.textMuted} />
                       </View>
                     </ActionMenu>
                   </View>
@@ -838,7 +817,7 @@ export default function RecurringScreen() {
         ) : /* TAB 2: Recurring Rules / Templates */
         filteredRecurring.length === 0 ? (
           <EmptyState
-            icon={<Layers size={32} color={theme.colors.textMuted} />}
+            icon={<Layers size={32} color={colors.textMuted} />}
             title="No recurring templates"
             description={
               typeFilter === "ALL"
@@ -881,18 +860,15 @@ export default function RecurringScreen() {
                           styles.actionIconBadge,
                           {
                             backgroundColor: isIncome
-                              ? theme.colors.successSubtle
-                              : theme.colors.primarySubtle,
+                              ? colors.successSubtle
+                              : colors.primarySubtle,
                           },
                         ]}
                       >
                         {isIncome ? (
-                          <ArrowDownLeft
-                            size={16}
-                            color={theme.colors.success}
-                          />
+                          <ArrowDownLeft size={16} color={colors.success} />
                         ) : (
-                          <Layers size={16} color={theme.colors.primary} />
+                          <Layers size={16} color={colors.primary} />
                         )}
                       </View>
                       <View style={styles.itemInfo}>
@@ -903,9 +879,9 @@ export default function RecurringScreen() {
                           <Badge
                             size="sm"
                             label={formatInterval(rt.interval)}
-                            bg={theme.colors.surfaceHighlight}
-                            border={theme.colors.border}
-                            color={theme.colors.textSecondary}
+                            bg={colors.surfaceHighlight}
+                            border={colors.border}
+                            color={colors.textSecondary}
                           />
                           {nextDueStr !== "N/A" ? (
                             <Text style={styles.txMeta}>
@@ -917,19 +893,15 @@ export default function RecurringScreen() {
                             label={isActive ? "Active" : "Paused"}
                             bg={
                               isActive
-                                ? theme.colors.primarySubtle
-                                : theme.colors.surfaceElevated
+                                ? colors.primarySubtle
+                                : colors.surfaceElevated
                             }
                             border={
                               isActive
                                 ? "rgba(99, 102, 241, 0.3)"
-                                : theme.colors.border
+                                : colors.border
                             }
-                            color={
-                              isActive
-                                ? theme.colors.primary
-                                : theme.colors.textMuted
-                            }
+                            color={isActive ? colors.primary : colors.textMuted}
                           />
                         </View>
                       </View>
@@ -937,11 +909,7 @@ export default function RecurringScreen() {
 
                     <MonoAmount
                       size="sm"
-                      color={
-                        isIncome
-                          ? theme.colors.success
-                          : theme.colors.textPrimary
-                      }
+                      color={isIncome ? colors.success : colors.textPrimary}
                     >
                       {isIncome ? "+" : "-"}
                       {formatAmount(rt.amount, rt.currency || baseCurrency)}
@@ -950,7 +918,7 @@ export default function RecurringScreen() {
 
                   <ActionMenu
                     title={rt.name}
-                    colorScheme="dark"
+                    colorScheme={resolvedMode}
                     style={styles.menuTriggerWrapper}
                     onPressAction={({ nativeEvent }) => {
                       if (nativeEvent.event === "edit") {
@@ -987,7 +955,7 @@ export default function RecurringScreen() {
                     ]}
                   >
                     <View style={styles.dotsBtn}>
-                      <MoreVertical size={18} color={theme.colors.textMuted} />
+                      <MoreVertical size={18} color={colors.textMuted} />
                     </View>
                   </ActionMenu>
                 </View>
@@ -1000,14 +968,14 @@ export default function RecurringScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,
@@ -1019,7 +987,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   overviewGrid: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 12,
   },
   overviewCard: {
@@ -1028,140 +996,140 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   overviewHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   metricIconCircle: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   overviewLabel: {
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     letterSpacing: 0.5,
   },
   overviewAmount: {
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "800" as const,
   },
   overviewUnit: {
     fontSize: 11,
-    color: theme.colors.textMuted,
-    fontWeight: "500",
+    color: t.colors.textMuted,
+    fontWeight: "500" as const,
   },
   forecastCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     padding: 14,
     borderLeftWidth: 3,
-    borderLeftColor: theme.colors.warning,
+    borderLeftColor: t.colors.warning,
   },
   forecastLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
   },
   forecastTitle: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   forecastSubtitle: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
   },
   tabContainer: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surface,
+    flexDirection: "row" as const,
+    backgroundColor: t.colors.surface,
     padding: 4,
-    borderRadius: theme.radius.lg,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 6,
   },
   tabBtn: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingVertical: 8,
-    borderRadius: theme.radius.md,
+    borderRadius: t.radius.md,
     gap: 6,
   },
   tabBtnActive: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   tabText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   tabTextActive: {
-    color: theme.colors.textPrimary,
-    fontWeight: "700",
+    color: t.colors.textPrimary,
+    fontWeight: "700" as const,
   },
   filterRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
   },
   filterPill: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surface,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   filterPillActive: {
-    backgroundColor: theme.colors.primarySubtle,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: t.colors.primary,
   },
   filterPillText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   filterPillTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "700",
+    color: t.colors.primary,
+    fontWeight: "700" as const,
   },
   listCard: {
     padding: 0,
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   txRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
   },
   txMainPressable: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingVertical: 12,
     paddingLeft: 12,
     paddingRight: 6,
   },
   menuTriggerWrapper: {
     paddingRight: 10,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
   },
   rowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   txLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
     flex: 1,
     marginRight: 8,
@@ -1170,8 +1138,8 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   itemInfo: {
     gap: 4,
@@ -1179,24 +1147,24 @@ const styles = StyleSheet.create({
   },
   txName: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   badgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
-    flexWrap: "wrap",
+    flexWrap: "wrap" as const,
   },
   txMeta: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   dotsBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
 })

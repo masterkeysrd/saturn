@@ -88,6 +88,8 @@ vi.mock("react-native", async () => {
         importantForAutofill: _ifa,
         autoCorrect: _ac,
         autoFocus: _af,
+        keyboardAppearance: _ka,
+        placeholderTextColor: _ptc,
         cursorColor: _cc,
         selectionColor: _sc,
         underlineColorAndroid: _uca,
@@ -134,8 +136,12 @@ vi.mock("lucide-react-native", () => ({
   ClipboardPaste: () => null,
 }))
 
-vi.mock("../lib/theme", () => ({
-  theme: {
+vi.mock("../lib/theme", () => {
+  const mockTheme = {
+    mode: "dark" as const,
+    resolvedMode: "dark" as const,
+    setMode: vi.fn(),
+    isDark: true,
     colors: {
       textSecondary: "#cbd5e1",
       border: "#334155",
@@ -143,15 +149,26 @@ vi.mock("../lib/theme", () => ({
       borderStrong: "#475569",
       surfaceHighlight: "#1e293b",
       primary: "#38bdf8",
+      primaryForeground: "#090d16",
       destructive: "#f43f5e",
       textPrimary: "#f8fafc",
       textMuted: "#94a3b8",
       primarySubtle: "rgba(56, 189, 248, 0.12)",
     },
-    spacing: { xs: 4, sm: 8 },
-    radius: { md: 10, full: 9999 },
-  },
-}))
+    spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 40 },
+    radius: { xs: 4, sm: 6, md: 10, lg: 14, xl: 20, full: 9999 },
+    shadows: { sm: {}, md: {}, lg: {} },
+    budgetColors: {},
+    getBudgetColors: () => ({}),
+    typography: { mono: "monospace" },
+  }
+  return {
+    theme: mockTheme,
+    useTheme: () => mockTheme,
+    useThemedStyles: (factory: (t: typeof mockTheme) => unknown) =>
+      factory(mockTheme),
+  }
+})
 
 vi.mock("../lib/haptics", () => ({
   haptics: {

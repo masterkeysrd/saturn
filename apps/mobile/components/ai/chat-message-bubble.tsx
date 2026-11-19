@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Share, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { Share, Text, TouchableOpacity, View } from "react-native"
 import * as Clipboard from "expo-clipboard"
 import {
   describeToolCall,
@@ -29,7 +29,7 @@ import {
   Wrench,
   XCircle,
 } from "lucide-react-native"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { MarkdownText } from "./markdown-text"
 import { StreamingDots } from "./streaming-dots"
@@ -48,15 +48,28 @@ interface ChatMessageBubbleProps {
   toolResultsByCallId?: Map<string, ToolResultEntry>
 }
 
-const DOMAIN_COLOR: Record<ToolDomain, string> = {
-  finance: theme.colors.success,
-  calendar: theme.colors.primary,
-  mail: theme.colors.accent,
-  workflows: theme.colors.warning,
-  space: theme.colors.textSecondary,
-  agent: theme.colors.accent,
-  mcp: theme.colors.primary,
-  general: theme.colors.textMuted,
+function getDomainColor(
+  domain: ToolDomain,
+  colors: SaturnMobileTheme["colors"]
+): string {
+  switch (domain) {
+    case "finance":
+      return colors.success
+    case "calendar":
+      return colors.primary
+    case "mail":
+      return colors.accent
+    case "workflows":
+      return colors.warning
+    case "space":
+      return colors.textSecondary
+    case "agent":
+      return colors.accent
+    case "mcp":
+      return colors.primary
+    default:
+      return colors.textMuted
+  }
 }
 
 function DomainIcon({
@@ -66,7 +79,8 @@ function DomainIcon({
   domain: ToolDomain
   size?: number
 }) {
-  const color = DOMAIN_COLOR[domain] ?? theme.colors.textMuted
+  const { colors } = useTheme()
+  const color = getDomainColor(domain, colors)
   switch (domain) {
     case "finance":
       return <Wallet size={size} color={color} />
@@ -95,6 +109,8 @@ export function ChatMessageBubble({
   activeToolName,
   toolResultsByCallId,
 }: ChatMessageBubbleProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [thinkingOpen, setThinkingOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
   const [expandedToolIds, setExpandedToolIds] = useState<
@@ -134,14 +150,14 @@ export function ChatMessageBubble({
               setThinkingOpen(!thinkingOpen)
             }}
           >
-            <Brain size={12} color={theme.colors.primary} />
+            <Brain size={12} color={colors.primary} />
             <Text style={styles.pillText}>
               {streamPhase === "thinking" ? "Thinking…" : "Thought process"}
             </Text>
             {thinkingOpen ? (
-              <ChevronDown size={12} color={theme.colors.textMuted} />
+              <ChevronDown size={12} color={colors.textMuted} />
             ) : (
-              <ChevronRight size={12} color={theme.colors.textMuted} />
+              <ChevronRight size={12} color={colors.textMuted} />
             )}
           </TouchableOpacity>
         ) : null}
@@ -160,11 +176,11 @@ export function ChatMessageBubble({
                   setGroupOpen(true)
                 }}
               >
-                <CheckCircle2 size={12} color={theme.colors.success} />
+                <CheckCircle2 size={12} color={colors.success} />
                 <Text style={styles.pillText}>
                   {streamingDraft.toolCalls.length} tool steps completed
                 </Text>
-                <ChevronRight size={12} color={theme.colors.textMuted} />
+                <ChevronRight size={12} color={colors.textMuted} />
               </TouchableOpacity>
             ) : (
               streamingDraft.toolCalls.map((tc) => {
@@ -207,9 +223,9 @@ export function ChatMessageBubble({
                     {tc.status === "running" ? (
                       <StreamingDots />
                     ) : tc.status === "completed" ? (
-                      <CheckCircle2 size={12} color={theme.colors.success} />
+                      <CheckCircle2 size={12} color={colors.success} />
                     ) : (
-                      <XCircle size={12} color={theme.colors.destructive} />
+                      <XCircle size={12} color={colors.destructive} />
                     )}
                   </View>
                 )
@@ -259,7 +275,7 @@ export function ChatMessageBubble({
           <View style={styles.attachmentsRow}>
             {attachments.map((b, i) => (
               <View key={i} style={styles.userAttachmentChip}>
-                <FileText size={11} color={theme.colors.primaryForeground} />
+                <FileText size={11} color={colors.primaryForeground} />
                 <Text style={styles.userAttachmentText} numberOfLines={1}>
                   {b.attachment?.filename}
                 </Text>
@@ -309,12 +325,12 @@ export function ChatMessageBubble({
             setThinkingOpen(!thinkingOpen)
           }}
         >
-          <Brain size={12} color={theme.colors.textMuted} />
+          <Brain size={12} color={colors.textMuted} />
           <Text style={styles.pillText}>Thought process</Text>
           {thinkingOpen ? (
-            <ChevronDown size={12} color={theme.colors.textMuted} />
+            <ChevronDown size={12} color={colors.textMuted} />
           ) : (
-            <ChevronRight size={12} color={theme.colors.textMuted} />
+            <ChevronRight size={12} color={colors.textMuted} />
           )}
         </TouchableOpacity>
       ) : null}
@@ -333,14 +349,14 @@ export function ChatMessageBubble({
                 setGroupOpen(!groupOpen)
               }}
             >
-              <CheckCircle2 size={12} color={theme.colors.success} />
+              <CheckCircle2 size={12} color={colors.success} />
               <Text style={styles.pillText}>
                 {toolBlocks.length} tool steps
               </Text>
               {groupOpen ? (
-                <ChevronDown size={12} color={theme.colors.textMuted} />
+                <ChevronDown size={12} color={colors.textMuted} />
               ) : (
-                <ChevronRight size={12} color={theme.colors.textMuted} />
+                <ChevronRight size={12} color={colors.textMuted} />
               )}
             </TouchableOpacity>
           )}
@@ -380,15 +396,15 @@ export function ChatMessageBubble({
                     ) : null}
                     {res ? (
                       res.isError ? (
-                        <XCircle size={12} color={theme.colors.destructive} />
+                        <XCircle size={12} color={colors.destructive} />
                       ) : (
-                        <CheckCircle2 size={12} color={theme.colors.success} />
+                        <CheckCircle2 size={12} color={colors.success} />
                       )
                     ) : null}
                     {isExpanded ? (
-                      <ChevronDown size={12} color={theme.colors.textMuted} />
+                      <ChevronDown size={12} color={colors.textMuted} />
                     ) : (
-                      <ChevronRight size={12} color={theme.colors.textMuted} />
+                      <ChevronRight size={12} color={colors.textMuted} />
                     )}
                   </TouchableOpacity>
 
@@ -414,9 +430,9 @@ export function ChatMessageBubble({
             accessibilityLabel="Copy response"
           >
             {copied ? (
-              <Check size={13} color={theme.colors.success} />
+              <Check size={13} color={colors.success} />
             ) : (
-              <Copy size={13} color={theme.colors.textMuted} />
+              <Copy size={13} color={colors.textMuted} />
             )}
             <Text style={[styles.actionText, copied && styles.copiedText]}>
               {copied ? "Copied" : "Copy"}
@@ -429,7 +445,7 @@ export function ChatMessageBubble({
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             accessibilityLabel="Share response"
           >
-            <Share2 size={13} color={theme.colors.textMuted} />
+            <Share2 size={13} color={colors.textMuted} />
             <Text style={styles.actionText}>Share</Text>
           </TouchableOpacity>
         </View>
@@ -438,18 +454,18 @@ export function ChatMessageBubble({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   userBubble: {
-    alignSelf: "flex-end",
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.lg,
+    alignSelf: "flex-end" as const,
+    backgroundColor: t.colors.primary,
+    borderRadius: t.radius.lg,
     paddingHorizontal: 13,
     paddingVertical: 9,
     gap: 5,
-    maxWidth: "85%",
+    maxWidth: "85%" as const,
   },
   assistantTurn: {
-    alignSelf: "stretch",
+    alignSelf: "stretch" as const,
     paddingHorizontal: 2,
     paddingVertical: 2,
     gap: 6,
@@ -457,125 +473,127 @@ const styles = StyleSheet.create({
   userText: {
     fontSize: 15,
     lineHeight: 21,
-    color: theme.colors.primaryForeground,
+    color: t.colors.primaryForeground,
   },
   attachmentsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 4,
   },
   userAttachmentChip: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
-    backgroundColor: "rgba(9, 13, 22, 0.16)",
-    borderRadius: theme.radius.full,
+    backgroundColor: t.isDark
+      ? "rgba(9, 13, 22, 0.16)"
+      : "rgba(255, 255, 255, 0.2)",
+    borderRadius: t.radius.full,
     paddingHorizontal: 7,
     paddingVertical: 2,
-    maxWidth: "100%",
+    maxWidth: "100%" as const,
   },
   userAttachmentText: {
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.primaryForeground,
+    fontWeight: "600" as const,
+    color: t.colors.primaryForeground,
     flexShrink: 1,
   },
   pill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 5,
-    alignSelf: "flex-start",
+    alignSelf: "flex-start" as const,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   toolBlock: {
     gap: 3,
   },
   toolPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 5,
-    alignSelf: "flex-start",
+    alignSelf: "flex-start" as const,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    maxWidth: "100%",
+    borderColor: t.colors.border,
+    maxWidth: "100%" as const,
   },
   toolPillActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySubtle,
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
   },
   toolPillError: {
-    borderColor: theme.colors.destructive,
-    backgroundColor: theme.colors.destructiveSubtle,
+    borderColor: t.colors.destructive,
+    backgroundColor: t.colors.destructiveSubtle,
   },
   toolDomainText: {
     fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
+    fontWeight: "700" as const,
+    color: t.colors.textSecondary,
   },
   toolSummaryText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     flexShrink: 1,
   },
   pillText: {
     fontSize: 12,
-    color: theme.colors.textPrimary,
-    fontWeight: "600",
+    color: t.colors.textPrimary,
+    fontWeight: "600" as const,
     flexShrink: 1,
   },
   pillMono: {
     fontSize: 10,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textMuted,
+    fontFamily: t.typography.mono,
+    color: t.colors.textMuted,
   },
   toolsWrap: {
-    flexDirection: "column",
+    flexDirection: "column" as const,
     gap: 4,
   },
   statusRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 7,
   },
   statusText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
-    fontWeight: "500",
+    color: t.colors.textMuted,
+    fontWeight: "500" as const,
   },
   thinkingBody: {
     fontSize: 12,
     lineHeight: 17,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
     borderLeftWidth: 2,
-    borderLeftColor: theme.colors.border,
+    borderLeftColor: t.colors.border,
     paddingLeft: 8,
   },
   actionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 14,
     paddingTop: 2,
   },
   actionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
   },
   actionText: {
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   copiedText: {
-    color: theme.colors.success,
+    color: t.colors.success,
   },
 })

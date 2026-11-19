@@ -22,10 +22,10 @@ import {
 } from "@saturn/api/saturn/finance/v1/finance"
 import { formatAmount, getInstitutionLogoUrl } from "@saturn/core"
 import { useSpace } from "@/lib/space-context"
-import { theme, getNativeBudgetColors } from "@/lib/theme"
+import { useTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
-import { sheetStyles } from "./sheet-styles"
+import { useSheetStyles } from "./sheet-styles"
 
 export interface AccountPickerSheetProps {
   title?: string
@@ -38,10 +38,7 @@ export interface AccountPickerSheetProps {
   snapPoints?: (string | number)[]
 }
 
-function renderAccountTypeIcon(
-  type?: Account_Type,
-  color: string = theme.colors.textMuted
-) {
+function renderAccountTypeIcon(type: Account_Type | undefined, color: string) {
   switch (type) {
     case "CREDIT_CARD":
       return <CreditCard size={18} color={color} />
@@ -78,6 +75,8 @@ function AccountLogoBadge({
   institution?: Account_InstitutionInfo
   nativeColors: { bg: string; border: string; bar: string }
 }) {
+  const { colors } = useTheme()
+  const sheetStyles = useSheetStyles()
   const [hasError, setHasError] = useState(false)
   const inst = institution || account.institution
   const logoUrl =
@@ -101,8 +100,8 @@ function AccountLogoBadge({
         sheetStyles.accountIconBadge,
         showLogo
           ? {
-              backgroundColor: theme.colors.surfaceHighlight,
-              borderColor: theme.colors.border,
+              backgroundColor: colors.surfaceHighlight,
+              borderColor: colors.border,
               borderWidth: 1,
             }
           : {
@@ -143,6 +142,8 @@ export const AccountPickerSheet = forwardRef<
     },
     ref
   ) => {
+    const { colors, isDark, getBudgetColors } = useTheme()
+    const sheetStyles = useSheetStyles()
     const insets = useSafeAreaInsets()
     const { activeSpaceId } = useSpace()
     const { data: instData } = useListInstitutionsQuery(
@@ -227,11 +228,12 @@ export const AccountPickerSheet = forwardRef<
 
               {/* Search Bar */}
               <View style={sheetStyles.accountSearchContainer}>
-                <Search size={16} color={theme.colors.textMuted} />
+                <Search size={16} color={colors.textMuted} />
                 <BottomSheetTextInput
                   style={sheetStyles.accountSearchInput}
                   placeholder="Search by name, institution, last 4..."
-                  placeholderTextColor={theme.colors.textMuted}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardAppearance={isDark ? "dark" : "light"}
                   value={search}
                   onChangeText={setSearch}
                   autoCorrect={false}
@@ -253,13 +255,13 @@ export const AccountPickerSheet = forwardRef<
                     style={[
                       sheetStyles.accountIconBadge,
                       {
-                        backgroundColor: theme.colors.surfaceHighlight,
-                        borderColor: theme.colors.border,
+                        backgroundColor: colors.surfaceHighlight,
+                        borderColor: colors.border,
                         borderWidth: 1,
                       },
                     ]}
                   >
-                    <Coins size={18} color={theme.colors.textMuted} />
+                    <Coins size={18} color={colors.textMuted} />
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={sheetStyles.accountItemTitle}>
@@ -270,7 +272,7 @@ export const AccountPickerSheet = forwardRef<
                     </Text>
                   </View>
                   {!selectedAccountId && (
-                    <Check size={18} color={theme.colors.primary} />
+                    <Check size={18} color={colors.primary} />
                   )}
                 </TouchableOpacity>
               )}
@@ -280,7 +282,7 @@ export const AccountPickerSheet = forwardRef<
             isLoading ? (
               <ActivityIndicator
                 size="small"
-                color={theme.colors.primary}
+                color={colors.primary}
                 style={{ marginVertical: 20 }}
               />
             ) : (
@@ -299,17 +301,17 @@ export const AccountPickerSheet = forwardRef<
               acc.institution ||
               (acc.institutionId ? instMap.get(acc.institutionId) : undefined)
             const colorName = acc.color || inst?.color || "indigo"
-            const nativeColors = getNativeBudgetColors(colorName)
+            const nativeColors = getBudgetColors(colorName)
             const isCredit = acc.type === "CREDIT_CARD"
             const rawBal = Number(acc.currentBalance || "0")
 
             // Balance text color matching card account guidelines
             const balanceColor =
               isCredit && rawBal > 0
-                ? "#fb7185" // rose for credit card debt
+                ? colors.destructive
                 : isCredit && rawBal < 0
-                  ? "#34d399" // emerald for overpayment
-                  : theme.colors.textPrimary
+                  ? colors.success
+                  : colors.textPrimary
 
             return (
               <TouchableOpacity
@@ -355,9 +357,7 @@ export const AccountPickerSheet = forwardRef<
                     {isCredit && rawBal > 0 && "-"}
                     {formatAmount(acc.currentBalance, acc.currency)}
                   </Text>
-                  {isSelected && (
-                    <Check size={18} color={theme.colors.primary} />
-                  )}
+                  {isSelected && <Check size={18} color={colors.primary} />}
                 </View>
               </TouchableOpacity>
             )

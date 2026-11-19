@@ -3,12 +3,11 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   type ViewProps,
   type StyleProp,
   type TextStyle,
 } from "react-native"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 export interface CardProps extends ViewProps {
@@ -24,10 +23,13 @@ export function Card({
   children,
   ...props
 }: CardProps) {
+  const { shadows } = useTheme()
+  const styles = useThemedStyles(createStyles)
+
   const containerStyles = [
     styles.card,
     elevated ? styles.cardElevated : styles.cardDefault,
-    elevated && theme.shadows.sm,
+    elevated && shadows.sm,
     style,
   ]
 
@@ -59,6 +61,7 @@ export function CardHeader({
   children,
   ...props
 }: ViewProps & { children?: React.ReactNode }) {
+  const styles = useThemedStyles(createStyles)
   return (
     <View style={[styles.header, style]} {...props}>
       {children}
@@ -73,6 +76,7 @@ export function CardTitle({
   style?: StyleProp<TextStyle>
   children?: React.ReactNode
 }) {
+  const styles = useThemedStyles(createStyles)
   return <Text style={[styles.title, style]}>{children}</Text>
 }
 
@@ -83,6 +87,7 @@ export function CardDescription({
   style?: StyleProp<TextStyle>
   children?: React.ReactNode
 }) {
+  const styles = useThemedStyles(createStyles)
   return <Text style={[styles.description, style]}>{children}</Text>
 }
 
@@ -91,6 +96,7 @@ export function CardContent({
   children,
   ...props
 }: ViewProps & { children?: React.ReactNode }) {
+  const styles = useThemedStyles(createStyles)
   return (
     <View style={[styles.content, style]} {...props}>
       {children}
@@ -103,6 +109,7 @@ export function CardFooter({
   children,
   ...props
 }: ViewProps & { children?: React.ReactNode }) {
+  const styles = useThemedStyles(createStyles)
   return (
     <View style={[styles.footer, style]} {...props}>
       {children}
@@ -110,19 +117,19 @@ export function CardFooter({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   card: {
-    borderRadius: theme.radius.md,
+    borderRadius: t.radius.md,
     borderWidth: 1,
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   cardDefault: {
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.border,
+    backgroundColor: t.colors.surface,
+    borderColor: t.colors.border,
   },
   cardElevated: {
-    backgroundColor: theme.colors.surfaceElevated,
-    borderColor: theme.colors.borderStrong,
+    backgroundColor: t.colors.surfaceElevated,
+    borderColor: t.colors.borderStrong,
   },
   header: {
     paddingHorizontal: 16,
@@ -132,25 +139,25 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   description: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   content: {
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   footer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 16,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
   },
 })

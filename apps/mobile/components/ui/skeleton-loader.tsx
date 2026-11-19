@@ -3,11 +3,10 @@ import {
   View,
   Animated,
   useAnimatedValue,
-  StyleSheet,
   type StyleProp,
   type ViewStyle,
 } from "react-native"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 export interface SkeletonProps {
   width?: number | string
@@ -19,9 +18,12 @@ export interface SkeletonProps {
 export function Skeleton({
   width = "100%",
   height = 16,
-  borderRadius = theme.radius.sm,
+  borderRadius,
   style,
 }: SkeletonProps) {
+  const { radius } = useTheme()
+  const styles = useThemedStyles(createStyles)
+  const resolvedRadius = borderRadius ?? radius.sm
   const opacityAnim = useAnimatedValue(0.3)
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export function Skeleton({
         {
           width: width as any,
           height: height as any,
-          borderRadius,
+          borderRadius: resolvedRadius,
           opacity: opacityAnim,
         },
         style,
@@ -67,6 +69,7 @@ export function SkeletonCard({
   height?: number | string
   style?: StyleProp<ViewStyle>
 }) {
+  const styles = useThemedStyles(createStyles)
   return (
     <View
       style={[
@@ -90,6 +93,7 @@ export function SkeletonTransactionItem({
 }: {
   style?: StyleProp<ViewStyle>
 }) {
+  const styles = useThemedStyles(createStyles)
   return (
     <View style={[styles.transactionRow, style]}>
       <Skeleton width={40} height={40} borderRadius={20} />
@@ -102,25 +106,25 @@ export function SkeletonTransactionItem({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   skeleton: {
-    backgroundColor: theme.colors.surfaceHighlight,
+    backgroundColor: t.colors.surfaceHighlight,
   },
   card: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.md,
     padding: 16,
   },
   cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
   },
   transactionRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     paddingVertical: 12,
     gap: 12,
   },

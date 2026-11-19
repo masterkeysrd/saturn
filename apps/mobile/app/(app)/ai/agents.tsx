@@ -1,10 +1,4 @@
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native"
+import { ScrollView, Text, TouchableOpacity, View } from "react-native"
 import { useRouter } from "expo-router"
 import {
   useListAgentsQuery,
@@ -13,13 +7,15 @@ import {
 import { useTimezone } from "@saturn/hooks"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Bot, ChevronRight, History } from "lucide-react-native"
 
 export default function MobileAIAgentsScreen() {
   const router = useRouter()
   const tz = useTimezone()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const { data: agentsData } = useListAgentsQuery({})
   const { data: runsData } = useListRunsQuery({ pageSize: 20, pageToken: "" })
 
@@ -33,7 +29,7 @@ export default function MobileAIAgentsScreen() {
         <Card key={ag.id} style={styles.card}>
           <View style={styles.rowBetween}>
             <View style={styles.rowLeft}>
-              <Bot size={18} color={theme.colors.primary} />
+              <Bot size={18} color={colors.primary} />
               <Text style={styles.cardTitle}>{ag.name}</Text>
             </View>
             {ag.isSystem && (
@@ -64,7 +60,7 @@ export default function MobileAIAgentsScreen() {
           <Card style={styles.card}>
             <View style={styles.rowBetween}>
               <View style={styles.rowLeft}>
-                <History size={16} color={theme.colors.textSecondary} />
+                <History size={16} color={colors.textSecondary} />
                 <Text style={styles.cardTitle}>{r.agentName || r.kind}</Text>
               </View>
               <View style={styles.rowRight}>
@@ -73,7 +69,7 @@ export default function MobileAIAgentsScreen() {
                   size="sm"
                   label={r.status ?? "unknown"}
                 />
-                <ChevronRight size={14} color={theme.colors.textMuted} />
+                <ChevronRight size={14} color={colors.textMuted} />
               </View>
             </View>
             <Text style={styles.cardSub} numberOfLines={1}>
@@ -95,10 +91,10 @@ export default function MobileAIAgentsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,
@@ -107,9 +103,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "700" as const,
     letterSpacing: 0.7,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginBottom: 4,
   },
   sectionSpaced: {
@@ -120,34 +116,34 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   rowBetween: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     gap: 8,
   },
   rowLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
     flex: 1,
   },
   rowRight: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
   },
   cardTitle: {
     fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   cardSub: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
   },
   metaMono: {
     fontSize: 11,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textMuted,
+    fontFamily: t.typography.mono,
+    color: t.colors.textMuted,
   },
 })

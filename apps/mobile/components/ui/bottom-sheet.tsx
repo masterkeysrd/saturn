@@ -21,7 +21,7 @@ import BottomSheet, {
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet"
 import { X } from "lucide-react-native"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 export interface AppBottomSheetProps extends Partial<BottomSheetProps> {
@@ -38,6 +38,9 @@ export function BottomSheetHeader({
   title: string
   onClose?: () => void
 }) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+
   return (
     <View style={styles.header}>
       <Text style={styles.title}>{title}</Text>
@@ -50,7 +53,7 @@ export function BottomSheetHeader({
           }}
           style={styles.closeBtn}
         >
-          <X size={18} color={theme.colors.textMuted} />
+          <X size={18} color={colors.textMuted} />
         </TouchableOpacity>
       )}
     </View>
@@ -72,6 +75,9 @@ export const AppBottomSheet = forwardRef<BottomSheet, AppBottomSheetProps>(
     },
     ref
   ) => {
+    const { colors, isDark } = useTheme()
+    const styles = useThemedStyles(createStyles)
+
     const snapPoints = useMemo(
       () => customSnapPoints || ["40%", "75%"],
       [customSnapPoints]
@@ -119,11 +125,11 @@ export const AppBottomSheet = forwardRef<BottomSheet, AppBottomSheetProps>(
           {...backdropProps}
           appearsOnIndex={0}
           disappearsOnIndex={-1}
-          opacity={0.65}
+          opacity={isDark ? 0.65 : 0.4}
           pressBehavior="close"
         />
       ),
-      []
+      [isDark]
     )
 
     const sheetElement = (
@@ -137,8 +143,14 @@ export const AppBottomSheet = forwardRef<BottomSheet, AppBottomSheetProps>(
         keyboardBehavior={keyboardBehavior}
         keyboardBlurBehavior={keyboardBlurBehavior}
         backdropComponent={renderBackdrop}
-        backgroundStyle={styles.background}
-        handleIndicatorStyle={styles.handleIndicator}
+        backgroundStyle={[
+          styles.background,
+          { backgroundColor: colors.surface },
+        ]}
+        handleIndicatorStyle={[
+          styles.handleIndicator,
+          { backgroundColor: colors.borderStrong },
+        ]}
         {...props}
         onChange={(index, position, type) => {
           if (index >= 0) haptics.light()
@@ -178,16 +190,16 @@ export const AppBottomSheet = forwardRef<BottomSheet, AppBottomSheetProps>(
 
 AppBottomSheet.displayName = "AppBottomSheet"
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   background: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: t.colors.surface,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.borderStrong,
-    borderTopLeftRadius: theme.radius.xl,
-    borderTopRightRadius: theme.radius.xl,
+    borderTopColor: t.colors.borderStrong,
+    borderTopLeftRadius: t.radius.xl,
+    borderTopRightRadius: t.radius.xl,
   },
   handleIndicator: {
-    backgroundColor: "#475569",
+    backgroundColor: t.colors.borderStrong,
     width: 36,
     height: 4,
     borderRadius: 2,
@@ -196,23 +208,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingBottom: 12,
     paddingTop: 2,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
     marginBottom: 8,
   },
   title: {
     fontSize: 17,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   closeBtn: {
     padding: 6,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
   },
 })

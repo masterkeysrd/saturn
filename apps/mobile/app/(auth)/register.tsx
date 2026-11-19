@@ -1,6 +1,5 @@
 import { useState } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   Image,
@@ -23,7 +22,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { RegisterSchema, type RegisterFormValues } from "@saturn/schemas"
 import { useAuth } from "@/lib/auth-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Button } from "@/components/ui/button"
 import { TextInput } from "@/components/ui/text-input"
 import { Card } from "@/components/ui/card"
@@ -33,6 +32,8 @@ import { haptics } from "@/lib/haptics"
 
 export default function RegisterScreen() {
   const router = useRouter()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const { register } = useAuth()
   const toast = useToast()
   const [errorState, setErrorState] = useState<string | null>(null)
@@ -98,7 +99,7 @@ export default function RegisterScreen() {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityLabel="Server Settings"
         >
-          <Settings size={18} color={theme.colors.textSecondary} />
+          <Settings size={18} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -130,7 +131,7 @@ export default function RegisterScreen() {
               placeholder="Ada Lovelace"
               autoComplete="name"
               textContentType="name"
-              leftIcon={<User size={18} color={theme.colors.textMuted} />}
+              leftIcon={<User size={18} color={colors.textMuted} />}
             />
 
             <TextInput
@@ -143,7 +144,7 @@ export default function RegisterScreen() {
               autoComplete="username"
               textContentType="username"
               importantForAutofill="yes"
-              leftIcon={<AtSign size={18} color={theme.colors.textMuted} />}
+              leftIcon={<AtSign size={18} color={colors.textMuted} />}
             />
 
             <TextInput
@@ -157,7 +158,7 @@ export default function RegisterScreen() {
               autoComplete="email"
               textContentType="emailAddress"
               importantForAutofill="yes"
-              leftIcon={<Mail size={18} color={theme.colors.textMuted} />}
+              leftIcon={<Mail size={18} color={colors.textMuted} />}
             />
 
             <TextInput
@@ -169,7 +170,7 @@ export default function RegisterScreen() {
               autoComplete="new-password"
               textContentType="newPassword"
               importantForAutofill="yes"
-              leftIcon={<Lock size={18} color={theme.colors.textMuted} />}
+              leftIcon={<Lock size={18} color={colors.textMuted} />}
             />
 
             {errorState && <Text style={styles.errorText}>{errorState}</Text>}
@@ -179,9 +180,7 @@ export default function RegisterScreen() {
               size="lg"
               loading={loading || isSubmitting}
               onPress={handleSubmit(onValid)}
-              leftIcon={
-                <UserPlus size={18} color={theme.colors.primaryForeground} />
-              }
+              leftIcon={<UserPlus size={18} color={colors.primaryForeground} />}
               style={styles.button}
             >
               Sign Up
@@ -202,18 +201,18 @@ export default function RegisterScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   keyboardAvoid: {
     flex: 1,
   },
   topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "flex-end" as const,
     paddingHorizontal: 20,
     paddingTop: 4,
   },
@@ -221,41 +220,41 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   container: {
     flexGrow: 1,
     padding: 24,
-    justifyContent: "center",
+    justifyContent: "center" as const,
   },
   header: {
-    alignItems: "center",
+    alignItems: "center" as const,
     marginBottom: 32,
   },
   logoWrapper: {
     width: 64,
     height: 64,
     borderRadius: 18,
-    overflow: "hidden",
+    overflow: "hidden" as const,
     borderWidth: 1.5,
-    borderColor: "rgba(255, 255, 255, 0.15)",
+    borderColor: t.colors.border,
     marginBottom: 14,
-    ...theme.shadows.md,
+    ...t.shadows.md,
   },
   logoImage: {
-    width: "100%",
-    height: "100%",
+    width: "100%" as const,
+    height: "100%" as const,
   },
   brandTitle: {
-    textAlign: "center",
+    textAlign: "center" as const,
   },
   subtitle: {
     marginTop: 6,
-    textAlign: "center",
+    textAlign: "center" as const,
   },
   formCard: {
     padding: 20,
@@ -263,23 +262,23 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 13,
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
   },
   button: {
     marginTop: 4,
   },
   footer: {
-    flexDirection: "row",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    justifyContent: "center" as const,
     marginTop: 24,
   },
   footerText: {
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     fontSize: 14,
   },
   linkText: {
-    color: theme.colors.primary,
+    color: t.colors.primary,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "600" as const,
   },
 })

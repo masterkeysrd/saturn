@@ -10,7 +10,7 @@ import {
 import { X, User } from "lucide-react-native"
 import { useContactSuggestions } from "@saturn/hooks"
 import type { MailRecipientFormValues } from "@saturn/schemas"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 export interface RecipientInputProps {
@@ -28,6 +28,8 @@ export function RecipientInput({
   placeholder = "Add recipient...",
   testID,
 }: RecipientInputProps) {
+  const { colors, isDark } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [inputText, setInputText] = useState("")
   const [isFocused, setIsFocused] = useState(false)
 
@@ -88,7 +90,7 @@ export function RecipientInput({
                 onPress={() => handleRemoveRecipient(index)}
                 style={styles.chipRemoveBtn}
               >
-                <X size={12} color={theme.colors.textMuted} />
+                <X size={12} color={colors.textMuted} />
               </Pressable>
             </View>
           ))}
@@ -112,7 +114,8 @@ export function RecipientInput({
             }}
             onSubmitEditing={handleSubmitEditing}
             placeholder={recipients.length === 0 ? placeholder : ""}
-            placeholderTextColor={theme.colors.textMuted}
+            placeholderTextColor={colors.textMuted}
+            keyboardAppearance={isDark ? "dark" : "light"}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -144,7 +147,7 @@ export function RecipientInput({
                 ]}
               >
                 <View style={styles.avatarMini}>
-                  <User size={13} color={theme.colors.textMuted} />
+                  <User size={13} color={colors.textMuted} />
                 </View>
                 <View style={styles.suggestionDetails}>
                   <Text numberOfLines={1} style={styles.suggestionName}>
@@ -165,42 +168,42 @@ export function RecipientInput({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
     paddingVertical: 4,
-    position: "relative",
+    position: "relative" as const,
     zIndex: 10,
   },
   inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 16,
     minHeight: 44,
   },
   label: {
     fontSize: 13,
-    color: theme.colors.textMuted,
-    fontWeight: "500",
+    color: t.colors.textMuted,
+    fontWeight: "500" as const,
     width: 44,
   },
   chipInputWrapper: {
     flex: 1,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingVertical: 4,
   },
   chip: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.full,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.full,
     paddingLeft: 8,
     paddingRight: 4,
     paddingVertical: 3,
@@ -208,58 +211,54 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 12,
-    color: theme.colors.textPrimary,
-    fontWeight: "500",
+    color: t.colors.textPrimary,
+    fontWeight: "500" as const,
   },
   chipRemoveBtn: {
     padding: 2,
-    borderRadius: theme.radius.full,
+    borderRadius: t.radius.full,
   },
   textInput: {
     flex: 1,
     minWidth: 120,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
     paddingVertical: 4,
     paddingHorizontal: 2,
   },
   suggestionsContainer: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.borderStrong,
+    borderRadius: t.radius.md,
     marginHorizontal: 16,
     marginTop: 2,
     marginBottom: 6,
-    overflow: "hidden",
+    overflow: "hidden" as const,
     maxHeight: 180,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
+    ...t.shadows.md,
   },
   suggestionsList: {
     flexGrow: 0,
   },
   suggestionItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   suggestionItemPressed: {
-    backgroundColor: theme.colors.surfaceHighlight,
+    backgroundColor: t.colors.surfaceHighlight,
   },
   avatarMini: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: theme.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surface,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     marginRight: 10,
   },
   suggestionDetails: {
@@ -267,11 +266,11 @@ const styles = StyleSheet.create({
   },
   suggestionName: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   suggestionEmail: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
 })

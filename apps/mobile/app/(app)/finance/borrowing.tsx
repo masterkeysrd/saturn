@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -40,7 +39,7 @@ import {
 } from "@saturn/core"
 import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -98,6 +97,8 @@ export default function BorrowingScreen() {
   const toast = useToast()
   const { activeSpaceId } = useSpace()
   const tz = useTimezone()
+  const { colors, resolvedMode } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [refreshing, setRefreshing] = useState(false)
   const [activeTab, setActiveTab] = useState<FilterTab>("ALL")
 
@@ -257,7 +258,7 @@ export default function BorrowingScreen() {
                     type: "button",
                     label: "New Agreement",
                     icon: { type: "sfSymbol", name: "plus" },
-                    tintColor: theme.colors.primary,
+                    tintColor: colors.primary,
                     onPress: () => {
                       haptics.light()
                       router.push("/modal/manage-borrowing")
@@ -275,7 +276,7 @@ export default function BorrowingScreen() {
                     style={styles.headerAddBtn}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <Plus size={20} color={theme.colors.primary} />
+                    <Plus size={20} color={colors.primary} />
                   </TouchableOpacity>
                 ),
               }),
@@ -289,9 +290,9 @@ export default function BorrowingScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-            progressBackgroundColor={theme.colors.surfaceElevated}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+            progressBackgroundColor={colors.surfaceElevated}
           />
         }
       >
@@ -303,20 +304,16 @@ export default function BorrowingScreen() {
               <View
                 style={[
                   styles.summaryIconBadge,
-                  { backgroundColor: theme.colors.successSubtle },
+                  { backgroundColor: colors.successSubtle },
                 ]}
               >
-                <TrendingUp size={16} color={theme.colors.success} />
+                <TrendingUp size={16} color={colors.success} />
               </View>
               <Text style={styles.summaryLabel} numberOfLines={1}>
                 Owed to Me
               </Text>
             </View>
-            <MonoAmount
-              size="md"
-              color={theme.colors.success}
-              numberOfLines={1}
-            >
+            <MonoAmount size="md" color={colors.success} numberOfLines={1}>
               {formatAmount(totalLentCents, baseCurrency)}
             </MonoAmount>
             <Text style={styles.summarySubtext}>
@@ -330,16 +327,16 @@ export default function BorrowingScreen() {
               <View
                 style={[
                   styles.summaryIconBadge,
-                  { backgroundColor: "rgba(245, 158, 11, 0.15)" },
+                  { backgroundColor: colors.warningSubtle },
                 ]}
               >
-                <TrendingDown size={16} color="#f59e0b" />
+                <TrendingDown size={16} color={colors.warning} />
               </View>
               <Text style={styles.summaryLabel} numberOfLines={1}>
                 I Owe
               </Text>
             </View>
-            <MonoAmount size="md" color="#f59e0b" numberOfLines={1}>
+            <MonoAmount size="md" color={colors.warning} numberOfLines={1}>
               {formatAmount(totalBorrowedCents, baseCurrency)}
             </MonoAmount>
             <Text style={styles.summarySubtext}>
@@ -355,9 +352,7 @@ export default function BorrowingScreen() {
               <Scale
                 size={18}
                 color={
-                  netPositionCents >= 0
-                    ? theme.colors.success
-                    : theme.colors.destructive
+                  netPositionCents >= 0 ? colors.success : colors.destructive
                 }
               />
             </View>
@@ -372,9 +367,7 @@ export default function BorrowingScreen() {
             <MonoAmount
               size="md"
               color={
-                netPositionCents >= 0
-                  ? theme.colors.success
-                  : theme.colors.destructive
+                netPositionCents >= 0 ? colors.success : colors.destructive
               }
             >
               {netPositionCents >= 0 ? "+" : ""}
@@ -485,7 +478,7 @@ export default function BorrowingScreen() {
           </View>
         ) : filteredBorrowings.length === 0 ? (
           <EmptyState
-            icon={<HandCoins size={32} color={theme.colors.textMuted} />}
+            icon={<HandCoins size={32} color={colors.textMuted} />}
             title={
               activeTab === "SETTLED"
                 ? "No settled debts"
@@ -548,26 +541,22 @@ export default function BorrowingScreen() {
                           styles.cardIconBadge,
                           {
                             backgroundColor: isPaid
-                              ? theme.colors.surfaceElevated
+                              ? colors.surfaceElevated
                               : isLent
-                                ? theme.colors.successSubtle
-                                : "rgba(245, 158, 11, 0.15)",
+                                ? colors.successSubtle
+                                : colors.warningSubtle,
                           },
                         ]}
                       >
                         {isLent ? (
                           <TrendingUp
                             size={18}
-                            color={
-                              isPaid
-                                ? theme.colors.textMuted
-                                : theme.colors.success
-                            }
+                            color={isPaid ? colors.textMuted : colors.success}
                           />
                         ) : (
                           <TrendingDown
                             size={18}
-                            color={isPaid ? theme.colors.textMuted : "#f59e0b"}
+                            color={isPaid ? colors.textMuted : colors.warning}
                           />
                         )}
                       </View>
@@ -585,21 +574,21 @@ export default function BorrowingScreen() {
                             label={isLent ? "Owed to you" : "You owe"}
                             bg={
                               isPaid
-                                ? theme.colors.surfaceElevated
+                                ? colors.surfaceElevated
                                 : isLent
-                                  ? theme.colors.successSubtle
-                                  : "rgba(245, 158, 11, 0.15)"
+                                  ? colors.successSubtle
+                                  : colors.warningSubtle
                             }
                             color={
                               isPaid
-                                ? theme.colors.textMuted
+                                ? colors.textMuted
                                 : isLent
-                                  ? theme.colors.success
-                                  : "#f59e0b"
+                                  ? colors.success
+                                  : colors.warning
                             }
                             border={
                               isPaid
-                                ? theme.colors.border
+                                ? colors.border
                                 : isLent
                                   ? "rgba(16, 185, 129, 0.3)"
                                   : "rgba(245, 158, 11, 0.3)"
@@ -620,7 +609,7 @@ export default function BorrowingScreen() {
                     {/* 3-dots native popup menu */}
                     <ActionMenu
                       title={b.counterparty || "Agreement"}
-                      colorScheme="dark"
+                      colorScheme={resolvedMode}
                       style={styles.menuTriggerWrapper}
                       onPressAction={({ nativeEvent }) => {
                         if (nativeEvent.event === "details") {
@@ -688,10 +677,7 @@ export default function BorrowingScreen() {
                       ]}
                     >
                       <View style={styles.dotsBtn}>
-                        <MoreVertical
-                          size={18}
-                          color={theme.colors.textMuted}
-                        />
+                        <MoreVertical size={18} color={colors.textMuted} />
                       </View>
                     </ActionMenu>
                   </View>
@@ -714,10 +700,10 @@ export default function BorrowingScreen() {
                         size="lg"
                         color={
                           isPaid
-                            ? theme.colors.textMuted
+                            ? colors.textMuted
                             : isLent
-                              ? theme.colors.success
-                              : "#f59e0b"
+                              ? colors.success
+                              : colors.warning
                         }
                       >
                         {formatAmount(remaining, curr)}
@@ -726,7 +712,7 @@ export default function BorrowingScreen() {
 
                     <View style={styles.financialRightCol}>
                       <Text style={styles.financialStatLabel}>PRINCIPAL</Text>
-                      <MonoAmount size="sm" color={theme.colors.textMuted}>
+                      <MonoAmount size="sm" color={colors.textMuted}>
                         {formatAmount(total, curr)}
                       </MonoAmount>
                     </View>
@@ -759,10 +745,10 @@ export default function BorrowingScreen() {
                           {
                             width: `${percentage}%`,
                             backgroundColor: isPaid
-                              ? theme.colors.textMuted
+                              ? colors.textMuted
                               : isLent
-                                ? theme.colors.success
-                                : "#f59e0b",
+                                ? colors.success
+                                : colors.warning,
                           },
                         ]}
                       />
@@ -786,12 +772,12 @@ export default function BorrowingScreen() {
                             size={13}
                             color={
                               isPaid
-                                ? theme.colors.textMuted
+                                ? colors.textMuted
                                 : isOverdue
-                                  ? theme.colors.destructive
+                                  ? colors.destructive
                                   : isDueToday || isDueSoon
-                                    ? "#f59e0b"
-                                    : theme.colors.textMuted
+                                    ? colors.warning
+                                    : colors.textMuted
                             }
                           />
                           <Text
@@ -812,7 +798,7 @@ export default function BorrowingScreen() {
                         </View>
                       ) : (
                         <View style={styles.dueDateWrap}>
-                          <Calendar size={13} color={theme.colors.textMuted} />
+                          <Calendar size={13} color={colors.textMuted} />
                           <Text style={styles.footerDateText}>
                             Started {formatDate(b.establishedAt, tz.timezone)}
                           </Text>
@@ -852,14 +838,14 @@ export default function BorrowingScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     padding: 16,
@@ -871,20 +857,20 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   summaryGrid: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 12,
   },
   summaryCard: {
     padding: 14,
-    borderRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.xl,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 4,
   },
   summaryCardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
     marginBottom: 2,
   },
@@ -892,51 +878,51 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   summaryLabel: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
     flex: 1,
   },
   summarySubtext: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 2,
   },
   netCard: {
     padding: 14,
-    borderRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.xl,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   netCardContent: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
   },
   netIconWrap: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: theme.colors.surfaceHighlight,
+    backgroundColor: t.colors.surfaceHighlight,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   netCardLabel: {
     fontSize: 10,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     letterSpacing: 0.5,
   },
   netCardSublabel: {
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
     marginTop: 2,
   },
   filterTabsRow: {
@@ -950,40 +936,40 @@ const styles = StyleSheet.create({
   filterTab: {
     paddingHorizontal: 14,
     paddingVertical: 7,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   filterTabActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySubtle,
+    borderColor: t.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
   },
   filterTabText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   filterTabTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "700",
+    color: t.colors.primary,
+    fontWeight: "700" as const,
   },
   borrowingCard: {
     padding: 14,
-    borderRadius: theme.radius.xl,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.xl,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 12,
   },
   cardHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   cardHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 10,
     flex: 1,
     marginRight: 8,
@@ -992,89 +978,89 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   cardTitleCol: {
     flex: 1,
     gap: 2,
   },
   nameBadgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
-    flexWrap: "wrap",
+    flexWrap: "wrap" as const,
   },
   counterpartyText: {
     fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   contactInfoText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   menuTriggerWrapper: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   dotsBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   cardFinancialRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "flex-end" as const,
+    justifyContent: "space-between" as const,
     paddingVertical: 2,
   },
   financialStatLabel: {
     fontSize: 10,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     letterSpacing: 0.5,
     marginBottom: 2,
   },
   financialRightCol: {
-    alignItems: "flex-end",
+    alignItems: "flex-end" as const,
   },
   progressContainer: {
     gap: 6,
   },
   progressHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
   },
   progressLabel: {
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   progressAmounts: {
     fontSize: 11,
-    color: theme.colors.textSecondary,
-    fontWeight: "500",
+    color: t.colors.textSecondary,
+    fontWeight: "500" as const,
   },
   progressBarTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: theme.colors.border,
-    overflow: "hidden",
+    backgroundColor: t.colors.border,
+    overflow: "hidden" as const,
   },
   progressBarFill: {
-    height: "100%",
+    height: "100%" as const,
     borderRadius: 3,
   },
   cardFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
     paddingTop: 10,
     marginTop: 2,
   },
@@ -1082,38 +1068,38 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dueDateWrap: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
   },
   footerDueDateText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
-    fontWeight: "500",
+    color: t.colors.textMuted,
+    fontWeight: "500" as const,
   },
   footerDateText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   overdueText: {
-    color: theme.colors.destructive,
-    fontWeight: "700",
+    color: t.colors.destructive,
+    fontWeight: "700" as const,
   },
   dueSoonText: {
-    color: "#f59e0b",
-    fontWeight: "600",
+    color: t.colors.warning,
+    fontWeight: "600" as const,
   },
   quickPayBtn: {
     paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.surfaceHighlight,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.surfaceHighlight,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   quickPayBtnText: {
     fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
 })

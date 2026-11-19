@@ -1,5 +1,4 @@
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -14,7 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { CreateSpaceSchema, type CreateSpaceFormValues } from "@saturn/schemas"
 import { useCreateSpaceMutation } from "@saturn/api/saturn/space/v1/space"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
 import { TextInput } from "@/components/ui/text-input"
 import { Button } from "@/components/ui/button"
@@ -25,6 +24,8 @@ export default function CreateSpaceModal() {
   const insets = useSafeAreaInsets()
   const toast = useToast()
   const { switchSpace, refetchSpaces } = useSpace()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   const {
     control,
@@ -96,7 +97,7 @@ export default function CreateSpaceModal() {
             name="name"
             label="Workspace Name"
             placeholder="e.g. Personal, Consulting, Family"
-            leftIcon={<Layers size={18} color={theme.colors.primary} />}
+            leftIcon={<Layers size={18} color={colors.primary} />}
             autoFocus
           />
 
@@ -105,7 +106,7 @@ export default function CreateSpaceModal() {
             name="description"
             label="Description (Optional)"
             placeholder="e.g. Primary personal finance & budgeting"
-            leftIcon={<FileText size={18} color={theme.colors.textMuted} />}
+            leftIcon={<FileText size={18} color={colors.textMuted} />}
             multiline
             numberOfLines={2}
           />
@@ -116,7 +117,7 @@ export default function CreateSpaceModal() {
             variant="secondary"
             size="lg"
             style={styles.cancelBtn}
-            leftIcon={<X size={18} color={theme.colors.textMuted} />}
+            leftIcon={<X size={18} color={colors.textMuted} />}
             onPress={() => router.back()}
           >
             Cancel
@@ -127,9 +128,7 @@ export default function CreateSpaceModal() {
             size="lg"
             style={styles.createBtn}
             loading={createSpaceMutation.isPending || isSubmitting}
-            leftIcon={
-              <Check size={18} color={theme.colors.primaryForeground} />
-            }
+            leftIcon={<Check size={18} color={colors.primaryForeground} />}
             onPress={handleSubmit(onValid)}
           >
             Create
@@ -140,10 +139,10 @@ export default function CreateSpaceModal() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   keyboardAvoid: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     padding: 20,
@@ -151,7 +150,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     lineHeight: 20,
   },
   formCard: {
@@ -159,7 +158,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   actionsRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 12,
     marginTop: 8,
   },

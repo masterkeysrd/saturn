@@ -14,7 +14,7 @@ import {
   type WebViewProps,
 } from "react-native-webview"
 import { stripHtmlToPlainText } from "@saturn/core"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import {
   buildMobileEditorDocumentHtml,
   EMPTY_ACTIVE_FORMATS,
@@ -74,6 +74,8 @@ export const EmailRichEditor = forwardRef<
   },
   ref
 ) {
+  const { colors, isDark } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const webViewRef = useRef<WebViewHandle>(null)
   const isDirtyRef = useRef(false)
   const latestHtmlRef = useRef(bodyHtml)
@@ -88,9 +90,29 @@ export const EmailRichEditor = forwardRef<
     onActiveFormatsChangeRef.current = onActiveFormatsChange
   })
 
+  const editorColors = useMemo(
+    () => ({
+      background: colors.surface,
+      textPrimary: colors.textPrimary,
+      textMuted: colors.textMuted,
+      textSecondary: colors.textSecondary,
+      primary: colors.primary,
+      border: colors.border,
+    }),
+    [
+      colors.surface,
+      colors.textPrimary,
+      colors.textMuted,
+      colors.textSecondary,
+      colors.primary,
+      colors.border,
+    ]
+  )
+
   const propKey = useMemo(
-    () => `${stylesHtml}\0${bodyHtml}`,
-    [stylesHtml, bodyHtml]
+    () =>
+      `${isDark ? "dark" : "light"}\0${colors.surface}\0${stylesHtml}\0${bodyHtml}`,
+    [isDark, colors.surface, stylesHtml, bodyHtml]
   )
   const lastWrittenPropKeyRef = useRef<string>(propKey)
 
@@ -101,13 +123,15 @@ export const EmailRichEditor = forwardRef<
       placeholder,
       minHeight,
       autoFocus,
+      isDark,
+      colors: editorColors,
     })
   )
 
   useEffect(() => {
     if (lastWrittenPropKeyRef.current === propKey) return
+    lastWrittenPropKeyRef.current = propKey
     if (!isDirtyRef.current) {
-      lastWrittenPropKeyRef.current = propKey
       latestHtmlRef.current = bodyHtml
       latestTextRef.current = stripHtmlToPlainText(bodyHtml)
       setDocumentHtml(
@@ -117,10 +141,25 @@ export const EmailRichEditor = forwardRef<
           placeholder,
           minHeight,
           autoFocus,
+          isDark,
+          colors: editorColors,
         })
       )
+    } else {
+      webViewRef.current?.injectJavaScript(
+        `document.documentElement.style.colorScheme=${JSON.stringify(isDark ? "dark" : "light")};document.documentElement.style.background=${JSON.stringify(editorColors.background)};document.body.style.backgroundColor=${JSON.stringify(editorColors.background)};document.body.style.color=${JSON.stringify(editorColors.textPrimary)};true;`
+      )
     }
-  }, [propKey, bodyHtml, stylesHtml, placeholder, minHeight, autoFocus])
+  }, [
+    propKey,
+    bodyHtml,
+    stylesHtml,
+    placeholder,
+    minHeight,
+    autoFocus,
+    isDark,
+    editorColors,
+  ])
 
   useImperativeHandle(
     ref,
@@ -248,16 +287,16 @@ export const EmailRichEditor = forwardRef<
   )
 })
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
-    width: "100%",
+    width: "100%" as const,
   },
   editorWrapper: {
-    backgroundColor: "#ffffff",
+    backgroundColor: t.colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
+    borderColor: t.colors.border,
+    overflow: "hidden" as const,
   },
   webView: {
     flex: 1,

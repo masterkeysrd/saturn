@@ -6,13 +6,10 @@
     "version": "0.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "dev.masterkeys.saturn",
-      "infoPlist": {
-        "UIUserInterfaceStyle": "Dark"
-      }
+      "bundleIdentifier": "dev.masterkeys.saturn"
     },
     "android": {
       "package": "dev.masterkeys.saturn",

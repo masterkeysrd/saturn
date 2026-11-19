@@ -2,7 +2,6 @@ import { useMemo, useRef, useEffect } from "react"
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   type RefreshControlProps,
@@ -16,7 +15,7 @@ import {
   type HourSlot,
 } from "@saturn/core"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { formatEventTime } from "./calendar-utils"
 
@@ -41,6 +40,8 @@ export function TimelineGrid({
   onSelectSlot,
   refreshControl,
 }: TimelineGridProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null)
   const hourSlots = useMemo<HourSlot[]>(() => getHourSlots(), [])
   const todayStr = useMemo(
@@ -177,7 +178,7 @@ export function TimelineGrid({
               return (
                 <View key={dayStr} style={styles.allDayCol}>
                   {dayAllDay.map((occ) => {
-                    const color = occ.color || theme.colors.primary
+                    const color = occ.color || colors.primary
                     return (
                       <TouchableOpacity
                         key={occ.instanceId || occ.eventId}
@@ -284,7 +285,7 @@ export function TimelineGrid({
                     )
                     const leftPct = `${item.leftPct}%`
                     const widthPct = `${item.widthPct}%`
-                    const eventColor = occ.color || theme.colors.primary
+                    const eventColor = occ.color || colors.primary
 
                     return (
                       <TouchableOpacity
@@ -302,7 +303,7 @@ export function TimelineGrid({
                             left: leftPct as unknown as number,
                             width: widthPct as unknown as number,
                             zIndex: item.zIndex + 2,
-                            backgroundColor: theme.colors.surfaceElevated,
+                            backgroundColor: colors.surfaceElevated,
                             borderLeftColor: eventColor,
                           },
                         ]}
@@ -312,7 +313,7 @@ export function TimelineGrid({
                           numberOfLines={1}
                           style={[
                             styles.eventTitle,
-                            { color: theme.colors.textPrimary },
+                            { color: colors.textPrimary },
                           ]}
                         >
                           {occ.title || "(No title)"}
@@ -340,93 +341,93 @@ export function TimelineGrid({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   headerRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderBottomColor: t.colors.border,
+    backgroundColor: t.colors.surface,
   },
   timeColHeader: {
     width: TIME_COL_WIDTH,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderRightWidth: 1,
-    borderRightColor: theme.colors.border,
+    borderRightColor: t.colors.border,
     paddingVertical: 6,
   },
   timeZoneText: {
     fontSize: 9,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
-    textTransform: "uppercase",
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
+    textTransform: "uppercase" as const,
   },
   daysHeaderContainer: {
     flex: 1,
-    flexDirection: "row",
+    flexDirection: "row" as const,
   },
   dayHeaderCol: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingVertical: 6,
   },
   dayHeaderWeekday: {
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
-    textTransform: "uppercase",
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
+    textTransform: "uppercase" as const,
   },
   dayHeaderTextToday: {
-    color: theme.colors.primary,
+    color: t.colors.primary,
   },
   dayHeaderBadge: {
     marginTop: 2,
     minWidth: 24,
     height: 24,
     borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingHorizontal: 4,
   },
   dayHeaderBadgeToday: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
   },
   dayHeaderDayNumber: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   dayHeaderDayNumberToday: {
-    color: theme.colors.primaryForeground,
+    color: t.colors.primaryForeground,
   },
   allDaySection: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceSubtle,
+    borderBottomColor: t.colors.border,
+    backgroundColor: t.colors.surfaceSubtle,
     maxHeight: 70,
   },
   allDayLabelCol: {
     width: TIME_COL_WIDTH,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderRightWidth: 1,
-    borderRightColor: theme.colors.border,
+    borderRightColor: t.colors.border,
     paddingHorizontal: 4,
   },
   allDayLabelText: {
     fontSize: 10,
-    fontWeight: "500",
-    color: theme.colors.textMuted,
+    fontWeight: "500" as const,
+    color: t.colors.textMuted,
   },
   allDayColumnsContainer: {
     flex: 1,
-    flexDirection: "row",
+    flexDirection: "row" as const,
     paddingVertical: 4,
   },
   allDayCol: {
@@ -435,13 +436,13 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   allDayPill: {
-    borderRadius: theme.radius.xs,
+    borderRadius: t.radius.xs,
     paddingVertical: 2,
     paddingHorizontal: 6,
   },
   allDayPillText: {
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "600" as const,
     color: "#ffffff",
   },
   scrollView: {
@@ -451,48 +452,48 @@ const styles = StyleSheet.create({
     height: TOTAL_GRID_HEIGHT + 30,
   },
   gridContainer: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     height: TOTAL_GRID_HEIGHT,
   },
   timeLabelsColumn: {
     width: TIME_COL_WIDTH,
     borderRightWidth: 1,
-    borderRightColor: theme.colors.border,
+    borderRightColor: t.colors.border,
   },
   hourSlotLabel: {
-    justifyContent: "flex-start",
+    justifyContent: "flex-start" as const,
     paddingTop: 2,
     paddingRight: 6,
-    alignItems: "flex-end",
+    alignItems: "flex-end" as const,
   },
   timeLabelText: {
     fontSize: 10,
-    fontWeight: "500",
-    color: theme.colors.textMuted,
+    fontWeight: "500" as const,
+    color: t.colors.textMuted,
   },
   dayColumnsRow: {
     flex: 1,
-    flexDirection: "row",
-    position: "relative",
+    flexDirection: "row" as const,
+    position: "relative" as const,
   },
   dayGridCol: {
     flex: 1,
-    position: "relative",
+    position: "relative" as const,
   },
   dayGridColBorder: {
     borderLeftWidth: 1,
-    borderLeftColor: theme.colors.border,
+    borderLeftColor: t.colors.border,
   },
   hourLine: {
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   currentTimeLine: {
-    position: "absolute",
+    position: "absolute" as const,
     left: 0,
     right: 0,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     zIndex: 20,
     height: 10,
     marginTop: -5,
@@ -501,37 +502,37 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: theme.colors.destructive,
+    backgroundColor: t.colors.destructive,
     marginLeft: -4,
   },
   currentTimeBar: {
     flex: 1,
     height: 2,
-    backgroundColor: theme.colors.destructive,
+    backgroundColor: t.colors.destructive,
   },
   eventCard: {
-    position: "absolute",
+    position: "absolute" as const,
     borderLeftWidth: 3,
-    borderRadius: theme.radius.xs,
+    borderRadius: t.radius.xs,
     paddingHorizontal: 6,
     paddingVertical: 3,
-    overflow: "hidden",
+    overflow: "hidden" as const,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   eventTitle: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "700" as const,
   },
   eventTime: {
     fontSize: 10,
-    fontWeight: "500",
-    color: theme.colors.textMuted,
+    fontWeight: "500" as const,
+    color: t.colors.textMuted,
     marginTop: 1,
   },
   eventLocation: {
     fontSize: 9,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     marginTop: 1,
   },
 })

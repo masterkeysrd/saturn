@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useState } from "react"
-import { StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native"
+import { Switch, Text, TouchableOpacity, View } from "react-native"
 import BottomSheet, {
   BottomSheetScrollView,
   BottomSheetTextInput,
@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { VariableChipPicker } from "./variable-chip-picker"
 import { Copy, Key, Trash2 } from "lucide-react-native"
@@ -37,6 +37,8 @@ interface TriggerSheetProps {
 
 export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
   ({ trigger, topics, onSave, onDelete, onClose }, ref) => {
+    const { colors, isDark } = useTheme()
+    const styles = useThemedStyles(createStyles)
     const tz = useTimezone()
     const toast = useToast()
     const { serverUrl } = useAuth()
@@ -113,8 +115,8 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
                 setDraft({ ...draft, isEnabled: val })
               }}
               trackColor={{
-                false: theme.colors.surfaceHighlight,
-                true: theme.colors.primary,
+                false: colors.surfaceHighlight,
+                true: colors.primary,
               }}
             />
           </View>
@@ -126,7 +128,8 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
               value={draft.name}
               onChangeText={(name) => setDraft({ ...draft, name })}
               placeholder="Trigger name"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
+              keyboardAppearance={isDark ? "dark" : "light"}
             />
           </View>
 
@@ -200,7 +203,8 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
                   })
                 }
                 placeholder="trigger.data.amount > 0"
-                placeholderTextColor={theme.colors.textMuted}
+                placeholderTextColor={colors.textMuted}
+                keyboardAppearance={isDark ? "dark" : "light"}
                 autoCapitalize="none"
               />
               <VariableChipPicker
@@ -226,7 +230,7 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
                     style={styles.actionPill}
                     onPress={() => handleCopy(webhookUrl, "Webhook URL")}
                   >
-                    <Copy size={14} color={theme.colors.primary} />
+                    <Copy size={14} color={colors.primary} />
                     <Text style={styles.actionPillText}>Copy URL</Text>
                   </TouchableOpacity>
                 )}
@@ -234,7 +238,7 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
                   style={styles.actionPill}
                   onPress={handleMintKey}
                 >
-                  <Key size={14} color={theme.colors.accent} />
+                  <Key size={14} color={colors.accent} />
                   <Text style={styles.actionPillText}>
                     {createAPIKeyMutation.isPending
                       ? "Creating..."
@@ -298,13 +302,14 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
                   setDraft({ ...draft, config: { ...cfg, cron } })
                 }
                 placeholder="0 9 * * 1-5"
-                placeholderTextColor={theme.colors.textMuted}
+                placeholderTextColor={colors.textMuted}
+                keyboardAppearance={isDark ? "dark" : "light"}
                 autoCapitalize="none"
               />
               <Text
                 style={[
                   styles.hintText,
-                  !cronOk && { color: theme.colors.destructive },
+                  !cronOk && { color: colors.destructive },
                 ]}
               >
                 {cronVal
@@ -325,7 +330,7 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
                 onClose()
               }}
             >
-              <Trash2 size={16} color={theme.colors.destructive} />
+              <Trash2 size={16} color={colors.destructive} />
               <Text style={styles.deleteText}>Remove</Text>
             </TouchableOpacity>
             <Button
@@ -347,171 +352,171 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
 
 TriggerSheet.displayName = "TriggerSheet"
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   body: {
     paddingHorizontal: 16,
     paddingBottom: 36,
     gap: 16,
   },
   rowBetween: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   fieldGroup: {
     gap: 8,
   },
   sectionLabel: {
     fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
+    fontWeight: "700" as const,
+    color: t.colors.textSecondary,
   },
   input: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   monoInput: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textPrimary,
+    fontFamily: t.typography.mono,
+    color: t.colors.textPrimary,
   },
   typeRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 8,
   },
   typeChip: {
     flex: 1,
     paddingVertical: 8,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
+    borderColor: t.colors.border,
+    alignItems: "center" as const,
   },
   typeChipActive: {
-    backgroundColor: theme.colors.primarySubtle,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: t.colors.primary,
   },
   typeChipText: {
     fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
+    fontWeight: "700" as const,
+    color: t.colors.textSecondary,
   },
   typeChipTextActive: {
-    color: theme.colors.primary,
+    color: t.colors.primary,
   },
   topicWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 6,
   },
   topicPill: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   topicPillActive: {
-    backgroundColor: theme.colors.primarySubtle,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: t.colors.primary,
   },
   topicText: {
     fontSize: 11,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textSecondary,
+    fontFamily: t.typography.mono,
+    color: t.colors.textSecondary,
   },
   topicTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "700",
+    color: t.colors.primary,
+    fontWeight: "700" as const,
   },
   webhookBox: {
     padding: 12,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 10,
   },
   webhookUrl: {
     fontSize: 12,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textPrimary,
+    fontFamily: t.typography.mono,
+    color: t.colors.textPrimary,
   },
   webhookActions: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 10,
   },
   actionPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surface,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   actionPillText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   mintedBox: {
     padding: 10,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.warningSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.warningSubtle,
     borderWidth: 1,
-    borderColor: theme.colors.warning,
+    borderColor: t.colors.warning,
     gap: 4,
   },
   mintedHint: {
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.warning,
+    fontWeight: "600" as const,
+    color: t.colors.warning,
   },
   mintedKey: {
     fontSize: 12,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textPrimary,
+    fontFamily: t.typography.mono,
+    color: t.colors.textPrimary,
   },
   hintText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   footerRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
     marginTop: 8,
   },
   deleteBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.destructiveSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.destructiveSubtle,
   },
   deleteText: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.destructive,
+    fontWeight: "700" as const,
+    color: t.colors.destructive,
   },
   saveBtn: {
     flex: 1,

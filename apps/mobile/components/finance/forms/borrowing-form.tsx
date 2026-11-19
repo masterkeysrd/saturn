@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Keyboard,
-  StyleSheet,
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useQueryClient } from "@tanstack/react-query"
@@ -27,7 +26,7 @@ import {
   type Borrowing,
   type BorrowingTransactionType,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -41,7 +40,7 @@ import {
   FormDateRow,
   FormPillGroup,
 } from "@/components/ui/form-primitives"
-import { formStyles } from "./form-styles"
+import { useFormStyles } from "./form-styles"
 
 export interface BorrowingFormProps {
   activeBorrowings: Borrowing[]
@@ -64,6 +63,9 @@ export function BorrowingForm({
   initialAccountId,
   onAccountChange,
 }: BorrowingFormProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+  const formStyles = useFormStyles()
   const insets = useSafeAreaInsets()
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -197,21 +199,21 @@ export function BorrowingForm({
       {
         label: isLent ? "Receive Payment" : "Make Repayment",
         value: "BORROWING_TRANSACTION_TYPE_PAYMENT",
-        activeColor: "#d97706",
-        activeBg: "rgba(245, 158, 11, 0.15)",
-        activeBorder: "#f59e0b",
-        activeTextColor: "#f59e0b",
+        activeColor: colors.warning,
+        activeBg: colors.warningSubtle,
+        activeBorder: colors.warning,
+        activeTextColor: colors.warning,
       },
       {
         label: isLent ? "Give Additional Loan" : "Take Additional Draw",
         value: "BORROWING_TRANSACTION_TYPE_DISBURSEMENT",
-        activeColor: "#d97706",
-        activeBg: "rgba(245, 158, 11, 0.15)",
-        activeBorder: "#f59e0b",
-        activeTextColor: "#f59e0b",
+        activeColor: colors.warning,
+        activeBg: colors.warningSubtle,
+        activeBorder: colors.warning,
+        activeTextColor: colors.warning,
       },
     ],
-    [isLent]
+    [isLent, colors.warning, colors.warningSubtle]
   )
 
   return (
@@ -233,10 +235,10 @@ export function BorrowingForm({
           <View
             style={[
               formStyles.specialSelectorIcon,
-              { backgroundColor: "rgba(245, 158, 11, 0.15)" },
+              { backgroundColor: colors.warningSubtle },
             ]}
           >
-            <HandCoins size={20} color="#f59e0b" />
+            <HandCoins size={20} color={colors.warning} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={formStyles.specialSelectorLabel}>
@@ -248,7 +250,7 @@ export function BorrowingForm({
                 : "Select agreement..."}
             </Text>
           </View>
-          <ChevronRight size={16} color={theme.colors.textMuted} />
+          <ChevronRight size={16} color={colors.textMuted} />
         </TouchableOpacity>
 
         {/* Transaction Type Pills */}
@@ -267,7 +269,7 @@ export function BorrowingForm({
           currency={currentCurrency}
           currencySymbol={currentSymbol}
           currencyDisabled
-          accentColor="#d97706"
+          accentColor={colors.warning}
           autoFocus
         />
 
@@ -321,7 +323,7 @@ export function BorrowingForm({
             control={control}
             name="notes"
             label="Notes"
-            icon={<FileText size={16} color={theme.colors.textMuted} />}
+            icon={<FileText size={16} color={colors.textMuted} />}
             placeholder="e.g. Bank transfer ref, monthly check"
             returnKeyType="done"
           />
@@ -330,7 +332,7 @@ export function BorrowingForm({
         {/* Error Box */}
         {submissionError && (
           <View style={formStyles.errorBox}>
-            <AlertCircle size={15} color={theme.colors.destructive} />
+            <AlertCircle size={15} color={colors.destructive} />
             <Text style={formStyles.errorText}>{submissionError}</Text>
           </View>
         )}
@@ -385,28 +387,28 @@ export function BorrowingForm({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   agreementInfoCard: {
-    backgroundColor: "rgba(245, 158, 11, 0.08)",
+    backgroundColor: t.colors.warningSubtle,
     borderWidth: 1,
-    borderColor: "rgba(245, 158, 11, 0.2)",
-    borderRadius: theme.radius.lg,
+    borderColor: `${t.colors.warning}33`,
+    borderRadius: t.radius.lg,
     padding: 12,
     marginBottom: 12,
     gap: 6,
   },
   agreementInfoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
   },
   agreementInfoLabel: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   agreementInfoVal: {
     fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
 })

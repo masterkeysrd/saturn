@@ -21,7 +21,7 @@ import {
   type ExchangeRate,
   type Transaction,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { theme } from "@/lib/theme"
+import { useTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -35,7 +35,7 @@ import {
   FormRowInput,
   FormEffectiveDateSection,
 } from "@/components/ui/form-primitives"
-import { formStyles } from "./form-styles"
+import { useFormStyles } from "./form-styles"
 
 export interface IncomeFormProps {
   existingTx?: Transaction | null
@@ -60,6 +60,8 @@ export function IncomeForm({
   initialAccountId,
   onAccountChange,
 }: IncomeFormProps) {
+  const { colors } = useTheme()
+  const formStyles = useFormStyles()
   const insets = useSafeAreaInsets()
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -243,7 +245,7 @@ export function IncomeForm({
             currencySheetRef.current?.expand()
           }}
           autoFocus={!isEditMode}
-          accentColor={theme.colors.success}
+          accentColor={colors.success}
         />
 
         {/* Currency Conversion Preview */}
@@ -253,7 +255,7 @@ export function IncomeForm({
               <View style={formStyles.conversionAlert}>
                 <AlertTriangle
                   size={16}
-                  color="#f59e0b"
+                  color={colors.warning}
                   style={{ marginTop: 2 }}
                 />
                 <View style={{ flex: 1 }}>
@@ -269,7 +271,7 @@ export function IncomeForm({
               <View style={formStyles.conversionBox}>
                 <Globe
                   size={16}
-                  color={theme.colors.primary}
+                  color={colors.primary}
                   style={{ marginTop: 2 }}
                 />
                 <View style={{ flex: 1 }}>
@@ -314,7 +316,7 @@ export function IncomeForm({
             control={control}
             name="description"
             label="Description"
-            icon={<FileText size={16} color={theme.colors.textMuted} />}
+            icon={<FileText size={16} color={colors.textMuted} />}
             placeholder="e.g. Monthly Salary, Freelance Payment"
             returnKeyType="done"
           />
@@ -327,7 +329,7 @@ export function IncomeForm({
         {/* Error Box */}
         {submissionError && (
           <View style={formStyles.errorBox}>
-            <AlertCircle size={15} color={theme.colors.destructive} />
+            <AlertCircle size={15} color={colors.destructive} />
             <Text style={formStyles.errorText}>{submissionError}</Text>
           </View>
         )}

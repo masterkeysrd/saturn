@@ -2,7 +2,6 @@ import { useMemo, useState, useEffect } from "react"
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   Animated,
   useAnimatedValue,
@@ -21,7 +20,7 @@ import {
   type MonthDayCell,
   type WeekDayHeader,
 } from "@saturn/core"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 export interface DateStripProps {
@@ -37,6 +36,8 @@ export function DateStrip({
   onSelectDate,
   eventsByDate,
 }: DateStripProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [isExpanded, setIsExpanded] = useState(false)
   const animValue = useAnimatedValue(0)
 
@@ -159,9 +160,9 @@ export function DateStrip({
         >
           <Text style={styles.monthTitleText}>{monthYearLabel}</Text>
           {isExpanded ? (
-            <ChevronUp size={16} color={theme.colors.textSecondary} />
+            <ChevronUp size={16} color={colors.textSecondary} />
           ) : (
-            <ChevronDown size={16} color={theme.colors.textSecondary} />
+            <ChevronDown size={16} color={colors.textSecondary} />
           )}
         </TouchableOpacity>
 
@@ -172,7 +173,7 @@ export function DateStrip({
             style={styles.navButton}
             testID="calendar-strip-prev"
           >
-            <ChevronLeft size={18} color={theme.colors.textSecondary} />
+            <ChevronLeft size={18} color={colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.7}
@@ -180,7 +181,7 @@ export function DateStrip({
             style={styles.navButton}
             testID="calendar-strip-next"
           >
-            <ChevronRight size={18} color={theme.colors.textSecondary} />
+            <ChevronRight size={18} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -298,84 +299,84 @@ export function DateStrip({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: t.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 10,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     marginBottom: 8,
   },
   monthTitleButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingVertical: 4,
     paddingHorizontal: 6,
-    borderRadius: theme.radius.sm,
+    borderRadius: t.radius.sm,
   },
   monthTitleText: {
     fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   navRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
   },
   navButton: {
     padding: 6,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
   },
   weekRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
     gap: 4,
   },
   dayPill: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingVertical: 8,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: "transparent",
     minHeight: 58,
   },
   dayPillToday: {
-    borderColor: theme.colors.primary,
+    borderColor: t.colors.primary,
   },
   dayPillSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
+    borderColor: t.colors.primary,
   },
   dayPillWeekName: {
     fontSize: 11,
-    fontWeight: "500",
-    color: theme.colors.textMuted,
+    fontWeight: "500" as const,
+    color: t.colors.textMuted,
     marginBottom: 2,
-    textTransform: "uppercase",
+    textTransform: "uppercase" as const,
   },
   dayPillNumber: {
     fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   dayPillTextToday: {
-    color: theme.colors.primary,
+    color: t.colors.primary,
   },
   dayPillTextSelected: {
-    color: theme.colors.primaryForeground,
+    color: t.colors.primaryForeground,
   },
   eventDot: {
     width: 4,
@@ -385,58 +386,58 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   eventDotActive: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
   },
   eventDotSelected: {
-    backgroundColor: theme.colors.primaryForeground,
+    backgroundColor: t.colors.primaryForeground,
   },
   weekdayInitialsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
     marginBottom: 6,
   },
   weekdayInitialText: {
     flex: 1,
-    textAlign: "center",
+    textAlign: "center" as const,
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
   },
   monthMatrixContainer: {
     gap: 4,
   },
   monthWeekRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
     gap: 4,
   },
   monthCell: {
     flex: 1,
     height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.surfaceSubtle,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: "transparent",
   },
   monthCellToday: {
-    borderColor: theme.colors.primary,
+    borderColor: t.colors.primary,
   },
   monthCellSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primary,
+    borderColor: t.colors.primary,
   },
   monthCellNumber: {
     fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   monthCellNumberDimmed: {
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     opacity: 0.4,
   },
 })

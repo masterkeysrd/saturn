@@ -4,7 +4,6 @@ import {
   Text,
   TextInput as RNTextInput,
   TouchableOpacity,
-  StyleSheet,
   type TextInputProps as RNTextInputProps,
   type StyleProp,
   type ViewStyle,
@@ -16,7 +15,7 @@ import {
   type FieldValues,
   type Path,
 } from "react-hook-form"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 export interface BaseTextInputProps extends RNTextInputProps {
   label?: string
@@ -57,6 +56,8 @@ export const BaseTextInput = React.forwardRef<TextInputRef, BaseTextInputProps>(
     },
     ref
   ) {
+    const { colors, isDark } = useTheme()
+    const styles = useThemedStyles(createStyles)
     const [isFocused, setIsFocused] = useState(false)
     const [isPasswordVisible, setIsPasswordVisible] = useState(false)
 
@@ -75,7 +76,8 @@ export const BaseTextInput = React.forwardRef<TextInputRef, BaseTextInputProps>(
           <RNTextInput
             ref={ref}
             style={[styles.input, style]}
-            placeholderTextColor={theme.colors.textMuted}
+            placeholderTextColor={colors.textMuted}
+            keyboardAppearance={isDark ? "dark" : "light"}
             secureTextEntry={isPassword ? !isPasswordVisible : secureTextEntry}
             onFocus={(e) => {
               setIsFocused(true)
@@ -94,9 +96,9 @@ export const BaseTextInput = React.forwardRef<TextInputRef, BaseTextInputProps>(
               style={styles.rightIconContainer}
             >
               {isPasswordVisible ? (
-                <EyeOff size={18} color={theme.colors.textMuted} />
+                <EyeOff size={18} color={colors.textMuted} />
               ) : (
-                <Eye size={18} color={theme.colors.textMuted} />
+                <Eye size={18} color={colors.textMuted} />
               )}
             </TouchableOpacity>
           ) : rightIcon ? (
@@ -163,34 +165,34 @@ export const TextInput = React.forwardRef(function TextInput<
   props: TextInputProps<TFieldValues> & { ref?: React.Ref<TextInputRef> }
 ) => React.ReactElement
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     gap: 6,
   },
   label: {
     fontSize: 13,
-    fontWeight: "500",
-    color: theme.colors.textSecondary,
+    fontWeight: "500" as const,
+    color: t.colors.textSecondary,
   },
   inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surfaceElevated,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.md,
     paddingHorizontal: 12,
     minHeight: 46,
   },
   inputWrapperFocused: {
-    borderColor: theme.colors.borderFocus,
+    borderColor: t.colors.borderFocus,
   },
   inputWrapperError: {
-    borderColor: theme.colors.destructive,
+    borderColor: t.colors.destructive,
   },
   input: {
     flex: 1,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
     fontSize: 15,
     paddingVertical: 10,
   },
@@ -199,15 +201,15 @@ const styles = StyleSheet.create({
   },
   rightIconContainer: {
     marginLeft: 10,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
   },
   errorText: {
     fontSize: 12,
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
   },
   helperText: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
 })

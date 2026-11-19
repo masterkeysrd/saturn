@@ -36,7 +36,7 @@ import {
   type ScheduledTransaction,
   type RecurringTransaction,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { theme, getNativeBudgetColors } from "@/lib/theme"
+import { useTheme } from "@/lib/theme"
 import { BudgetCategoryIcon } from "@/lib/budget-icons"
 import { haptics } from "@/lib/haptics"
 import { Button } from "@/components/ui/button"
@@ -51,7 +51,7 @@ import {
 import { AccountRow } from "../account-select"
 import { HeroAmountInput } from "@/components/ui/amount-input"
 import { FormRowInput, FormDateRow } from "@/components/ui/form-primitives"
-import { formStyles } from "./form-styles"
+import { useFormStyles } from "./form-styles"
 
 export interface ScheduledConfirmFormProps {
   pendingScheduled: ScheduledTransaction[]
@@ -80,6 +80,8 @@ export function ScheduledConfirmForm({
   initialAccountId,
   onAccountChange,
 }: ScheduledConfirmFormProps) {
+  const { colors, getBudgetColors } = useTheme()
+  const formStyles = useFormStyles()
   const insets = useSafeAreaInsets()
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -191,7 +193,7 @@ export function ScheduledConfirmForm({
     () => budgets.find((b) => b.id === selectedBudgetId),
     [budgets, selectedBudgetId]
   )
-  const selectedBudgetColors = getNativeBudgetColors(
+  const selectedBudgetColors = getBudgetColors(
     selectedBudget?.color || "indigo"
   )
 
@@ -278,10 +280,10 @@ export function ScheduledConfirmForm({
           <View
             style={[
               formStyles.specialSelectorIcon,
-              { backgroundColor: "rgba(99, 102, 241, 0.15)" },
+              { backgroundColor: `${colors.accent}26` },
             ]}
           >
-            <CalendarClock size={20} color="#6366f1" />
+            <CalendarClock size={20} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={formStyles.specialSelectorLabel}>Scheduled Item</Text>
@@ -291,7 +293,7 @@ export function ScheduledConfirmForm({
                 : "Select scheduled item..."}
             </Text>
           </View>
-          <ChevronRight size={16} color={theme.colors.textMuted} />
+          <ChevronRight size={16} color={colors.textMuted} />
         </TouchableOpacity>
 
         {/* Amount & Currency Field */}
@@ -301,7 +303,7 @@ export function ScheduledConfirmForm({
           currency={currentCurrency}
           currencySymbol={currentSymbol}
           currencyDisabled
-          accentColor="#6366f1"
+          accentColor={colors.accent}
           autoFocus
         />
 
@@ -319,7 +321,7 @@ export function ScheduledConfirmForm({
                 }}
               >
                 <View style={formStyles.formRowLabelGroup}>
-                  <Tag size={16} color={theme.colors.textMuted} />
+                  <Tag size={16} color={colors.textMuted} />
                   <Text style={formStyles.formRowLabel}>Budget</Text>
                 </View>
                 <View style={formStyles.formRowValueGroup}>
@@ -354,7 +356,7 @@ export function ScheduledConfirmForm({
                       Select a budget
                     </Text>
                   )}
-                  <ChevronRight size={14} color={theme.colors.textMuted} />
+                  <ChevronRight size={14} color={colors.textMuted} />
                 </View>
               </TouchableOpacity>
               {errors.budgetId ? (
@@ -367,11 +369,11 @@ export function ScheduledConfirmForm({
                     paddingBottom: 8,
                   }}
                 >
-                  <AlertCircle size={12} color={theme.colors.destructive} />
+                  <AlertCircle size={12} color={colors.destructive} />
                   <Text
                     style={{
                       fontSize: 12,
-                      color: theme.colors.destructive,
+                      color: colors.destructive,
                       fontWeight: "500",
                     }}
                   >
@@ -400,7 +402,7 @@ export function ScheduledConfirmForm({
             control={control}
             name="description"
             label="Description"
-            icon={<FileText size={16} color={theme.colors.textMuted} />}
+            icon={<FileText size={16} color={colors.textMuted} />}
             placeholder="e.g. Netflix Monthly, Internet Bill"
             returnKeyType="done"
           />
@@ -417,7 +419,7 @@ export function ScheduledConfirmForm({
         {/* Error Box */}
         {submissionError && (
           <View style={formStyles.errorBox}>
-            <AlertCircle size={15} color={theme.colors.destructive} />
+            <AlertCircle size={15} color={colors.destructive} />
             <Text style={formStyles.errorText}>{submissionError}</Text>
           </View>
         )}

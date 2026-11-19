@@ -1,6 +1,6 @@
 import React from "react"
-import { StyleSheet, Text, View, type ViewStyle } from "react-native"
-import { theme } from "@/lib/theme"
+import { Text, View, type ViewStyle } from "react-native"
+import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 
 export interface DateSectionHeaderProps {
   title: string
@@ -13,6 +13,8 @@ export function DateSectionHeader({
   insetHorizontal = true,
   style,
 }: DateSectionHeaderProps) {
+  const styles = useThemedStyles(createStyles)
+
   return (
     <View
       style={[
@@ -26,9 +28,9 @@ export function DateSectionHeader({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   sectionHeader: {
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
     paddingTop: 12,
     paddingBottom: 6,
   },
@@ -37,9 +39,9 @@ const styles = StyleSheet.create({
   },
   sectionHeaderText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     letterSpacing: 0.8,
-    textTransform: "uppercase",
+    textTransform: "uppercase" as const,
   },
 })

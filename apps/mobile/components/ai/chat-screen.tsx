@@ -14,7 +14,6 @@ import {
   type NativeSyntheticEvent,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -31,7 +30,7 @@ import {
   useListModelsQuery,
 } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { ChatMessageBubble, type ToolResultEntry } from "./chat-message-bubble"
 import { ToolApprovalCard } from "./tool-approval-card"
@@ -73,6 +72,8 @@ export function MobileChatScreen({
   threadId = null,
   initialPrompt,
 }: MobileChatScreenProps) {
+  const { colors, isDark } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { activeSpaceId } = useSpace()
@@ -372,7 +373,7 @@ export function MobileChatScreen({
               threadSheetRef.current?.expand()
             }}
           >
-            <List size={14} color={theme.colors.textSecondary} />
+            <List size={14} color={colors.textSecondary} />
             <Text style={styles.toolbarText} numberOfLines={1}>
               {thread?.title || "New Chat"}
             </Text>
@@ -385,7 +386,7 @@ export function MobileChatScreen({
               agentModelSheetRef.current?.expand()
             }}
           >
-            <Bot size={14} color={theme.colors.primary} />
+            <Bot size={14} color={colors.primary} />
             <Text style={styles.toolbarText} numberOfLines={1}>
               {activeAgent?.name || "Assistant"}
               {activeModel ? ` · ${activeModel.displayName}` : ""}
@@ -400,7 +401,7 @@ export function MobileChatScreen({
             }}
             accessibilityLabel="Manage AI Agents"
           >
-            <History size={16} color={theme.colors.textSecondary} />
+            <History size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -420,7 +421,7 @@ export function MobileChatScreen({
             {messages.length === 0 && !streamingMessage && !isStreaming ? (
               <View style={styles.emptyState}>
                 <View style={styles.emptyIcon}>
-                  <Sparkles size={24} color={theme.colors.primary} />
+                  <Sparkles size={24} color={colors.primary} />
                 </View>
                 <Text style={styles.emptyTitle}>
                   {activeAgent?.name || "Saturn Assistant"}
@@ -506,7 +507,7 @@ export function MobileChatScreen({
               }}
               accessibilityLabel="Scroll to bottom"
             >
-              <ArrowDown size={16} color={theme.colors.textPrimary} />
+              <ArrowDown size={16} color={colors.textPrimary} />
             </TouchableOpacity>
           )}
         </View>
@@ -531,7 +532,7 @@ export function MobileChatScreen({
             >
               {attachments.map((att) => (
                 <View key={att.id} style={styles.attachmentChip}>
-                  <FileText size={12} color={theme.colors.primary} />
+                  <FileText size={12} color={colors.primary} />
                   <Text style={styles.attachmentChipText} numberOfLines={1}>
                     {att.filename}
                   </Text>
@@ -545,7 +546,7 @@ export function MobileChatScreen({
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     accessibilityLabel={`Remove ${att.filename}`}
                   >
-                    <X size={12} color={theme.colors.textMuted} />
+                    <X size={12} color={colors.textMuted} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -563,8 +564,8 @@ export function MobileChatScreen({
                 size={18}
                 color={
                   isStreaming || attachments.length >= MAX_ATTACHMENTS
-                    ? theme.colors.textMuted
-                    : theme.colors.textSecondary
+                    ? colors.textMuted
+                    : colors.textSecondary
                 }
               />
             </TouchableOpacity>
@@ -574,7 +575,8 @@ export function MobileChatScreen({
               value={input}
               onChangeText={setInput}
               placeholder="Message Saturn AI..."
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
+              keyboardAppearance={isDark ? "dark" : "light"}
               multiline
             />
             {isStreaming ? (
@@ -586,7 +588,7 @@ export function MobileChatScreen({
                 }}
                 accessibilityLabel="Stop streaming"
               >
-                <Square size={16} color={theme.colors.textPrimary} />
+                <Square size={16} color="#ffffff" />
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
@@ -600,7 +602,7 @@ export function MobileChatScreen({
                 disabled={!input.trim() && attachments.length === 0}
                 accessibilityLabel="Send message"
               >
-                <Send size={16} color={theme.colors.primaryForeground} />
+                <Send size={16} color={colors.primaryForeground} />
               </TouchableOpacity>
             )}
           </View>
@@ -631,48 +633,48 @@ export function MobileChatScreen({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   toolbar: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   toolbarPill: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: theme.radius.full,
+    borderRadius: t.radius.full,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   toolbarText: {
     flex: 1,
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   iconBtn: {
     padding: 8,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   messagesWrap: {
     flex: 1,
-    position: "relative",
+    position: "relative" as const,
   },
   messagesScroll: {
     flex: 1,
@@ -685,72 +687,72 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   scrollBottomBtn: {
-    position: "absolute",
+    position: "absolute" as const,
     right: 14,
     bottom: 12,
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
-    alignItems: "center",
-    justifyContent: "center",
-    ...theme.shadows.sm,
+    borderColor: t.colors.borderStrong,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    ...t.shadows.sm,
   },
   starterChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    justifyContent: "center" as const,
     gap: 8,
     marginTop: 6,
   },
   starterChip: {
     paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   starterChipText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
+    fontWeight: "600" as const,
+    color: t.colors.textSecondary,
   },
   attachmentsStrip: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 6,
     paddingBottom: 8,
   },
   attachmentChip: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 5,
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.full,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.full,
     paddingHorizontal: 9,
     paddingVertical: 5,
     maxWidth: 180,
   },
   attachmentChipText: {
     fontSize: 11,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
     flexShrink: 1,
   },
   attachBtn: {
     width: 34,
     height: 36,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   emptyState: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingHorizontal: 24,
     gap: 10,
   },
@@ -758,52 +760,52 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: theme.colors.primarySubtle,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.primarySubtle,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   emptyTitle: {
     fontSize: 17,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
   },
   emptySub: {
     fontSize: 13,
     lineHeight: 19,
-    textAlign: "center",
-    color: theme.colors.textSecondary,
+    textAlign: "center" as const,
+    color: t.colors.textSecondary,
   },
   errorBanner: {
-    backgroundColor: theme.colors.destructiveSubtle,
-    borderRadius: theme.radius.md,
+    backgroundColor: t.colors.destructiveSubtle,
+    borderRadius: t.radius.md,
     padding: 12,
   },
   errorText: {
     fontSize: 12,
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
   },
   composerWrap: {
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: t.colors.border,
     paddingHorizontal: 12,
     paddingTop: 10,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   composerRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
+    flexDirection: "row" as const,
+    alignItems: "flex-end" as const,
     gap: 8,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.radius.lg,
+    backgroundColor: t.colors.surfaceElevated,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     padding: 8,
   },
   input: {
     flex: 1,
     maxHeight: 110,
     fontSize: 15,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
     paddingHorizontal: 6,
     paddingVertical: 6,
   },
@@ -811,14 +813,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.primary,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   sendBtnDisabled: {
     opacity: 0.4,
   },
   stopBtn: {
-    backgroundColor: theme.colors.destructive,
+    backgroundColor: t.colors.destructive,
   },
 })

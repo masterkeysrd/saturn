@@ -9,10 +9,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Check, Search } from "lucide-react-native"
 import { type CurrencyInfo } from "@saturn/api/saturn/finance/v1/finance"
 import { getCurrencySymbol } from "@saturn/core"
-import { theme } from "@/lib/theme"
+import { useTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
-import { sheetStyles } from "./sheet-styles"
+import { useSheetStyles } from "./sheet-styles"
 
 export interface CurrencyPickerSheetProps {
   currencies: CurrencyInfo[]
@@ -36,6 +36,8 @@ export const CurrencyPickerSheet = forwardRef<
     },
     ref
   ) => {
+    const { colors, isDark } = useTheme()
+    const sheetStyles = useSheetStyles()
     const insets = useSafeAreaInsets()
     const [search, setSearch] = useState("")
 
@@ -91,11 +93,12 @@ export const CurrencyPickerSheet = forwardRef<
                 onClose={handleClose}
               />
               <View style={sheetStyles.currencySearchContainer}>
-                <Search size={16} color={theme.colors.textMuted} />
+                <Search size={16} color={colors.textMuted} />
                 <BottomSheetTextInput
                   style={sheetStyles.currencySearchInput}
                   placeholder="Search currency code or name..."
-                  placeholderTextColor={theme.colors.textMuted}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardAppearance={isDark ? "dark" : "light"}
                   value={search}
                   onChangeText={setSearch}
                   autoCorrect={false}
@@ -108,7 +111,7 @@ export const CurrencyPickerSheet = forwardRef<
             isLoading ? (
               <ActivityIndicator
                 size="small"
-                color={theme.colors.primary}
+                color={colors.primary}
                 style={{ marginVertical: 20 }}
               />
             ) : (
@@ -150,7 +153,7 @@ export const CurrencyPickerSheet = forwardRef<
                     Symbol: {getCurrencySymbol(c.code)}
                   </Text>
                 </View>
-                {isSelected && <Check size={18} color={theme.colors.primary} />}
+                {isSelected && <Check size={18} color={colors.primary} />}
               </TouchableOpacity>
             )
           }}

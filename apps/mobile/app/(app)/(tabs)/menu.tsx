@@ -1,11 +1,4 @@
-import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-} from "react-native"
+import { Text, View, ScrollView, TouchableOpacity, Alert } from "react-native"
 import { useRouter } from "expo-router"
 import {
   Calendar,
@@ -24,16 +17,36 @@ import {
   Sparkles,
   Workflow,
   Palette,
+  Sun,
+  Moon,
+  Smartphone,
 } from "lucide-react-native"
 import { useSpace } from "@/lib/space-context"
-import { theme } from "@/lib/theme"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+  type ThemeMode,
+} from "@/lib/theme"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { haptics } from "@/lib/haptics"
 
+const APPEARANCE_OPTIONS: readonly {
+  value: ThemeMode
+  label: string
+  Icon: typeof Sun
+}[] = [
+  { value: "light", label: "Light", Icon: Sun },
+  { value: "dark", label: "Dark", Icon: Moon },
+  { value: "system", label: "System", Icon: Smartphone },
+]
+
 export default function MenuScreen() {
   const router = useRouter()
   const { activeSpaceRole } = useSpace()
+  const { mode, setMode, colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
 
   const navigateTo = (path: string) => {
     haptics.light()
@@ -66,10 +79,10 @@ export default function MenuScreen() {
               onPress={() => navigateTo("/(app)/(tabs)/calendar")}
             >
               <View style={styles.menuLeft}>
-                <Calendar size={18} color={theme.colors.primary} />
+                <Calendar size={18} color={colors.primary} />
                 <Text style={styles.menuLabel}>Calendar</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -78,10 +91,10 @@ export default function MenuScreen() {
               onPress={() => navigateTo("/(app)/(tabs)/mail")}
             >
               <View style={styles.menuLeft}>
-                <Mail size={18} color={theme.colors.accent} />
+                <Mail size={18} color={colors.accent} />
                 <Text style={styles.menuLabel}>Mail</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </Card>
         </View>
@@ -96,10 +109,10 @@ export default function MenuScreen() {
               onPress={() => navigateTo("/(app)/finance/transactions")}
             >
               <View style={styles.menuLeft}>
-                <ReceiptText size={18} color={theme.colors.primary} />
+                <ReceiptText size={18} color={colors.primary} />
                 <Text style={styles.menuLabel}>Transactions</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -108,10 +121,10 @@ export default function MenuScreen() {
               onPress={() => navigateTo("/(app)/finance/budgets")}
             >
               <View style={styles.menuLeft}>
-                <PiggyBank size={18} color={theme.colors.accent} />
+                <PiggyBank size={18} color={colors.accent} />
                 <Text style={styles.menuLabel}>Budgets</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -120,10 +133,10 @@ export default function MenuScreen() {
               onPress={() => navigateTo("/(app)/finance/accounts")}
             >
               <View style={styles.menuLeft}>
-                <Landmark size={18} color={theme.colors.success} />
+                <Landmark size={18} color={colors.success} />
                 <Text style={styles.menuLabel}>Accounts</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -132,10 +145,10 @@ export default function MenuScreen() {
               onPress={() => navigateTo("/(app)/finance/recurring")}
             >
               <View style={styles.menuLeft}>
-                <CalendarClock size={18} color={theme.colors.warning} />
+                <CalendarClock size={18} color={colors.warning} />
                 <Text style={styles.menuLabel}>Recurring & Subscriptions</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -144,10 +157,10 @@ export default function MenuScreen() {
               onPress={() => navigateTo("/(app)/finance/borrowing")}
             >
               <View style={styles.menuLeft}>
-                <HandCoins size={18} color={theme.colors.primary} />
+                <HandCoins size={18} color={colors.primary} />
                 <Text style={styles.menuLabel}>Borrowing & Debts</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -161,12 +174,12 @@ export default function MenuScreen() {
               }
             >
               <View style={styles.menuLeft}>
-                <Inbox size={18} color="#818cf8" />
+                <Inbox size={18} color={colors.accent} />
                 <Text style={styles.menuLabel}>Review Queue (Inbox)</Text>
               </View>
               <View style={styles.menuRight}>
                 <Badge variant="outline" size="sm" label="Web Only" />
-                <ChevronRight size={16} color={theme.colors.textMuted} />
+                <ChevronRight size={16} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
 
@@ -181,18 +194,18 @@ export default function MenuScreen() {
               }
             >
               <View style={styles.menuLeft}>
-                <FileSpreadsheet size={18} color={theme.colors.textMuted} />
+                <FileSpreadsheet size={18} color={colors.textMuted} />
                 <Text style={styles.menuLabel}>Reconciliation</Text>
               </View>
               <View style={styles.menuRight}>
                 <Badge variant="outline" size="sm" label="Web Only" />
-                <ChevronRight size={16} color={theme.colors.textMuted} />
+                <ChevronRight size={16} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
           </Card>
         </View>
 
-        {/* Section 2: Workspace */}
+        {/* Section 3: Workspace */}
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>WORKSPACE</Text>
           <Card style={styles.menuGroup}>
@@ -202,7 +215,7 @@ export default function MenuScreen() {
               onPress={() => navigateTo("/(app)/settings/space")}
             >
               <View style={styles.menuLeft}>
-                <Users size={18} color={theme.colors.accent} />
+                <Users size={18} color={colors.accent} />
                 <Text style={styles.menuLabel}>
                   Workspace Details & Members
                 </Text>
@@ -213,7 +226,7 @@ export default function MenuScreen() {
                   size="sm"
                   label={activeSpaceRole.toUpperCase()}
                 />
-                <ChevronRight size={16} color={theme.colors.textMuted} />
+                <ChevronRight size={16} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
 
@@ -223,10 +236,10 @@ export default function MenuScreen() {
               onPress={() => navigateTo("/(app)/settings/connected-accounts")}
             >
               <View style={styles.menuLeft}>
-                <Link2 size={18} color={theme.colors.primary} />
+                <Link2 size={18} color={colors.primary} />
                 <Text style={styles.menuLabel}>Connected Accounts</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -235,10 +248,10 @@ export default function MenuScreen() {
               onPress={() => navigateTo("/(app)/ai")}
             >
               <View style={styles.menuLeft}>
-                <Sparkles size={18} color={theme.colors.primary} />
+                <Sparkles size={18} color={colors.primary} />
                 <Text style={styles.menuLabel}>AI Assistant</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -247,28 +260,72 @@ export default function MenuScreen() {
               onPress={() => navigateTo("/(app)/workflows")}
             >
               <View style={styles.menuLeft}>
-                <Workflow size={18} color={theme.colors.accent} />
+                <Workflow size={18} color={colors.accent} />
                 <Text style={styles.menuLabel}>Workflows</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </Card>
         </View>
 
-        {/* Section 3: Settings */}
+        {/* Section 4: Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>SETTINGS</Text>
           <Card style={styles.menuGroup}>
+            <View style={[styles.appearanceRow, styles.menuItemBorder]}>
+              <View style={styles.menuLeft}>
+                <Sun size={18} color={colors.warning} />
+                <Text style={styles.menuLabel}>Appearance</Text>
+              </View>
+              <View style={styles.appearanceStrip}>
+                {APPEARANCE_OPTIONS.map(({ value, label, Icon }) => {
+                  const isActive = mode === value
+                  return (
+                    <TouchableOpacity
+                      key={value}
+                      style={[
+                        styles.appearanceChip,
+                        isActive && styles.appearanceChipActive,
+                      ]}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isActive }}
+                      accessibilityLabel={`${label} theme`}
+                      onPress={() => {
+                        haptics.selection()
+                        setMode(value)
+                      }}
+                    >
+                      <Icon
+                        size={12}
+                        color={
+                          isActive ? colors.primaryForeground : colors.textMuted
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.appearanceChipLabel,
+                          isActive && styles.appearanceChipLabelActive,
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </View>
+
             <TouchableOpacity
               style={[styles.menuItem, __DEV__ && styles.menuItemBorder]}
               activeOpacity={0.7}
               onPress={() => navigateTo("/(app)/settings")}
             >
               <View style={styles.menuLeft}>
-                <Settings size={18} color={theme.colors.textSecondary} />
+                <Settings size={18} color={colors.textSecondary} />
                 <Text style={styles.menuLabel}>Settings & Preferences</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
 
             {__DEV__ && (
@@ -278,12 +335,12 @@ export default function MenuScreen() {
                 onPress={() => navigateTo("/(app)/settings/design-system")}
               >
                 <View style={styles.menuLeft}>
-                  <Palette size={18} color={theme.colors.primary} />
+                  <Palette size={18} color={colors.primary} />
                   <Text style={styles.menuLabel}>Design System Gallery</Text>
                 </View>
                 <View style={styles.menuRight}>
                   <Badge variant="outline" size="sm" label="DEV" />
-                  <ChevronRight size={16} color={theme.colors.textMuted} />
+                  <ChevronRight size={16} color={colors.textMuted} />
                 </View>
               </TouchableOpacity>
             )}
@@ -294,14 +351,14 @@ export default function MenuScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   content: {
     paddingHorizontal: 16,
@@ -314,37 +371,73 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     paddingHorizontal: 4,
     letterSpacing: 0.8,
   },
   menuGroup: {
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
   menuItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: t.colors.border,
   },
   menuLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
   },
   menuLabel: {
     fontSize: 15,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   menuRight: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
+  },
+  appearanceRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    gap: 10,
+  },
+  appearanceStrip: {
+    flexDirection: "row" as const,
+    backgroundColor: t.colors.surfaceSubtle,
+    borderRadius: t.radius.md,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+    padding: 2,
+    gap: 2,
+  },
+  appearanceChip: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: t.radius.sm,
+  },
+  appearanceChipActive: {
+    backgroundColor: t.colors.primary,
+  },
+  appearanceChipLabel: {
+    fontSize: 11,
+    fontWeight: "600" as const,
+    color: t.colors.textMuted,
+  },
+  appearanceChipLabelActive: {
+    color: t.colors.primaryForeground,
   },
 })

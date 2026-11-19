@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react"
 import {
-  StyleSheet,
   Text,
   View,
   ScrollView,
@@ -37,7 +36,7 @@ import {
 import { parseUserAgent } from "@saturn/core"
 import { useTimezone } from "@saturn/hooks"
 import { useAuth } from "@/lib/auth-context"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -51,6 +50,8 @@ export default function SecuritySessionsScreen() {
   const router = useRouter()
   const toast = useToast()
   const tz = useTimezone()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const {
     logout,
     isDeviceEnrolled,
@@ -287,12 +288,12 @@ export default function SecuritySessionsScreen() {
 
   const getDeviceIcon = (parsed: ReturnType<typeof parseUserAgent>) => {
     if (parsed.isMobile) {
-      return <Smartphone size={20} color={theme.colors.primary} />
+      return <Smartphone size={20} color={colors.primary} />
     }
     if (parsed.os === "macOS" || parsed.os === "Windows") {
-      return <Laptop size={20} color={theme.colors.accent} />
+      return <Laptop size={20} color={colors.accent} />
     }
-    return <Monitor size={20} color={theme.colors.textSecondary} />
+    return <Monitor size={20} color={colors.textSecondary} />
   }
 
   return (
@@ -304,9 +305,9 @@ export default function SecuritySessionsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-            progressBackgroundColor={theme.colors.surfaceElevated}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+            progressBackgroundColor={colors.surfaceElevated}
           />
         }
       >
@@ -314,7 +315,7 @@ export default function SecuritySessionsScreen() {
         <Card style={styles.infoCard}>
           <View style={styles.infoHeader}>
             <View style={styles.infoIconBox}>
-              <ShieldCheck size={20} color={theme.colors.success} />
+              <ShieldCheck size={20} color={colors.success} />
             </View>
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoTitle}>
@@ -336,7 +337,7 @@ export default function SecuritySessionsScreen() {
         <Card style={styles.actionCard}>
           <View style={styles.actionHeader}>
             <View style={styles.actionIconBox}>
-              <KeyRound size={20} color={theme.colors.primary} />
+              <KeyRound size={20} color={colors.primary} />
             </View>
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>Password</Text>
@@ -358,7 +359,7 @@ export default function SecuritySessionsScreen() {
         <Card style={styles.actionCard}>
           <View style={styles.actionHeader}>
             <View style={styles.actionIconBox}>
-              <KeyRound size={20} color={theme.colors.primary} />
+              <KeyRound size={20} color={colors.primary} />
             </View>
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>Personal API Keys</Text>
@@ -394,7 +395,7 @@ export default function SecuritySessionsScreen() {
           <Card style={styles.enrollCard}>
             <View style={styles.enrollHeader}>
               <View style={styles.enrollIconBox}>
-                <Fingerprint size={22} color={theme.colors.primary} />
+                <Fingerprint size={22} color={colors.primary} />
               </View>
               <View style={styles.enrollTextContainer}>
                 <Text style={styles.enrollTitle}>Enable Biometrics</Text>
@@ -410,7 +411,7 @@ export default function SecuritySessionsScreen() {
               loading={enrolling}
               onPress={handleEnrollPress}
               leftIcon={
-                <Fingerprint size={16} color={theme.colors.primaryForeground} />
+                <Fingerprint size={16} color={colors.primaryForeground} />
               }
               style={styles.enrollBtn}
             >
@@ -422,12 +423,12 @@ export default function SecuritySessionsScreen() {
         {/* Devices List */}
         {isDevicesLoading && devices.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <RefreshCw size={24} color={theme.colors.textMuted} />
+            <RefreshCw size={24} color={colors.textMuted} />
             <Text style={styles.emptyText}>Loading trusted devices...</Text>
           </Card>
         ) : devices.length === 0 && !isBiometricSupported ? (
           <Card style={styles.emptyCard}>
-            <Shield size={28} color={theme.colors.textMuted} />
+            <Shield size={28} color={colors.textMuted} />
             <Text style={styles.emptyText}>No trusted devices registered.</Text>
             <Text style={styles.emptySubtext}>
               Biometric hardware authentication is not available on this device.
@@ -435,7 +436,7 @@ export default function SecuritySessionsScreen() {
           </Card>
         ) : devices.length === 0 && isDeviceEnrolled ? (
           <Card style={styles.emptyCard}>
-            <Shield size={28} color={theme.colors.textMuted} />
+            <Shield size={28} color={colors.textMuted} />
             <Text style={styles.emptyText}>No registered devices found.</Text>
             <Text style={styles.emptySubtext}>
               Enrolled credentials may have expired or been revoked.
@@ -450,7 +451,7 @@ export default function SecuritySessionsScreen() {
                   <View style={styles.sessionHeaderRow}>
                     <View style={styles.sessionLeft}>
                       <View style={styles.deviceIconBox}>
-                        <Fingerprint size={20} color={theme.colors.primary} />
+                        <Fingerprint size={20} color={colors.primary} />
                       </View>
                       <View style={styles.sessionNameContainer}>
                         <View style={styles.deviceNameRow}>
@@ -478,7 +479,7 @@ export default function SecuritySessionsScreen() {
                       disabled={revokeDeviceMutation.isPending}
                       accessibilityLabel={`Revoke ${device.deviceName}`}
                     >
-                      <Trash2 size={16} color={theme.colors.destructive} />
+                      <Trash2 size={16} color={colors.destructive} />
                     </TouchableOpacity>
                   </View>
 
@@ -486,13 +487,13 @@ export default function SecuritySessionsScreen() {
 
                   <View style={styles.metaRow}>
                     <View style={styles.metaItem}>
-                      <Clock size={13} color={theme.colors.textMuted} />
+                      <Clock size={13} color={colors.textMuted} />
                       <Text style={styles.metaText}>
                         Enrolled: {formatTimestamp(device.createTime)}
                       </Text>
                     </View>
                     <View style={styles.metaItem}>
-                      <Clock size={13} color={theme.colors.textMuted} />
+                      <Clock size={13} color={colors.textMuted} />
                       <Text style={styles.metaText}>
                         Expires: {formatTimestamp(device.expireTime)}
                       </Text>
@@ -523,12 +524,12 @@ export default function SecuritySessionsScreen() {
         {/* Sessions List */}
         {isLoading && sessions.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <RefreshCw size={24} color={theme.colors.textMuted} />
+            <RefreshCw size={24} color={colors.textMuted} />
             <Text style={styles.emptyText}>Loading active sessions...</Text>
           </Card>
         ) : sessions.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <Globe size={28} color={theme.colors.textMuted} />
+            <Globe size={28} color={colors.textMuted} />
             <Text style={styles.emptyText}>No active sessions found.</Text>
           </Card>
         ) : (
@@ -571,7 +572,7 @@ export default function SecuritySessionsScreen() {
                         onPress={() => promptRevokeSession(session)}
                         disabled={revokeSessionMutation.isPending}
                       >
-                        <Trash2 size={16} color={theme.colors.destructive} />
+                        <Trash2 size={16} color={colors.destructive} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -581,14 +582,14 @@ export default function SecuritySessionsScreen() {
                   {/* Metadata Row */}
                   <View style={styles.metaRow}>
                     <View style={styles.metaItem}>
-                      <MapPin size={13} color={theme.colors.textMuted} />
+                      <MapPin size={13} color={colors.textMuted} />
                       <Text style={styles.metaText}>
                         {session.ipAddress || "Unknown IP"}
                       </Text>
                     </View>
 
                     <View style={styles.metaItem}>
-                      <Clock size={13} color={theme.colors.textMuted} />
+                      <Clock size={13} color={colors.textMuted} />
                       <Text style={styles.metaText}>
                         Active: {formatTimestamp(session.lastUsedAt)}
                       </Text>
@@ -605,7 +606,7 @@ export default function SecuritySessionsScreen() {
           <Button
             variant="destructive"
             size="lg"
-            leftIcon={<LogOut size={18} color={theme.colors.destructive} />}
+            leftIcon={<LogOut size={18} color={colors.destructive} />}
             onPress={promptRevokeAllSessions}
             disabled={revokeAllSessionsMutation.isPending}
             style={styles.signOutAllBtn}
@@ -637,10 +638,10 @@ export default function SecuritySessionsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: t.colors.background,
   },
   container: {
     flex: 1,
@@ -652,22 +653,22 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     padding: 14,
-    backgroundColor: "rgba(16, 185, 129, 0.08)",
-    borderColor: "rgba(16, 185, 129, 0.2)",
+    backgroundColor: t.colors.successSubtle,
+    borderColor: "rgba(16, 185, 129, 0.25)",
     borderWidth: 1,
   },
   infoHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
   },
   infoIconBox: {
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: "rgba(16, 185, 129, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.successSubtle,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   infoTextContainer: {
     flex: 1,
@@ -675,31 +676,31 @@ const styles = StyleSheet.create({
   },
   infoTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   infoSubtitle: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     lineHeight: 16,
   },
   sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 4,
     marginTop: 4,
   },
   sectionHeader: {
     fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
+    fontWeight: "700" as const,
+    color: t.colors.textMuted,
     letterSpacing: 0.8,
   },
   revokeAllText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.destructive,
+    fontWeight: "600" as const,
+    color: t.colors.destructive,
   },
   sessionsList: {
     gap: 12,
@@ -709,13 +710,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sessionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
   },
   sessionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
     flex: 1,
     marginRight: 8,
@@ -724,68 +725,68 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: theme.colors.surfaceHighlight,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surfaceHighlight,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   sessionNameContainer: {
     flex: 1,
     gap: 2,
   },
   deviceNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
-    flexWrap: "wrap",
+    flexWrap: "wrap" as const,
   },
   deviceName: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   sessionUa: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   revokeBtn: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: "rgba(244, 63, 94, 0.1)",
+    backgroundColor: t.colors.destructiveSubtle,
   },
   divider: {
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: t.colors.border,
   },
   metaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
+    flexWrap: "wrap" as const,
     gap: 8,
   },
   metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 5,
   },
   metaText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: t.colors.textSecondary,
   },
   emptyCard: {
     padding: 32,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 8,
   },
   emptyText: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   emptySubtext: {
     fontSize: 12,
-    color: theme.colors.textMuted,
-    textAlign: "center",
+    color: t.colors.textMuted,
+    textAlign: "center" as const,
   },
   signOutAllBtn: {
     marginTop: 8,
@@ -793,22 +794,22 @@ const styles = StyleSheet.create({
   enrollCard: {
     padding: 16,
     gap: 14,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.surfaceElevated,
+    borderColor: t.colors.primary,
     borderWidth: 1,
   },
   enrollHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
   },
   enrollIconBox: {
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: theme.colors.surfaceHighlight,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surfaceHighlight,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   enrollTextContainer: {
     flex: 1,
@@ -816,12 +817,12 @@ const styles = StyleSheet.create({
   },
   enrollTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   enrollSubtitle: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     lineHeight: 16,
   },
   enrollBtn: {
@@ -832,17 +833,17 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
   },
   actionIconBox: {
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: theme.colors.surfaceHighlight,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surfaceHighlight,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   actionTextContainer: {
     flex: 1,
@@ -850,15 +851,15 @@ const styles = StyleSheet.create({
   },
   actionTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   actionSubtitle: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
     lineHeight: 16,
   },
   changePasswordBtn: {
-    alignSelf: "flex-start",
+    alignSelf: "flex-start" as const,
   },
 })

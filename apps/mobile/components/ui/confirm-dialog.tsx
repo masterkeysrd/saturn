@@ -1,13 +1,7 @@
 import React from "react"
-import {
-  Modal,
-  View,
-  Text,
-  StyleSheet,
-  TouchableWithoutFeedback,
-} from "react-native"
+import { Modal, View, Text, TouchableWithoutFeedback } from "react-native"
 import { AlertTriangle } from "lucide-react-native"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Button } from "./button"
 import { haptics } from "@/lib/haptics"
 
@@ -34,6 +28,9 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
+
   if (!visible) return null
 
   return (
@@ -49,7 +46,7 @@ export function ConfirmDialog({
             <View style={styles.dialogCard}>
               {isDestructive && (
                 <View style={styles.iconCircle}>
-                  <AlertTriangle size={24} color={theme.colors.destructive} />
+                  <AlertTriangle size={24} color={colors.destructive} />
                 </View>
               )}
 
@@ -91,52 +88,52 @@ export function ConfirmDialog({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: t.isDark ? "rgba(0, 0, 0, 0.7)" : "rgba(15, 23, 42, 0.45)",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
     padding: 24,
   },
   dialogCard: {
-    width: "100%",
+    width: "100%" as const,
     maxWidth: 360,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
+    backgroundColor: t.colors.surface,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
+    borderColor: t.colors.borderStrong,
     padding: 24,
-    alignItems: "center",
-    ...theme.shadows.lg,
+    alignItems: "center" as const,
+    ...t.shadows.lg,
   },
   iconCircle: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: theme.colors.destructiveSubtle,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.destructiveSubtle,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     marginBottom: 16,
   },
   title: {
     fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    textAlign: "center",
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
+    textAlign: "center" as const,
     marginBottom: 8,
   },
   message: {
     fontSize: 14,
-    color: theme.colors.textMuted,
-    textAlign: "center",
+    color: t.colors.textMuted,
+    textAlign: "center" as const,
     lineHeight: 20,
     marginBottom: 24,
   },
   buttonRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 12,
-    width: "100%",
+    width: "100%" as const,
   },
   actionBtn: {
     flex: 1,

@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useState } from "react"
-import { StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native"
+import { Switch, Text, TouchableOpacity, View } from "react-native"
 import BottomSheet, {
   BottomSheetScrollView,
   BottomSheetTextInput,
@@ -12,7 +12,7 @@ import type {
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 import { Button } from "@/components/ui/button"
 import { VariableChipPicker } from "./variable-chip-picker"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Plus, Trash2 } from "lucide-react-native"
 
@@ -28,6 +28,8 @@ export const SourceBindingSheet = forwardRef<
   BottomSheet,
   SourceBindingSheetProps
 >(({ sources, loaders, variables, onSave, onClose }, ref) => {
+  const { colors, isDark } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [draft, setDraft] =
     useState<Record<string, Flow_SourceBinding>>(sources)
 
@@ -65,7 +67,7 @@ export const SourceBindingSheet = forwardRef<
     >
       <BottomSheetScrollView contentContainerStyle={styles.body}>
         <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
-          <Plus size={16} color={theme.colors.primary} />
+          <Plus size={16} color={colors.primary} />
           <Text style={styles.addText}>Add Data Loader</Text>
         </TouchableOpacity>
 
@@ -92,7 +94,7 @@ export const SourceBindingSheet = forwardRef<
                     setDraft(next)
                   }}
                 >
-                  <Trash2 size={16} color={theme.colors.destructive} />
+                  <Trash2 size={16} color={colors.destructive} />
                 </TouchableOpacity>
               </View>
 
@@ -143,8 +145,8 @@ export const SourceBindingSheet = forwardRef<
                     })
                   }}
                   trackColor={{
-                    false: theme.colors.surfaceHighlight,
-                    true: theme.colors.primary,
+                    false: colors.surfaceHighlight,
+                    true: colors.primary,
                   }}
                 />
               </View>
@@ -174,7 +176,8 @@ export const SourceBindingSheet = forwardRef<
                         })
                       }}
                       placeholder={`{{ input.${paramKey} }}`}
-                      placeholderTextColor={theme.colors.textMuted}
+                      placeholderTextColor={colors.textMuted}
+                      keyboardAppearance={isDark ? "dark" : "light"}
                       autoCapitalize="none"
                     />
                     <VariableChipPicker
@@ -208,95 +211,95 @@ export const SourceBindingSheet = forwardRef<
 
 SourceBindingSheet.displayName = "SourceBindingSheet"
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   body: {
     paddingHorizontal: 16,
     paddingBottom: 32,
     gap: 14,
   },
   addBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: 6,
     paddingVertical: 10,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.primarySubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.primarySubtle,
     borderWidth: 1,
-    borderColor: theme.colors.primaryDark,
+    borderColor: t.colors.primaryDark,
   },
   addText: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.primary,
+    fontWeight: "700" as const,
+    color: t.colors.primary,
   },
   card: {
     padding: 14,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.lg,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 10,
   },
   rowBetween: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   aliasLabel: {
     fontSize: 13,
-    fontWeight: "700",
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textPrimary,
+    fontWeight: "700" as const,
+    fontFamily: t.typography.mono,
+    color: t.colors.textPrimary,
   },
   subLabel: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
+    fontWeight: "600" as const,
+    color: t.colors.textSecondary,
   },
   loaderGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 6,
   },
   loaderPill: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surface,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   loaderPillActive: {
-    backgroundColor: theme.colors.primarySubtle,
-    borderColor: theme.colors.primary,
+    backgroundColor: t.colors.primarySubtle,
+    borderColor: t.colors.primary,
   },
   loaderPillText: {
     fontSize: 11,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textSecondary,
+    fontFamily: t.typography.mono,
+    color: t.colors.textSecondary,
   },
   loaderPillTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "700",
+    color: t.colors.primary,
+    fontWeight: "700" as const,
   },
   paramBlock: {
     gap: 6,
   },
   paramKey: {
     fontSize: 11,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textSecondary,
+    fontFamily: t.typography.mono,
+    color: t.colors.textSecondary,
   },
   input: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: t.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.md,
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 12,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textPrimary,
+    fontFamily: t.typography.mono,
+    color: t.colors.textPrimary,
   },
 })

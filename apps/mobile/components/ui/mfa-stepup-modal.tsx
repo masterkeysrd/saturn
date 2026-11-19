@@ -12,7 +12,7 @@ import { KeyRound } from "lucide-react-native"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { MfaStepUpSchema, type MfaStepUpFormValues } from "@saturn/schemas"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { Button } from "./button"
 import { OTPInput, type OTPTextInputRef } from "./otp-input"
 import { haptics } from "@/lib/haptics"
@@ -38,6 +38,8 @@ export function MfaStepUpModal({
   subtitle = "Please enter the 6-digit code from your authenticator app to authorize this device.",
   confirmText = "Verify & Enroll",
 }: MfaStepUpModalProps) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(createStyles)
   const [localError, setLocalError] = useState<string | null>(null)
   const otpInputRef = useRef<OTPTextInputRef>(null)
 
@@ -95,7 +97,7 @@ export function MfaStepUpModal({
         />
         <View style={styles.modalCard}>
           <View style={styles.modalIconBox}>
-            <KeyRound size={24} color={theme.colors.primary} />
+            <KeyRound size={24} color={colors.primary} />
           </View>
           <Text style={styles.modalTitle}>{title}</Text>
           <Text style={styles.modalSubtitle}>{subtitle}</Text>
@@ -145,62 +147,62 @@ export function MfaStepUpModal({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: t.isDark ? "rgba(0, 0, 0, 0.7)" : "rgba(15, 23, 42, 0.45)",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
     padding: 24,
   },
   modalCard: {
-    width: "100%",
+    width: "100%" as const,
     maxWidth: 360,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
+    backgroundColor: t.colors.surface,
+    borderRadius: t.radius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
+    borderColor: t.colors.borderStrong,
     padding: 24,
-    alignItems: "center",
-    ...theme.shadows.lg,
+    alignItems: "center" as const,
+    ...t.shadows.lg,
   },
   modalIconBox: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: t.colors.surfaceElevated,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     marginBottom: 16,
   },
   modalTitle: {
     fontSize: 17,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    textAlign: "center",
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
+    textAlign: "center" as const,
     marginBottom: 8,
   },
   modalSubtitle: {
     fontSize: 13,
-    color: theme.colors.textMuted,
-    textAlign: "center",
+    color: t.colors.textMuted,
+    textAlign: "center" as const,
     lineHeight: 18,
     marginBottom: 20,
   },
   otpModalWrapper: {
     marginVertical: 8,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   modalError: {
     fontSize: 12,
-    color: theme.colors.destructive,
+    color: t.colors.destructive,
     marginTop: 8,
-    textAlign: "center",
+    textAlign: "center" as const,
   },
   modalButtonRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 12,
-    width: "100%",
+    width: "100%" as const,
     marginTop: 20,
   },
   modalActionBtn: {

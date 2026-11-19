@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react"
-import { StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native"
+import { Switch, Text, TouchableOpacity, View } from "react-native"
 import BottomSheet, {
   BottomSheetScrollView,
   BottomSheetTextInput,
@@ -19,7 +19,7 @@ import type {
 import { useListAgentsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 import { Button } from "@/components/ui/button"
-import { theme } from "@/lib/theme"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { VariableChipPicker } from "./variable-chip-picker"
 import { SourceBindingSheet } from "./source-binding-sheet"
@@ -53,6 +53,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
     },
     ref
   ) => {
+    const { colors, isDark } = useTheme()
+    const styles = useThemedStyles(createStyles)
     const [draft, setDraft] = useState<Flow_StepNode>(step)
     const sourceSheetRef = useRef<BottomSheet>(null)
     const modelSheetRef = useRef<BottomSheet>(null)
@@ -161,8 +163,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                       style={[
                         styles.pillBtn,
                         active && {
-                          borderColor: theme.colors.primary,
-                          backgroundColor: theme.colors.primarySubtle,
+                          borderColor: colors.primary,
+                          backgroundColor: colors.primarySubtle,
                         },
                       ]}
                       onPress={() => handleStepTypeChange(stepType)}
@@ -170,7 +172,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                       <Text
                         style={[
                           styles.pillBtnText,
-                          active && { color: theme.colors.primary },
+                          active && { color: colors.primary },
                         ]}
                       >
                         {stepType}
@@ -188,6 +190,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   style={styles.monoInput}
                   value={draft.id}
                   onChangeText={(id) => setDraft({ ...draft, id })}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardAppearance={isDark ? "dark" : "light"}
                   autoCapitalize="none"
                 />
               </View>
@@ -197,6 +201,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   style={styles.input}
                   value={draft.name ?? ""}
                   onChangeText={(name) => setDraft({ ...draft, name })}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardAppearance={isDark ? "dark" : "light"}
                 />
               </View>
             </View>
@@ -209,7 +215,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   sourceSheetRef.current?.expand()
                 }}
               >
-                <Database size={14} color={theme.colors.primary} />
+                <Database size={14} color={colors.primary} />
                 <Text style={styles.pillBtnText}>Sources ({sourceCount})</Text>
               </TouchableOpacity>
               {(draft.type === "llm.generate" ||
@@ -221,7 +227,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                     modelSheetRef.current?.expand()
                   }}
                 >
-                  <Sparkles size={14} color={theme.colors.accent} />
+                  <Sparkles size={14} color={colors.accent} />
                   <Text style={styles.pillBtnText}>Model Override</Text>
                 </TouchableOpacity>
               )}
@@ -239,8 +245,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                       setDraft({ ...draft, onError: v ? "continue" : "fail" })
                     }}
                     trackColor={{
-                      false: theme.colors.surfaceHighlight,
-                      true: theme.colors.primary,
+                      false: colors.surfaceHighlight,
+                      true: colors.primary,
                     }}
                   />
                 </View>
@@ -256,7 +262,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                             key={ag.id}
                             style={[
                               styles.pillBtn,
-                              selected && { borderColor: theme.colors.primary },
+                              selected && { borderColor: colors.primary },
                             ]}
                             onPress={() => {
                               haptics.selection()
@@ -279,6 +285,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                       multiline
                       value={String(inputs.system ?? "")}
                       onChangeText={(v) => updateInput("system", v)}
+                      placeholderTextColor={colors.textMuted}
+                      keyboardAppearance={isDark ? "dark" : "light"}
                     />
                   </>
                 )}
@@ -289,6 +297,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   multiline
                   value={String(inputs.prompt ?? "")}
                   onChangeText={(v) => updateInput("prompt", v)}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardAppearance={isDark ? "dark" : "light"}
                 />
                 <VariableChipPicker
                   variables={variables}
@@ -305,6 +315,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   style={styles.monoInput}
                   value={String(inputs.condition ?? "")}
                   onChangeText={(v) => updateInput("condition", v)}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardAppearance={isDark ? "dark" : "light"}
                   autoCapitalize="none"
                 />
                 <VariableChipPicker
@@ -318,6 +330,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   style={styles.input}
                   value={String(inputs.reason ?? "")}
                   onChangeText={(v) => updateInput("reason", v)}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardAppearance={isDark ? "dark" : "light"}
                 />
               </View>
             )}
@@ -343,7 +357,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                       })
                     }}
                   >
-                    <Plus size={14} color={theme.colors.primary} />
+                    <Plus size={14} color={colors.primary} />
                     <Text style={styles.smallAddText}>Add Case</Text>
                   </TouchableOpacity>
                 </View>
@@ -362,6 +376,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                         })
                       }
                       placeholder="case_name"
+                      placeholderTextColor={colors.textMuted}
+                      keyboardAppearance={isDark ? "dark" : "light"}
                     />
                     <BottomSheetTextInput
                       style={styles.monoInput}
@@ -375,6 +391,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                         })
                       }
                       placeholder="CEL condition"
+                      placeholderTextColor={colors.textMuted}
+                      keyboardAppearance={isDark ? "dark" : "light"}
                       autoCapitalize="none"
                     />
                     <Text style={styles.nestedCount}>
@@ -398,7 +416,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                         })
                       }}
                     >
-                      <Plus size={14} color={theme.colors.primary} />
+                      <Plus size={14} color={colors.primary} />
                       <Text style={styles.smallAddText}>Add Output Step</Text>
                     </TouchableOpacity>
                   </View>
@@ -413,6 +431,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   style={styles.monoInput}
                   value={String(inputs.items ?? "")}
                   onChangeText={(v) => updateInput("items", v)}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardAppearance={isDark ? "dark" : "light"}
                   autoCapitalize="none"
                 />
                 <VariableChipPicker
@@ -425,6 +445,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   style={styles.monoInput}
                   value={String(inputs.item_alias ?? "item")}
                   onChangeText={(v) => updateInput("item_alias", v)}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardAppearance={isDark ? "dark" : "light"}
                   autoCapitalize="none"
                 />
                 <Text style={styles.nestedCount}>
@@ -445,6 +467,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                       : JSON.stringify(inputs.value ?? {}, null, 2)
                   }
                   onChangeText={(v) => updateInput("value", v)}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardAppearance={isDark ? "dark" : "light"}
                 />
                 <VariableChipPicker
                   variables={variables}
@@ -483,6 +507,8 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                         style={styles.monoInput}
                         value={strVal}
                         onChangeText={(v) => updateInput(k, v)}
+                        placeholderTextColor={colors.textMuted}
+                        keyboardAppearance={isDark ? "dark" : "light"}
                         autoCapitalize="none"
                       />
                       <VariableChipPicker
@@ -505,7 +531,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   onClose()
                 }}
               >
-                <Trash2 size={16} color={theme.colors.destructive} />
+                <Trash2 size={16} color={colors.destructive} />
                 <Text style={styles.deleteText}>Delete</Text>
               </TouchableOpacity>
               <Button
@@ -545,14 +571,14 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
 
 StepEditorSheet.displayName = "StepEditorSheet"
 
-const styles = StyleSheet.create({
+const createStyles = (t: SaturnMobileTheme) => ({
   body: {
     paddingHorizontal: 16,
     paddingBottom: 40,
     gap: 14,
   },
   fieldRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 10,
   },
   halfField: {
@@ -560,109 +586,109 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   rowBetween: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
   },
   actionsRow: {
-    flexDirection: "row",
+    flexDirection: "row" as const,
     gap: 10,
   },
   pillBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
   },
   pillBtnText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+    fontWeight: "600" as const,
+    color: t.colors.textPrimary,
   },
   section: {
     gap: 8,
   },
   typeGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 8,
   },
   label: {
     fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
+    fontWeight: "700" as const,
+    color: t.colors.textSecondary,
   },
   input: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: t.colors.textPrimary,
   },
   monoInput: {
-    backgroundColor: theme.colors.surfaceElevated,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: t.colors.border,
+    borderRadius: t.radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 12,
-    fontFamily: theme.typography.mono,
-    color: theme.colors.textPrimary,
+    fontFamily: t.typography.mono,
+    color: t.colors.textPrimary,
   },
   multiline: {
     minHeight: 84,
-    textAlignVertical: "top",
+    textAlignVertical: "top" as const,
   },
   nestedBox: {
     padding: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: t.colors.border,
     gap: 8,
   },
   nestedCount: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: t.colors.textMuted,
   },
   smallAdd: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 4,
   },
   smallAddText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.primary,
+    fontWeight: "700" as const,
+    color: t.colors.primary,
   },
   footerRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 12,
     marginTop: 8,
   },
   deleteBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.destructiveSubtle,
+    borderRadius: t.radius.md,
+    backgroundColor: t.colors.destructiveSubtle,
   },
   deleteText: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.destructive,
+    fontWeight: "700" as const,
+    color: t.colors.destructive,
   },
   saveBtn: {
     flex: 1,
