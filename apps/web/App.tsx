@@ -16,8 +16,14 @@ import { ProtectedRoute } from "@/components/protected-route"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { useTheme } from "@/components/theme-provider"
-import { Sun, Moon } from "lucide-react"
+import { Sun, Moon, Monitor, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
 import type { SaturnRouteObject } from "@/lib/navigation"
 import { useActiveSpaceContext, useMySpaces } from "@/features/space/use-space"
 import { useAuth } from "@/features/auth/use-auth"
@@ -98,22 +104,60 @@ const featureRoutes = Object.values(routeModules).flatMap(
 )
 
 function ThemeToggle() {
-  const { theme, setTheme } = useTheme()
+  const { theme, resolvedTheme, setTheme } = useTheme()
 
   return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="h-8 w-8 cursor-pointer rounded-full hover:bg-muted/80"
-      title="Toggle Theme"
-    >
-      {theme === "dark" ? (
-        <Sun className="h-4 w-4 text-amber-500" />
-      ) : (
-        <Moon className="h-4 w-4 text-foreground" />
-      )}
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="h-8 w-8 cursor-pointer rounded-full hover:bg-muted/80"
+            title="Switch Theme"
+            aria-label="Switch Theme"
+          />
+        }
+      >
+        {resolvedTheme === "dark" ? (
+          <Moon className="h-4 w-4 text-foreground" />
+        ) : (
+          <Sun className="h-4 w-4 text-amber-500" />
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-36">
+        <DropdownMenuItem
+          onClick={() => setTheme("light")}
+          className="cursor-pointer justify-between"
+        >
+          <span className="flex items-center gap-2">
+            <Sun className="h-4 w-4 text-amber-500" />
+            Light
+          </span>
+          {theme === "light" && <Check className="h-3.5 w-3.5 text-primary" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => setTheme("dark")}
+          className="cursor-pointer justify-between"
+        >
+          <span className="flex items-center gap-2">
+            <Moon className="h-4 w-4" />
+            Dark
+          </span>
+          {theme === "dark" && <Check className="h-3.5 w-3.5 text-primary" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => setTheme("system")}
+          className="cursor-pointer justify-between"
+        >
+          <span className="flex items-center gap-2">
+            <Monitor className="h-4 w-4" />
+            System
+          </span>
+          {theme === "system" && <Check className="h-3.5 w-3.5 text-primary" />}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 

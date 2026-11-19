@@ -1,6 +1,7 @@
 import { useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { useSpacePermissions } from "@/features/space/use-space"
-import { useTimezone } from "@saturn/hooks"
+import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
 import {
   type ExchangeRate,
   useDeleteExchangeRateMutation,
@@ -9,10 +10,22 @@ import {
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { Button } from "@/components/ui/button"
+import { toast } from "@/components/ui/toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Globe, ArrowRight, Trash2 } from "lucide-react"
 import { CreateRateSheet } from "./components/create-rate-sheet"
 
 export function RatesView() {
+  const queryClient = useQueryClient()
   const { spaceId, isWritable } = useSpacePermissions()
   const tz = useTimezone()
 
@@ -23,23 +36,41 @@ export function RatesView() {
   )
 
   const [rateCreateOpen, setRateCreateOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<ExchangeRate | null>(null)
   const deleteRateMutation = useDeleteExchangeRateMutation()
 
-  const handleDeleteRate = async (rate: ExchangeRate) => {
+  const handleDeleteRate = (rate: ExchangeRate) => {
+    setDeleteTarget(rate)
+  }
+
+  const handleConfirmDeleteRate = async () => {
+    if (!deleteTarget) return
     const rateId =
-      rate.id ||
-      `rate_${rate.fromCurrency}_${rate.toCurrency}_${rate.rateDate.split("T")[0].replace(/-/g, "")}`
-    if (
-      !confirm(
-        `Are you sure you want to delete exchange rate for ${rate.fromCurrency} to ${rate.toCurrency} on ${tz.format(rate.rateDate, { month: "short", day: "numeric", year: "numeric" })}?`
-      )
-    )
-      return
-    await deleteRateMutation.mutateAsync({
-      id: rateId,
-      req: { id: rateId },
-    })
-    refetchRates()
+      deleteTarget.id ||
+      `rate_${deleteTarget.fromCurrency}_${deleteTarget.toCurrency}_${deleteTarget.rateDate.split("T")[0].replace(/-/g, "")}`
+    try {
+      await deleteRateMutation.mutateAsync({
+        id: rateId,
+        req: { id: rateId },
+      })
+      toast.add({
+        type: "success",
+        title: "Exchange Rate Deleted",
+        description: `Removed ${deleteTarget.fromCurrency} to ${deleteTarget.toCurrency} conversion rate.`,
+      })
+      setDeleteTarget(null)
+      await invalidateFinanceQueries(queryClient)
+      refetchRates()
+    } catch (err) {
+      toast.add({
+        type: "error",
+        title: "Delete Failed",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Failed to delete exchange rate.",
+      })
+    }
   }
 
   return (
@@ -51,7 +82,7 @@ export function RatesView() {
         isWritable && (
           <Button
             onClick={() => setRateCreateOpen(true)}
-            className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95 sm:w-auto"
+            className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary pt-0.5 font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90 sm:w-auto"
           >
             Add Conversion Rate
           </Button>
@@ -159,6 +190,39 @@ export function RatesView() {
         settings={settings}
         refetchRates={refetchRates}
       />
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Exchange Rate</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the exchange rate for{" "}
+              <span className="font-semibold text-foreground">
+                {deleteTarget?.fromCurrency} to {deleteTarget?.toCurrency}
+              </span>
+              {deleteTarget?.rateDate
+                ? ` on ${tz.format(deleteTarget.rateDate, { month: "short", day: "numeric", year: "numeric" })}`
+                : ""}
+              ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteRateMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleteRateMutation.isPending}
+              onClick={handleConfirmDeleteRate}
+            >
+              {deleteRateMutation.isPending ? "Deleting..." : "Delete Rate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </FinancePageLayout>
   )
 }

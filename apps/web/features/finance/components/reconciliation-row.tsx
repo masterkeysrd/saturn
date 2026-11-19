@@ -1553,7 +1553,7 @@ export function ReconciliationRow({
                             budgetId: selectedBudgetId,
                           })
                         }
-                        className="h-8 rounded-lg bg-gradient-to-r from-primary to-accent px-4 text-xs font-bold text-white shadow-sm transition-all hover:scale-[1.02]"
+                        className="h-8 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
                       >
                         Create Expense
                       </Button>

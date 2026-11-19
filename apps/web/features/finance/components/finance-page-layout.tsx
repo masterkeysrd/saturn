@@ -78,7 +78,7 @@ export function FinancePageLayout({
         <div className="relative w-full max-w-lg animate-in overflow-hidden rounded-3xl border border-border/40 bg-card/40 p-8 shadow-2xl backdrop-blur-xl duration-500 fade-in slide-in-from-bottom-6 md:p-10">
           <div className="absolute top-0 right-0 -mt-16 -mr-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl"></div>
 
-          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-accent text-white shadow-xl">
+          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
             <Coins className="h-8 w-8" />
           </div>
           <h2 className="text-3xl font-extrabold tracking-tight text-foreground">
@@ -124,7 +124,7 @@ export function FinancePageLayout({
             <Button
               type="submit"
               disabled={setupMutation.isPending || !isWritable}
-              className="h-12 w-full rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] hover:opacity-95"
+              className="h-12 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
             >
               {setupMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

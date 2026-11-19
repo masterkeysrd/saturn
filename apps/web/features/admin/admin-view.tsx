@@ -229,7 +229,7 @@ export function AdminView() {
           <div className="flex flex-col items-center justify-center space-y-4 py-20">
             <div className="relative flex items-center justify-center">
               <div className="absolute h-12 w-12 animate-spin rounded-full border-[3px] border-primary/20 border-t-primary duration-1000" />
-              <div className="h-4 w-4 animate-pulse rounded-full bg-gradient-to-tr from-primary to-accent" />
+              <div className="h-4 w-4 animate-pulse rounded-full bg-primary" />
             </div>
             <span className="text-sm text-muted-foreground">
               Loading accounts list...
@@ -293,7 +293,7 @@ export function AdminView() {
                     >
                       {/* Name / Email Column */}
                       <td className="flex items-center gap-3 px-6 py-4.5">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-primary/15 to-accent/15 text-xs font-bold text-foreground select-none">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-xs font-bold text-primary select-none">
                           {initials}
                         </div>
                         <div className="flex min-w-0 flex-col">

@@ -130,7 +130,7 @@ export function DashboardView() {
                 <Link to="/settings/spaces">
                   <Button
                     size="sm"
-                    className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-md shadow-primary/10 hover:opacity-95"
+                    className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-primary font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm hover:bg-primary/90"
                   >
                     Create Space
                     <ArrowRight className="h-3.5 w-3.5" />

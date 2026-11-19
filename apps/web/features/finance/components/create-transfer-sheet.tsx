@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { AmountInput } from "@/components/ui/amount-input"
 import { DatePicker } from "@/components/ui/date-picker"
 import { ArrowRightLeft, AlertTriangle } from "lucide-react"
+import { toast } from "@/components/ui/toast"
 import { toCentsString } from "../utils"
 
 interface CreateTransferSheetProps {
@@ -121,7 +122,11 @@ export function CreateTransferSheet({
       refetchAccounts()
       refetchTransfers()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Transfer failed.")
+      toast.add({
+        type: "error",
+        title: "Transfer Failed",
+        description: err instanceof Error ? err.message : "Transfer failed.",
+      })
     }
   }
 

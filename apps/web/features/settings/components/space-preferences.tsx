@@ -235,7 +235,7 @@ export function SpacePreferences() {
         {/* Section Header */}
         <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-accent text-white shadow-lg shadow-primary/20">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
               <Globe className="h-5 w-5" />
             </div>
             <div>
@@ -388,7 +388,7 @@ export function SpacePreferences() {
             size="sm"
             disabled={!isDirty || !canManage || updateMutation.isPending}
             onClick={handleSave}
-            className="rounded-xl bg-gradient-to-r from-primary to-accent text-white shadow-md shadow-primary/10 transition-opacity hover:opacity-95"
+            className="rounded-xl bg-primary text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
           >
             {updateMutation.isPending ? (
               <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />

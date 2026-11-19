@@ -105,7 +105,7 @@ export function NoSpaceActiveScreen() {
           </div>
           <Button
             type="submit"
-            className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:opacity-95"
+            className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
             disabled={isCreating || !name.trim()}
           >
             {isCreating ? (

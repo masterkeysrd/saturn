@@ -68,7 +68,7 @@ export function FormDrawer({
               <Button
                 type="submit"
                 disabled={isPending || disabled}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-lg shadow-primary/10 transition-all hover:scale-[1.01]"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
               >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 <span>{submitLabel}</span>

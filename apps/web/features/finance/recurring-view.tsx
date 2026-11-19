@@ -1,6 +1,7 @@
 import { useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { useSpacePermissions } from "@/features/space/use-space"
-import { useTimezone } from "@saturn/hooks"
+import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import {
   useListRecurringTransactionsQuery,
@@ -33,6 +34,17 @@ import {
   FastForward,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "@/components/ui/toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   DropdownMenu,
@@ -63,6 +75,7 @@ const DEFAULT_PAGE_SIZE = 100
 const HISTORY_PAGE_SIZE = 50
 
 export function RecurringView() {
+  const queryClient = useQueryClient()
   const { spaceId, isWritable } = useSpacePermissions()
   const tz = useTimezone()
 
@@ -93,6 +106,9 @@ export function RecurringView() {
     useState<RecurringTransaction | null>(null)
   const [transactionToSkip, setTransactionToSkip] =
     useState<ScheduledTransaction | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<RecurringTransaction | null>(
+    null
+  )
 
   // Fetch lists
   const {
@@ -152,20 +168,37 @@ export function RecurringView() {
     Boolean(t.metadata?.recurring_transaction_id)
   )
 
-  const handleDeleteTransaction = async (re: RecurringTransaction) => {
-    if (
-      confirm(
-        `Are you sure you want to delete this recurring ${re.type === "INCOME" ? "income" : "expense"} template? This will stop future scheduled instances from generating.`
-      )
-    ) {
+  const handleDeleteTransaction = (re: RecurringTransaction) => {
+    setDeleteTarget(re)
+  }
+
+  const handleConfirmDeleteTransaction = async () => {
+    if (!deleteTarget?.id) return
+    try {
       await deleteMutation.mutateAsync({
-        id: re.id || "",
+        id: deleteTarget.id,
         req: {
-          id: re.id || "",
-          version: re.version,
+          id: deleteTarget.id,
+          version: deleteTarget.version,
         },
       })
+      toast.add({
+        type: "success",
+        title: "Template Deleted",
+        description: `Recurring ${deleteTarget.type === "INCOME" ? "income" : "expense"} template "${deleteTarget.name}" has been deleted.`,
+      })
+      setDeleteTarget(null)
+      await invalidateFinanceQueries(queryClient)
       refetchRecurring()
+    } catch (err) {
+      toast.add({
+        type: "error",
+        title: "Delete Failed",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Failed to delete recurring template.",
+      })
     }
   }
 
@@ -251,7 +284,7 @@ export function RecurringView() {
             setEditTransaction(null)
             setTransactionSheetOpen(true)
           }}
-          className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95 sm:w-auto"
+          className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary pt-0.5 font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90 sm:w-auto"
         >
           <PlusIcon className="h-4 w-4" />
           Create Template
@@ -932,6 +965,37 @@ export function RecurringView() {
         }
         currency={transactionToSkip?.currency}
       />
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Recurring Template</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this recurring{" "}
+              {deleteTarget?.type === "INCOME" ? "income" : "expense"} template{" "}
+              <span className="font-semibold text-foreground">
+                {deleteTarget?.name}
+              </span>
+              ? This will stop future scheduled instances from generating.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={handleConfirmDeleteTransaction}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete Template"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </FinancePageLayout>
   )
 }

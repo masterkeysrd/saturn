@@ -469,7 +469,7 @@ export function BorrowingDetailSheet({
 
                 <Button
                   type="submit"
-                  className="h-11 w-full rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-md shadow-primary/10 transition-all hover:scale-[1.005]"
+                  className="h-11 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
                   disabled={
                     logTransactionMutation.isPending ||
                     !!(conversion && "error" in conversion)

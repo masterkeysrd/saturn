@@ -274,7 +274,7 @@ export function CreateTransactionSheet({
         <button
           type="button"
           onClick={() => setStep("INCOME")}
-          className="group hover:border-emerald/40 hover:bg-emerald/5 flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all outline-none hover:scale-[1.01] focus:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary"
+          className="group flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all outline-none hover:scale-[1.01] hover:border-emerald-500/40 hover:bg-emerald-500/5 focus:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary"
         >
           <div className="shrink-0 rounded-xl bg-emerald-500/10 p-2.5 text-emerald-500 dark:bg-emerald-500/20">
             <ArrowUpRight className="h-5 w-5" />

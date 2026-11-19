@@ -19,6 +19,17 @@ import {
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { Button } from "@/components/ui/button"
+import { toast } from "@/components/ui/toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -94,6 +105,7 @@ export function BorrowingView() {
   const [selectedBorrowing, setSelectedBorrowing] = useState<Borrowing | null>(
     null
   )
+  const [deleteTarget, setDeleteTarget] = useState<Borrowing | null>(null)
 
   const { data, refetch: refetchBorrowings } = useListBorrowingsQuery(
     {
@@ -114,26 +126,36 @@ export function BorrowingView() {
 
   const deleteBorrowingMutation = useDeleteBorrowingMutation()
 
-  const handleDelete = async (b: Borrowing) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete this borrowing record with ${b.counterparty}? This will delete all logged repayments and associated ledger transactions.`
-      )
-    ) {
-      return
-    }
+  const handleDelete = (b: Borrowing) => {
+    setDeleteTarget(b)
+  }
 
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget?.id) return
     try {
       await deleteBorrowingMutation.mutateAsync({
-        id: b.id || "",
+        id: deleteTarget.id,
         req: {
-          id: b.id || "",
+          id: deleteTarget.id,
         },
       })
+      toast.add({
+        type: "success",
+        title: "Borrowing Deleted",
+        description: `Record with ${deleteTarget.counterparty} has been deleted.`,
+      })
+      setDeleteTarget(null)
       await invalidateFinanceQueries(queryClient)
       refetchBorrowings()
     } catch (err) {
-      console.error("Failed to delete borrowing", err)
+      toast.add({
+        type: "error",
+        title: "Delete Failed",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Failed to delete borrowing record.",
+      })
     }
   }
 
@@ -196,7 +218,7 @@ export function BorrowingView() {
         isWritable && (
           <Button
             onClick={handleOpenCreate}
-            className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent px-4 pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95 sm:w-auto"
+            className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-4 pt-0.5 font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90 sm:w-auto"
           >
             <Plus className="h-4.5 w-4.5" />
             Record Borrowing
@@ -526,6 +548,39 @@ export function BorrowingView() {
         spaceId={spaceId}
         refetchBorrowings={refetchBorrowings}
       />
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Borrowing Record</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this borrowing record with{" "}
+              <span className="font-semibold text-foreground">
+                {deleteTarget?.counterparty}
+              </span>
+              ? This will delete all logged repayments and associated ledger
+              transactions.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteBorrowingMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleteBorrowingMutation.isPending}
+              onClick={handleConfirmDelete}
+            >
+              {deleteBorrowingMutation.isPending
+                ? "Deleting..."
+                : "Delete Record"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </FinancePageLayout>
   )
 }

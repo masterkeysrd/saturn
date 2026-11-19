@@ -1716,7 +1716,7 @@ export function InboxItemReviewPanel({
             </Button>
             <Button
               type="submit"
-              className="flex cursor-pointer items-center gap-2 rounded-2xl bg-primary text-white shadow-lg hover:bg-primary/95"
+              className="flex cursor-pointer items-center gap-2 rounded-2xl bg-primary text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm hover:bg-primary/90"
               disabled={isPending || isDiscarding}
             >
               {isPending ? (

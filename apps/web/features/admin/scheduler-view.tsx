@@ -401,7 +401,7 @@ export function SchedulerAdminView() {
             <div className="flex flex-col items-center justify-center space-y-4 py-20">
               <div className="relative flex items-center justify-center">
                 <div className="absolute h-12 w-12 animate-spin rounded-full border-[3px] border-primary/20 border-t-primary duration-1000" />
-                <div className="h-4 w-4 animate-pulse rounded-full bg-gradient-to-tr from-primary to-accent" />
+                <div className="h-4 w-4 animate-pulse rounded-full bg-primary" />
               </div>
               <span className="text-sm text-muted-foreground">
                 Loading schedules...
@@ -546,7 +546,7 @@ export function SchedulerAdminView() {
           <div className="flex flex-col items-center justify-center space-y-4 py-20">
             <div className="relative flex items-center justify-center">
               <div className="absolute h-12 w-12 animate-spin rounded-full border-[3px] border-primary/20 border-t-primary duration-1000" />
-              <div className="h-4 w-4 animate-pulse rounded-full bg-gradient-to-tr from-primary to-accent" />
+              <div className="h-4 w-4 animate-pulse rounded-full bg-primary" />
             </div>
             <span className="text-sm text-muted-foreground">
               Loading queue...

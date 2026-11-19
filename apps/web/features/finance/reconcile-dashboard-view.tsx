@@ -173,7 +173,7 @@ export function ReconciliationDashboardView() {
       actions={
         <Button
           onClick={handleOpenImport}
-          className="rounded-xl bg-gradient-to-r from-primary to-accent text-xs font-bold text-white shadow-lg transition-all hover:scale-[1.02]"
+          className="rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
         >
           <Plus className="mr-1.5 h-3.5 w-3.5" />
           Import Statement
@@ -246,7 +246,7 @@ export function ReconciliationDashboardView() {
                 </p>
                 <Button
                   onClick={handleOpenImport}
-                  className="mt-5 rounded-xl bg-primary text-xs font-bold text-white shadow-md"
+                  className="mt-5 rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm hover:bg-primary/90"
                 >
                   <Plus className="mr-1.5 h-3.5 w-3.5" />
                   Import Statement
@@ -466,7 +466,7 @@ function StatementDashboardCard({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 rounded-xl px-3 text-xs font-bold transition-all group-hover:bg-primary group-hover:text-white"
+            className="h-8 rounded-xl px-3 text-xs font-bold transition-all group-hover:bg-primary group-hover:text-primary-foreground"
           >
             {isCompleted ? "Review" : "Resume"}
             <ArrowRight className="ml-1 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />

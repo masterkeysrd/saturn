@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useMySpaces, useActiveSpaceContext } from "@/features/space/use-space"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { ChevronDownIcon, Loader2, SettingsIcon } from "lucide-react"
 import {
   DropdownMenu,
@@ -14,12 +14,14 @@ import { cn } from "@/lib/utils"
 
 import { useSidebar } from "@/components/ui/sidebar"
 import { useAuth } from "@/features/auth/use-auth"
+import { resolveNextSpaceRoute } from "@/lib/space-route"
 
 export function SpaceSelector() {
   const { user } = useAuth()
   const { spaces, isLoading } = useMySpaces()
   const { spaceId, activeSpace, switchSpace } = useActiveSpaceContext()
   const [open, setOpen] = useState(false)
+  const location = useLocation()
   const navigate = useNavigate()
   const { state, isMobile, setOpenMobile } = useSidebar()
   const isCollapsed = state === "collapsed"
@@ -68,15 +70,24 @@ export function SpaceSelector() {
           <DropdownMenuItem
             key={space.id}
             onClick={() => {
+              const nextSpaceId = space.id || ""
               const role = user && space.ownerId === user.id ? "owner" : ""
               switchSpace({
-                spaceId: space.id || "",
+                spaceId: nextSpaceId,
                 spaceName: space.name,
                 spaceRole: role,
               })
               setOpen(false)
               if (isMobile) setOpenMobile(false)
-              navigate(`/space/${space.id}/finance`)
+              if (nextSpaceId) {
+                const targetRoute = resolveNextSpaceRoute(
+                  location.pathname,
+                  nextSpaceId
+                )
+                if (targetRoute) {
+                  navigate(targetRoute)
+                }
+              }
             }}
             className={cn(
               "justify-between",

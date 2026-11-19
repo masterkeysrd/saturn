@@ -257,7 +257,7 @@ export function AccountSettingsView() {
               className="h-16 w-16 rounded-2xl object-cover shadow-lg shadow-primary/20"
             />
           ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-accent text-2xl font-bold text-white shadow-lg shadow-primary/20">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-primary-foreground shadow-sm">
               {initials}
             </div>
           )}

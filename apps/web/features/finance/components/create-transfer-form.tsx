@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AmountInput } from "@/components/ui/amount-input"
 import { DatePicker } from "@/components/ui/date-picker"
+import { toast } from "@/components/ui/toast"
 import { toCentsString } from "../utils"
 
 interface CreateTransferFormProps {
@@ -130,7 +131,11 @@ export function CreateTransferForm({
       reset()
       onOpenChange(false)
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Transfer failed.")
+      toast.add({
+        type: "error",
+        title: "Transfer Failed",
+        description: err instanceof Error ? err.message : "Transfer failed.",
+      })
     }
   }
 

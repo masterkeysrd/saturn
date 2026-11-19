@@ -30,6 +30,13 @@ import {
 } from "lucide-react"
 import { SpaceSelector } from "@/components/space-selector"
 import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import {
   useActiveSpaceContext,
   resolveSpacePath,
 } from "@/features/space/use-space"
@@ -166,7 +173,6 @@ export function AppSidebar() {
   const { state, isMobile, setOpenMobile } = useSidebar()
   const location = useLocation()
   const { spaceId } = useActiveSpaceContext()
-  const [profileOpen, setProfileOpen] = useState(false)
 
   // Filter items inside the component based on role and active space requirements
   const filteredMainNavItems = mainNavItems.filter(
@@ -253,108 +259,92 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="relative">
+      <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip="Profile"
-              isActive={location.pathname.startsWith("/settings")}
-              onClick={() => setProfileOpen(!profileOpen)}
-              className="cursor-pointer"
-            >
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-primary to-accent text-[10px] font-bold text-white shadow-md shadow-primary/10 select-none">
-                {initials}
-              </div>
-              <span className="truncate">
-                {user?.name || user?.username || "Profile"}
-              </span>
-              <ChevronUpIcon className="ml-auto h-4 w-4 text-muted-foreground transition-transform duration-200" />
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-
-        {profileOpen && (
-          <>
-            {/* Backdrop overlay to close when clicking outside */}
-            <div
-              className="fixed inset-0 z-40 cursor-default"
-              onClick={() => setProfileOpen(false)}
-            />
-            {/* Dropdown Menu Container */}
-            <div
-              className={cn(
-                "absolute z-50 w-52 animate-in rounded-2xl border border-border/50 bg-card/90 p-1.5 shadow-2xl backdrop-blur-xl duration-200 fade-in slide-in-from-bottom-2 dark:bg-card/85",
-                state === "collapsed"
-                  ? "bottom-2 left-14"
-                  : "right-2 bottom-14 left-2"
-              )}
-            >
-              {/* User Identity Info */}
-              <div className="mb-1.5 flex items-center gap-2.5 border-b border-border/40 px-3 py-2.5 pb-3 select-none">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-accent text-sm font-bold text-white shadow-md shadow-primary/10">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <SidebarMenuButton
+                    isActive={location.pathname.startsWith("/settings")}
+                    className="cursor-pointer"
+                  />
+                }
+              >
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary text-[10px] font-bold text-primary-foreground shadow-sm select-none">
                   {initials}
                 </div>
-                <div className="flex flex-col overflow-hidden text-left">
-                  <span className="mb-1 truncate text-sm leading-none font-semibold text-foreground">
-                    {user?.name || user?.username || "User"}
-                  </span>
-                  <span className="truncate text-[10px] leading-none text-muted-foreground">
-                    {user?.email || "No email"}
-                  </span>
+                <span className="truncate">
+                  {user?.name || user?.username || "Profile"}
+                </span>
+                <ChevronUpIcon className="ml-auto h-4 w-4 text-muted-foreground transition-transform duration-200" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side={state === "collapsed" ? "right" : "top"}
+                align="end"
+                sideOffset={8}
+                className="w-56"
+              >
+                <div className="flex items-center gap-2.5 px-2.5 py-2 select-none">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm">
+                    {initials}
+                  </div>
+                  <div className="flex flex-col overflow-hidden text-left">
+                    <span className="mb-1 truncate text-sm leading-none font-semibold text-foreground">
+                      {user?.name || user?.username || "User"}
+                    </span>
+                    <span className="truncate text-[10px] leading-none text-muted-foreground">
+                      {user?.email || "No email"}
+                    </span>
+                  </div>
                 </div>
-              </div>
-
-              {/* Menu Items */}
-              <Link
-                to="/settings/account"
-                onClick={() => {
-                  setProfileOpen(false)
-                  if (isMobile) setOpenMobile(false)
-                }}
-                className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted/60"
-              >
-                <UserIcon className="h-4 w-4 text-muted-foreground" />
-                <span>Account</span>
-              </Link>
-
-              <Link
-                to="/settings/security/credentials"
-                onClick={() => {
-                  setProfileOpen(false)
-                  if (isMobile) setOpenMobile(false)
-                }}
-                className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted/60"
-              >
-                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                <span>Security & Logins</span>
-              </Link>
-
-              <Link
-                to="/settings/spaces"
-                onClick={() => {
-                  setProfileOpen(false)
-                  if (isMobile) setOpenMobile(false)
-                }}
-                className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted/60"
-              >
-                <Layers className="h-4 w-4 text-muted-foreground" />
-                <span>Workspaces</span>
-              </Link>
-
-              <button
-                onClick={() => {
-                  setProfileOpen(false)
-                  logoutUser()
-                  if (isMobile) setOpenMobile(false)
-                }}
-                className="mt-1 flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
-              >
-                <LogOutIcon className="h-4 w-4 text-destructive" />
-                <span>Log Out</span>
-              </button>
-            </div>
-          </>
-        )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  render={<Link to="/settings/account" />}
+                  onClick={() => {
+                    if (isMobile) setOpenMobile(false)
+                  }}
+                  className="cursor-pointer"
+                >
+                  <UserIcon className="h-4 w-4 text-muted-foreground" />
+                  <span>Account</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  render={<Link to="/settings/security/credentials" />}
+                  onClick={() => {
+                    if (isMobile) setOpenMobile(false)
+                  }}
+                  className="cursor-pointer"
+                >
+                  <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                  <span>Security &amp; Logins</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  render={<Link to="/settings/spaces" />}
+                  onClick={() => {
+                    if (isMobile) setOpenMobile(false)
+                  }}
+                  className="cursor-pointer"
+                >
+                  <Layers className="h-4 w-4 text-muted-foreground" />
+                  <span>Workspaces</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => {
+                    logoutUser()
+                    if (isMobile) setOpenMobile(false)
+                  }}
+                  className="cursor-pointer"
+                >
+                  <LogOutIcon className="h-4 w-4" />
+                  <span>Log Out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   )

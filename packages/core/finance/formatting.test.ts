@@ -21,9 +21,28 @@ describe("finance formatting utilities", () => {
     expect(toCents("10.00", -1)).toBe(-1000)
   })
 
-  it("formats amounts with optional currency", () => {
-    expect(formatAmount(2500, "USD")).toContain("USD")
-    expect(formatAmount(2500)).toMatch(/25\.00/)
+  it.each([
+    { input: "12.34", defaultSign: undefined, expected: 1234 },
+    { input: "$1,234.56", defaultSign: undefined, expected: 123456 },
+    { input: "-45.10", defaultSign: undefined, expected: -4510 },
+    { input: "10.00", defaultSign: -1 as const, expected: -1000 },
+    { input: "12,50", defaultSign: undefined, expected: 1250 },
+    { input: "12,5", defaultSign: undefined, expected: 1250 },
+    { input: "1.234,56", defaultSign: undefined, expected: 123456 },
+    { input: "1.234.567,89", defaultSign: undefined, expected: 123456789 },
+    { input: "1,234,567.89", defaultSign: undefined, expected: 123456789 },
+    { input: "1,000", defaultSign: undefined, expected: 100000 },
+    { input: "1,234,567", defaultSign: undefined, expected: 123456700 },
+    { input: "-12,50", defaultSign: undefined, expected: -1250 },
+    { input: "€ 99,95", defaultSign: undefined, expected: 9995 },
+    { input: "", defaultSign: undefined, expected: 0 },
+  ])("toCents parses $input accurately", ({ input, defaultSign, expected }) => {
+    expect(toCents(input, defaultSign)).toBe(expected)
+  })
+
+  it("formats amounts deterministically with en-US dot decimals", () => {
+    expect(formatAmount(2500, "USD")).toBe("25.00 USD")
+    expect(formatAmount(123456)).toBe("1,234.56")
   })
 
   it("formats intervals, statuses, and currency symbols", () => {

@@ -126,7 +126,7 @@ export function FinanceSettings() {
         {/* Section Header */}
         <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-accent text-white shadow-lg shadow-primary/20">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
               <Landmark className="h-5 w-5" />
             </div>
             <div>

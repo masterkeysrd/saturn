@@ -48,6 +48,16 @@ import {
   ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -104,6 +114,7 @@ export function AccountsView() {
 
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [adjustingAccount, setAdjustingAccount] = useState<Account | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Account | null>(null)
 
   const handleOpenAdjust = (acc: Account) => {
     setAdjustingAccount(acc)
@@ -320,33 +331,45 @@ export function AccountsView() {
     }
   }, [accounts, getAccountBaseCents])
 
-  const handleDeleteAccount = async (id: string) => {
+  const handleDeleteAccount = (id: string) => {
     const acc = accounts.find((a) => a.id === id)
     if (!acc) return
 
     if (acc.isDefault) {
-      alert(
-        "Cannot delete the default account. Set another account as default first."
-      )
+      toast.add({
+        type: "warning",
+        title: "Cannot Delete Default Account",
+        description:
+          "Set another account as default before deleting this account.",
+      })
       return
     }
 
-    if (
-      !confirm(
-        `Are you sure you want to delete account "${acc.name}"? This action cannot be undone.`
-      )
-    ) {
-      return
-    }
+    setDeleteTarget(acc)
+  }
 
+  const handleConfirmDeleteAccount = async () => {
+    if (!deleteTarget?.id) return
     try {
       await deleteAccountMutation.mutateAsync({
-        id,
-        req: { id },
+        id: deleteTarget.id,
+        req: { id: deleteTarget.id },
       })
+      toast.add({
+        type: "success",
+        title: "Account Deleted",
+        description: `Account "${deleteTarget.name}" has been deleted.`,
+      })
+      setDeleteTarget(null)
+      await invalidateFinanceQueries(queryClient)
       refetchAccounts()
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Failed to delete account.")
+      toast.add({
+        type: "error",
+        title: "Delete Failed",
+        description:
+          e instanceof Error ? e.message : "Failed to delete account.",
+      })
     }
   }
 
@@ -370,7 +393,7 @@ export function AccountsView() {
                 setEditingAccount(null)
                 setCreateOpen(true)
               }}
-              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent px-4 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95"
+              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
             >
               <Plus className="h-5 w-5" />
               Add Account
@@ -476,14 +499,14 @@ export function AccountsView() {
             <TabsList className="h-11 rounded-2xl border border-border/40 bg-card/40 p-1 backdrop-blur-md">
               <TabsTrigger
                 value="accounts"
-                className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md"
+                className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
               >
                 <Wallet className="h-4 w-4" />
                 <span>Accounts ({accounts.length})</span>
               </TabsTrigger>
               <TabsTrigger
                 value="transfers"
-                className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md"
+                className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
               >
                 <ArrowRightLeft className="h-4 w-4" />
                 <span>Transfers ({transfers.length})</span>
@@ -514,7 +537,7 @@ export function AccountsView() {
                   onClick={() => setGroupBy("INSTITUTION")}
                   className={`rounded-lg px-3 py-1.5 font-semibold transition-all ${
                     groupBy === "INSTITUTION"
-                      ? "bg-primary text-white shadow-sm"
+                      ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -525,7 +548,7 @@ export function AccountsView() {
                   onClick={() => setGroupBy("TYPE")}
                   className={`rounded-lg px-3 py-1.5 font-semibold transition-all ${
                     groupBy === "TYPE"
-                      ? "bg-primary text-white shadow-sm"
+                      ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -536,7 +559,7 @@ export function AccountsView() {
                   onClick={() => setGroupBy("FLAT")}
                   className={`rounded-lg px-3 py-1.5 font-semibold transition-all ${
                     groupBy === "FLAT"
-                      ? "bg-primary text-white shadow-sm"
+                      ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -607,7 +630,7 @@ export function AccountsView() {
                 {!urlState.q && !urlState.active && (
                   <Button
                     onClick={() => setCreateOpen(true)}
-                    className="mt-4 flex items-center gap-2 rounded-xl bg-primary text-xs font-bold text-white"
+                    className="mt-4 flex items-center gap-2 rounded-xl bg-primary text-xs font-bold text-primary-foreground"
                   >
                     Create Your First Account
                   </Button>
@@ -884,6 +907,38 @@ export function AccountsView() {
         refetchAccounts={refetchAccounts}
         refetchTransfers={refetchTransfers}
       />
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete account{" "}
+              <span className="font-semibold text-foreground">
+                {deleteTarget?.name}
+              </span>
+              ? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteAccountMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleteAccountMutation.isPending}
+              onClick={handleConfirmDeleteAccount}
+            >
+              {deleteAccountMutation.isPending
+                ? "Deleting..."
+                : "Delete Account"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </FinancePageLayout>
   )
 }

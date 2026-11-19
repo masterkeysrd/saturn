@@ -237,7 +237,7 @@ export function AdjustBalanceModal({
             <Button
               type="submit"
               disabled={adjustMutation.isPending || deltaCents === 0}
-              className="flex cursor-pointer items-center gap-2 rounded-xl bg-primary text-white shadow-lg"
+              className="flex cursor-pointer items-center gap-2 rounded-xl bg-primary text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm hover:bg-primary/90"
             >
               {adjustMutation.isPending && (
                 <Loader2 className="h-4 w-4 animate-spin" />

@@ -747,7 +747,7 @@ export function ReconciliationWorkspaceView() {
               </div>
               <div className="h-2 w-44 overflow-hidden rounded-full bg-muted/60">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
+                  className="h-full rounded-full bg-primary transition-all duration-300"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -817,7 +817,7 @@ export function ReconciliationWorkspaceView() {
                   <Button
                     disabled={!isReadyToComplete || completeMutation.isPending}
                     onClick={() => setIsCompleteDialogOpen(true)}
-                    className="h-9 rounded-xl bg-gradient-to-r from-primary to-accent px-4 text-xs font-bold text-white shadow-lg transition-all hover:scale-[1.01]"
+                    className="h-9 rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
                   >
                     {completeMutation.isPending && (
                       <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
@@ -1065,7 +1065,7 @@ export function ReconciliationWorkspaceView() {
                 e.preventDefault()
                 handleConfirmComplete()
               }}
-              className="bg-gradient-to-r from-primary to-accent font-bold text-white shadow-md hover:scale-[1.01]"
+              className="bg-primary font-bold text-primary-foreground shadow-sm hover:bg-primary/90"
             >
               {completeMutation.isPending ? (
                 <>

@@ -1238,4 +1238,36 @@ describe("Web AI Studio", () => {
     const spentCell = screen.getByText("$420.50").closest("td")
     expect(spentCell?.className).toContain("text-right")
   })
+
+  it("confirms before deleting a thread and supports opening mobile Threads sheet", async () => {
+    const mutateDelete = vi.fn()
+    vi.mocked(aiApi.useDeleteThreadMutation).mockReturnValue({
+      mutate: mutateDelete,
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as never)
+
+    renderWithProviders(<ChatView />)
+
+    // Clicking delete opens confirmation AlertDialog without deleting immediately
+    fireEvent.click(screen.getByRole("button", { name: "Delete thread" }))
+    expect(mutateDelete).not.toHaveBeenCalled()
+    expect(
+      await screen.findByRole("heading", { name: "Delete Thread" })
+    ).toBeTruthy()
+
+    // Confirming triggers deletion
+    fireEvent.click(screen.getByRole("button", { name: "Delete Thread" }))
+    expect(mutateDelete).toHaveBeenCalledWith({
+      id: "thr_1",
+      req: { id: "thr_1" },
+    })
+
+    // Close dialog before testing mobile Threads sheet
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+
+    // Mobile Threads button opens sheet
+    fireEvent.click(screen.getByRole("button", { name: "Threads" }))
+    expect(screen.getAllByText("April Spend Check").length).toBeGreaterThan(1)
+  })
 })

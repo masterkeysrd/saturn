@@ -375,7 +375,7 @@ export function ConfirmTransactionSheet({
               </Button>
               <Button
                 onClick={() => onOpenChange(false)}
-                className="h-12 cursor-pointer rounded-xl bg-gradient-to-r from-primary to-accent text-xs font-bold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.01] hover:opacity-95"
+                className="h-12 cursor-pointer rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
               >
                 Done
               </Button>
@@ -960,7 +960,7 @@ export function ConfirmTransactionSheet({
               <Button
                 type="submit"
                 form="confirm-transaction-form"
-                className="h-12 flex-1 cursor-pointer rounded-xl bg-gradient-to-r from-primary to-accent text-xs font-bold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.01] hover:opacity-95"
+                className="h-12 flex-1 cursor-pointer rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
                 disabled={
                   isPending || matchMutation.isPending || skipMutation.isPending
                 }

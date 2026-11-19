@@ -17,11 +17,43 @@ export function formatAmount(
   currency?: string
 ): string {
   const amount = formatCents(cents)
-  const formatted = amount.toLocaleString(undefined, {
+  const formatted = amount.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
   return currency ? `${formatted} ${currency}` : formatted
+}
+
+function normalizeDecimalInput(unsigned: string): string {
+  const hasDot = unsigned.includes(".")
+  const hasComma = unsigned.includes(",")
+
+  if (hasDot && hasComma) {
+    if (unsigned.lastIndexOf(",") > unsigned.lastIndexOf(".")) {
+      return unsigned.replace(/\./g, "").replace(",", ".")
+    }
+    return unsigned.replace(/,/g, "")
+  }
+
+  if (hasComma) {
+    const commaCount = (unsigned.match(/,/g) || []).length
+    if (commaCount > 1) {
+      return unsigned.replace(/,/g, "")
+    }
+    if (/^[1-9]\d{0,2},\d{3}$/.test(unsigned)) {
+      return unsigned.replace(",", "")
+    }
+    return unsigned.replace(",", ".")
+  }
+
+  if (hasDot) {
+    const dotCount = (unsigned.match(/\./g) || []).length
+    if (dotCount > 1) {
+      return unsigned.replace(/\./g, "")
+    }
+  }
+
+  return unsigned
 }
 
 export function toCents(
@@ -32,12 +64,21 @@ export function toCents(
   if (typeof amountInput === "number") {
     return isNaN(amountInput) ? 0 : Math.round(amountInput * 100)
   }
-  const clean = amountInput.replace(/[$€£,\s]/g, "").trim()
-  const raw = parseFloat(clean)
+  const stripped = amountInput.replace(/[$€£\s]/g, "").trim()
+  if (!stripped) return 0
+
+  const isNegative = stripped.startsWith("-")
+  const isPositive = stripped.startsWith("+")
+  const unsigned = stripped.replace(/^[+-]/, "")
+  if (!unsigned) return 0
+
+  const normalized = normalizeDecimalInput(unsigned)
+  const raw = parseFloat(normalized)
   if (isNaN(raw)) return 0
   const absCents = Math.round(Math.abs(raw) * 100)
-  if (clean.startsWith("-")) return -absCents
-  if (clean.startsWith("+")) return absCents
+  if (absCents === 0) return 0
+  if (isNegative) return -absCents
+  if (isPositive) return absCents
   return defaultSign === -1 ? -absCents : absCents
 }
 

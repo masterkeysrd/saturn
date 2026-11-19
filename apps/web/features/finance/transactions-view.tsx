@@ -1,7 +1,12 @@
 import { useState, useEffect, createElement } from "react"
 import { useSearchParams, useNavigate } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import { useUrlState } from "@/lib/use-url-state"
-import { useDebounce, useTimezone } from "@saturn/hooks"
+import {
+  invalidateFinanceQueries,
+  useDebounce,
+  useTimezone,
+} from "@saturn/hooks"
 import {
   useSpacePermissions,
   resolveSpacePath,
@@ -18,6 +23,17 @@ import {
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { Inbox } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "@/components/ui/toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   Select,
   SelectTrigger,
@@ -60,6 +76,7 @@ const TRANSACTIONS_FILTER_DEFAULTS = {
 }
 
 export function TransactionsView() {
+  const queryClient = useQueryClient()
   const { spaceId, isWritable } = useSpacePermissions()
   const tz = useTimezone()
 
@@ -101,6 +118,7 @@ export function TransactionsView() {
   const [eventsTxnDescription, setEventsTxnDescription] = useState<
     string | null
   >(null)
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
   const [searchParams] = useSearchParams()
 
   // Fetch transactions
@@ -169,20 +187,36 @@ export function TransactionsView() {
 
   const deleteMutation = useDeleteTransactionMutation()
 
-  const handleDelete = async (id: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this transaction? This will restore the budget limit capacity."
-      )
-    ) {
-      return
+  const handleDelete = (id: string) => {
+    if (!id) return
+    setDeleteTargetId(id)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTargetId) return
+    try {
+      await deleteMutation.mutateAsync({
+        id: deleteTargetId,
+        req: { id: deleteTargetId },
+      })
+      toast.add({
+        type: "success",
+        title: "Transaction Deleted",
+        description:
+          "The transaction has been removed and budget capacity restored.",
+      })
+      setDeleteTargetId(null)
+      await invalidateFinanceQueries(queryClient)
+      refetchTransactions()
+      refetchBudgets()
+    } catch (err) {
+      toast.add({
+        type: "error",
+        title: "Delete Failed",
+        description:
+          err instanceof Error ? err.message : "Failed to delete transaction.",
+      })
     }
-    await deleteMutation.mutateAsync({
-      id,
-      req: { id },
-    })
-    refetchTransactions()
-    refetchBudgets()
   }
 
   const getBudgetDetails = (id: string) => {
@@ -227,7 +261,7 @@ export function TransactionsView() {
         isWritable && (
           <Button
             onClick={handleCreateTrigger}
-            className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95 sm:w-auto"
+            className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary pt-0.5 font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90 sm:w-auto"
           >
             <Plus className="h-4 w-4" />
             Record Transaction
@@ -799,6 +833,35 @@ export function TransactionsView() {
           txnId={eventsTxnId}
           txnDescription={eventsTxnDescription}
         />
+
+        <AlertDialog
+          open={!!deleteTargetId}
+          onOpenChange={(open) => !open && setDeleteTargetId(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this transaction? This will
+                restore the budget limit capacity.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleteMutation.isPending}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={deleteMutation.isPending}
+                onClick={handleConfirmDelete}
+              >
+                {deleteMutation.isPending
+                  ? "Deleting..."
+                  : "Delete Transaction"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </FinancePageLayout>
   )

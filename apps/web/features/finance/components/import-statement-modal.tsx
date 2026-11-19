@@ -592,7 +592,7 @@ export function ImportStatementModal({
               className={cn(
                 "flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all",
                 step === 1
-                  ? "bg-primary text-white shadow-sm"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -608,7 +608,7 @@ export function ImportStatementModal({
               className={cn(
                 "flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all",
                 step === 2
-                  ? "bg-primary text-white shadow-sm"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : !csvFile
                     ? "cursor-not-allowed text-muted-foreground opacity-50"
                     : "text-muted-foreground hover:text-foreground"
@@ -696,7 +696,7 @@ export function ImportStatementModal({
                             handleModalOpenChange(false)
                             onImportSuccess(stmt.id || "")
                           }}
-                          className="w-full rounded-xl bg-primary text-xs font-bold text-white shadow-md transition-all hover:scale-[1.01]"
+                          className="w-full rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
                         >
                           Reconcile {acc?.currency} Statement
                           <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
@@ -1372,7 +1372,7 @@ export function ImportStatementModal({
                 <Button
                   type="button"
                   onClick={() => handleModalOpenChange(false)}
-                  className="rounded-xl bg-primary px-5 text-xs font-bold text-white shadow-md transition-all hover:scale-[1.01]"
+                  className="rounded-xl bg-primary px-5 text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
                 >
                   Done
                 </Button>
@@ -1403,7 +1403,7 @@ export function ImportStatementModal({
                       handleIngestPdf()
                     }
                   }}
-                  className="h-10 rounded-xl bg-gradient-to-r from-primary to-accent px-6 text-xs font-bold text-white shadow-lg transition-all hover:scale-[1.01]"
+                  className="h-10 rounded-xl bg-primary px-6 text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
                 >
                   {executeFlowMutation.isPending ||
                   isCheckingPdf ||
@@ -1435,7 +1435,7 @@ export function ImportStatementModal({
                   type="button"
                   disabled={!csvFile || !importAccountId}
                   onClick={() => setStep(2)}
-                  className="rounded-xl bg-primary px-5 text-xs font-bold text-white shadow-md transition-all hover:scale-[1.01]"
+                  className="rounded-xl bg-primary px-5 text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
                 >
                   Continue to Column Mapping
                   <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
@@ -1459,7 +1459,7 @@ export function ImportStatementModal({
                   importMutation.isPending || !csvFile || !importAccountId
                 }
                 onClick={handleImport}
-                className="h-10 rounded-xl bg-gradient-to-r from-primary to-accent px-6 text-xs font-bold text-white shadow-lg transition-all hover:scale-[1.01]"
+                className="h-10 rounded-xl bg-primary px-6 text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
               >
                 {importMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

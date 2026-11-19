@@ -274,7 +274,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
         {/* Header Section */}
         <SheetHeader className="space-y-2 border-b border-border/40 p-6 select-none">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-accent text-white shadow-lg shadow-primary/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
               <Settings2 className="h-5 w-5" />
             </div>
             <div className="flex flex-col text-left">
@@ -342,7 +342,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                 type="submit"
                 size="sm"
                 disabled={patchMutation.isPending}
-                className="w-full rounded-xl bg-gradient-to-r from-primary to-accent text-white shadow-md shadow-primary/10 transition-opacity hover:opacity-95"
+                className="w-full rounded-xl bg-primary text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
               >
                 {patchMutation.isPending ? (
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
@@ -392,7 +392,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                       className="flex items-center justify-between gap-2 p-3.5 transition-colors hover:bg-muted/10"
                     >
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-primary/20 bg-gradient-to-tr from-primary/10 to-accent/10 text-xs font-bold text-primary">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-primary/20 bg-primary/10 text-xs font-bold text-primary">
                           {member.profile?.avatarUrl ? (
                             <img
                               src={member.profile.avatarUrl}
@@ -509,7 +509,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                     type="submit"
                     size="sm"
                     variant="outline"
-                    className="h-9 shrink-0 rounded-xl px-3 transition-all hover:border-transparent hover:bg-primary hover:text-white"
+                    className="h-9 shrink-0 rounded-xl px-3 transition-all hover:border-transparent hover:bg-primary hover:text-primary-foreground"
                     disabled={createMemberMutation.isPending}
                   >
                     {createMemberMutation.isPending ? (
