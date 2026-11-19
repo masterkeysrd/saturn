@@ -1,5 +1,6 @@
 import React from "react"
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native"
+import { useRouter } from "expo-router"
 import {
   Inbox,
   Star,
@@ -9,13 +10,19 @@ import {
   Archive,
   Trash2,
   Layers,
+  AlertTriangle,
 } from "lucide-react-native"
 import type { MailboxRole } from "@saturn/api/saturn/mail/v1/mail"
 import type { ConnectedAccount } from "@saturn/api/saturn/platform/connector/v1/connector"
+import { isMailAccountReauthRequired } from "@saturn/core"
 import { useI18n } from "@saturn/hooks"
 import type { TranslationKey } from "@saturn/i18n"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../lib/theme"
+import { haptics } from "../../lib/haptics"
 
 export interface AccountBucketBarProps {
   accounts: ConnectedAccount[]
@@ -26,6 +33,7 @@ export interface AccountBucketBarProps {
   isUnreadFilter?: boolean
   onToggleUnreadFilter: () => void
   unreadCounts?: Record<string, number>
+  onReconnectAccount?: (account: ConnectedAccount) => void
 }
 
 interface BucketChip {
@@ -72,8 +80,10 @@ export function AccountBucketBar({
   isUnreadFilter = false,
   onToggleUnreadFilter,
   unreadCounts = {},
+  onReconnectAccount,
 }: AccountBucketBarProps) {
   const { t } = useI18n()
+  const router = useRouter()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
 
@@ -92,67 +102,115 @@ export function AccountBucketBar({
     onToggleUnreadFilter()
   }
 
+  const handleReconnect = (account: ConnectedAccount) => {
+    haptics.selection()
+    if (onReconnectAccount) {
+      onReconnectAccount(account)
+      return
+    }
+    router.push("/(app)/settings/connected-accounts")
+  }
+
+  const reauthAccounts = accounts.filter((a) => isMailAccountReauthRequired(a))
+  const showAccountRow = accounts.length > 1 || reauthAccounts.length > 0
+  const selectedReauthAccount = selectedAccountId
+    ? reauthAccounts.find((a) => a.id === selectedAccountId)
+    : reauthAccounts.length === 1 && accounts.length === 1
+      ? reauthAccounts[0]
+      : undefined
+
   return (
     <View style={styles.container}>
       {/* Top Row: Account Selector Chips */}
-      {accounts.length > 1 && (
+      {showAccountRow && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.accountRow}
         >
           {/* All Accounts Pill */}
-          <Pressable
-            testID="mobile-account-filter-all"
-            onPress={() => handleSelectAccount(undefined)}
-            style={[
-              styles.accountChip,
-              !selectedAccountId && styles.accountChipActive,
-            ]}
-          >
-            <Layers
-              size={14}
-              color={!selectedAccountId ? colors.primary : colors.textMuted}
-            />
-            <Text
+          {accounts.length > 1 && (
+            <Pressable
+              testID="mobile-account-filter-all"
+              onPress={() => handleSelectAccount(undefined)}
               style={[
-                styles.accountChipText,
-                !selectedAccountId && styles.accountChipTextActive,
+                styles.accountChip,
+                !selectedAccountId && styles.accountChipActive,
               ]}
             >
-              {t("mail.allAccounts")}
-            </Text>
-          </Pressable>
+              <Layers
+                size={14}
+                color={!selectedAccountId ? colors.primary : colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.accountChipText,
+                  !selectedAccountId && styles.accountChipTextActive,
+                ]}
+              >
+                {t("mail.allAccounts")}
+              </Text>
+            </Pressable>
+          )}
 
           {/* Individual Connected Accounts */}
           {accounts.map((acc) => {
             const isSelected = selectedAccountId === acc.id
             const dotColor = acc.color || colors.primary
+            const needsReauth = isMailAccountReauthRequired(acc)
             return (
-              <Pressable
+              <View
                 key={acc.id}
-                testID={`mobile-account-filter-${acc.id}`}
-                onPress={() => handleSelectAccount(acc.id)}
                 style={[
                   styles.accountChip,
                   isSelected && styles.accountChipActive,
                 ]}
               >
-                <View
-                  style={[styles.accountDot, { backgroundColor: dotColor }]}
-                />
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    styles.accountChipText,
-                    isSelected && styles.accountChipTextActive,
-                  ]}
+                <Pressable
+                  testID={`mobile-account-filter-${acc.id}`}
+                  onPress={() => handleSelectAccount(acc.id)}
+                  style={styles.accountChipMain}
                 >
-                  {acc.displayName || acc.email}
-                </Text>
-              </Pressable>
+                  <View
+                    style={[styles.accountDot, { backgroundColor: dotColor }]}
+                  />
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.accountChipText,
+                      isSelected && styles.accountChipTextActive,
+                    ]}
+                  >
+                    {acc.displayName || acc.email}
+                  </Text>
+                </Pressable>
+                {needsReauth && (
+                  <Pressable
+                    hitSlop={6}
+                    testID={`mobile-account-reauth-${acc.id}`}
+                    accessibilityLabel={t("mail.reauth.bannerTitle")}
+                    onPress={() => handleReconnect(acc)}
+                    style={styles.reauthIconBtn}
+                  >
+                    <AlertTriangle size={13} color={colors.warning} />
+                  </Pressable>
+                )}
+              </View>
             )
           })}
+
+          {selectedReauthAccount && (
+            <Pressable
+              testID="mobile-account-reconnect-pill"
+              onPress={() => handleReconnect(selectedReauthAccount)}
+              style={styles.reconnectPill}
+            >
+              <AlertTriangle size={12} color={colors.warning} />
+              <Text style={styles.reconnectPillText}>
+                {t("mail.reauth.reconnect")}
+              </Text>
+            </Pressable>
+          )}
         </ScrollView>
       )}
 
@@ -252,13 +310,18 @@ const createStyles = (t: SaturnMobileTheme) => ({
   accountChip: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    gap: 6,
+    gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: t.radius.full,
     backgroundColor: t.colors.surface,
     borderWidth: 1,
     borderColor: t.colors.border,
+  },
+  accountChipMain: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
   },
   accountChipActive: {
     backgroundColor: t.colors.primarySubtle,
@@ -277,6 +340,27 @@ const createStyles = (t: SaturnMobileTheme) => ({
   accountChipTextActive: {
     color: t.colors.primary,
     fontWeight: "700" as const,
+  },
+  reauthIconBtn: {
+    marginLeft: 2,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  reconnectPill: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.warningSubtle,
+    borderWidth: 1,
+    borderColor: t.colors.warningBorder,
+  },
+  reconnectPillText: {
+    fontSize: 11,
+    fontWeight: "600" as const,
+    color: t.colors.warning,
   },
   bucketRow: {
     paddingHorizontal: 16,

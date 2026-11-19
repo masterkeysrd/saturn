@@ -1,11 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef } from "react"
-import {
-  View,
-  Text,
-  Pressable,
-  Linking,
-  type LayoutChangeEvent,
-} from "react-native"
+import { View, Text, Pressable, Linking } from "react-native"
 import {
   WebView,
   type WebViewNavigation,
@@ -19,9 +13,19 @@ import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import {
   buildMobileMessageDocumentHtml,
-  INJECTED_EMAIL_LAYOUT_BEFORE_LOAD_JS,
   INJECTED_EMAIL_LAYOUT_JS,
 } from "./message-webview-html"
+
+function estimateInitialWebViewHeight(
+  html?: string,
+  plainText?: string
+): number {
+  const len = (html?.length || 0) + (plainText?.length || 0)
+  if (len > 8000) return 360
+  if (len > 2000) return 220
+  if (len > 400) return 140
+  return 72
+}
 
 type WebViewHandle = {
   injectJavaScript: (script: string) => void
@@ -51,8 +55,9 @@ export function MessageWebView({
   const styles = useThemedStyles(createStyles)
   const webViewRef = useRef<WebViewHandle>(null)
   const [loadImages, setLoadImages] = useState(false)
-  const [webViewHeight, setWebViewHeight] = useState(48)
-  const [containerWidth, setContainerWidth] = useState(300)
+  const [webViewHeight, setWebViewHeight] = useState(() =>
+    estimateInitialWebViewHeight(html, plainText)
+  )
 
   const containsRemoteImages = useMemo(() => {
     return Boolean(
@@ -126,15 +131,8 @@ export function MessageWebView({
     [onLinkPress]
   )
 
-  const handleLayout = (e: LayoutChangeEvent) => {
-    const { width } = e.nativeEvent.layout
-    if (width > 0) {
-      setContainerWidth(width)
-    }
-  }
-
   return (
-    <View style={styles.container} onLayout={handleLayout}>
+    <View style={styles.container}>
       {containsRemoteImages && !loadImages && (
         <View style={styles.bannerContainer}>
           <View style={styles.bannerTextRow}>
@@ -157,21 +155,20 @@ export function MessageWebView({
         </View>
       )}
 
-      <View
-        style={[
-          styles.webViewWrapper,
-          { height: webViewHeight, width: containerWidth },
-        ]}
-      >
+      <View style={[styles.webViewWrapper, { height: webViewHeight }]}>
         <WebViewWithRef
           ref={webViewRef}
           testID="mobile-message-webview"
           originWhitelist={["about:blank", "https://*", "http://*"]}
           source={{ html: fullHtmlDocument, baseUrl: "about:blank" }}
-          injectedJavaScriptBeforeContentLoaded={
-            INJECTED_EMAIL_LAYOUT_BEFORE_LOAD_JS
-          }
           injectedJavaScript={INJECTED_EMAIL_LAYOUT_JS}
+          onLoadProgress={({ nativeEvent }) => {
+            if (nativeEvent.progress >= 0.1) {
+              webViewRef.current?.injectJavaScript(
+                "if(window.__saturnEmailLayoutMeasure)window.__saturnEmailLayoutMeasure();true;"
+              )
+            }
+          }}
           onLoadEnd={() => {
             webViewRef.current?.injectJavaScript(INJECTED_EMAIL_LAYOUT_JS)
           }}
@@ -232,6 +229,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
     fontWeight: "600" as const,
   },
   webViewWrapper: {
+    width: "100%" as const,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: t.colors.border,
@@ -240,6 +238,7 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   webView: {
     flex: 1,
+    width: "100%" as const,
     backgroundColor: "transparent",
   },
 })

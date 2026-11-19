@@ -22,6 +22,12 @@ vi.mock("@/features/space/use-space", async () => {
       spaceName: "Personal",
       spaceRole: "owner",
     }),
+    useSpacePermissions: () => ({
+      spaceId: "sp_1",
+      spaceRole: "owner",
+      isWritable: true,
+      canManageSpace: true,
+    }),
   }
 })
 
@@ -316,6 +322,11 @@ describe("MailView Web Feature", () => {
       data: { accounts: mockAccounts },
       isLoading: false,
     } as unknown as ReturnType<typeof hooks.useConnectedAccounts>)
+
+    vi.spyOn(hooks, "useInitiateOAuth").mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({ authUrl: "" }),
+      isPending: false,
+    } as unknown as ReturnType<typeof hooks.useInitiateOAuth>)
 
     vi.spyOn(hooks, "useCalendars").mockReturnValue({
       data: {
@@ -1282,5 +1293,78 @@ describe("MailView Web Feature", () => {
     expect(
       editorIframe.contentDocument?.body.getAttribute("data-placeholder")
     ).toBe("Escribe tu correo aquí...")
+  })
+
+  it("renders Apple Mail style warning icon on reauth_required accounts in MailboxRail and collapsed rail toggle, and triggers OAuth reconnect on click", async () => {
+    const reauthAccounts = [
+      {
+        ...mockAccounts[0],
+        status: "reauth_required",
+      },
+      {
+        ...mockAccounts[1],
+        status: "connected",
+      },
+    ]
+
+    vi.spyOn(hooks, "useConnectedAccounts").mockReturnValue({
+      data: { accounts: reauthAccounts },
+      isLoading: false,
+    } as unknown as ReturnType<typeof hooks.useConnectedAccounts>)
+
+    const mutateInitiateOAuth = vi.fn().mockResolvedValue({
+      authUrl: "https://accounts.google.com/o/oauth2/v2/auth?reauth=1",
+    })
+    vi.spyOn(hooks, "useInitiateOAuth").mockReturnValue({
+      mutateAsync: mutateInitiateOAuth,
+      isPending: false,
+    } as unknown as ReturnType<typeof hooks.useInitiateOAuth>)
+
+    const originalLocation = window.location
+    const assignMock = vi.fn()
+    Object.defineProperty(window, "location", {
+      value: {
+        ...originalLocation,
+        href: "http://localhost:3000/mail",
+        assign: assignMock,
+      },
+      writable: true,
+    })
+
+    try {
+      render(<MailView />, { wrapper: createWrapper() })
+
+      // Warning icon shows only for the reauth_required account (no full-width top banner)
+      expect(screen.queryByTestId("mail-reauth-banner")).toBeNull()
+      const warningBtn = screen.getByTestId("account-reauth-warning-acc_work")
+      expect(warningBtn).toBeDefined()
+      expect(
+        screen.queryByTestId("account-reauth-warning-acc_personal")
+      ).toBeNull()
+
+      // Clicking the warning icon triggers OAuth reconnect without crashing
+      fireEvent.click(warningBtn)
+
+      await waitFor(() => {
+        expect(mutateInitiateOAuth).toHaveBeenCalledWith({
+          provider: "google",
+          returnUrl: "http://localhost:3000/mail",
+          capabilities: ["mail", "calendar"],
+          connectedAccountId: "acc_work",
+        })
+        expect(assignMock).toHaveBeenCalledWith(
+          "https://accounts.google.com/o/oauth2/v2/auth?reauth=1"
+        )
+      })
+
+      // Collapsing MailboxRail shows the subtle amber dot on the rail toggle button
+      fireEvent.click(screen.getByTestId("mail-toggle-rail-btn"))
+      expect(screen.getByTestId("mail-rail-reauth-dot")).toBeDefined()
+    } finally {
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        writable: true,
+      })
+    }
   })
 })

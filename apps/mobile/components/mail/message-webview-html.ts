@@ -5,6 +5,29 @@ import {
   stripTrailingEmptyParagraphsAndBrs,
 } from "@saturn/core"
 
+const NONCE_ALPHABET =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
+function generateScriptNonce(): string {
+  const bytes = new Uint8Array(24)
+  if (
+    typeof globalThis !== "undefined" &&
+    globalThis.crypto &&
+    typeof globalThis.crypto.getRandomValues === "function"
+  ) {
+    globalThis.crypto.getRandomValues(bytes)
+  } else {
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] = Math.floor(Math.random() * 256)
+    }
+  }
+  let nonce = ""
+  for (let i = 0; i < bytes.length; i++) {
+    nonce += NONCE_ALPHABET[bytes[i] % NONCE_ALPHABET.length]
+  }
+  return nonce
+}
+
 export interface BuildMobileMessageHtmlOptions {
   html: string
   plainText?: string
@@ -79,6 +102,7 @@ export function buildMobileMessageDocumentHtml({
   const imgSrcPolicy = loadImages
     ? `https: http: data: blob:${apiOrigin}`
     : `data: blob:${apiOrigin}`
+  const scriptNonce = generateScriptNonce()
 
   return `<!DOCTYPE html>
 <html>
@@ -86,7 +110,7 @@ export function buildMobileMessageDocumentHtml({
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="img-src ${imgSrcPolicy}; media-src ${imgSrcPolicy}; object-src 'none'; frame-src 'none';">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'nonce-${scriptNonce}'; img-src ${imgSrcPolicy}; media-src ${imgSrcPolicy}; object-src 'none'; frame-src 'none';">
   <style>
     :root {
       color-scheme: light;
@@ -176,6 +200,7 @@ export function buildMobileMessageDocumentHtml({
     <div id="saturn-email-root">${source}</div>
   </div>
   <style>html, body { height: auto !important; min-height: 0 !important; }</style>
+  <script nonce="${scriptNonce}">${INJECTED_EMAIL_LAYOUT_JS}</script>
 </body>
 </html>`
 }
@@ -316,8 +341,11 @@ export const INJECTED_EMAIL_LAYOUT_JS = `
 
   window.addEventListener('load', scheduleMeasure);
   window.addEventListener('resize', scheduleMeasure);
+  setTimeout(scheduleMeasure, 40);
   setTimeout(scheduleMeasure, 120);
-  setTimeout(scheduleMeasure, 500);
+  setTimeout(scheduleMeasure, 280);
+  setTimeout(scheduleMeasure, 600);
+  setTimeout(scheduleMeasure, 1200);
 })();
 true;
 `

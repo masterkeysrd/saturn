@@ -260,6 +260,16 @@
     "noSubject": "(sin asunto)",
     "printMessage": "Imprimir mensaje",
     "read": "Leído",
+    "reauth": {
+      "bannerDescription": "La autorización de {email} expiró. Reconecta para sincronizar el correo y cargar mensajes completos.",
+      "bannerTitle": "Se requiere reconectar la cuenta",
+      "manageAccounts": "Cuentas conectadas",
+      "multipleBannerDescription": "{count} cuentas de correo requieren reconexión para sincronizar y cargar mensajes completos.",
+      "reconnect": "Reconectar",
+      "reconnectedSuccess": "Cuenta reconectada",
+      "reconnecting": "Reconectando...",
+      "snippetOnlyNotice": "Mostrando solo un fragmento de vista previa porque la autorización de {email} expiró. Reconecta para cargar el mensaje completo."
+    },
     "recipientRequired": "Por favor especifica al menos un destinatario",
     "recipientsPlaceholder": "Destinatarios...",
     "refresh": "Actualizar",

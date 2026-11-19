@@ -1,5 +1,8 @@
+import React from "react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
+import { render, fireEvent } from "@testing-library/react"
 import type { Thread, Message } from "@saturn/api/saturn/mail/v1/mail"
+import type { ConnectedAccount } from "@saturn/api/saturn/platform/connector/v1/connector"
 import { haptics } from "../lib/haptics"
 import {
   computeReplyRecipients,
@@ -9,14 +12,140 @@ import {
   buildForwardedMessageHtml,
   prepareUnifiedDraftHtml,
   stripHtmlToPlainText,
+  isMailAccountReauthRequired,
+  filterReauthMailAccounts,
 } from "@saturn/core"
+import { TimezoneProvider } from "@saturn/hooks"
 import { buildMobileEditorDocumentHtml } from "../components/mail/email-editor-html"
 import {
   buildMobileMessageDocumentHtml,
   INJECTED_EMAIL_LAYOUT_BEFORE_LOAD_JS,
   INJECTED_EMAIL_LAYOUT_JS,
 } from "../components/mail/message-webview-html"
+import { AccountBucketBar } from "../components/mail/account-bucket-bar"
 import { translate } from "@saturn/i18n"
+
+const { mockRouterPush } = vi.hoisted(() => ({
+  mockRouterPush: vi.fn(),
+}))
+
+vi.mock("expo-router", () => ({
+  useRouter: () => ({ push: mockRouterPush, back: vi.fn() }),
+}))
+
+vi.mock("@react-native-async-storage/async-storage", () => ({
+  default: {
+    getItem: vi.fn(async () => null),
+    setItem: vi.fn(async () => undefined),
+  },
+}))
+
+vi.mock("lucide-react-native", async () => {
+  const ReactMod = await import("react")
+  const Stub = (name: string) => (props: Record<string, unknown>) =>
+    ReactMod.createElement("span", {
+      "data-icon": name,
+      "data-testid": props.testID,
+    })
+  return {
+    Inbox: Stub("Inbox"),
+    Star: Stub("Star"),
+    Mail: Stub("Mail"),
+    Send: Stub("Send"),
+    FileEdit: Stub("FileEdit"),
+    Archive: Stub("Archive"),
+    Trash2: Stub("Trash2"),
+    Layers: Stub("Layers"),
+    AlertTriangle: Stub("AlertTriangle"),
+  }
+})
+
+vi.mock("react-native", async () => {
+  const ReactMod = await import("react")
+  const flattenStyle = (s: unknown): Record<string, unknown> | undefined => {
+    if (!s) return undefined
+    if (Array.isArray(s)) {
+      return Object.assign(
+        {},
+        ...s
+          .flat(Infinity)
+          .filter(Boolean)
+          .map((item) => flattenStyle(item))
+      )
+    }
+    return typeof s === "object" ? (s as Record<string, unknown>) : undefined
+  }
+  return {
+    Appearance: { setColorScheme: vi.fn() },
+    Platform: {
+      OS: "ios",
+      select: (obj: Record<string, unknown>) => obj.ios ?? obj.default,
+    },
+    StyleSheet: {
+      create: <T extends Record<string, unknown>>(styles: T): T => styles,
+      hairlineWidth: 1,
+    },
+    useColorScheme: () => "dark",
+    View: ({
+      children,
+      style,
+      testID,
+      ...props
+    }: Record<string, unknown> & { children?: React.ReactNode }) =>
+      ReactMod.createElement(
+        "div",
+        { ...props, "data-testid": testID, style: flattenStyle(style) },
+        children
+      ),
+    Text: ({
+      children,
+      style,
+      testID,
+      numberOfLines: _n,
+      ...props
+    }: Record<string, unknown> & { children?: React.ReactNode }) =>
+      ReactMod.createElement(
+        "span",
+        { ...props, "data-testid": testID, style: flattenStyle(style) },
+        children
+      ),
+    ScrollView: ({
+      children,
+      contentContainerStyle,
+      horizontal: _h,
+      showsHorizontalScrollIndicator: _s,
+      ...props
+    }: Record<string, unknown> & { children?: React.ReactNode }) =>
+      ReactMod.createElement(
+        "div",
+        { ...props, style: flattenStyle(contentContainerStyle) },
+        children
+      ),
+    Pressable: ({
+      children,
+      onPress,
+      testID,
+      accessibilityLabel,
+      hitSlop: _hs,
+      style,
+    }: Record<string, unknown> & {
+      children?: React.ReactNode
+      onPress?: (e: unknown) => void
+      testID?: string
+      accessibilityLabel?: string
+    }) =>
+      ReactMod.createElement(
+        "button",
+        {
+          "data-testid": testID,
+          "aria-label": accessibilityLabel,
+          style: flattenStyle(style),
+          onClick: onPress,
+        },
+        children
+      ),
+  }
+})
 
 // Mock haptics
 vi.mock("../lib/haptics", () => ({
@@ -744,6 +873,108 @@ describe("Mobile Mail Feature Logic & Component Unit Tests", () => {
       expect(translate("es-ES", "mail.remoteImagesBlockedShort")).toBe(
         "Imágenes remotas bloqueadas"
       )
+      expect(translate("es-ES", "mail.reauth.bannerTitle")).toBe(
+        "Se requiere reconectar la cuenta"
+      )
+      expect(translate("es-ES", "mail.reauth.reconnect")).toBe("Reconectar")
+    })
+  })
+
+  describe("Reauth Account Helpers & AccountBucketBar Warning Indicator", () => {
+    it("detects reauth_required accounts and filters mail-capable accounts cleanly", () => {
+      expect(isMailAccountReauthRequired(null)).toBe(false)
+      expect(isMailAccountReauthRequired({ status: "connected" })).toBe(false)
+      expect(isMailAccountReauthRequired({ status: "reauth_required" })).toBe(
+        true
+      )
+      expect(
+        isMailAccountReauthRequired({
+          status: "ACCOUNT_STATUS_REAUTH_REQUIRED",
+        })
+      ).toBe(true)
+
+      const accounts = [
+        {
+          id: "acc_mail_reauth",
+          status: "reauth_required",
+          enabledCapabilities: ["mail", "calendar"],
+        },
+        {
+          id: "acc_cal_only",
+          status: "reauth_required",
+          enabledCapabilities: ["calendar"],
+        },
+        {
+          id: "acc_healthy",
+          status: "connected",
+          enabledCapabilities: ["mail"],
+        },
+      ]
+
+      expect(filterReauthMailAccounts(accounts)).toHaveLength(1)
+      expect(filterReauthMailAccounts(accounts)[0].id).toBe("acc_mail_reauth")
+      expect(filterReauthMailAccounts(accounts, "acc_healthy")).toHaveLength(0)
+      expect(
+        filterReauthMailAccounts(accounts, "acc_mail_reauth")
+      ).toHaveLength(1)
+    })
+
+    it("renders compact warning icon on reauth_required account chip and navigates/reconnects on press", () => {
+      const accounts: ConnectedAccount[] = [
+        {
+          id: "acc_work",
+          spaceId: "sp_1",
+          provider: "google",
+          providerAccountId: "ext_1",
+          email: "work@company.com",
+          displayName: "Work",
+          status: "reauth_required",
+          color: "#3b82f6",
+          enabledCapabilities: ["mail"],
+        },
+        {
+          id: "acc_personal",
+          spaceId: "sp_1",
+          provider: "google",
+          providerAccountId: "ext_2",
+          email: "personal@gmail.com",
+          displayName: "Personal",
+          status: "connected",
+          color: "#10b981",
+          enabledCapabilities: ["mail"],
+        },
+      ]
+
+      const onSelectAccount = vi.fn()
+      const screen = render(
+        <TimezoneProvider timezone="UTC" locale="es-ES">
+          <AccountBucketBar
+            accounts={accounts}
+            selectedAccountId="acc_work"
+            onSelectAccount={onSelectAccount}
+            onSelectRole={vi.fn()}
+            onToggleUnreadFilter={vi.fn()}
+          />
+        </TimezoneProvider>
+      )
+
+      const warningBtn = screen.getByTestId("mobile-account-reauth-acc_work")
+      expect(warningBtn).toBeDefined()
+      expect(
+        screen.queryByTestId("mobile-account-reauth-acc_personal")
+      ).toBeNull()
+
+      const reconnectPill = screen.getByTestId("mobile-account-reconnect-pill")
+      expect(reconnectPill.textContent).toContain("Reconectar")
+
+      fireEvent.click(warningBtn)
+      expect(mockRouterPush).toHaveBeenCalledWith(
+        "/(app)/settings/connected-accounts"
+      )
+      expect(onSelectAccount).not.toHaveBeenCalled()
+
+      fireEvent.click(reconnectPill)
+      expect(mockRouterPush).toHaveBeenCalledTimes(2)
     })
   })
 })

@@ -42,6 +42,7 @@ export interface ThreadListProps {
   onSearchChange: (q: string) => void
   searchInputRef?: React.RefObject<HTMLInputElement | null>
   railOpen?: boolean
+  hasReauthWarning?: boolean
   onToggleRail?: () => void
   layoutMode?: MailLayoutMode
   onToggleLayoutMode?: () => void
@@ -68,6 +69,7 @@ export function ThreadList({
   onSearchChange,
   searchInputRef,
   railOpen = true,
+  hasReauthWarning = false,
   onToggleRail,
   layoutMode = "split",
   onToggleLayoutMode,
@@ -198,7 +200,7 @@ export function ThreadList({
             size="icon-sm"
             data-testid="mail-toggle-rail-btn"
             onClick={onToggleRail}
-            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+            className="relative h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
             title={
               railOpen ? t("mail.collapseFolders") : t("mail.expandFolders")
             }
@@ -207,6 +209,12 @@ export function ThreadList({
             }
           >
             <PanelLeft className="h-4 w-4" />
+            {!railOpen && hasReauthWarning && (
+              <span
+                data-testid="mail-rail-reauth-dot"
+                className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500 ring-1 ring-background"
+              />
+            )}
           </Button>
         )}
         <div className="relative flex-1">

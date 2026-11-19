@@ -7,18 +7,27 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native"
+import { useRouter } from "expo-router"
 import BottomSheet, { BottomSheetTextInput } from "@gorhom/bottom-sheet"
-import { Plus, Check } from "lucide-react-native"
+import { Plus, Check, AlertTriangle } from "lucide-react-native"
 import {
   useCalendars,
   useUpdateCalendar,
   useCreateCalendar,
+  useConnectedAccounts,
   useTimezone,
+  useI18n,
   type Calendar,
+  type ConnectedAccount,
 } from "@saturn/hooks"
-import { AppBottomSheet } from "@/components/ui/bottom-sheet"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import { isMailAccountReauthRequired } from "@saturn/core"
+import { AppBottomSheet } from "../ui/bottom-sheet"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../lib/theme"
+import { haptics } from "../../lib/haptics"
 
 export interface CalendarFilterSheetProps {
   onClose?: () => void
@@ -42,8 +51,11 @@ export const CalendarFilterSheet = forwardRef<
 >(({ onClose, canManage = true }, ref) => {
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const router = useRouter()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { data: calendarsData, isLoading } = useCalendars()
+  const { data: accountsData } = useConnectedAccounts()
   const updateCalendarMutation = useUpdateCalendar()
   const createCalendarMutation = useCreateCalendar()
 
@@ -51,6 +63,14 @@ export const CalendarFilterSheet = forwardRef<
     () => calendarsData?.calendars || [],
     [calendarsData]
   )
+
+  const accountMap = useMemo(() => {
+    const map = new Map<string, ConnectedAccount>()
+    for (const acc of accountsData?.accounts || []) {
+      if (acc.id) map.set(acc.id, acc)
+    }
+    return map
+  }, [accountsData?.accounts])
 
   // Quick create calendar state
   const [isCreating, setIsCreating] = useState(false)
@@ -261,38 +281,66 @@ export const CalendarFilterSheet = forwardRef<
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Connected Accounts</Text>
                 <View style={styles.calendarList}>
-                  {connectedCalendars.map((cal) => (
-                    <View key={cal.id} style={styles.calendarRow}>
-                      <View style={styles.calendarInfo}>
-                        <View
-                          style={[
-                            styles.calendarColorDot,
-                            {
-                              backgroundColor: cal.color || colors.primary,
-                            },
-                          ]}
+                  {connectedCalendars.map((cal) => {
+                    const acc = cal.connectedAccountId
+                      ? accountMap.get(cal.connectedAccountId)
+                      : undefined
+                    const needsReauth = isMailAccountReauthRequired(acc)
+
+                    return (
+                      <View key={cal.id} style={styles.calendarRow}>
+                        <View style={styles.calendarInfo}>
+                          <View
+                            style={[
+                              styles.calendarColorDot,
+                              {
+                                backgroundColor: cal.color || colors.primary,
+                              },
+                            ]}
+                          />
+                          <Text numberOfLines={1} style={styles.calendarName}>
+                            {cal.name}
+                          </Text>
+                          {cal.isPrimary && (
+                            <View style={styles.defaultBadge}>
+                              <Text style={styles.defaultBadgeText}>
+                                Primary
+                              </Text>
+                            </View>
+                          )}
+                          {needsReauth && (
+                            <TouchableOpacity
+                              activeOpacity={0.7}
+                              testID={`calendar-reauth-reconnect-${cal.id}`}
+                              onPress={() => {
+                                haptics.selection()
+                                onClose?.()
+                                router.push(
+                                  "/(app)/settings/connected-accounts"
+                                )
+                              }}
+                              style={styles.reauthPill}
+                            >
+                              <AlertTriangle size={12} color={colors.warning} />
+                              <Text style={styles.reauthPillText}>
+                                {t("mail.reauth.reconnect")}
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                        <Switch
+                          value={cal.isEnabled}
+                          onValueChange={() => handleToggleCalendar(cal)}
+                          trackColor={{
+                            false: colors.surfaceHighlight,
+                            true: colors.primary,
+                          }}
+                          thumbColor="#ffffff"
+                          testID={`calendar-toggle-${cal.id}`}
                         />
-                        <Text numberOfLines={1} style={styles.calendarName}>
-                          {cal.name}
-                        </Text>
-                        {cal.isPrimary && (
-                          <View style={styles.defaultBadge}>
-                            <Text style={styles.defaultBadgeText}>Primary</Text>
-                          </View>
-                        )}
                       </View>
-                      <Switch
-                        value={cal.isEnabled}
-                        onValueChange={() => handleToggleCalendar(cal)}
-                        trackColor={{
-                          false: colors.surfaceHighlight,
-                          true: colors.primary,
-                        }}
-                        thumbColor="#ffffff"
-                        testID={`calendar-toggle-${cal.id}`}
-                      />
-                    </View>
-                  ))}
+                    )
+                  })}
                 </View>
               </View>
             )}
@@ -461,5 +509,21 @@ const createStyles = (t: SaturnMobileTheme) => ({
     fontSize: 10,
     color: t.colors.textMuted,
     fontWeight: "500" as const,
+  },
+  reauthPill: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: t.radius.xs,
+    backgroundColor: t.colors.warningSubtle,
+    borderWidth: 1,
+    borderColor: t.colors.warningBorder,
+  },
+  reauthPillText: {
+    fontSize: 10,
+    fontWeight: "600" as const,
+    color: t.colors.warning,
   },
 })

@@ -1,5 +1,10 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react"
-import { useInRouterContext, useSearchParams } from "react-router-dom"
+import {
+  useInRouterContext,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   useInfiniteMailThreads,
   useModifyThread,
@@ -8,11 +13,13 @@ import {
   useSendDraft,
   useDeleteDraft,
   useConnectedAccounts,
+  useInitiateOAuth,
   useSyncConnectedAccount,
   useI18n,
+  type ConnectedAccount,
 } from "@saturn/hooks"
 import { useRegisterCopilotView } from "@saturn/hooks/ai"
-import { buildCopilotEntityKey } from "@saturn/core"
+import { buildCopilotEntityKey, filterReauthMailAccounts } from "@saturn/core"
 import type {
   Thread,
   Message,
@@ -21,7 +28,7 @@ import type {
   ListThreadsRequest,
   Attachment,
 } from "@saturn/api/saturn/mail/v1/mail"
-import { useActiveSpaceContext } from "@/features/space/use-space"
+import { useSpacePermissions } from "@/features/space/use-space"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { MailboxRail } from "./components/mailbox-rail"
 import { ThreadList } from "./components/thread-list"
@@ -76,14 +83,25 @@ function useIsDesktop(): boolean {
 function MailSearchParamsSync({
   onSelectThreadId,
   onOpenCompose,
+  onNavigateReady,
 }: {
   onSelectThreadId: (threadId: string) => void
   onOpenCompose: () => void
+  onNavigateReady?: (navigateFn: (to: string) => void) => void
 }) {
+  const { t } = useI18n()
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const paramThreadId = searchParams.get("threadId")
   const paramCompose = searchParams.get("compose")
+  const paramOAuth = searchParams.get("oauth")
   const lastThreadIdRef = useRef<string | null>(null)
+  const handledOAuthRef = useRef(false)
+
+  useEffect(() => {
+    onNavigateReady?.(navigate)
+  }, [navigate, onNavigateReady])
 
   useEffect(() => {
     if (paramThreadId && paramThreadId !== lastThreadIdRef.current) {
@@ -103,15 +121,34 @@ function MailSearchParamsSync({
     }
   }, [paramCompose, searchParams, setSearchParams, onOpenCompose])
 
+  useEffect(() => {
+    if (paramOAuth === "success" && !handledOAuthRef.current) {
+      handledOAuthRef.current = true
+      toast.add({
+        title: t("mail.reauth.reconnectedSuccess"),
+        type: "success",
+      })
+      void queryClient.invalidateQueries({ queryKey: ["connector"] })
+      void queryClient.invalidateQueries({ queryKey: ["mail"] })
+      const next = new URLSearchParams(searchParams)
+      next.delete("oauth")
+      setSearchParams(next, { replace: true })
+    } else if (paramOAuth !== "success") {
+      handledOAuthRef.current = false
+    }
+  }, [paramOAuth, searchParams, setSearchParams, queryClient, t])
+
   return null
 }
 
 export function MailView() {
   const { t } = useI18n()
   const inRouter = useInRouterContext()
+  const navigateRef = useRef<((to: string) => void) | null>(null)
   const isDesktop = useIsDesktop()
-  const { spaceId } = useActiveSpaceContext()
-  const { data: accountsData } = useConnectedAccounts()
+  const { spaceId, canManageSpace } = useSpacePermissions()
+  const { data: accountsData } = useConnectedAccounts({ spaceId })
+  const initiateOAuthMutation = useInitiateOAuth()
   const accounts = useMemo(() => {
     return (accountsData?.accounts || []).filter(
       (a) =>
@@ -869,11 +906,61 @@ export function MailView() {
     }
   }
 
+  const reauthAccounts = useMemo(
+    () => filterReauthMailAccounts(accountsData?.accounts),
+    [accountsData?.accounts]
+  )
+
+  const navigateToConnectedAccounts = useCallback(() => {
+    if (navigateRef.current) {
+      navigateRef.current("/settings/connected-accounts")
+    } else if (typeof window !== "undefined") {
+      window.location.assign("/settings/connected-accounts")
+    }
+  }, [])
+
+  const handleReconnectAccount = useCallback(
+    async (account?: ConnectedAccount) => {
+      if (account && canManageSpace) {
+        try {
+          const returnUrl =
+            typeof window !== "undefined"
+              ? window.location.href.split("?")[0]
+              : ""
+          const res = await initiateOAuthMutation.mutateAsync({
+            provider: account.provider || "google",
+            returnUrl,
+            capabilities: account.enabledCapabilities?.length
+              ? account.enabledCapabilities
+              : ["calendar", "mail", "contacts"],
+            connectedAccountId: account.id,
+          })
+          if (res.authUrl && typeof window !== "undefined") {
+            window.location.assign(res.authUrl)
+          }
+        } catch (err) {
+          toast.add({
+            title: t("mail.actionFailed"),
+            description:
+              err instanceof Error ? err.message : t("mail.anErrorOccurred"),
+            type: "error",
+          })
+        }
+        return
+      }
+
+      navigateToConnectedAccounts()
+    },
+    [canManageSpace, initiateOAuthMutation, navigateToConnectedAccounts, t]
+  )
+
   const railContent = (
     <MailboxRail
       selectedRole={selectedRole}
       selectedAccountId={selectedAccountId}
       selectedMailboxId={selectedMailboxId}
+      onReconnectAccount={(acc) => void handleReconnectAccount(acc)}
+      isReconnecting={initiateOAuthMutation.isPending}
       onSelectRole={(role) => {
         setSelectedRole(role)
         setSelectedMailboxId(undefined)
@@ -916,6 +1003,9 @@ export function MailView() {
             setReopenedDraft(undefined)
             setComposeOpen(true)
           }}
+          onNavigateReady={(nav) => {
+            navigateRef.current = nav
+          }}
         />
       )}
 
@@ -952,6 +1042,7 @@ export function MailView() {
           onSearchChange={setSearchQuery}
           searchInputRef={searchInputRef}
           railOpen={isDesktop ? railOpen : mobileRailOpen}
+          hasReauthWarning={reauthAccounts.length > 0}
           onToggleRail={handleToggleRail}
           layoutMode={layoutMode}
           onToggleLayoutMode={handleToggleLayoutMode}

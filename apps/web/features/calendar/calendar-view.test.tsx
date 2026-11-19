@@ -151,8 +151,10 @@ const mutateUpdateEvent = vi.fn()
 const mutateDeleteEvent = vi.fn()
 const mutateUpdateCalendar = vi.fn()
 const mutateRespond = vi.fn()
+const mutateInitiateOAuth = vi.fn()
 const mockUseCalendarEvents = vi.fn()
 const mockUseCalendars = vi.fn()
+const mockUseConnectedAccounts = vi.fn()
 const mockUseGetEvent = vi.fn()
 
 import type { DateInput } from "@saturn/core"
@@ -226,9 +228,10 @@ vi.mock("@saturn/hooks", async () => {
   return {
     ...actual,
     useCalendars: () => mockUseCalendars(),
-    useConnectedAccounts: () => ({
-      data: { accounts: mockConnectedAccounts },
-      isLoading: false,
+    useConnectedAccounts: () => mockUseConnectedAccounts(),
+    useInitiateOAuth: () => ({
+      mutateAsync: mutateInitiateOAuth,
+      isPending: false,
     }),
     useCalendarEvents: (...args: unknown[]) => mockUseCalendarEvents(...args),
     useGetEvent: (...args: unknown[]) => mockUseGetEvent(...args),
@@ -276,6 +279,11 @@ describe("CalendarView Component", () => {
       data: { calendars: mockCalendars },
       isLoading: false,
     })
+    mockUseConnectedAccounts.mockReturnValue({
+      data: { accounts: mockConnectedAccounts },
+      isLoading: false,
+    })
+    mutateInitiateOAuth.mockResolvedValue({ authUrl: "" })
     mockUseCalendarEvents.mockReturnValue({
       data: { occurrences: mockOccurrences },
       isLoading: false,
@@ -931,5 +939,60 @@ describe("CalendarView Component", () => {
     fireEvent.click(screen.getByTestId("view-tab-agenda"))
     expect(screen.getByTestId("agenda-finance-sch_aws")).toBeDefined()
     expect(screen.getByTestId("agenda-finance-sch_payday")).toBeDefined()
+  })
+
+  it("renders Apple Calendar style warning icon on reauth_required account in CalendarSidebar and triggers OAuth reconnect", async () => {
+    mockUseConnectedAccounts.mockReturnValue({
+      data: {
+        accounts: [
+          {
+            ...mockConnectedAccounts[0],
+            status: "reauth_required",
+          },
+        ],
+      },
+      isLoading: false,
+    })
+    mutateInitiateOAuth.mockResolvedValue({
+      authUrl: "https://accounts.google.com/o/oauth2/v2/auth?cal=1",
+    })
+
+    const originalLocation = window.location
+    const assignMock = vi.fn()
+    Object.defineProperty(window, "location", {
+      value: {
+        ...originalLocation,
+        href: "http://localhost:3000/calendar",
+        assign: assignMock,
+      },
+      writable: true,
+    })
+
+    try {
+      render(<CalendarView />, { wrapper: createWrapper() })
+
+      const warningBtn = screen.getByTestId(
+        "calendar-reauth-warning-acc_google_1"
+      )
+      expect(warningBtn).toBeDefined()
+      fireEvent.click(warningBtn)
+
+      await waitFor(() => {
+        expect(mutateInitiateOAuth).toHaveBeenCalledWith({
+          provider: "google",
+          returnUrl: "http://localhost:3000/calendar",
+          capabilities: ["calendar"],
+          connectedAccountId: "acc_google_1",
+        })
+        expect(assignMock).toHaveBeenCalledWith(
+          "https://accounts.google.com/o/oauth2/v2/auth?cal=1"
+        )
+      })
+    } finally {
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        writable: true,
+      })
+    }
   })
 })

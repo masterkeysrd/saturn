@@ -10,9 +10,16 @@ import {
   Folder,
   Plus,
   Layers,
+  AlertTriangle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useMailboxes, useConnectedAccounts, useI18n } from "@saturn/hooks"
+import {
+  useMailboxes,
+  useConnectedAccounts,
+  useI18n,
+  type ConnectedAccount,
+} from "@saturn/hooks"
+import { isMailAccountReauthRequired } from "@saturn/core"
 import type { MailboxRole, Mailbox } from "@saturn/api/saturn/mail/v1/mail"
 import type { TranslationKey } from "@saturn/i18n"
 import { cn } from "@/lib/utils"
@@ -25,6 +32,8 @@ export interface MailboxRailProps {
   onSelectAccount: (accountId?: string) => void
   onSelectMailbox: (mailboxId: string) => void
   onOpenCompose: () => void
+  onReconnectAccount?: (account: ConnectedAccount) => void
+  isReconnecting?: boolean
 }
 
 interface BucketItem {
@@ -75,6 +84,8 @@ export function MailboxRail({
   onSelectAccount,
   onSelectMailbox,
   onOpenCompose,
+  onReconnectAccount,
+  isReconnecting = false,
 }: MailboxRailProps) {
   const { t } = useI18n()
   const { data: mailboxesData } = useMailboxes(selectedAccountId)
@@ -235,25 +246,48 @@ export function MailboxRail({
 
           {accounts.map((acc) => {
             const isSelected = selectedAccountId === acc.id
+            const needsReauth = isMailAccountReauthRequired(acc)
             return (
-              <button
+              <div
                 key={acc.id}
-                type="button"
-                data-testid={`account-filter-${acc.id}`}
-                onClick={() => onSelectAccount(acc.id)}
                 className={cn(
-                  "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition",
+                  "flex w-full items-center gap-1 rounded-lg transition",
                   isSelected
                     ? "bg-primary/10 font-semibold text-primary"
                     : "text-foreground/80 hover:bg-muted hover:text-foreground"
                 )}
               >
-                <div
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: acc.color || "#3b82f6" }}
-                />
-                <span className="truncate">{acc.displayName || acc.email}</span>
-              </button>
+                <button
+                  type="button"
+                  data-testid={`account-filter-${acc.id}`}
+                  onClick={() => onSelectAccount(acc.id)}
+                  className="flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-1.5 text-left text-xs font-medium"
+                >
+                  <div
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: acc.color || "#3b82f6" }}
+                  />
+                  <span className="truncate">
+                    {acc.displayName || acc.email}
+                  </span>
+                </button>
+                {needsReauth && (
+                  <button
+                    type="button"
+                    data-testid={`account-reauth-warning-${acc.id}`}
+                    disabled={isReconnecting}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onReconnectAccount?.(acc)
+                    }}
+                    title={`${t("mail.reauth.bannerTitle")} — ${t("mail.reauth.reconnect")}`}
+                    aria-label={`${t("mail.reauth.bannerTitle")} (${acc.email || acc.displayName || acc.id})`}
+                    className="mr-1.5 flex shrink-0 items-center rounded p-1 text-amber-500 transition hover:bg-amber-500/15 disabled:opacity-50"
+                  >
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                  </button>
+                )}
+              </div>
             )
           })}
         </div>

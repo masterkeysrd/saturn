@@ -29,6 +29,7 @@ import {
 import {
   formatLocalDateString,
   getTimezoneParts,
+  isMailAccountReauthRequired,
   parseDate,
 } from "@saturn/core"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
@@ -156,6 +157,18 @@ export default function CalendarScreen() {
   // Connected accounts sync hook
   const { data: connectedData } = useConnectedAccounts()
   const syncAccountMutation = useSyncConnectedAccount()
+
+  const hasCalendarReauthWarning = useMemo(() => {
+    return (connectedData?.accounts || []).some((acc) => {
+      const isCalCapable =
+        !acc.enabledCapabilities ||
+        acc.enabledCapabilities.length === 0 ||
+        acc.enabledCapabilities.some((c) =>
+          c.toLowerCase().includes("calendar")
+        )
+      return isCalCapable && isMailAccountReauthRequired(acc)
+    })
+  }, [connectedData?.accounts])
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -341,6 +354,12 @@ export default function CalendarScreen() {
               accessibilityLabel="Calendar filters"
             >
               <SlidersHorizontal size={16} color={colors.textSecondary} />
+              {hasCalendarReauthWarning && (
+                <View
+                  testID="calendar-filter-reauth-dot"
+                  style={styles.filterReauthDot}
+                />
+              )}
             </TouchableOpacity>
 
             <AIHeaderButton />
@@ -609,11 +628,21 @@ const createStyles = (t: SaturnMobileTheme) => ({
     color: t.colors.primary,
   },
   filterButton: {
+    position: "relative" as const,
     padding: 6,
     borderRadius: t.radius.full,
     backgroundColor: t.colors.surfaceElevated,
     borderWidth: 1,
     borderColor: t.colors.border,
+  },
+  filterReauthDot: {
+    position: "absolute" as const,
+    top: 2,
+    right: 2,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: t.colors.warning,
   },
   viewContainer: {
     flex: 1,

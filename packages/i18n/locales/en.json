@@ -260,6 +260,16 @@
     "noSubject": "(no subject)",
     "printMessage": "Print message",
     "read": "Read",
+    "reauth": {
+      "bannerDescription": "Authorization for {email} expired. Reconnect to sync mail and load full messages.",
+      "bannerTitle": "Account reconnection required",
+      "manageAccounts": "Connected Accounts",
+      "multipleBannerDescription": "{count} mail accounts need reconnection to sync and load full messages.",
+      "reconnect": "Reconnect",
+      "reconnectedSuccess": "Account reconnected",
+      "reconnecting": "Reconnecting...",
+      "snippetOnlyNotice": "Showing preview snippet only because authorization for {email} expired. Reconnect to load the full message."
+    },
     "recipientRequired": "Please specify at least one recipient",
     "recipientsPlaceholder": "Recipients...",
     "refresh": "Refresh",

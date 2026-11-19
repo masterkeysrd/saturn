@@ -1,15 +1,43 @@
-import { useState } from "react"
-import { ChevronLeft, ChevronRight, Plus, Receipt } from "lucide-react"
+import { useState, useRef, useEffect, useCallback } from "react"
+import { useInRouterContext, useNavigate } from "react-router-dom"
+import {
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Receipt,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { toast } from "@/components/ui/toast"
 import {
   useTimezone,
   useCalendars,
   useUpdateCalendar,
   useConnectedAccounts,
+  useInitiateOAuth,
+  useI18n,
+  type ConnectedAccount,
 } from "@saturn/hooks"
-import { getMonthMatrix, type MonthDayCell } from "@saturn/core"
+import {
+  getMonthMatrix,
+  isMailAccountReauthRequired,
+  type MonthDayCell,
+} from "@saturn/core"
+import { useOptionalSpacePermissions } from "@/features/space/use-space"
 import { cn } from "@/lib/utils"
+
+function CalendarRouterNavigateBridge({
+  onNavigateReady,
+}: {
+  onNavigateReady: (nav: (to: string) => void) => void
+}) {
+  const navigate = useNavigate()
+  useEffect(() => {
+    onNavigateReady(navigate)
+  }, [navigate, onNavigateReady])
+  return null
+}
 
 export interface CalendarSidebarProps {
   currentDate: Date
@@ -27,12 +55,58 @@ export function CalendarSidebar({
   onToggleFinanceOverlay,
 }: CalendarSidebarProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
+  const inRouter = useInRouterContext()
+  const navigateRef = useRef<((to: string) => void) | null>(null)
+  const { spaceId, canManageSpace } = useOptionalSpacePermissions()
   const { data: calendarsData } = useCalendars()
-  const { data: accountsData } = useConnectedAccounts()
+  const { data: accountsData } = useConnectedAccounts(
+    spaceId ? { spaceId } : undefined
+  )
+  const initiateOAuthMutation = useInitiateOAuth()
   const updateCalendarMutation = useUpdateCalendar()
 
   const calendars = calendarsData?.calendars || []
   const connectedAccounts = accountsData?.accounts || []
+
+  const handleReconnectAccount = useCallback(
+    async (account: ConnectedAccount) => {
+      if (canManageSpace && account.id) {
+        try {
+          const returnUrl =
+            typeof window !== "undefined"
+              ? window.location.href.split("?")[0]
+              : ""
+          const res = await initiateOAuthMutation.mutateAsync({
+            provider: account.provider || "google",
+            returnUrl,
+            capabilities: account.enabledCapabilities?.length
+              ? account.enabledCapabilities
+              : ["calendar", "mail", "contacts"],
+            connectedAccountId: account.id,
+          })
+          if (res.authUrl && typeof window !== "undefined") {
+            window.location.assign(res.authUrl)
+          }
+        } catch (err) {
+          toast.add({
+            title: t("mail.actionFailed"),
+            description:
+              err instanceof Error ? err.message : t("mail.anErrorOccurred"),
+            type: "error",
+          })
+        }
+        return
+      }
+
+      if (navigateRef.current) {
+        navigateRef.current("/settings/connected-accounts")
+      } else if (typeof window !== "undefined") {
+        window.location.assign("/settings/connected-accounts")
+      }
+    },
+    [canManageSpace, initiateOAuthMutation, t]
+  )
 
   // Mini jumper month state
   const currentParts = tz.parts(currentDate) || {
@@ -113,6 +187,13 @@ export function CalendarSidebar({
 
   return (
     <div className="flex h-full w-64 flex-col border-r border-border/40 bg-card p-3">
+      {inRouter && (
+        <CalendarRouterNavigateBridge
+          onNavigateReady={(nav) => {
+            navigateRef.current = nav
+          }}
+        />
+      )}
       {/* Create Event CTA */}
       <Button
         data-testid="create-event-btn"
@@ -250,12 +331,28 @@ export function CalendarSidebar({
                 const accountCals = externalCalendars.filter(
                   (c) => c.connectedAccountId === account.id
                 )
-                if (accountCals.length === 0) return null
+                const needsReauth = isMailAccountReauthRequired(account)
+                if (accountCals.length === 0 && !needsReauth) return null
 
                 return (
                   <div key={account.id} className="space-y-1">
-                    <div className="px-2 text-[11px] font-medium text-muted-foreground">
-                      {account.displayName || account.email}
+                    <div className="flex items-center justify-between gap-1.5 px-2">
+                      <span className="truncate text-[11px] font-medium text-muted-foreground">
+                        {account.displayName || account.email}
+                      </span>
+                      {needsReauth && (
+                        <button
+                          type="button"
+                          data-testid={`calendar-reauth-warning-${account.id}`}
+                          disabled={initiateOAuthMutation.isPending}
+                          onClick={() => void handleReconnectAccount(account)}
+                          title={`${t("mail.reauth.bannerTitle")} — ${t("mail.reauth.reconnect")}`}
+                          aria-label={`${t("mail.reauth.bannerTitle")} (${account.email || account.displayName || account.id})`}
+                          className="flex shrink-0 items-center rounded p-0.5 text-amber-500 transition hover:bg-amber-500/15 disabled:opacity-50"
+                        >
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                        </button>
+                      )}
                     </div>
                     {accountCals.map((cal) => (
                       <label
