@@ -29,6 +29,10 @@ authentication:
       auth_required: true
       api_key_scopes:
         - spaces:read
+    - selector: "saturn.space.v1.Spaces.GetDashboardPreferences"
+      auth_required: true
+      api_key_scopes:
+        - spaces:read
     - selector: "saturn.space.v1.Spaces.ListSpaceMembers"
       auth_required: true
       api_key_scopes:

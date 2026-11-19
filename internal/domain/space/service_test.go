@@ -168,8 +168,10 @@ func setupTestService() (*space.Service, *memorySpaceStore, *memoryMemberStore) 
 	spaceStore := newMemorySpaceStore()
 	memberStore := newMemoryMemberStore()
 	svc := space.NewService(space.Dependencies{
-		SpaceStore:  spaceStore,
-		MemberStore: memberStore,
+		SpaceStore:           spaceStore,
+		MemberStore:          memberStore,
+		Settings:             &space.SettingsClientMock{},
+		DashboardPreferences: &space.DashboardPreferencesClientMock{},
 	})
 	return svc, spaceStore, memberStore
 }

@@ -1142,6 +1142,221 @@ func (x *UpdateSettingsRequest) GetVersion() int64 {
 	return 0
 }
 
+// DashboardPreferences represents a user's customizable dashboard widget layout within a workspace.
+type DashboardPreferences struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The workspace's unique identifier.
+	// Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+	SpaceId string `protobuf:"bytes,1,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Output only. The user's unique identifier.
+	// Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Optional. Ordered list of enabled dashboard widget identifiers.
+	Widgets []string `protobuf:"bytes,3,rep,name=widgets,proto3" json:"widgets,omitempty"`
+	// Output only. The optimistic concurrency control version number.
+	Version int64 `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
+	// Output only. The timestamp when the dashboard preferences were created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Output only. The timestamp when the dashboard preferences were last updated.
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DashboardPreferences) Reset() {
+	*x = DashboardPreferences{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DashboardPreferences) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DashboardPreferences) ProtoMessage() {}
+
+func (x *DashboardPreferences) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DashboardPreferences.ProtoReflect.Descriptor instead.
+func (*DashboardPreferences) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *DashboardPreferences) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *DashboardPreferences) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *DashboardPreferences) GetWidgets() []string {
+	if x != nil {
+		return x.Widgets
+	}
+	return nil
+}
+
+func (x *DashboardPreferences) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *DashboardPreferences) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *DashboardPreferences) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+// Request message for Spaces.GetDashboardPreferences.
+type GetDashboardPreferencesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the workspace whose dashboard preferences are retrieved.
+	// Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+	SpaceId       string `protobuf:"bytes,1,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetDashboardPreferencesRequest) Reset() {
+	*x = GetDashboardPreferencesRequest{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDashboardPreferencesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDashboardPreferencesRequest) ProtoMessage() {}
+
+func (x *GetDashboardPreferencesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDashboardPreferencesRequest.ProtoReflect.Descriptor instead.
+func (*GetDashboardPreferencesRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *GetDashboardPreferencesRequest) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+// Request message for Spaces.UpdateDashboardPreferences.
+type UpdateDashboardPreferencesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the workspace whose dashboard preferences are updated.
+	// Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+	SpaceId string `protobuf:"bytes,1,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Required. The dashboard preferences resource containing updated values.
+	DashboardPreferences *DashboardPreferences `protobuf:"bytes,2,opt,name=dashboard_preferences,json=dashboardPreferences,proto3" json:"dashboard_preferences,omitempty"`
+	// Required. The list of fields to update.
+	// A mask specifying which fields (e.g. `widgets`) in the `dashboard_preferences` field should be updated.
+	UpdateMask *fieldmaskpb.FieldMask `protobuf:"bytes,3,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	// Optional. The optimistic concurrency control version expected for this update.
+	Version       *int64 `protobuf:"varint,4,opt,name=version,proto3,oneof" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateDashboardPreferencesRequest) Reset() {
+	*x = UpdateDashboardPreferencesRequest{}
+	mi := &file_saturn_space_v1_space_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateDashboardPreferencesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateDashboardPreferencesRequest) ProtoMessage() {}
+
+func (x *UpdateDashboardPreferencesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_space_v1_space_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateDashboardPreferencesRequest.ProtoReflect.Descriptor instead.
+func (*UpdateDashboardPreferencesRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *UpdateDashboardPreferencesRequest) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *UpdateDashboardPreferencesRequest) GetDashboardPreferences() *DashboardPreferences {
+	if x != nil {
+		return x.DashboardPreferences
+	}
+	return nil
+}
+
+func (x *UpdateDashboardPreferencesRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.UpdateMask
+	}
+	return nil
+}
+
+func (x *UpdateDashboardPreferencesRequest) GetVersion() int64 {
+	if x != nil && x.Version != nil {
+		return *x.Version
+	}
+	return 0
+}
+
 // APIKeyGrant represents an API key access grant scoped to a specific workspace.
 type APIKeyGrant struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1173,7 +1388,7 @@ type APIKeyGrant struct {
 
 func (x *APIKeyGrant) Reset() {
 	*x = APIKeyGrant{}
-	mi := &file_saturn_space_v1_space_proto_msgTypes[16]
+	mi := &file_saturn_space_v1_space_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1185,7 +1400,7 @@ func (x *APIKeyGrant) String() string {
 func (*APIKeyGrant) ProtoMessage() {}
 
 func (x *APIKeyGrant) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_space_v1_space_proto_msgTypes[16]
+	mi := &file_saturn_space_v1_space_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1198,7 +1413,7 @@ func (x *APIKeyGrant) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use APIKeyGrant.ProtoReflect.Descriptor instead.
 func (*APIKeyGrant) Descriptor() ([]byte, []int) {
-	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{16}
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *APIKeyGrant) GetApiKeyId() string {
@@ -1289,7 +1504,7 @@ type ListSpaceAPIKeyGrantsRequest struct {
 
 func (x *ListSpaceAPIKeyGrantsRequest) Reset() {
 	*x = ListSpaceAPIKeyGrantsRequest{}
-	mi := &file_saturn_space_v1_space_proto_msgTypes[17]
+	mi := &file_saturn_space_v1_space_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1301,7 +1516,7 @@ func (x *ListSpaceAPIKeyGrantsRequest) String() string {
 func (*ListSpaceAPIKeyGrantsRequest) ProtoMessage() {}
 
 func (x *ListSpaceAPIKeyGrantsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_space_v1_space_proto_msgTypes[17]
+	mi := &file_saturn_space_v1_space_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1314,7 +1529,7 @@ func (x *ListSpaceAPIKeyGrantsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSpaceAPIKeyGrantsRequest.ProtoReflect.Descriptor instead.
 func (*ListSpaceAPIKeyGrantsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{17}
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListSpaceAPIKeyGrantsRequest) GetSpaceId() string {
@@ -1335,7 +1550,7 @@ type ListSpaceAPIKeyGrantsResponse struct {
 
 func (x *ListSpaceAPIKeyGrantsResponse) Reset() {
 	*x = ListSpaceAPIKeyGrantsResponse{}
-	mi := &file_saturn_space_v1_space_proto_msgTypes[18]
+	mi := &file_saturn_space_v1_space_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1347,7 +1562,7 @@ func (x *ListSpaceAPIKeyGrantsResponse) String() string {
 func (*ListSpaceAPIKeyGrantsResponse) ProtoMessage() {}
 
 func (x *ListSpaceAPIKeyGrantsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_space_v1_space_proto_msgTypes[18]
+	mi := &file_saturn_space_v1_space_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1360,7 +1575,7 @@ func (x *ListSpaceAPIKeyGrantsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSpaceAPIKeyGrantsResponse.ProtoReflect.Descriptor instead.
 func (*ListSpaceAPIKeyGrantsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{18}
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ListSpaceAPIKeyGrantsResponse) GetGrants() []*APIKeyGrant {
@@ -1383,7 +1598,7 @@ type RevokeSpaceAPIKeyGrantRequest struct {
 
 func (x *RevokeSpaceAPIKeyGrantRequest) Reset() {
 	*x = RevokeSpaceAPIKeyGrantRequest{}
-	mi := &file_saturn_space_v1_space_proto_msgTypes[19]
+	mi := &file_saturn_space_v1_space_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1395,7 +1610,7 @@ func (x *RevokeSpaceAPIKeyGrantRequest) String() string {
 func (*RevokeSpaceAPIKeyGrantRequest) ProtoMessage() {}
 
 func (x *RevokeSpaceAPIKeyGrantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_space_v1_space_proto_msgTypes[19]
+	mi := &file_saturn_space_v1_space_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1408,7 +1623,7 @@ func (x *RevokeSpaceAPIKeyGrantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeSpaceAPIKeyGrantRequest.ProtoReflect.Descriptor instead.
 func (*RevokeSpaceAPIKeyGrantRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{19}
+	return file_saturn_space_v1_space_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *RevokeSpaceAPIKeyGrantRequest) GetSpaceId() string {
@@ -1440,7 +1655,7 @@ type SpaceMember_Profile struct {
 
 func (x *SpaceMember_Profile) Reset() {
 	*x = SpaceMember_Profile{}
-	mi := &file_saturn_space_v1_space_proto_msgTypes[20]
+	mi := &file_saturn_space_v1_space_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1452,7 +1667,7 @@ func (x *SpaceMember_Profile) String() string {
 func (*SpaceMember_Profile) ProtoMessage() {}
 
 func (x *SpaceMember_Profile) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_space_v1_space_proto_msgTypes[20]
+	mi := &file_saturn_space_v1_space_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1585,6 +1800,25 @@ const file_saturn_space_v1_space_proto_rawDesc = "" +
 	"updateMask\x12\"\n" +
 	"\aversion\x18\x04 \x01(\x03B\x03\xe0A\x01H\x00R\aversion\x88\x01\x01B\n" +
 	"\n" +
+	"\b_version\"\x96\x02\n" +
+	"\x14DashboardPreferences\x12\x1e\n" +
+	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x03R\aspaceId\x12\x1c\n" +
+	"\auser_id\x18\x02 \x01(\tB\x03\xe0A\x03R\x06userId\x12\x1d\n" +
+	"\awidgets\x18\x03 \x03(\tB\x03\xe0A\x01R\awidgets\x12\x1d\n" +
+	"\aversion\x18\x04 \x01(\x03B\x03\xe0A\x03R\aversion\x12@\n" +
+	"\vcreate_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12@\n" +
+	"\vupdate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"updateTime\"@\n" +
+	"\x1eGetDashboardPreferencesRequest\x12\x1e\n" +
+	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\"\x96\x02\n" +
+	"!UpdateDashboardPreferencesRequest\x12\x1e\n" +
+	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\x12_\n" +
+	"\x15dashboard_preferences\x18\x02 \x01(\v2%.saturn.space.v1.DashboardPreferencesB\x03\xe0A\x02R\x14dashboardPreferences\x12@\n" +
+	"\vupdate_mask\x18\x03 \x01(\v2\x1a.google.protobuf.FieldMaskB\x03\xe0A\x02R\n" +
+	"updateMask\x12\"\n" +
+	"\aversion\x18\x04 \x01(\x03B\x03\xe0A\x01H\x00R\aversion\x88\x01\x01B\n" +
+	"\n" +
 	"\b_version\"\x8f\x04\n" +
 	"\vAPIKeyGrant\x12!\n" +
 	"\n" +
@@ -1613,7 +1847,7 @@ const file_saturn_space_v1_space_proto_rawDesc = "" +
 	"\x1dRevokeSpaceAPIKeyGrantRequest\x12\x1e\n" +
 	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\x12!\n" +
 	"\n" +
-	"api_key_id\x18\x02 \x01(\tB\x03\xe0A\x02R\bapiKeyId2\xe5\x0e\n" +
+	"api_key_id\x18\x02 \x01(\tB\x03\xe0A\x02R\bapiKeyId2\x8c\x12\n" +
 	"\x06Spaces\x12h\n" +
 	"\vCreateSpace\x12#.saturn.space.v1.CreateSpaceRequest\x1a\x16.saturn.space.v1.Space\"\x1c\xdaA\x04name\x82\xd3\xe4\x93\x02\x0f:\x01*\"\n" +
 	"/v1/spaces\x12n\n" +
@@ -1628,7 +1862,9 @@ const file_saturn_space_v1_space_proto_rawDesc = "" +
 	"\x11UpdateSpaceMember\x12).saturn.space.v1.UpdateSpaceMemberRequest\x1a\x1c.saturn.space.v1.SpaceMember\"\\\xdaA\x1bspace_id,member,update_mask\x82\xd3\xe4\x93\x028:\x06member2./v1/spaces/{space_id}/members/{member.user_id}\x12\x99\x01\n" +
 	"\x10ListSpaceMembers\x12(.saturn.space.v1.ListSpaceMembersRequest\x1a).saturn.space.v1.ListSpaceMembersResponse\"0\xdaA\bspace_id\x82\xd3\xe4\x93\x02\x1f\x12\x1d/v1/spaces/{space_id}/members\x12\x80\x01\n" +
 	"\vGetSettings\x12#.saturn.space.v1.GetSettingsRequest\x1a\x19.saturn.space.v1.Settings\"1\xdaA\bspace_id\x82\xd3\xe4\x93\x02 \x12\x1e/v1/spaces/{space_id}/settings\x12\xa5\x01\n" +
-	"\x0eUpdateSettings\x12&.saturn.space.v1.UpdateSettingsRequest\x1a\x19.saturn.space.v1.Settings\"P\xdaA\x1dspace_id,settings,update_mask\x82\xd3\xe4\x93\x02*:\bsettings2\x1e/v1/spaces/{space_id}/settings\x12\xa9\x01\n" +
+	"\x0eUpdateSettings\x12&.saturn.space.v1.UpdateSettingsRequest\x1a\x19.saturn.space.v1.Settings\"P\xdaA\x1dspace_id,settings,update_mask\x82\xd3\xe4\x93\x02*:\bsettings2\x1e/v1/spaces/{space_id}/settings\x12\xb1\x01\n" +
+	"\x17GetDashboardPreferences\x12/.saturn.space.v1.GetDashboardPreferencesRequest\x1a%.saturn.space.v1.DashboardPreferences\">\xdaA\bspace_id\x82\xd3\xe4\x93\x02-\x12+/v1/spaces/{space_id}/dashboard-preferences\x12\xf0\x01\n" +
+	"\x1aUpdateDashboardPreferences\x122.saturn.space.v1.UpdateDashboardPreferencesRequest\x1a%.saturn.space.v1.DashboardPreferences\"w\xdaA*space_id,dashboard_preferences,update_mask\x82\xd3\xe4\x93\x02D:\x15dashboard_preferences2+/v1/spaces/{space_id}/dashboard-preferences\x12\xa9\x01\n" +
 	"\x15ListSpaceAPIKeyGrants\x12-.saturn.space.v1.ListSpaceAPIKeyGrantsRequest\x1a..saturn.space.v1.ListSpaceAPIKeyGrantsResponse\"1\xdaA\bspace_id\x82\xd3\xe4\x93\x02 \x12\x1e/v1/spaces/{space_id}/api-keys\x12\xab\x01\n" +
 	"\x16RevokeSpaceAPIKeyGrant\x12..saturn.space.v1.RevokeSpaceAPIKeyGrantRequest\x1a\x16.google.protobuf.Empty\"I\xdaA\x13space_id,api_key_id\x82\xd3\xe4\x93\x02-*+/v1/spaces/{space_id}/api-keys/{api_key_id}B=Z;github.com/masterkeysrd/saturn/apis/saturn/space/v1;spacev1b\x06proto3"
 
@@ -1645,87 +1881,98 @@ func file_saturn_space_v1_space_proto_rawDescGZIP() []byte {
 }
 
 var file_saturn_space_v1_space_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_saturn_space_v1_space_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_saturn_space_v1_space_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_saturn_space_v1_space_proto_goTypes = []any{
-	(SpaceMember_Role)(0),                 // 0: saturn.space.v1.SpaceMember.Role
-	(*Space)(nil),                         // 1: saturn.space.v1.Space
-	(*SpaceMember)(nil),                   // 2: saturn.space.v1.SpaceMember
-	(*CreateSpaceRequest)(nil),            // 3: saturn.space.v1.CreateSpaceRequest
-	(*GetSpaceRequest)(nil),               // 4: saturn.space.v1.GetSpaceRequest
-	(*UpdateSpaceRequest)(nil),            // 5: saturn.space.v1.UpdateSpaceRequest
-	(*DeleteSpaceRequest)(nil),            // 6: saturn.space.v1.DeleteSpaceRequest
-	(*ListSpacesRequest)(nil),             // 7: saturn.space.v1.ListSpacesRequest
-	(*ListSpacesResponse)(nil),            // 8: saturn.space.v1.ListSpacesResponse
-	(*CreateSpaceMemberRequest)(nil),      // 9: saturn.space.v1.CreateSpaceMemberRequest
-	(*DeleteSpaceMemberRequest)(nil),      // 10: saturn.space.v1.DeleteSpaceMemberRequest
-	(*UpdateSpaceMemberRequest)(nil),      // 11: saturn.space.v1.UpdateSpaceMemberRequest
-	(*ListSpaceMembersRequest)(nil),       // 12: saturn.space.v1.ListSpaceMembersRequest
-	(*ListSpaceMembersResponse)(nil),      // 13: saturn.space.v1.ListSpaceMembersResponse
-	(*Settings)(nil),                      // 14: saturn.space.v1.Settings
-	(*GetSettingsRequest)(nil),            // 15: saturn.space.v1.GetSettingsRequest
-	(*UpdateSettingsRequest)(nil),         // 16: saturn.space.v1.UpdateSettingsRequest
-	(*APIKeyGrant)(nil),                   // 17: saturn.space.v1.APIKeyGrant
-	(*ListSpaceAPIKeyGrantsRequest)(nil),  // 18: saturn.space.v1.ListSpaceAPIKeyGrantsRequest
-	(*ListSpaceAPIKeyGrantsResponse)(nil), // 19: saturn.space.v1.ListSpaceAPIKeyGrantsResponse
-	(*RevokeSpaceAPIKeyGrantRequest)(nil), // 20: saturn.space.v1.RevokeSpaceAPIKeyGrantRequest
-	(*SpaceMember_Profile)(nil),           // 21: saturn.space.v1.SpaceMember.Profile
-	(*timestamppb.Timestamp)(nil),         // 22: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),         // 23: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),                 // 24: google.protobuf.Empty
+	(SpaceMember_Role)(0),                     // 0: saturn.space.v1.SpaceMember.Role
+	(*Space)(nil),                             // 1: saturn.space.v1.Space
+	(*SpaceMember)(nil),                       // 2: saturn.space.v1.SpaceMember
+	(*CreateSpaceRequest)(nil),                // 3: saturn.space.v1.CreateSpaceRequest
+	(*GetSpaceRequest)(nil),                   // 4: saturn.space.v1.GetSpaceRequest
+	(*UpdateSpaceRequest)(nil),                // 5: saturn.space.v1.UpdateSpaceRequest
+	(*DeleteSpaceRequest)(nil),                // 6: saturn.space.v1.DeleteSpaceRequest
+	(*ListSpacesRequest)(nil),                 // 7: saturn.space.v1.ListSpacesRequest
+	(*ListSpacesResponse)(nil),                // 8: saturn.space.v1.ListSpacesResponse
+	(*CreateSpaceMemberRequest)(nil),          // 9: saturn.space.v1.CreateSpaceMemberRequest
+	(*DeleteSpaceMemberRequest)(nil),          // 10: saturn.space.v1.DeleteSpaceMemberRequest
+	(*UpdateSpaceMemberRequest)(nil),          // 11: saturn.space.v1.UpdateSpaceMemberRequest
+	(*ListSpaceMembersRequest)(nil),           // 12: saturn.space.v1.ListSpaceMembersRequest
+	(*ListSpaceMembersResponse)(nil),          // 13: saturn.space.v1.ListSpaceMembersResponse
+	(*Settings)(nil),                          // 14: saturn.space.v1.Settings
+	(*GetSettingsRequest)(nil),                // 15: saturn.space.v1.GetSettingsRequest
+	(*UpdateSettingsRequest)(nil),             // 16: saturn.space.v1.UpdateSettingsRequest
+	(*DashboardPreferences)(nil),              // 17: saturn.space.v1.DashboardPreferences
+	(*GetDashboardPreferencesRequest)(nil),    // 18: saturn.space.v1.GetDashboardPreferencesRequest
+	(*UpdateDashboardPreferencesRequest)(nil), // 19: saturn.space.v1.UpdateDashboardPreferencesRequest
+	(*APIKeyGrant)(nil),                       // 20: saturn.space.v1.APIKeyGrant
+	(*ListSpaceAPIKeyGrantsRequest)(nil),      // 21: saturn.space.v1.ListSpaceAPIKeyGrantsRequest
+	(*ListSpaceAPIKeyGrantsResponse)(nil),     // 22: saturn.space.v1.ListSpaceAPIKeyGrantsResponse
+	(*RevokeSpaceAPIKeyGrantRequest)(nil),     // 23: saturn.space.v1.RevokeSpaceAPIKeyGrantRequest
+	(*SpaceMember_Profile)(nil),               // 24: saturn.space.v1.SpaceMember.Profile
+	(*timestamppb.Timestamp)(nil),             // 25: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),             // 26: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),                     // 27: google.protobuf.Empty
 }
 var file_saturn_space_v1_space_proto_depIdxs = []int32{
-	22, // 0: saturn.space.v1.Space.create_time:type_name -> google.protobuf.Timestamp
-	22, // 1: saturn.space.v1.Space.update_time:type_name -> google.protobuf.Timestamp
+	25, // 0: saturn.space.v1.Space.create_time:type_name -> google.protobuf.Timestamp
+	25, // 1: saturn.space.v1.Space.update_time:type_name -> google.protobuf.Timestamp
 	0,  // 2: saturn.space.v1.SpaceMember.role:type_name -> saturn.space.v1.SpaceMember.Role
-	22, // 3: saturn.space.v1.SpaceMember.create_time:type_name -> google.protobuf.Timestamp
-	22, // 4: saturn.space.v1.SpaceMember.update_time:type_name -> google.protobuf.Timestamp
-	21, // 5: saturn.space.v1.SpaceMember.profile:type_name -> saturn.space.v1.SpaceMember.Profile
+	25, // 3: saturn.space.v1.SpaceMember.create_time:type_name -> google.protobuf.Timestamp
+	25, // 4: saturn.space.v1.SpaceMember.update_time:type_name -> google.protobuf.Timestamp
+	24, // 5: saturn.space.v1.SpaceMember.profile:type_name -> saturn.space.v1.SpaceMember.Profile
 	1,  // 6: saturn.space.v1.UpdateSpaceRequest.space:type_name -> saturn.space.v1.Space
-	23, // 7: saturn.space.v1.UpdateSpaceRequest.update_mask:type_name -> google.protobuf.FieldMask
+	26, // 7: saturn.space.v1.UpdateSpaceRequest.update_mask:type_name -> google.protobuf.FieldMask
 	1,  // 8: saturn.space.v1.ListSpacesResponse.spaces:type_name -> saturn.space.v1.Space
 	2,  // 9: saturn.space.v1.CreateSpaceMemberRequest.member:type_name -> saturn.space.v1.SpaceMember
 	2,  // 10: saturn.space.v1.UpdateSpaceMemberRequest.member:type_name -> saturn.space.v1.SpaceMember
-	23, // 11: saturn.space.v1.UpdateSpaceMemberRequest.update_mask:type_name -> google.protobuf.FieldMask
+	26, // 11: saturn.space.v1.UpdateSpaceMemberRequest.update_mask:type_name -> google.protobuf.FieldMask
 	2,  // 12: saturn.space.v1.ListSpaceMembersResponse.members:type_name -> saturn.space.v1.SpaceMember
-	22, // 13: saturn.space.v1.Settings.create_time:type_name -> google.protobuf.Timestamp
-	22, // 14: saturn.space.v1.Settings.update_time:type_name -> google.protobuf.Timestamp
+	25, // 13: saturn.space.v1.Settings.create_time:type_name -> google.protobuf.Timestamp
+	25, // 14: saturn.space.v1.Settings.update_time:type_name -> google.protobuf.Timestamp
 	14, // 15: saturn.space.v1.UpdateSettingsRequest.settings:type_name -> saturn.space.v1.Settings
-	23, // 16: saturn.space.v1.UpdateSettingsRequest.update_mask:type_name -> google.protobuf.FieldMask
-	22, // 17: saturn.space.v1.APIKeyGrant.expires_at:type_name -> google.protobuf.Timestamp
-	22, // 18: saturn.space.v1.APIKeyGrant.last_used_at:type_name -> google.protobuf.Timestamp
-	22, // 19: saturn.space.v1.APIKeyGrant.grant_create_time:type_name -> google.protobuf.Timestamp
-	17, // 20: saturn.space.v1.ListSpaceAPIKeyGrantsResponse.grants:type_name -> saturn.space.v1.APIKeyGrant
-	3,  // 21: saturn.space.v1.Spaces.CreateSpace:input_type -> saturn.space.v1.CreateSpaceRequest
-	4,  // 22: saturn.space.v1.Spaces.GetSpace:input_type -> saturn.space.v1.GetSpaceRequest
-	5,  // 23: saturn.space.v1.Spaces.UpdateSpace:input_type -> saturn.space.v1.UpdateSpaceRequest
-	6,  // 24: saturn.space.v1.Spaces.DeleteSpace:input_type -> saturn.space.v1.DeleteSpaceRequest
-	7,  // 25: saturn.space.v1.Spaces.ListSpaces:input_type -> saturn.space.v1.ListSpacesRequest
-	9,  // 26: saturn.space.v1.Spaces.CreateSpaceMember:input_type -> saturn.space.v1.CreateSpaceMemberRequest
-	10, // 27: saturn.space.v1.Spaces.DeleteSpaceMember:input_type -> saturn.space.v1.DeleteSpaceMemberRequest
-	11, // 28: saturn.space.v1.Spaces.UpdateSpaceMember:input_type -> saturn.space.v1.UpdateSpaceMemberRequest
-	12, // 29: saturn.space.v1.Spaces.ListSpaceMembers:input_type -> saturn.space.v1.ListSpaceMembersRequest
-	15, // 30: saturn.space.v1.Spaces.GetSettings:input_type -> saturn.space.v1.GetSettingsRequest
-	16, // 31: saturn.space.v1.Spaces.UpdateSettings:input_type -> saturn.space.v1.UpdateSettingsRequest
-	18, // 32: saturn.space.v1.Spaces.ListSpaceAPIKeyGrants:input_type -> saturn.space.v1.ListSpaceAPIKeyGrantsRequest
-	20, // 33: saturn.space.v1.Spaces.RevokeSpaceAPIKeyGrant:input_type -> saturn.space.v1.RevokeSpaceAPIKeyGrantRequest
-	1,  // 34: saturn.space.v1.Spaces.CreateSpace:output_type -> saturn.space.v1.Space
-	1,  // 35: saturn.space.v1.Spaces.GetSpace:output_type -> saturn.space.v1.Space
-	1,  // 36: saturn.space.v1.Spaces.UpdateSpace:output_type -> saturn.space.v1.Space
-	24, // 37: saturn.space.v1.Spaces.DeleteSpace:output_type -> google.protobuf.Empty
-	8,  // 38: saturn.space.v1.Spaces.ListSpaces:output_type -> saturn.space.v1.ListSpacesResponse
-	2,  // 39: saturn.space.v1.Spaces.CreateSpaceMember:output_type -> saturn.space.v1.SpaceMember
-	24, // 40: saturn.space.v1.Spaces.DeleteSpaceMember:output_type -> google.protobuf.Empty
-	2,  // 41: saturn.space.v1.Spaces.UpdateSpaceMember:output_type -> saturn.space.v1.SpaceMember
-	13, // 42: saturn.space.v1.Spaces.ListSpaceMembers:output_type -> saturn.space.v1.ListSpaceMembersResponse
-	14, // 43: saturn.space.v1.Spaces.GetSettings:output_type -> saturn.space.v1.Settings
-	14, // 44: saturn.space.v1.Spaces.UpdateSettings:output_type -> saturn.space.v1.Settings
-	19, // 45: saturn.space.v1.Spaces.ListSpaceAPIKeyGrants:output_type -> saturn.space.v1.ListSpaceAPIKeyGrantsResponse
-	24, // 46: saturn.space.v1.Spaces.RevokeSpaceAPIKeyGrant:output_type -> google.protobuf.Empty
-	34, // [34:47] is the sub-list for method output_type
-	21, // [21:34] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	26, // 16: saturn.space.v1.UpdateSettingsRequest.update_mask:type_name -> google.protobuf.FieldMask
+	25, // 17: saturn.space.v1.DashboardPreferences.create_time:type_name -> google.protobuf.Timestamp
+	25, // 18: saturn.space.v1.DashboardPreferences.update_time:type_name -> google.protobuf.Timestamp
+	17, // 19: saturn.space.v1.UpdateDashboardPreferencesRequest.dashboard_preferences:type_name -> saturn.space.v1.DashboardPreferences
+	26, // 20: saturn.space.v1.UpdateDashboardPreferencesRequest.update_mask:type_name -> google.protobuf.FieldMask
+	25, // 21: saturn.space.v1.APIKeyGrant.expires_at:type_name -> google.protobuf.Timestamp
+	25, // 22: saturn.space.v1.APIKeyGrant.last_used_at:type_name -> google.protobuf.Timestamp
+	25, // 23: saturn.space.v1.APIKeyGrant.grant_create_time:type_name -> google.protobuf.Timestamp
+	20, // 24: saturn.space.v1.ListSpaceAPIKeyGrantsResponse.grants:type_name -> saturn.space.v1.APIKeyGrant
+	3,  // 25: saturn.space.v1.Spaces.CreateSpace:input_type -> saturn.space.v1.CreateSpaceRequest
+	4,  // 26: saturn.space.v1.Spaces.GetSpace:input_type -> saturn.space.v1.GetSpaceRequest
+	5,  // 27: saturn.space.v1.Spaces.UpdateSpace:input_type -> saturn.space.v1.UpdateSpaceRequest
+	6,  // 28: saturn.space.v1.Spaces.DeleteSpace:input_type -> saturn.space.v1.DeleteSpaceRequest
+	7,  // 29: saturn.space.v1.Spaces.ListSpaces:input_type -> saturn.space.v1.ListSpacesRequest
+	9,  // 30: saturn.space.v1.Spaces.CreateSpaceMember:input_type -> saturn.space.v1.CreateSpaceMemberRequest
+	10, // 31: saturn.space.v1.Spaces.DeleteSpaceMember:input_type -> saturn.space.v1.DeleteSpaceMemberRequest
+	11, // 32: saturn.space.v1.Spaces.UpdateSpaceMember:input_type -> saturn.space.v1.UpdateSpaceMemberRequest
+	12, // 33: saturn.space.v1.Spaces.ListSpaceMembers:input_type -> saturn.space.v1.ListSpaceMembersRequest
+	15, // 34: saturn.space.v1.Spaces.GetSettings:input_type -> saturn.space.v1.GetSettingsRequest
+	16, // 35: saturn.space.v1.Spaces.UpdateSettings:input_type -> saturn.space.v1.UpdateSettingsRequest
+	18, // 36: saturn.space.v1.Spaces.GetDashboardPreferences:input_type -> saturn.space.v1.GetDashboardPreferencesRequest
+	19, // 37: saturn.space.v1.Spaces.UpdateDashboardPreferences:input_type -> saturn.space.v1.UpdateDashboardPreferencesRequest
+	21, // 38: saturn.space.v1.Spaces.ListSpaceAPIKeyGrants:input_type -> saturn.space.v1.ListSpaceAPIKeyGrantsRequest
+	23, // 39: saturn.space.v1.Spaces.RevokeSpaceAPIKeyGrant:input_type -> saturn.space.v1.RevokeSpaceAPIKeyGrantRequest
+	1,  // 40: saturn.space.v1.Spaces.CreateSpace:output_type -> saturn.space.v1.Space
+	1,  // 41: saturn.space.v1.Spaces.GetSpace:output_type -> saturn.space.v1.Space
+	1,  // 42: saturn.space.v1.Spaces.UpdateSpace:output_type -> saturn.space.v1.Space
+	27, // 43: saturn.space.v1.Spaces.DeleteSpace:output_type -> google.protobuf.Empty
+	8,  // 44: saturn.space.v1.Spaces.ListSpaces:output_type -> saturn.space.v1.ListSpacesResponse
+	2,  // 45: saturn.space.v1.Spaces.CreateSpaceMember:output_type -> saturn.space.v1.SpaceMember
+	27, // 46: saturn.space.v1.Spaces.DeleteSpaceMember:output_type -> google.protobuf.Empty
+	2,  // 47: saturn.space.v1.Spaces.UpdateSpaceMember:output_type -> saturn.space.v1.SpaceMember
+	13, // 48: saturn.space.v1.Spaces.ListSpaceMembers:output_type -> saturn.space.v1.ListSpaceMembersResponse
+	14, // 49: saturn.space.v1.Spaces.GetSettings:output_type -> saturn.space.v1.Settings
+	14, // 50: saturn.space.v1.Spaces.UpdateSettings:output_type -> saturn.space.v1.Settings
+	17, // 51: saturn.space.v1.Spaces.GetDashboardPreferences:output_type -> saturn.space.v1.DashboardPreferences
+	17, // 52: saturn.space.v1.Spaces.UpdateDashboardPreferences:output_type -> saturn.space.v1.DashboardPreferences
+	22, // 53: saturn.space.v1.Spaces.ListSpaceAPIKeyGrants:output_type -> saturn.space.v1.ListSpaceAPIKeyGrantsResponse
+	27, // 54: saturn.space.v1.Spaces.RevokeSpaceAPIKeyGrant:output_type -> google.protobuf.Empty
+	40, // [40:55] is the sub-list for method output_type
+	25, // [25:40] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_saturn_space_v1_space_proto_init() }
@@ -1736,14 +1983,15 @@ func file_saturn_space_v1_space_proto_init() {
 	file_saturn_space_v1_space_proto_msgTypes[4].OneofWrappers = []any{}
 	file_saturn_space_v1_space_proto_msgTypes[10].OneofWrappers = []any{}
 	file_saturn_space_v1_space_proto_msgTypes[15].OneofWrappers = []any{}
-	file_saturn_space_v1_space_proto_msgTypes[16].OneofWrappers = []any{}
+	file_saturn_space_v1_space_proto_msgTypes[18].OneofWrappers = []any{}
+	file_saturn_space_v1_space_proto_msgTypes[19].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_space_v1_space_proto_rawDesc), len(file_saturn_space_v1_space_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   21,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

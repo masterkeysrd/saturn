@@ -38,6 +38,10 @@ type Coordinator interface {
 	// @transactional
 	UpdateSettings(ctx context.Context, req *UpdateSettingsRequest) (*settings.Entry[space.Settings], error)
 	// @transactional
+	GetDashboardPreferences(ctx context.Context, req *GetDashboardPreferencesRequest) (*settings.Entry[space.DashboardPreferences], error)
+	// @transactional
+	UpdateDashboardPreferences(ctx context.Context, req *UpdateDashboardPreferencesRequest) (*settings.Entry[space.DashboardPreferences], error)
+	// @transactional
 	RevokeSpaceAPIKeyGrant(ctx context.Context, req *RevokeSpaceAPIKeyGrantRequest) error
 }
 
@@ -119,6 +123,21 @@ type UpdateSettingsRequest struct {
 	Settings        *space.Settings
 	UpdateMask      []string
 	ExpectedVersion *int64
+}
+
+// GetDashboardPreferencesRequest represents the input for retrieving per-user workspace dashboard preferences.
+type GetDashboardPreferencesRequest struct {
+	SpaceID string
+	UserID  string
+}
+
+// UpdateDashboardPreferencesRequest represents the input for updating per-user workspace dashboard preferences.
+type UpdateDashboardPreferencesRequest struct {
+	SpaceID              string
+	UserID               string
+	DashboardPreferences *space.DashboardPreferences
+	UpdateMask           []string
+	ExpectedVersion      *int64
 }
 
 // RevokeSpaceAPIKeyGrantRequest represents the input for revoking an API key's access grant to a workspace.
@@ -256,6 +275,46 @@ func (c *coordinator) UpdateSettings(ctx context.Context, req *UpdateSettingsReq
 	return res, nil
 }
 
+// GetDashboardPreferences orchestrates per-user workspace dashboard preferences retrieval.
+func (c *coordinator) GetDashboardPreferences(ctx context.Context, req *GetDashboardPreferencesRequest) (*settings.Entry[space.DashboardPreferences], error) {
+	const op errors.Op = "application/space.GetDashboardPreferences"
+	if req == nil {
+		return nil, errors.E(op, errors.Invalid, "request is required")
+	}
+	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsAPIKey() && !principal.HasSpaceGrant(req.SpaceID) {
+		return nil, errors.E(op, errors.Permission, "API key does not have access to this space")
+	}
+	session := space.Session{
+		SpaceID: space.SpaceID(req.SpaceID),
+		UserID:  space.UserID(req.UserID),
+	}
+	res, err := c.spaceService.GetDashboardPreferences(ctx, session)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return res, nil
+}
+
+// UpdateDashboardPreferences orchestrates per-user workspace dashboard preferences modification.
+func (c *coordinator) UpdateDashboardPreferences(ctx context.Context, req *UpdateDashboardPreferencesRequest) (*settings.Entry[space.DashboardPreferences], error) {
+	const op errors.Op = "application/space.UpdateDashboardPreferences"
+	if req == nil {
+		return nil, errors.E(op, errors.Invalid, "request is required")
+	}
+	if principal, ok := auth.PrincipalFromContext(ctx); ok && principal.IsAPIKey() && !principal.HasSpaceGrant(req.SpaceID) {
+		return nil, errors.E(op, errors.Permission, "API key does not have access to this space")
+	}
+	session := space.Session{
+		SpaceID: space.SpaceID(req.SpaceID),
+		UserID:  space.UserID(req.UserID),
+	}
+	res, err := c.spaceService.UpdateDashboardPreferences(ctx, session, req.DashboardPreferences, req.UpdateMask, req.ExpectedVersion)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return res, nil
+}
+
 // RevokeSpaceAPIKeyGrant revokes an API key's grant to access the workspace.
 func (c *coordinator) RevokeSpaceAPIKeyGrant(ctx context.Context, req *RevokeSpaceAPIKeyGrantRequest) error {
 	const op errors.Op = "application/space.RevokeSpaceAPIKeyGrant"
@@ -283,6 +342,8 @@ type SpaceService interface {
 	UpdateSpaceMember(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error)
 	GetSettings(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error)
 	UpdateSettings(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error)
+	GetDashboardPreferences(ctx context.Context, session space.Session) (*settings.Entry[space.DashboardPreferences], error)
+	UpdateDashboardPreferences(ctx context.Context, session space.Session, incoming *space.DashboardPreferences, mask []string, expectedVersion *int64) (*settings.Entry[space.DashboardPreferences], error)
 	RevokeSpaceAPIKeyGrant(ctx context.Context, session space.Session, apiKeyID string) error
 }
 

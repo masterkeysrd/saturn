@@ -8377,6 +8377,85 @@
         ]
       }
     },
+    "/v1/spaces/{spaceId}/dashboard-preferences": {
+      "get": {
+        "summary": "Retrieves the current user's dashboard preferences for a workspace.",
+        "operationId": "Spaces_GetDashboardPreferences",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DashboardPreferences"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace whose dashboard preferences are retrieved.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      },
+      "patch": {
+        "summary": "Updates the current user's dashboard preferences for a workspace.",
+        "operationId": "Spaces_UpdateDashboardPreferences",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DashboardPreferences"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace whose dashboard preferences are updated.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "dashboardPreferences",
+            "description": "Required. The dashboard preferences resource containing updated values.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1DashboardPreferences"
+            }
+          },
+          {
+            "name": "version",
+            "description": "Optional. The optimistic concurrency control version expected for this update.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      }
+    },
     "/v1/spaces/{spaceId}/members": {
       "get": {
         "summary": "Lists all members belonging to a workspace.",
@@ -12490,6 +12569,47 @@
         "code",
         "name"
       ]
+    },
+    "v1DashboardPreferences": {
+      "type": "object",
+      "properties": {
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. The workspace's unique identifier.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+          "readOnly": true
+        },
+        "userId": {
+          "type": "string",
+          "description": "Output only. The user's unique identifier.\nFormatted as `usr_\u003cksuid\u003e` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+          "readOnly": true
+        },
+        "widgets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. Ordered list of enabled dashboard widget identifiers."
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. The optimistic concurrency control version number.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. The timestamp when the dashboard preferences were created.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. The timestamp when the dashboard preferences were last updated.",
+          "readOnly": true
+        }
+      },
+      "description": "DashboardPreferences represents a user's customizable dashboard widget layout within a workspace."
     },
     "v1DeliveryInfo": {
       "type": "object",

@@ -105,9 +105,10 @@ func TestService_Settings(t *testing.T) {
 	}
 
 	svc := space.NewService(space.Dependencies{
-		SpaceStore:  &space.SpaceStoreMock{},
-		MemberStore: memberMock,
-		Settings:    settingsMock,
+		SpaceStore:           &space.SpaceStoreMock{},
+		MemberStore:          memberMock,
+		Settings:             settingsMock,
+		DashboardPreferences: &space.DashboardPreferencesClientMock{},
 	})
 
 	t.Run("GetSettings default for member", func(t *testing.T) {

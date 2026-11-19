@@ -20,19 +20,21 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Spaces_CreateSpace_FullMethodName            = "/saturn.space.v1.Spaces/CreateSpace"
-	Spaces_GetSpace_FullMethodName               = "/saturn.space.v1.Spaces/GetSpace"
-	Spaces_UpdateSpace_FullMethodName            = "/saturn.space.v1.Spaces/UpdateSpace"
-	Spaces_DeleteSpace_FullMethodName            = "/saturn.space.v1.Spaces/DeleteSpace"
-	Spaces_ListSpaces_FullMethodName             = "/saturn.space.v1.Spaces/ListSpaces"
-	Spaces_CreateSpaceMember_FullMethodName      = "/saturn.space.v1.Spaces/CreateSpaceMember"
-	Spaces_DeleteSpaceMember_FullMethodName      = "/saturn.space.v1.Spaces/DeleteSpaceMember"
-	Spaces_UpdateSpaceMember_FullMethodName      = "/saturn.space.v1.Spaces/UpdateSpaceMember"
-	Spaces_ListSpaceMembers_FullMethodName       = "/saturn.space.v1.Spaces/ListSpaceMembers"
-	Spaces_GetSettings_FullMethodName            = "/saturn.space.v1.Spaces/GetSettings"
-	Spaces_UpdateSettings_FullMethodName         = "/saturn.space.v1.Spaces/UpdateSettings"
-	Spaces_ListSpaceAPIKeyGrants_FullMethodName  = "/saturn.space.v1.Spaces/ListSpaceAPIKeyGrants"
-	Spaces_RevokeSpaceAPIKeyGrant_FullMethodName = "/saturn.space.v1.Spaces/RevokeSpaceAPIKeyGrant"
+	Spaces_CreateSpace_FullMethodName                = "/saturn.space.v1.Spaces/CreateSpace"
+	Spaces_GetSpace_FullMethodName                   = "/saturn.space.v1.Spaces/GetSpace"
+	Spaces_UpdateSpace_FullMethodName                = "/saturn.space.v1.Spaces/UpdateSpace"
+	Spaces_DeleteSpace_FullMethodName                = "/saturn.space.v1.Spaces/DeleteSpace"
+	Spaces_ListSpaces_FullMethodName                 = "/saturn.space.v1.Spaces/ListSpaces"
+	Spaces_CreateSpaceMember_FullMethodName          = "/saturn.space.v1.Spaces/CreateSpaceMember"
+	Spaces_DeleteSpaceMember_FullMethodName          = "/saturn.space.v1.Spaces/DeleteSpaceMember"
+	Spaces_UpdateSpaceMember_FullMethodName          = "/saturn.space.v1.Spaces/UpdateSpaceMember"
+	Spaces_ListSpaceMembers_FullMethodName           = "/saturn.space.v1.Spaces/ListSpaceMembers"
+	Spaces_GetSettings_FullMethodName                = "/saturn.space.v1.Spaces/GetSettings"
+	Spaces_UpdateSettings_FullMethodName             = "/saturn.space.v1.Spaces/UpdateSettings"
+	Spaces_GetDashboardPreferences_FullMethodName    = "/saturn.space.v1.Spaces/GetDashboardPreferences"
+	Spaces_UpdateDashboardPreferences_FullMethodName = "/saturn.space.v1.Spaces/UpdateDashboardPreferences"
+	Spaces_ListSpaceAPIKeyGrants_FullMethodName      = "/saturn.space.v1.Spaces/ListSpaceAPIKeyGrants"
+	Spaces_RevokeSpaceAPIKeyGrant_FullMethodName     = "/saturn.space.v1.Spaces/RevokeSpaceAPIKeyGrant"
 )
 
 // SpacesClient is the client API for Spaces service.
@@ -63,6 +65,10 @@ type SpacesClient interface {
 	GetSettings(ctx context.Context, in *GetSettingsRequest, opts ...grpc.CallOption) (*Settings, error)
 	// Updates the configuration settings for a workspace.
 	UpdateSettings(ctx context.Context, in *UpdateSettingsRequest, opts ...grpc.CallOption) (*Settings, error)
+	// Retrieves the current user's dashboard preferences for a workspace.
+	GetDashboardPreferences(ctx context.Context, in *GetDashboardPreferencesRequest, opts ...grpc.CallOption) (*DashboardPreferences, error)
+	// Updates the current user's dashboard preferences for a workspace.
+	UpdateDashboardPreferences(ctx context.Context, in *UpdateDashboardPreferencesRequest, opts ...grpc.CallOption) (*DashboardPreferences, error)
 	// Lists all active API key grants targeting a workspace (admin/owner only).
 	ListSpaceAPIKeyGrants(ctx context.Context, in *ListSpaceAPIKeyGrantsRequest, opts ...grpc.CallOption) (*ListSpaceAPIKeyGrantsResponse, error)
 	// Revokes a specific API key's grant to access a workspace (admin/owner only).
@@ -187,6 +193,26 @@ func (c *spacesClient) UpdateSettings(ctx context.Context, in *UpdateSettingsReq
 	return out, nil
 }
 
+func (c *spacesClient) GetDashboardPreferences(ctx context.Context, in *GetDashboardPreferencesRequest, opts ...grpc.CallOption) (*DashboardPreferences, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DashboardPreferences)
+	err := c.cc.Invoke(ctx, Spaces_GetDashboardPreferences_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *spacesClient) UpdateDashboardPreferences(ctx context.Context, in *UpdateDashboardPreferencesRequest, opts ...grpc.CallOption) (*DashboardPreferences, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DashboardPreferences)
+	err := c.cc.Invoke(ctx, Spaces_UpdateDashboardPreferences_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *spacesClient) ListSpaceAPIKeyGrants(ctx context.Context, in *ListSpaceAPIKeyGrantsRequest, opts ...grpc.CallOption) (*ListSpaceAPIKeyGrantsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListSpaceAPIKeyGrantsResponse)
@@ -235,6 +261,10 @@ type SpacesServer interface {
 	GetSettings(context.Context, *GetSettingsRequest) (*Settings, error)
 	// Updates the configuration settings for a workspace.
 	UpdateSettings(context.Context, *UpdateSettingsRequest) (*Settings, error)
+	// Retrieves the current user's dashboard preferences for a workspace.
+	GetDashboardPreferences(context.Context, *GetDashboardPreferencesRequest) (*DashboardPreferences, error)
+	// Updates the current user's dashboard preferences for a workspace.
+	UpdateDashboardPreferences(context.Context, *UpdateDashboardPreferencesRequest) (*DashboardPreferences, error)
 	// Lists all active API key grants targeting a workspace (admin/owner only).
 	ListSpaceAPIKeyGrants(context.Context, *ListSpaceAPIKeyGrantsRequest) (*ListSpaceAPIKeyGrantsResponse, error)
 	// Revokes a specific API key's grant to access a workspace (admin/owner only).
@@ -280,6 +310,12 @@ func (UnimplementedSpacesServer) GetSettings(context.Context, *GetSettingsReques
 }
 func (UnimplementedSpacesServer) UpdateSettings(context.Context, *UpdateSettingsRequest) (*Settings, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSettings not implemented")
+}
+func (UnimplementedSpacesServer) GetDashboardPreferences(context.Context, *GetDashboardPreferencesRequest) (*DashboardPreferences, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDashboardPreferences not implemented")
+}
+func (UnimplementedSpacesServer) UpdateDashboardPreferences(context.Context, *UpdateDashboardPreferencesRequest) (*DashboardPreferences, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateDashboardPreferences not implemented")
 }
 func (UnimplementedSpacesServer) ListSpaceAPIKeyGrants(context.Context, *ListSpaceAPIKeyGrantsRequest) (*ListSpaceAPIKeyGrantsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSpaceAPIKeyGrants not implemented")
@@ -505,6 +541,42 @@ func _Spaces_UpdateSettings_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Spaces_GetDashboardPreferences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDashboardPreferencesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpacesServer).GetDashboardPreferences(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Spaces_GetDashboardPreferences_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpacesServer).GetDashboardPreferences(ctx, req.(*GetDashboardPreferencesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Spaces_UpdateDashboardPreferences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateDashboardPreferencesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SpacesServer).UpdateDashboardPreferences(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Spaces_UpdateDashboardPreferences_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SpacesServer).UpdateDashboardPreferences(ctx, req.(*UpdateDashboardPreferencesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Spaces_ListSpaceAPIKeyGrants_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListSpaceAPIKeyGrantsRequest)
 	if err := dec(in); err != nil {
@@ -591,6 +663,14 @@ var Spaces_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateSettings",
 			Handler:    _Spaces_UpdateSettings_Handler,
+		},
+		{
+			MethodName: "GetDashboardPreferences",
+			Handler:    _Spaces_GetDashboardPreferences_Handler,
+		},
+		{
+			MethodName: "UpdateDashboardPreferences",
+			Handler:    _Spaces_UpdateDashboardPreferences_Handler,
 		},
 		{
 			MethodName: "ListSpaceAPIKeyGrants",

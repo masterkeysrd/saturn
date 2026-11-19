@@ -93,6 +93,21 @@ service Spaces {
     option (google.api.method_signature) = "space_id,settings,update_mask";
   }
 
+  // Retrieves the current user's dashboard preferences for a workspace.
+  rpc GetDashboardPreferences(GetDashboardPreferencesRequest) returns (DashboardPreferences) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/dashboard-preferences"};
+    option (google.api.method_signature) = "space_id";
+  }
+
+  // Updates the current user's dashboard preferences for a workspace.
+  rpc UpdateDashboardPreferences(UpdateDashboardPreferencesRequest) returns (DashboardPreferences) {
+    option (google.api.http) = {
+      patch: "/v1/spaces/{space_id}/dashboard-preferences"
+      body: "dashboard_preferences"
+    };
+    option (google.api.method_signature) = "space_id,dashboard_preferences,update_mask";
+  }
+
   // Lists all active API key grants targeting a workspace (admin/owner only).
   rpc ListSpaceAPIKeyGrants(ListSpaceAPIKeyGrantsRequest) returns (ListSpaceAPIKeyGrantsResponse) {
     option (google.api.http) = {get: "/v1/spaces/{space_id}/api-keys"};
@@ -363,6 +378,53 @@ message UpdateSettingsRequest {
 
   // Required. The list of fields to update.
   // A mask specifying which fields (e.g. `timezone`) in the `settings` field should be updated.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. The optimistic concurrency control version expected for this update.
+  optional int64 version = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// DashboardPreferences represents a user's customizable dashboard widget layout within a workspace.
+message DashboardPreferences {
+  // Output only. The workspace's unique identifier.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string space_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The user's unique identifier.
+  // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string user_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Ordered list of enabled dashboard widget identifiers.
+  repeated string widgets = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. The optimistic concurrency control version number.
+  int64 version = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the dashboard preferences were created.
+  google.protobuf.Timestamp create_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the dashboard preferences were last updated.
+  google.protobuf.Timestamp update_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Spaces.GetDashboardPreferences.
+message GetDashboardPreferencesRequest {
+  // Required. The unique identifier of the workspace whose dashboard preferences are retrieved.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Spaces.UpdateDashboardPreferences.
+message UpdateDashboardPreferencesRequest {
+  // Required. The unique identifier of the workspace whose dashboard preferences are updated.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The dashboard preferences resource containing updated values.
+  DashboardPreferences dashboard_preferences = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The list of fields to update.
+  // A mask specifying which fields (e.g. `widgets`) in the `dashboard_preferences` field should be updated.
   google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = REQUIRED];
 
   // Optional. The optimistic concurrency control version expected for this update.

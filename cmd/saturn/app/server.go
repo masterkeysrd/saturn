@@ -191,10 +191,11 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 
 	// Wire Space service
 	spaceService := space.NewService(space.Dependencies{
-		SpaceStore:       spaceStore,
-		MemberStore:      memberStore,
-		APIKeyGrantStore: apiKeyGrantStore,
-		Settings:         settings.Bind(platformSettingsStore, space.SettingsKey),
+		SpaceStore:           spaceStore,
+		MemberStore:          memberStore,
+		APIKeyGrantStore:     apiKeyGrantStore,
+		Settings:             settings.Bind(platformSettingsStore, space.SettingsKey),
+		DashboardPreferences: settings.Bind(platformSettingsStore, space.DashboardPreferencesKey),
 	})
 
 	// Wire JWT token service

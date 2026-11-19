@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { createElement, type ReactNode } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { MemoryRouter } from "react-router-dom"
 import { MailView } from "./mail-view"
 import { MailUnreadBadge } from "./components/mail-unread-badge"
 import * as hooks from "@saturn/hooks"
@@ -900,5 +901,24 @@ describe("MailView Web Feature", () => {
     await waitFor(() => {
       expect(screen.getByTestId("inline-reply-composer")).toBeDefined()
     })
+  })
+
+  it("opens deep-linked threadId and compose modal from URL search params", async () => {
+    render(
+      <MemoryRouter
+        initialEntries={["/space/sp_1/mail?threadId=mth_101&compose=1"]}
+      >
+        <MailView />
+      </MemoryRouter>,
+      { wrapper: createWrapper() }
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("thread-reader-pane")).toBeDefined()
+    })
+    expect(screen.getByTestId("thread-subject-heading").textContent).toContain(
+      "Q3 Budget Review"
+    )
+    expect(screen.getByTestId("mail-compose-modal")).toBeDefined()
   })
 })

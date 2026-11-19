@@ -7,6 +7,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
@@ -709,4 +710,199 @@ func TestCoordinator_RevokeSpaceAPIKeyGrant(t *testing.T) {
 			t.Fatalf("expected Permission error, got %v", err)
 		}
 	})
+}
+
+func TestCoordinator_GetDashboardPreferences(t *testing.T) {
+	tests := []struct {
+		name     string
+		ctx      context.Context
+		req      *GetDashboardPreferencesRequest
+		mockFn   func(ctx context.Context, session space.Session) (*settings.Entry[space.DashboardPreferences], error)
+		want     []string
+		wantErr  bool
+		wantKind errors.Kind
+	}{
+		{
+			name: "Success",
+			ctx:  context.Background(),
+			req: &GetDashboardPreferencesRequest{
+				SpaceID: "spc_123",
+				UserID:  "usr_456",
+			},
+			mockFn: func(ctx context.Context, session space.Session) (*settings.Entry[space.DashboardPreferences], error) {
+				return &settings.Entry[space.DashboardPreferences]{
+					Target:  space.DashboardPreferencesKey.For(settings.UserSpaceScopeID(string(session.UserID), string(session.SpaceID))),
+					Value:   space.DashboardPreferences{Widgets: []string{"budget_pace", "net_worth"}},
+					Version: 1,
+				}, nil
+			},
+			want:    []string{"budget_pace", "net_worth"},
+			wantErr: false,
+		},
+		{
+			name:     "Nil request",
+			ctx:      context.Background(),
+			req:      nil,
+			wantErr:  true,
+			wantKind: errors.Invalid,
+		},
+		{
+			name: "API key without space grant denied",
+			ctx: auth.WithPrincipal(context.Background(), auth.Principal{
+				Subject:         "usr_456",
+				APIKeyID:        "apk_1",
+				GrantedSpaceIDs: []string{"spc_other"},
+			}),
+			req: &GetDashboardPreferencesRequest{
+				SpaceID: "spc_123",
+				UserID:  "usr_456",
+			},
+			wantErr:  true,
+			wantKind: errors.Permission,
+		},
+		{
+			name: "Domain error propagation",
+			ctx:  context.Background(),
+			req: &GetDashboardPreferencesRequest{
+				SpaceID: "spc_123",
+				UserID:  "usr_456",
+			},
+			mockFn: func(ctx context.Context, session space.Session) (*settings.Entry[space.DashboardPreferences], error) {
+				return nil, errors.E(errors.Permission, "denied")
+			},
+			wantErr:  true,
+			wantKind: errors.Permission,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockSpace := &SpaceServiceMock{
+				GetDashboardPreferencesFunc: tc.mockFn,
+			}
+			coord := NewCoordinator(Dependencies{SpaceService: mockSpace})
+			entry, err := coord.GetDashboardPreferences(tc.ctx, tc.req)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if errors.KindOf(err) != tc.wantKind {
+					t.Fatalf("expected kind %v, got %v", tc.wantKind, errors.KindOf(err))
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(entry.Value.Widgets) != len(tc.want) {
+				t.Fatalf("expected widgets %v, got %v", tc.want, entry.Value.Widgets)
+			}
+			for i := range tc.want {
+				if entry.Value.Widgets[i] != tc.want[i] {
+					t.Errorf("widget[%d] = %q, want %q", i, entry.Value.Widgets[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestCoordinator_UpdateDashboardPreferences(t *testing.T) {
+	tests := []struct {
+		name     string
+		ctx      context.Context
+		req      *UpdateDashboardPreferencesRequest
+		mockFn   func(ctx context.Context, session space.Session, incoming *space.DashboardPreferences, mask []string, expectedVersion *int64) (*settings.Entry[space.DashboardPreferences], error)
+		want     []string
+		wantVer  int64
+		wantErr  bool
+		wantKind errors.Kind
+	}{
+		{
+			name: "Success",
+			ctx:  context.Background(),
+			req: &UpdateDashboardPreferencesRequest{
+				SpaceID:              "spc_123",
+				UserID:               "usr_456",
+				DashboardPreferences: &space.DashboardPreferences{Widgets: []string{"workflow_runs", "budget_pace"}},
+				UpdateMask:           []string{"widgets"},
+				ExpectedVersion:      new(int64(1)),
+			},
+			mockFn: func(ctx context.Context, session space.Session, incoming *space.DashboardPreferences, mask []string, expectedVersion *int64) (*settings.Entry[space.DashboardPreferences], error) {
+				return &settings.Entry[space.DashboardPreferences]{
+					Target:  space.DashboardPreferencesKey.For(settings.UserSpaceScopeID(string(session.UserID), string(session.SpaceID))),
+					Value:   *incoming,
+					Version: 2,
+				}, nil
+			},
+			want:    []string{"workflow_runs", "budget_pace"},
+			wantVer: 2,
+			wantErr: false,
+		},
+		{
+			name:     "Nil request",
+			ctx:      context.Background(),
+			req:      nil,
+			wantErr:  true,
+			wantKind: errors.Invalid,
+		},
+		{
+			name: "API key without space grant denied",
+			ctx: auth.WithPrincipal(context.Background(), auth.Principal{
+				Subject:         "usr_456",
+				APIKeyID:        "apk_1",
+				GrantedSpaceIDs: []string{"spc_other"},
+			}),
+			req: &UpdateDashboardPreferencesRequest{
+				SpaceID:              "spc_123",
+				UserID:               "usr_456",
+				DashboardPreferences: &space.DashboardPreferences{Widgets: []string{"net_worth"}},
+				UpdateMask:           []string{"widgets"},
+			},
+			wantErr:  true,
+			wantKind: errors.Permission,
+		},
+		{
+			name: "Domain error propagation",
+			ctx:  context.Background(),
+			req: &UpdateDashboardPreferencesRequest{
+				SpaceID:              "spc_123",
+				UserID:               "usr_456",
+				DashboardPreferences: &space.DashboardPreferences{Widgets: []string{"net_worth"}},
+				UpdateMask:           []string{"widgets"},
+			},
+			mockFn: func(ctx context.Context, session space.Session, incoming *space.DashboardPreferences, mask []string, expectedVersion *int64) (*settings.Entry[space.DashboardPreferences], error) {
+				return nil, errors.E(errors.Conflict, "modified concurrently")
+			},
+			wantErr:  true,
+			wantKind: errors.Conflict,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockSpace := &SpaceServiceMock{
+				UpdateDashboardPreferencesFunc: tc.mockFn,
+			}
+			coord := NewCoordinator(Dependencies{SpaceService: mockSpace})
+			entry, err := coord.UpdateDashboardPreferences(tc.ctx, tc.req)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if errors.KindOf(err) != tc.wantKind {
+					t.Fatalf("expected kind %v, got %v", tc.wantKind, errors.KindOf(err))
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if entry.Version != tc.wantVer {
+				t.Errorf("expected version %d, got %d", tc.wantVer, entry.Version)
+			}
+			if len(entry.Value.Widgets) != len(tc.want) {
+				t.Fatalf("expected widgets %v, got %v", tc.want, entry.Value.Widgets)
+			}
+		})
+	}
 }

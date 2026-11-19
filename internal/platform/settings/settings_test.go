@@ -323,6 +323,74 @@ func TestPostgresStore(t *testing.T) {
 	})
 }
 
+func TestUserSpaceScopeID(t *testing.T) {
+	tests := []struct {
+		name     string
+		userID   string
+		spaceID  string
+		expected string
+	}{
+		{
+			name:     "valid user and space IDs",
+			userID:   "usr_123",
+			spaceID:  "spc_456",
+			expected: "usr_123:spc_456",
+		},
+		{
+			name:     "empty user ID",
+			userID:   "",
+			spaceID:  "spc_456",
+			expected: ":spc_456",
+		},
+		{
+			name:     "empty space ID",
+			userID:   "usr_123",
+			spaceID:  "",
+			expected: "usr_123:",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, settings.UserSpaceScopeID(tc.userID, tc.spaceID))
+		})
+	}
+}
+
+func TestSettings_ScopeUserSpace_Lifecycle(t *testing.T) {
+	ctx := context.Background()
+	store := newMemoryStore()
+	userSpaceKey := settings.NewKey[TestSpaceSettings](settings.ScopeUserSpace, "dashboard")
+	client := settings.Bind(store, userSpaceKey)
+
+	scopeA := settings.UserSpaceScopeID("usr_1", "spc_1")
+	scopeB := settings.UserSpaceScopeID("usr_1", "spc_2")
+	scopeC := settings.UserSpaceScopeID("usr_2", "spc_1")
+
+	assert.Equal(t, settings.ScopeUserSpace, client.Key().ScopeType())
+	assert.Equal(t, "dashboard", client.Key().Namespace())
+
+	entryA, err := client.GetOrDefault(ctx, scopeA, TestSpaceSettings{Timezone: "UTC"})
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), entryA.Version)
+
+	entryA.Value.Timezone = "America/New_York"
+	require.NoError(t, client.Save(ctx, entryA))
+	assert.Equal(t, int64(1), entryA.Version)
+
+	// Different space for same user remains isolated
+	entryB, err := client.GetOrDefault(ctx, scopeB, TestSpaceSettings{Timezone: "UTC"})
+	require.NoError(t, err)
+	assert.Equal(t, "UTC", entryB.Value.Timezone)
+	assert.Equal(t, int64(0), entryB.Version)
+
+	// Different user in same space remains isolated
+	entryC, err := client.GetOrDefault(ctx, scopeC, TestSpaceSettings{Timezone: "UTC"})
+	require.NoError(t, err)
+	assert.Equal(t, "UTC", entryC.Value.Timezone)
+	assert.Equal(t, int64(0), entryC.Version)
+}
+
 // memoryStore provides a test double implementing settings.Store.
 type memoryStore struct {
 	mu      sync.RWMutex

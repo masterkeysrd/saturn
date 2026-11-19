@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react"
+import { useInRouterContext, useSearchParams } from "react-router-dom"
 import {
   useInfiniteMailThreads,
   useModifyThread,
@@ -23,7 +24,41 @@ import { MailComposer } from "./components/mail-composer"
 import { EventDialog } from "@/features/calendar/components/event-dialog"
 import { toast } from "@/components/ui/toast"
 
+function MailSearchParamsSync({
+  onSelectThreadId,
+  onOpenCompose,
+}: {
+  onSelectThreadId: (threadId: string) => void
+  onOpenCompose: () => void
+}) {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const paramThreadId = searchParams.get("threadId")
+  const paramCompose = searchParams.get("compose")
+  const lastThreadIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (paramThreadId && paramThreadId !== lastThreadIdRef.current) {
+      lastThreadIdRef.current = paramThreadId
+      onSelectThreadId(paramThreadId)
+    } else if (!paramThreadId) {
+      lastThreadIdRef.current = null
+    }
+  }, [paramThreadId, onSelectThreadId])
+
+  useEffect(() => {
+    if (paramCompose === "1" || paramCompose === "true") {
+      onOpenCompose()
+      const next = new URLSearchParams(searchParams)
+      next.delete("compose")
+      setSearchParams(next, { replace: true })
+    }
+  }, [paramCompose, searchParams, setSearchParams, onOpenCompose])
+
+  return null
+}
+
 export function MailView() {
+  const inRouter = useInRouterContext()
   const { spaceId } = useActiveSpaceContext()
   const { data: accountsData } = useConnectedAccounts()
   const accounts = useMemo(() => {
@@ -382,6 +417,12 @@ export function MailView() {
       data-testid="mail-main-view"
       className="flex h-full min-h-0 w-full flex-1 overflow-hidden bg-background"
     >
+      {inRouter && (
+        <MailSearchParamsSync
+          onSelectThreadId={setSelectedThreadId}
+          onOpenCompose={() => setComposeOpen(true)}
+        />
+      )}
       {/* Pane 1: Mailbox & Accounts Rail */}
       <MailboxRail
         selectedRole={selectedRole}

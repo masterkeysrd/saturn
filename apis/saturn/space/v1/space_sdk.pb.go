@@ -231,6 +231,46 @@ func (c *Client) UpdateSettings(ctx context.Context, req *UpdateSettingsRequest)
 	return &resp, nil
 }
 
+// GetDashboardPreferences executes GET /api/v1/spaces/{space_id}/dashboard-preferences.
+func (c *Client) GetDashboardPreferences(ctx context.Context, req *GetDashboardPreferencesRequest) (*DashboardPreferences, error) {
+	var resp DashboardPreferences
+	path := fmt.Sprintf("/api/v1/spaces/%s/dashboard-preferences", req.GetSpaceId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// UpdateDashboardPreferences executes PATCH /api/v1/spaces/{space_id}/dashboard-preferences.
+func (c *Client) UpdateDashboardPreferences(ctx context.Context, req *UpdateDashboardPreferencesRequest) (*DashboardPreferences, error) {
+	var resp DashboardPreferences
+	path := fmt.Sprintf("/api/v1/spaces/%s/dashboard-preferences", req.GetSpaceId())
+	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetDashboardPreferences()
+	if payload == nil {
+		return nil, fmt.Errorf("dashboard_preferences payload is required")
+	}
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 // ListSpaceAPIKeyGrants executes GET /api/v1/spaces/{space_id}/api-keys.
 func (c *Client) ListSpaceAPIKeyGrants(ctx context.Context, req *ListSpaceAPIKeyGrantsRequest) (*ListSpaceAPIKeyGrantsResponse, error) {
 	var resp ListSpaceAPIKeyGrantsResponse

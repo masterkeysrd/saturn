@@ -220,6 +220,54 @@ func (l *LoggingCoordinator) UpdateSettings(ctx context.Context, req *UpdateSett
 	return res, nil
 }
 
+// GetDashboardPreferences executes next.GetDashboardPreferences and logs execution duration and errors.
+func (l *LoggingCoordinator) GetDashboardPreferences(ctx context.Context, req *GetDashboardPreferencesRequest) (*settings.Entry[space.DashboardPreferences], error) {
+	start := time.Now()
+	res, err := l.next.GetDashboardPreferences(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "space.GetDashboardPreferences failed",
+			log.String("component", "space"),
+			log.String("operation", "GetDashboardPreferences"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "space.GetDashboardPreferences completed",
+		log.String("component", "space"),
+		log.String("operation", "GetDashboardPreferences"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// UpdateDashboardPreferences executes next.UpdateDashboardPreferences and logs execution duration and errors.
+func (l *LoggingCoordinator) UpdateDashboardPreferences(ctx context.Context, req *UpdateDashboardPreferencesRequest) (*settings.Entry[space.DashboardPreferences], error) {
+	start := time.Now()
+	res, err := l.next.UpdateDashboardPreferences(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "space.UpdateDashboardPreferences failed",
+			log.String("component", "space"),
+			log.String("operation", "UpdateDashboardPreferences"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "space.UpdateDashboardPreferences completed",
+		log.String("component", "space"),
+		log.String("operation", "UpdateDashboardPreferences"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
 // RevokeSpaceAPIKeyGrant executes next.RevokeSpaceAPIKeyGrant and logs execution duration and errors.
 func (l *LoggingCoordinator) RevokeSpaceAPIKeyGrant(ctx context.Context, req *RevokeSpaceAPIKeyGrantRequest) error {
 	start := time.Now()

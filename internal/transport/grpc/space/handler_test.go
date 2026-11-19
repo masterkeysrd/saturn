@@ -34,9 +34,11 @@ type mockSpaceService struct {
 	updateSpaceMemberRoleFunc func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
 	updateSpaceMemberFunc     func(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error)
 	listSpaceMembersFunc      func(ctx context.Context, session space.Session, filter *space.ListMembersFilter) (*paging.Page[*space.Member], error)
-	getSettingsFunc           func(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error)
-	updateSettingsFunc        func(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error)
-	listSpaceAPIKeyGrantsFunc func(ctx context.Context, session space.Session) ([]*space.APIKeyGrant, error)
+	getSettingsFunc                 func(ctx context.Context, session space.Session) (*settings.Entry[space.Settings], error)
+	updateSettingsFunc              func(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error)
+	getDashboardPreferencesFunc     func(ctx context.Context, session space.Session) (*settings.Entry[space.DashboardPreferences], error)
+	updateDashboardPreferencesFunc  func(ctx context.Context, session space.Session, incoming *space.DashboardPreferences, mask []string, expectedVersion *int64) (*settings.Entry[space.DashboardPreferences], error)
+	listSpaceAPIKeyGrantsFunc       func(ctx context.Context, session space.Session) ([]*space.APIKeyGrant, error)
 	revokeSpaceAPIKeyFunc     func(ctx context.Context, session space.Session, apiKeyID string) error
 }
 
@@ -146,6 +148,28 @@ func (m *mockSpaceService) UpdateSettings(ctx context.Context, session space.Ses
 		Target:  space.SettingsKey.For(string(session.SpaceID)),
 		Value:   *incoming,
 		Version: 2,
+	}, nil
+}
+
+func (m *mockSpaceService) GetDashboardPreferences(ctx context.Context, session space.Session) (*settings.Entry[space.DashboardPreferences], error) {
+	if m.getDashboardPreferencesFunc != nil {
+		return m.getDashboardPreferencesFunc(ctx, session)
+	}
+	return &settings.Entry[space.DashboardPreferences]{
+		Target:  space.DashboardPreferencesKey.For(settings.UserSpaceScopeID(string(session.UserID), string(session.SpaceID))),
+		Value:   space.DefaultDashboardPreferences(),
+		Version: 0,
+	}, nil
+}
+
+func (m *mockSpaceService) UpdateDashboardPreferences(ctx context.Context, session space.Session, incoming *space.DashboardPreferences, mask []string, expectedVersion *int64) (*settings.Entry[space.DashboardPreferences], error) {
+	if m.updateDashboardPreferencesFunc != nil {
+		return m.updateDashboardPreferencesFunc(ctx, session, incoming, mask, expectedVersion)
+	}
+	return &settings.Entry[space.DashboardPreferences]{
+		Target:  space.DashboardPreferencesKey.For(settings.UserSpaceScopeID(string(session.UserID), string(session.SpaceID))),
+		Value:   *incoming,
+		Version: 1,
 	}, nil
 }
 
@@ -807,5 +831,183 @@ func TestHandler_SpaceAPIKeyGrants(t *testing.T) {
 
 	if _, err := h.RevokeSpaceAPIKeyGrant(ctx, &spacev1.RevokeSpaceAPIKeyGrantRequest{SpaceId: "spc_1", ApiKeyId: "apk_1"}); err != nil {
 		t.Fatalf("RevokeSpaceAPIKeyGrant failed: %v", err)
+	}
+}
+
+func TestHandler_GetDashboardPreferences(t *testing.T) {
+	interceptor := interceptors.ErrorUnaryInterceptor()
+	authedCtx := auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_member"})
+
+	tests := []struct {
+		name     string
+		ctx      context.Context
+		req      *spacev1.GetDashboardPreferencesRequest
+		mockFn   func(ctx context.Context, session space.Session) (*settings.Entry[space.DashboardPreferences], error)
+		wantCode codes.Code
+		want     []string
+	}{
+		{
+			name: "success",
+			ctx:  authedCtx,
+			req:  &spacev1.GetDashboardPreferencesRequest{SpaceId: "spc_1"},
+			mockFn: func(ctx context.Context, session space.Session) (*settings.Entry[space.DashboardPreferences], error) {
+				return &settings.Entry[space.DashboardPreferences]{
+					Target:     space.DashboardPreferencesKey.For(settings.UserSpaceScopeID(string(session.UserID), string(session.SpaceID))),
+					Value:      space.DashboardPreferences{Widgets: []string{"budget_pace", "net_worth"}},
+					Version:    3,
+					CreateTime: time.Now(),
+					UpdateTime: time.Now(),
+				}, nil
+			},
+			want: []string{"budget_pace", "net_worth"},
+		},
+		{
+			name:     "unauthenticated when principal missing",
+			ctx:      context.Background(),
+			req:      &spacev1.GetDashboardPreferencesRequest{SpaceId: "spc_1"},
+			wantCode: codes.Unauthenticated,
+		},
+		{
+			name: "permission denied propagated",
+			ctx:  authedCtx,
+			req:  &spacev1.GetDashboardPreferencesRequest{SpaceId: "spc_1"},
+			mockFn: func(ctx context.Context, session space.Session) (*settings.Entry[space.DashboardPreferences], error) {
+				return nil, errors.E(errors.Permission, space.InsufficientRole, "denied")
+			},
+			wantCode: codes.PermissionDenied,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockSpace := &mockSpaceService{getDashboardPreferencesFunc: tc.mockFn}
+			mockID := &mockIdentityService{}
+			coordinator := spaceapp.NewCoordinator(spaceapp.Dependencies{SpaceService: mockSpace, IdentityService: mockID})
+			aggregator := spaceaggregator.NewService(mockSpace, mockID)
+			handler := spacegrpc.NewHandler(coordinator, aggregator)
+
+			info := &grpc.UnaryServerInfo{FullMethod: "/saturn.space.v1.Spaces/GetDashboardPreferences"}
+			resp, err := interceptor(tc.ctx, tc.req, info, func(c context.Context, r any) (any, error) {
+				return handler.GetDashboardPreferences(c, r.(*spacev1.GetDashboardPreferencesRequest))
+			})
+			if tc.wantCode != codes.OK {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if status.Code(err) != tc.wantCode {
+					t.Fatalf("expected status code %v, got %v (%v)", tc.wantCode, status.Code(err), err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			got := resp.(*spacev1.DashboardPreferences)
+			if got.GetSpaceId() != "spc_1" || got.GetUserId() != "usr_member" {
+				t.Errorf("unexpected space/user ids: space=%q user=%q", got.GetSpaceId(), got.GetUserId())
+			}
+			if got.GetVersion() != 3 {
+				t.Errorf("expected version 3, got %d", got.GetVersion())
+			}
+			if len(got.GetWidgets()) != len(tc.want) {
+				t.Fatalf("expected widgets %v, got %v", tc.want, got.GetWidgets())
+			}
+		})
+	}
+}
+
+func TestHandler_UpdateDashboardPreferences(t *testing.T) {
+	interceptor := interceptors.ErrorUnaryInterceptor()
+	authedCtx := auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_viewer"})
+
+	tests := []struct {
+		name     string
+		ctx      context.Context
+		req      *spacev1.UpdateDashboardPreferencesRequest
+		mockFn   func(ctx context.Context, session space.Session, incoming *space.DashboardPreferences, mask []string, expectedVersion *int64) (*settings.Entry[space.DashboardPreferences], error)
+		wantCode codes.Code
+		want     []string
+	}{
+		{
+			name: "success",
+			ctx:  authedCtx,
+			req: &spacev1.UpdateDashboardPreferencesRequest{
+				SpaceId: "spc_1",
+				DashboardPreferences: &spacev1.DashboardPreferences{
+					Widgets: []string{"budget_pace", "priority_mail"},
+				},
+				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"widgets"}},
+				Version:    new(int64(1)),
+			},
+			mockFn: func(ctx context.Context, session space.Session, incoming *space.DashboardPreferences, mask []string, expectedVersion *int64) (*settings.Entry[space.DashboardPreferences], error) {
+				return &settings.Entry[space.DashboardPreferences]{
+					Target:     space.DashboardPreferencesKey.For(settings.UserSpaceScopeID(string(session.UserID), string(session.SpaceID))),
+					Value:      *incoming,
+					Version:    2,
+					CreateTime: time.Now(),
+					UpdateTime: time.Now(),
+				}, nil
+			},
+			want: []string{"budget_pace", "priority_mail"},
+		},
+		{
+			name: "unauthenticated when principal missing",
+			ctx:  context.Background(),
+			req: &spacev1.UpdateDashboardPreferencesRequest{
+				SpaceId:              "spc_1",
+				DashboardPreferences: &spacev1.DashboardPreferences{Widgets: []string{"net_worth"}},
+			},
+			wantCode: codes.Unauthenticated,
+		},
+		{
+			name: "invalid widget error mapped to InvalidArgument",
+			ctx:  authedCtx,
+			req: &spacev1.UpdateDashboardPreferencesRequest{
+				SpaceId:              "spc_1",
+				DashboardPreferences: &spacev1.DashboardPreferences{Widgets: []string{"bad_widget"}},
+				UpdateMask:           &fieldmaskpb.FieldMask{Paths: []string{"widgets"}},
+			},
+			mockFn: func(ctx context.Context, session space.Session, incoming *space.DashboardPreferences, mask []string, expectedVersion *int64) (*settings.Entry[space.DashboardPreferences], error) {
+				return nil, errors.E(errors.Invalid, "unsupported dashboard widget")
+			},
+			wantCode: codes.InvalidArgument,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockSpace := &mockSpaceService{updateDashboardPreferencesFunc: tc.mockFn}
+			mockID := &mockIdentityService{}
+			coordinator := spaceapp.NewCoordinator(spaceapp.Dependencies{SpaceService: mockSpace, IdentityService: mockID})
+			aggregator := spaceaggregator.NewService(mockSpace, mockID)
+			handler := spacegrpc.NewHandler(coordinator, aggregator)
+
+			info := &grpc.UnaryServerInfo{FullMethod: "/saturn.space.v1.Spaces/UpdateDashboardPreferences"}
+			resp, err := interceptor(tc.ctx, tc.req, info, func(c context.Context, r any) (any, error) {
+				return handler.UpdateDashboardPreferences(c, r.(*spacev1.UpdateDashboardPreferencesRequest))
+			})
+			if tc.wantCode != codes.OK {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if status.Code(err) != tc.wantCode {
+					t.Fatalf("expected status code %v, got %v (%v)", tc.wantCode, status.Code(err), err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			got := resp.(*spacev1.DashboardPreferences)
+			if got.GetSpaceId() != "spc_1" || got.GetUserId() != "usr_viewer" {
+				t.Errorf("unexpected space/user ids: space=%q user=%q", got.GetSpaceId(), got.GetUserId())
+			}
+			if got.GetVersion() != 2 {
+				t.Errorf("expected version 2, got %d", got.GetVersion())
+			}
+			if len(got.GetWidgets()) != len(tc.want) {
+				t.Fatalf("expected widgets %v, got %v", tc.want, got.GetWidgets())
+			}
+		})
 	}
 }

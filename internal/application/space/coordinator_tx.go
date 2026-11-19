@@ -186,6 +186,46 @@ func (t *TransactionalCoordinator) UpdateSettings(ctx context.Context, req *Upda
 	return res, nil
 }
 
+// GetDashboardPreferences executes next.GetDashboardPreferences inside a database transaction.
+func (t *TransactionalCoordinator) GetDashboardPreferences(ctx context.Context, req *GetDashboardPreferencesRequest) (*settings.Entry[space.DashboardPreferences], error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.GetDashboardPreferences(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// UpdateDashboardPreferences executes next.UpdateDashboardPreferences inside a database transaction.
+func (t *TransactionalCoordinator) UpdateDashboardPreferences(ctx context.Context, req *UpdateDashboardPreferencesRequest) (*settings.Entry[space.DashboardPreferences], error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.UpdateDashboardPreferences(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 // RevokeSpaceAPIKeyGrant executes next.RevokeSpaceAPIKeyGrant inside a database transaction.
 func (t *TransactionalCoordinator) RevokeSpaceAPIKeyGrant(ctx context.Context, req *RevokeSpaceAPIKeyGrantRequest) error {
 	ctx, tx, err := t.txr.Begin(ctx)

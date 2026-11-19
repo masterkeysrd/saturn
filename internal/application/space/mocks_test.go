@@ -40,6 +40,12 @@ type SpaceServiceMock struct {
 	// UpdateSettingsFunc mocks the UpdateSettings method.
 	UpdateSettingsFunc func(ctx context.Context, session space.Session, incoming *space.Settings, mask []string, expectedVersion *int64) (*settings.Entry[space.Settings], error)
 
+	// GetDashboardPreferencesFunc mocks the GetDashboardPreferences method.
+	GetDashboardPreferencesFunc func(ctx context.Context, session space.Session) (*settings.Entry[space.DashboardPreferences], error)
+
+	// UpdateDashboardPreferencesFunc mocks the UpdateDashboardPreferences method.
+	UpdateDashboardPreferencesFunc func(ctx context.Context, session space.Session, incoming *space.DashboardPreferences, mask []string, expectedVersion *int64) (*settings.Entry[space.DashboardPreferences], error)
+
 	// RevokeSpaceAPIKeyGrantFunc mocks the RevokeSpaceAPIKeyGrant method.
 	RevokeSpaceAPIKeyGrantFunc func(ctx context.Context, session space.Session, apiKeyID string) error
 
@@ -86,21 +92,34 @@ type SpaceServiceMock struct {
 			Mask            []string
 			ExpectedVersion *int64
 		}
+		GetDashboardPreferences []struct {
+			Ctx     context.Context
+			Session space.Session
+		}
+		UpdateDashboardPreferences []struct {
+			Ctx             context.Context
+			Session         space.Session
+			Incoming        *space.DashboardPreferences
+			Mask            []string
+			ExpectedVersion *int64
+		}
 		RevokeSpaceAPIKeyGrant []struct {
 			Ctx      context.Context
 			Session  space.Session
 			ApiKeyID string
 		}
 	}
-	lockCreateSpace            sync.RWMutex
-	lockUpdateSpace            sync.RWMutex
-	lockDeleteSpace            sync.RWMutex
-	lockAddSpaceMember         sync.RWMutex
-	lockRemoveSpaceMember      sync.RWMutex
-	lockUpdateSpaceMember      sync.RWMutex
-	lockGetSettings            sync.RWMutex
-	lockUpdateSettings         sync.RWMutex
-	lockRevokeSpaceAPIKeyGrant sync.RWMutex
+	lockCreateSpace                sync.RWMutex
+	lockUpdateSpace                sync.RWMutex
+	lockDeleteSpace                sync.RWMutex
+	lockAddSpaceMember             sync.RWMutex
+	lockRemoveSpaceMember          sync.RWMutex
+	lockUpdateSpaceMember          sync.RWMutex
+	lockGetSettings                sync.RWMutex
+	lockUpdateSettings             sync.RWMutex
+	lockGetDashboardPreferences    sync.RWMutex
+	lockUpdateDashboardPreferences sync.RWMutex
+	lockRevokeSpaceAPIKeyGrant     sync.RWMutex
 }
 
 // CreateSpace calls CreateSpaceFunc.
@@ -344,6 +363,69 @@ func (mock *SpaceServiceMock) UpdateSettingsCalls() []struct {
 	mock.lockUpdateSettings.RLock()
 	defer mock.lockUpdateSettings.RUnlock()
 	return mock.calls.UpdateSettings
+}
+
+// GetDashboardPreferences calls GetDashboardPreferencesFunc.
+func (mock *SpaceServiceMock) GetDashboardPreferences(ctx context.Context, session space.Session) (*settings.Entry[space.DashboardPreferences], error) {
+	if mock.GetDashboardPreferencesFunc == nil {
+		panic("SpaceServiceMock.GetDashboardPreferencesFunc: method is nil but SpaceService.GetDashboardPreferences was just called")
+	}
+	mock.lockGetDashboardPreferences.Lock()
+	mock.calls.GetDashboardPreferences = append(mock.calls.GetDashboardPreferences, struct {
+		Ctx     context.Context
+		Session space.Session
+	}{
+		Ctx:     ctx,
+		Session: session,
+	})
+	mock.lockGetDashboardPreferences.Unlock()
+	return mock.GetDashboardPreferencesFunc(ctx, session)
+}
+
+// GetDashboardPreferencesCalls returns all calls made to GetDashboardPreferences.
+func (mock *SpaceServiceMock) GetDashboardPreferencesCalls() []struct {
+	Ctx     context.Context
+	Session space.Session
+} {
+	mock.lockGetDashboardPreferences.RLock()
+	defer mock.lockGetDashboardPreferences.RUnlock()
+	return mock.calls.GetDashboardPreferences
+}
+
+// UpdateDashboardPreferences calls UpdateDashboardPreferencesFunc.
+func (mock *SpaceServiceMock) UpdateDashboardPreferences(ctx context.Context, session space.Session, incoming *space.DashboardPreferences, mask []string, expectedVersion *int64) (*settings.Entry[space.DashboardPreferences], error) {
+	if mock.UpdateDashboardPreferencesFunc == nil {
+		panic("SpaceServiceMock.UpdateDashboardPreferencesFunc: method is nil but SpaceService.UpdateDashboardPreferences was just called")
+	}
+	mock.lockUpdateDashboardPreferences.Lock()
+	mock.calls.UpdateDashboardPreferences = append(mock.calls.UpdateDashboardPreferences, struct {
+		Ctx             context.Context
+		Session         space.Session
+		Incoming        *space.DashboardPreferences
+		Mask            []string
+		ExpectedVersion *int64
+	}{
+		Ctx:             ctx,
+		Session:         session,
+		Incoming:        incoming,
+		Mask:            mask,
+		ExpectedVersion: expectedVersion,
+	})
+	mock.lockUpdateDashboardPreferences.Unlock()
+	return mock.UpdateDashboardPreferencesFunc(ctx, session, incoming, mask, expectedVersion)
+}
+
+// UpdateDashboardPreferencesCalls returns all calls made to UpdateDashboardPreferences.
+func (mock *SpaceServiceMock) UpdateDashboardPreferencesCalls() []struct {
+	Ctx             context.Context
+	Session         space.Session
+	Incoming        *space.DashboardPreferences
+	Mask            []string
+	ExpectedVersion *int64
+} {
+	mock.lockUpdateDashboardPreferences.RLock()
+	defer mock.lockUpdateDashboardPreferences.RUnlock()
+	return mock.calls.UpdateDashboardPreferences
 }
 
 // RevokeSpaceAPIKeyGrant calls RevokeSpaceAPIKeyGrantFunc.

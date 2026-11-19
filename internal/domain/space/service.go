@@ -11,10 +11,11 @@ import (
 
 // Dependencies holds all storage interfaces and clients required by the Service.
 type Dependencies struct {
-	SpaceStore       SpaceStore
-	MemberStore      MemberStore
-	APIKeyGrantStore APIKeyGrantStore
-	Settings         SettingsClient
+	SpaceStore           SpaceStore
+	MemberStore          MemberStore
+	APIKeyGrantStore     APIKeyGrantStore
+	Settings             SettingsClient
+	DashboardPreferences DashboardPreferencesClient
 }
 
 // Service handles space business logic.
@@ -416,6 +417,72 @@ func (s *Service) UpdateSettings(ctx context.Context, session Session, incoming 
 	}
 
 	if err := s.deps.Settings.Save(ctx, entry); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	return entry, nil
+}
+
+// GetDashboardPreferences retrieves the caller's dashboard widget layout for a workspace.
+// Any active member of the workspace (including viewers) may read their own preferences.
+func (s *Service) GetDashboardPreferences(ctx context.Context, session Session) (*settings.Entry[DashboardPreferences], error) {
+	const op errors.Op = "domain/space.GetDashboardPreferences"
+
+	if session.SpaceID == "" {
+		return nil, errors.E(op, errors.Invalid, "space_id is required")
+	}
+	if session.UserID == "" {
+		return nil, errors.E(op, errors.Invalid, "user_id is required")
+	}
+
+	if _, err := s.authorize(ctx, session); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	scopeID := settings.UserSpaceScopeID(string(session.UserID), string(session.SpaceID))
+	entry, err := s.deps.DashboardPreferences.GetOrDefault(ctx, scopeID, DefaultDashboardPreferences())
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	if len(entry.Value.Widgets) == 0 {
+		entry.Value = DefaultDashboardPreferences()
+	}
+
+	return entry, nil
+}
+
+// UpdateDashboardPreferences updates the caller's dashboard widget layout for a workspace.
+// Any active member of the workspace (including viewers) may update their own preferences.
+func (s *Service) UpdateDashboardPreferences(ctx context.Context, session Session, incoming *DashboardPreferences, mask []string, expectedVersion *int64) (*settings.Entry[DashboardPreferences], error) {
+	const op errors.Op = "domain/space.UpdateDashboardPreferences"
+
+	if session.SpaceID == "" {
+		return nil, errors.E(op, errors.Invalid, "space_id is required")
+	}
+	if session.UserID == "" {
+		return nil, errors.E(op, errors.Invalid, "user_id is required")
+	}
+
+	if _, err := s.authorize(ctx, session); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	scopeID := settings.UserSpaceScopeID(string(session.UserID), string(session.SpaceID))
+	entry, err := s.deps.DashboardPreferences.GetOrDefault(ctx, scopeID, DefaultDashboardPreferences())
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	if expectedVersion != nil && *expectedVersion > 0 && *expectedVersion != entry.Version {
+		return nil, errors.E(op, errors.Conflict, VersionMismatch, "dashboard preferences were modified concurrently")
+	}
+
+	if err := entry.Value.ApplyPatch(incoming, mask); err != nil {
+		return nil, errors.E(op, errors.Invalid, err)
+	}
+
+	if err := s.deps.DashboardPreferences.Save(ctx, entry); err != nil {
 		return nil, errors.E(op, err)
 	}
 

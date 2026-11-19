@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { createElement, type ReactNode } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { MemoryRouter } from "react-router-dom"
 import { CalendarView } from "./calendar-view"
 import * as hooks from "@saturn/hooks"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
@@ -682,5 +683,20 @@ describe("CalendarView Component", () => {
     render(<CalendarView />, { wrapper: createWrapper() })
     fireEvent.click(screen.getByTestId("month-more-2026-10-20"))
     expect(screen.getByTestId("day-view-container")).toBeDefined()
+  })
+
+  it("focuses target date and view from URL search params", async () => {
+    render(
+      <MemoryRouter
+        initialEntries={["/space/sp_1/calendar?date=2026-10-20&view=day"]}
+      >
+        <CalendarView />
+      </MemoryRouter>,
+      { wrapper: createWrapper() }
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("day-view-container")).toBeDefined()
+    })
   })
 })

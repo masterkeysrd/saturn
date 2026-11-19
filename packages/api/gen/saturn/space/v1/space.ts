@@ -378,6 +378,73 @@ export interface UpdateSettingsRequest {
 }
 
 /**
+ * DashboardPreferences represents a user's customizable dashboard widget layout within a workspace.
+ */
+export interface DashboardPreferences {
+  /**
+   * Output only. The workspace's unique identifier.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  spaceId?: string
+  /**
+   * Output only. The user's unique identifier.
+   * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  userId?: string
+  /**
+   * Optional. Ordered list of enabled dashboard widget identifiers.
+   */
+  widgets: string[]
+  /**
+   * Output only. The optimistic concurrency control version number.
+   */
+  version?: string
+  /**
+   * Output only. The timestamp when the dashboard preferences were created.
+   */
+  createTime?: string
+  /**
+   * Output only. The timestamp when the dashboard preferences were last updated.
+   */
+  updateTime?: string
+}
+
+/**
+ * Request message for Spaces.GetDashboardPreferences.
+ */
+export interface GetDashboardPreferencesRequest {
+  /**
+   * Required. The unique identifier of the workspace whose dashboard preferences are retrieved.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  spaceId: string
+}
+
+/**
+ * Request message for Spaces.UpdateDashboardPreferences.
+ */
+export interface UpdateDashboardPreferencesRequest {
+  /**
+   * Required. The unique identifier of the workspace whose dashboard preferences are updated.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  spaceId: string
+  /**
+   * Required. The dashboard preferences resource containing updated values.
+   */
+  dashboardPreferences: DashboardPreferences
+  /**
+   * Required. The list of fields to update.
+   * A mask specifying which fields (e.g. `widgets`) in the `dashboard_preferences` field should be updated.
+   */
+  updateMask: { paths?: string[] }
+  /**
+   * Optional. The optimistic concurrency control version expected for this update.
+   */
+  version?: string
+}
+
+/**
  * APIKeyGrant represents an API key access grant scoped to a specific workspace.
  */
 export interface APIKeyGrant {
@@ -787,6 +854,69 @@ export function useUpdateSettingsMutation(
     { space_id: string; req: UpdateSettingsRequest }
   >({
     mutationFn: ({ space_id, req }) => updateSettings(space_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Retrieves the current user's dashboard preferences for a workspace.
+ */
+export async function getDashboardPreferences(
+  space_id: string,
+  _req: GetDashboardPreferencesRequest
+): Promise<DashboardPreferences> {
+  return request<DashboardPreferences>({
+    method: "GET",
+    url: `/api/v1/spaces/${space_id}/dashboard-preferences`,
+  })
+}
+
+export function useGetDashboardPreferencesQuery(
+  req: GetDashboardPreferencesRequest,
+  options?: Omit<
+    UseQueryOptions<DashboardPreferences, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<DashboardPreferences, Error>({
+    queryKey: [`/api/v1/spaces/${req.spaceId}/dashboard-preferences`, req],
+    queryFn: () => getDashboardPreferences(req.spaceId, req),
+    ...options,
+  })
+}
+
+/**
+ * Updates the current user's dashboard preferences for a workspace.
+ */
+export async function updateDashboardPreferences(
+  space_id: string,
+  req: UpdateDashboardPreferencesRequest
+): Promise<DashboardPreferences> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).spaceId
+  delete (params as Record<string, unknown>).dashboardPreferences
+  return request<DashboardPreferences>({
+    method: "PATCH",
+    url: `/api/v1/spaces/${space_id}/dashboard-preferences`,
+    params: params,
+    data: req.dashboardPreferences,
+  })
+}
+
+export function useUpdateDashboardPreferencesMutation(
+  options?: UseMutationOptions<
+    DashboardPreferences,
+    Error,
+    { space_id: string; req: UpdateDashboardPreferencesRequest }
+  >
+) {
+  return useMutation<
+    DashboardPreferences,
+    Error,
+    { space_id: string; req: UpdateDashboardPreferencesRequest }
+  >({
+    mutationFn: ({ space_id, req }) =>
+      updateDashboardPreferences(space_id, req),
     ...options,
   })
 }

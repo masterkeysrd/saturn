@@ -11,6 +11,125 @@ import (
 )
 
 // Compile-time interface assertion.
+var _ DashboardPreferencesClient = (*DashboardPreferencesClientMock)(nil)
+
+// DashboardPreferencesClientMock is a mock implementation of DashboardPreferencesClient.
+type DashboardPreferencesClientMock struct {
+	// GetFunc mocks the Get method.
+	GetFunc func(ctx context.Context, scopeID string) (*settings.Entry[DashboardPreferences], error)
+
+	// GetOrDefaultFunc mocks the GetOrDefault method.
+	GetOrDefaultFunc func(ctx context.Context, scopeID string, fallback DashboardPreferences) (*settings.Entry[DashboardPreferences], error)
+
+	// SaveFunc mocks the Save method.
+	SaveFunc func(ctx context.Context, entry *settings.Entry[DashboardPreferences]) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Get []struct {
+			Ctx     context.Context
+			ScopeID string
+		}
+		GetOrDefault []struct {
+			Ctx      context.Context
+			ScopeID  string
+			Fallback DashboardPreferences
+		}
+		Save []struct {
+			Ctx   context.Context
+			Entry *settings.Entry[DashboardPreferences]
+		}
+	}
+	lockGet          sync.RWMutex
+	lockGetOrDefault sync.RWMutex
+	lockSave         sync.RWMutex
+}
+
+// Get calls GetFunc.
+func (mock *DashboardPreferencesClientMock) Get(ctx context.Context, scopeID string) (*settings.Entry[DashboardPreferences], error) {
+	if mock.GetFunc == nil {
+		panic("DashboardPreferencesClientMock.GetFunc: method is nil but DashboardPreferencesClient.Get was just called")
+	}
+	mock.lockGet.Lock()
+	mock.calls.Get = append(mock.calls.Get, struct {
+		Ctx     context.Context
+		ScopeID string
+	}{
+		Ctx:     ctx,
+		ScopeID: scopeID,
+	})
+	mock.lockGet.Unlock()
+	return mock.GetFunc(ctx, scopeID)
+}
+
+// GetCalls returns all calls made to Get.
+func (mock *DashboardPreferencesClientMock) GetCalls() []struct {
+	Ctx     context.Context
+	ScopeID string
+} {
+	mock.lockGet.RLock()
+	defer mock.lockGet.RUnlock()
+	return mock.calls.Get
+}
+
+// GetOrDefault calls GetOrDefaultFunc.
+func (mock *DashboardPreferencesClientMock) GetOrDefault(ctx context.Context, scopeID string, fallback DashboardPreferences) (*settings.Entry[DashboardPreferences], error) {
+	if mock.GetOrDefaultFunc == nil {
+		panic("DashboardPreferencesClientMock.GetOrDefaultFunc: method is nil but DashboardPreferencesClient.GetOrDefault was just called")
+	}
+	mock.lockGetOrDefault.Lock()
+	mock.calls.GetOrDefault = append(mock.calls.GetOrDefault, struct {
+		Ctx      context.Context
+		ScopeID  string
+		Fallback DashboardPreferences
+	}{
+		Ctx:      ctx,
+		ScopeID:  scopeID,
+		Fallback: fallback,
+	})
+	mock.lockGetOrDefault.Unlock()
+	return mock.GetOrDefaultFunc(ctx, scopeID, fallback)
+}
+
+// GetOrDefaultCalls returns all calls made to GetOrDefault.
+func (mock *DashboardPreferencesClientMock) GetOrDefaultCalls() []struct {
+	Ctx      context.Context
+	ScopeID  string
+	Fallback DashboardPreferences
+} {
+	mock.lockGetOrDefault.RLock()
+	defer mock.lockGetOrDefault.RUnlock()
+	return mock.calls.GetOrDefault
+}
+
+// Save calls SaveFunc.
+func (mock *DashboardPreferencesClientMock) Save(ctx context.Context, entry *settings.Entry[DashboardPreferences]) error {
+	if mock.SaveFunc == nil {
+		panic("DashboardPreferencesClientMock.SaveFunc: method is nil but DashboardPreferencesClient.Save was just called")
+	}
+	mock.lockSave.Lock()
+	mock.calls.Save = append(mock.calls.Save, struct {
+		Ctx   context.Context
+		Entry *settings.Entry[DashboardPreferences]
+	}{
+		Ctx:   ctx,
+		Entry: entry,
+	})
+	mock.lockSave.Unlock()
+	return mock.SaveFunc(ctx, entry)
+}
+
+// SaveCalls returns all calls made to Save.
+func (mock *DashboardPreferencesClientMock) SaveCalls() []struct {
+	Ctx   context.Context
+	Entry *settings.Entry[DashboardPreferences]
+} {
+	mock.lockSave.RLock()
+	defer mock.lockSave.RUnlock()
+	return mock.calls.Save
+}
+
+// Compile-time interface assertion.
 var _ SettingsClient = (*SettingsClientMock)(nil)
 
 // SettingsClientMock is a mock implementation of SettingsClient.

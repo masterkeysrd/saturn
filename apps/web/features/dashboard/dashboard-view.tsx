@@ -1,28 +1,53 @@
-import { useState, type FormEvent } from "react"
-import { useAuth } from "@/features/auth/use-auth"
-import { PageLayout } from "@/components/ui/page-layout"
-import { Home, Sparkles, ArrowRight, SendHorizontal } from "lucide-react"
-import { Link } from "react-router-dom"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useActiveSpaceContext } from "@/features/space/use-space"
+import { useMemo, useState } from "react"
+import { Link, useNavigate } from "react-router-dom"
+import {
+  ArrowRight,
+  Calendar,
+  ChevronDown,
+  PenSquare,
+  Plus,
+  ReceiptText,
+  SlidersHorizontal,
+  Sparkles,
+  Workflow,
+} from "lucide-react"
+import {
+  DASHBOARD_WIDGET_MAP,
+  normalizeDashboardWidgets,
+  type DashboardWidgetId,
+} from "@saturn/core"
+import { useGetDashboardPreferencesQuery } from "@saturn/api/gen/saturn/space/v1/space"
 import { useTimezone } from "@saturn/hooks"
-import { openAIDrawer } from "@/features/ai/lib/drawer-events"
+import { useAuth } from "@/features/auth/use-auth"
+import { useActiveSpaceContext } from "@/features/space/use-space"
+import { DocumentPage } from "@/components/ui/page-shells"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { SaturnMark } from "@/components/ui/saturn-mark"
-
-const QUICK_PROMPTS = [
-  "Summarize my spending this month",
-  "What is on my schedule this week?",
-  "Check unread emails for action items",
-]
+import { Skeleton } from "@/components/ui/skeleton"
+import { CreateTransactionSheet } from "@/features/finance/components/create-transaction-sheet"
+import { EventDialog } from "@/features/calendar/components/event-dialog"
+import { cn } from "@/lib/utils"
+import { DASHBOARD_WIDGET_COMPONENTS } from "./widgets"
+import { CustomizeDashboardSheet } from "./components/customize-dashboard-sheet"
 
 export function DashboardView() {
   const { user } = useAuth()
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
-  const [prompt, setPrompt] = useState("")
+  const navigate = useNavigate()
+  const [customizeOpen, setCustomizeOpen] = useState(false)
+  const [previewWidgets, setPreviewWidgets] = useState<
+    DashboardWidgetId[] | null
+  >(null)
+  const [txSheetOpen, setTxSheetOpen] = useState(false)
+  const [eventDialogOpen, setEventDialogOpen] = useState(false)
 
-  // Format today's date: e.g. "Saturday, July 18, 2026"
   const formattedDate = tz.formatDate(tz.now(), {
     weekday: "long",
     month: "long",
@@ -30,115 +55,172 @@ export function DashboardView() {
     year: "numeric",
   })
 
-  // Get a time-based greeting: "Good morning", "Good afternoon", or "Good evening"
   const getGreeting = () => {
-    const hour = tz.parts()?.hour ?? 0
+    const hour = tz.parts()?.hour ?? 12
     if (hour < 12) return "Good morning"
     if (hour < 18) return "Good afternoon"
     return "Good evening"
   }
 
   const firstName = user?.name?.split(" ")[0] || "User"
+  const greetingTitle = `${getGreeting()}, ${firstName}`
 
-  const handleAskSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    const trimmed = prompt.trim()
-    if (!trimmed) {
-      openAIDrawer()
-      return
-    }
-    setPrompt("")
-    openAIDrawer({ prompt: trimmed, autoSend: true })
-  }
+  const { data: preferences, isLoading: prefsLoading } =
+    useGetDashboardPreferencesQuery({ spaceId }, { enabled: Boolean(spaceId) })
 
-  return (
-    <PageLayout
-      title="Dashboard"
-      description="Welcome to your Saturn Life OS."
-      icon={Home}
-      hideHeader={true}
-    >
-      <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
-        <div className="w-full max-w-lg animate-in duration-500 zoom-in-95 fade-in">
-          {/* Branding badge */}
-          <div className="mb-8 flex animate-in justify-center duration-700 select-none zoom-in-75">
-            <SaturnMark variant="badge" size="xl" />
-          </div>
+  const activeWidgets = useMemo(
+    () => normalizeDashboardWidgets(preferences?.widgets),
+    [preferences?.widgets]
+  )
 
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            {getGreeting()}, {firstName}!
-          </h2>
+  const displayedWidgets = previewWidgets ?? activeWidgets
 
-          <p className="mt-3 font-mono text-xs font-semibold tracking-wider text-muted-foreground/80 uppercase">
-            {formattedDate}
-          </p>
-
-          {spaceId ? (
-            <div className="mt-8 space-y-3 text-left">
-              <form
-                onSubmit={handleAskSubmit}
-                className="flex items-center gap-2 rounded-xl border border-border bg-control p-1.5 shadow-2xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40"
-              >
-                <Sparkles className="ml-2.5 size-4 shrink-0 text-primary" />
-                <Input
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Ask Saturn AI anything across Finance, Calendar & Mail..."
-                  aria-label="Ask Saturn AI"
-                  className="h-9 rounded-none border-0 bg-transparent px-1 text-sm shadow-none focus-visible:ring-0"
-                />
-                <Button
-                  type="submit"
-                  size="icon-sm"
-                  aria-label="Ask AI"
-                  className="size-8 shrink-0 cursor-pointer rounded-lg"
-                >
-                  <SendHorizontal className="size-4" />
-                </Button>
-              </form>
-
-              <div className="flex flex-wrap items-center justify-center gap-1.5">
-                {QUICK_PROMPTS.map((q) => (
-                  <Button
-                    key={q}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openAIDrawer({ prompt: q, autoSend: true })}
-                    className="h-7 cursor-pointer rounded-full border-border/60 px-3 text-[11px] text-muted-foreground hover:text-foreground"
-                  >
-                    {q}
-                  </Button>
-                ))}
-              </div>
+  if (!spaceId) {
+    return (
+      <DocumentPage title={greetingTitle} hideHeader>
+        <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
+          <div className="w-full max-w-lg">
+            <div className="mb-6 flex justify-center select-none">
+              <SaturnMark variant="badge" size="xl" />
             </div>
-          ) : (
-            <div className="mt-8 animate-in rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-6 text-center duration-500 select-none fade-in slide-in-from-bottom-4">
-              <Sparkles className="mx-auto h-8 w-8 text-primary" />
-              <h3 className="mt-3 font-semibold text-foreground">
-                Launch Your First Space
-              </h3>
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                Saturn organizes your life into isolated Spaces. Select an
-                existing space from the dropdown above or click below to create
-                your first space!
+
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              {greetingTitle}
+            </h1>
+            <p className="mt-2 font-mono text-xs text-muted-foreground">
+              {formattedDate}
+            </p>
+
+            <div className="mt-8 rounded-2xl border border-dashed border-border bg-card p-6 text-center">
+              <Sparkles className="mx-auto size-7 text-primary" />
+              <h2 className="mt-3 text-base font-semibold text-foreground">
+                Create your first Space
+              </h2>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Saturn organizes your finances, mail, calendar, and automations
+                into isolated Spaces. Select an existing Space above or create
+                one to get started.
               </p>
-              <div className="mt-4 flex justify-center">
+              <div className="mt-5 flex justify-center">
                 <Link to="/settings/spaces">
-                  <Button
-                    size="sm"
-                    className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-primary font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm hover:bg-primary/90"
-                  >
-                    Create Space
-                    <ArrowRight className="h-3.5 w-3.5" />
+                  <Button size="sm" className="cursor-pointer gap-1.5">
+                    <span>Manage Spaces</span>
+                    <ArrowRight className="size-3.5" />
                   </Button>
                 </Link>
               </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
-    </PageLayout>
+      </DocumentPage>
+    )
+  }
+
+  return (
+    <DocumentPage
+      title={greetingTitle}
+      description={formattedDate}
+      maxWidth="xl"
+      actions={
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button size="sm" className="cursor-pointer gap-1.5">
+                  <Plus className="size-4" />
+                  <span>Quick Action</span>
+                  <ChevronDown className="size-3.5 opacity-75" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={() => setTxSheetOpen(true)}>
+                <ReceiptText className="size-4" />
+                <span>Record Transaction</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setEventDialogOpen(true)}>
+                <Calendar className="size-4" />
+                <span>Create Event</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => navigate(`/space/${spaceId}/mail?compose=1`)}
+              >
+                <PenSquare className="size-4" />
+                <span>Compose Email</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => navigate(`/space/${spaceId}/workflows/new`)}
+              >
+                <Workflow className="size-4" />
+                <span>New Workflow</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setCustomizeOpen(true)}
+            className="cursor-pointer gap-1.5"
+          >
+            <SlidersHorizontal className="size-3.5" />
+            <span>Customize</span>
+          </Button>
+        </div>
+      }
+    >
+      {prefsLoading && !preferences ? (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Skeleton className="h-20 rounded-xl lg:col-span-2" />
+          <Skeleton className="h-48 rounded-xl" />
+          <Skeleton className="h-48 rounded-xl" />
+          <Skeleton className="h-48 rounded-xl" />
+          <Skeleton className="h-48 rounded-xl" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {displayedWidgets.map((widgetId) => {
+            const meta = DASHBOARD_WIDGET_MAP[widgetId]
+            const WidgetComponent = DASHBOARD_WIDGET_COMPONENTS[widgetId]
+            return (
+              <div
+                key={widgetId}
+                data-widget-id={widgetId}
+                className={cn(
+                  meta.span === "wide" ? "lg:col-span-2" : "lg:col-span-1"
+                )}
+              >
+                <WidgetComponent />
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <CustomizeDashboardSheet
+        open={customizeOpen}
+        onOpenChange={setCustomizeOpen}
+        onPreviewChange={setPreviewWidgets}
+        spaceId={spaceId}
+        preferences={preferences}
+        activeWidgets={activeWidgets}
+      />
+
+      <CreateTransactionSheet
+        open={txSheetOpen}
+        onOpenChange={setTxSheetOpen}
+        spaceId={spaceId}
+      />
+
+      {eventDialogOpen && (
+        <EventDialog
+          open={eventDialogOpen}
+          onClose={() => setEventDialogOpen(false)}
+        />
+      )}
+    </DocumentPage>
   )
 }
+
 export default DashboardView

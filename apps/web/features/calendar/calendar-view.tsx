@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
+import { useInRouterContext, useSearchParams } from "react-router-dom"
 import { ChevronLeft, ChevronRight, PanelLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,7 +24,37 @@ import { cn } from "@/lib/utils"
 
 export type CalendarViewType = "month" | "week" | "day" | "agenda"
 
+const VALID_CALENDAR_VIEWS = new Set<string>(["month", "week", "day", "agenda"])
+
+function CalendarSearchParamsSync({
+  onApplyParams,
+}: {
+  onApplyParams: (params: { date?: string; view?: CalendarViewType }) => void
+}) {
+  const [searchParams] = useSearchParams()
+  const dateParam = searchParams.get("date") ?? undefined
+  const viewParam = searchParams.get("view") ?? undefined
+  const lastHandledRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const validDate =
+      dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined
+    const validView =
+      viewParam && VALID_CALENDAR_VIEWS.has(viewParam)
+        ? (viewParam as CalendarViewType)
+        : undefined
+    const key = `${validDate ?? ""}|${validView ?? ""}`
+    if ((validDate || validView) && key !== lastHandledRef.current) {
+      lastHandledRef.current = key
+      onApplyParams({ date: validDate, view: validView })
+    }
+  }, [dateParam, viewParam, onApplyParams])
+
+  return null
+}
+
 export function CalendarView() {
+  const inRouter = useInRouterContext()
   const tz = useTimezone()
   const { data: calendarsData } = useCalendars()
   const calendars = useMemo(
@@ -242,6 +273,18 @@ export function CalendarView() {
       data-testid="calendar-main-view"
       className="flex h-full w-full overflow-hidden bg-background"
     >
+      {inRouter && (
+        <CalendarSearchParamsSync
+          onApplyParams={({ date, view }) => {
+            if (date) {
+              setCurrentDate(tz.startOfDay(date))
+            }
+            if (view) {
+              setActiveView(view)
+            }
+          }}
+        />
+      )}
       {/* Sidebar Rail */}
       {sidebarOpen && (
         <CalendarSidebar

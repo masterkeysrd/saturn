@@ -18,6 +18,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/requestid"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 	"github.com/masterkeysrd/saturn/internal/platform/shutdown"
 	"github.com/masterkeysrd/saturn/migrations"
 	"github.com/spf13/cobra"
@@ -140,11 +141,16 @@ func Execute() error {
 				SessionStore:    sessionStore,
 				Hasher:          passwordHasher,
 			})
+			platformSettingsStore := settings.NewPostgresStore(dbClient)
 			spaceStore := spacestorage.NewSpaceStore(dbClient)
 			memberStore := spacestorage.NewMemberStore(dbClient)
+			apiKeyGrantStore := spacestorage.NewAPIKeyGrantStore(dbClient)
 			spaceService := space.NewService(space.Dependencies{
-				SpaceStore:  spaceStore,
-				MemberStore: memberStore,
+				SpaceStore:           spaceStore,
+				MemberStore:          memberStore,
+				APIKeyGrantStore:     apiKeyGrantStore,
+				Settings:             settings.Bind(platformSettingsStore, space.SettingsKey),
+				DashboardPreferences: settings.Bind(platformSettingsStore, space.DashboardPreferencesKey),
 			})
 			coordinator := iam.NewTransactionalCoordinator(
 				iam.NewCoordinator(iam.Dependencies{

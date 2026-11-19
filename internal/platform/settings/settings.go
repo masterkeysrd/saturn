@@ -19,9 +19,17 @@ const (
 	// ScopeUser represents user-scoped configuration.
 	ScopeUser ScopeType = "user"
 
+	// ScopeUserSpace represents user-within-workspace-scoped configuration.
+	ScopeUserSpace ScopeType = "user_space"
+
 	// ScopeSystem represents system-wide configuration.
 	ScopeSystem ScopeType = "system"
 )
+
+// UserSpaceScopeID builds the canonical scope identifier for a user within a workspace.
+func UserSpaceScopeID(userID, spaceID string) string {
+	return userID + ":" + spaceID
+}
 
 // Key defines a strongly-typed descriptor for a settings namespace within a scope.
 type Key[T any] struct {

@@ -2,6 +2,8 @@ package space
 
 import (
 	"context"
+	"slices"
+	"strings"
 
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
 	spaceaggregator "github.com/masterkeysrd/saturn/internal/aggregator/space"
@@ -450,6 +452,82 @@ func (h *Handler) UpdateSettings(ctx context.Context, req *spacev1.UpdateSetting
 	}
 
 	return toProtoSettings(entry), nil
+}
+
+// toProtoDashboardPreferences converts a settings Entry to a proto DashboardPreferences.
+func toProtoDashboardPreferences(spaceID, userID string, entry *settings.Entry[space.DashboardPreferences]) *spacev1.DashboardPreferences {
+	if entry == nil {
+		return nil
+	}
+	if scopeUser, scopeSpace, ok := strings.Cut(entry.Target.ScopeID(), ":"); ok {
+		if userID == "" {
+			userID = scopeUser
+		}
+		if spaceID == "" {
+			spaceID = scopeSpace
+		}
+	}
+	return &spacev1.DashboardPreferences{
+		SpaceId:    spaceID,
+		UserId:     userID,
+		Widgets:    slices.Clone(entry.Value.Widgets),
+		Version:    entry.Version,
+		CreateTime: timestamppb.New(entry.CreateTime),
+		UpdateTime: timestamppb.New(entry.UpdateTime),
+	}
+}
+
+// GetDashboardPreferences retrieves the caller's dashboard widget layout for a workspace.
+func (h *Handler) GetDashboardPreferences(ctx context.Context, req *spacev1.GetDashboardPreferencesRequest) (*spacev1.DashboardPreferences, error) {
+	const op errors.Op = "transport/grpc/space.GetDashboardPreferences"
+	userID, err := h.getSpaceUserID(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	entry, err := h.Coordinator.GetDashboardPreferences(ctx, &spaceapp.GetDashboardPreferencesRequest{
+		SpaceID: req.GetSpaceId(),
+		UserID:  userID,
+	})
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	return toProtoDashboardPreferences(req.GetSpaceId(), userID, entry), nil
+}
+
+// UpdateDashboardPreferences updates the caller's dashboard widget layout for a workspace.
+func (h *Handler) UpdateDashboardPreferences(ctx context.Context, req *spacev1.UpdateDashboardPreferencesRequest) (*spacev1.DashboardPreferences, error) {
+	const op errors.Op = "transport/grpc/space.UpdateDashboardPreferences"
+	userID, err := h.getSpaceUserID(ctx)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	var expectedVersion *int64
+	if req.Version != nil {
+		expectedVersion = new(req.GetVersion())
+	}
+
+	var incoming *space.DashboardPreferences
+	if req.GetDashboardPreferences() != nil {
+		incoming = &space.DashboardPreferences{
+			Widgets: slices.Clone(req.GetDashboardPreferences().GetWidgets()),
+		}
+	}
+
+	entry, err := h.Coordinator.UpdateDashboardPreferences(ctx, &spaceapp.UpdateDashboardPreferencesRequest{
+		SpaceID:              req.GetSpaceId(),
+		UserID:               userID,
+		DashboardPreferences: incoming,
+		UpdateMask:           req.GetUpdateMask().GetPaths(),
+		ExpectedVersion:      expectedVersion,
+	})
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	return toProtoDashboardPreferences(req.GetSpaceId(), userID, entry), nil
 }
 
 // ListSpaceAPIKeyGrants lists all active API key grants targeting a workspace.
