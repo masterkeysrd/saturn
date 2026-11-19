@@ -1,11 +1,13 @@
 import { Mail } from "lucide-react"
 import type { FeatureMenu } from "@/lib/navigation"
+import { MailUnreadBadge } from "./components/mail-unread-badge"
 
 export const menu: FeatureMenu = {
-  title: "Email",
+  title: "Mail",
   url: "/mail",
   icon: Mail,
-  weight: 16,
-  group: "main",
+  weight: 10,
+  group: "pulse",
   requiresSpace: true,
+  badge: MailUnreadBadge,
 }

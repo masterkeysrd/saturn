@@ -178,7 +178,7 @@ export function CreateRateSheet({
           placeholder={
             rateDirection === "direct" ? "e.g. 1.0900" : "e.g. 58.0000"
           }
-          className="h-11 rounded-xl border-border/60 bg-background/50"
+          className="font-mono tabular-nums"
         />
 
         {!isNaN(parsedVal) && parsedVal > 0 && (

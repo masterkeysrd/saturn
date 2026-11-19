@@ -260,7 +260,6 @@ export function CreateIncomeForm({
         <Input
           {...register("description")}
           placeholder="e.g. Freelance Consulting, Salary Payout"
-          className="h-12 rounded-xl border-border/60 bg-background/50"
         />
       </FormFieldItem>
 
@@ -325,22 +324,22 @@ export function CreateIncomeForm({
       </div>
 
       <FormFieldItem label="Amount" error={errors.amount?.message}>
-        <div className="flex h-12 items-center overflow-hidden rounded-xl border border-border/60 bg-background/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
+        <div className="flex h-10 items-center overflow-hidden rounded-lg border border-border bg-control shadow-2xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
           <AmountInput
             control={control}
             name="amount"
             placeholder="0.00"
             showError={false}
-            className="h-full w-full flex-1 border-0 bg-transparent px-4 py-2 text-sm text-foreground shadow-none ring-0 focus-visible:ring-0 focus-visible:outline-none"
+            className="h-full w-full flex-1 rounded-none border-0 bg-transparent px-3 py-1.5 text-sm text-foreground shadow-none ring-0 focus-visible:ring-0 focus-visible:outline-none"
           />
 
-          <div className="h-6 w-px shrink-0 bg-border/40" />
+          <div className="h-5 w-px shrink-0 bg-border/70" />
 
           <FormSelect
             control={control}
             name="currency"
             items={currencyItems}
-            triggerClassName="!h-full w-28 border-0 bg-transparent focus-visible:ring-0"
+            triggerClassName="h-full w-24 shrink-0 rounded-none border-0 bg-transparent px-3 font-mono text-xs font-medium shadow-none hover:bg-muted/40 focus-visible:ring-0"
           />
         </div>
       </FormFieldItem>

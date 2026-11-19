@@ -256,7 +256,7 @@ export function EditBudgetSheet({
                 <Button
                   type="button"
                   variant="ghost"
-                  className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border/60 bg-background/50 p-0 text-primary transition-all hover:bg-muted/20"
+                  className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-border bg-control p-0 text-primary shadow-2xs transition-colors hover:bg-muted/40"
                   title="Choose category icon"
                 >
                   {createElement(getBudgetIcon(iconValue), {
@@ -292,7 +292,6 @@ export function EditBudgetSheet({
             <Input
               placeholder="e.g. Groceries, Dining Out"
               {...register("name")}
-              className="h-11 rounded-xl border-border/60 bg-background/50"
             />
           </div>
         </div>
@@ -325,12 +324,7 @@ export function EditBudgetSheet({
           ) : undefined
         }
       >
-        <AmountInput
-          control={control}
-          name="limit"
-          placeholder="0.00"
-          className="h-11 rounded-xl border-border/60 bg-background/50"
-        />
+        <AmountInput control={control} name="limit" placeholder="0.00" />
       </FormFieldItem>
 
       <FormSelect
@@ -358,10 +352,10 @@ export function EditBudgetSheet({
         items={STATUS_ITEMS}
       />
 
-      <div className="mt-3 space-y-1.5 border-t border-border/20 pt-5">
+      <div className="mt-3 space-y-1.5 border-t border-border/40 pt-5">
         <Label
           htmlFor="propagation"
-          className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
+          className="text-[13px] font-medium text-foreground/90"
         >
           Limit Propagation Rule
         </Label>
@@ -371,10 +365,7 @@ export function EditBudgetSheet({
             val && setPropagation(val as LimitPropagation)
           }
         >
-          <SelectTrigger
-            id="propagation"
-            className="!h-11 w-full rounded-xl border-border/60 bg-background/50 text-left"
-          >
+          <SelectTrigger id="propagation" className="w-full text-left">
             <SelectValue placeholder="Select propagation rule...">
               {PROPAGATION_ITEMS.find((i) => i.value === propagation)?.label ||
                 propagation}

@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useMySpaces, useActiveSpaceContext } from "@/features/space/use-space"
 import { useLocation, useNavigate } from "react-router-dom"
-import { ChevronDownIcon, Loader2, SettingsIcon } from "lucide-react"
+import { Check, ChevronsUpDown, Loader2, SettingsIcon } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,26 +11,24 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-
 import { useSidebar } from "@/components/ui/sidebar"
 import { useAuth } from "@/features/auth/use-auth"
 import { resolveNextSpaceRoute } from "@/lib/space-route"
 
-export function SpaceSelector() {
+export function SpaceSelector({ className }: { className?: string }) {
   const { user } = useAuth()
   const { spaces, isLoading } = useMySpaces()
   const { spaceId, activeSpace, switchSpace } = useActiveSpaceContext()
   const [open, setOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
-  const { state, isMobile, setOpenMobile } = useSidebar()
-  const isCollapsed = state === "collapsed"
+  const { isMobile, setOpenMobile } = useSidebar()
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        {!isCollapsed && <span>Loading spaces...</span>}
+      <div className="flex h-7 items-center gap-1.5 px-2 text-xs text-muted-foreground">
+        <Loader2 className="size-3.5 animate-spin" />
+        <span className="hidden sm:inline">Loading...</span>
       </div>
     )
   }
@@ -39,29 +37,26 @@ export function SpaceSelector() {
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
         render={
-          isCollapsed ? (
-            <Button
-              variant="ghost"
-              className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 p-0 select-none hover:bg-primary/20"
-            >
-              <span className="text-xs font-bold text-primary">
-                {activeSpace?.name ? activeSpace.name[0].toUpperCase() : "S"}
-              </span>
-            </Button>
-          ) : (
-            <Button variant="ghost" className="w-full justify-start gap-2 px-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10 text-xs font-bold text-primary">
-                {activeSpace?.name ? activeSpace.name[0].toUpperCase() : "S"}
-              </div>
-              <span className="truncate text-sm font-medium text-foreground">
-                {activeSpace ? activeSpace.name : "Select Space"}
-              </span>
-              <ChevronDownIcon className="ml-auto h-4 w-4 text-muted-foreground" />
-            </Button>
-          )
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="Switch Workspace"
+            className={cn(
+              "h-7 max-w-[180px] cursor-pointer gap-1.5 rounded-lg px-2 text-sm font-medium text-foreground hover:bg-muted/70 sm:max-w-[220px]",
+              className
+            )}
+          />
         }
-      />
-      <DropdownMenuContent className="w-64">
+      >
+        <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/12 text-[11px] font-semibold text-primary">
+          {activeSpace?.name ? activeSpace.name[0].toUpperCase() : "S"}
+        </span>
+        <span className="truncate">
+          {activeSpace ? activeSpace.name : "Select Space"}
+        </span>
+        <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" sideOffset={6} className="w-64">
         <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
           {spaces.length} Workspace{spaces.length !== 1 ? "s" : ""}
         </div>
@@ -90,18 +85,18 @@ export function SpaceSelector() {
               }
             }}
             className={cn(
-              "justify-between",
+              "cursor-pointer justify-between",
               space.id === spaceId && "bg-accent font-medium"
             )}
           >
-            <span className="flex items-center gap-2">
-              <div className="flex h-5 w-5 items-center justify-center rounded bg-primary/10 text-[10px] font-bold text-primary">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/12 text-[11px] font-semibold text-primary">
                 {space.name?.[0]?.toUpperCase() ?? "S"}
-              </div>
-              {space.name}
+              </span>
+              <span className="truncate">{space.name}</span>
             </span>
             {space.id === spaceId && (
-              <span className="text-xs text-green-600">Active</span>
+              <Check className="size-3.5 shrink-0 text-primary" />
             )}
           </DropdownMenuItem>
         ))}
@@ -112,12 +107,10 @@ export function SpaceSelector() {
             navigate("/settings/spaces")
             if (isMobile) setOpenMobile(false)
           }}
-          className="justify-between"
+          className="cursor-pointer"
         >
-          <span className="flex items-center gap-2">
-            <SettingsIcon className="h-4 w-4" />
-            Manage Spaces
-          </span>
+          <SettingsIcon className="size-4 text-muted-foreground" />
+          <span>Manage Spaces</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -263,7 +263,6 @@ export function CreateAccountSheet({
         <Input
           placeholder="e.g. Chase Operating, Petty Cash"
           {...register("name")}
-          className="h-11 rounded-xl"
         />
       </FormFieldItem>
 
@@ -271,11 +270,7 @@ export function CreateAccountSheet({
         label="Last 4 Digits (Optional)"
         error={errors.lastFour?.message}
       >
-        <Input
-          placeholder="e.g. 1234"
-          {...register("lastFour")}
-          className="h-11 rounded-xl"
-        />
+        <Input placeholder="e.g. 1234" {...register("lastFour")} />
       </FormFieldItem>
 
       <FormFieldItem label="Financial Institution">
@@ -323,7 +318,6 @@ export function CreateAccountSheet({
           control={control}
           name="initialBalance"
           placeholder={accountType === "CREDIT_CARD" ? "e.g. 450.00" : "0.00"}
-          className="h-11 rounded-xl"
           disabled={!!editAccount}
         />
       </FormFieldItem>
@@ -337,7 +331,6 @@ export function CreateAccountSheet({
             control={control}
             name="creditLimit"
             placeholder="e.g. 5000.00"
-            className="h-11 rounded-xl"
           />
         </FormFieldItem>
       )}
@@ -346,7 +339,7 @@ export function CreateAccountSheet({
         <Label className="mb-2 block text-xs font-bold tracking-wider text-foreground uppercase">
           Card Theme Color
         </Label>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {ACCOUNT_COLORS.map(
             (c: {
               value: string
@@ -423,7 +416,6 @@ export function CreateAccountSheet({
         <Input
           placeholder="e.g. Swift codes, secondary card details"
           {...register("notes")}
-          className="h-11 rounded-xl"
         />
       </FormFieldItem>
     </FormDrawer>

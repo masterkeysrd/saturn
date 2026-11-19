@@ -64,10 +64,35 @@ export function getBudgetIcon(iconName: string) {
 
 export function getCardGradient(colorName: string) {
   switch (colorName) {
+    case "teal":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-teal-950/80 to-slate-900 border-teal-500/30 shadow-teal-950/50 hover:border-teal-400/60",
+      }
+    case "blue":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-blue-950/80 to-slate-900 border-blue-500/30 shadow-blue-950/50 hover:border-blue-400/60",
+      }
+    case "plum":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-purple-950/80 to-slate-900 border-purple-500/30 shadow-purple-950/50 hover:border-purple-400/60",
+      }
+    case "pink":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-pink-950/80 to-slate-900 border-pink-500/30 shadow-pink-950/50 hover:border-pink-400/60",
+      }
+    case "orange":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-orange-950/80 to-slate-900 border-orange-500/30 shadow-orange-950/50 hover:border-orange-400/60",
+      }
+    case "lime":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-lime-950/80 to-slate-900 border-lime-500/30 shadow-lime-950/50 hover:border-lime-400/60",
+      }
     case "emerald":
       return {
         card: "bg-gradient-to-br from-slate-950 via-emerald-950/80 to-slate-900 border-emerald-500/30 shadow-emerald-950/50 hover:border-emerald-400/60",
       }
+    case "coral":
     case "rose":
       return {
         card: "bg-gradient-to-br from-slate-950 via-rose-950/80 to-slate-900 border-rose-500/30 shadow-rose-950/50 hover:border-rose-400/60",

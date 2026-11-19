@@ -8,6 +8,8 @@ Saturn uses a Turborepo monorepo with strict package boundaries between shared l
 
 ```
 packages/
+├── tokens/     # @saturn/tokens: PURE design tokens (colors, radii, spacing, 12-hue palette)
+│               # (ZERO runtime dependencies — consumed by Web CSS and Mobile useTheme)
 ├── core/       # @saturn/core: PURE business logic, date/timezone math, formatting
 │               # (ZERO runtime dependencies — standard Web/Node APIs only)
 ├── hooks/      # @saturn/hooks: React context providers and shared custom hooks
@@ -22,22 +24,23 @@ apps/
 > [!IMPORTANT]
 > **Strict Monorepo Dependency Flow**:
 > - `apps/web` and `apps/mobile` may import from `@saturn/*`.
-> - `@saturn/hooks` may import from `@saturn/core` and `@saturn/api`.
-> - `@saturn/core` must **NEVER** import React, hooks, or application packages.
+> - `@saturn/hooks` may import from `@saturn/core`, `@saturn/tokens`, and `@saturn/api`.
+> - `@saturn/core` and `@saturn/tokens` must **NEVER** import React, hooks, or application packages, and `@saturn/core` must remain 100% UI-framework agnostic.
 > - **NEVER** cross-import between `apps/web` and `apps/mobile`.
 
 ---
 
-## 2. Date & Timezone Handling
+## 2. Date, Timezone & Regional Formatting
 
 1. **Zero Inline Formatting**:
-   - **NEVER** call `new Date().toLocaleDateString(undefined, { timeZone: "UTC" })` or native date methods inline in components.
-   - Always consume `const tz = useTimezone()` from `@saturn/hooks`.
-2. **Standard Methods on `tz`**:
-   - `tz.format(date, options)`: Formats with active workspace timezone.
+   - **NEVER** call `new Date().toLocaleDateString(undefined, { timeZone: "UTC" })` or native date/currency formatting inline in components.
+   - Always consume `const tz = useTimezone()` from `@saturn/hooks` and render monetary values with `<MoneyAmount />` (Web) or `<MonoAmount />` (Mobile) using `tabular-nums`.
+2. **Standard Methods & Preferences on `tz`**:
+   - `tz.format(date, options)` / `tz.formatTime(date, options)`: Formats with active workspace timezone and user-scoped `locale` / `hourCycle` (`"h12"` or `"h23"`).
+   - `tz.formatMoney(cents, currency, options)`: Deterministic locale-aware currency formatting.
    - `tz.startOfDay(date)` / `tz.endOfDay(date)`: Computes localized day boundaries.
    - `tz.isToday(date)` / `tz.isYesterday(date)` / `tz.isTomorrow(date)`: Timezone-aware relative checks.
-   - `tz.timezone`: Active IANA timezone string (e.g., `"America/New_York"`).
+   - `tz.timezone` (Space-scoped), `tz.locale`, `tz.hourCycle`, `tz.weekStartsOn` (User-scoped).
 3. **Timezone Selection**:
    - Use `COMMON_TIMEZONES` imported from `@saturn/core`. Do not define duplicate timezone arrays.
 
@@ -57,18 +60,25 @@ apps/
 
 ---
 
-## 4. UI & Form Design Rules
+## 4. UI, Page Shells & Form Design Rules
 
-1. **No Double-Nested Card Containers**:
+See [Saturn Design System Charter](design-system.md) for the complete **Orbital Precision** token, radius, typography, and `/__design` verification standards.
+
+1. **Three Canonical Page Shells**:
+   - Use `<DocumentPage>` for scrollable settings, insights, budgets, and admin views.
+   - Use `<SplitWorkspacePage>` for list/detail workspaces (Mail, Transactions + Inspector, Review Queue, AI Chat).
+   - Use `<StudioCanvasPage>` for full-bleed tools (Workflow Editor, Calendar Grid, Statement Reconciliation).
+2. **No Double-Nested Card Containers**:
    - **NEVER** render a bordered card or collapsible card inside another bordered card, drawer, sheet, or inspector panel.
    - Inside drawers, sheets, and side inspectors, use flat vertical sections separated by `border-t border-border/40` hairlines instead of nested `rounded-2xl border bg-card` wrappers.
-2. **Single-Column Rhythm in Narrow Inspectors & Drawers**:
-   - Any panel narrower than `520px` (right-hand inspectors, side sheets, mobile forms) must use a **single-column vertical layout** (`space-y-4`) for fields—never squeeze 3+ inputs or 12-column horizontal grids into narrow sidebars.
-   - Use full-width stacked field items or collapsible pill rows for structured array builders (such as schema field lists or key-value mappings) instead of cramped multi-input table rows.
-3. **Schema-Driven Typed Controls**:
+3. **Drawer & Inspector Grid Rhythm (`< 520px`)**:
+   - Any panel narrower than `520px` (right-hand inspectors, side sheets, mobile forms) must **never** squeeze 3+ column grids or cramped multi-input table rows.
+   - Prefer clean vertical stacking (`space-y-4`) with **semantic 2-field micro-pairings** where inputs form a single conceptual unit (`[Currency | Amount]`, `[Start Time | End Time]`, `[Interval | Day of Month]`).
+   - Use sentence-case field labels (`text-[13px] font-medium`); never use shouting `10px ALL-CAPS BOLD` labels.
+4. **Schema-Driven Typed Controls**:
    - When rendering form fields backed by a JSON Schema (`inputsSchema` / `paramsSchema`), map field types to native UI controls: `boolean` $\rightarrow$ `Switch`, `enum` $\rightarrow$ `Select`, `number` / `integer` $\rightarrow$ numeric `Input`, with an optional expression (`fx`) toggle when dynamic `{{ ... }}` bindings are needed.
    - Do not render generic monospace code boxes for every field.
-4. **Progressive Disclosure**:
+5. **Progressive Disclosure**:
    - Keep primary form sections focused on the core fields a user edits first (e.g., Name, Prompt, Model, Topic).
    - Tuck low-level plumbing (internal IDs, raw CEL filters, `input_mapping`, retry/timeout knobs, `on_error` toggles) inside a collapsed **Advanced** section.
 
@@ -97,5 +107,5 @@ Always format, lint, and typecheck before considering any frontend or package ch
 ```bash
 make web-format     # Format all frontend source files with Prettier
 make web-lint       # Run ESLint across web and mobile packages
-make web-typecheck  # Run TypeScript compiler across all 6 monorepo packages
+make web-typecheck  # Run TypeScript compiler across all monorepo packages
 ```

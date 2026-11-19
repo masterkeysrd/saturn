@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { useTimezone } from "@saturn/hooks"
 import { openAIDrawer } from "@/features/ai/lib/drawer-events"
+import { SaturnMark } from "@/components/ui/saturn-mark"
 
 const QUICK_PROMPTS = [
   "Summarize my spending this month",
@@ -61,11 +62,7 @@ export function DashboardView() {
         <div className="w-full max-w-lg animate-in duration-500 zoom-in-95 fade-in">
           {/* Branding badge */}
           <div className="mb-8 flex animate-in justify-center duration-700 select-none zoom-in-75">
-            <img
-              src="/saturn_logo.jpg"
-              alt="Saturn Logo"
-              className="h-20 w-20 rounded-3xl object-cover shadow-xl shadow-primary/20"
-            />
+            <SaturnMark variant="badge" size="xl" />
           </div>
 
           <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
@@ -80,7 +77,7 @@ export function DashboardView() {
             <div className="mt-8 space-y-3 text-left">
               <form
                 onSubmit={handleAskSubmit}
-                className="flex items-center gap-2 rounded-2xl border border-border/70 bg-card/80 p-1.5 shadow-sm focus-within:border-primary/60"
+                className="flex items-center gap-2 rounded-xl border border-border bg-control p-1.5 shadow-2xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40"
               >
                 <Sparkles className="ml-2.5 size-4 shrink-0 text-primary" />
                 <Input
@@ -88,13 +85,13 @@ export function DashboardView() {
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder="Ask Saturn AI anything across Finance, Calendar & Mail..."
                   aria-label="Ask Saturn AI"
-                  className="h-9 border-0 bg-transparent px-1 text-sm shadow-none focus-visible:ring-0"
+                  className="h-9 rounded-none border-0 bg-transparent px-1 text-sm shadow-none focus-visible:ring-0"
                 />
                 <Button
                   type="submit"
                   size="icon-sm"
                   aria-label="Ask AI"
-                  className="size-8 shrink-0 cursor-pointer rounded-xl"
+                  className="size-8 shrink-0 cursor-pointer rounded-lg"
                 >
                   <SendHorizontal className="size-4" />
                 </Button>
@@ -117,7 +114,7 @@ export function DashboardView() {
             </div>
           ) : (
             <div className="mt-8 animate-in rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-6 text-center duration-500 select-none fade-in slide-in-from-bottom-4">
-              <Sparkles className="mx-auto h-8 w-8 animate-pulse text-primary" />
+              <Sparkles className="mx-auto h-8 w-8 text-primary" />
               <h3 className="mt-3 font-semibold text-foreground">
                 Launch Your First Space
               </h3>

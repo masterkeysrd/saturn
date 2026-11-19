@@ -17,7 +17,7 @@ import { AuthProvider, useAuth } from "@/lib/auth-context"
 import { SpaceProvider } from "@/lib/space-context"
 import { ToastProvider } from "@/components/ui/toast"
 import { queryClient, persistOptions } from "@/lib/query-persister"
-import { theme } from "@/lib/theme"
+import { MobileThemeProvider, theme, useTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
 void SplashScreen.preventAutoHideAsync().catch(() => {})
@@ -81,17 +81,19 @@ function modalCloseHeaderOptions() {
       }
 }
 
-export default function RootLayout() {
-  const [isLayoutReady, setIsLayoutReady] = useState(false)
-
-  const handleRootLayout = useCallback(() => {
-    setIsLayoutReady(true)
-  }, [])
+function RootNavigationShell({
+  onRootLayout,
+  isLayoutReady,
+}: {
+  onRootLayout: () => void
+  isLayoutReady: boolean
+}) {
+  const { resolvedMode, colors } = useTheme()
 
   return (
     <GestureHandlerRootView
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
-      onLayout={handleRootLayout}
+      style={{ flex: 1, backgroundColor: colors.background }}
+      onLayout={onRootLayout}
     >
       <SafeAreaProvider>
         <PersistQueryClientProvider
@@ -103,24 +105,26 @@ export default function RootLayout() {
             <SpaceProvider>
               <BottomSheetModalProvider>
                 <ToastProvider>
-                  <StatusBar style="light" />
+                  <StatusBar
+                    style={resolvedMode === "dark" ? "light" : "dark"}
+                  />
                   <Stack
                     screenOptions={{
                       headerStyle: {
                         backgroundColor:
                           Platform.OS === "ios"
                             ? "transparent"
-                            : theme.colors.background,
+                            : colors.background,
                       },
-                      headerUserInterfaceStyle: "dark",
+                      headerUserInterfaceStyle: resolvedMode,
                       headerShadowVisible: false,
                       headerBackButtonDisplayMode: "minimal",
-                      headerTintColor: theme.colors.textPrimary,
+                      headerTintColor: colors.textPrimary,
                       headerTitleStyle: {
                         fontWeight: "600",
                       },
                       contentStyle: {
-                        backgroundColor: theme.colors.background,
+                        backgroundColor: colors.background,
                       },
                     }}
                   >
@@ -140,7 +144,7 @@ export default function RootLayout() {
                         ...modalCloseHeaderOptions(),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: colors.surface,
                           },
                         }),
                       }}
@@ -153,7 +157,7 @@ export default function RootLayout() {
                         ...modalCloseHeaderOptions(),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: colors.surface,
                           },
                         }),
                       }}
@@ -164,7 +168,7 @@ export default function RootLayout() {
                         headerTitle: "Settings",
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: colors.surface,
                           },
                         }),
                       }}
@@ -177,7 +181,7 @@ export default function RootLayout() {
                         ...modalCloseHeaderOptions(),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: colors.surface,
                           },
                         }),
                       }}
@@ -189,7 +193,7 @@ export default function RootLayout() {
                         headerTitle: "Manage Budget",
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: colors.surface,
                           },
                         }),
                       }}
@@ -201,7 +205,7 @@ export default function RootLayout() {
                         headerTitle: "Manage Account",
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: colors.surface,
                           },
                         }),
                       }}
@@ -213,7 +217,7 @@ export default function RootLayout() {
                         headerTitle: "Recurring Template",
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: colors.surface,
                           },
                         }),
                       }}
@@ -225,7 +229,7 @@ export default function RootLayout() {
                         headerTitle: "Manage Debt / Loan",
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: colors.surface,
                           },
                         }),
                       }}
@@ -237,7 +241,7 @@ export default function RootLayout() {
                         headerTitle: "Adjust Balance",
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: colors.surface,
                           },
                         }),
                       }}
@@ -249,7 +253,7 @@ export default function RootLayout() {
                         headerTitle: "Adjust Debt Balance",
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: colors.surface,
                           },
                         }),
                       }}
@@ -261,7 +265,7 @@ export default function RootLayout() {
                         headerTitle: "Manage Event",
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: colors.surface,
                           },
                         }),
                       }}
@@ -274,7 +278,7 @@ export default function RootLayout() {
                         headerTitle: "New Message",
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: colors.surface,
                           },
                         }),
                       }}
@@ -287,7 +291,7 @@ export default function RootLayout() {
                         ...modalCloseHeaderOptions(),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: colors.surface,
                           },
                         }),
                       }}
@@ -300,7 +304,7 @@ export default function RootLayout() {
                         ...modalCloseHeaderOptions(),
                         ...(Platform.OS !== "ios" && {
                           headerStyle: {
-                            backgroundColor: theme.colors.surface,
+                            backgroundColor: colors.surface,
                           },
                         }),
                       }}
@@ -319,5 +323,22 @@ export default function RootLayout() {
         </PersistQueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  )
+}
+
+export default function RootLayout() {
+  const [isLayoutReady, setIsLayoutReady] = useState(false)
+
+  const handleRootLayout = useCallback(() => {
+    setIsLayoutReady(true)
+  }, [])
+
+  return (
+    <MobileThemeProvider>
+      <RootNavigationShell
+        onRootLayout={handleRootLayout}
+        isLayoutReady={isLayoutReady}
+      />
+    </MobileThemeProvider>
   )
 }

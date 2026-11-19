@@ -816,7 +816,7 @@ export function ConfirmTransactionSheet({
                             >
                               Amount Cleared
                             </Label>
-                            <div className="flex h-12 items-center overflow-hidden rounded-xl border border-border/60 bg-background/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
+                            <div className="flex h-10 items-center overflow-hidden rounded-lg border border-border bg-control shadow-2xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
                               <input
                                 id="actualAmount"
                                 type="number"
@@ -824,12 +824,12 @@ export function ConfirmTransactionSheet({
                                 min="0.01"
                                 placeholder="0.00"
                                 {...register("amount")}
-                                className="h-full w-full flex-1 bg-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                                className="h-full w-full flex-1 bg-transparent px-3 py-1.5 font-mono text-sm font-semibold text-foreground tabular-nums placeholder:text-muted-foreground focus:outline-none"
                               />
 
-                              <div className="h-6 w-px shrink-0 bg-border/40" />
+                              <div className="h-5 w-px shrink-0 bg-border/70" />
 
-                              <div className="px-4 text-xs font-bold text-muted-foreground select-none">
+                              <div className="px-3 font-mono text-xs font-medium text-muted-foreground select-none">
                                 {transaction.currency}
                               </div>
                             </div>
@@ -889,7 +889,6 @@ export function ConfirmTransactionSheet({
                               type="text"
                               placeholder="Optional notes or narration..."
                               {...register("description")}
-                              className="h-12 rounded-xl border-border/60 bg-background/50"
                             />
                             {errors.description && (
                               <p className="text-[11px] font-semibold text-destructive">

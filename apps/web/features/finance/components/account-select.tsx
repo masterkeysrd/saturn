@@ -285,7 +285,7 @@ function AccountSelectInner({
       <PopoverTrigger
         disabled={disabled}
         className={cn(
-          "flex h-11 w-full items-center justify-between rounded-xl border border-border/60 bg-background/50 px-3 text-left font-normal transition-all hover:border-border focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-10 w-full cursor-pointer items-center justify-between rounded-lg border border-border bg-control px-3 text-left text-sm font-normal shadow-2xs transition-colors outline-none hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
       >
@@ -299,16 +299,16 @@ function AccountSelectInner({
                 type={selectedAccount.type}
                 colors={selectedColors}
               />
-              <span className="truncate text-xs font-semibold text-foreground">
+              <span className="truncate text-sm font-medium text-foreground">
                 {selectedAccount.name}
                 {selectedAccount.lastFour && (
-                  <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">
                     •••• {selectedAccount.lastFour}
                   </span>
                 )}
               </span>
             </div>
-            <span className="ml-2 shrink-0 text-[10px] font-bold text-muted-foreground tabular-nums">
+            <span className="ml-2 shrink-0 font-mono text-xs font-medium text-muted-foreground tabular-nums">
               {selectedAccount.type === "CREDIT_CARD" &&
                 Number(selectedAccount.currentBalance || "0") > 0 &&
                 "-"}
@@ -319,7 +319,7 @@ function AccountSelectInner({
             </span>
           </div>
         ) : (
-          <span className="text-xs text-muted-foreground">{placeholder}</span>
+          <span className="text-sm text-muted-foreground">{placeholder}</span>
         )}
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </PopoverTrigger>

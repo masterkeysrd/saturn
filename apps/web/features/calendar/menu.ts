@@ -5,7 +5,7 @@ export const menu: FeatureMenu = {
   title: "Calendar",
   url: "/calendar",
   icon: CalendarIcon,
-  weight: 15,
-  group: "main",
+  weight: 20,
+  group: "pulse",
   requiresSpace: true,
 }

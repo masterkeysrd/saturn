@@ -404,16 +404,17 @@ export function BorrowingDetailSheet({
                 <div className="space-y-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="paymentAmount">Amount</Label>
-                    <div className="relative flex h-10 items-center overflow-hidden rounded-xl border border-border/60 bg-background/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
+                    <div className="relative flex h-10 items-center overflow-hidden rounded-lg border border-border bg-control shadow-2xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
                       <input
                         id="paymentAmount"
                         type="number"
                         step="0.01"
                         placeholder="0.00"
                         {...register("amount")}
-                        className="h-full w-full flex-1 bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
+                        className="h-full w-full flex-1 bg-transparent px-3 py-1.5 font-mono text-sm font-semibold text-foreground tabular-nums placeholder:text-muted-foreground focus:outline-none"
                       />
-                      <span className="flex h-full items-center border-l border-border/40 bg-muted/20 px-3 text-xs font-semibold text-muted-foreground select-none">
+                      <div className="h-5 w-px shrink-0 bg-border/70" />
+                      <span className="flex h-full items-center px-3 font-mono text-xs font-medium text-muted-foreground select-none">
                         {borrowing.currency}
                       </span>
                     </div>
@@ -463,7 +464,6 @@ export function BorrowingDetailSheet({
                     id="paymentNotes"
                     placeholder="e.g. Installment #1, bank transfer..."
                     {...register("notes")}
-                    className="h-10 rounded-xl border-border/60 bg-background/50"
                   />
                 </div>
 

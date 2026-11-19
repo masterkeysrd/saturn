@@ -2,9 +2,9 @@ import { HomeIcon } from "lucide-react"
 import type { FeatureMenu } from "@/lib/navigation"
 
 export const menu: FeatureMenu = {
-  title: "Dashboard",
+  title: "Overview",
   url: "/",
   icon: HomeIcon,
   weight: 0,
-  group: "main",
+  group: "pulse",
 }

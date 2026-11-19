@@ -145,12 +145,12 @@ export function CreateBudgetSheet({
       onSubmit={handleSubmit(onSubmit)}
     >
       <FormFieldItem label="Budget Name" error={errors.name?.message}>
-        <div className="flex h-11 items-center overflow-hidden rounded-xl border border-border/60 bg-background/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
+        <div className="flex h-10 items-center overflow-hidden rounded-lg border border-border bg-control shadow-2xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
           <input
             id="name"
             {...register("name")}
             placeholder="e.g. Dining Out, Groceries"
-            className="order-2 h-full w-full flex-1 bg-transparent px-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+            className="order-2 h-full w-full flex-1 bg-transparent px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
 
           <DropdownMenu>
@@ -160,7 +160,7 @@ export function CreateBudgetSheet({
                   type="button"
                   variant="ghost"
                   className={cn(
-                    "order-1 flex h-full shrink-0 cursor-pointer items-center justify-center rounded-none border-y-0 border-r border-l-0 border-border/30 px-4 transition-all hover:bg-muted/20 focus:border-r-primary/50 focus:bg-muted/40 focus:outline-none",
+                    "order-1 flex h-full shrink-0 cursor-pointer items-center justify-center rounded-none border-y-0 border-r border-l-0 border-border/60 px-3.5 transition-colors hover:bg-muted/40 focus:outline-none",
                     getBudgetColors(colorValue).text,
                     getBudgetColors(colorValue).bg
                   )}
@@ -223,12 +223,7 @@ export function CreateBudgetSheet({
           ) : undefined
         }
       >
-        <AmountInput
-          control={control}
-          name="limit"
-          placeholder="0.00"
-          className="h-11 rounded-xl border-border/60 bg-background/50"
-        />
+        <AmountInput control={control} name="limit" placeholder="0.00" />
       </FormFieldItem>
 
       <FormSelect

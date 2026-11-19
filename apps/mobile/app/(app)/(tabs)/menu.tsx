@@ -23,6 +23,7 @@ import {
   Link2,
   Sparkles,
   Workflow,
+  Palette,
 } from "lucide-react-native"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
@@ -259,7 +260,7 @@ export default function MenuScreen() {
           <Text style={styles.sectionHeader}>SETTINGS</Text>
           <Card style={styles.menuGroup}>
             <TouchableOpacity
-              style={styles.menuItem}
+              style={[styles.menuItem, __DEV__ && styles.menuItemBorder]}
               activeOpacity={0.7}
               onPress={() => navigateTo("/(app)/settings")}
             >
@@ -269,6 +270,23 @@ export default function MenuScreen() {
               </View>
               <ChevronRight size={16} color={theme.colors.textMuted} />
             </TouchableOpacity>
+
+            {__DEV__ && (
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.7}
+                onPress={() => navigateTo("/(app)/settings/design-system")}
+              >
+                <View style={styles.menuLeft}>
+                  <Palette size={18} color={theme.colors.primary} />
+                  <Text style={styles.menuLabel}>Design System Gallery</Text>
+                </View>
+                <View style={styles.menuRight}>
+                  <Badge variant="outline" size="sm" label="DEV" />
+                  <ChevronRight size={16} color={theme.colors.textMuted} />
+                </View>
+              </TouchableOpacity>
+            )}
           </Card>
         </View>
       </ScrollView>

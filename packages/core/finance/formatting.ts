@@ -86,12 +86,31 @@ export function toCentsString(amountStr: string | number): string {
   return toCents(amountStr).toString()
 }
 
+const INTERVAL_LABELS: Record<string, string> = {
+  WEEKLY: "Weekly",
+  INTERVAL_WEEKLY: "Weekly",
+  BIWEEKLY: "Biweekly",
+  INTERVAL_BIWEEKLY: "Biweekly",
+  MONTHLY: "Monthly",
+  INTERVAL_MONTHLY: "Monthly",
+  QUARTERLY: "Quarterly",
+  INTERVAL_QUARTERLY: "Quarterly",
+  YEARLY: "Yearly",
+  INTERVAL_YEARLY: "Yearly",
+  ONE_TIME: "One-Time",
+  INTERVAL_ONE_TIME: "One-Time",
+  UNSPECIFIED: "Monthly",
+  INTERVAL_UNSPECIFIED: "Monthly",
+}
+
 export function formatInterval(interval: string | undefined | null): string {
   if (!interval) return "Monthly"
-  const clean = interval.replace(/^(INTERVAL_|STATUS_)/i, "").toLowerCase()
-  if (!clean) return "Monthly"
-  if (clean === "one_time") return "One-Time"
-  return clean.charAt(0).toUpperCase() + clean.slice(1)
+  const key = interval.trim().toUpperCase()
+  if (key in INTERVAL_LABELS) {
+    return INTERVAL_LABELS[key]
+  }
+  const normalized = key.replace(/_/g, " ").toLowerCase()
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
 }
 
 export function formatNextDueDate(
@@ -112,27 +131,53 @@ export function formatNextDueDate(
   })
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "Active",
+  STATUS_ACTIVE: "Active",
+  RECURRING_EXPENSE_STATUS_ACTIVE: "Active",
+  RECURRING_TRANSACTION_STATUS_ACTIVE: "Active",
+  PAUSED: "Paused",
+  STATUS_PAUSED: "Paused",
+  RECURRING_EXPENSE_STATUS_PAUSED: "Paused",
+  RECURRING_TRANSACTION_STATUS_PAUSED: "Paused",
+  ARCHIVED: "Archived",
+  STATUS_ARCHIVED: "Archived",
+  CANCELLED: "Cancelled",
+  STATUS_CANCELLED: "Cancelled",
+  COMPLETED: "Completed",
+  STATUS_COMPLETED: "Completed",
+  PENDING: "Pending",
+  STATUS_PENDING: "Pending",
+  UNSPECIFIED: "Active",
+  STATUS_UNSPECIFIED: "Active",
+  RECURRING_EXPENSE_STATUS_UNSPECIFIED: "Active",
+  RECURRING_TRANSACTION_STATUS_UNSPECIFIED: "Active",
+}
+
+const ACTIVE_STATUS_KEYS = new Set([
+  "ACTIVE",
+  "STATUS_ACTIVE",
+  "RECURRING_EXPENSE_STATUS_ACTIVE",
+  "RECURRING_TRANSACTION_STATUS_ACTIVE",
+  "UNSPECIFIED",
+  "STATUS_UNSPECIFIED",
+  "RECURRING_EXPENSE_STATUS_UNSPECIFIED",
+  "RECURRING_TRANSACTION_STATUS_UNSPECIFIED",
+])
+
 export function formatStatus(status: string | undefined | null): string {
   if (!status) return "Active"
-  const clean = status
-    .replace(
-      /^(STATUS_|RECURRING_EXPENSE_STATUS_|RECURRING_TRANSACTION_STATUS_)/i,
-      ""
-    )
-    .toLowerCase()
-  if (!clean || clean === "unspecified") return "Active"
-  return clean.charAt(0).toUpperCase() + clean.slice(1)
+  const key = status.trim().toUpperCase()
+  if (key in STATUS_LABELS) {
+    return STATUS_LABELS[key]
+  }
+  const normalized = key.replace(/_/g, " ").toLowerCase()
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
 }
 
 export function isStatusActive(status: string | undefined | null): boolean {
   if (!status) return true
-  const clean = status
-    .replace(
-      /^(STATUS_|RECURRING_EXPENSE_STATUS_|RECURRING_TRANSACTION_STATUS_)/i,
-      ""
-    )
-    .toUpperCase()
-  return clean === "ACTIVE" || clean === "UNSPECIFIED"
+  return ACTIVE_STATUS_KEYS.has(status.trim().toUpperCase())
 }
 
 export function formatSourceType(

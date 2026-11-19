@@ -85,6 +85,14 @@ export default function AppLayout() {
         }}
       />
       <Stack.Screen
+        name="settings/design-system"
+        options={{
+          headerShown: true,
+          headerTitle: "Design System",
+          headerBackTitle: "Menu",
+        }}
+      />
+      <Stack.Screen
         name="finance/transactions/index"
         options={{
           headerShown: true,

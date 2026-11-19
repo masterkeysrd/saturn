@@ -61,7 +61,7 @@ export function FormSelect<TFieldValues extends FieldValues>({
             <SelectTrigger
               id={name}
               className={cn(
-                "!h-11 w-full rounded-xl border-border/60 bg-background/50 text-left",
+                "w-full text-left",
                 disabled && "opacity-70",
                 triggerClassName,
                 !hasWrapper && className
@@ -73,7 +73,7 @@ export function FormSelect<TFieldValues extends FieldValues>({
                   : field.value || undefined}
               </SelectValue>
             </SelectTrigger>
-            <SelectContent className="w-(--anchor-width) min-w-56 rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+            <SelectContent className="w-(--anchor-width) min-w-56">
               {items.map((item) => (
                 <SelectItem
                   key={item.value}
@@ -96,19 +96,19 @@ export function FormSelect<TFieldValues extends FieldValues>({
             {label && (
               <Label
                 htmlFor={name}
-                className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
+                className="text-[13px] font-medium text-foreground/90"
               >
                 {label}
               </Label>
             )}
             {selectElement}
             {helperText && !fieldState.error && (
-              <span className="mt-1 block text-[10px] text-muted-foreground/75">
+              <span className="mt-1 block text-xs text-muted-foreground">
                 {helperText}
               </span>
             )}
             {fieldState.error && (
-              <p className="text-[11px] font-semibold text-destructive">
+              <p className="text-xs font-medium text-destructive">
                 {fieldState.error.message}
               </p>
             )}

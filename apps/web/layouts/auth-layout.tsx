@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom"
 import { Wallet, Mail, Sparkles } from "lucide-react"
+import { SaturnMark } from "@/components/ui/saturn-mark"
 
 export function AuthLayout() {
   return (
@@ -8,10 +9,10 @@ export function AuthLayout() {
       <div className="relative col-span-1 flex flex-col justify-between p-6 md:p-10 lg:col-span-5">
         {/* Branding header */}
         <div className="flex items-center space-x-2.5">
-          <img
-            src="/saturn_logo.jpg"
-            alt="Saturn Logo"
-            className="h-9 w-9 animate-in rounded-xl object-cover shadow-md shadow-primary/25 duration-500 fade-in slide-in-from-top-4"
+          <SaturnMark
+            variant="badge"
+            size="md"
+            className="animate-in duration-500 fade-in slide-in-from-top-4"
           />
           <span className="animate-in font-sans text-lg font-bold tracking-tight text-foreground duration-500 fade-in">
             Saturn
@@ -47,11 +48,11 @@ export function AuthLayout() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] bg-[size:24px_24px]" />
 
         {/* Large floating Saturn icon graphic */}
-        <div className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 opacity-[0.02] select-none">
-          <img
-            src="/saturn_logo.jpg"
-            alt=""
-            className="h-full w-full rounded-full object-contain"
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -z-10 flex h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 items-center justify-center opacity-[0.04] select-none">
+          <SaturnMark
+            variant="mark"
+            decorative
+            className="h-full w-full text-teal-300"
           />
         </div>
 

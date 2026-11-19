@@ -47,9 +47,16 @@ describe("finance formatting utilities", () => {
 
   it("formats intervals, statuses, and currency symbols", () => {
     expect(formatInterval("INTERVAL_MONTHLY")).toBe("Monthly")
+    expect(formatInterval("WEEKLY")).toBe("Weekly")
+    expect(formatInterval("YEARLY")).toBe("Yearly")
     expect(formatInterval("one_time")).toBe("One-Time")
+    expect(formatInterval(undefined)).toBe("Monthly")
     expect(formatStatus("STATUS_PAUSED")).toBe("Paused")
+    expect(formatStatus("RECURRING_TRANSACTION_STATUS_ACTIVE")).toBe("Active")
+    expect(formatStatus("STATUS_UNSPECIFIED")).toBe("Active")
+    expect(formatStatus("CANCELLED")).toBe("Cancelled")
     expect(isStatusActive("ACTIVE")).toBe(true)
+    expect(isStatusActive("STATUS_ACTIVE")).toBe(true)
     expect(isStatusActive("PAUSED")).toBe(false)
     expect(getCurrencySymbol("USD")).toBe("$")
   })

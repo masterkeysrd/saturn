@@ -194,25 +194,25 @@ export function ConfirmScheduledForm({
         </div>
 
         {/* Amount field */}
-        <div className="space-y-2">
-          <Label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+        <div className="space-y-1.5">
+          <Label className="text-[13px] font-medium text-foreground/90">
             Actual Amount
           </Label>
           <div className="relative">
             <Input
               type="number"
               step="0.01"
-              className="h-11 rounded-xl border-border/60 bg-background/40 pr-12 focus-visible:ring-primary"
+              className="pr-14 font-mono tabular-nums"
               {...register("amount")}
             />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-              <span className="text-xs font-bold text-muted-foreground uppercase">
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+              <span className="font-mono text-xs font-medium text-muted-foreground uppercase">
                 {scheduledTransaction.currency || "USD"}
               </span>
             </div>
           </div>
           {errors.amount && (
-            <p className="text-[11px] font-semibold text-destructive">
+            <p className="text-xs font-medium text-destructive">
               {errors.amount.message}
             </p>
           )}
@@ -220,17 +220,16 @@ export function ConfirmScheduledForm({
 
         {/* Account Select */}
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+          <Label className="text-[13px] font-medium text-foreground/90">
             {isExpense ? "Payment Account" : "Deposit Account"}
           </Label>
           <AccountSelect
             control={control}
             name="accountId"
             accounts={accounts}
-            className="h-11 rounded-xl border-border/60 bg-background/40"
           />
           {errors.accountId && (
-            <p className="text-[11px] font-semibold text-destructive">
+            <p className="text-xs font-medium text-destructive">
               {errors.accountId.message}
             </p>
           )}
@@ -239,17 +238,12 @@ export function ConfirmScheduledForm({
         {/* Budget Category Select (only for expenses) */}
         {isExpense && (
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+            <Label className="text-[13px] font-medium text-foreground/90">
               Budget Category
             </Label>
-            <BudgetSelect
-              control={control}
-              name="budgetId"
-              budgets={budgets}
-              className="h-11 rounded-xl border-border/60 bg-background/40"
-            />
+            <BudgetSelect control={control} name="budgetId" budgets={budgets} />
             {errors.budgetId && (
-              <p className="text-[11px] font-semibold text-destructive">
+              <p className="text-xs font-medium text-destructive">
                 {errors.budgetId.message}
               </p>
             )}
@@ -257,25 +251,22 @@ export function ConfirmScheduledForm({
         )}
 
         {/* Description field */}
-        <div className="space-y-2">
-          <Label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+        <div className="space-y-1.5">
+          <Label className="text-[13px] font-medium text-foreground/90">
             Description
           </Label>
-          <Input
-            className="h-11 rounded-xl border-border/60 bg-background/40"
-            {...register("description")}
-          />
+          <Input {...register("description")} />
           {errors.description && (
-            <p className="text-[11px] font-semibold text-destructive">
+            <p className="text-xs font-medium text-destructive">
               {errors.description.message}
             </p>
           )}
         </div>
 
         {/* Dates */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+            <Label className="text-[13px] font-medium text-foreground/90">
               Transaction Date
             </Label>
             <Controller
@@ -288,7 +279,7 @@ export function ConfirmScheduledForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+            <Label className="text-[13px] font-medium text-foreground/90">
               Effective Date
             </Label>
             <Controller

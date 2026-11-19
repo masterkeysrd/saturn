@@ -64,4 +64,31 @@ describe("useTimezone", () => {
     const { result } = renderHook(() => useTimezone("Invalid/Timezone"))
     expect(result.current.timezone).toBe("UTC")
   })
+
+  it("exposes user-scoped locale, hourCycle, weekStartsOn, and deterministic formatMoney", () => {
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <TimezoneProvider
+        timezone="UTC"
+        locale="en-US"
+        hourCycle="h23"
+        weekStartsOn={1}
+      >
+        {children}
+      </TimezoneProvider>
+    )
+
+    const { result } = renderHook(() => useTimezone(), { wrapper })
+    expect(result.current.locale).toBe("en-US")
+    expect(result.current.hourCycle).toBe("h23")
+    expect(result.current.weekStartsOn).toBe(1)
+    expect(result.current.formatTime("2026-01-15T17:05:00.000Z")).toBe("17:05")
+    expect(result.current.formatMoney(123456, "USD")).toBe("$1,234.56")
+    expect(result.current.formatMoney(2500, "USD", { showSign: true })).toBe(
+      "+$25.00"
+    )
+    expect(result.current.formatMoney(-2500, "USD", { showSign: true })).toBe(
+      "-$25.00"
+    )
+    expect(result.current.formatMoney(5000, "INVALID")).toBe("50.00 INVALID")
+  })
 })

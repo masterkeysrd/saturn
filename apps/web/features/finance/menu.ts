@@ -1,49 +1,70 @@
-import { PiggyBankIcon } from "lucide-react"
+import {
+  ArrowLeftRight,
+  FileSpreadsheet,
+  HandCoins,
+  Inbox,
+  Landmark,
+  PiggyBankIcon,
+  ReceiptText,
+  RefreshCw,
+  TrendingUp,
+} from "lucide-react"
 import type { FeatureMenu } from "@/lib/navigation"
+import { FinanceInboxBadge } from "./components/finance-inbox-badge"
 
 export const menu: FeatureMenu = {
   title: "Finance",
   url: "/finance",
   icon: PiggyBankIcon,
-  weight: 20,
-  group: "main",
+  weight: 40,
+  group: "money",
   requiresSpace: true,
   items: [
     {
       title: "Insights",
       url: "/finance",
-    },
-    {
-      title: "Accounts",
-      url: "/finance/accounts",
+      icon: TrendingUp,
     },
     {
       title: "Transactions",
       url: "/finance/transactions",
+      icon: ReceiptText,
     },
     {
       title: "Review Queue",
       url: "/finance/inbox",
+      icon: Inbox,
+      badge: FinanceInboxBadge,
     },
     {
-      title: "Reconciliation",
-      url: "/finance/reconcile",
-    },
-    {
-      title: "Recurring Transactions",
-      url: "/finance/recurring",
+      title: "Accounts",
+      url: "/finance/accounts",
+      icon: Landmark,
     },
     {
       title: "Budgets",
       url: "/finance/budgets",
+      icon: PiggyBankIcon,
     },
     {
-      title: "Exchange Rates",
-      url: "/finance/rates",
+      title: "Recurring",
+      url: "/finance/recurring",
+      icon: RefreshCw,
     },
     {
       title: "Borrowings",
       url: "/finance/borrowings",
+      icon: HandCoins,
+    },
+    {
+      title: "Reconciliation",
+      url: "/finance/reconcile",
+      icon: FileSpreadsheet,
+    },
+    {
+      title: "Exchange Rates",
+      url: "/finance/rates",
+      icon: ArrowLeftRight,
     },
   ],
 }

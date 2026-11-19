@@ -1,13 +1,23 @@
-import { type ReactNode, useEffect, useRef, Suspense } from "react"
 import {
-  Routes,
-  Route,
+  Fragment,
+  lazy,
+  Suspense,
+  type ReactNode,
+  useEffect,
+  useRef,
+} from "react"
+import {
+  Link,
   Navigate,
   Outlet,
-  useParams,
+  Route,
+  Routes,
+  useLocation,
   useNavigate,
+  useParams,
 } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
+import { Search } from "lucide-react"
 import { AuthLayout } from "@/layouts/auth-layout"
 import { LoginView } from "@/features/auth/login-view"
 import { RegisterView } from "@/features/auth/register-view"
@@ -15,20 +25,26 @@ import { ResetPasswordView } from "@/features/auth/reset-password-view"
 import { ProtectedRoute } from "@/components/protected-route"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
-import { useTheme } from "@/components/theme-provider"
-import { Sun, Moon, Monitor, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu"
+import { Kbd } from "@/components/ui/kbd"
+import { SpaceSelector } from "@/components/space-selector"
+import { UserMenu } from "@/components/user-menu"
+import { CommandPalette } from "@/components/command-palette"
+import { openCommandPalette } from "@/lib/command-palette-events"
 import type { SaturnRouteObject } from "@/lib/navigation"
+import { resolveBreadcrumbs } from "@/lib/breadcrumbs"
 import { useActiveSpaceContext, useMySpaces } from "@/features/space/use-space"
 import { useAuth } from "@/features/auth/use-auth"
 import { NoSpaceActiveScreen } from "@/components/no-space-active"
 import { GlobalAIDrawer } from "@/features/ai/components/global-ai-drawer"
+
+const DevDesignSystemView = import.meta.env.DEV
+  ? lazy(() =>
+      import("@/features/design-system/design-system-view").then((m) => ({
+        default: m.DesignSystemView,
+      }))
+    )
+  : null
 
 function SpaceGuard({ children }: { children: ReactNode }) {
   const { spaceId: spaceIdParam } = useParams<{ spaceId: string }>()
@@ -103,61 +119,87 @@ const featureRoutes = Object.values(routeModules).flatMap(
   (module) => module.routes || []
 )
 
-function ThemeToggle() {
-  const { theme, resolvedTheme, setTheme } = useTheme()
+function ProtectedAppShell() {
+  const { spaceId } = useActiveSpaceContext()
+  const location = useLocation()
+  const breadcrumbs = resolveBreadcrumbs(location.pathname)
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="h-8 w-8 cursor-pointer rounded-full hover:bg-muted/80"
-            title="Switch Theme"
-            aria-label="Switch Theme"
-          />
-        }
-      >
-        {resolvedTheme === "dark" ? (
-          <Moon className="h-4 w-4 text-foreground" />
-        ) : (
-          <Sun className="h-4 w-4 text-amber-500" />
-        )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-36">
-        <DropdownMenuItem
-          onClick={() => setTheme("light")}
-          className="cursor-pointer justify-between"
-        >
-          <span className="flex items-center gap-2">
-            <Sun className="h-4 w-4 text-amber-500" />
-            Light
-          </span>
-          {theme === "light" && <Check className="h-3.5 w-3.5 text-primary" />}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => setTheme("dark")}
-          className="cursor-pointer justify-between"
-        >
-          <span className="flex items-center gap-2">
-            <Moon className="h-4 w-4" />
-            Dark
-          </span>
-          {theme === "dark" && <Check className="h-3.5 w-3.5 text-primary" />}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => setTheme("system")}
-          className="cursor-pointer justify-between"
-        >
-          <span className="flex items-center gap-2">
-            <Monitor className="h-4 w-4" />
-            System
-          </span>
-          {theme === "system" && <Check className="h-3.5 w-3.5 text-primary" />}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <SidebarProvider>
+      <CommandPalette />
+      <div className="flex h-svh w-full overflow-hidden bg-background">
+        <AppSidebar />
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/75 sm:px-4">
+            <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+              <SidebarTrigger />
+              {(spaceId || breadcrumbs.length > 0) && (
+                <span
+                  aria-hidden="true"
+                  className="mx-0.5 h-4 w-px shrink-0 bg-border/70"
+                />
+              )}
+              {spaceId && <SpaceSelector />}
+              {breadcrumbs.length > 0 && (
+                <nav
+                  aria-label="Breadcrumb"
+                  className="hidden min-w-0 items-center gap-1.5 text-sm sm:flex"
+                >
+                  {breadcrumbs.map((segment, index) => {
+                    const isLast = index === breadcrumbs.length - 1
+                    const showSlash = Boolean(spaceId) || index > 0
+                    return (
+                      <Fragment key={`${segment.label}-${index}`}>
+                        {showSlash && (
+                          <span
+                            aria-hidden="true"
+                            className="text-border select-none"
+                          >
+                            /
+                          </span>
+                        )}
+                        {segment.to && !isLast ? (
+                          <Link
+                            to={segment.to}
+                            className="truncate text-muted-foreground transition-colors hover:text-foreground"
+                          >
+                            {segment.label}
+                          </Link>
+                        ) : (
+                          <span className="truncate font-medium text-foreground">
+                            {segment.label}
+                          </span>
+                        )}
+                      </Fragment>
+                    )
+                  })}
+                </nav>
+              )}
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => openCommandPalette()}
+                aria-label="Open Command Palette"
+                className="h-8 cursor-pointer gap-2 rounded-lg px-2.5 text-xs font-normal text-muted-foreground hover:text-foreground"
+              >
+                <Search className="size-3.5 shrink-0" />
+                <span className="hidden md:inline">Search or jump…</span>
+                <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
+              </Button>
+              <GlobalAIDrawer key={spaceId} />
+              <UserMenu />
+            </div>
+          </header>
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+    </SidebarProvider>
   )
 }
 
@@ -199,6 +241,23 @@ export function App() {
 
   return (
     <Routes>
+      {import.meta.env.DEV && DevDesignSystemView && (
+        <Route
+          path="/__design"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex h-svh items-center justify-center p-8">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              }
+            >
+              <DevDesignSystemView />
+            </Suspense>
+          }
+        />
+      )}
+
       {/* Public Auth Routes */}
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginView />} />
@@ -208,27 +267,7 @@ export function App() {
 
       {/* Protected Routes with Sidebar Layout */}
       <Route element={<ProtectedRoute />}>
-        <Route
-          element={
-            <SidebarProvider>
-              <div className="flex h-svh w-full overflow-hidden bg-background">
-                <AppSidebar />
-                <main className="flex flex-1 flex-col overflow-hidden">
-                  <div className="flex h-14 shrink-0 items-center justify-between border-b border-border/40 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                    <SidebarTrigger />
-                    <div className="flex items-center gap-2">
-                      <GlobalAIDrawer key={spaceId} />
-                      <ThemeToggle />
-                    </div>
-                  </div>
-                  <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-                    <Outlet />
-                  </div>
-                </main>
-              </div>
-            </SidebarProvider>
-          }
-        >
+        <Route element={<ProtectedAppShell />}>
           {/* Calendar top-level space redirect */}
           <Route
             path="/calendar"

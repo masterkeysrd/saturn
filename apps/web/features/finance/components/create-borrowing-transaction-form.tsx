@@ -212,25 +212,25 @@ export function CreateBorrowingTransactionForm({
         </div>
 
         {/* Amount field */}
-        <div className="space-y-2">
-          <Label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+        <div className="space-y-1.5">
+          <Label className="text-[13px] font-medium text-foreground/90">
             Amount
           </Label>
           <div className="relative">
             <Input
               type="number"
               step="0.01"
-              className="h-11 rounded-xl border-border/60 bg-background/40 pr-12 focus-visible:ring-primary"
+              className="pr-14 font-mono tabular-nums"
               {...register("amount")}
             />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-              <span className="text-xs font-bold text-muted-foreground uppercase">
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+              <span className="font-mono text-xs font-medium text-muted-foreground uppercase">
                 {borrowing.currency || "USD"}
               </span>
             </div>
           </div>
           {errors.amount && (
-            <p className="text-[11px] font-semibold text-destructive">
+            <p className="text-xs font-medium text-destructive">
               {errors.amount.message}
             </p>
           )}
@@ -238,34 +238,32 @@ export function CreateBorrowingTransactionForm({
 
         {/* Account Select */}
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+          <Label className="text-[13px] font-medium text-foreground/90">
             Bank Account
           </Label>
           <AccountSelect
             control={control}
             name="accountId"
             accounts={activeAccounts}
-            className="h-11 rounded-xl border-border/60 bg-background/40"
           />
           {errors.accountId && (
-            <p className="text-[11px] font-semibold text-destructive">
+            <p className="text-xs font-medium text-destructive">
               {errors.accountId.message}
             </p>
           )}
         </div>
 
         {/* Notes/Description field */}
-        <div className="space-y-2">
-          <Label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+        <div className="space-y-1.5">
+          <Label className="text-[13px] font-medium text-foreground/90">
             Notes / Reference
           </Label>
           <Input
             placeholder="e.g. Monthly installment, bank transfer ID, cash repayment"
-            className="h-11 rounded-xl border-border/60 bg-background/40"
             {...register("notes")}
           />
           {errors.notes && (
-            <p className="text-[11px] font-semibold text-destructive">
+            <p className="text-xs font-medium text-destructive">
               {errors.notes.message}
             </p>
           )}
@@ -273,7 +271,7 @@ export function CreateBorrowingTransactionForm({
 
         {/* Date Picker */}
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+          <Label className="text-[13px] font-medium text-foreground/90">
             Transaction Date
           </Label>
           <Controller

@@ -4,8 +4,8 @@ import type { FeatureMenu } from "@/lib/navigation"
 export const menu: FeatureMenu = {
   title: "Workflows",
   icon: Workflow,
-  weight: 55,
-  group: "main",
+  weight: 50,
+  group: "automation",
   requiresSpace: true,
   items: [
     {

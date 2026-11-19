@@ -31,9 +31,11 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 ## 3. UI, Theming & Performance
 
-1. **Theme Tokens**:
-   - Use `theme.colors` from `@/lib/theme` rather than hardcoded hex values to support dark mode consistently.
+1. **Reactive Theme Tokens (`@saturn/tokens` + `useTheme()`)**:
+   - Consume `useTheme()` and `useThemedStyles(createStyles)` from `@/lib/theme` (backed by `@saturn/tokens`) in all new and refactored screens so Light, Dark, and System modes react immediately without stale module-level `StyleSheet.create` singletons.
+   - Legacy static `theme` exports remain strictly for backward compatibility during screen-by-screen migration; never hardcode raw hex colors in components.
    - For budget cards and category accents, use `getNativeBudgetColors` from `@/lib/theme`.
+   - Use the dev-only Design System gallery (`settings/design-system`, gated by `__DEV__`) to verify Light & Dark tokens and primitives side-by-side.
 2. **Haptic Feedback**:
    - Trigger haptics via `@/lib/haptics` (`haptics.light()`, `haptics.success()`, `haptics.selection()`) on user interactions, button taps, and sheet dismissals.
 3. **Typography**:

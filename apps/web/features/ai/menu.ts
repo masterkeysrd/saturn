@@ -1,27 +1,22 @@
-import { Sparkles, MessageSquare, Bot, Cpu, Plug, History } from "lucide-react"
+import { Sparkles, Bot, Cpu, Plug, History } from "lucide-react"
 import type { FeatureMenu } from "@/lib/navigation"
 
 export const menu: FeatureMenu[] = [
   {
-    title: "AI Assistant",
+    title: "Copilot",
     url: "/space/ai/chat",
     icon: Sparkles,
-    weight: 5,
-    group: "main",
+    weight: 30,
+    group: "pulse",
     requiresSpace: true,
   },
   {
     title: "AI Studio",
     icon: Bot,
     weight: 60,
-    group: "main",
+    group: "automation",
     requiresSpace: true,
     items: [
-      {
-        title: "Chat",
-        url: "/space/ai/chat",
-        icon: MessageSquare,
-      },
       {
         title: "Agents",
         url: "/space/ai/agents",

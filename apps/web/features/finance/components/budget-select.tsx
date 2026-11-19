@@ -181,7 +181,7 @@ function BudgetSelectInner({
       <PopoverTrigger
         disabled={disabled}
         className={cn(
-          "flex h-11 w-full cursor-pointer items-center justify-between rounded-xl border border-border/50 bg-background/50 px-3 text-left font-normal transition-all hover:border-border hover:bg-background/80 focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-10 w-full cursor-pointer items-center justify-between rounded-lg border border-border bg-control px-3 text-left text-sm font-normal shadow-2xs transition-colors outline-none hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
       >
@@ -194,37 +194,37 @@ function BudgetSelectInner({
                 return (
                   <div
                     className={cn(
-                      "shrink-0 rounded-lg border p-1",
+                      "shrink-0 rounded-md border p-1",
                       colors.bg,
                       colors.text,
                       colors.border
                     )}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-3.5 w-3.5" />
                   </div>
                 )
               })()}
               <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
-                <span className="truncate text-xs font-semibold text-foreground">
+                <span className="truncate text-sm font-medium text-foreground">
                   {selectedBudget.name}
                 </span>
                 <span
                   className={cn(
-                    "shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-bold tracking-wider",
+                    "shrink-0 rounded-md border px-1.5 py-0.5 text-[11px] font-medium",
                     getIntervalColorClass(selectedBudget.interval)
                   )}
                 >
                   {formatInterval(selectedBudget.interval)}
                 </span>
                 {!isStatusActive(selectedBudget.status) && (
-                  <span className="flex shrink-0 items-center gap-0.5 rounded-full border border-border/40 bg-muted px-1.5 py-0.5 text-[8px] font-bold text-muted-foreground uppercase">
-                    <PauseCircle className="h-2 w-2" />
+                  <span className="flex shrink-0 items-center gap-0.5 rounded-md border border-border/40 bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    <PauseCircle className="h-2.5 w-2.5" />
                     Paused
                   </span>
                 )}
               </div>
             </div>
-            <span className="ml-2 shrink-0 text-[10px] font-bold text-muted-foreground tabular-nums">
+            <span className="ml-2 shrink-0 font-mono text-xs font-medium text-muted-foreground tabular-nums">
               {formatCents(selectedBudget.limitAmount).toLocaleString(
                 undefined,
                 {
@@ -236,7 +236,7 @@ function BudgetSelectInner({
             </span>
           </div>
         ) : (
-          <span className="text-xs text-muted-foreground">{placeholder}</span>
+          <span className="text-sm text-muted-foreground">{placeholder}</span>
         )}
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground opacity-50" />
       </PopoverTrigger>

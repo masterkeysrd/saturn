@@ -112,7 +112,7 @@ export function InstitutionSelect({ value, onChange }: InstitutionSelectProps) {
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger className="flex h-10 w-full items-center justify-between rounded-md border border-border/50 bg-card/50 px-3 text-left font-normal hover:bg-accent/50">
+        <PopoverTrigger className="flex h-10 w-full cursor-pointer items-center justify-between rounded-lg border border-border bg-control px-3 text-left text-sm font-normal shadow-2xs transition-colors outline-none hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40">
           {selectedInstitution ? (
             <div className="flex items-center gap-2.5 truncate">
               <InstitutionLogo

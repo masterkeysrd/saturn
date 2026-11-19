@@ -180,7 +180,7 @@ const AmountInputInner = React.forwardRef<
           placeholder={placeholder}
           disabled={disabled}
           className={cn(
-            "h-11 rounded-xl font-bold text-foreground transition-all",
+            "h-10 rounded-lg font-mono text-sm font-semibold text-foreground tabular-nums",
             currency ? "pl-12" : "pl-3",
             className
           )}

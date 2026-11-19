@@ -2,7 +2,6 @@ import { format, isValid } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import {
   Popover,
@@ -28,25 +27,23 @@ export function DatePicker({
   return (
     <Popover>
       <PopoverTrigger
-        render={
-          <Button
-            variant="outline"
-            className={cn(
-              "h-12 w-full justify-start rounded-xl border border-border/60 bg-background/50 text-left font-normal",
-              !isValidDate && "text-muted-foreground",
-              className
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-            {isValidDate ? (
-              format(date, "yyyy/MM/dd")
-            ) : (
-              <span>{placeholder}</span>
-            )}
-          </Button>
-        }
-      />
-      <PopoverContent className="w-auto rounded-2xl border border-border/50 bg-card/90 p-0 shadow-2xl backdrop-blur-xl">
+        type="button"
+        className={cn(
+          "flex h-10 w-full cursor-pointer items-center justify-start gap-2 rounded-lg border border-border bg-control px-3 text-left text-sm font-normal text-foreground shadow-2xs transition-colors outline-none hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40",
+          !isValidDate && "text-muted-foreground",
+          className
+        )}
+      >
+        <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        {isValidDate ? (
+          <span className="font-mono tabular-nums">
+            {format(date, "yyyy/MM/dd")}
+          </span>
+        ) : (
+          <span>{placeholder}</span>
+        )}
+      </PopoverTrigger>
+      <PopoverContent className="w-auto rounded-xl border border-border bg-popover p-0 shadow-xl">
         <Calendar
           mode="single"
           selected={isValidDate ? date : undefined}

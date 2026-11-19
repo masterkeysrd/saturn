@@ -18,6 +18,7 @@ export interface FormDrawerProps {
   description?: React.ReactNode
   icon?: React.ReactNode
   submitLabel: string
+  cancelLabel?: string
   isPending?: boolean
   disabled?: boolean
   hideSubmitButton?: boolean
@@ -33,6 +34,7 @@ export function FormDrawer({
   description,
   icon,
   submitLabel,
+  cancelLabel = "Cancel",
   isPending = false,
   disabled = false,
   hideSubmitButton = false,
@@ -44,12 +46,12 @@ export function FormDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         className={cn(
-          "rounded-none border-none border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:rounded-l-3xl sm:border-l data-[side=right]:sm:max-w-md md:p-8",
+          "flex h-full flex-col gap-0 overflow-hidden border-l border-border bg-card p-0 shadow-xl sm:max-w-md",
           className
         )}
       >
-        <SheetHeader className="p-0">
-          <SheetTitle className="flex items-center gap-2 text-xl font-bold">
+        <SheetHeader className="shrink-0 border-b border-border/60 px-6 py-4">
+          <SheetTitle className="flex items-center gap-2 pr-8 text-lg font-semibold tracking-tight">
             {icon}
             <span>{title}</span>
           </SheetTitle>
@@ -60,15 +62,28 @@ export function FormDrawer({
           )}
         </SheetHeader>
 
-        <form onSubmit={onSubmit} className="mt-8 space-y-6">
-          {children}
+        <form
+          onSubmit={onSubmit}
+          className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        >
+          <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+            {children}
+          </div>
 
           {!hideSubmitButton && (
-            <div className="w-full pt-4">
+            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border/60 bg-card px-6 py-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isPending}
+              >
+                {cancelLabel}
+              </Button>
               <Button
                 type="submit"
                 disabled={isPending || disabled}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
+                className="min-w-28"
               >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 <span>{submitLabel}</span>
@@ -101,27 +116,21 @@ export function FormFieldItem({
   id,
 }: FormFieldItemProps) {
   return (
-    <div className={cn("space-y-2", className)}>
-      <div className="flex items-center justify-between">
+    <div className={cn("space-y-1.5", className)}>
+      <div className="flex items-center justify-between gap-2">
         <Label
           htmlFor={id}
-          className="text-xs font-bold tracking-wider text-foreground uppercase"
+          className="text-[13px] font-medium text-foreground/90"
         >
           {label}
         </Label>
         {optionalText && (
-          <span className="text-[10px] font-medium text-muted-foreground">
-            {optionalText}
-          </span>
+          <span className="text-xs text-muted-foreground">{optionalText}</span>
         )}
       </div>
       {children}
-      {subtext && (
-        <p className="text-[10px] text-muted-foreground">{subtext}</p>
-      )}
-      {error && (
-        <p className="text-[11px] font-semibold text-destructive">{error}</p>
-      )}
+      {subtext && <p className="text-xs text-muted-foreground">{subtext}</p>}
+      {error && <p className="text-xs font-medium text-destructive">{error}</p>}
     </div>
   )
 }

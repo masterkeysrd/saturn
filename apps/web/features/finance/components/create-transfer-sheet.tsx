@@ -198,7 +198,6 @@ export function CreateTransferSheet({
           }}
           currency={srcAcc?.currency}
           placeholder="0.00"
-          className="h-11 rounded-xl"
         />
       </FormFieldItem>
 
@@ -211,15 +210,14 @@ export function CreateTransferSheet({
           name="destinationAmount"
           currency={dstAcc?.currency}
           placeholder="0.00"
-          className="h-11 rounded-xl"
         />
       </FormFieldItem>
 
       {srcAcc && dstAcc && srcAcc.currency !== dstAcc.currency && (
-        <div className="flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3.5 text-[11px] text-amber-500">
-          <AlertTriangle className="mt-0.5 h-4.5 w-4.5 shrink-0" />
+        <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 text-xs text-amber-500">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            <p className="font-bold">Multi-Currency Transfer</p>
+            <p className="font-semibold">Multi-Currency Transfer</p>
             <p className="mt-0.5 leading-relaxed">
               Funds will be converted from {srcAcc.currency} to{" "}
               {dstAcc.currency} using your rates configuration.
@@ -245,7 +243,6 @@ export function CreateTransferSheet({
         <Input
           placeholder="e.g. Monthly savings allocation"
           {...register("notes")}
-          className="h-11 rounded-xl"
         />
       </FormFieldItem>
     </FormDrawer>
