@@ -24,6 +24,7 @@ export interface FormDrawerProps {
   isPending?: boolean
   disabled?: boolean
   hideSubmitButton?: boolean
+  mobileFullscreen?: boolean
   onSubmit: (e: React.FormEvent) => void
   children: React.ReactNode
   className?: string
@@ -34,6 +35,7 @@ const FormDialogShellContext = React.createContext(false)
 export interface FormDialogShellProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  mobileFullscreen?: boolean
   children: React.ReactNode
   className?: string
 }
@@ -41,12 +43,14 @@ export interface FormDialogShellProps {
 export function FormDialogShell({
   open,
   onOpenChange,
+  mobileFullscreen = true,
   children,
   className,
 }: FormDialogShellProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        mobileFullscreen={mobileFullscreen}
         className={cn(
           "flex max-h-[min(88svh,44rem)] flex-col gap-0 overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-2xl sm:max-w-lg",
           className
@@ -73,6 +77,7 @@ export function FormDrawer({
   isPending = false,
   disabled = false,
   hideSubmitButton = false,
+  mobileFullscreen = true,
   onSubmit,
   children,
   className,
@@ -81,7 +86,7 @@ export function FormDrawer({
 
   const innerContent = (
     <>
-      <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
+      <DialogHeader className="shrink-0 border-b border-border/60 px-6 pt-[max(1rem,env(safe-area-inset-top))] pb-4">
         <DialogTitle className="flex items-center gap-2 pr-8 text-lg font-semibold tracking-tight">
           {icon}
           <span>{title}</span>
@@ -108,12 +113,12 @@ export function FormDrawer({
         </div>
 
         {customFooter ? (
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border/60 bg-card px-6 py-4">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border/60 bg-card px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {customFooter}
           </div>
         ) : (
           !hideSubmitButton && (
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border/60 bg-card px-6 py-4">
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border/60 bg-card px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <Button
                 type="button"
                 variant="outline"
@@ -144,6 +149,7 @@ export function FormDrawer({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        mobileFullscreen={mobileFullscreen}
         className={cn(
           "flex max-h-[min(88svh,44rem)] flex-col gap-0 overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-2xl sm:max-w-lg",
           className

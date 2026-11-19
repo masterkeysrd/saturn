@@ -313,7 +313,7 @@ export function SpaceSettings() {
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
       >
-        <DialogContent>
+        <DialogContent mobileFullscreen={false}>
           <DialogHeader>
             <DialogTitle>Delete Space</DialogTitle>
             <DialogDescription>

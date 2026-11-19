@@ -258,7 +258,7 @@ export function ActiveSessionsSettings() {
         open={!!sessionToRevoke}
         onOpenChange={(open) => !open && setSessionToRevoke(null)}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent mobileFullscreen={false} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangleIcon className="h-5 w-5" />
@@ -304,7 +304,7 @@ export function ActiveSessionsSettings() {
 
       {/* Revoke All Sessions Dialog */}
       <Dialog open={revokeAllOpen} onOpenChange={setRevokeAllOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent mobileFullscreen={false} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <LogOutIcon className="h-5 w-5" />

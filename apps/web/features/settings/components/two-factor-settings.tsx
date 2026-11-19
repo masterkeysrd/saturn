@@ -688,7 +688,7 @@ export function TwoFactorSettings() {
         open={!!factorToDelete}
         onOpenChange={(open) => !open && setFactorToDelete(null)}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent mobileFullscreen={false} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Remove Authenticator Device</DialogTitle>
             <DialogDescription>

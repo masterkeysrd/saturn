@@ -177,7 +177,7 @@ export function TrustedDevicesSettings() {
 
       {/* Revocation Confirmation Dialog */}
       <Dialog open={revokeOpen} onOpenChange={setRevokeOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent mobileFullscreen={false} className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-2 text-destructive">
               <AlertTriangleIcon className="h-5 w-5" />

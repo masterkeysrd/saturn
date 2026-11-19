@@ -36,7 +36,7 @@ export function RecurrenceScopeDialog({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent mobileFullscreen={false} className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
             {isDelete ? "Delete Recurring Event" : "Edit Recurring Event"}

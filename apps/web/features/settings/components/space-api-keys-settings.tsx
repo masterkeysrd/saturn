@@ -198,7 +198,7 @@ export function SpaceAPIKeysSettings() {
         open={!!grantToRevoke}
         onOpenChange={(open) => !open && setGrantToRevoke(null)}
       >
-        <DialogContent>
+        <DialogContent mobileFullscreen={false}>
           <DialogHeader>
             <DialogTitle>Revoke Workspace Access</DialogTitle>
             <DialogDescription>

@@ -49,8 +49,9 @@ function CommandDialog({
         <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
       <DialogContent
+        mobileFullscreen={false}
         className={cn(
-          "top-1/4 translate-y-0 overflow-hidden rounded-xl! border border-border p-0 shadow-2xl",
+          "top-[10%] translate-y-0 overflow-hidden rounded-xl! border border-border p-0 shadow-2xl sm:top-1/4",
           className
         )}
         showCloseButton={showCloseButton}

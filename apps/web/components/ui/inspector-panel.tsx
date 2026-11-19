@@ -44,11 +44,11 @@ export function WorkspaceInspectorPanel({
       tabIndex={-1}
       onKeyDown={handleKeyDown}
       className={cn(
-        "flex w-full flex-col overflow-hidden border-t border-border/60 bg-card outline-none lg:sticky lg:top-0 lg:h-[calc(100svh-3rem)] lg:w-96 lg:shrink-0 lg:border-t-0 lg:border-l xl:w-[420px]",
+        "flex w-full flex-col overflow-hidden bg-card outline-none max-lg:fixed max-lg:inset-0 max-lg:z-40 max-lg:h-dvh lg:sticky lg:top-0 lg:h-[calc(100svh-3rem)] lg:w-96 lg:shrink-0 lg:border-l lg:border-border/60 xl:w-[420px]",
         className
       )}
     >
-      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/60 px-5 py-3.5">
+      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/60 px-5 pt-[max(0.875rem,env(safe-area-inset-top))] pb-3.5 lg:py-3.5">
         <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground">
             {icon && <span className="shrink-0 text-primary">{icon}</span>}
@@ -77,7 +77,7 @@ export function WorkspaceInspectorPanel({
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
 
       {footer && (
-        <footer className="shrink-0 border-t border-border/60 bg-card px-5 py-3.5">
+        <footer className="shrink-0 border-t border-border/60 bg-card px-5 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] lg:py-3.5">
           {footer}
         </footer>
       )}

@@ -740,7 +740,7 @@ export function APIKeysSettings() {
         open={!!keyToDelete}
         onOpenChange={(open) => !open && setKeyToDelete(null)}
       >
-        <DialogContent>
+        <DialogContent mobileFullscreen={false}>
           <DialogHeader className="pr-8">
             <DialogTitle>Revoke API Key</DialogTitle>
             <DialogDescription>
