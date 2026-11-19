@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import {
+  buildCopilotEntityKey,
   collectWorkflowStepIds,
   createDefaultWorkflowStep,
   createEmptyWorkflowDraft,
 } from "@saturn/core"
+import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import { FlowSchema } from "@saturn/schemas"
 import {
   useGetFlowQuery,
@@ -71,6 +73,27 @@ export function WorkflowEditorView() {
   const draft =
     draftOverride ?? (!isNew && loadedFlow ? loadedFlow : fallbackDraft)
   const setDraft = (next: Flow) => setDraftOverride(next)
+
+  useRegisterCopilotView({
+    viewId: "workflows.editor",
+    title: "Workflow Editor",
+    activeEntity: {
+      key: buildCopilotEntityKey("workflow", draft.id || "new"),
+      kind: "workflow",
+      id: draft.id || "new",
+      label: draft.name || "Untitled Workflow",
+      summary: {
+        isEnabled: Boolean(draft.isEnabled),
+        stepCount: draft.steps?.length ?? 0,
+        triggerCount: draft.triggers?.length ?? 0,
+      },
+    },
+    suggestions: [
+      "Review this workflow for potential edge cases",
+      "Explain what each step in this workflow does",
+      "Suggest error handling or improvements for this flow",
+    ],
+  })
 
   const [selectedNode, setSelectedNode] = useState<SelectedCanvasNode>({
     kind: "flow",

@@ -23,6 +23,8 @@ import {
   Unlock,
   CreditCard,
 } from "lucide-react"
+import { buildCopilotEntityKey } from "@saturn/core"
+import { CopilotAttachButton } from "@/features/ai/components/copilot-attach-button"
 import { getBudgetColors, getBudgetIcon, formatInterval } from "../utils"
 import { BudgetPeriodProgress } from "./budget-period-progress"
 import { cn } from "@/lib/utils"
@@ -157,9 +159,25 @@ export function BudgetCard({
           </div>
 
           <div
-            className="flex shrink-0 items-center"
+            className="flex shrink-0 items-center gap-0.5"
             onClick={(e) => e.stopPropagation()}
           >
+            {budget.id && (
+              <CopilotAttachButton
+                item={{
+                  key: buildCopilotEntityKey("budget", budget.id),
+                  kind: "budget",
+                  id: budget.id,
+                  label: budget.name || "Budget",
+                  summary: {
+                    currency: budget.currency,
+                    limitAmount: Number(budget.limitAmount || 0),
+                    interval: budget.interval,
+                    status: budget.status,
+                  },
+                }}
+              />
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={

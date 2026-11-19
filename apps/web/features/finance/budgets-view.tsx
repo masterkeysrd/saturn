@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useSpacePermissions } from "@/features/space/use-space"
 import { convertCentsToBase } from "@saturn/core"
 import { invalidateFinanceQueries } from "@saturn/hooks"
+import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import {
   type Budget,
   type Budget_Status,
@@ -216,6 +217,16 @@ export function BudgetsView() {
     setActiveBudget(budget)
     setEditOpen(true)
   }
+
+  useRegisterCopilotView({
+    viewId: "finance.budgets",
+    title: "Budgets",
+    suggestions: [
+      "Which budgets are pacing ahead of limit this month?",
+      "Summarize my active budget limits and remaining room",
+      "Suggest budget adjustments based on recent spending",
+    ],
+  })
 
   return (
     <FinancePageLayout

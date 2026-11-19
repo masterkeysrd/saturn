@@ -36,7 +36,11 @@ import { resolveBreadcrumbs } from "@/lib/breadcrumbs"
 import { useActiveSpaceContext, useMySpaces } from "@/features/space/use-space"
 import { useAuth } from "@/features/auth/use-auth"
 import { NoSpaceActiveScreen } from "@/components/no-space-active"
-import { GlobalAIDrawer } from "@/features/ai/components/global-ai-drawer"
+import { CopilotContextProvider } from "@saturn/hooks/ai"
+import {
+  DockedCopilotSidebar,
+  GlobalAIDrawer,
+} from "@/features/ai/components/global-ai-drawer"
 
 const DevDesignSystemView = import.meta.env.DEV
   ? lazy(() =>
@@ -125,81 +129,84 @@ function ProtectedAppShell() {
   const breadcrumbs = resolveBreadcrumbs(location.pathname)
 
   return (
-    <SidebarProvider>
-      <CommandPalette />
-      <div className="flex h-svh w-full overflow-hidden bg-background">
-        <AppSidebar />
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/75 sm:px-4">
-            <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-              <SidebarTrigger />
-              {(spaceId || breadcrumbs.length > 0) && (
-                <span
-                  aria-hidden="true"
-                  className="mx-0.5 h-4 w-px shrink-0 bg-border/70"
-                />
-              )}
-              {spaceId && <SpaceSelector />}
-              {breadcrumbs.length > 0 && (
-                <nav
-                  aria-label="Breadcrumb"
-                  className="hidden min-w-0 items-center gap-1.5 text-sm sm:flex"
-                >
-                  {breadcrumbs.map((segment, index) => {
-                    const isLast = index === breadcrumbs.length - 1
-                    const showSlash = Boolean(spaceId) || index > 0
-                    return (
-                      <Fragment key={`${segment.label}-${index}`}>
-                        {showSlash && (
-                          <span
-                            aria-hidden="true"
-                            className="text-border select-none"
-                          >
-                            /
-                          </span>
-                        )}
-                        {segment.to && !isLast ? (
-                          <Link
-                            to={segment.to}
-                            className="truncate text-muted-foreground transition-colors hover:text-foreground"
-                          >
-                            {segment.label}
-                          </Link>
-                        ) : (
-                          <span className="truncate font-medium text-foreground">
-                            {segment.label}
-                          </span>
-                        )}
-                      </Fragment>
-                    )
-                  })}
-                </nav>
-              )}
-            </div>
+    <CopilotContextProvider spaceId={spaceId}>
+      <SidebarProvider>
+        <CommandPalette />
+        <div className="flex h-svh w-full overflow-hidden bg-background">
+          <AppSidebar />
+          <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/75 sm:px-4">
+              <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+                <SidebarTrigger />
+                {(spaceId || breadcrumbs.length > 0) && (
+                  <span
+                    aria-hidden="true"
+                    className="mx-0.5 h-4 w-px shrink-0 bg-border/70"
+                  />
+                )}
+                {spaceId && <SpaceSelector />}
+                {breadcrumbs.length > 0 && (
+                  <nav
+                    aria-label="Breadcrumb"
+                    className="hidden min-w-0 items-center gap-1.5 text-sm sm:flex"
+                  >
+                    {breadcrumbs.map((segment, index) => {
+                      const isLast = index === breadcrumbs.length - 1
+                      const showSlash = Boolean(spaceId) || index > 0
+                      return (
+                        <Fragment key={`${segment.label}-${index}`}>
+                          {showSlash && (
+                            <span
+                              aria-hidden="true"
+                              className="text-border select-none"
+                            >
+                              /
+                            </span>
+                          )}
+                          {segment.to && !isLast ? (
+                            <Link
+                              to={segment.to}
+                              className="truncate text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                              {segment.label}
+                            </Link>
+                          ) : (
+                            <span className="truncate font-medium text-foreground">
+                              {segment.label}
+                            </span>
+                          )}
+                        </Fragment>
+                      )
+                    })}
+                  </nav>
+                )}
+              </div>
 
-            <div className="flex shrink-0 items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => openCommandPalette()}
-                aria-label="Open Command Palette"
-                className="h-8 cursor-pointer gap-2 rounded-lg px-2.5 text-xs font-normal text-muted-foreground hover:text-foreground"
-              >
-                <Search className="size-3.5 shrink-0" />
-                <span className="hidden md:inline">Search or jump…</span>
-                <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
-              </Button>
-              <GlobalAIDrawer key={spaceId} />
-              <UserMenu />
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openCommandPalette()}
+                  aria-label="Open Command Palette"
+                  className="h-8 cursor-pointer gap-2 rounded-lg px-2.5 text-xs font-normal text-muted-foreground hover:text-foreground"
+                >
+                  <Search className="size-3.5 shrink-0" />
+                  <span className="hidden md:inline">Search or jump…</span>
+                  <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
+                </Button>
+                <GlobalAIDrawer triggerOnly key={spaceId} />
+                <UserMenu />
+              </div>
+            </header>
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+              <Outlet />
             </div>
-          </header>
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-            <Outlet />
-          </div>
-        </main>
-      </div>
-    </SidebarProvider>
+          </main>
+          <DockedCopilotSidebar />
+        </div>
+      </SidebarProvider>
+    </CopilotContextProvider>
   )
 }
 

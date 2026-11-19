@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useLocation } from "react-router-dom"
 import {
+  deduplicateCopilotEntityRefs,
   describeToolCall,
   extractToolErrorMessage,
+  formatCopilotPromptWithContext,
   getStreamPhaseLabel,
+  parseCopilotMessageContext,
   splitThinkingFromText,
   type ThreadStreamPhase,
   type ToolDescriptor,
 } from "@saturn/core"
-import { useThreadStream } from "@saturn/hooks/ai"
+import { useCopilot, useThreadStream } from "@saturn/hooks/ai"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import {
   useListAgentsQuery,
@@ -76,6 +79,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { CopilotEntityBadge } from "./copilot-entity-pill"
 import { cn } from "@/lib/utils"
 import {
   BotIcon,
@@ -133,8 +137,21 @@ function renderMessageBlocks(msg: ThreadMessage) {
   )
   const toolCalls = blocks.filter((b) => b.type === "tool_call")
 
+  const parsedContext =
+    msg.role === "user" && textParts
+      ? parseCopilotMessageContext(textParts)
+      : { refs: [], cleanText: textParts }
+
   return (
     <>
+      {parsedContext.refs.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {parsedContext.refs.map((ref) => (
+            <CopilotEntityBadge key={ref.key} item={ref} />
+          ))}
+        </div>
+      )}
+
       {attachments.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {attachments.map((b, i) => (
@@ -166,7 +183,9 @@ function renderMessageBlocks(msg: ThreadMessage) {
         </Tool>
       ))}
 
-      {textParts && <MessageResponse>{textParts}</MessageResponse>}
+      {parsedContext.cleanText && (
+        <MessageResponse>{parsedContext.cleanText}</MessageResponse>
+      )}
     </>
   )
 }
@@ -287,6 +306,14 @@ export function ThreadConversation({
 }: ThreadConversationProps) {
   const location = useLocation()
   const { spaceId } = useActiveSpaceContext()
+  const {
+    activeView,
+    isAmbientDismissed,
+    dismissAmbient,
+    pinnedItems,
+    detachItem,
+    clearPinnedItems,
+  } = useCopilot()
   const [input, setInput] = useState("")
   const [attachments, setAttachments] = useState<PromptInputAttachment[]>([])
   const threadKey = threadId ?? "__new__"
@@ -441,6 +468,18 @@ export function ThreadConversation({
     const content = (overrideText ?? effectiveInput).trim()
     if (!content && attachments.length === 0) return
 
+    const ambientEntity =
+      activeView?.activeEntity && !isAmbientDismissed
+        ? activeView.activeEntity
+        : null
+    const contextRefs = deduplicateCopilotEntityRefs([
+      ...(ambientEntity ? [ambientEntity] : []),
+      ...pinnedItems,
+    ])
+    const serializedContent = content
+      ? formatCopilotPromptWithContext(content, contextRefs)
+      : content
+
     const currentAttachments = attachments
     if (!overrideText) {
       setInput("")
@@ -449,13 +488,16 @@ export function ThreadConversation({
         onPendingPromptConsumed?.()
       }
     }
+    if (pinnedItems.length > 0) {
+      clearPinnedItems()
+    }
 
     try {
       await sendMessage({
-        content,
+        content: serializedContent,
         agentId: effectiveAgentId,
         modelId: effectiveModelId,
-        contextHint: location.pathname,
+        contextHint: activeView?.viewId || location.pathname,
         attachments: overrideText
           ? []
           : currentAttachments.map((a) => ({
@@ -530,8 +572,64 @@ export function ThreadConversation({
     return Array.from(groups.entries())
   }, [models])
 
+  const starterPrompts =
+    activeView?.suggestions && activeView.suggestions.length > 0
+      ? activeView.suggestions
+      : STARTER_PROMPTS
+
+  const visibleAmbientEntity =
+    activeView?.activeEntity &&
+    !isAmbientDismissed &&
+    !pinnedItems.some((p) => p.key === activeView.activeEntity?.key)
+      ? activeView.activeEntity
+      : null
+
+  const hasContextChips =
+    Boolean(visibleAmbientEntity) || pinnedItems.length > 0
+
+  const agentSelectControl =
+    agents.length > 0 ? (
+      <Select
+        value={effectiveAgentId ?? ""}
+        onValueChange={(val) => setSelectedAgentId(val || undefined)}
+      >
+        <SelectTrigger
+          className={cn(
+            "w-auto max-w-[170px] border-border px-2.5 text-xs",
+            compact ? "h-7 rounded-lg bg-control" : "h-8 rounded-lg bg-control"
+          )}
+        >
+          <BotIcon className="mr-1 size-3.5 text-muted-foreground" />
+          <SelectValue>{activeAgent?.name ?? "Saturn Assistant"}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {agents.map((a) => (
+            <SelectItem key={a.id} value={a.id ?? ""} className="text-xs">
+              {a.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ) : null
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {compact && (agentSelectControl || activeView) && (
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border/50 bg-card/40 px-3 py-1.5">
+          <div className="flex min-w-0 items-center gap-1.5">
+            {agentSelectControl}
+          </div>
+          {activeView && (
+            <Badge
+              variant="secondary"
+              className="max-w-[170px] truncate rounded-md px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+            >
+              Context: {activeView.title}
+            </Badge>
+          )}
+        </div>
+      )}
+
       <Conversation className="min-h-0 flex-1">
         <ConversationContent
           className={cn(
@@ -547,7 +645,7 @@ export function ThreadConversation({
               icon={<SparklesIcon className="size-8 text-primary/70" />}
               title={activeAgent?.name || "Saturn Assistant"}
               description="Ask about your finances, calendar, mail, or workflows — Saturn uses your workspace tools safely with confirmation before changes."
-              className="py-10"
+              className={compact ? "py-6" : "py-10"}
             >
               <div className="flex flex-col items-center gap-4">
                 <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -561,10 +659,31 @@ export function ThreadConversation({
                     Ask across Finance, Calendar, Mail, and Workflows. Mutating
                     actions pause for your confirmation.
                   </p>
+                  {activeView && (
+                    <div className="pt-1">
+                      <Badge
+                        variant="outline"
+                        className="rounded-md px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+                      >
+                        Context: {activeView.title}
+                      </Badge>
+                    </div>
+                  )}
                 </div>
-                {!compact && (
+                {compact ? (
+                  <div className="flex w-full flex-col gap-1.5 pt-1">
+                    {starterPrompts.map((prompt) => (
+                      <Suggestion
+                        key={prompt}
+                        suggestion={prompt}
+                        onClick={(p) => void handleSend(p)}
+                        className="h-auto w-full justify-start rounded-lg px-3 py-2 text-left text-xs leading-snug whitespace-normal"
+                      />
+                    ))}
+                  </div>
+                ) : (
                   <Suggestions className="max-w-xl">
-                    {STARTER_PROMPTS.map((prompt) => (
+                    {starterPrompts.map((prompt) => (
                       <Suggestion
                         key={prompt}
                         suggestion={prompt}
@@ -866,32 +985,29 @@ export function ThreadConversation({
           onRemoveAttachment={(id) =>
             setAttachments((prev) => prev.filter((a) => a.id !== id))
           }
+          contextChips={
+            hasContextChips ? (
+              <>
+                {visibleAmbientEntity && (
+                  <CopilotEntityBadge
+                    item={visibleAmbientEntity}
+                    ambient
+                    onDismiss={dismissAmbient}
+                  />
+                )}
+                {pinnedItems.map((item) => (
+                  <CopilotEntityBadge
+                    key={item.key}
+                    item={item}
+                    onDismiss={() => detachItem(item.key)}
+                  />
+                ))}
+              </>
+            ) : undefined
+          }
           toolbarLeft={
             <>
-              {agents.length > 0 && (
-                <Select
-                  value={effectiveAgentId ?? ""}
-                  onValueChange={(val) => setSelectedAgentId(val || undefined)}
-                >
-                  <SelectTrigger className="h-8 w-auto max-w-[170px] rounded-full border-border/60 px-2.5 text-xs">
-                    <BotIcon className="mr-1 size-3.5 text-muted-foreground" />
-                    <SelectValue>
-                      {activeAgent?.name ?? "Saturn Assistant"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {agents.map((a) => (
-                      <SelectItem
-                        key={a.id}
-                        value={a.id ?? ""}
-                        className="text-xs"
-                      >
-                        {a.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              {!compact && agentSelectControl}
 
               <ModelSelector
                 open={modelPickerOpen}

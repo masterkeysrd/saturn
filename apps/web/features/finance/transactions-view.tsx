@@ -7,6 +7,9 @@ import {
   useDebounce,
   useTimezone,
 } from "@saturn/hooks"
+import { useRegisterCopilotView } from "@saturn/hooks/ai"
+import { buildCopilotEntityKey } from "@saturn/core"
+import { CopilotAttachButton } from "@/features/ai/components/copilot-attach-button"
 import {
   useSpacePermissions,
   resolveSpacePath,
@@ -148,6 +151,16 @@ export function TransactionsView() {
   )
   const reviewParam = searchParams.get("review") === "true"
   const navigate = useNavigate()
+
+  useRegisterCopilotView({
+    viewId: "finance.transactions",
+    title: "Transactions",
+    suggestions: [
+      "Summarize my spending trends in these transactions",
+      "Find any unusual or duplicate charges",
+      "Which categories account for most of my expenses?",
+    ],
+  })
 
   useEffect(() => {
     if (reviewParam) {
@@ -761,6 +774,23 @@ export function TransactionsView() {
                             )
                           })()}
                         </div>
+
+                        {t.id && (
+                          <CopilotAttachButton
+                            item={{
+                              key: buildCopilotEntityKey("transaction", t.id),
+                              kind: "transaction",
+                              id: t.id,
+                              label: t.description || "Transaction",
+                              summary: {
+                                amount: Number(t.amount || 0),
+                                currency: t.currency,
+                                type: t.type,
+                                transactionDate: t.transactionDate,
+                              },
+                            }}
+                          />
+                        )}
 
                         {isWritable && (
                           <DropdownMenu>

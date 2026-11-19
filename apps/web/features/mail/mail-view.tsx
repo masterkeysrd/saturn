@@ -10,6 +10,8 @@ import {
   useConnectedAccounts,
   useSyncConnectedAccount,
 } from "@saturn/hooks"
+import { useRegisterCopilotView } from "@saturn/hooks/ai"
+import { buildCopilotEntityKey } from "@saturn/core"
 import type {
   Thread,
   MailboxRole,
@@ -163,6 +165,34 @@ export function MailView() {
     if (!selectedThreadId) return undefined
     return threads.find((t) => t.id === selectedThreadId)
   }, [threads, selectedThreadId])
+
+  useRegisterCopilotView({
+    viewId: "mail.inbox",
+    title: "Mail",
+    activeEntity: activeThread?.id
+      ? {
+          key: buildCopilotEntityKey("mail_thread", activeThread.id),
+          kind: "mail_thread",
+          id: activeThread.id,
+          label: activeThread.subject || "(No subject)",
+          summary: {
+            isUnread: Boolean(activeThread.isUnread),
+            messageCount: activeThread.messageCount,
+          },
+        }
+      : undefined,
+    suggestions: activeThread
+      ? [
+          "Summarize this thread and extract action items",
+          "Draft a concise reply",
+          "Are there any deadlines or amounts mentioned here?",
+        ]
+      : [
+          "Summarize my unread emails",
+          "Which emails need a reply today?",
+          "Find recent receipts or invoices in my inbox",
+        ],
+  })
 
   // Mutations
   const modifyThreadMutation = useModifyThread({

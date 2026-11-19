@@ -18,6 +18,7 @@ import {
 } from "@saturn/core"
 import { useGetDashboardPreferencesQuery } from "@saturn/api/gen/saturn/space/v1/space"
 import { useTimezone } from "@saturn/hooks"
+import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import { useAuth } from "@/features/auth/use-auth"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { DocumentPage } from "@/components/ui/page-shells"
@@ -71,6 +72,20 @@ export function DashboardView() {
   const activeWidgets = useMemo(
     () => normalizeDashboardWidgets(preferences?.widgets),
     [preferences?.widgets]
+  )
+
+  useRegisterCopilotView(
+    spaceId
+      ? {
+          viewId: "dashboard.overview",
+          title: "Overview",
+          suggestions: [
+            "Give me a quick financial and schedule briefing for today",
+            "Are there any upcoming bills or overdue items this week?",
+            "Check my unread emails for urgent action items",
+          ],
+        }
+      : null
   )
 
   const displayedWidgets = previewWidgets ?? activeWidgets

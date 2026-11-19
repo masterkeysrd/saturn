@@ -10,6 +10,7 @@ import {
   useTimezone,
   invalidateFinanceQueries,
 } from "@saturn/hooks"
+import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import { toast } from "@/components/ui/toast"
 import {
   type Account,
@@ -145,6 +146,16 @@ export function AccountsView() {
 
   const accounts = useMemo(() => accountsData?.accounts || [], [accountsData])
   const transfers = transfersData?.transfers || []
+
+  useRegisterCopilotView({
+    viewId: "finance.accounts",
+    title: "Accounts",
+    suggestions: [
+      "Summarize my liquid cash vs credit card debt",
+      "Check credit utilization across my accounts",
+      "Review recent transfers between accounts",
+    ],
+  })
 
   const handleSetDefault = (acc: Account) => {
     if (!acc.id) return

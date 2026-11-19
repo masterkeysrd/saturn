@@ -27,12 +27,17 @@ import { MemoryRouter } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import * as aiApi from "@saturn/api/saturn/platform/ai/v1/ai"
 import * as aiHooks from "@saturn/hooks/ai"
+import {
+  CopilotContextProvider,
+  useRegisterCopilotView,
+} from "@saturn/hooks/ai"
 import { ChatView } from "./chat-view"
 import { AgentsView } from "./agents-view"
 import { ModelsView } from "./models-view"
 import { MCPServersView } from "./mcp-servers-view"
 import { RunsView } from "./runs-view"
 import { GlobalAIDrawer } from "./components/global-ai-drawer"
+import { CopilotAttachButton } from "./components/copilot-attach-button"
 import { MCPServerSheet } from "./components/mcp-server-sheet"
 import { openAIDrawer } from "./lib/drawer-events"
 
@@ -68,9 +73,13 @@ vi.mock("@saturn/api/saturn/platform/ai/v1/ai", () => ({
   useGetRunQuery: vi.fn(),
 }))
 
-vi.mock("@saturn/hooks/ai", () => ({
-  useThreadStream: vi.fn(),
-}))
+vi.mock("@saturn/hooks/ai", async () => {
+  const actual = await vi.importActual<typeof aiHooks>("@saturn/hooks/ai")
+  return {
+    ...actual,
+    useThreadStream: vi.fn(),
+  }
+})
 
 vi.mock("@saturn/hooks", () => ({
   useTimezone: () => ({
@@ -78,6 +87,8 @@ vi.mock("@saturn/hooks", () => ({
     isToday: () => true,
     isYesterday: () => false,
     format: (d: string | Date) => `FMT(${String(d)})`,
+    formatTime: (d: string | Date) => `TIME(${String(d)})`,
+    formatDate: (d: string | Date) => `DATE(${String(d)})`,
   }),
 }))
 
@@ -1269,5 +1280,205 @@ describe("Web AI Studio", () => {
     // Mobile Threads button opens sheet
     fireEvent.click(screen.getByRole("button", { name: "Threads" }))
     expect(screen.getAllByText("April Spend Check").length).toBeGreaterThan(1)
+  })
+
+  it("renders view-registered starter suggestions and dismissible ambient entity chip in docked Copilot", async () => {
+    function MockMailView() {
+      useRegisterCopilotView({
+        viewId: "mail.inbox",
+        title: "Mail",
+        activeEntity: {
+          key: "mail_thread:mth_42",
+          kind: "mail_thread",
+          id: "mth_42",
+          label: "Q3 Budget Review",
+        },
+        suggestions: [
+          "Summarize this thread and extract action items",
+          "Draft a concise reply",
+        ],
+      })
+      return <div>Mail Body</div>
+    }
+
+    renderWithProviders(
+      <CopilotContextProvider spaceId="spc_1">
+        <MockMailView />
+        <GlobalAIDrawer />
+      </CopilotContextProvider>
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open Saturn AI Copilot" })
+    )
+
+    expect(await screen.findAllByText("Context: Mail")).not.toHaveLength(0)
+    expect(
+      screen.getByRole("button", {
+        name: "Summarize this thread and extract action items",
+      })
+    ).toBeTruthy()
+    expect(screen.getByText("Q3 Budget Review")).toBeTruthy()
+
+    // Dismissing the ambient chip removes it cleanly
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dismiss Q3 Budget Review" })
+    )
+    expect(screen.queryByText("Q3 Budget Review")).toBeNull()
+
+    // Clicking a view-registered starter suggestion sends immediately
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Summarize this thread and extract action items",
+      })
+    )
+    await waitFor(() => {
+      expect(sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: "Summarize this thread and extract action items",
+          contextHint: "mail.inbox",
+        })
+      )
+    })
+  })
+
+  it("toggles CopilotAttachButton visibility, pins entity chips, serializes <attached_context>, and renders clean context pills", async () => {
+    const budgetRef = {
+      key: "budget:bgt_groceries",
+      kind: "budget" as const,
+      id: "bgt_groceries",
+      label: "Groceries",
+      summary: { currency: "USD", limitAmount: 60000 },
+    }
+
+    vi.mocked(aiHooks.useThreadStream).mockReturnValue({
+      thread: undefined,
+      messages: [
+        {
+          id: "aim_ctx_1",
+          threadId: "thr_1",
+          spaceId: "spc_1",
+          seq: 1,
+          role: "user",
+          blocks: [
+            {
+              type: "text",
+              text: `<attached_context>\n${JSON.stringify([budgetRef])}\n</attached_context>\n\nWhy am I over budget?`,
+            },
+          ],
+        },
+      ],
+      isLoadingMessages: false,
+      isStreaming: false,
+      status: "idle",
+      streamPhase: "idle",
+      activeToolCall: null,
+      activeRunId: null,
+      streamingMessage: null,
+      pendingApprovals: [],
+      error: null,
+      sendMessage,
+      resolveApprovals,
+      stop,
+      clearError: vi.fn(),
+    })
+
+    renderWithProviders(
+      <CopilotContextProvider spaceId="spc_1">
+        <CopilotAttachButton item={budgetRef} />
+        <GlobalAIDrawer />
+      </CopilotContextProvider>
+    )
+
+    // Hidden while Copilot is closed
+    expect(
+      screen.queryByRole("button", { name: "Add Groceries to Copilot" })
+    ).toBeNull()
+
+    // Open Copilot
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open Saturn AI Copilot" })
+    )
+
+    // Attach button appears and pins entity chip into PromptInput
+    const attachBtn = await screen.findByRole("button", {
+      name: "Add Groceries to Copilot",
+    })
+    fireEvent.click(attachBtn)
+    expect(
+      screen.getByRole("button", { name: "Remove Groceries" })
+    ).toBeTruthy()
+
+    // Persisted user message renders clean entity pill without raw <attached_context> tags
+    expect(screen.getByText("Why am I over budget?")).toBeTruthy()
+    expect(screen.queryByText(/<attached_context>/)).toBeNull()
+
+    // Sending serializes <attached_context> and clears pinnedItems
+    const input = screen.getByLabelText("Ask anything about your workspace...")
+    fireEvent.change(input, { target: { value: "Compare to last month" } })
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }))
+
+    await waitFor(() => {
+      expect(sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: `<attached_context>\n${JSON.stringify([budgetRef])}\n</attached_context>\n\nCompare to last month`,
+        })
+      )
+    })
+    expect(
+      screen.queryByRole("button", { name: "Remove Groceries" })
+    ).toBeNull()
+  })
+
+  it("displays pending approval banner in docked Copilot and switches to the awaiting thread on Review", async () => {
+    vi.mocked(aiApi.useListThreadsQuery).mockReturnValue({
+      data: {
+        threads: [
+          {
+            id: "thr_idle",
+            spaceId: "spc_1",
+            userId: "usr_1",
+            title: "General Questions",
+            agentName: "Saturn Assistant",
+            status: "idle",
+            messageCount: 1,
+            isPinned: false,
+            isArchived: false,
+            lastMessageAt: "2026-04-15T09:00:00Z",
+          },
+          {
+            id: "thr_wait",
+            spaceId: "spc_1",
+            userId: "usr_1",
+            title: "Transfer Funds",
+            agentName: "Saturn Assistant",
+            status: "awaiting_approval",
+            messageCount: 2,
+            isPinned: false,
+            isArchived: false,
+            lastMessageAt: "2026-04-15T10:00:00Z",
+          },
+        ],
+        nextPageToken: "",
+      },
+      isLoading: false,
+    } as never)
+
+    renderWithProviders(<GlobalAIDrawer />)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open Saturn AI Copilot" })
+    )
+
+    expect(
+      await screen.findByText(/Approval needed in 'Transfer Funds'/)
+    ).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "Review →" }))
+
+    expect(
+      await screen.findByRole("heading", { name: "Transfer Funds" })
+    ).toBeTruthy()
+    expect(screen.queryByText(/Approval needed in 'Transfer Funds'/)).toBeNull()
   })
 })

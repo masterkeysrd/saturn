@@ -21,6 +21,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { openAIDrawer } from "@/features/ai/lib/drawer-events"
+import { CopilotAttachButton } from "@/features/ai/components/copilot-attach-button"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
 import {
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useTimezone, useConnectedAccounts, useMailThread } from "@saturn/hooks"
 import {
+  buildCopilotEntityKey,
   normalizeReplySubject,
   normalizeForwardSubject,
   computeReplyRecipients,
@@ -458,6 +460,21 @@ export function ThreadReader({
 
         {/* Action Buttons */}
         <div className="flex shrink-0 items-center gap-1">
+          {thread.id && (
+            <CopilotAttachButton
+              size="sm"
+              item={{
+                key: buildCopilotEntityKey("mail_thread", thread.id),
+                kind: "mail_thread",
+                id: thread.id,
+                label: thread.subject || "(No subject)",
+                summary: {
+                  isUnread: Boolean(thread.isUnread),
+                  messageCount: thread.messageCount,
+                },
+              }}
+            />
+          )}
           <Button
             variant="ghost"
             size="sm"

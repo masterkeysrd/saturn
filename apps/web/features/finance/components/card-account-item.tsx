@@ -23,6 +23,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import { buildCopilotEntityKey } from "@saturn/core"
+import { CopilotAttachButton } from "@/features/ai/components/copilot-attach-button"
 import { cn } from "@/lib/utils"
 import {
   formatAmount,
@@ -141,6 +143,23 @@ export function CardAccountItem({
           className="flex shrink-0 items-center gap-2"
           onClick={(e) => e.stopPropagation()}
         >
+          {acc.id && (
+            <CopilotAttachButton
+              item={{
+                key: buildCopilotEntityKey("account", acc.id),
+                kind: "account",
+                id: acc.id,
+                label: acc.name || institution?.name || "Account",
+                summary: {
+                  type: acc.type,
+                  currency: acc.currency,
+                  currentBalance: Number(acc.currentBalance || 0),
+                  isActive: Boolean(acc.isActive),
+                },
+              }}
+              className="text-white/80 hover:bg-white/15 hover:text-white"
+            />
+          )}
           {acc.isDefault && (
             <span className="rounded-full border border-amber-400/40 bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 px-2.5 py-0.5 text-[9px] font-black tracking-widest text-amber-300 uppercase shadow-sm backdrop-blur-md">
               Default

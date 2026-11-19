@@ -8,6 +8,7 @@ import {
   useCalendarEvents,
   useEnsureDefaultCalendar,
 } from "@saturn/hooks"
+import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import {
   formatLocalDateString,
   getWeekDays,
@@ -102,6 +103,18 @@ export function CalendarView() {
   const enabledCalendarIds = useMemo(() => {
     return calendars.filter((c) => c.isEnabled).map((c) => c.id)
   }, [calendars])
+
+  const focalDateStr = formatLocalDateString(currentDate, tz.timezone)
+
+  useRegisterCopilotView({
+    viewId: "calendar.schedule",
+    title: `Calendar (${activeView} · ${focalDateStr})`,
+    suggestions: [
+      `What's on my schedule around ${focalDateStr}?`,
+      "Find open focus blocks on my calendar this week",
+      "Check for any overlapping meetings or busy days",
+    ],
+  })
 
   const allCalendarsDisabled =
     Boolean(calendarsData) &&

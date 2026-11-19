@@ -36,6 +36,7 @@ export interface PromptInputProps extends Omit<
   placeholder?: string
   disabled?: boolean
   toolbarLeft?: React.ReactNode
+  contextChips?: React.ReactNode
   acceptAttachments?: string
 }
 
@@ -51,6 +52,7 @@ export function PromptInput({
   placeholder = "Ask anything about your workspace...",
   disabled = false,
   toolbarLeft,
+  contextChips,
   acceptAttachments = "image/png,image/jpeg,image/webp,application/pdf,text/csv,text/plain",
   className,
   ...props
@@ -94,17 +96,23 @@ export function PromptInput({
     <form
       onSubmit={handleSubmit}
       className={cn(
-        "flex flex-col gap-2 rounded-2xl border border-border/70 bg-background p-2.5 shadow-xs focus-within:border-ring",
+        "flex flex-col gap-2 rounded-xl border border-border bg-control p-2.5 shadow-2xs focus-within:border-ring",
         className
       )}
       {...props}
     >
+      {contextChips && (
+        <div className="flex flex-wrap items-center gap-1.5 px-1">
+          {contextChips}
+        </div>
+      )}
+
       {attachments.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-1">
           {attachments.map((att) => (
             <span
               key={att.id}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 py-0.5 text-xs"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2 py-0.5 text-xs"
             >
               <span className="max-w-[160px] truncate">{att.filename}</span>
               {onRemoveAttachment && (
@@ -153,7 +161,7 @@ export function PromptInput({
                 disabled={disabled || isStreaming}
                 title="Attach file"
                 aria-label="Attach file"
-                className="size-8 cursor-pointer rounded-full text-muted-foreground hover:text-foreground"
+                className="size-8 cursor-pointer rounded-lg text-muted-foreground hover:text-foreground"
               >
                 <PaperclipIcon className="size-4" />
               </Button>
@@ -170,7 +178,7 @@ export function PromptInput({
             onClick={onStop}
             aria-label="Stop generation"
             title="Stop generation"
-            className="size-8 shrink-0 cursor-pointer rounded-full"
+            className="size-8 shrink-0 cursor-pointer rounded-lg"
           >
             <SquareIcon className="size-3.5 fill-current" />
           </Button>
@@ -181,7 +189,7 @@ export function PromptInput({
             disabled={!canSubmit}
             aria-label="Send message"
             title="Send message"
-            className="size-8 shrink-0 cursor-pointer rounded-full"
+            className="size-8 shrink-0 cursor-pointer rounded-lg"
           >
             <SendHorizontalIcon className="size-4" />
           </Button>
