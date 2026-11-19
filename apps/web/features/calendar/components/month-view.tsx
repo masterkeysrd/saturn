@@ -13,7 +13,10 @@ export interface MonthViewProps {
   occurrences: EventOccurrence[]
   onSelectDate: (d: Date) => void
   onSelectSlot: (dateStr: string) => void
-  onSelectOccurrence: (occ: EventOccurrence) => void
+  onSelectOccurrence: (
+    occ: EventOccurrence,
+    anchorEl?: HTMLElement | null
+  ) => void
 }
 
 export function MonthView({
@@ -163,7 +166,7 @@ export function MonthView({
                           data-testid={`event-pill-${occ.instanceId || occ.eventId}`}
                           onClick={(e) => {
                             e.stopPropagation()
-                            onSelectOccurrence(occ)
+                            onSelectOccurrence(occ, e.currentTarget)
                           }}
                           className="flex w-full items-center justify-between gap-1 rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-foreground transition hover:opacity-80"
                           style={{
@@ -216,7 +219,7 @@ export function MonthView({
                     data-testid={`banner-${item.id}`}
                     onClick={(e) => {
                       e.stopPropagation()
-                      onSelectOccurrence(occ)
+                      onSelectOccurrence(occ, e.currentTarget)
                     }}
                     style={{
                       gridColumn: `${colStart} / span ${colSpan}`,

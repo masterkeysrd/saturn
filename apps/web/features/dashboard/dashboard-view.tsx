@@ -35,7 +35,7 @@ import { CreateTransactionSheet } from "@/features/finance/components/create-tra
 import { EventDialog } from "@/features/calendar/components/event-dialog"
 import { cn } from "@/lib/utils"
 import { DASHBOARD_WIDGET_COMPONENTS } from "./widgets"
-import { CustomizeDashboardSheet } from "./components/customize-dashboard-sheet"
+import { CustomizeDashboardPopover } from "./components/customize-dashboard-sheet"
 
 export function DashboardView() {
   const { user } = useAuth()
@@ -172,16 +172,25 @@ export function DashboardView() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setCustomizeOpen(true)}
-            className="cursor-pointer gap-1.5"
-          >
-            <SlidersHorizontal className="size-3.5" />
-            <span>Customize</span>
-          </Button>
+          <CustomizeDashboardPopover
+            open={customizeOpen}
+            onOpenChange={setCustomizeOpen}
+            onPreviewChange={setPreviewWidgets}
+            spaceId={spaceId}
+            preferences={preferences}
+            activeWidgets={activeWidgets}
+            trigger={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="cursor-pointer gap-1.5"
+              >
+                <SlidersHorizontal className="size-3.5" />
+                <span>Customize</span>
+              </Button>
+            }
+          />
         </div>
       }
     >
@@ -212,15 +221,6 @@ export function DashboardView() {
           })}
         </div>
       )}
-
-      <CustomizeDashboardSheet
-        open={customizeOpen}
-        onOpenChange={setCustomizeOpen}
-        onPreviewChange={setPreviewWidgets}
-        spaceId={spaceId}
-        preferences={preferences}
-        activeWidgets={activeWidgets}
-      />
 
       <CreateTransactionSheet
         open={txSheetOpen}

@@ -111,11 +111,11 @@ export function CreateInstitutionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="border-border/40 bg-background/95 backdrop-blur-xl sm:max-w-[440px]">
+      <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-            <Building2 className="h-5 w-5 text-indigo-500" />
-            New Financial Institution
+          <DialogTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+            <Building2 className="h-4.5 w-4.5 text-primary" />
+            <span>New Financial Institution</span>
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
             Review and confirm auto-resolved web logo & domain details before
@@ -153,8 +153,11 @@ export function CreateInstitutionModal({
           </div>
 
           {/* Name Field */}
-          <div className="space-y-2">
-            <Label htmlFor="inst-name" className="text-xs font-semibold">
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="inst-name"
+              className="text-[13px] font-medium text-foreground/90"
+            >
               Institution Name
             </Label>
             <Input
@@ -162,14 +165,16 @@ export function CreateInstitutionModal({
               placeholder="e.g. Chase, Banco Popular, Revolut"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="bg-card/50"
               required
             />
           </div>
 
           {/* Domain Field */}
-          <div className="space-y-2">
-            <Label htmlFor="inst-domain" className="text-xs font-semibold">
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="inst-domain"
+              className="text-[13px] font-medium text-foreground/90"
+            >
               Website Domain (Optional)
             </Label>
             <Input
@@ -180,10 +185,10 @@ export function CreateInstitutionModal({
                 setDomain(e.target.value)
                 setImgError(false)
               }}
-              className="bg-card/50"
             />
-            <p className="text-[11px] text-muted-foreground">
-              Used to fetch the institution's official brand logo automatically.
+            <p className="text-xs text-muted-foreground">
+              Used to fetch the institution&apos;s official brand logo
+              automatically.
             </p>
           </div>
 

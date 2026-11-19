@@ -4,7 +4,75 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+function extractNodeText(node: React.ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node)
+  }
+  if (Array.isArray(node)) {
+    return node.map(extractNodeText).join("")
+  }
+  if (React.isValidElement<{ children?: React.ReactNode }>(node)) {
+    return extractNodeText(node.props.children)
+  }
+  return ""
+}
+
+function collectSelectItemEntries(
+  node: React.ReactNode,
+  acc: Array<[string, string]>
+) {
+  React.Children.forEach(node, (child) => {
+    if (!React.isValidElement(child)) return
+    const props = child.props as {
+      value?: unknown
+      label?: string
+      children?: React.ReactNode
+    }
+    if (
+      child.type === SelectItem &&
+      props.value !== undefined &&
+      props.value !== null
+    ) {
+      const text = props.label ?? extractNodeText(props.children)
+      acc.push([String(props.value), text])
+      return
+    }
+    if (props.children) {
+      collectSelectItemEntries(props.children, acc)
+    }
+  })
+}
+
+function Select<Value, Multiple extends boolean | undefined = false>({
+  children,
+  items,
+  ...props
+}: SelectPrimitive.Root.Props<Value, Multiple>) {
+  let itemsSignature = ""
+  if (items === undefined) {
+    const entries: Array<[string, string]> = []
+    collectSelectItemEntries(children, entries)
+    if (entries.length > 0) {
+      itemsSignature = JSON.stringify(entries)
+    }
+  }
+
+  const derivedItems = React.useMemo(() => {
+    if (!itemsSignature) return undefined
+    const parsed = JSON.parse(itemsSignature) as Array<[string, string]>
+    const map: Record<string, string> = {}
+    for (const [k, v] of parsed) {
+      map[k] = v
+    }
+    return map
+  }, [itemsSignature])
+
+  return (
+    <SelectPrimitive.Root items={items ?? derivedItems} {...props}>
+      {children}
+    </SelectPrimitive.Root>
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (

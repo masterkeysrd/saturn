@@ -431,6 +431,28 @@ describe("CalendarView Component", () => {
     })
   })
 
+  it("opens anchored event preview popover on click with Join Meeting, location, attendees, and Edit handoff", () => {
+    render(<CalendarView />, { wrapper: createWrapper() })
+
+    fireEvent.click(screen.getByTestId("event-pill-inst_standup"))
+
+    const preview = screen.getByTestId("event-preview-popover")
+    expect(preview).toBeDefined()
+    expect(screen.queryByText("Edit Event")).toBeNull()
+    expect(preview.textContent).toContain("Daily Standup")
+    expect(preview.textContent).toContain("9:00 AM – 9:30 AM")
+    expect(preview.textContent).toContain("Zoom")
+    expect(preview.textContent).toContain("Morning sync")
+    expect(preview.textContent).toContain("Accepted")
+
+    const joinLink = screen.getByRole("link", { name: /Join Meeting/i })
+    expect(joinLink.getAttribute("href")).toBe("https://zoom.us/j/123")
+
+    fireEvent.click(screen.getByTestId("preview-edit-event-btn"))
+    expect(screen.getByText("Edit Event")).toBeDefined()
+    expect(screen.queryByTestId("event-preview-popover")).toBeNull()
+  })
+
   it("prompts recurrence scope dialog when editing a recurring occurrence", async () => {
     mutateUpdateEvent.mockResolvedValueOnce({
       id: "ev_recurring",
@@ -439,9 +461,10 @@ describe("CalendarView Component", () => {
 
     render(<CalendarView />, { wrapper: createWrapper() })
 
-    // Click on recurring event pill in Month view
+    // Click on recurring event pill in Month view -> opens preview -> click Edit
     const recurringPill = screen.getByTestId("event-pill-inst_recurring_1")
     fireEvent.click(recurringPill)
+    fireEvent.click(screen.getByTestId("preview-edit-event-btn"))
 
     expect(screen.getByText("Edit Event")).toBeDefined()
 
@@ -488,6 +511,7 @@ describe("CalendarView Component", () => {
 
     const recurringPill = screen.getByTestId("event-pill-inst_recurring_1")
     fireEvent.click(recurringPill)
+    fireEvent.click(screen.getByTestId("preview-edit-event-btn"))
 
     // Click Delete in event dialog
     const deleteBtn = screen.getByTestId("delete-event-btn")
@@ -602,8 +626,9 @@ describe("CalendarView Component", () => {
 
     render(<CalendarView />, { wrapper: createWrapper() })
 
-    // Open recurring occurrence
+    // Open recurring occurrence via preview -> Edit
     fireEvent.click(screen.getByTestId("event-pill-inst_recurring_1"))
+    fireEvent.click(screen.getByTestId("preview-edit-event-btn"))
     expect(screen.getByText("Edit Event")).toBeDefined()
 
     // Select America/New_York timezone (EDT = UTC-4 in Oct)
@@ -631,6 +656,7 @@ describe("CalendarView Component", () => {
 
     // Reopen and save as ALL_EVENTS -> preserves custom RRULE
     fireEvent.click(screen.getByTestId("event-pill-inst_recurring_1"))
+    fireEvent.click(screen.getByTestId("preview-edit-event-btn"))
     fireEvent.click(screen.getByTestId("save-event-btn"))
     const allRadio = screen
       .getByTestId("scope-all-events")

@@ -1,10 +1,6 @@
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
+import { WorkspaceInspectorPanel } from "@/components/ui/inspector-panel"
+import { CopilotAttachButton } from "@/features/ai/components/copilot-attach-button"
+import { buildCopilotEntityKey } from "@saturn/core"
 import {
   useListTransactionsQuery,
   useListBudgetsQuery,
@@ -13,7 +9,6 @@ import {
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { useTimezone } from "@saturn/hooks"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Loader2,
   Calendar,
@@ -70,155 +65,167 @@ export function AccountHistorySheet({
   const isLoading = isTxnsLoading || isBudgetsLoading
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full border-none border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:!max-w-xl sm:border-l">
-        <SheetHeader className="mb-6 text-left">
-          <SheetTitle className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground">
-            <History className="h-5 w-5 text-primary" />
-            Account Transaction Ledger
-          </SheetTitle>
-          <SheetDescription className="mt-1 text-xs text-muted-foreground">
-            Ledger of transactions recorded under account:{" "}
-            <span className="font-semibold text-foreground">
-              {account?.name || ""}
-            </span>
-          </SheetDescription>
-        </SheetHeader>
+    <WorkspaceInspectorPanel
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={<History className="size-4" />}
+      title="Account Transaction Ledger"
+      description={
+        <>
+          Ledger for{" "}
+          <span className="font-medium text-foreground">
+            {account?.name || "selected account"}
+          </span>
+        </>
+      }
+      headerActions={
+        account?.id ? (
+          <CopilotAttachButton
+            item={{
+              key: buildCopilotEntityKey("account", account.id),
+              kind: "account",
+              id: account.id,
+              label: account.name || "Account",
+              summary: {
+                type: account.type,
+                currency: account.currency,
+                currentBalance: Number(account.currentBalance || 0),
+              },
+            }}
+          />
+        ) : null
+      }
+    >
+      {isLoading ? (
+        <div className="flex h-[250px] items-center justify-center">
+          <Loader2 className="h-7 w-7 animate-spin text-primary" />
+        </div>
+      ) : transactions.length === 0 ? (
+        <div className="flex h-[250px] flex-col items-center justify-center p-4 text-center">
+          <Calendar className="mb-3 h-9 w-9 text-muted-foreground/30" />
+          <p className="text-xs font-semibold text-muted-foreground">
+            No transactions logged
+          </p>
+          <p className="mt-1 max-w-[250px] text-xs text-muted-foreground/80">
+            Transactions using this account will appear here once they are
+            added.
+          </p>
+        </div>
+      ) : (
+        <div className="divide-y divide-border/40">
+          {transactions.map((txn) => {
+            const conversionPreview = txn.currency !== baseCurrency
+            const budget = budgets.find((b) => b.id === txn.budgetId)
+            const rawAmt = formatCents(txn.amount)
+            const isNegative = rawAmt < 0
+            const isExpense =
+              txn.type === "EXPENSE" || txn.type === "TRANSFER_OUT"
+            const isAdjustment =
+              txn.type === "BALANCE_ADJUSTMENT" ||
+              txn.type === "TYPE_UNSPECIFIED" ||
+              (txn.metadata?.source_type ?? txn.metadata?.sourceType) ===
+                "SYSTEM_BALANCE_ADJUSTMENT"
 
-        {isLoading ? (
-          <div className="flex h-[250px] items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : transactions.length === 0 ? (
-          <div className="flex h-[250px] flex-col items-center justify-center p-4 text-center">
-            <Calendar className="mb-3 h-10 w-10 text-muted-foreground/30" />
-            <p className="text-xs font-semibold text-muted-foreground">
-              No transactions logged
-            </p>
-            <p className="mt-1 max-w-[250px] text-[10px] text-muted-foreground/80">
-              Transactions using this account will appear here once they are
-              added.
-            </p>
-          </div>
-        ) : (
-          <ScrollArea className="h-[calc(100vh-180px)] pr-3">
-            <div className="space-y-3.5">
-              {transactions.map((txn) => {
-                const conversionPreview = txn.currency !== baseCurrency
-                const budget = budgets.find((b) => b.id === txn.budgetId)
-                const rawAmt = formatCents(txn.amount)
-                const isNegative = rawAmt < 0
-                const isExpense =
-                  txn.type === "EXPENSE" || txn.type === "TRANSFER_OUT"
-                const isAdjustment =
-                  txn.type === "BALANCE_ADJUSTMENT" ||
-                  txn.type === "TYPE_UNSPECIFIED" ||
-                  (txn.metadata?.source_type ?? txn.metadata?.sourceType) ===
-                    "SYSTEM_BALANCE_ADJUSTMENT"
-
-                return (
-                  <div
-                    key={txn.id}
-                    className="relative overflow-hidden rounded-2xl border border-border/40 bg-background/50 p-4 shadow-sm backdrop-blur-sm transition-all hover:bg-background/80"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex min-w-0 items-center gap-3">
-                        {/* Transaction Type Indicator Icon */}
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground">
-                          {isAdjustment ? (
-                            <Scale className="h-4 w-4 text-teal-400" />
-                          ) : isExpense ? (
-                            <TrendingDown className="h-4 w-4 text-rose-400" />
-                          ) : (
-                            <TrendingUp className="h-4 w-4 text-emerald-400" />
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <span className="block truncate text-xs font-bold text-foreground">
-                            {txn.description || "Unspecified Transaction"}
-                          </span>
-                          <div className="mt-0.5 flex items-center gap-1.5 text-[9px] text-muted-foreground">
-                            <span>
-                              {tz.formatDate(txn.transactionDate, {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })}
-                            </span>
-                            {budget && (
-                              <>
-                                <span className="text-muted-foreground/45">
-                                  •
-                                </span>
-                                <span className="flex items-center gap-0.5 font-medium text-foreground">
-                                  <Tag className="h-2.5 w-2.5" />
-                                  {budget.name}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <span className="block text-xs font-black text-foreground">
-                          {isNegative ? "-" : "+"}
-                          {Math.abs(rawAmt).toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}{" "}
-                          <span className="text-[9px] font-bold uppercase opacity-85">
-                            {txn.currency}
-                          </span>
-                        </span>
-
-                        {conversionPreview && (
-                          <span className="mt-0.5 flex items-center justify-end gap-1 text-[9px] font-medium text-muted-foreground">
-                            <ArrowRight className="h-3 w-3" />
-                            {baseCurrency}{" "}
-                            {formatCents(txn.amountInBase).toLocaleString(
-                              undefined,
-                              {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              }
-                            )}
-                          </span>
-                        )}
-                      </div>
+            return (
+              <div
+                key={txn.id}
+                className="space-y-2 py-3.5 first:pt-0 last:pb-0"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground">
+                      {isAdjustment ? (
+                        <Scale className="h-4 w-4 text-teal-400" />
+                      ) : isExpense ? (
+                        <TrendingDown className="h-4 w-4 text-rose-400" />
+                      ) : (
+                        <TrendingUp className="h-4 w-4 text-emerald-400" />
+                      )}
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between border-t border-border/10 pt-2.5">
-                      <span className="font-mono text-[9px] text-muted-foreground/75 select-all">
-                        ID: {txn.id}
+                    <div className="min-w-0">
+                      <span className="block truncate text-xs font-semibold text-foreground">
+                        {txn.description || "Unspecified Transaction"}
                       </span>
-                      <span
-                        className={cn(
-                          "rounded px-2 py-0.5 text-[8px] font-black tracking-wider uppercase",
-                          txn.type === "EXPENSE" || txn.type === "TRANSFER_OUT"
-                            ? "bg-rose-500/10 text-rose-500"
-                            : txn.type === "BALANCE_ADJUSTMENT" ||
-                                txn.type === "TYPE_UNSPECIFIED"
-                              ? "bg-teal-500/10 text-teal-400"
-                              : "bg-emerald-500/10 text-emerald-500"
+                      <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span>
+                          {tz.formatDate(txn.transactionDate, {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                        {budget && (
+                          <>
+                            <span className="text-muted-foreground/45">•</span>
+                            <span className="flex items-center gap-0.5 font-medium text-foreground">
+                              <Tag className="h-2.5 w-2.5" />
+                              {budget.name}
+                            </span>
+                          </>
                         )}
-                      >
-                        {txn.type === "BALANCE_ADJUSTMENT" ||
-                        txn.type === "TYPE_UNSPECIFIED"
-                          ? "ADJUSTMENT"
-                          : txn.type
-                              .replace("TRANSACTION_TYPE_", "")
-                              .replaceAll("_", " ")}
-                      </span>
+                      </div>
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          </ScrollArea>
-        )}
-      </SheetContent>
-    </Sheet>
+
+                  <div className="shrink-0 text-right tabular-nums">
+                    <span className="block font-mono text-xs font-semibold text-foreground">
+                      {isNegative ? "-" : "+"}
+                      {Math.abs(rawAmt).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      <span className="text-[11px] font-medium uppercase opacity-80">
+                        {txn.currency}
+                      </span>
+                    </span>
+
+                    {conversionPreview && (
+                      <span className="mt-0.5 flex items-center justify-end gap-1 font-mono text-[11px] text-muted-foreground">
+                        <ArrowRight className="h-3 w-3" />
+                        {baseCurrency}{" "}
+                        {formatCents(txn.amountInBase).toLocaleString(
+                          undefined,
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-0.5">
+                  <span className="font-mono text-[11px] text-muted-foreground/75 select-all">
+                    ID: {txn.id}
+                  </span>
+                  <span
+                    className={cn(
+                      "rounded-md px-2 py-0.5 text-[11px] font-medium",
+                      txn.type === "EXPENSE" || txn.type === "TRANSFER_OUT"
+                        ? "bg-rose-500/10 text-rose-500"
+                        : txn.type === "BALANCE_ADJUSTMENT" ||
+                            txn.type === "TYPE_UNSPECIFIED"
+                          ? "bg-teal-500/10 text-teal-400"
+                          : "bg-emerald-500/10 text-emerald-500"
+                    )}
+                  >
+                    {txn.type === "BALANCE_ADJUSTMENT" ||
+                    txn.type === "TYPE_UNSPECIFIED"
+                      ? "ADJUSTMENT"
+                      : txn.type
+                          .replace("TRANSACTION_TYPE_", "")
+                          .replaceAll("_", " ")}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </WorkspaceInspectorPanel>
   )
 }
+
+export { AccountHistorySheet as AccountHistoryInspector }

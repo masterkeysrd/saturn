@@ -17,7 +17,7 @@ Saturn's visual language across Web (`apps/web`) and Mobile (`apps/mobile`) is *
 3. **Layer 3 — Saturn Domain & Layout Patterns**:
    - **3 Canonical Page Shells**: `<DocumentPage>`, `<SplitWorkspacePage>`, and `<StudioCanvasPage>`.
    - **Financial & Temporal Primitives**: `<MoneyAmount />` (Web) and `<MonoAmount />` (Mobile) with mandatory `tabular-nums`, plus deterministic user-scoped regional formatting via `useTimezone()`.
-   - **Triage & Command Patterns**: Global `⌘K` `<CommandPalette />`, `<FormDrawer />` with pinned sticky footers, and flat hairline-separated inspector sections.
+   - **Triage & Command Patterns**: Global `⌘K` `<CommandPalette />`, `<FormDrawer />` / `<FormDialog />` centered composer modals with pinned sticky footers, anchored `<Popover>`s for quick previews/controls, and in-flow `<WorkspaceInspectorPanel />` side inspectors with flat hairline-separated sections.
 
 ---
 
@@ -96,6 +96,12 @@ User-assigned entities (budgets, accounts, institutions, calendar labels) use th
 | **Document Shell** | `<DocumentPage>` | Dashboard, Insights, Budgets, Accounts, Settings, Admin |
 | **Split Workspace Shell** | `<SplitWorkspacePage>` | Mail, Transactions + Inspector, Review Queue, AI Chat |
 | **Studio Canvas Shell** | `<StudioCanvasPage>` | Workflow Editor, Calendar Grid, Statement Reconciliation |
+
+### 3-Tier Overlay & Spatial Ownership (Web)
+- **Viewport Edges**: Left edge is reserved for `AppSidebar`; right edge is reserved exclusively for `DockedCopilotSidebar` (`⌘J`). Desktop views must **never** mount right-hand `<Sheet>` overlays (`<Sheet>` is restricted strictly to mobile-only left navigation drawers).
+- **Tier 1 — Anchored `<Popover>`s (Zero Backdrop)**: Quick previews and view controls (`CustomizeDashboardPopover`, Calendar `EventPreviewPopover`).
+- **Tier 2 — Centered `<Dialog>` Composer Modals**: CRUD creation, edit, and action forms (`<FormDrawer />` / `<FormDialog />`, `AgentSheet`, `ModelSheet`, `ProviderSheet`, `MCPServerSheet`, `ConfirmTransactionSheet`, `ManageSpaceSheet`, `TestRunDrawer`, API Key composer).
+- **Tier 3 — In-Flow `<WorkspaceInspectorPanel />` Inside `<main>`**: Deep entity inspection, ledgers, timelines, and execution traces (`BudgetHistorySheet`, `AccountHistorySheet`, `BorrowingDetailSheet`, `RecurringTransactionHistorySheet`, `TransactionEventsSheet`, `RunTraceSheet`) sit side-by-side in-flow inside `<main>` to the left of `DockedCopilotSidebar` with zero backdrop or focus trap.
 
 ### Verification via `/__design`
 - **Web**: Dev-only route `/__design` (`import.meta.env.DEV`) renders all `@saturn/tokens` swatches, typography, `<MoneyAmount />`, core primitives, page shell previews, and a live `FormDrawer` **side-by-side in Light and Dark mode**.

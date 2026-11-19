@@ -21,6 +21,7 @@ import { WeekView } from "./components/week-view"
 import { DayView } from "./components/day-view"
 import { AgendaView } from "./components/agenda-view"
 import { EventDialog } from "./components/event-dialog"
+import { EventPreviewPopover } from "./components/event-preview-popover"
 import { cn } from "@/lib/utils"
 
 export type CalendarViewType = "month" | "week" | "day" | "agenda"
@@ -98,6 +99,9 @@ export function CalendarView() {
   const [selectedOccurrence, setSelectedOccurrence] = useState<
     EventOccurrence | undefined
   >()
+  const [previewOccurrence, setPreviewOccurrence] =
+    useState<EventOccurrence | null>(null)
+  const [previewAnchor, setPreviewAnchor] = useState<HTMLElement | null>(null)
 
   // Active calendars filter
   const enabledCalendarIds = useMemo(() => {
@@ -246,6 +250,8 @@ export function CalendarView() {
 
   // Open create event dialog from slot click
   const handleSelectSlot = (dateStr: string, timeStr?: string) => {
+    setPreviewOccurrence(null)
+    setPreviewAnchor(null)
     setDialogInitialDate(dateStr)
     if (timeStr) {
       setDialogInitialStartTime(timeStr)
@@ -262,7 +268,17 @@ export function CalendarView() {
     setEventDialogOpen(true)
   }
 
-  const handleSelectOccurrence = (occ: EventOccurrence) => {
+  const handleSelectOccurrence = (
+    occ: EventOccurrence,
+    anchorEl?: HTMLElement | null
+  ) => {
+    setPreviewOccurrence(occ)
+    setPreviewAnchor(anchorEl ?? null)
+  }
+
+  const handleEditFromPreview = (occ: EventOccurrence) => {
+    setPreviewOccurrence(null)
+    setPreviewAnchor(null)
     setSelectedOccurrence(occ)
     setDialogInitialDate(undefined)
     setDialogInitialStartTime(undefined)
@@ -271,6 +287,8 @@ export function CalendarView() {
   }
 
   const handleOpenNewEvent = () => {
+    setPreviewOccurrence(null)
+    setPreviewAnchor(null)
     setSelectedOccurrence(undefined)
     const p = tz.parts(currentDate) || { year: 2026, month: 10, day: 20 }
     setDialogInitialDate(
@@ -472,6 +490,19 @@ export function CalendarView() {
           )}
         </div>
       </div>
+
+      {/* Event Preview Popover */}
+      <EventPreviewPopover
+        occurrence={previewOccurrence}
+        anchorEl={previewAnchor}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreviewOccurrence(null)
+            setPreviewAnchor(null)
+          }
+        }}
+        onEdit={handleEditFromPreview}
+      />
 
       {/* Event Create / Edit Dialog */}
       <EventDialog

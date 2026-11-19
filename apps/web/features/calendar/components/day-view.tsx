@@ -14,7 +14,10 @@ export interface DayViewProps {
   currentDate: Date
   occurrences: EventOccurrence[]
   onSelectSlot: (dateStr: string, timeStr: string) => void
-  onSelectOccurrence: (occ: EventOccurrence) => void
+  onSelectOccurrence: (
+    occ: EventOccurrence,
+    anchorEl?: HTMLElement | null
+  ) => void
 }
 
 export function DayView({
@@ -135,7 +138,7 @@ export function DayView({
                     key={item.id}
                     type="button"
                     data-testid={`banner-${item.id}`}
-                    onClick={() => onSelectOccurrence(occ)}
+                    onClick={(e) => onSelectOccurrence(occ, e.currentTarget)}
                     style={{
                       top: `${2 + item.rowIndex * 24}px`,
                       backgroundColor: occ.color || "#3b82f6",
@@ -217,7 +220,7 @@ export function DayView({
                   title={`${occ.title}\n${startTimeStr} – ${endTimeStr}${occ.location ? `\n${occ.location}` : ""}`}
                   onClick={(e) => {
                     e.stopPropagation()
-                    onSelectOccurrence(occ)
+                    onSelectOccurrence(occ, e.currentTarget)
                   }}
                   style={{
                     top: `${item.topPct}%`,

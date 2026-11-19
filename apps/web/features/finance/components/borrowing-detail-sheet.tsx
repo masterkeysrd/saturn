@@ -13,13 +13,7 @@ import {
   useGetSettingsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
+import { WorkspaceInspectorPanel } from "@/components/ui/inspector-panel"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -192,29 +186,31 @@ export function BorrowingDetailSheet({
     borrowing?.direction === "LENT" ? "Lent to" : "Borrowed from"
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex h-full flex-col overflow-hidden rounded-none border-none border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:max-w-2xl sm:rounded-l-3xl sm:border-l md:p-8">
-        <SheetHeader className="mb-4">
-          <SheetTitle className="flex items-center gap-2">
-            <HandCoins className="h-5 w-5 text-primary" />
-            Borrowing Details
-          </SheetTitle>
-          <SheetDescription>
-            Track balance and installment history with{" "}
-            {borrowing?.counterparty || ""}.
-          </SheetDescription>
-        </SheetHeader>
-
+    <>
+      <WorkspaceInspectorPanel
+        open={open}
+        onOpenChange={onOpenChange}
+        icon={<HandCoins className="size-4" />}
+        title="Borrowing Details"
+        description={
+          <>
+            Balance &amp; installments with{" "}
+            <span className="font-medium text-foreground">
+              {borrowing?.counterparty || ""}
+            </span>
+          </>
+        }
+      >
         {borrowing && (
-          <div className="flex min-h-0 flex-1 flex-col space-y-6">
+          <div className="space-y-5">
             {/* Overview Summary */}
-            <div className="space-y-4 rounded-2xl border border-border/50 bg-muted/50 p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+            <section className="space-y-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {directionLabel}
                   </span>
-                  <h4 className="text-xl font-bold text-foreground">
+                  <h4 className="truncate text-lg font-semibold text-foreground">
                     {borrowing.counterparty}
                   </h4>
                   {borrowing.contactInfo && (
@@ -223,42 +219,35 @@ export function BorrowingDetailSheet({
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setOpenAdjustModal(true)}
-                    className="h-8 cursor-pointer gap-1.5 rounded-xl border-border/50 bg-background/50 px-3 text-xs font-semibold text-foreground hover:bg-muted"
+                    className="h-8 cursor-pointer gap-1.5 text-xs"
                   >
-                    <Scale className="h-3.5 w-3.5 text-emerald-400" />
-                    Adjust Balance
+                    <Scale className="h-3.5 w-3.5 text-emerald-500" />
+                    Adjust
                   </Button>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                      Status
-                    </span>
-                    <span className="mt-1 block">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs leading-5 font-semibold ${
-                          borrowing.status === "ACTIVE"
-                            ? "bg-emerald-500/10 text-emerald-500"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {borrowing.status === "ACTIVE" ? "Active" : "Settled"}
-                      </span>
-                    </span>
-                  </div>
+                  <span
+                    className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
+                      borrowing.status === "ACTIVE"
+                        ? "bg-emerald-500/10 text-emerald-500"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {borrowing.status === "ACTIVE" ? "Active" : "Settled"}
+                  </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 border-t border-border/20 pt-4">
+              <div className="grid grid-cols-2 gap-4 border-t border-border/40 pt-3.5 tabular-nums">
                 <div>
-                  <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                  <span className="block text-xs text-muted-foreground">
                     Remaining Balance
                   </span>
-                  <span className="text-2xl font-black text-primary">
+                  <span className="font-mono text-xl font-bold text-primary">
                     {formatCents(borrowing.remainingAmount).toLocaleString(
                       undefined,
                       {
@@ -272,10 +261,10 @@ export function BorrowingDetailSheet({
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                  <span className="block text-xs text-muted-foreground">
                     Total Agreement
                   </span>
-                  <span className="text-lg font-bold text-foreground/80">
+                  <span className="font-mono text-base font-semibold text-foreground/80">
                     {formatCents(borrowing.totalAmount).toLocaleString(
                       undefined,
                       {
@@ -290,9 +279,9 @@ export function BorrowingDetailSheet({
                 </div>
               </div>
 
-              <div className="flex flex-wrap justify-between gap-4 border-t border-border/20 pt-4 text-xs text-muted-foreground">
+              <div className="flex flex-wrap justify-between gap-3 border-t border-border/40 pt-3 text-xs text-muted-foreground">
                 <div className="whitespace-nowrap">
-                  <span className="font-semibold text-foreground">
+                  <span className="font-medium text-foreground">
                     Established:
                   </span>{" "}
                   {tz.format(borrowing.establishedAt, {
@@ -303,7 +292,7 @@ export function BorrowingDetailSheet({
                 </div>
                 {borrowing.dueAt && (
                   <div className="text-right whitespace-nowrap">
-                    <span className="font-semibold text-foreground">Due:</span>{" "}
+                    <span className="font-medium text-foreground">Due:</span>{" "}
                     {tz.format(borrowing.dueAt, {
                       year: "numeric",
                       month: "short",
@@ -312,16 +301,16 @@ export function BorrowingDetailSheet({
                   </div>
                 )}
                 {borrowing.notes && (
-                  <div className="w-full border-t border-border/10 pt-2 text-[11px] break-words text-muted-foreground/80 italic">
-                    "{borrowing.notes}"
+                  <div className="w-full border-t border-border/40 pt-2 text-xs break-words text-muted-foreground italic">
+                    &ldquo;{borrowing.notes}&rdquo;
                   </div>
                 )}
               </div>
-            </div>
+            </section>
 
             {/* Repayments History */}
-            <div className="flex min-h-0 flex-1 flex-col space-y-3">
-              <h4 className="flex items-center gap-1.5 text-sm font-bold tracking-tight text-foreground">
+            <section className="space-y-3 border-t border-border/40 pt-4">
+              <h4 className="text-[13px] font-medium text-foreground">
                 Repayment History ({repayments.length})
               </h4>
 
@@ -330,32 +319,32 @@ export function BorrowingDetailSheet({
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               ) : repayments.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/40 bg-muted/20 py-8 text-center">
+                <div className="flex flex-col items-center justify-center py-6 text-center">
                   <Calendar className="mb-2 h-6 w-6 text-muted-foreground/30" />
-                  <p className="text-xs font-bold text-muted-foreground">
+                  <p className="text-xs font-medium text-muted-foreground">
                     No payments recorded yet
                   </p>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground/80">
+                  <p className="mt-0.5 text-xs text-muted-foreground/80">
                     Use the form below to register installments.
                   </p>
                 </div>
               ) : (
-                <div className="max-h-[220px] space-y-2.5 overflow-y-auto pr-1">
+                <div className="divide-y divide-border/40">
                   {repayments.map((r) => (
                     <div
                       key={r.id}
-                      className="flex animate-in items-center justify-between rounded-xl border border-border/30 bg-card/45 p-3 shadow-sm transition-all duration-250 fade-in hover:bg-card/70"
+                      className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0"
                     >
                       <div className="min-w-0 flex-1 pr-3">
                         <div className="flex items-baseline gap-2">
-                          <span className="font-mono text-xs font-bold text-foreground">
+                          <span className="font-mono text-xs font-semibold text-foreground tabular-nums">
                             {formatCents(r.amount).toLocaleString(undefined, {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
                             })}{" "}
                             {currency}
                           </span>
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-[11px] text-muted-foreground">
                             {tz.format(
                               r.transactionDate || r.createTime || "",
                               {
@@ -367,16 +356,16 @@ export function BorrowingDetailSheet({
                           </span>
                         </div>
                         {r.description && (
-                          <p className="mt-0.5 truncate text-[10px] text-muted-foreground/80 italic">
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
                             {r.description}
                           </p>
                         )}
                       </div>
                       <Button
                         type="button"
-                        size="icon"
+                        size="icon-xs"
                         variant="ghost"
-                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                        className="shrink-0 text-muted-foreground hover:text-destructive"
                         onClick={() => handleDeleteRepayment(r.id || "")}
                         disabled={deleteTransactionMutation.isPending}
                       >
@@ -390,18 +379,18 @@ export function BorrowingDetailSheet({
                   ))}
                 </div>
               )}
-            </div>
+            </section>
 
             {/* Record Installment Form */}
             {borrowing.status === "ACTIVE" && (
               <form
                 onSubmit={handleSubmit(onSubmitRepayment)}
-                className="animate-in space-y-4 border-t border-border/20 pt-4 duration-300 fade-in"
+                className="space-y-4 border-t border-border/40 pt-4"
               >
-                <h5 className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                <h5 className="text-[13px] font-medium text-foreground">
                   Log Installment Payment
                 </h5>
-                <div className="space-y-4">
+                <div className="space-y-3.5">
                   <div className="space-y-1.5">
                     <Label htmlFor="paymentAmount">Amount</Label>
                     <div className="relative flex h-10 items-center overflow-hidden rounded-lg border border-border bg-control shadow-2xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
@@ -419,13 +408,13 @@ export function BorrowingDetailSheet({
                       </span>
                     </div>
                     {errors.amount && (
-                      <p className="text-[11px] font-semibold text-destructive">
+                      <p className="text-xs font-medium text-destructive">
                         {errors.amount.message}
                       </p>
                     )}
                   </div>
                   <div className="flex flex-col space-y-1.5">
-                    <Label className="mb-1">Payment Date</Label>
+                    <Label>Payment Date</Label>
                     <Controller
                       control={control}
                       name="paymentDate"
@@ -438,7 +427,7 @@ export function BorrowingDetailSheet({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="mb-1">Payment Account</Label>
+                    <Label>Payment Account</Label>
                     <AccountSelect
                       control={control}
                       name="accountId"
@@ -469,7 +458,7 @@ export function BorrowingDetailSheet({
 
                 <Button
                   type="submit"
-                  className="h-11 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
+                  className="w-full cursor-pointer"
                   disabled={
                     logTransactionMutation.isPending ||
                     !!(conversion && "error" in conversion)
@@ -485,16 +474,18 @@ export function BorrowingDetailSheet({
             )}
           </div>
         )}
+      </WorkspaceInspectorPanel>
 
-        <AdjustBorrowingModal
-          open={openAdjustModal}
-          onOpenChange={setOpenAdjustModal}
-          borrowing={borrowing}
-          spaceId={spaceId}
-          refetchBorrowings={refetchBorrowings}
-          refetchRepayments={refetchTransactions}
-        />
-      </SheetContent>
-    </Sheet>
+      <AdjustBorrowingModal
+        open={openAdjustModal}
+        onOpenChange={setOpenAdjustModal}
+        borrowing={borrowing}
+        spaceId={spaceId}
+        refetchBorrowings={refetchBorrowings}
+        refetchRepayments={refetchTransactions}
+      />
+    </>
   )
 }
+
+export { BorrowingDetailSheet as BorrowingDetailInspector }

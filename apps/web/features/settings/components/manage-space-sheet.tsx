@@ -10,12 +10,12 @@ import {
 } from "@saturn/schemas"
 import { usePatch } from "@/hooks/use-patch"
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -269,26 +269,26 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
   const members = membersData?.members ?? []
 
   return (
-    <Sheet open={!!space} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-full overflow-y-auto border-none border-border/40 bg-background/95 p-0 shadow-2xl backdrop-blur-xl sm:w-[500px] sm:max-w-lg sm:border-l">
+    <Dialog open={!!space} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[min(88svh,46rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
         {/* Header Section */}
-        <SheetHeader className="space-y-2 border-b border-border/40 p-6 select-none">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+        <DialogHeader className="shrink-0 space-y-2 border-b border-border/60 px-6 py-4 select-none">
+          <div className="flex items-center gap-3 pr-8">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
               <Settings2 className="h-5 w-5" />
             </div>
             <div className="flex flex-col text-left">
-              <SheetTitle className="text-lg font-bold tracking-tight text-foreground">
+              <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
                 Manage Space
-              </SheetTitle>
-              <SheetDescription className="text-xs text-muted-foreground">
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
                 Settings and access control for this workspace.
-              </SheetDescription>
+              </DialogDescription>
             </div>
           </div>
-        </SheetHeader>
+        </DialogHeader>
 
-        <div className="space-y-6 p-6">
+        <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
           {/* Section 1: General settings */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 select-none">
@@ -528,7 +528,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
             </form>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

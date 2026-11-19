@@ -16,7 +16,10 @@ export interface WeekViewProps {
   occurrences: EventOccurrence[]
   onSelectDate: (d: Date) => void
   onSelectSlot: (dateStr: string, timeStr: string) => void
-  onSelectOccurrence: (occ: EventOccurrence) => void
+  onSelectOccurrence: (
+    occ: EventOccurrence,
+    anchorEl?: HTMLElement | null
+  ) => void
 }
 
 export function WeekView({
@@ -150,7 +153,7 @@ export function WeekView({
                     key={item.id}
                     type="button"
                     data-testid={`banner-${item.id}`}
-                    onClick={() => onSelectOccurrence(occ)}
+                    onClick={(e) => onSelectOccurrence(occ, e.currentTarget)}
                     style={{
                       gridColumn: `${colStart} / span ${colSpan}`,
                       top: `${2 + item.rowIndex * 24}px`,
@@ -253,7 +256,7 @@ export function WeekView({
                         title={`${occ.title}\n${startTimeStr} – ${endTimeStr}${occ.location ? `\n${occ.location}` : ""}`}
                         onClick={(e) => {
                           e.stopPropagation()
-                          onSelectOccurrence(occ)
+                          onSelectOccurrence(occ, e.currentTarget)
                         }}
                         style={{
                           top: `${item.topPct}%`,

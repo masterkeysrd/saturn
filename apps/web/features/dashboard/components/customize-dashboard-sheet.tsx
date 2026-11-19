@@ -1,4 +1,4 @@
-import { useMemo, useState, type ElementType } from "react"
+import { useMemo, useState, type ElementType, type ReactElement } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   ArrowDown,
@@ -27,12 +27,13 @@ import {
   type DashboardPreferences,
 } from "@saturn/api/gen/saturn/space/v1/space"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/toast"
@@ -48,23 +49,27 @@ const WIDGET_ICONS: Record<DashboardWidgetId, ElementType> = {
   workflow_runs: Workflow,
 }
 
-export interface CustomizeDashboardSheetProps {
+export interface CustomizeDashboardPopoverProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onPreviewChange?: (widgets: DashboardWidgetId[] | null) => void
   spaceId: string
   preferences?: DashboardPreferences
   activeWidgets: DashboardWidgetId[]
+  trigger?: ReactElement
 }
 
-export function CustomizeDashboardSheet({
+export type CustomizeDashboardSheetProps = CustomizeDashboardPopoverProps
+
+export function CustomizeDashboardPopover({
   open,
   onOpenChange,
   onPreviewChange,
   spaceId,
   preferences,
   activeWidgets,
-}: CustomizeDashboardSheetProps) {
+  trigger,
+}: CustomizeDashboardPopoverProps) {
   const queryClient = useQueryClient()
   const [draftWidgets, setDraftWidgets] =
     useState<DashboardWidgetId[]>(activeWidgets)
@@ -117,7 +122,7 @@ export function CustomizeDashboardSheet({
     onPreviewChange?.(next)
   }
 
-  const handleSheetOpenChange = (nextOpen: boolean) => {
+  const handlePopoverOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       onPreviewChange?.(null)
     }
@@ -188,24 +193,40 @@ export function CustomizeDashboardSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={handleSheetOpenChange}>
-      <SheetContent
-        overlayClassName="bg-black/20 backdrop-blur-[1px]"
-        className="flex h-full flex-col gap-0 overflow-hidden border-l border-border bg-card p-0 shadow-xl sm:max-w-md"
+    <Popover open={open} onOpenChange={handlePopoverOpenChange}>
+      <PopoverTrigger
+        render={
+          trigger ?? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="cursor-pointer gap-1.5"
+            >
+              <SlidersHorizontal className="size-3.5" />
+              <span>Customize</span>
+            </Button>
+          )
+        }
+      />
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        className="w-[min(24rem,calc(100vw-2rem))] gap-0 overflow-hidden rounded-xl border border-border bg-popover p-0 shadow-xl"
       >
-        <SheetHeader className="shrink-0 border-b border-border/60 px-6 py-4">
-          <SheetTitle className="flex items-center gap-2 pr-8 text-lg font-semibold tracking-tight">
+        <PopoverHeader className="shrink-0 border-b border-border/60 px-4 py-3">
+          <PopoverTitle className="flex items-center gap-2 text-sm font-semibold tracking-tight">
             <SlidersHorizontal className="size-4 text-primary" />
             <span>Customize Dashboard</span>
-          </SheetTitle>
-          <SheetDescription className="text-xs text-muted-foreground">
+          </PopoverTitle>
+          <PopoverDescription className="text-xs text-muted-foreground">
             Choose and order widgets for your personal view of this workspace.
-          </SheetDescription>
-        </SheetHeader>
+          </PopoverDescription>
+        </PopoverHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="max-h-[min(26rem,60svh)] overflow-y-auto px-4 py-3.5">
           {/* Section 1: Space Presets */}
-          <section className="space-y-3 pb-5">
+          <section className="space-y-2.5 pb-4">
             <div>
               <h2 className="text-[13px] font-medium text-foreground">
                 Presets
@@ -214,7 +235,7 @@ export function CustomizeDashboardSheet({
                 Apply a curated widget arrangement in one click.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {DASHBOARD_PRESETS.map((preset) => {
                 const isActive = activePresetId === preset.id
                 return (
@@ -223,7 +244,7 @@ export function CustomizeDashboardSheet({
                     type="button"
                     onClick={() => applyDraft([...preset.widgets])}
                     className={cn(
-                      "cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                      "cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
                       isActive
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border/70 bg-background text-muted-foreground hover:border-border hover:text-foreground"
@@ -237,7 +258,7 @@ export function CustomizeDashboardSheet({
           </section>
 
           {/* Section 2: Widgets & Order */}
-          <section className="space-y-3 border-t border-border/40 pt-5">
+          <section className="space-y-2.5 border-t border-border/40 pt-4">
             <div className="flex items-center justify-between gap-2">
               <div>
                 <h2 className="text-[13px] font-medium text-foreground">
@@ -261,7 +282,7 @@ export function CustomizeDashboardSheet({
                 return (
                   <div
                     key={widget.id}
-                    className="flex items-center justify-between gap-3 py-3 first:pt-1 last:pb-1"
+                    className="flex items-center justify-between gap-2.5 py-2.5 first:pt-1 last:pb-1"
                   >
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <div className="flex items-center gap-2">
@@ -275,7 +296,7 @@ export function CustomizeDashboardSheet({
                         />
                         <span
                           className={cn(
-                            "truncate text-sm font-medium",
+                            "truncate text-xs font-medium",
                             widget.enabled
                               ? "text-foreground"
                               : "text-muted-foreground"
@@ -287,12 +308,12 @@ export function CustomizeDashboardSheet({
                           {widget.span === "wide" ? "Wide" : "1 col"}
                         </span>
                       </div>
-                      <p className="line-clamp-2 text-xs text-muted-foreground">
+                      <p className="line-clamp-2 text-[11px] text-muted-foreground">
                         {widget.description}
                       </p>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-1">
+                    <div className="flex shrink-0 items-center gap-0.5">
                       {widget.enabled && (
                         <>
                           <Button
@@ -336,7 +357,7 @@ export function CustomizeDashboardSheet({
           </section>
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border/60 bg-card px-6 py-4">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border/60 bg-popover px-4 py-3">
           <Button
             type="button"
             variant="ghost"
@@ -346,7 +367,7 @@ export function CustomizeDashboardSheet({
             className="cursor-pointer gap-1.5 text-muted-foreground hover:text-foreground"
           >
             <RotateCcw className="size-3.5" />
-            <span>Reset to Default</span>
+            <span>Reset</span>
           </Button>
 
           <div className="flex items-center gap-2">
@@ -354,7 +375,7 @@ export function CustomizeDashboardSheet({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => handleSheetOpenChange(false)}
+              onClick={() => handlePopoverOpenChange(false)}
               disabled={updateMutation.isPending}
             >
               Cancel
@@ -373,7 +394,9 @@ export function CustomizeDashboardSheet({
             </Button>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </PopoverContent>
+    </Popover>
   )
 }
+
+export { CustomizeDashboardPopover as CustomizeDashboardSheet }

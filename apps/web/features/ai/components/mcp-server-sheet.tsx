@@ -6,13 +6,13 @@ import {
   type MCPServer,
 } from "@saturn/api/saturn/platform/ai/v1/ai"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Collapsible,
   CollapsibleContent,
@@ -177,9 +177,9 @@ function MCPServerSheetForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
-      <div className="space-y-4 p-5">
+      <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
         {errorMsg && (
           <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
             {errorMsg}
@@ -410,14 +410,14 @@ function MCPServerSheetForm({
         </Collapsible>
       </div>
 
-      <SheetFooter className="mt-auto border-t border-border/40 px-5 py-3">
+      <DialogFooter className="shrink-0 border-t border-border/60 bg-card px-6 py-4">
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
         </Button>
         <Button type="submit" disabled={isPending}>
           {isPending ? "Saving..." : isEditing ? "Save Changes" : "Add Server"}
         </Button>
-      </SheetFooter>
+      </DialogFooter>
     </form>
   )
 }
@@ -428,17 +428,17 @@ export function MCPServerSheet({
   server,
 }: MCPServerSheetProps) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full max-w-[460px] flex-col gap-0 p-0 sm:max-w-[460px]">
-        <SheetHeader className="border-b border-border/40 px-5 py-4">
-          <SheetTitle className="text-base font-semibold">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[min(88svh,46rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
+          <DialogTitle className="pr-8 text-base font-semibold">
             {server?.id ? `Edit ${server.name}` : "Add Remote HTTP MCP Server"}
-          </SheetTitle>
-          <SheetDescription className="text-xs">
+          </DialogTitle>
+          <DialogDescription className="text-xs">
             Connect external Streamable HTTP MCP tool servers to bind into your
             workspace agents.
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         {open && (
           <MCPServerSheetForm
             key={server?.id ?? "new"}
@@ -446,7 +446,7 @@ export function MCPServerSheet({
             onClose={() => onOpenChange(false)}
           />
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

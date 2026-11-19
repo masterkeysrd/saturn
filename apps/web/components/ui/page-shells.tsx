@@ -212,3 +212,8 @@ export function StudioCanvasPage({
     </div>
   )
 }
+
+export {
+  WorkspaceInspectorPanel,
+  type WorkspaceInspectorPanelProps,
+} from "./inspector-panel"

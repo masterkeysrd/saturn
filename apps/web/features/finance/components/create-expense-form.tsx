@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
@@ -39,24 +39,29 @@ interface CreateExpenseFormProps {
   onBack?: () => void
 }
 
+const EMPTY_BUDGETS: Budget[] = []
+
 export function CreateExpenseForm({
   open,
   onOpenChange,
   spaceId,
   baseCurrency,
-  budgets = [],
+  budgets = EMPTY_BUDGETS,
   accounts: initialAccounts,
   editTransaction,
   preselectedBudgetId,
   refetchData,
   onBack,
 }: CreateExpenseFormProps) {
+  const [initialDate] = useState(() => new Date())
   const { data: accountsData } = useListAccountsQuery(
     {},
     { enabled: open && !initialAccounts }
   )
-  const accountsList = initialAccounts || accountsData?.accounts || []
-  const activeAccounts = accountsList.filter((a) => a.isActive)
+  const activeAccounts = useMemo(() => {
+    const accountsList = initialAccounts || accountsData?.accounts || []
+    return accountsList.filter((a) => a.isActive)
+  }, [initialAccounts, accountsData?.accounts])
 
   const createExpenseMutation = useCreateExpenseMutation({
     onSuccess: () => {
@@ -135,8 +140,8 @@ export function CreateExpenseForm({
       amount: "",
       currency: defaultCurrency,
       description: "",
-      transactionDate: new Date(),
-      effectiveDate: new Date(),
+      transactionDate: initialDate,
+      effectiveDate: initialDate,
       hasCustomEffectiveDate: false,
       accountId: initialAccId,
     }
@@ -146,6 +151,7 @@ export function CreateExpenseForm({
     budgets,
     activeAccounts,
     baseCurrency,
+    initialDate,
   ])
 
   const {

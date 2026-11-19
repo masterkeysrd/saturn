@@ -7,12 +7,12 @@ import {
   type FlowRun,
 } from "@saturn/api/gen/saturn/platform/workflow/v1/workflow"
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -121,20 +121,20 @@ export function TestRunDrawer({
   const isRunning = testMutation.isPending || executeMutation.isPending
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[min(88svh,46rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
+          <DialogTitle className="flex items-center gap-2 pr-8 text-base font-semibold">
             <FlaskConical className="h-4 w-4 text-primary" />
             Test & Run Workflow
-          </SheetTitle>
-          <SheetDescription>
+          </DialogTitle>
+          <DialogDescription className="text-xs">
             Dry-run unsaved edits in-memory via <code>:test</code> or run the
             saved workflow live.
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="mt-6 space-y-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground">
               Input Payload (JSON)
@@ -265,7 +265,7 @@ export function TestRunDrawer({
             </div>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

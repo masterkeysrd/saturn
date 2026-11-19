@@ -32,14 +32,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -464,23 +456,23 @@ export function APIKeysSettings() {
         </div>
       )}
 
-      {/* Create / Edit Sheet */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="w-full overflow-hidden p-0 data-[side=right]:sm:max-w-lg">
+      {/* Create / Edit Dialog */}
+      <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
+        <DialogContent className="flex max-h-[min(88svh,46rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
           <form
             onSubmit={handleSubmit}
-            className="flex min-h-0 flex-1 flex-col"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
           >
-            <SheetHeader className="shrink-0 border-b border-border/40 pr-12">
-              <SheetTitle>
+            <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4 pr-12">
+              <DialogTitle>
                 {editingKey ? "Edit API Key" : "Create Personal API Key"}
-              </SheetTitle>
-              <SheetDescription>
+              </DialogTitle>
+              <DialogDescription>
                 {editingKey
                   ? "Update the key name, granted workspaces, or permission scopes."
                   : "Bind a fine-grained token to explicit workspaces and scopes."}
-              </SheetDescription>
-            </SheetHeader>
+              </DialogDescription>
+            </DialogHeader>
 
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-4">
               {formError && (
@@ -656,7 +648,7 @@ export function APIKeysSettings() {
               </div>
             </div>
 
-            <SheetFooter className="mt-0 shrink-0 flex-row justify-end border-t border-border/40 bg-popover px-6 py-4">
+            <DialogFooter className="mt-0 shrink-0 flex-row justify-end border-t border-border/60 bg-card px-6 py-4">
               <Button
                 type="button"
                 variant="outline"
@@ -670,10 +662,10 @@ export function APIKeysSettings() {
                 )}
                 {editingKey ? "Save Changes" : "Create API Key"}
               </Button>
-            </SheetFooter>
+            </DialogFooter>
           </form>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* One-Time Secret Reveal Dialog */}
       <Dialog

@@ -8,13 +8,13 @@ import {
   type ProviderDescriptor,
 } from "@saturn/api/saturn/platform/ai/v1/ai"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Collapsible,
   CollapsibleContent,
@@ -149,9 +149,9 @@ function ProviderSheetForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
-      <div className="space-y-4 p-5">
+      <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
         {errorMsg && (
           <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
             {errorMsg}
@@ -275,7 +275,7 @@ function ProviderSheetForm({
         </Collapsible>
       </div>
 
-      <SheetFooter className="mt-auto border-t border-border/40 px-5 py-3">
+      <DialogFooter className="shrink-0 border-t border-border/60 bg-card px-6 py-4">
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
         </Button>
@@ -286,7 +286,7 @@ function ProviderSheetForm({
               ? "Save Changes"
               : "Connect Provider"}
         </Button>
-      </SheetFooter>
+      </DialogFooter>
     </form>
   )
 }
@@ -300,18 +300,18 @@ export function ProviderSheet({
   const descriptors = descData?.providers ?? []
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full max-w-[460px] flex-col gap-0 p-0 sm:max-w-[460px]">
-        <SheetHeader className="border-b border-border/40 px-5 py-4">
-          <SheetTitle className="flex items-center gap-2 text-base font-semibold">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[min(88svh,46rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
+          <DialogTitle className="flex items-center gap-2 pr-8 text-base font-semibold">
             <ProviderLogo driver={provider?.driver ?? "gemini"} />
             {provider?.id ? `Edit ${provider.name}` : "Connect LLM Provider"}
-          </SheetTitle>
-          <SheetDescription className="text-xs">
+          </DialogTitle>
+          <DialogDescription className="text-xs">
             Credentials are encrypted at rest and curated models are auto-seeded
             on creation.
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         {open && (
           <ProviderSheetForm
             key={provider?.id ?? "new"}
@@ -320,7 +320,7 @@ export function ProviderSheet({
             onClose={() => onOpenChange(false)}
           />
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

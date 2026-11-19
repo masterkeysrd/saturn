@@ -149,15 +149,15 @@ export function AdjustBorrowingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-3xl border-border/60 bg-background/95 p-6 backdrop-blur-xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
-            <Scale className="h-5 w-5 text-emerald-400" />
-            Adjust Borrowing Balance
+      <DialogContent className="flex max-h-[min(88svh,44rem)] flex-col gap-0 overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-2xl sm:max-w-md">
+        <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
+          <DialogTitle className="flex items-center gap-2 pr-8 text-lg font-semibold tracking-tight text-foreground">
+            <Scale className="h-4.5 w-4.5 text-primary" />
+            <span>Adjust Borrowing Balance</span>
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
             Directly adjust the remaining balance for{" "}
-            <span className="font-semibold text-foreground">
+            <span className="font-medium text-foreground">
               {borrowing.direction === "LENT" ? "Lent to" : "Borrowed from"}{" "}
               {borrowing.counterparty}
             </span>
@@ -165,137 +165,139 @@ export function AdjustBorrowingModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
-          {/* Current vs Target Card */}
-          <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border/40 bg-muted/20 p-3.5">
-            <div>
-              <span className="block text-[10px] font-bold text-muted-foreground uppercase">
-                Current Remaining
-              </span>
-              <span className="text-sm font-extrabold text-foreground">
-                {currentBalFormatted}{" "}
-                <span className="text-xs font-semibold text-muted-foreground">
-                  {currency}
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        >
+          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+            {/* Current vs Target Summary */}
+            <div className="grid grid-cols-2 gap-3 rounded-xl border border-border/60 bg-muted/30 p-3.5">
+              <div>
+                <span className="block text-xs text-muted-foreground">
+                  Current Remaining
                 </span>
-              </span>
-            </div>
-            <div>
-              <span className="block text-[10px] font-bold text-muted-foreground uppercase">
-                Target Balance
-              </span>
-              <span className="text-sm font-extrabold text-foreground">
-                {targetBalFormatted}{" "}
-                <span className="text-xs font-semibold text-muted-foreground">
-                  {currency}
+                <span className="mt-0.5 block font-mono text-sm font-semibold text-foreground tabular-nums">
+                  {currentBalFormatted}{" "}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {currency}
+                  </span>
                 </span>
-              </span>
+              </div>
+              <div>
+                <span className="block text-xs text-muted-foreground">
+                  Target Balance
+                </span>
+                <span className="mt-0.5 block font-mono text-sm font-semibold text-foreground tabular-nums">
+                  {targetBalFormatted}{" "}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {currency}
+                  </span>
+                </span>
+              </div>
             </div>
-          </div>
 
-          {/* Live Preview Delta Callout */}
-          <div
-            className={cn(
-              "flex items-center justify-between rounded-xl border p-3 text-xs font-semibold transition-all",
-              deltaCents > 0
-                ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
-                : deltaCents < 0
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                  : "border-border/40 bg-muted/20 text-muted-foreground"
-            )}
-          >
-            <span>Adjustment Type</span>
-            <span className="font-bold">
-              {deltaCents > 0
-                ? `+${deltaFormatted} ${currency} (Balance Increase)`
-                : deltaCents < 0
-                  ? `-${deltaFormatted} ${currency} (Balance Reduction)`
-                  : `0.00 ${currency} (No Change)`}
-            </span>
-          </div>
-
-          {/* Inputs */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-muted-foreground uppercase">
-              New Remaining Balance
-            </Label>
-            <AmountInput
-              control={control}
-              name="targetBalance"
-              currency={currency}
-              placeholder="0.00"
-              autoFocus
-            />
-          </div>
-
-          <div className="flex flex-col space-y-1.5">
-            <Label className="text-xs font-bold text-muted-foreground uppercase">
-              Adjustment Date
-            </Label>
-            <Controller
-              control={control}
-              name="adjustmentDate"
-              render={({ field }) => (
-                <DatePicker
-                  date={field.value}
-                  setDate={(d) => d && field.onChange(d)}
-                />
+            {/* Live Preview Delta Callout */}
+            <div
+              className={cn(
+                "flex items-center justify-between rounded-lg border px-3.5 py-2.5 text-xs font-medium transition-colors",
+                deltaCents > 0
+                  ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                  : deltaCents < 0
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    : "border-border/60 bg-muted/20 text-muted-foreground"
               )}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-muted-foreground uppercase">
-              Account for Bank Transaction (Optional)
-            </Label>
-            <AccountSelect
-              control={control}
-              name="accountId"
-              accounts={activeAccounts}
-              placeholder="None (Adjust borrowing balance only)"
-              allowNone
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="adjust-borrowing-notes"
-              className="text-xs font-bold text-muted-foreground uppercase"
             >
-              Adjustment Note / Reason
-            </Label>
-            <Input
-              id="adjust-borrowing-notes"
-              {...register("notes")}
-              placeholder="e.g. Debt forgiveness, fee adjustment, reconciliation"
-              className="h-11 rounded-xl text-xs"
-            />
-            {errors.notes && (
-              <p className="text-[11px] font-semibold text-destructive">
-                {errors.notes.message}
-              </p>
+              <span>Adjustment Type</span>
+              <span className="font-mono font-semibold tabular-nums">
+                {deltaCents > 0
+                  ? `+${deltaFormatted} ${currency} (Balance Increase)`
+                  : deltaCents < 0
+                    ? `-${deltaFormatted} ${currency} (Balance Reduction)`
+                    : `0.00 ${currency} (No Change)`}
+              </span>
+            </div>
+
+            {/* Inputs */}
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-medium text-foreground/90">
+                New Remaining Balance
+              </Label>
+              <AmountInput
+                control={control}
+                name="targetBalance"
+                currency={currency}
+                placeholder="0.00"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex flex-col space-y-1.5">
+              <Label className="text-[13px] font-medium text-foreground/90">
+                Adjustment Date
+              </Label>
+              <Controller
+                control={control}
+                name="adjustmentDate"
+                render={({ field }) => (
+                  <DatePicker
+                    date={field.value}
+                    setDate={(d) => d && field.onChange(d)}
+                  />
+                )}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-medium text-foreground/90">
+                Account for Bank Transaction (Optional)
+              </Label>
+              <AccountSelect
+                control={control}
+                name="accountId"
+                accounts={activeAccounts}
+                placeholder="None (Adjust borrowing balance only)"
+                allowNone
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="adjust-borrowing-notes"
+                className="text-[13px] font-medium text-foreground/90"
+              >
+                Adjustment Note / Reason
+              </Label>
+              <Input
+                id="adjust-borrowing-notes"
+                {...register("notes")}
+                placeholder="e.g. Debt forgiveness, fee adjustment, reconciliation"
+              />
+              {errors.notes && (
+                <p className="text-xs font-medium text-destructive">
+                  {errors.notes.message}
+                </p>
+              )}
+            </div>
+
+            {adjustError && (
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs font-medium text-destructive">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>{adjustError}</span>
+              </div>
             )}
           </div>
 
-          {adjustError && (
-            <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs font-semibold text-rose-400">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span>{adjustError}</span>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border/60 bg-card px-6 py-4">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="cursor-pointer rounded-xl"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={adjustMutation.isPending || deltaCents === 0}
-              className="flex cursor-pointer items-center gap-2 rounded-xl bg-primary text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm hover:bg-primary/90"
             >
               {adjustMutation.isPending && (
                 <Loader2 className="h-4 w-4 animate-spin" />

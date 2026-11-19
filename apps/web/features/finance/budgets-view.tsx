@@ -229,203 +229,207 @@ export function BudgetsView() {
   })
 
   return (
-    <FinancePageLayout
-      title="Budgeting"
-      description="Manage your template limits, recurrence tracking, and cross-currency allocation."
-      actions={
-        isWritable && (
-          <Button
-            onClick={() => setCreateOpen(true)}
-            className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary pt-0.5 font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90 sm:w-auto"
-          >
-            Create Budget Template
-          </Button>
-        )
-      }
-    >
-      <div className="mt-2 animate-in space-y-8 duration-300 fade-in">
-        {/* Modern Dashboard Stats Grid */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-          <div className="relative flex items-center gap-4 overflow-hidden rounded-3xl border border-border/40 bg-card/30 p-6 shadow-sm backdrop-blur-sm select-none">
-            <div className="rounded-2xl bg-primary/10 p-3.5 text-primary">
-              <PieChart className="h-6 w-6" />
-            </div>
-            <div>
-              <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                Active Limits Total
-              </span>
-              <span className="mt-1 block text-2xl font-black tracking-tight text-foreground">
-                {totalLimitBudgeted.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                <span className="text-xs font-bold text-muted-foreground uppercase">
-                  {settings?.baseCurrency}
-                </span>
-              </span>
-            </div>
-          </div>
-
-          <div className="relative flex items-center gap-4 overflow-hidden rounded-3xl border border-border/40 bg-card/30 p-6 shadow-sm backdrop-blur-sm select-none">
-            <div className="rounded-2xl bg-emerald-500/10 p-3.5 font-bold text-emerald-500">
-              <DollarSign className="h-6 w-6" />
-            </div>
-            <div>
-              <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                Base Workspace Currency
-              </span>
-              <span className="mt-1 block text-2xl font-black tracking-tight text-foreground uppercase">
-                {settings?.baseCurrency}
-              </span>
-            </div>
-          </div>
-
-          <div className="relative flex items-center gap-4 overflow-hidden rounded-3xl border border-border/40 bg-card/30 p-6 shadow-sm backdrop-blur-sm select-none">
-            <div className="rounded-2xl bg-indigo-500/10 p-3.5 text-indigo-500">
-              <PiggyBank className="h-6 w-6" />
-            </div>
-            <div>
-              <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                Total Tracked Templates
-              </span>
-              <span className="mt-1 block text-2xl font-black tracking-tight text-indigo-500 dark:text-indigo-400">
-                {budgetsData?.budgets?.length || 0}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Status Filter Tabs */}
-        <Tabs
-          value={statusFilter}
-          onValueChange={(val) =>
-            setStatusFilter(val as "ACTIVE" | "PAUSED" | "CLOSED" | "ALL")
+    <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+      <div className="min-w-0 flex-1">
+        <FinancePageLayout
+          title="Budgeting"
+          description="Manage your template limits, recurrence tracking, and cross-currency allocation."
+          actions={
+            isWritable && (
+              <Button
+                onClick={() => setCreateOpen(true)}
+                className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary pt-0.5 font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90 sm:w-auto"
+              >
+                Create Budget Template
+              </Button>
+            )
           }
-          className="w-full"
         >
-          <TabsList className="rounded-2xl border border-border/40 bg-card/40 p-1 backdrop-blur-sm">
-            {(["ACTIVE", "PAUSED", "CLOSED", "ALL"] as const).map((st) => (
-              <TabsTrigger
-                key={st}
-                value={st}
-                className="flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm"
-              >
-                {st === "ALL"
-                  ? "All Budgets"
-                  : st.charAt(0) + st.slice(1).toLowerCase()}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+          <div className="mt-2 animate-in space-y-8 duration-300 fade-in">
+            {/* Modern Dashboard Stats Grid */}
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+              <div className="relative flex items-center gap-4 overflow-hidden rounded-3xl border border-border/40 bg-card/30 p-6 shadow-sm backdrop-blur-sm select-none">
+                <div className="rounded-2xl bg-primary/10 p-3.5 text-primary">
+                  <PieChart className="h-6 w-6" />
+                </div>
+                <div>
+                  <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                    Active Limits Total
+                  </span>
+                  <span className="mt-1 block text-2xl font-black tracking-tight text-foreground">
+                    {totalLimitBudgeted.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    <span className="text-xs font-bold text-muted-foreground uppercase">
+                      {settings?.baseCurrency}
+                    </span>
+                  </span>
+                </div>
+              </div>
 
-        {/* Dynamic Budget Template Cards Stream */}
-        {!budgetsData?.budgets || budgetsData.budgets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border/40 bg-card/15 py-20 text-center shadow-inner">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/40 text-muted-foreground/85 shadow-sm">
-              <Globe className="h-8 w-8" />
+              <div className="relative flex items-center gap-4 overflow-hidden rounded-3xl border border-border/40 bg-card/30 p-6 shadow-sm backdrop-blur-sm select-none">
+                <div className="rounded-2xl bg-emerald-500/10 p-3.5 font-bold text-emerald-500">
+                  <DollarSign className="h-6 w-6" />
+                </div>
+                <div>
+                  <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                    Base Workspace Currency
+                  </span>
+                  <span className="mt-1 block text-2xl font-black tracking-tight text-foreground uppercase">
+                    {settings?.baseCurrency}
+                  </span>
+                </div>
+              </div>
+
+              <div className="relative flex items-center gap-4 overflow-hidden rounded-3xl border border-border/40 bg-card/30 p-6 shadow-sm backdrop-blur-sm select-none">
+                <div className="rounded-2xl bg-indigo-500/10 p-3.5 text-indigo-500">
+                  <PiggyBank className="h-6 w-6" />
+                </div>
+                <div>
+                  <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                    Total Tracked Templates
+                  </span>
+                  <span className="mt-1 block text-2xl font-black tracking-tight text-indigo-500 dark:text-indigo-400">
+                    {budgetsData?.budgets?.length || 0}
+                  </span>
+                </div>
+              </div>
             </div>
-            <h4 className="text-md font-bold text-foreground">
-              No Budget Templates Configured
-            </h4>
-            <p className="mt-1.5 max-w-xs px-4 text-xs leading-relaxed text-muted-foreground">
-              Define a budget limit template to track recurrent expenditures and
-              manage conversions in your space.
-            </p>
+
+            {/* Status Filter Tabs */}
+            <Tabs
+              value={statusFilter}
+              onValueChange={(val) =>
+                setStatusFilter(val as "ACTIVE" | "PAUSED" | "CLOSED" | "ALL")
+              }
+              className="w-full"
+            >
+              <TabsList className="rounded-2xl border border-border/40 bg-card/40 p-1 backdrop-blur-sm">
+                {(["ACTIVE", "PAUSED", "CLOSED", "ALL"] as const).map((st) => (
+                  <TabsTrigger
+                    key={st}
+                    value={st}
+                    className="flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm"
+                  >
+                    {st === "ALL"
+                      ? "All Budgets"
+                      : st.charAt(0) + st.slice(1).toLowerCase()}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+
+            {/* Dynamic Budget Template Cards Stream */}
+            {!budgetsData?.budgets || budgetsData.budgets.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border/40 bg-card/15 py-20 text-center shadow-inner">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/40 text-muted-foreground/85 shadow-sm">
+                  <Globe className="h-8 w-8" />
+                </div>
+                <h4 className="text-md font-bold text-foreground">
+                  No Budget Templates Configured
+                </h4>
+                <p className="mt-1.5 max-w-xs px-4 text-xs leading-relaxed text-muted-foreground">
+                  Define a budget limit template to track recurrent expenditures
+                  and manage conversions in your space.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {budgetsData.budgets.map((b) => (
+                  <BudgetCard
+                    key={b.id}
+                    budget={b}
+                    account={
+                      b.defaultAccountId
+                        ? accountsById.get(b.defaultAccountId)
+                        : undefined
+                    }
+                    isWritable={isWritable}
+                    onEdit={handleEditTrigger}
+                    onDelete={handleDelete}
+                    onPause={handlePause}
+                    onResume={handleResume}
+                    onClose={handleClose}
+                    onReopen={handleReopen}
+                    onAddExpense={handleAddExpenseTrigger}
+                    onPeriodLoaded={handlePeriodLoaded}
+                    onViewHistory={handleViewHistoryTrigger}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Create sheet modal */}
+            <CreateBudgetSheet
+              open={createOpen}
+              onOpenChange={setCreateOpen}
+              spaceId={spaceId}
+              baseCurrency={settings?.baseCurrency || "USD"}
+              accounts={accounts}
+            />
+
+            {/* Modal Sheet triggers */}
+            <EditBudgetSheet
+              open={editOpen}
+              onOpenChange={setEditOpen}
+              activeBudget={activeBudget}
+              spaceId={spaceId}
+              accounts={accounts}
+              baseCurrency={settings?.baseCurrency || "USD"}
+            />
+
+            {/* Quick transaction recording slider sheet */}
+            <CreateTransactionSheet
+              open={txOpen}
+              onOpenChange={setTxOpen}
+              spaceId={spaceId}
+              baseCurrency={settings?.baseCurrency || "USD"}
+              budgets={budgetsData?.budgets || []}
+              accounts={accounts}
+              preselectedBudgetId={selectedBudgetId}
+            />
+
+            {/* Delete Confirmation Alert Dialog */}
+            <AlertDialog
+              open={!!deleteTarget}
+              onOpenChange={(open) => !open && setDeleteTarget(null)}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Budget Template</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete{" "}
+                    <span className="font-semibold text-foreground">
+                      {deleteTarget?.name}
+                    </span>
+                    ? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    disabled={isDeleting}
+                    onClick={handleConfirmDelete}
+                  >
+                    {isDeleting ? "Deleting..." : "Delete Budget"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {budgetsData.budgets.map((b) => (
-              <BudgetCard
-                key={b.id}
-                budget={b}
-                account={
-                  b.defaultAccountId
-                    ? accountsById.get(b.defaultAccountId)
-                    : undefined
-                }
-                isWritable={isWritable}
-                onEdit={handleEditTrigger}
-                onDelete={handleDelete}
-                onPause={handlePause}
-                onResume={handleResume}
-                onClose={handleClose}
-                onReopen={handleReopen}
-                onAddExpense={handleAddExpenseTrigger}
-                onPeriodLoaded={handlePeriodLoaded}
-                onViewHistory={handleViewHistoryTrigger}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Create sheet modal */}
-        <CreateBudgetSheet
-          open={createOpen}
-          onOpenChange={setCreateOpen}
-          spaceId={spaceId}
-          baseCurrency={settings?.baseCurrency || "USD"}
-          accounts={accounts}
-        />
-
-        {/* Modal Sheet triggers */}
-        <EditBudgetSheet
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          activeBudget={activeBudget}
-          spaceId={spaceId}
-          accounts={accounts}
-          baseCurrency={settings?.baseCurrency || "USD"}
-        />
-
-        {/* Quick transaction recording slider sheet */}
-        <CreateTransactionSheet
-          open={txOpen}
-          onOpenChange={setTxOpen}
-          spaceId={spaceId}
-          baseCurrency={settings?.baseCurrency || "USD"}
-          budgets={budgetsData?.budgets || []}
-          accounts={accounts}
-          preselectedBudgetId={selectedBudgetId}
-        />
-
-        {/* Budget History Ledger Sheet */}
-        <BudgetHistorySheet
-          open={historyOpen}
-          onOpenChange={setHistoryOpen}
-          budget={activeBudget}
-        />
-
-        {/* Delete Confirmation Alert Dialog */}
-        <AlertDialog
-          open={!!deleteTarget}
-          onOpenChange={(open) => !open && setDeleteTarget(null)}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Budget Template</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete{" "}
-                <span className="font-semibold text-foreground">
-                  {deleteTarget?.name}
-                </span>
-                ? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                disabled={isDeleting}
-                onClick={handleConfirmDelete}
-              >
-                {isDeleting ? "Deleting..." : "Delete Budget"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        </FinancePageLayout>
       </div>
-    </FinancePageLayout>
+
+      {/* Budget History Inspector Panel */}
+      <BudgetHistorySheet
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        budget={activeBudget}
+      />
+    </div>
   )
 }

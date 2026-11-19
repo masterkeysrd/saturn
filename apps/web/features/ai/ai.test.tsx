@@ -36,8 +36,12 @@ import { AgentsView } from "./agents-view"
 import { ModelsView } from "./models-view"
 import { MCPServersView } from "./mcp-servers-view"
 import { RunsView } from "./runs-view"
-import { GlobalAIDrawer } from "./components/global-ai-drawer"
+import {
+  GlobalAIDrawer,
+  DockedCopilotSidebar,
+} from "./components/global-ai-drawer"
 import { CopilotAttachButton } from "./components/copilot-attach-button"
+import { AgentSheet } from "./components/agent-sheet"
 import { MCPServerSheet } from "./components/mcp-server-sheet"
 import { openAIDrawer } from "./lib/drawer-events"
 
@@ -1480,5 +1484,154 @@ describe("Web AI Studio", () => {
       await screen.findByRole("heading", { name: "Transfer Funds" })
     ).toBeTruthy()
     expect(screen.queryByText(/Approval needed in 'Transfer Funds'/)).toBeNull()
+  })
+
+  it("renders WorkspaceInspectorPanel in-flow alongside DockedCopilotSidebar without backdrop or focus trap", async () => {
+    vi.mocked(aiApi.useListRunsQuery).mockReturnValue({
+      data: {
+        runs: [
+          {
+            id: "run_1",
+            kind: "agent_run",
+            source: "chat",
+            status: "completed",
+            agentName: "Budget Coach",
+            input: { prompt: "Inspect dining expenses" },
+            metrics: { tokens: { total: 420 }, latencyMs: "180" },
+            createTime: "2026-04-15T10:00:00Z",
+          },
+        ],
+        nextPageToken: "",
+      },
+      isLoading: false,
+    } as never)
+
+    vi.mocked(aiApi.useGetRunQuery).mockReturnValue({
+      data: {
+        id: "run_1",
+        kind: "agent_run",
+        source: "chat",
+        status: "completed",
+        agentName: "Budget Coach",
+        input: { prompt: "Inspect dining expenses" },
+        output: { text: "Dining spend is $240 this month." },
+        metrics: {
+          tokens: { total: 420 },
+          latencyMs: "180",
+          estimatedCostUsd: 0.002,
+        },
+        steps: [],
+      },
+      isLoading: false,
+    } as never)
+
+    renderWithProviders(
+      <CopilotContextProvider spaceId="spc_1">
+        <div className="flex min-h-0 flex-1">
+          <main className="flex min-w-0 flex-1 flex-col">
+            <RunsView />
+          </main>
+          <GlobalAIDrawer triggerOnly />
+          <DockedCopilotSidebar />
+        </div>
+      </CopilotContextProvider>
+    )
+
+    // Open DockedCopilotSidebar first
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open Saturn AI Copilot" })
+    )
+    expect(
+      await screen.findByLabelText("Ask anything about your workspace...")
+    ).toBeTruthy()
+
+    // Click run row -> opens WorkspaceInspectorPanel in-flow inside <main>
+    fireEvent.click(screen.getByText("Inspect dining expenses"))
+
+    expect(await screen.findByText("Execution Trace")).toBeTruthy()
+    const complementaryPanels = screen.getAllByRole("complementary")
+    expect(complementaryPanels.length).toBe(2)
+    const inspector = complementaryPanels.find(
+      (el) => el.getAttribute("data-slot") === "workspace-inspector-panel"
+    )
+    expect(inspector).toBeTruthy()
+    expect(inspector?.closest("main")).toBeTruthy()
+    expect(screen.getByText("Dining spend is $240 this month.")).toBeTruthy()
+
+    // DockedCopilotSidebar remains simultaneously visible and interactive
+    const copilotInput = screen.getByLabelText(
+      "Ask anything about your workspace..."
+    ) as HTMLTextAreaElement
+    fireEvent.change(copilotInput, {
+      target: { value: "Explain this trace" },
+    })
+    expect(copilotInput.value).toBe("Explain this trace")
+
+    // Closing inspector via Close button leaves Copilot open
+    fireEvent.click(screen.getByRole("button", { name: "Close inspector" }))
+    expect(screen.queryByText("Execution Trace")).toBeNull()
+    expect(
+      screen.getByLabelText("Ask anything about your workspace...")
+    ).toBeTruthy()
+  })
+
+  it("renders human-readable Select labels and searchable MCP tool finder in AgentSheet and MCPServerSheet", () => {
+    vi.mocked(aiApi.useListMCPServersQuery).mockReturnValue({
+      data: {
+        mcpServers: [
+          {
+            id: "mcp_sys",
+            name: "Saturn Workspace",
+            slug: "saturn",
+            isSystem: true,
+            isEnabled: true,
+            discovery: {
+              tools: [
+                {
+                  name: "finance_create_expense",
+                  description: "Record an expense in a budget",
+                },
+                {
+                  name: "calendar_list_events",
+                  description: "List upcoming calendar events",
+                },
+              ],
+            },
+          },
+        ],
+      },
+      isLoading: false,
+    } as never)
+
+    const { unmount } = renderWithProviders(
+      <AgentSheet open={true} onOpenChange={vi.fn()} />
+    )
+
+    // Select displays human-readable label rather than raw "confirm_writes"
+    expect(
+      screen.getByText("Confirm mutating tools (Recommended)")
+    ).toBeTruthy()
+    expect(screen.queryByText("confirm_writes")).toBeNull()
+
+    // MCP tools are collapsed behind "Find tools" by default
+    expect(screen.getByText("All (2)")).toBeTruthy()
+    expect(screen.queryByText("finance_create_expense")).toBeNull()
+
+    fireEvent.click(screen.getByRole("button", { name: /Find tools/i }))
+    expect(screen.getByText("finance_create_expense")).toBeTruthy()
+    expect(screen.getByText("calendar_list_events")).toBeTruthy()
+
+    const searchInput = screen.getByLabelText(
+      "Search tools for Saturn Workspace"
+    )
+    fireEvent.change(searchInput, { target: { value: "calendar" } })
+    expect(screen.queryByText("finance_create_expense")).toBeNull()
+    expect(screen.getByText("calendar_list_events")).toBeTruthy()
+
+    unmount()
+
+    renderWithProviders(<MCPServerSheet open={true} onOpenChange={vi.fn()} />)
+    expect(screen.getByText("None")).toBeTruthy()
+    expect(screen.queryByText("none")).toBeNull()
   })
 })

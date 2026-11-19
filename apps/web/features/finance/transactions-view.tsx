@@ -266,633 +266,658 @@ export function TransactionsView() {
   const pendingCount = pendingData?.inboxItems.length || 0
 
   return (
-    <FinancePageLayout
-      title="Transactions"
-      description="View your ledger history, check exchange conversions, and manage expenses."
-      icon={Receipt}
-      actions={
-        isWritable && (
-          <Button
-            onClick={handleCreateTrigger}
-            className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary pt-0.5 font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90 sm:w-auto"
-          >
-            <Plus className="h-4 w-4" />
-            Record Transaction
-          </Button>
-        )
-      }
-    >
-      <div className="mt-2 animate-in space-y-6 duration-300 fade-in">
-        {/* Top Summary Stat Cards Grid */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {/* Card 1: Total Inflow */}
-          <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
-            <div className="rounded-2xl bg-emerald-500/10 p-3.5 text-emerald-500">
-              <ArrowUpRight className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">
-                Total Inflow
-              </p>
-              <h4 className="mt-0.5 text-2xl font-bold text-foreground">
-                {totalInflow.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                <span className="text-xs font-bold text-muted-foreground uppercase">
-                  {settings?.baseCurrency}
-                </span>
-              </h4>
-            </div>
-          </div>
-
-          {/* Card 2: Total Outflow */}
-          <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
-            <div className="rounded-2xl bg-rose-500/10 p-3.5 text-rose-500">
-              <ArrowDownLeft className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">
-                Total Outflow
-              </p>
-              <h4 className="mt-0.5 text-2xl font-bold text-foreground">
-                {totalSpent.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                <span className="text-xs font-bold text-muted-foreground uppercase">
-                  {settings?.baseCurrency}
-                </span>
-              </h4>
-            </div>
-          </div>
-
-          {/* Card 3: Avg. per Expense */}
-          <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
-            <div className="rounded-2xl bg-indigo-500/10 p-3.5 text-indigo-500">
-              <Calculator className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">
-                Avg. per Expense
-              </p>
-              <h4 className="mt-0.5 text-2xl font-bold text-foreground">
-                {avgSpent.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                <span className="text-xs font-bold text-muted-foreground uppercase">
-                  {settings?.baseCurrency}
-                </span>
-              </h4>
-            </div>
-          </div>
-
-          {/* Card 4: Total Transactions */}
-          <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
-            <div className="rounded-2xl bg-zinc-500/10 p-3.5 text-zinc-500 dark:text-zinc-400">
-              <Hash className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">
-                Total Transactions
-              </p>
-              <h4 className="mt-0.5 text-2xl font-bold text-foreground">
-                {txCount}
-              </h4>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          {/* Left Column: Dedicated Search & Filter Controls (Sticky) */}
-          <div className="space-y-6 self-start lg:sticky lg:top-6 lg:col-span-1">
-            {pendingCount > 0 && (
-              <div className="overflow-hidden rounded-3xl border border-indigo-500/30 bg-indigo-500/5 p-6 shadow-lg backdrop-blur-xl">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-400">
-                    <Inbox className="h-5 w-5 animate-pulse" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-foreground">
-                      Staging Review Queue
-                    </h4>
-                    <p className="mt-0.5 text-[10px] text-muted-foreground">
-                      {pendingCount} transaction{pendingCount > 1 ? "s" : ""}{" "}
-                      staged for review
-                    </p>
-                  </div>
+    <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+      <div className="min-w-0 flex-1">
+        <FinancePageLayout
+          title="Transactions"
+          description="View your ledger history, check exchange conversions, and manage expenses."
+          icon={Receipt}
+          actions={
+            isWritable && (
+              <Button
+                onClick={handleCreateTrigger}
+                className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary pt-0.5 font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90 sm:w-auto"
+              >
+                <Plus className="h-4 w-4" />
+                Record Transaction
+              </Button>
+            )
+          }
+        >
+          <div className="mt-2 animate-in space-y-6 duration-300 fade-in">
+            {/* Top Summary Stat Cards Grid */}
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {/* Card 1: Total Inflow */}
+              <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
+                <div className="rounded-2xl bg-emerald-500/10 p-3.5 text-emerald-500">
+                  <ArrowUpRight className="h-6 w-6" />
                 </div>
-                <Button
-                  size="sm"
-                  className="mt-4 w-full cursor-pointer rounded-2xl bg-indigo-500 font-semibold text-white shadow-md hover:bg-indigo-600"
-                  onClick={() =>
-                    navigate(resolveSpacePath("/finance/inbox", spaceId, true))
-                  }
-                >
-                  Review Staged Expenses
-                </Button>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Total Inflow
+                  </p>
+                  <h4 className="mt-0.5 text-2xl font-bold text-foreground">
+                    {totalInflow.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    <span className="text-xs font-bold text-muted-foreground uppercase">
+                      {settings?.baseCurrency}
+                    </span>
+                  </h4>
+                </div>
               </div>
-            )}
-            <div className="overflow-hidden rounded-3xl border border-border/40 bg-card/45 p-6 shadow-xl backdrop-blur-xl md:p-8">
-              <h3 className="flex items-center gap-2 text-base font-bold text-foreground">
-                <Filter className="h-4 w-4 text-primary" />
-                Filter & Search
-              </h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Refine transaction history by category, account, or notes.
-              </p>
 
-              <div className="mt-6 space-y-4">
-                {/* Search query */}
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Search Notes
-                  </label>
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search description..."
-                    className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-primary focus:outline-none"
-                  />
+              {/* Card 2: Total Outflow */}
+              <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
+                <div className="rounded-2xl bg-rose-500/10 p-3.5 text-rose-500">
+                  <ArrowDownLeft className="h-6 w-6" />
                 </div>
-
-                {/* Flow Type filter */}
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Flow Type
-                  </label>
-                  <Select
-                    value={urlState.type}
-                    onValueChange={(val) =>
-                      setUrlState({ type: val || "TYPE_UNSPECIFIED" })
-                    }
-                  >
-                    <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
-                      <SelectValue placeholder="All Flows">
-                        {urlState.type === "TYPE_UNSPECIFIED"
-                          ? "All Flows"
-                          : urlState.type === "EXPENSE"
-                            ? "Expense"
-                            : urlState.type === "INCOME"
-                              ? "Income"
-                              : urlState.type === "TRANSFER_OUT"
-                                ? "Transfer Out"
-                                : urlState.type === "TRANSFER_IN"
-                                  ? "Transfer In"
-                                  : "All Flows"}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                      <SelectItem value="TYPE_UNSPECIFIED">
-                        All Flows
-                      </SelectItem>
-                      <SelectItem value="EXPENSE">Expense</SelectItem>
-                      <SelectItem value="INCOME">Income</SelectItem>
-                      <SelectItem value="TRANSFER_OUT">Transfer Out</SelectItem>
-                      <SelectItem value="TRANSFER_IN">Transfer In</SelectItem>
-                      <SelectItem value="BALANCE_ADJUSTMENT">
-                        Adjustment
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Total Outflow
+                  </p>
+                  <h4 className="mt-0.5 text-2xl font-bold text-foreground">
+                    {totalSpent.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    <span className="text-xs font-bold text-muted-foreground uppercase">
+                      {settings?.baseCurrency}
+                    </span>
+                  </h4>
                 </div>
+              </div>
 
-                {/* Budget Category filter */}
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Budget Category
-                  </label>
-                  <Select
-                    value={urlState.budgetId}
-                    onValueChange={(val) =>
-                      setUrlState({ budgetId: val || "_all" })
-                    }
-                  >
-                    <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
-                      <SelectValue placeholder="All Budgets">
-                        {urlState.budgetId === "_all"
-                          ? "All Budgets"
-                          : budgets.find((b) => b.id === urlState.budgetId)
-                              ?.name || "All Budgets"}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                      <SelectItem value="_all">All Budgets</SelectItem>
-                      {budgets.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {/* Card 3: Avg. per Expense */}
+              <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
+                <div className="rounded-2xl bg-indigo-500/10 p-3.5 text-indigo-500">
+                  <Calculator className="h-6 w-6" />
                 </div>
-
-                {/* Asset Account filter */}
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Asset Account
-                  </label>
-                  <Select
-                    value={urlState.accountId}
-                    onValueChange={(val) =>
-                      setUrlState({ accountId: val || "_all" })
-                    }
-                  >
-                    <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
-                      <SelectValue placeholder="All Accounts">
-                        {urlState.accountId === "_all"
-                          ? "All Accounts"
-                          : accounts.find((a) => a.id === urlState.accountId)
-                              ?.name || "All Accounts"}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                      <SelectItem value="_all">All Accounts</SelectItem>
-                      {accounts.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          {a.name} ({a.currency})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Avg. per Expense
+                  </p>
+                  <h4 className="mt-0.5 text-2xl font-bold text-foreground">
+                    {avgSpent.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    <span className="text-xs font-bold text-muted-foreground uppercase">
+                      {settings?.baseCurrency}
+                    </span>
+                  </h4>
                 </div>
+              </div>
 
-                {/* Sort Order filter */}
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Sort Order
-                  </label>
-                  <Select
-                    value={urlState.sort}
-                    onValueChange={(val) =>
-                      setUrlState({ sort: val || "_default" })
-                    }
-                  >
-                    <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
-                      <SelectValue placeholder="Newest first">
-                        {urlState.sort === "_default"
-                          ? "Newest first"
-                          : urlState.sort === "transaction_date:asc"
-                            ? "Oldest first"
-                            : urlState.sort === "effective_date:desc"
-                              ? "Effective: Newest"
-                              : urlState.sort === "effective_date:asc"
-                                ? "Effective: Oldest"
-                                : urlState.sort === "amount:desc"
-                                  ? "Highest Amount"
-                                  : urlState.sort === "amount:asc"
-                                    ? "Lowest Amount"
-                                    : urlState.sort === "description:asc"
-                                      ? "Description: A-Z"
-                                      : urlState.sort === "description:desc"
-                                        ? "Description: Z-A"
-                                        : "Newest first"}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                      <SelectItem value="_default">Newest first</SelectItem>
-                      <SelectItem value="transaction_date:asc">
-                        Oldest first
-                      </SelectItem>
-                      <SelectItem value="effective_date:desc">
-                        Effective: Newest
-                      </SelectItem>
-                      <SelectItem value="effective_date:asc">
-                        Effective: Oldest
-                      </SelectItem>
-                      <SelectItem value="amount:desc">
-                        Highest Amount
-                      </SelectItem>
-                      <SelectItem value="amount:asc">Lowest Amount</SelectItem>
-                      <SelectItem value="description:asc">
-                        Description: A-Z
-                      </SelectItem>
-                      <SelectItem value="description:desc">
-                        Description: Z-A
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+              {/* Card 4: Total Transactions */}
+              <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
+                <div className="rounded-2xl bg-zinc-500/10 p-3.5 text-zinc-500 dark:text-zinc-400">
+                  <Hash className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Total Transactions
+                  </p>
+                  <h4 className="mt-0.5 text-2xl font-bold text-foreground">
+                    {txCount}
+                  </h4>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Right Column: Transaction Stream (Activity List) */}
-          <div className="space-y-4 lg:col-span-2">
-            <div className="flex items-center justify-between px-2">
-              <div>
-                <h3 className="text-lg font-bold text-foreground">
-                  Activity Stream
-                </h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Chronological record of space-wide expenses.
-                </p>
-              </div>
-              <span className="rounded-full border border-border/30 bg-muted/40 px-2.5 py-1 text-xs font-bold whitespace-nowrap text-muted-foreground">
-                {txCount} total
-              </span>
-            </div>
-
-            {/* Loader */}
-            {txnLoading ? (
-              <div className="flex items-center justify-center rounded-3xl border border-border/20 bg-card/15 py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : transactions.length === 0 ? (
-              <div className="flex animate-in flex-col items-center justify-center rounded-3xl border border-dashed border-border/40 bg-card/15 py-24 text-center shadow-inner fade-in">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/40 text-muted-foreground/80 shadow-sm">
-                  <Receipt className="h-8 w-8" />
-                </div>
-                <h4 className="text-md font-bold text-foreground">
-                  No Transactions Recorded
-                </h4>
-                <p className="mt-1.5 max-w-xs px-4 text-xs leading-relaxed text-muted-foreground">
-                  Create an expense to see it in your ledger stream and update
-                  your budget progress.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3.5 select-none">
-                {transactions.map((t) => {
-                  const amtLocal = formatCents(t.amount)
-                  const amtBase = formatCents(t.amountInBase)
-                  const isCrossCurrency = t.currency !== settings?.baseCurrency
-                  const details = getBudgetDetails(t.budgetId)
-                  const colors = getBudgetColors(details.color)
-                  const iconComp = getBudgetIcon(details.icon)
-
-                  return (
-                    <div
-                      key={t.id}
-                      className="group relative flex items-center justify-between gap-4 rounded-2xl border border-border/40 bg-card/25 p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:scale-[1.005] hover:bg-card/35 hover:shadow-md sm:grid sm:grid-cols-12 sm:gap-4"
-                    >
-                      {/* Column 1: Icon & Description (col-span-5) */}
-                      <div className="flex min-w-0 flex-1 items-center gap-3 sm:col-span-5 sm:gap-4">
-                        <div
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${colors.bg} ${colors.text} border ${colors.border}`}
-                        >
-                          {createElement(iconComp, { className: "h-5 w-5" })}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <span className="flex flex-wrap items-center gap-1.5 text-sm font-bold text-foreground transition-colors group-hover:text-primary">
-                            <span className="max-w-[100px] truncate min-[375px]:max-w-[140px] min-[420px]:max-w-[180px] sm:max-w-none">
-                              {t.description || (
-                                <span className="text-xs font-normal text-muted-foreground/50 italic">
-                                  No description
-                                </span>
-                              )}
-                            </span>
-                            {Boolean(t.metadata?.recurring_transaction_id) && (
-                              <span className="inline-flex items-center gap-1 rounded bg-indigo-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-indigo-500 uppercase select-none">
-                                <Repeat className="h-2.5 w-2.5" />
-                                Recurring
-                              </span>
-                            )}
-                            {Boolean(t.metadata?.borrowing_id) &&
-                              t.metadata?.borrowing_role ===
-                                "INITIAL_FUNDING" &&
-                              t.type === "EXPENSE" && (
-                                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-amber-500 uppercase select-none">
-                                  <ArrowUpRight className="h-2.5 w-2.5" />
-                                  Lend
-                                </span>
-                              )}
-                            {Boolean(t.metadata?.borrowing_id) &&
-                              t.metadata?.borrowing_role ===
-                                "INITIAL_FUNDING" &&
-                              t.type === "INCOME" && (
-                                <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-emerald-500 uppercase select-none">
-                                  <ArrowDownLeft className="h-2.5 w-2.5" />
-                                  Borrow
-                                </span>
-                              )}
-                            {t.metadata?.borrowing_role === "REPAYMENT" && (
-                              <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-blue-500 uppercase select-none">
-                                <Coins className="h-2.5 w-2.5" />
-                                Repayment
-                              </span>
-                            )}
-                          </span>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                            <span
-                              className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${colors.bg} ${colors.text}`}
-                            >
-                              {details.name}
-                            </span>
-                            {(() => {
-                              const acc = accounts.find(
-                                (a) => a.id === t.accountId
-                              )
-                              if (!acc) return null
-                              return (
-                                <span className="inline-flex items-center gap-1 rounded border border-border/40 bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
-                                  {acc.name}
-                                </span>
-                              )
-                            })()}
-                            <span className="font-mono text-[10px] text-muted-foreground/80 sm:hidden">
-                              {tz.format(t.transactionDate, {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })}
-                            </span>
-                          </div>
-                        </div>
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              {/* Left Column: Dedicated Search & Filter Controls (Sticky) */}
+              <div className="space-y-6 self-start lg:sticky lg:top-6 lg:col-span-1">
+                {pendingCount > 0 && (
+                  <div className="overflow-hidden rounded-3xl border border-indigo-500/30 bg-indigo-500/5 p-6 shadow-lg backdrop-blur-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-400">
+                        <Inbox className="h-5 w-5 animate-pulse" />
                       </div>
-
-                      {/* Column 2: Transaction Type Badge (col-span-2) */}
-                      <div className="hidden sm:col-span-2 sm:block">
-                        <span
-                          className={`inline-flex items-center rounded border px-2 py-0.5 text-[9px] font-extrabold uppercase select-none ${
-                            t.type === "INCOME"
-                              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
-                              : t.type === "EXPENSE"
-                                ? "border-rose-500/20 bg-rose-500/10 text-rose-500"
-                                : t.type === "BALANCE_ADJUSTMENT" ||
-                                    t.type === "TYPE_UNSPECIFIED"
-                                  ? "border-teal-500/20 bg-teal-500/10 text-teal-400"
-                                  : "border-border/30 bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {t.type === "BALANCE_ADJUSTMENT" ||
-                          t.type === "TYPE_UNSPECIFIED"
-                            ? "ADJUSTMENT"
-                            : t.type.replaceAll("_", " ")}
-                        </span>
-                      </div>
-
-                      {/* Column 3: Date (col-span-2) */}
-                      <div className="hidden font-mono text-xs text-muted-foreground/80 sm:col-span-2 sm:block">
-                        {tz.format(t.transactionDate, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </div>
-
-                      {/* Column 4: Amount & Actions (col-span-3 text-right) */}
-                      <div className="flex shrink-0 items-center justify-end gap-1 sm:col-span-3">
-                        <div className="min-w-0 pr-1 text-right">
-                          {(() => {
-                            const isNegative = amtLocal < 0
-                            const displaySign = isNegative
-                              ? "-"
-                              : t.type === "INCOME"
-                                ? "+"
-                                : t.type === "BALANCE_ADJUSTMENT"
-                                  ? "+"
-                                  : "-"
-                            const absAmtLocal = Math.abs(amtLocal)
-                            const absAmtBase = Math.abs(amtBase)
-
-                            return (
-                              <>
-                                <span className="block truncate text-sm font-extrabold tracking-tight text-foreground sm:text-base">
-                                  {displaySign}
-                                  {absAmtLocal.toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}
-                                  <span className="ml-1 text-[9px] font-bold text-muted-foreground uppercase sm:text-[10px]">
-                                    {t.currency}
-                                  </span>
-                                </span>
-                                {isCrossCurrency && (
-                                  <span className="mt-0.5 flex items-center justify-end gap-0.5 truncate font-mono text-[9px] text-muted-foreground sm:text-[10px]">
-                                    {displaySign}
-                                    {absAmtBase.toLocaleString(undefined, {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}{" "}
-                                    {settings?.baseCurrency}
-                                  </span>
-                                )}
-                              </>
-                            )
-                          })()}
-                        </div>
-
-                        {t.id && (
-                          <CopilotAttachButton
-                            item={{
-                              key: buildCopilotEntityKey("transaction", t.id),
-                              kind: "transaction",
-                              id: t.id,
-                              label: t.description || "Transaction",
-                              summary: {
-                                amount: Number(t.amount || 0),
-                                currency: t.currency,
-                                type: t.type,
-                                transactionDate: t.transactionDate,
-                              },
-                            }}
-                          />
-                        )}
-
-                        {isWritable && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger
-                              render={
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 shrink-0 cursor-pointer rounded-lg text-muted-foreground hover:bg-muted/40"
-                                >
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              }
-                            />
-                            <DropdownMenuContent align="end" className="w-36">
-                              <DropdownMenuItem
-                                onClick={() => handleViewEventsTrigger(t)}
-                                className="flex cursor-pointer items-center gap-2"
-                              >
-                                <History className="h-4 w-4" />
-                                <span>Timeline</span>
-                              </DropdownMenuItem>
-                              {t.type !== "BALANCE_ADJUSTMENT" &&
-                                t.type !== "TYPE_UNSPECIFIED" &&
-                                (t.metadata?.source_type ??
-                                  t.metadata?.sourceType) !==
-                                  "SYSTEM_BALANCE_ADJUSTMENT" && (
-                                  <DropdownMenuItem
-                                    onClick={() => handleEditTrigger(t)}
-                                    className="flex cursor-pointer items-center gap-2"
-                                  >
-                                    <Edit2 className="h-4 w-4" />
-                                    <span>Edit</span>
-                                  </DropdownMenuItem>
-                                )}
-                              <DropdownMenuItem
-                                onClick={() => handleDelete(t.id || "")}
-                                disabled={deleteMutation.isPending}
-                                className="flex cursor-pointer items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span>Delete</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
+                      <div>
+                        <h4 className="text-sm font-bold text-foreground">
+                          Staging Review Queue
+                        </h4>
+                        <p className="mt-0.5 text-[10px] text-muted-foreground">
+                          {pendingCount} transaction
+                          {pendingCount > 1 ? "s" : ""} staged for review
+                        </p>
                       </div>
                     </div>
-                  )
-                })}
+                    <Button
+                      size="sm"
+                      className="mt-4 w-full cursor-pointer rounded-2xl bg-indigo-500 font-semibold text-white shadow-md hover:bg-indigo-600"
+                      onClick={() =>
+                        navigate(
+                          resolveSpacePath("/finance/inbox", spaceId, true)
+                        )
+                      }
+                    >
+                      Review Staged Expenses
+                    </Button>
+                  </div>
+                )}
+                <div className="overflow-hidden rounded-3xl border border-border/40 bg-card/45 p-6 shadow-xl backdrop-blur-xl md:p-8">
+                  <h3 className="flex items-center gap-2 text-base font-bold text-foreground">
+                    <Filter className="h-4 w-4 text-primary" />
+                    Filter & Search
+                  </h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Refine transaction history by category, account, or notes.
+                  </p>
+
+                  <div className="mt-6 space-y-4">
+                    {/* Search query */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                        Search Notes
+                      </label>
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search description..."
+                        className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-primary focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Flow Type filter */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                        Flow Type
+                      </label>
+                      <Select
+                        value={urlState.type}
+                        onValueChange={(val) =>
+                          setUrlState({ type: val || "TYPE_UNSPECIFIED" })
+                        }
+                      >
+                        <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
+                          <SelectValue placeholder="All Flows">
+                            {urlState.type === "TYPE_UNSPECIFIED"
+                              ? "All Flows"
+                              : urlState.type === "EXPENSE"
+                                ? "Expense"
+                                : urlState.type === "INCOME"
+                                  ? "Income"
+                                  : urlState.type === "TRANSFER_OUT"
+                                    ? "Transfer Out"
+                                    : urlState.type === "TRANSFER_IN"
+                                      ? "Transfer In"
+                                      : "All Flows"}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                          <SelectItem value="TYPE_UNSPECIFIED">
+                            All Flows
+                          </SelectItem>
+                          <SelectItem value="EXPENSE">Expense</SelectItem>
+                          <SelectItem value="INCOME">Income</SelectItem>
+                          <SelectItem value="TRANSFER_OUT">
+                            Transfer Out
+                          </SelectItem>
+                          <SelectItem value="TRANSFER_IN">
+                            Transfer In
+                          </SelectItem>
+                          <SelectItem value="BALANCE_ADJUSTMENT">
+                            Adjustment
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Budget Category filter */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                        Budget Category
+                      </label>
+                      <Select
+                        value={urlState.budgetId}
+                        onValueChange={(val) =>
+                          setUrlState({ budgetId: val || "_all" })
+                        }
+                      >
+                        <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
+                          <SelectValue placeholder="All Budgets">
+                            {urlState.budgetId === "_all"
+                              ? "All Budgets"
+                              : budgets.find((b) => b.id === urlState.budgetId)
+                                  ?.name || "All Budgets"}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                          <SelectItem value="_all">All Budgets</SelectItem>
+                          {budgets.map((b) => (
+                            <SelectItem key={b.id} value={b.id}>
+                              {b.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Asset Account filter */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                        Asset Account
+                      </label>
+                      <Select
+                        value={urlState.accountId}
+                        onValueChange={(val) =>
+                          setUrlState({ accountId: val || "_all" })
+                        }
+                      >
+                        <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
+                          <SelectValue placeholder="All Accounts">
+                            {urlState.accountId === "_all"
+                              ? "All Accounts"
+                              : accounts.find(
+                                  (a) => a.id === urlState.accountId
+                                )?.name || "All Accounts"}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                          <SelectItem value="_all">All Accounts</SelectItem>
+                          {accounts.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.name} ({a.currency})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Sort Order filter */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                        Sort Order
+                      </label>
+                      <Select
+                        value={urlState.sort}
+                        onValueChange={(val) =>
+                          setUrlState({ sort: val || "_default" })
+                        }
+                      >
+                        <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
+                          <SelectValue placeholder="Newest first">
+                            {urlState.sort === "_default"
+                              ? "Newest first"
+                              : urlState.sort === "transaction_date:asc"
+                                ? "Oldest first"
+                                : urlState.sort === "effective_date:desc"
+                                  ? "Effective: Newest"
+                                  : urlState.sort === "effective_date:asc"
+                                    ? "Effective: Oldest"
+                                    : urlState.sort === "amount:desc"
+                                      ? "Highest Amount"
+                                      : urlState.sort === "amount:asc"
+                                        ? "Lowest Amount"
+                                        : urlState.sort === "description:asc"
+                                          ? "Description: A-Z"
+                                          : urlState.sort === "description:desc"
+                                            ? "Description: Z-A"
+                                            : "Newest first"}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                          <SelectItem value="_default">Newest first</SelectItem>
+                          <SelectItem value="transaction_date:asc">
+                            Oldest first
+                          </SelectItem>
+                          <SelectItem value="effective_date:desc">
+                            Effective: Newest
+                          </SelectItem>
+                          <SelectItem value="effective_date:asc">
+                            Effective: Oldest
+                          </SelectItem>
+                          <SelectItem value="amount:desc">
+                            Highest Amount
+                          </SelectItem>
+                          <SelectItem value="amount:asc">
+                            Lowest Amount
+                          </SelectItem>
+                          <SelectItem value="description:asc">
+                            Description: A-Z
+                          </SelectItem>
+                          <SelectItem value="description:desc">
+                            Description: Z-A
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
+
+              {/* Right Column: Transaction Stream (Activity List) */}
+              <div className="space-y-4 lg:col-span-2">
+                <div className="flex items-center justify-between px-2">
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground">
+                      Activity Stream
+                    </h3>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Chronological record of space-wide expenses.
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-border/30 bg-muted/40 px-2.5 py-1 text-xs font-bold whitespace-nowrap text-muted-foreground">
+                    {txCount} total
+                  </span>
+                </div>
+
+                {/* Loader */}
+                {txnLoading ? (
+                  <div className="flex items-center justify-center rounded-3xl border border-border/20 bg-card/15 py-20">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : transactions.length === 0 ? (
+                  <div className="flex animate-in flex-col items-center justify-center rounded-3xl border border-dashed border-border/40 bg-card/15 py-24 text-center shadow-inner fade-in">
+                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/40 text-muted-foreground/80 shadow-sm">
+                      <Receipt className="h-8 w-8" />
+                    </div>
+                    <h4 className="text-md font-bold text-foreground">
+                      No Transactions Recorded
+                    </h4>
+                    <p className="mt-1.5 max-w-xs px-4 text-xs leading-relaxed text-muted-foreground">
+                      Create an expense to see it in your ledger stream and
+                      update your budget progress.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3.5 select-none">
+                    {transactions.map((t) => {
+                      const amtLocal = formatCents(t.amount)
+                      const amtBase = formatCents(t.amountInBase)
+                      const isCrossCurrency =
+                        t.currency !== settings?.baseCurrency
+                      const details = getBudgetDetails(t.budgetId)
+                      const colors = getBudgetColors(details.color)
+                      const iconComp = getBudgetIcon(details.icon)
+
+                      return (
+                        <div
+                          key={t.id}
+                          className="group relative flex items-center justify-between gap-4 rounded-2xl border border-border/40 bg-card/25 p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:scale-[1.005] hover:bg-card/35 hover:shadow-md sm:grid sm:grid-cols-12 sm:gap-4"
+                        >
+                          {/* Column 1: Icon & Description (col-span-5) */}
+                          <div className="flex min-w-0 flex-1 items-center gap-3 sm:col-span-5 sm:gap-4">
+                            <div
+                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${colors.bg} ${colors.text} border ${colors.border}`}
+                            >
+                              {createElement(iconComp, {
+                                className: "h-5 w-5",
+                              })}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="flex flex-wrap items-center gap-1.5 text-sm font-bold text-foreground transition-colors group-hover:text-primary">
+                                <span className="max-w-[100px] truncate min-[375px]:max-w-[140px] min-[420px]:max-w-[180px] sm:max-w-none">
+                                  {t.description || (
+                                    <span className="text-xs font-normal text-muted-foreground/50 italic">
+                                      No description
+                                    </span>
+                                  )}
+                                </span>
+                                {Boolean(
+                                  t.metadata?.recurring_transaction_id
+                                ) && (
+                                  <span className="inline-flex items-center gap-1 rounded bg-indigo-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-indigo-500 uppercase select-none">
+                                    <Repeat className="h-2.5 w-2.5" />
+                                    Recurring
+                                  </span>
+                                )}
+                                {Boolean(t.metadata?.borrowing_id) &&
+                                  t.metadata?.borrowing_role ===
+                                    "INITIAL_FUNDING" &&
+                                  t.type === "EXPENSE" && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-amber-500 uppercase select-none">
+                                      <ArrowUpRight className="h-2.5 w-2.5" />
+                                      Lend
+                                    </span>
+                                  )}
+                                {Boolean(t.metadata?.borrowing_id) &&
+                                  t.metadata?.borrowing_role ===
+                                    "INITIAL_FUNDING" &&
+                                  t.type === "INCOME" && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-emerald-500 uppercase select-none">
+                                      <ArrowDownLeft className="h-2.5 w-2.5" />
+                                      Borrow
+                                    </span>
+                                  )}
+                                {t.metadata?.borrowing_role === "REPAYMENT" && (
+                                  <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-blue-500 uppercase select-none">
+                                    <Coins className="h-2.5 w-2.5" />
+                                    Repayment
+                                  </span>
+                                )}
+                              </span>
+                              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                                <span
+                                  className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${colors.bg} ${colors.text}`}
+                                >
+                                  {details.name}
+                                </span>
+                                {(() => {
+                                  const acc = accounts.find(
+                                    (a) => a.id === t.accountId
+                                  )
+                                  if (!acc) return null
+                                  return (
+                                    <span className="inline-flex items-center gap-1 rounded border border-border/40 bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                                      {acc.name}
+                                    </span>
+                                  )
+                                })()}
+                                <span className="font-mono text-[10px] text-muted-foreground/80 sm:hidden">
+                                  {tz.format(t.transactionDate, {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Column 2: Transaction Type Badge (col-span-2) */}
+                          <div className="hidden sm:col-span-2 sm:block">
+                            <span
+                              className={`inline-flex items-center rounded border px-2 py-0.5 text-[9px] font-extrabold uppercase select-none ${
+                                t.type === "INCOME"
+                                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+                                  : t.type === "EXPENSE"
+                                    ? "border-rose-500/20 bg-rose-500/10 text-rose-500"
+                                    : t.type === "BALANCE_ADJUSTMENT" ||
+                                        t.type === "TYPE_UNSPECIFIED"
+                                      ? "border-teal-500/20 bg-teal-500/10 text-teal-400"
+                                      : "border-border/30 bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {t.type === "BALANCE_ADJUSTMENT" ||
+                              t.type === "TYPE_UNSPECIFIED"
+                                ? "ADJUSTMENT"
+                                : t.type.replaceAll("_", " ")}
+                            </span>
+                          </div>
+
+                          {/* Column 3: Date (col-span-2) */}
+                          <div className="hidden font-mono text-xs text-muted-foreground/80 sm:col-span-2 sm:block">
+                            {tz.format(t.transactionDate, {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </div>
+
+                          {/* Column 4: Amount & Actions (col-span-3 text-right) */}
+                          <div className="flex shrink-0 items-center justify-end gap-1 sm:col-span-3">
+                            <div className="min-w-0 pr-1 text-right">
+                              {(() => {
+                                const isNegative = amtLocal < 0
+                                const displaySign = isNegative
+                                  ? "-"
+                                  : t.type === "INCOME"
+                                    ? "+"
+                                    : t.type === "BALANCE_ADJUSTMENT"
+                                      ? "+"
+                                      : "-"
+                                const absAmtLocal = Math.abs(amtLocal)
+                                const absAmtBase = Math.abs(amtBase)
+
+                                return (
+                                  <>
+                                    <span className="block truncate text-sm font-extrabold tracking-tight text-foreground sm:text-base">
+                                      {displaySign}
+                                      {absAmtLocal.toLocaleString(undefined, {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                      <span className="ml-1 text-[9px] font-bold text-muted-foreground uppercase sm:text-[10px]">
+                                        {t.currency}
+                                      </span>
+                                    </span>
+                                    {isCrossCurrency && (
+                                      <span className="mt-0.5 flex items-center justify-end gap-0.5 truncate font-mono text-[9px] text-muted-foreground sm:text-[10px]">
+                                        {displaySign}
+                                        {absAmtBase.toLocaleString(undefined, {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        })}{" "}
+                                        {settings?.baseCurrency}
+                                      </span>
+                                    )}
+                                  </>
+                                )
+                              })()}
+                            </div>
+
+                            {t.id && (
+                              <CopilotAttachButton
+                                item={{
+                                  key: buildCopilotEntityKey(
+                                    "transaction",
+                                    t.id
+                                  ),
+                                  kind: "transaction",
+                                  id: t.id,
+                                  label: t.description || "Transaction",
+                                  summary: {
+                                    amount: Number(t.amount || 0),
+                                    currency: t.currency,
+                                    type: t.type,
+                                    transactionDate: t.transactionDate,
+                                  },
+                                }}
+                              />
+                            )}
+
+                            {isWritable && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  render={
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 shrink-0 cursor-pointer rounded-lg text-muted-foreground hover:bg-muted/40"
+                                    >
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  }
+                                />
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="w-36"
+                                >
+                                  <DropdownMenuItem
+                                    onClick={() => handleViewEventsTrigger(t)}
+                                    className="flex cursor-pointer items-center gap-2"
+                                  >
+                                    <History className="h-4 w-4" />
+                                    <span>Timeline</span>
+                                  </DropdownMenuItem>
+                                  {t.type !== "BALANCE_ADJUSTMENT" &&
+                                    t.type !== "TYPE_UNSPECIFIED" &&
+                                    (t.metadata?.source_type ??
+                                      t.metadata?.sourceType) !==
+                                      "SYSTEM_BALANCE_ADJUSTMENT" && (
+                                      <DropdownMenuItem
+                                        onClick={() => handleEditTrigger(t)}
+                                        className="flex cursor-pointer items-center gap-2"
+                                      >
+                                        <Edit2 className="h-4 w-4" />
+                                        <span>Edit</span>
+                                      </DropdownMenuItem>
+                                    )}
+                                  <DropdownMenuItem
+                                    onClick={() => handleDelete(t.id || "")}
+                                    disabled={deleteMutation.isPending}
+                                    className="flex cursor-pointer items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span>Delete</span>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Transaction recording modal */}
+            <CreateTransactionSheet
+              open={createOpen}
+              onOpenChange={setCreateOpen}
+              spaceId={spaceId}
+              baseCurrency={baseCurrency}
+              budgets={budgets}
+              editTransaction={editTransaction}
+              refetchTransactions={refetchTransactions}
+              refetchBudgets={refetchBudgets}
+            />
+
+            <AlertDialog
+              open={!!deleteTargetId}
+              onOpenChange={(open) => !open && setDeleteTargetId(null)}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this transaction? This will
+                    restore the budget limit capacity.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={deleteMutation.isPending}>
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    disabled={deleteMutation.isPending}
+                    onClick={handleConfirmDelete}
+                  >
+                    {deleteMutation.isPending
+                      ? "Deleting..."
+                      : "Delete Transaction"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
-        </div>
-
-        {/* Transaction recording slider sheet */}
-        <CreateTransactionSheet
-          open={createOpen}
-          onOpenChange={setCreateOpen}
-          spaceId={spaceId}
-          baseCurrency={baseCurrency}
-          budgets={budgets}
-          editTransaction={editTransaction}
-          refetchTransactions={refetchTransactions}
-          refetchBudgets={refetchBudgets}
-        />
-        <TransactionEventsSheet
-          open={eventsOpen}
-          onOpenChange={setEventsOpen}
-          txnId={eventsTxnId}
-          txnDescription={eventsTxnDescription}
-        />
-
-        <AlertDialog
-          open={!!deleteTargetId}
-          onOpenChange={(open) => !open && setDeleteTargetId(null)}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete this transaction? This will
-                restore the budget limit capacity.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleteMutation.isPending}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                disabled={deleteMutation.isPending}
-                onClick={handleConfirmDelete}
-              >
-                {deleteMutation.isPending
-                  ? "Deleting..."
-                  : "Delete Transaction"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        </FinancePageLayout>
       </div>
-    </FinancePageLayout>
+
+      <TransactionEventsSheet
+        open={eventsOpen}
+        onOpenChange={setEventsOpen}
+        txnId={eventsTxnId}
+        txnDescription={eventsTxnDescription}
+      />
+    </div>
   )
 }

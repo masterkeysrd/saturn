@@ -11,13 +11,13 @@ import {
   type Model,
 } from "@saturn/api/saturn/platform/ai/v1/ai"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Collapsible,
   CollapsibleContent,
@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ChevronDownIcon, PlugIcon } from "lucide-react"
+import { ChevronDownIcon, PlugIcon, SearchIcon, XIcon } from "lucide-react"
 
 interface AgentSheetProps {
   open: boolean
@@ -108,6 +108,12 @@ function AgentSheetForm({
       : ""
   )
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [expandedToolServers, setExpandedToolServers] = useState<
+    Record<string, boolean>
+  >({})
+  const [toolSearchByServer, setToolSearchByServer] = useState<
+    Record<string, string>
+  >({})
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const createAgent = useCreateAgentMutation({
@@ -240,9 +246,9 @@ function AgentSheetForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
-      <div className="space-y-4 p-5">
+      <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
         {errorMsg && (
           <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
             {errorMsg}
@@ -361,7 +367,7 @@ function AgentSheetForm({
         <div className="space-y-3 border-t border-border/40 pt-4">
           <div>
             <Label>MCP Server & Tool Bindings</Label>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Grant access to built-in Saturn workspace tools or external HTTP
               MCP servers.
             </p>
@@ -371,16 +377,36 @@ function AgentSheetForm({
             const sid = srv.id ?? ""
             const allowed = bindings[sid]
             const isBound = allowed !== undefined
-            const discoveredTools = (srv.discovery?.tools ?? [])
-              .map((t) => t.name ?? "")
-              .filter(Boolean)
+            const rawTools = (srv.discovery?.tools ?? []).filter((t) =>
+              Boolean(t.name)
+            )
+            const discoveredTools = rawTools.map((t) => t.name ?? "")
+            const isWildcard = Boolean(allowed?.includes("*"))
+            const isExpanded =
+              Boolean(expandedToolServers[sid]) || (isBound && !isWildcard)
+            const toolQuery = (toolSearchByServer[sid] ?? "")
+              .trim()
+              .toLowerCase()
+            const filteredTools = toolQuery
+              ? rawTools.filter(
+                  (t) =>
+                    (t.name ?? "").toLowerCase().includes(toolQuery) ||
+                    (t.description ?? "").toLowerCase().includes(toolQuery)
+                )
+              : rawTools
+            const activeCount = !isBound
+              ? 0
+              : isWildcard
+                ? discoveredTools.length
+                : allowed.length
+
             return (
               <div
                 key={sid}
-                className="space-y-2 border-t border-border/40 pt-3 first:border-t-0 first:pt-0"
+                className="space-y-2.5 border-t border-border/40 pt-3 first:border-t-0 first:pt-0"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
                     <Checkbox
                       checked={isBound}
                       onCheckedChange={(chk) =>
@@ -390,46 +416,134 @@ function AgentSheetForm({
                     />
                     <label
                       htmlFor={`mcp-bind-${sid}`}
-                      className="flex cursor-pointer items-center gap-1.5 text-xs font-medium"
+                      className="flex min-w-0 cursor-pointer items-center gap-1.5 text-xs font-medium"
                     >
-                      <PlugIcon className="size-3.5 text-muted-foreground" />
-                      <span>{srv.name}</span>
+                      <PlugIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                      <span className="truncate">{srv.name}</span>
                       {srv.isSystem && (
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="shrink-0 text-[11px] text-muted-foreground">
                           (Built-in)
                         </span>
                       )}
                     </label>
                   </div>
+
                   {isBound && (
-                    <span className="text-[11px] text-muted-foreground">
-                      {allowed.includes("*")
-                        ? "All tools (*)"
-                        : `${allowed.length} tools`}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
+                        {isWildcard
+                          ? discoveredTools.length > 0
+                            ? `All (${discoveredTools.length})`
+                            : "All tools (*)"
+                          : `${activeCount}/${discoveredTools.length} tools`}
+                      </span>
+                      {discoveredTools.length > 0 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="xs"
+                          onClick={() =>
+                            setExpandedToolServers((prev) => ({
+                              ...prev,
+                              [sid]: !isExpanded,
+                            }))
+                          }
+                          className="cursor-pointer gap-1"
+                        >
+                          <SearchIcon className="size-3" />
+                          <span>
+                            {isExpanded ? "Hide tools" : "Find tools"}
+                          </span>
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
 
-                {isBound && discoveredTools.length > 0 && (
-                  <div className="ml-6 grid grid-cols-1 gap-1.5 pt-1">
-                    {discoveredTools.map((tName) => {
-                      const checked =
-                        allowed.includes("*") || allowed.includes(tName)
-                      return (
-                        <label
-                          key={tName}
-                          className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={() =>
-                              toggleTool(sid, tName, discoveredTools)
+                {isBound && discoveredTools.length > 0 && isExpanded && (
+                  <div className="ml-6 space-y-2 rounded-lg border border-border/70 bg-muted/20 p-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={toolSearchByServer[sid] ?? ""}
+                          onChange={(e) =>
+                            setToolSearchByServer((prev) => ({
+                              ...prev,
+                              [sid]: e.target.value,
+                            }))
+                          }
+                          placeholder={`Search ${discoveredTools.length} tools by name or description...`}
+                          aria-label={`Search tools for ${srv.name}`}
+                          className="h-8 pr-7 pl-8 text-xs"
+                        />
+                        {toolSearchByServer[sid] && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setToolSearchByServer((prev) => ({
+                                ...prev,
+                                [sid]: "",
+                              }))
                             }
-                          />
-                          <span className="font-mono text-[11px]">{tName}</span>
-                        </label>
-                      )
-                    })}
+                            aria-label="Clear tool search"
+                            className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                          >
+                            <XIcon className="size-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        onClick={() =>
+                          setBindings((prev) => ({ ...prev, [sid]: ["*"] }))
+                        }
+                        disabled={isWildcard}
+                        className="shrink-0 cursor-pointer text-xs"
+                      >
+                        Select all
+                      </Button>
+                    </div>
+
+                    <div className="max-h-48 divide-y divide-border/40 overflow-y-auto rounded-md border border-border/60 bg-control px-2.5">
+                      {filteredTools.length === 0 ? (
+                        <p className="py-4 text-center text-xs text-muted-foreground">
+                          No tools matching &ldquo;{toolSearchByServer[sid]}
+                          &rdquo;
+                        </p>
+                      ) : (
+                        filteredTools.map((tool) => {
+                          const tName = tool.name ?? ""
+                          const checked = isWildcard || allowed.includes(tName)
+                          return (
+                            <label
+                              key={tName}
+                              className="flex cursor-pointer items-start gap-2.5 py-2 text-xs hover:text-foreground"
+                            >
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={() =>
+                                  toggleTool(sid, tName, discoveredTools)
+                                }
+                                className="mt-0.5"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate font-mono text-[11px] font-medium text-foreground">
+                                  {tName}
+                                </div>
+                                {tool.description && (
+                                  <p className="line-clamp-1 text-[11px] text-muted-foreground">
+                                    {tool.description}
+                                  </p>
+                                )}
+                              </div>
+                            </label>
+                          )
+                        })
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -488,7 +602,7 @@ function AgentSheetForm({
         </Collapsible>
       </div>
 
-      <SheetFooter className="mt-auto border-t border-border/40 px-5 py-3">
+      <DialogFooter className="shrink-0 border-t border-border/60 bg-card px-6 py-4">
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
         </Button>
@@ -499,7 +613,7 @@ function AgentSheetForm({
               ? "Save Changes"
               : "Create Agent"}
         </Button>
-      </SheetFooter>
+      </DialogFooter>
     </form>
   )
 }
@@ -511,17 +625,17 @@ export function AgentSheet({ open, onOpenChange, agent }: AgentSheetProps) {
   const mcpServers = mcpData?.mcpServers ?? []
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full max-w-[480px] flex-col gap-0 p-0 sm:max-w-[480px]">
-        <SheetHeader className="border-b border-border/40 px-5 py-4">
-          <SheetTitle className="text-base font-semibold">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[min(88svh,46rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
+          <DialogTitle className="pr-8 text-base font-semibold">
             {agent?.id ? `Edit ${agent.name}` : "Create AI Agent"}
-          </SheetTitle>
-          <SheetDescription className="text-xs">
+          </DialogTitle>
+          <DialogDescription className="text-xs">
             Configure instructions, model selection, and unified MCP tool
             bindings.
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         {open && (
           <AgentSheetForm
             key={agent?.id ?? "new"}
@@ -531,7 +645,7 @@ export function AgentSheet({ open, onOpenChange, agent }: AgentSheetProps) {
             onClose={() => onOpenChange(false)}
           />
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

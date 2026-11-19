@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
@@ -45,12 +45,15 @@ export function CreateIncomeForm({
   refetchData,
   onBack,
 }: CreateIncomeFormProps) {
+  const [initialDate] = useState(() => new Date())
   const { data: accountsData } = useListAccountsQuery(
     {},
     { enabled: open && !initialAccounts }
   )
-  const accountsList = initialAccounts || accountsData?.accounts || []
-  const activeAccounts = accountsList.filter((a) => a.isActive)
+  const activeAccounts = useMemo(() => {
+    const accountsList = initialAccounts || accountsData?.accounts || []
+    return accountsList.filter((a) => a.isActive)
+  }, [initialAccounts, accountsData?.accounts])
 
   const createIncomeMutation = useCreateIncomeMutation({
     onSuccess: () => {
@@ -121,12 +124,12 @@ export function CreateIncomeForm({
       amount: "",
       currency: baseCurrency || "USD",
       description: "",
-      transactionDate: new Date(),
-      effectiveDate: new Date(),
+      transactionDate: initialDate,
+      effectiveDate: initialDate,
       hasCustomEffectiveDate: false,
       accountId: initialAccId,
     }
-  }, [editTransaction, activeAccounts, baseCurrency])
+  }, [editTransaction, activeAccounts, baseCurrency, initialDate])
 
   const {
     register,

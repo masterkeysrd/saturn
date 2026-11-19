@@ -10,7 +10,10 @@ import { cn } from "@/lib/utils"
 export interface AgendaViewProps {
   currentDate?: Date
   occurrences: EventOccurrence[]
-  onSelectOccurrence: (occ: EventOccurrence) => void
+  onSelectOccurrence: (
+    occ: EventOccurrence,
+    anchorEl?: HTMLElement | null
+  ) => void
   onOpenCreateDialog: () => void
 }
 
@@ -152,7 +155,7 @@ export function AgendaView({
                   <div
                     key={occ.instanceId || occ.eventId}
                     data-testid={`agenda-event-${occ.instanceId || occ.eventId}`}
-                    onClick={() => onSelectOccurrence(occ)}
+                    onClick={(e) => onSelectOccurrence(occ, e.currentTarget)}
                     className="group flex cursor-pointer flex-col justify-between gap-3 p-3.5 transition hover:bg-muted/30 sm:flex-row sm:items-center"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
