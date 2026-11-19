@@ -10,20 +10,33 @@ import {
 import { useRouter } from "expo-router"
 import BottomSheet from "@gorhom/bottom-sheet"
 import { useQueryClient } from "@tanstack/react-query"
+import { normalizeDashboardWidgets, type DashboardWidgetId } from "@saturn/core"
+import {
+  useGetDashboardPreferencesQuery,
+  useUpdateDashboardPreferencesMutation,
+  type DashboardPreferences,
+} from "@saturn/api/saturn/space/v1/space"
 import { useTimezone } from "@saturn/hooks"
-import { Send, Sparkles } from "lucide-react-native"
+import { Send, SlidersHorizontal, Sparkles } from "lucide-react-native"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
 import { getOverviewQuickCaptureActions } from "@/lib/quick-capture"
+import { buildUpdateDashboardPreferencesPayload } from "@/lib/overview-preferences"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import {
   QuickCaptureFab,
   QuickCaptureSheet,
 } from "@/components/ui/quick-capture-sheet"
+import { SkeletonCard } from "@/components/ui/skeleton-loader"
+import { useToast } from "@/components/ui/toast"
 import { FinanceSummaryWidget } from "@/components/widgets/finance-summary-widget"
+import { BudgetPaceWidget } from "@/components/widgets/budget-pace-widget"
+import { UpcomingBillsWidget } from "@/components/widgets/upcoming-bills-widget"
 import { CalendarSummaryWidget } from "@/components/widgets/calendar-summary-widget"
 import { MailSummaryWidget } from "@/components/widgets/mail-summary-widget"
+import { WorkflowRunsWidget } from "@/components/widgets/workflow-runs-widget"
+import { CustomizeOverviewSheet } from "@/components/widgets/customize-overview-sheet"
 
 const OVERVIEW_PROMPTS = [
   "Today's schedule",
@@ -34,18 +47,73 @@ const OVERVIEW_PROMPTS = [
 export default function OverviewScreen() {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const toast = useToast()
   const { user } = useAuth()
-  const { refetchSpaces, activeSpaceRole } = useSpace()
+  const { activeSpaceId, refetchSpaces, activeSpaceRole } = useSpace()
   const tz = useTimezone()
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
   const quickCaptureRef = useRef<BottomSheet>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [aiQuery, setAiQuery] = useState("")
+  const [customizeOpen, setCustomizeOpen] = useState(false)
+
   const quickCaptureActions = useMemo(
     () => getOverviewQuickCaptureActions(activeSpaceRole),
     [activeSpaceRole]
   )
+
+  const spaceId = activeSpaceId || ""
+  const { data: prefsData, isLoading: prefsLoading } =
+    useGetDashboardPreferencesQuery({ spaceId }, { enabled: Boolean(spaceId) })
+
+  const updateDashboardPreferencesMutation =
+    useUpdateDashboardPreferencesMutation()
+
+  const activeWidgets = useMemo(
+    () => normalizeDashboardWidgets(prefsData?.widgets),
+    [prefsData?.widgets]
+  )
+
+  const handleUpdateWidgets = (nextWidgets: DashboardWidgetId[]) => {
+    if (!spaceId) return
+    const queryKey = [
+      `/api/v1/spaces/${spaceId}/dashboard-preferences`,
+      { spaceId },
+    ]
+    const previousPrefs =
+      queryClient.getQueryData<DashboardPreferences>(queryKey)
+
+    queryClient.setQueryData<DashboardPreferences>(queryKey, (prev) => ({
+      ...prev,
+      spaceId,
+      widgets: nextWidgets,
+    }))
+
+    const payload = buildUpdateDashboardPreferencesPayload(
+      spaceId,
+      nextWidgets,
+      prefsData?.version
+    )
+
+    updateDashboardPreferencesMutation.mutate(payload, {
+      onSuccess: (updated) => {
+        queryClient.setQueryData<DashboardPreferences>(queryKey, updated)
+      },
+      onError: (err) => {
+        queryClient.setQueryData<DashboardPreferences | undefined>(
+          queryKey,
+          previousPrefs
+        )
+        haptics.error()
+        toast.show({
+          title: "Could not save overview layout",
+          message: err instanceof Error ? err.message : "Please try again.",
+          type: "error",
+        })
+      },
+    })
+  }
 
   const openAIWithPrompt = (promptText?: string) => {
     haptics.light()
@@ -104,6 +172,73 @@ export default function OverviewScreen() {
     }
   }
 
+  const renderWidget = (widgetId: DashboardWidgetId) => {
+    switch (widgetId) {
+      case "ai_quick_ask":
+        return (
+          <View key={widgetId} style={styles.aiLauncherWrap}>
+            <View style={styles.aiInputRow}>
+              <Sparkles size={16} color={colors.primary} />
+              <TextInput
+                style={styles.aiInput}
+                value={aiQuery}
+                onChangeText={setAiQuery}
+                placeholder="Ask Saturn AI anything..."
+                placeholderTextColor={colors.textMuted}
+                keyboardAppearance={isDark ? "dark" : "light"}
+                returnKeyType="send"
+                onSubmitEditing={() => {
+                  const text = aiQuery
+                  setAiQuery("")
+                  openAIWithPrompt(text)
+                }}
+              />
+              <TouchableOpacity
+                style={styles.aiSendBtn}
+                activeOpacity={0.7}
+                onPress={() => {
+                  const text = aiQuery
+                  setAiQuery("")
+                  openAIWithPrompt(text)
+                }}
+                accessibilityLabel="Ask Saturn AI"
+              >
+                <Send size={14} color={colors.primaryForeground} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.aiChipsRow}
+            >
+              {OVERVIEW_PROMPTS.map((chip) => (
+                <TouchableOpacity
+                  key={chip}
+                  style={styles.aiChip}
+                  activeOpacity={0.7}
+                  onPress={() => openAIWithPrompt(chip)}
+                >
+                  <Text style={styles.aiChipText}>{chip}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )
+      case "net_worth":
+        return <FinanceSummaryWidget key={widgetId} />
+      case "budget_pace":
+        return <BudgetPaceWidget key={widgetId} />
+      case "upcoming_bills":
+        return <UpcomingBillsWidget key={widgetId} />
+      case "today_schedule":
+        return <CalendarSummaryWidget key={widgetId} />
+      case "priority_mail":
+        return <MailSummaryWidget key={widgetId} />
+      case "workflow_runs":
+        return <WorkflowRunsWidget key={widgetId} />
+    }
+  }
+
   return (
     <View style={styles.safeArea}>
       <ScrollView
@@ -119,67 +254,43 @@ export default function OverviewScreen() {
           />
         }
       >
-        {/* Daily Greeting & Date Header */}
+        {/* Daily Greeting, Date & Customize Button */}
         <View style={styles.greetingHeader}>
-          <Text style={styles.dateLabel}>{formattedDate}</Text>
-          <Text style={styles.greetingTitle}>
-            {getGreeting()}, {firstName}
-          </Text>
-        </View>
-
-        {/* Quick AI Assistant Launcher */}
-        <View style={styles.aiLauncherWrap}>
-          <View style={styles.aiInputRow}>
-            <Sparkles size={16} color={colors.primary} />
-            <TextInput
-              style={styles.aiInput}
-              value={aiQuery}
-              onChangeText={setAiQuery}
-              placeholder="Ask Saturn AI anything..."
-              placeholderTextColor={colors.textMuted}
-              keyboardAppearance={isDark ? "dark" : "light"}
-              returnKeyType="send"
-              onSubmitEditing={() => {
-                const text = aiQuery
-                setAiQuery("")
-                openAIWithPrompt(text)
-              }}
-            />
-            <TouchableOpacity
-              style={styles.aiSendBtn}
-              activeOpacity={0.7}
-              onPress={() => {
-                const text = aiQuery
-                setAiQuery("")
-                openAIWithPrompt(text)
-              }}
-              accessibilityLabel="Ask Saturn AI"
-            >
-              <Send size={14} color={colors.primaryForeground} />
-            </TouchableOpacity>
+          <View style={styles.greetingTextCol}>
+            <Text style={styles.dateLabel}>{formattedDate}</Text>
+            <Text style={styles.greetingTitle} numberOfLines={1}>
+              {getGreeting()}, {firstName}
+            </Text>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.aiChipsRow}
-          >
-            {OVERVIEW_PROMPTS.map((chip) => (
-              <TouchableOpacity
-                key={chip}
-                style={styles.aiChip}
-                activeOpacity={0.7}
-                onPress={() => openAIWithPrompt(chip)}
-              >
-                <Text style={styles.aiChipText}>{chip}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+
+          {Boolean(spaceId) && (
+            <TouchableOpacity
+              style={styles.customizeBtn}
+              activeOpacity={0.75}
+              onPress={() => {
+                haptics.light()
+                setCustomizeOpen(true)
+              }}
+              testID="overview-customize-btn"
+              accessibilityRole="button"
+              accessibilityLabel="Customize overview widgets"
+            >
+              <SlidersHorizontal size={14} color={colors.textSecondary} />
+              <Text style={styles.customizeBtnText}>Customize</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Feature Widgets */}
-        <CalendarSummaryWidget />
-        <MailSummaryWidget />
-        <FinanceSummaryWidget />
+        {/* Ordered Space-Scoped Widgets */}
+        {prefsLoading && !prefsData ? (
+          <View style={styles.loadingWrap}>
+            <SkeletonCard height={110} />
+            <SkeletonCard height={140} />
+            <SkeletonCard height={140} />
+          </View>
+        ) : (
+          activeWidgets.map((widgetId) => renderWidget(widgetId))
+        )}
       </ScrollView>
 
       <QuickCaptureFab
@@ -193,6 +304,14 @@ export default function OverviewScreen() {
         title="Quick Capture"
         actions={quickCaptureActions}
         onClose={() => quickCaptureRef.current?.close()}
+      />
+
+      <CustomizeOverviewSheet
+        open={customizeOpen}
+        activeWidgets={activeWidgets}
+        isSaving={updateDashboardPreferencesMutation.isPending}
+        onClose={() => setCustomizeOpen(false)}
+        onChangeWidgets={handleUpdateWidgets}
       />
     </View>
   )
@@ -214,7 +333,15 @@ const createStyles = (t: SaturnMobileTheme) => ({
     gap: 12,
   },
   greetingHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    gap: 12,
     paddingHorizontal: 4,
+  },
+  greetingTextCol: {
+    flex: 1,
+    minWidth: 0,
     gap: 0,
   },
   dateLabel: {
@@ -233,6 +360,25 @@ const createStyles = (t: SaturnMobileTheme) => ({
     color: t.colors.textPrimary,
     letterSpacing: -0.5,
     includeFontPadding: false,
+  },
+  customizeBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: t.radius.full,
+    backgroundColor: t.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+  },
+  customizeBtnText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: t.colors.textSecondary,
+  },
+  loadingWrap: {
+    gap: 12,
   },
   aiLauncherWrap: {
     gap: 8,

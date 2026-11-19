@@ -111,6 +111,14 @@ export default function AppLayout() {
         }}
       />
       <Stack.Screen
+        name="finance/inbox"
+        options={{
+          headerShown: true,
+          headerTitle: "Review Queue",
+          headerBackTitle: "Finance",
+        }}
+      />
+      <Stack.Screen
         name="finance/budgets"
         options={{
           headerShown: true,

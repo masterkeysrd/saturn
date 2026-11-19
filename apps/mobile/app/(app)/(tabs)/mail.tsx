@@ -34,7 +34,7 @@ import type {
   Draft,
 } from "@saturn/api/saturn/mail/v1/mail"
 import { stripHtmlToPlainText } from "@saturn/core"
-import { SpaceSwitcherChip, AIHeaderButton } from "@/components/app-header"
+import { SpaceAvatarButton, AIHeaderButton } from "@/components/app-header"
 import { QuickCaptureFab } from "@/components/ui/quick-capture-sheet"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
@@ -302,11 +302,10 @@ export default function MobileMailScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Single-Row Safe-Area Mail Header: Space Switcher + Search + AI */}
+      {/* Single-Row Safe-Area Gmail-Style Mail Header: Search Pill + AI + Space Avatar */}
       <View
         style={[styles.topHeader, { paddingTop: Math.max(insets.top, 10) + 4 }]}
       >
-        <SpaceSwitcherChip compact />
         <View style={styles.searchInner}>
           <Search size={15} color={colors.textMuted} />
           <TextInput
@@ -337,7 +336,10 @@ export default function MobileMailScreen() {
             </Pressable>
           )}
         </View>
-        <AIHeaderButton />
+        <View style={styles.topHeaderActions}>
+          <AIHeaderButton />
+          <SpaceAvatarButton size={30} />
+        </View>
       </View>
 
       {/* Account & System Bucket Selector Bar */}
@@ -538,12 +540,17 @@ const createStyles = (t: SaturnMobileTheme) => ({
   topHeader: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingBottom: 8,
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
     backgroundColor: t.colors.background,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: t.colors.border,
+  },
+  topHeaderActions: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
   },
   searchInner: {
     flex: 1,
@@ -553,9 +560,9 @@ const createStyles = (t: SaturnMobileTheme) => ({
     backgroundColor: t.colors.surface,
     borderWidth: 1,
     borderColor: t.colors.border,
-    borderRadius: t.radius.md,
-    paddingHorizontal: 10,
-    height: 36,
+    borderRadius: t.radius.full,
+    paddingHorizontal: 14,
+    height: 38,
     gap: 8,
   },
   searchInput: {

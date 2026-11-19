@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { Tabs } from "expo-router"
+import { Tabs, useRouter } from "expo-router"
 import { View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
@@ -14,6 +14,7 @@ import { useListInboxItemsQuery } from "@saturn/api/saturn/finance/v1/finance"
 import { useListThreadsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { AppHeader } from "@/components/app-header"
 import { OfflineIndicator } from "@/components/offline-indicator"
+import { haptics } from "@/lib/haptics"
 import { useSpace } from "@/lib/space-context"
 import { formatTabBadgeCount, sumInboxUnreadCount } from "@/lib/tab-badges"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
@@ -23,6 +24,7 @@ export const unstable_settings = {
 }
 
 export default function TabsLayout() {
+  const router = useRouter()
   const insets = useSafeAreaInsets()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
@@ -160,14 +162,19 @@ export default function TabsLayout() {
           name="menu"
           options={{
             title: "Menu",
-            headerShown: true,
-            header: () => <AppHeader />,
+            headerShown: false,
             tabBarIcon: ({ color, size }) => (
               <Menu
                 size={size ?? 22}
                 color={typeof color === "string" ? color : undefined}
               />
             ),
+          }}
+          listeners={{
+            tabLongPress: () => {
+              haptics.medium()
+              router.push("/modal/switch-space")
+            },
           }}
         />
       </Tabs>

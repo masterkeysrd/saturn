@@ -1,13 +1,110 @@
+import React from "react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
+import { render, fireEvent } from "@testing-library/react"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
+import { formatLocalDateString } from "@saturn/core"
 import {
   groupEventsByDate,
   getConsecutiveDays,
   formatEventTime,
   findSelfAttendee,
 } from "../components/calendar/calendar-utils"
+import {
+  DateStrip,
+  stepCalendarStripDate,
+  resolveHorizontalSwipeDirection,
+} from "../components/calendar/date-strip"
 import { haptics } from "../lib/haptics"
 import { buildRRule, parseRRule } from "@saturn/schemas"
+
+vi.mock("react-native", async () => {
+  const ReactMod = await import("react")
+  const flattenStyle = (s: unknown): Record<string, unknown> | undefined => {
+    if (!s) return undefined
+    if (Array.isArray(s)) {
+      return Object.assign(
+        {},
+        ...s
+          .flat(Infinity)
+          .filter(Boolean)
+          .map((item) => flattenStyle(item))
+      )
+    }
+    return typeof s === "object" ? (s as Record<string, unknown>) : undefined
+  }
+  return {
+    Appearance: {
+      setColorScheme: vi.fn(),
+    },
+    Platform: {
+      OS: "ios",
+      select: (obj: Record<string, unknown>) => obj.ios ?? obj.default,
+    },
+    StyleSheet: {
+      create: <T extends Record<string, unknown>>(styles: T): T => styles,
+    },
+    useColorScheme: () => "dark",
+    View: ({
+      children,
+      style,
+      testID,
+      ...props
+    }: Record<string, unknown> & { children?: React.ReactNode }) =>
+      ReactMod.createElement(
+        "div",
+        { ...props, "data-testid": testID, style: flattenStyle(style) },
+        children
+      ),
+    Text: ({
+      children,
+      style,
+      testID,
+      ...props
+    }: Record<string, unknown> & { children?: React.ReactNode }) =>
+      ReactMod.createElement(
+        "span",
+        { ...props, "data-testid": testID, style: flattenStyle(style) },
+        children
+      ),
+    TouchableOpacity: ({
+      children,
+      onPress,
+      disabled,
+      testID,
+      accessibilityLabel,
+      accessibilityRole: _ar,
+      activeOpacity: _ao,
+      style,
+      ...props
+    }: Record<string, unknown> & {
+      children?: React.ReactNode
+      onPress?: () => void
+      disabled?: boolean
+      testID?: string
+      accessibilityLabel?: string
+    }) =>
+      ReactMod.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: disabled ? undefined : onPress,
+          disabled,
+          "data-testid": testID,
+          "aria-label": accessibilityLabel,
+          style: flattenStyle(style),
+          ...props,
+        },
+        children
+      ),
+  }
+})
+
+vi.mock("@react-native-async-storage/async-storage", () => ({
+  default: {
+    getItem: vi.fn(async () => null),
+    setItem: vi.fn(async () => undefined),
+  },
+}))
 
 // Mock haptics
 vi.mock("../lib/haptics", () => ({
@@ -375,5 +472,256 @@ describe("Self-Attendee RSVP Matching", () => {
       findSelfAttendee([attendees[0]], ["me.work@example.com"])
     ).toBeUndefined()
     expect(findSelfAttendee(attendees, [])).toBeUndefined()
+  })
+})
+
+describe("DateStrip Stepping & Horizontal Swipe Helpers", () => {
+  it("steps ±7 days when collapsed across month boundaries", () => {
+    // 2026-01-29 in America/New_York
+    const jan29 = new Date("2026-01-29T17:00:00Z")
+    const nextWeek = stepCalendarStripDate(
+      jan29,
+      "America/New_York",
+      "next",
+      false
+    )
+    expect(formatLocalDateString(nextWeek, "America/New_York")).toBe(
+      "2026-02-05"
+    )
+
+    // 2026-03-03 -> 7 days back crosses into February
+    const mar03 = new Date("2026-03-03T17:00:00Z")
+    const prevWeek = stepCalendarStripDate(
+      mar03,
+      "America/New_York",
+      "prev",
+      false
+    )
+    expect(formatLocalDateString(prevWeek, "America/New_York")).toBe(
+      "2026-02-24"
+    )
+  })
+
+  it("steps ±1 month when expanded including Jan <-> Dec year rollover", () => {
+    const jan18 = new Date("2026-01-18T17:00:00Z")
+    const prevMonth = stepCalendarStripDate(
+      jan18,
+      "America/New_York",
+      "prev",
+      true
+    )
+    expect(formatLocalDateString(prevMonth, "America/New_York")).toBe(
+      "2025-12-01"
+    )
+
+    const dec18 = new Date("2026-12-18T17:00:00Z")
+    const nextMonth = stepCalendarStripDate(
+      dec18,
+      "America/New_York",
+      "next",
+      true
+    )
+    expect(formatLocalDateString(nextMonth, "America/New_York")).toBe(
+      "2027-01-01"
+    )
+  })
+
+  it("resolves horizontal swipe direction and ignores vertical or short touches", () => {
+    // Short touches below threshold
+    expect(resolveHorizontalSwipeDirection(0, 0)).toBeNull()
+    expect(resolveHorizontalSwipeDirection(35, 0)).toBeNull()
+    expect(resolveHorizontalSwipeDirection(-20, 5)).toBeNull()
+
+    // Vertical or diagonal-vertical-dominant touches
+    expect(resolveHorizontalSwipeDirection(-50, 50)).toBeNull()
+    expect(resolveHorizontalSwipeDirection(40, -60)).toBeNull()
+
+    // Non-finite values
+    expect(resolveHorizontalSwipeDirection(Number.NaN, 0)).toBeNull()
+    expect(
+      resolveHorizontalSwipeDirection(50, Number.POSITIVE_INFINITY)
+    ).toBeNull()
+
+    // Left swipe (dx < 0) advances forward -> "next"
+    expect(resolveHorizontalSwipeDirection(-45, 8)).toBe("next")
+    expect(resolveHorizontalSwipeDirection(-36, 0)).toBe("next")
+
+    // Right swipe (dx > 0) goes back -> "prev"
+    expect(resolveHorizontalSwipeDirection(45, -8)).toBe("prev")
+    expect(resolveHorizontalSwipeDirection(36, 0)).toBe("prev")
+  })
+})
+
+describe("<DateStrip /> Component", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("renders without any duplicate month/year header or internal stepper controls", () => {
+    const selectedDate = new Date("2026-09-15T12:00:00Z")
+    const { queryByText, queryByTestId } = render(
+      <DateStrip
+        selectedDate={selectedDate}
+        timeZone="UTC"
+        isExpanded={false}
+        onSelectDate={vi.fn()}
+      />
+    )
+
+    expect(queryByText("September 2026")).toBeNull()
+    expect(queryByTestId("calendar-strip-toggle")).toBeNull()
+    expect(queryByTestId("calendar-strip-prev")).toBeNull()
+    expect(queryByTestId("calendar-strip-next")).toBeNull()
+  })
+
+  it("renders week pills when collapsed and month matrix when expanded", () => {
+    const selectedDate = new Date("2026-09-15T12:00:00Z")
+    const onSelectDate = vi.fn()
+
+    const collapsed = render(
+      <DateStrip
+        selectedDate={selectedDate}
+        timeZone="UTC"
+        isExpanded={false}
+        onSelectDate={onSelectDate}
+      />
+    )
+
+    // Collapsed shows the 7 days of the week containing Sep 15, 2026 (Sun Sep 13 - Sat Sep 19)
+    expect(collapsed.getByTestId("day-pill-2026-09-13")).toBeTruthy()
+    expect(collapsed.getByTestId("day-pill-2026-09-19")).toBeTruthy()
+    expect(collapsed.queryByTestId("month-cell-2026-09-01")).toBeNull()
+    collapsed.unmount()
+
+    const expanded = render(
+      <DateStrip
+        selectedDate={selectedDate}
+        timeZone="UTC"
+        isExpanded={true}
+        onSelectDate={onSelectDate}
+      />
+    )
+
+    // Expanded shows full September 2026 month matrix
+    expect(expanded.queryByTestId("day-pill-2026-09-15")).toBeNull()
+    expect(expanded.getByTestId("month-cell-2026-09-01")).toBeTruthy()
+    expect(expanded.getByTestId("month-cell-2026-09-30")).toBeTruthy()
+  })
+
+  it("respects weekStartsOn={0} vs weekStartsOn={1} in both week strip and month matrix", () => {
+    // 2026-09-15 is a Tuesday
+    const selectedDate = new Date("2026-09-15T12:00:00Z")
+
+    // weekStartsOn={0}: week starts Sunday 2026-09-13, ends Saturday 2026-09-19
+    const sundayWeek = render(
+      <DateStrip
+        selectedDate={selectedDate}
+        timeZone="UTC"
+        weekStartsOn={0}
+        isExpanded={false}
+        onSelectDate={vi.fn()}
+      />
+    )
+    expect(sundayWeek.getByTestId("day-pill-2026-09-13")).toBeTruthy()
+    expect(sundayWeek.queryByTestId("day-pill-2026-09-20")).toBeNull()
+    sundayWeek.unmount()
+
+    // weekStartsOn={1}: week starts Monday 2026-09-14, ends Sunday 2026-09-20
+    const mondayWeek = render(
+      <DateStrip
+        selectedDate={selectedDate}
+        timeZone="UTC"
+        weekStartsOn={1}
+        isExpanded={false}
+        onSelectDate={vi.fn()}
+      />
+    )
+    expect(mondayWeek.queryByTestId("day-pill-2026-09-13")).toBeNull()
+    expect(mondayWeek.getByTestId("day-pill-2026-09-14")).toBeTruthy()
+    expect(mondayWeek.getByTestId("day-pill-2026-09-20")).toBeTruthy()
+    mondayWeek.unmount()
+
+    // weekStartsOn={1} expanded weekday initials start with "M"
+    const mondayMonth = render(
+      <DateStrip
+        selectedDate={selectedDate}
+        timeZone="UTC"
+        weekStartsOn={1}
+        isExpanded={true}
+        onSelectDate={vi.fn()}
+      />
+    )
+    const strip = mondayMonth.getByTestId("calendar-date-strip")
+    const spans = Array.from(strip.querySelectorAll("span")).slice(0, 7)
+    expect(spans.map((el) => el.textContent)).toEqual([
+      "M",
+      "T",
+      "W",
+      "T",
+      "F",
+      "S",
+      "S",
+    ])
+    // Sep 1, 2026 is Tuesday -> Monday-first matrix begins on Aug 31
+    expect(mondayMonth.getByTestId("month-cell-2026-08-31")).toBeTruthy()
+  })
+
+  it("advances or rewinds dates on horizontal swipe and ignores vertical swipes", () => {
+    const selectedDate = new Date("2026-09-15T12:00:00Z")
+    const onSelectDate = vi.fn()
+
+    const { getByTestId, rerender } = render(
+      <DateStrip
+        selectedDate={selectedDate}
+        timeZone="UTC"
+        isExpanded={false}
+        onSelectDate={onSelectDate}
+      />
+    )
+
+    const strip = getByTestId("calendar-date-strip")
+
+    // Left swipe in collapsed mode -> next week (2026-09-22)
+    fireEvent.touchStart(strip, {
+      touches: [{ clientX: 250, clientY: 100 }],
+    })
+    fireEvent.touchEnd(strip, {
+      changedTouches: [{ clientX: 150, clientY: 105 }],
+    })
+    expect(haptics.light).toHaveBeenCalledTimes(1)
+    expect(onSelectDate).toHaveBeenCalledTimes(1)
+    expect(formatLocalDateString(onSelectDate.mock.calls[0][0], "UTC")).toBe(
+      "2026-09-22"
+    )
+
+    // Vertical swipe should be ignored
+    fireEvent.touchStart(strip, {
+      touches: [{ clientX: 150, clientY: 100 }],
+    })
+    fireEvent.touchEnd(strip, {
+      changedTouches: [{ clientX: 155, clientY: 220 }],
+    })
+    expect(onSelectDate).toHaveBeenCalledTimes(1)
+
+    // Right swipe in expanded mode -> previous month (2026-08-01)
+    rerender(
+      <DateStrip
+        selectedDate={selectedDate}
+        timeZone="UTC"
+        isExpanded={true}
+        onSelectDate={onSelectDate}
+      />
+    )
+    fireEvent.touchStart(strip, {
+      touches: [{ clientX: 100, clientY: 120 }],
+    })
+    fireEvent.touchEnd(strip, {
+      changedTouches: [{ clientX: 220, clientY: 125 }],
+    })
+    expect(haptics.light).toHaveBeenCalledTimes(2)
+    expect(onSelectDate).toHaveBeenCalledTimes(2)
+    expect(formatLocalDateString(onSelectDate.mock.calls[1][0], "UTC")).toBe(
+      "2026-08-01"
+    )
   })
 })

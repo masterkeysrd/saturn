@@ -20,6 +20,7 @@ import {
   MailPlus,
   Sparkles,
   ChevronRight,
+  Inbox,
 } from "lucide-react-native"
 import { AppBottomSheet } from "./bottom-sheet"
 import type {
@@ -107,6 +108,8 @@ function renderActionIcon(
       return <Landmark size={size} color={color} />
     case "budget":
       return <PiggyBank size={size} color={color} />
+    case "inbox":
+      return <Inbox size={size} color={color} />
     case "event":
       return <CalendarPlus size={size} color={color} />
     case "mail":

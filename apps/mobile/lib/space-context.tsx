@@ -115,10 +115,11 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
 
   const switchSpace = useCallback(
     async (newSpaceId: string) => {
-      if (newSpaceId === activeSpaceId) return
+      if (!newSpaceId || newSpaceId === activeSpaceId) return
       setIsSwitching(true)
       try {
         setPendingWorkflowDraft(null)
+        setActiveSpaceId(newSpaceId)
         await setAuthActiveSpace(newSpaceId)
         queryClient.removeQueries({
           predicate: (q) =>

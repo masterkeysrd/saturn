@@ -1,5 +1,6 @@
 import { Text, View, ScrollView, TouchableOpacity, Alert } from "react-native"
 import { useRouter } from "expo-router"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   ReceiptText,
   PiggyBank,
@@ -33,6 +34,7 @@ import {
   type SaturnMobileTheme,
   type ThemeMode,
 } from "@/lib/theme"
+import { AIHeaderButton } from "@/components/app-header"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
@@ -50,6 +52,7 @@ const APPEARANCE_OPTIONS: readonly {
 
 export default function MenuScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { user } = useAuth()
   const { activeSpace, activeSpaceId, activeSpaceRole } = useSpace()
   const { mode, setMode, colors } = useTheme()
@@ -97,6 +100,12 @@ export default function MenuScreen() {
 
   return (
     <View style={styles.safeArea}>
+      <View
+        style={[styles.topHeader, { paddingTop: Math.max(insets.top, 10) + 4 }]}
+      >
+        <Text style={styles.topHeaderTitle}>Menu</Text>
+        <AIHeaderButton />
+      </View>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -161,12 +170,7 @@ export default function MenuScreen() {
             <TouchableOpacity
               style={[styles.menuItem, styles.menuItemBorder]}
               activeOpacity={0.7}
-              onPress={() =>
-                showWebOnlyNotice(
-                  "Review Queue / Inbox",
-                  "Email-forwarded bank alerts and receipt ingestion review is an administrative workflow optimized for wide desktop screens."
-                )
-              }
+              onPress={() => navigateTo("/(app)/finance/inbox")}
               testID="menu-review-queue"
             >
               <View style={styles.menuLeft}>
@@ -174,14 +178,12 @@ export default function MenuScreen() {
                 <Text style={styles.menuLabel}>Review Queue (Inbox)</Text>
               </View>
               <View style={styles.menuRight}>
-                {pendingInboxBadge !== undefined ? (
+                {pendingInboxBadge !== undefined && (
                   <Badge
                     variant="primary"
                     size="sm"
                     label={String(pendingInboxBadge)}
                   />
-                ) : (
-                  <Badge variant="outline" size="sm" label="Web Only" />
                 )}
                 <ChevronRight size={16} color={colors.textMuted} />
               </View>
@@ -450,6 +452,22 @@ const createStyles = (t: SaturnMobileTheme) => ({
   safeArea: {
     flex: 1,
     backgroundColor: t.colors.background,
+  },
+  topHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    backgroundColor: t.colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: t.colors.border,
+  },
+  topHeaderTitle: {
+    fontSize: 18,
+    fontWeight: "700" as const,
+    color: t.colors.textPrimary,
+    letterSpacing: -0.4,
   },
   container: {
     flex: 1,

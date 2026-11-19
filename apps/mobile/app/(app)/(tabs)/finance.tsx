@@ -54,7 +54,7 @@ import {
   type ListScheduledTransactionsRequest,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
-import { SpaceSwitcherChip, AIHeaderButton } from "@/components/app-header"
+import { SpaceAvatarButton, AIHeaderButton } from "@/components/app-header"
 import {
   QuickCaptureFab,
   QuickCaptureSheet,
@@ -430,16 +430,6 @@ export default function FinanceHubScreen() {
     )
   }
 
-  const showInboxInfo = () => {
-    haptics.light()
-    const itemWord = pendingInboxCount === 1 ? "item" : "items"
-    Alert.alert(
-      "Pending Inbox Items",
-      `You have ${pendingInboxCount} forwarded ${itemWord} waiting for review.\n\nPlease log in to the Saturn web app on your desktop browser to review, link, and approve or discard them.`,
-      [{ text: "Got it" }]
-    )
-  }
-
   return (
     <View style={styles.safeArea}>
       {/* Single-Row Safe-Area Finance Header */}
@@ -447,13 +437,15 @@ export default function FinanceHubScreen() {
         style={[styles.topHeader, { paddingTop: Math.max(insets.top, 10) + 4 }]}
       >
         <View style={styles.topHeaderLeft}>
-          <SpaceSwitcherChip />
           <Text style={styles.topHeaderTitle} numberOfLines={1}>
             Finance
           </Text>
           <Badge size="sm" label={baseCurrency} />
         </View>
-        <AIHeaderButton />
+        <View style={styles.topHeaderRight}>
+          <AIHeaderButton />
+          <SpaceAvatarButton size={30} />
+        </View>
       </View>
 
       <ScrollView
@@ -519,31 +511,44 @@ export default function FinanceHubScreen() {
             <HandCoins size={15} color={colors.primary} />
             <Text style={styles.navPillText}>Borrowing</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navPill}
+            activeOpacity={0.7}
+            onPress={() => navigateTo("/(app)/finance/inbox")}
+            testID="finance-pill-review"
+          >
+            <Inbox size={15} color={colors.brandSecondary} />
+            <Text style={styles.navPillText}>Review</Text>
+            {pendingInboxCount > 0 && (
+              <Badge
+                variant="primary"
+                size="sm"
+                label={String(pendingInboxCount)}
+              />
+            )}
+          </TouchableOpacity>
         </ScrollView>
 
-        {/* Pending Inbox Items Banner (Web Review Notice) */}
+        {/* Pending Inbox Items Banner */}
         {pendingInboxCount > 0 && (
           <TouchableOpacity
             style={styles.inboxBanner}
             activeOpacity={0.8}
-            onPress={showInboxInfo}
+            onPress={() => navigateTo("/(app)/finance/inbox")}
+            testID="finance-pending-inbox-banner"
           >
             <View style={styles.inboxBannerIconContainer}>
-              <Inbox size={18} color={colors.accent} />
+              <Inbox size={18} color={colors.primary} />
             </View>
             <View style={styles.inboxBannerTextContainer}>
-              <View style={styles.inboxBannerHeaderRow}>
-                <Text style={styles.inboxBannerTitle}>
-                  {pendingInboxCount === 1
-                    ? "1 Pending Inbox Item"
-                    : `${pendingInboxCount} Pending Inbox Items`}
-                </Text>
-                <View style={styles.inboxBannerBadge}>
-                  <Text style={styles.inboxBannerBadgeText}>Web Only</Text>
-                </View>
-              </View>
+              <Text style={styles.inboxBannerTitle}>
+                {pendingInboxCount === 1
+                  ? "1 Pending Inbox Item"
+                  : `${pendingInboxCount} Pending Inbox Items`}
+              </Text>
               <Text style={styles.inboxBannerSubtitle}>
-                Review and resolve on the web app
+                Tap to review and approve into your ledger
               </Text>
             </View>
             <ChevronRight size={16} color={colors.textMuted} />
@@ -1327,6 +1332,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flex: 1,
     minWidth: 0,
   },
+  topHeaderRight: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+  },
   topHeaderTitle: {
     fontSize: 18,
     fontWeight: "700" as const,
@@ -1693,30 +1703,10 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flex: 1,
     gap: 2,
   },
-  inboxBannerHeaderRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 8,
-  },
   inboxBannerTitle: {
     fontSize: 14,
     fontWeight: "600" as const,
     color: t.colors.textPrimary,
-  },
-  inboxBannerBadge: {
-    backgroundColor: t.colors.primarySubtle,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: t.colors.borderStrong,
-  },
-  inboxBannerBadgeText: {
-    fontSize: 10,
-    fontWeight: "700" as const,
-    color: t.colors.accent,
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.5,
   },
   inboxBannerSubtitle: {
     fontSize: 12,

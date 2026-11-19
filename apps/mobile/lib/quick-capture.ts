@@ -33,6 +33,7 @@ export type QuickCaptureIconKey =
   | "scheduled"
   | "account"
   | "budget"
+  | "inbox"
   | "event"
   | "mail"
   | "ai"
@@ -166,6 +167,14 @@ export function getFinanceQuickCaptureActions(
       route: "/modal/manage-budget",
       iconKey: "budget",
       tone: "accent",
+    },
+    {
+      id: "finance-review-queue",
+      label: "Review Queue",
+      description: "Triage pending receipts, invoices, and bank alerts",
+      route: "/(app)/finance/inbox",
+      iconKey: "inbox",
+      tone: "primary",
     },
   ]
 }

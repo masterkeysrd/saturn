@@ -1,6 +1,6 @@
 import React from "react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, fireEvent } from "@testing-library/react"
+import { render, fireEvent, waitFor } from "@testing-library/react"
 import {
   formatTabBadgeCount,
   sumInboxUnreadCount,
@@ -13,10 +13,54 @@ import {
   getFinanceQuickCaptureActions,
 } from "../lib/quick-capture"
 import {
+  getNextCycledSpace,
+  resolveVerticalSwipeDirection,
+} from "../lib/space-switcher"
+import { SpaceAvatarButton } from "../components/app-header"
+import {
   QuickCaptureFab,
   QuickCaptureSheet,
 } from "../components/ui/quick-capture-sheet"
 import { haptics } from "../lib/haptics"
+
+const { mockSwitchSpace, mockToastShow, mockUseSpace } = vi.hoisted(() => {
+  const mockSwitchSpace = vi.fn(async (_spaceId: string) => undefined)
+  const mockToastShow = vi.fn()
+  const mockUseSpace = vi.fn(() => ({
+    spaces: [
+      { id: "spc_personal", name: "Personal" },
+      { id: "spc_acme", name: "Acme Corp" },
+      { id: "spc_family", name: "Family Budget" },
+    ],
+    activeSpace: { id: "spc_acme", name: "Acme Corp" },
+    activeSpaceId: "spc_acme",
+    activeSpaceRole: "owner" as const,
+    isLoading: false,
+    isSwitching: false,
+    isOwner: true,
+    canManageMembers: true,
+    timezone: "UTC",
+    switchSpace: mockSwitchSpace,
+    refetchSpaces: vi.fn(),
+  }))
+  return { mockSwitchSpace, mockToastShow, mockUseSpace }
+})
+
+vi.mock("../lib/space-context", () => ({
+  useSpace: mockUseSpace,
+}))
+
+vi.mock("../components/ui/toast", () => ({
+  useToast: () => ({ show: mockToastShow, hide: vi.fn() }),
+}))
+
+vi.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}))
+
+vi.mock("@saturn/api/saturn/platform/ai/v1/ai", () => ({
+  useListThreadsQuery: () => ({ data: { threads: [] } }),
+}))
 
 vi.mock("../lib/haptics", () => ({
   haptics: {
@@ -68,6 +112,7 @@ vi.mock("lucide-react-native", async () => {
     MailPlus: Stub("MailPlus"),
     Sparkles: Stub("Sparkles"),
     ChevronRight: Stub("ChevronRight"),
+    Inbox: Stub("Inbox"),
     X: Stub("X"),
   }
 })
@@ -121,6 +166,8 @@ vi.mock("react-native", async () => {
       absoluteFill: {},
     },
     useColorScheme: () => "dark",
+    Image: ({ style, ...props }: Record<string, unknown>) =>
+      ReactMod.createElement("img", { ...props, style: flattenStyle(style) }),
     View: ({ children, style, ...props }: Record<string, unknown>) =>
       ReactMod.createElement(
         "div",
@@ -137,17 +184,23 @@ vi.mock("react-native", async () => {
       children,
       onPress,
       onLongPress,
+      onTouchStart,
+      onTouchEnd,
       testID,
       accessibilityRole,
       accessibilityLabel,
+      accessibilityHint,
       style,
     }: {
       children?: React.ReactNode
       onPress?: () => void
       onLongPress?: () => void
+      onTouchStart?: (e: unknown) => void
+      onTouchEnd?: (e: unknown) => void
       testID?: string
       accessibilityRole?: string
       accessibilityLabel?: string
+      accessibilityHint?: string
       style?: unknown
     }) =>
       ReactMod.createElement(
@@ -156,9 +209,12 @@ vi.mock("react-native", async () => {
           "data-testid": testID,
           role: accessibilityRole,
           "aria-label": accessibilityLabel,
+          "data-hint": accessibilityHint,
           style: flattenStyle(style),
           onClick: onPress,
           onContextMenu: onLongPress,
+          onTouchStart,
+          onTouchEnd,
         },
         children
       ),
@@ -309,6 +365,7 @@ describe("Mobile Navigation UX, Tab Badges & Quick Capture", () => {
         "/modal/add-transaction?type=SCHEDULED",
         "/modal/manage-account",
         "/modal/manage-budget",
+        "/(app)/finance/inbox",
       ])
 
       expect(getFinanceQuickCaptureActions("viewer")).toEqual([])
@@ -357,6 +414,222 @@ describe("Mobile Navigation UX, Tab Badges & Quick Capture", () => {
       expect(mockRouterPush).toHaveBeenCalledWith(
         "/modal/add-transaction?type=EXPENSE"
       )
+    })
+  })
+
+  describe("getNextCycledSpace", () => {
+    const spaces = [
+      { id: "spc_1", name: "Personal" },
+      { id: "spc_2", name: "Acme Corp" },
+      { id: "spc_3", name: "Family" },
+    ]
+
+    it.each([
+      {
+        name: "returns null for empty list",
+        list: [],
+        activeId: "spc_1",
+        dir: "next" as const,
+        expectedId: null,
+      },
+      {
+        name: "returns null for single valid space",
+        list: [{ id: "spc_1", name: "Only" }, { id: "" }, { name: "No ID" }],
+        activeId: "spc_1",
+        dir: "next" as const,
+        expectedId: null,
+      },
+      {
+        name: "advances forward on next",
+        list: spaces,
+        activeId: "spc_1",
+        dir: "next" as const,
+        expectedId: "spc_2",
+      },
+      {
+        name: "wraps from end to start on next",
+        list: spaces,
+        activeId: "spc_3",
+        dir: "next" as const,
+        expectedId: "spc_1",
+      },
+      {
+        name: "steps backward on prev",
+        list: spaces,
+        activeId: "spc_2",
+        dir: "prev" as const,
+        expectedId: "spc_1",
+      },
+      {
+        name: "wraps from start to end on prev",
+        list: spaces,
+        activeId: "spc_1",
+        dir: "prev" as const,
+        expectedId: "spc_3",
+      },
+      {
+        name: "falls back to index 0 when activeSpaceId is unknown",
+        list: spaces,
+        activeId: "spc_missing",
+        dir: "next" as const,
+        expectedId: "spc_2",
+      },
+      {
+        name: "falls back to index 0 on prev when activeSpaceId is null",
+        list: spaces,
+        activeId: null,
+        dir: "prev" as const,
+        expectedId: "spc_3",
+      },
+    ])("$name", ({ list, activeId, dir, expectedId }) => {
+      const result = getNextCycledSpace(list, activeId, dir)
+      expect(result?.id ?? null).toBe(expectedId)
+    })
+  })
+
+  describe("resolveVerticalSwipeDirection", () => {
+    it.each([
+      { name: "returns null below threshold", dy: -15, dx: 0, expected: null },
+      {
+        name: "returns null for horizontal-dominant swipe",
+        dy: -30,
+        dx: 45,
+        expected: null,
+      },
+      {
+        name: "returns null for non-finite input",
+        dy: Number.NaN,
+        dx: 0,
+        expected: null,
+      },
+      {
+        name: "returns next for negative dy (swipe up)",
+        dy: -28,
+        dx: 4,
+        expected: "next" as const,
+      },
+      {
+        name: "returns prev for positive dy (swipe down)",
+        dy: 32,
+        dx: -6,
+        expected: "prev" as const,
+      },
+      {
+        name: "respects custom threshold",
+        dy: 30,
+        dx: 0,
+        threshold: 40,
+        expected: null,
+      },
+    ])("$name", ({ dy, dx, threshold, expected }) => {
+      expect(resolveVerticalSwipeDirection(dy, dx, threshold)).toBe(expected)
+    })
+  })
+
+  describe("SpaceAvatarButton", () => {
+    beforeEach(() => {
+      mockUseSpace.mockReturnValue({
+        spaces: [
+          { id: "spc_personal", name: "Personal" },
+          { id: "spc_acme", name: "Acme Corp" },
+          { id: "spc_family", name: "Family Budget" },
+        ],
+        activeSpace: { id: "spc_acme", name: "Acme Corp" },
+        activeSpaceId: "spc_acme",
+        activeSpaceRole: "owner" as const,
+        isLoading: false,
+        isSwitching: false,
+        isOwner: true,
+        canManageMembers: true,
+        timezone: "UTC",
+        switchSpace: mockSwitchSpace,
+        refetchSpaces: vi.fn(),
+      })
+    })
+
+    it("renders active workspace initials and opens switch-space modal on tap", () => {
+      const { getByTestId, getByText } = render(<SpaceAvatarButton />)
+
+      expect(getByText("AC")).toBeTruthy()
+      const btn = getByTestId("space-avatar-button")
+      expect(btn.getAttribute("aria-label")).toContain("Acme Corp")
+
+      fireEvent.click(btn)
+      expect(haptics.light).toHaveBeenCalledTimes(1)
+      expect(mockRouterPush).toHaveBeenCalledWith("/modal/switch-space")
+    })
+
+    it("cycles to next workspace on swipe up without opening modal", async () => {
+      const { getByTestId } = render(<SpaceAvatarButton />)
+      const btn = getByTestId("space-avatar-button")
+
+      fireEvent.touchStart(btn, {
+        changedTouches: [{ pageX: 100, pageY: 100 }],
+      })
+      fireEvent.touchEnd(btn, {
+        changedTouches: [{ pageX: 102, pageY: 60 }],
+      })
+      fireEvent.click(btn)
+
+      await waitFor(() => {
+        expect(mockSwitchSpace).toHaveBeenCalledWith("spc_family")
+      })
+      expect(haptics.medium).toHaveBeenCalledTimes(1)
+      expect(mockToastShow).toHaveBeenCalledWith({
+        type: "info",
+        title: "Switched to Family Budget",
+      })
+      expect(mockRouterPush).not.toHaveBeenCalled()
+    })
+
+    it("cycles to previous workspace on swipe down without opening modal", async () => {
+      const { getByTestId } = render(<SpaceAvatarButton />)
+      const btn = getByTestId("space-avatar-button")
+
+      fireEvent.touchStart(btn, {
+        changedTouches: [{ pageX: 100, pageY: 100 }],
+      })
+      fireEvent.touchEnd(btn, {
+        changedTouches: [{ pageX: 98, pageY: 140 }],
+      })
+
+      await waitFor(() => {
+        expect(mockSwitchSpace).toHaveBeenCalledWith("spc_personal")
+      })
+      expect(mockRouterPush).not.toHaveBeenCalled()
+    })
+
+    it("opens switch-space modal on vertical swipe when only one space exists", async () => {
+      mockUseSpace.mockReturnValue({
+        spaces: [{ id: "spc_personal", name: "Personal" }],
+        activeSpace: { id: "spc_personal", name: "Personal" },
+        activeSpaceId: "spc_personal",
+        activeSpaceRole: "owner" as const,
+        isLoading: false,
+        isSwitching: false,
+        isOwner: true,
+        canManageMembers: true,
+        timezone: "UTC",
+        switchSpace: mockSwitchSpace,
+        refetchSpaces: vi.fn(),
+      })
+
+      const { getByTestId, getByText } = render(<SpaceAvatarButton />)
+      expect(getByText("PE")).toBeTruthy()
+      const btn = getByTestId("space-avatar-button")
+
+      fireEvent.touchStart(btn, {
+        changedTouches: [{ pageX: 50, pageY: 100 }],
+      })
+      fireEvent.touchEnd(btn, {
+        changedTouches: [{ pageX: 50, pageY: 60 }],
+      })
+
+      await waitFor(() => {
+        expect(mockRouterPush).toHaveBeenCalledWith("/modal/switch-space")
+      })
+      expect(mockSwitchSpace).not.toHaveBeenCalled()
+      expect(haptics.selection).toHaveBeenCalledTimes(1)
     })
   })
 })

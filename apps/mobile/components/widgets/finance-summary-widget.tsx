@@ -7,6 +7,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Plus,
+  Inbox,
 } from "lucide-react-native"
 import {
   formatAmount,
@@ -17,6 +18,7 @@ import {
   useListAccountsQuery,
   useGetSettingsQuery,
   useGetInsightsQuery,
+  useListInboxItemsQuery,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview, useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
@@ -72,6 +74,19 @@ export function FinanceSummaryWidget() {
       },
       { enabled: !!activeSpaceId }
     )
+
+  // 5. Pending Finance Inbox count for inline triage callout
+  const { data: inboxData } = useListInboxItemsQuery(
+    {
+      status: "PENDING",
+      pageSize: 50,
+      pageToken: "",
+      sort: "",
+      view: "BASIC",
+    },
+    { enabled: !!activeSpaceId, retry: false }
+  )
+  const pendingInboxCount = inboxData?.inboxItems?.length ?? 0
 
   const accounts = useMemo(
     () => accountsData?.accounts || [],
@@ -207,6 +222,28 @@ export function FinanceSummaryWidget() {
             </View>
           </View>
         </View>
+
+        {pendingInboxCount > 0 && (
+          <TouchableOpacity
+            style={styles.inboxCallout}
+            activeOpacity={0.75}
+            onPress={() => {
+              haptics.light()
+              router.push("/(app)/finance/inbox" as never)
+            }}
+            testID="finance-widget-inbox-callout"
+          >
+            <View style={styles.inboxCalloutLeft}>
+              <Inbox size={14} color={colors.primary} />
+              <Text style={styles.inboxCalloutText}>
+                {pendingInboxCount === 1
+                  ? "1 item awaiting review"
+                  : `${pendingInboxCount} items awaiting review`}
+              </Text>
+            </View>
+            <ChevronRight size={14} color={colors.primary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Card Footer Quick Action */}
@@ -302,6 +339,30 @@ const createStyles = (t: SaturnMobileTheme) => ({
     borderRadius: 14,
     alignItems: "center" as const,
     justifyContent: "center" as const,
+  },
+  inboxCallout: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.primarySubtle,
+    borderWidth: 1,
+    borderColor: t.colors.borderFocus,
+    marginTop: 2,
+  },
+  inboxCalloutLeft: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    flex: 1,
+  },
+  inboxCalloutText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: t.colors.primary,
   },
   cardFooter: {
     flexDirection: "row" as const,

@@ -1,50 +1,165 @@
-import React from "react"
-import { View, Text, Image, TouchableOpacity } from "react-native"
+import { useRef } from "react"
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  type GestureResponderEvent,
+} from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { ChevronDown, Sparkles, Settings } from "lucide-react-native"
+import { Sparkles } from "lucide-react-native"
 import { useListThreadsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
-import { useSpace } from "@/lib/space-context"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import { Avatar } from "./ui/avatar"
+import { useToast } from "./ui/toast"
+import { useSpace } from "../lib/space-context"
+import {
+  getNextCycledSpace,
+  resolveVerticalSwipeDirection,
+} from "../lib/space-switcher"
+import { useTheme, useThemedStyles, type SaturnMobileTheme } from "../lib/theme"
+import { haptics } from "../lib/haptics"
 
-export interface SpaceSwitcherChipProps {
-  compact?: boolean
+interface TouchPoint {
+  x: number
+  y: number
+}
+
+function extractTouchPoint(event: unknown): TouchPoint | null {
+  if (!event || typeof event !== "object") return null
+  const e = event as Record<string, unknown>
+  const nativeEvent =
+    (e.nativeEvent as Record<string, unknown> | undefined) ?? e
+  const touches =
+    (nativeEvent.changedTouches as unknown[] | undefined) ??
+    (nativeEvent.touches as unknown[] | undefined) ??
+    (e.changedTouches as unknown[] | undefined) ??
+    (e.touches as unknown[] | undefined)
+
+  const source =
+    touches && touches.length > 0 && typeof touches[0] === "object"
+      ? (touches[0] as Record<string, unknown>)
+      : nativeEvent
+
+  const x =
+    typeof source.pageX === "number"
+      ? source.pageX
+      : typeof source.clientX === "number"
+        ? source.clientX
+        : typeof source.locationX === "number"
+          ? source.locationX
+          : null
+  const y =
+    typeof source.pageY === "number"
+      ? source.pageY
+      : typeof source.clientY === "number"
+        ? source.clientY
+        : typeof source.locationY === "number"
+          ? source.locationY
+          : null
+
+  if (x === null || y === null) return null
+  return { x, y }
+}
+
+export interface SpaceAvatarButtonProps {
+  size?: number
   testID?: string
 }
 
-export function SpaceSwitcherChip({
-  compact = false,
-  testID = "space-switcher-chip",
-}: SpaceSwitcherChipProps) {
-  const { colors } = useTheme()
+export function SpaceAvatarButton({
+  size = 30,
+  testID = "space-avatar-button",
+}: SpaceAvatarButtonProps) {
   const styles = useThemedStyles(createStyles)
   const router = useRouter()
-  const { activeSpace } = useSpace()
+  const toast = useToast()
+  const { spaces, activeSpace, activeSpaceId, isSwitching, switchSpace } =
+    useSpace()
 
-  const handleSwitchSpace = () => {
+  const touchStartRef = useRef<TouchPoint | null>(null)
+  const swipedRef = useRef(false)
+  const swipeResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const spaceName = activeSpace?.name || "Personal"
+
+  const handlePress = () => {
+    if (swipedRef.current) {
+      swipedRef.current = false
+      return
+    }
     haptics.light()
     router.push("/modal/switch-space")
   }
 
+  const handleTouchStart = (event: GestureResponderEvent) => {
+    if (swipeResetTimerRef.current) {
+      clearTimeout(swipeResetTimerRef.current)
+      swipeResetTimerRef.current = null
+    }
+    swipedRef.current = false
+    touchStartRef.current = extractTouchPoint(event)
+  }
+
+  const handleTouchEnd = async (event: GestureResponderEvent) => {
+    const start = touchStartRef.current
+    touchStartRef.current = null
+    if (!start) return
+
+    const end = extractTouchPoint(event)
+    if (!end) return
+
+    const dy = end.y - start.y
+    const dx = end.x - start.x
+    const direction = resolveVerticalSwipeDirection(dy, dx)
+    if (!direction) return
+
+    swipedRef.current = true
+    swipeResetTimerRef.current = setTimeout(() => {
+      swipedRef.current = false
+      swipeResetTimerRef.current = null
+    }, 300)
+
+    if (isSwitching) return
+
+    if (spaces.length <= 1) {
+      haptics.selection()
+      router.push("/modal/switch-space")
+      return
+    }
+
+    const nextSpace = getNextCycledSpace(spaces, activeSpaceId, direction)
+    if (nextSpace?.id) {
+      haptics.medium()
+      await switchSpace(nextSpace.id)
+      toast.show({
+        type: "info",
+        title: `Switched to ${nextSpace.name || "Workspace"}`,
+      })
+    }
+  }
+
   return (
-    <TouchableOpacity
-      style={[styles.spacePill, compact && styles.spacePillCompact]}
-      activeOpacity={0.7}
-      onPress={handleSwitchSpace}
-      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-      accessibilityRole="button"
-      accessibilityLabel={`Switch workspace, current ${activeSpace?.name || "Personal"}`}
-      testID={testID}
+    <View
+      onTouchStart={handleTouchStart}
+      onTouchEnd={(event) => {
+        void handleTouchEnd(event)
+      }}
     >
-      <Text
-        style={[styles.spaceName, compact && styles.spaceNameCompact]}
-        numberOfLines={1}
+      <TouchableOpacity
+        style={styles.avatarRing}
+        activeOpacity={0.75}
+        onPress={handlePress}
+        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+        accessibilityRole="button"
+        accessibilityLabel={`Workspace and account switcher, current workspace ${spaceName}`}
+        accessibilityHint="Tap to switch workspace or open account settings. Swipe up or down to cycle workspaces."
+        testID={testID}
       >
-        {activeSpace?.name || "Personal"}
-      </Text>
-      <ChevronDown size={compact ? 12 : 13} color={colors.textMuted} />
-    </TouchableOpacity>
+        <Avatar name={spaceName} size={size} />
+        {spaces.length > 1 && <View style={styles.multiSpaceDot} />}
+      </TouchableOpacity>
+    </View>
   )
 }
 
@@ -98,15 +213,8 @@ export function AIHeaderButton({
 }
 
 export function AppHeader() {
-  const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
-  const router = useRouter()
   const insets = useSafeAreaInsets()
-
-  const handleSettings = () => {
-    haptics.light()
-    router.push("/(app)/settings")
-  }
 
   return (
     <View
@@ -116,7 +224,7 @@ export function AppHeader() {
       <View style={styles.brandContainer}>
         <View style={styles.logoWrapper}>
           <Image
-            source={require("@/assets/saturn_logo.jpg")}
+            source={require("../assets/saturn_logo.jpg")}
             style={styles.logoImage}
             resizeMode="cover"
           />
@@ -124,21 +232,10 @@ export function AppHeader() {
         <Text style={styles.brandTitle}>Saturn</Text>
       </View>
 
-      {/* Right controls: Space Switcher pill + AI Assistant + Settings */}
+      {/* Right controls: AI Assistant + Gmail-style Space Avatar Switcher */}
       <View style={styles.rightControls}>
-        <SpaceSwitcherChip />
         <AIHeaderButton />
-
-        <TouchableOpacity
-          style={styles.iconButton}
-          activeOpacity={0.7}
-          onPress={handleSettings}
-          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-          accessibilityRole="button"
-          accessibilityLabel="Open Settings"
-        >
-          <Settings size={17} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <SpaceAvatarButton />
       </View>
     </View>
   )
@@ -182,34 +279,27 @@ const createStyles = (t: SaturnMobileTheme) => ({
   rightControls: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
-    gap: 6,
+    gap: 8,
   },
-  spacePill: {
-    flexDirection: "row" as const,
+  avatarRing: {
+    position: "relative" as const,
+    borderWidth: 1.5,
+    borderColor: t.colors.borderStrong,
+    borderRadius: 999,
+    padding: 1,
     alignItems: "center" as const,
-    backgroundColor: t.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: t.colors.border,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    borderRadius: t.radius.full,
-    gap: 5,
-    maxWidth: 120,
+    justifyContent: "center" as const,
   },
-  spacePillCompact: {
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    gap: 4,
-    maxWidth: 96,
-  },
-  spaceName: {
-    fontSize: 13,
-    fontWeight: "600" as const,
-    color: t.colors.textPrimary,
-    flexShrink: 1,
-  },
-  spaceNameCompact: {
-    fontSize: 12,
+  multiSpaceDot: {
+    position: "absolute" as const,
+    right: -1,
+    bottom: -1,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: t.colors.primary,
+    borderWidth: 1.5,
+    borderColor: t.colors.background,
   },
   iconButton: {
     width: 32,

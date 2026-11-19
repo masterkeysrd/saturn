@@ -9,7 +9,14 @@ import {
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import BottomSheet from "@gorhom/bottom-sheet"
-import { SlidersHorizontal, RotateCcw } from "lucide-react-native"
+import {
+  SlidersHorizontal,
+  RotateCcw,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react-native"
 import {
   useTimezone,
   useCalendars,
@@ -24,12 +31,15 @@ import {
   parseDate,
 } from "@saturn/core"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
-import { SpaceSwitcherChip } from "@/components/app-header"
+import { SpaceAvatarButton, AIHeaderButton } from "@/components/app-header"
 import { QuickCaptureFab } from "@/components/ui/quick-capture-sheet"
 import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
-import { DateStrip } from "@/components/calendar/date-strip"
+import {
+  DateStrip,
+  stepCalendarStripDate,
+} from "@/components/calendar/date-strip"
 import { TimelineGrid } from "@/components/calendar/timeline-grid"
 import { AgendaList } from "@/components/calendar/agenda-list"
 import { CalendarFilterSheet } from "@/components/calendar/calendar-filter-sheet"
@@ -49,6 +59,9 @@ export default function CalendarScreen() {
 
   // Active view mode: Agenda, 1-Day, 3-Day
   const [viewMode, setViewMode] = useState<MobileCalendarViewMode>("agenda")
+
+  // Date strip expanded (month matrix) vs collapsed (week strip)
+  const [isStripExpanded, setIsStripExpanded] = useState(false)
 
   // Current focal date
   const [currentDate, setCurrentDate] = useState<Date>(() => tz.now())
@@ -179,6 +192,20 @@ export default function CalendarScreen() {
     setCurrentDate(tz.now())
   }
 
+  // Toggle month matrix vs week strip
+  const handleToggleStrip = () => {
+    haptics.selection()
+    setIsStripExpanded((prev) => !prev)
+  }
+
+  // Step week or month via compact ‹ / › buttons
+  const handleStepDate = (direction: "prev" | "next") => {
+    haptics.light()
+    setCurrentDate((prev) =>
+      stepCalendarStripDate(prev, tz.timezone, direction, isStripExpanded)
+    )
+  }
+
   // Open filter sheet
   const handleOpenFilters = () => {
     haptics.selection()
@@ -246,10 +273,23 @@ export default function CalendarScreen() {
     />
   )
 
-  const activeMonthTitle = useMemo(
-    () => tz.format(currentDate, { month: "short", year: "numeric" }),
-    [currentDate, tz]
-  )
+  const activeMonthTitle = useMemo(() => {
+    if (!currentDate) return ""
+
+    if (currentDate.getFullYear() !== tz.now().getFullYear()) {
+      return tz.format(currentDate, {
+        month: "long",
+        year: "numeric",
+        day: undefined,
+      })
+    }
+
+    return tz.format(currentDate, {
+      month: "long",
+      year: undefined,
+      day: undefined,
+    })
+  }, [currentDate, tz])
 
   return (
     <View style={styles.container}>
@@ -257,13 +297,27 @@ export default function CalendarScreen() {
       <View
         style={[styles.topBar, { paddingTop: Math.max(insets.top, 10) + 4 }]}
       >
-        {/* Row 1: Space Switcher + Localized Month Title + Today + Filters */}
+        {/* Row 1: Interactive Month Title Toggle + Today + Filters + AI + Space Avatar */}
         <View style={styles.topHeaderRow}>
           <View style={styles.topLeftGroup}>
-            <SpaceSwitcherChip compact />
-            <Text style={styles.monthTitle} numberOfLines={1}>
-              {activeMonthTitle}
-            </Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleToggleStrip}
+              style={styles.monthToggleButton}
+              testID="calendar-strip-toggle"
+              accessibilityRole="button"
+              accessibilityState={{ expanded: isStripExpanded }}
+              accessibilityLabel={`${activeMonthTitle}, ${isStripExpanded ? "collapse" : "expand"} month calendar`}
+            >
+              <Text style={styles.monthTitle} numberOfLines={1}>
+                {activeMonthTitle}
+              </Text>
+              {isStripExpanded ? (
+                <ChevronUp size={17} color={colors.textSecondary} />
+              ) : (
+                <ChevronDown size={17} color={colors.textSecondary} />
+              )}
+            </TouchableOpacity>
           </View>
 
           <View style={styles.topActionsRow}>
@@ -286,67 +340,97 @@ export default function CalendarScreen() {
             >
               <SlidersHorizontal size={16} color={colors.textSecondary} />
             </TouchableOpacity>
+
+            <AIHeaderButton />
+            <SpaceAvatarButton size={30} />
           </View>
         </View>
 
-        {/* Row 2: View Mode Segmented Controls */}
-        <View style={styles.segmentedControl} testID="calendar-mode-switcher">
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => handleModeSwitch("agenda")}
-            style={[
-              styles.segmentBtn,
-              viewMode === "agenda" && styles.segmentBtnActive,
-            ]}
-            testID="calendar-mode-agenda"
-          >
-            <Text
+        {/* Row 2: View Mode Segmented Controls + Compact ‹ › Stepper */}
+        <View style={styles.secondHeaderRow}>
+          <View style={styles.segmentedControl} testID="calendar-mode-switcher">
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => handleModeSwitch("agenda")}
               style={[
-                styles.segmentBtnText,
-                viewMode === "agenda" && styles.segmentBtnTextActive,
+                styles.segmentBtn,
+                viewMode === "agenda" && styles.segmentBtnActive,
               ]}
+              testID="calendar-mode-agenda"
             >
-              Agenda
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.segmentBtnText,
+                  viewMode === "agenda" && styles.segmentBtnTextActive,
+                ]}
+              >
+                Agenda
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => handleModeSwitch("day")}
-            style={[
-              styles.segmentBtn,
-              viewMode === "day" && styles.segmentBtnActive,
-            ]}
-            testID="calendar-mode-day"
-          >
-            <Text
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => handleModeSwitch("day")}
               style={[
-                styles.segmentBtnText,
-                viewMode === "day" && styles.segmentBtnTextActive,
+                styles.segmentBtn,
+                viewMode === "day" && styles.segmentBtnActive,
               ]}
+              testID="calendar-mode-day"
             >
-              Day
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.segmentBtnText,
+                  viewMode === "day" && styles.segmentBtnTextActive,
+                ]}
+              >
+                Day
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => handleModeSwitch("three_day")}
-            style={[
-              styles.segmentBtn,
-              viewMode === "three_day" && styles.segmentBtnActive,
-            ]}
-            testID="calendar-mode-3day"
-          >
-            <Text
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => handleModeSwitch("three_day")}
               style={[
-                styles.segmentBtnText,
-                viewMode === "three_day" && styles.segmentBtnTextActive,
+                styles.segmentBtn,
+                viewMode === "three_day" && styles.segmentBtnActive,
               ]}
+              testID="calendar-mode-3day"
             >
-              3-Day
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.segmentBtnText,
+                  viewMode === "three_day" && styles.segmentBtnTextActive,
+                ]}
+              >
+                3-Day
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.stepperRow}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => handleStepDate("prev")}
+              style={styles.stepperButton}
+              testID="calendar-strip-prev"
+              accessibilityRole="button"
+              accessibilityLabel={
+                isStripExpanded ? "Previous month" : "Previous week"
+              }
+            >
+              <ChevronLeft size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => handleStepDate("next")}
+              style={styles.stepperButton}
+              testID="calendar-strip-next"
+              accessibilityRole="button"
+              accessibilityLabel={isStripExpanded ? "Next month" : "Next week"}
+            >
+              <ChevronRight size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -354,6 +438,8 @@ export default function CalendarScreen() {
       <DateStrip
         selectedDate={currentDate}
         timeZone={tz.timezone}
+        weekStartsOn={tz.weekStartsOn}
+        isExpanded={isStripExpanded}
         onSelectDate={setCurrentDate}
         eventsByDate={eventsByDate}
       />
@@ -438,6 +524,13 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flex: 1,
     minWidth: 0,
   },
+  monthToggleButton: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    paddingVertical: 2,
+    maxWidth: "100%" as const,
+  },
   monthTitle: {
     fontSize: 16,
     fontWeight: "700" as const,
@@ -445,11 +538,32 @@ const createStyles = (t: SaturnMobileTheme) => ({
     letterSpacing: -0.3,
     flexShrink: 1,
   },
+  secondHeaderRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+  },
   segmentedControl: {
+    flex: 1,
     flexDirection: "row" as const,
     backgroundColor: t.colors.surfaceSubtle,
     borderRadius: t.radius.sm,
     padding: 2,
+    borderWidth: 1,
+    borderColor: t.colors.border,
+  },
+  stepperRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+  },
+  stepperButton: {
+    width: 32,
+    height: 32,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    borderRadius: t.radius.sm,
+    backgroundColor: t.colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: t.colors.border,
   },

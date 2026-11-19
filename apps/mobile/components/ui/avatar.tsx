@@ -8,7 +8,7 @@ import {
   type ViewStyle,
   type ImageStyle,
 } from "react-native"
-import { getAvatarColor, useTheme } from "@/lib/theme"
+import { getAvatarColor, useTheme } from "../../lib/theme"
 
 export interface AvatarProps {
   name: string

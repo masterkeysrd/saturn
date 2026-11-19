@@ -1,17 +1,5 @@
-import { useMemo, useState, useEffect } from "react"
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Animated,
-  useAnimatedValue,
-} from "react-native"
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react-native"
+import { useMemo, useRef } from "react"
+import { View, Text, TouchableOpacity } from "react-native"
 import {
   getWeekDays,
   getMonthMatrix,
@@ -20,34 +8,100 @@ import {
   type MonthDayCell,
   type WeekDayHeader,
 } from "@saturn/core"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import { useThemedStyles, type SaturnMobileTheme } from "../../lib/theme"
+import { haptics } from "../../lib/haptics"
 
 export interface DateStripProps {
   selectedDate: Date
   timeZone: string
+  weekStartsOn?: 0 | 1
+  isExpanded: boolean
   onSelectDate: (date: Date) => void
   eventsByDate?: Set<string>
+}
+
+export function stepCalendarStripDate(
+  selectedDate: Date,
+  timeZone: string,
+  direction: "prev" | "next",
+  isExpanded: boolean
+): Date {
+  const parts = getTimezoneParts(selectedDate, timeZone)
+  if (!parts) return selectedDate
+  if (isExpanded) {
+    const targetMonthIndex =
+      direction === "next" ? parts.month : parts.month - 2
+    return new Date(Date.UTC(parts.year, targetMonthIndex, 1, 12, 0, 0))
+  }
+  const dayOffset = direction === "next" ? 7 : -7
+  return new Date(
+    Date.UTC(parts.year, parts.month - 1, parts.day + dayOffset, 12, 0, 0)
+  )
+}
+
+export function resolveHorizontalSwipeDirection(
+  dx: number,
+  dy: number,
+  threshold = 36
+): "prev" | "next" | null {
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return null
+  if (Math.abs(dx) < threshold) return null
+  if (Math.abs(dy) >= Math.abs(dx)) return null
+  return dx < 0 ? "next" : "prev"
+}
+
+interface TouchPoint {
+  x: number
+  y: number
+}
+
+interface TouchCoordLike {
+  pageX?: number
+  pageY?: number
+  clientX?: number
+  clientY?: number
+}
+
+interface TouchEventLike {
+  nativeEvent?: {
+    pageX?: number
+    pageY?: number
+    changedTouches?: ArrayLike<TouchCoordLike>
+    touches?: ArrayLike<TouchCoordLike>
+  }
+  changedTouches?: ArrayLike<TouchCoordLike>
+  touches?: ArrayLike<TouchCoordLike>
+}
+
+function extractTouchPoint(event: unknown): TouchPoint | null {
+  if (!event || typeof event !== "object") return null
+  const e = event as TouchEventLike
+  const ne = e.nativeEvent
+  if (ne && typeof ne.pageX === "number" && typeof ne.pageY === "number") {
+    return { x: ne.pageX, y: ne.pageY }
+  }
+  const touch =
+    ne?.changedTouches?.[0] ??
+    ne?.touches?.[0] ??
+    e.changedTouches?.[0] ??
+    e.touches?.[0]
+  if (!touch) return null
+  const x = touch.pageX ?? touch.clientX
+  const y = touch.pageY ?? touch.clientY
+  if (typeof x !== "number" || typeof y !== "number") return null
+  return { x, y }
 }
 
 export function DateStrip({
   selectedDate,
   timeZone,
+  weekStartsOn = 0,
+  isExpanded,
   onSelectDate,
   eventsByDate,
 }: DateStripProps) {
-  const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
-  const [isExpanded, setIsExpanded] = useState(false)
-  const animValue = useAnimatedValue(0)
-
-  useEffect(() => {
-    Animated.timing(animValue, {
-      toValue: isExpanded ? 1 : 0,
-      duration: 220,
-      useNativeDriver: false,
-    }).start()
-  }, [isExpanded, animValue])
+  const touchStartRef = useRef<TouchPoint | null>(null)
 
   const selectedParts = useMemo(
     () => getTimezoneParts(selectedDate, timeZone),
@@ -58,134 +112,63 @@ export function DateStrip({
     [selectedDate, timeZone]
   )
 
-  const monthYearLabel = useMemo(() => {
-    if (!selectedParts) return ""
-    const noonUtc = new Date(
-      Date.UTC(selectedParts.year, selectedParts.month - 1, 15, 12, 0, 0)
-    )
-    return new Intl.DateTimeFormat("en-US", {
-      month: "long",
-      year: "numeric",
-      timeZone,
-    }).format(noonUtc)
-  }, [selectedParts, timeZone])
-
   const weekDays = useMemo<WeekDayHeader[]>(() => {
     return getWeekDays(selectedDate, {
       timeZone,
-      weekStartsOn: 0,
+      weekStartsOn,
     })
-  }, [selectedDate, timeZone])
+  }, [selectedDate, timeZone, weekStartsOn])
 
   const monthMatrix = useMemo<MonthDayCell[][]>(() => {
     if (!selectedParts) return []
     return getMonthMatrix(selectedParts.year, selectedParts.month, {
       timeZone,
-      weekStartsOn: 0,
+      weekStartsOn,
       fixedWeeks: false,
     })
-  }, [selectedParts, timeZone])
-
-  const handlePrev = () => {
-    haptics.light()
-    if (!selectedParts) return
-    if (isExpanded) {
-      // Prev month
-      const prevMonthNoon = new Date(
-        Date.UTC(selectedParts.year, selectedParts.month - 2, 1, 12, 0, 0)
-      )
-      onSelectDate(prevMonthNoon)
-    } else {
-      // Prev week (7 days ago)
-      const prevWeekNoon = new Date(
-        Date.UTC(
-          selectedParts.year,
-          selectedParts.month - 1,
-          selectedParts.day - 7,
-          12,
-          0,
-          0
-        )
-      )
-      onSelectDate(prevWeekNoon)
-    }
-  }
-
-  const handleNext = () => {
-    haptics.light()
-    if (!selectedParts) return
-    if (isExpanded) {
-      // Next month
-      const nextMonthNoon = new Date(
-        Date.UTC(selectedParts.year, selectedParts.month, 1, 12, 0, 0)
-      )
-      onSelectDate(nextMonthNoon)
-    } else {
-      // Next week (7 days later)
-      const nextWeekNoon = new Date(
-        Date.UTC(
-          selectedParts.year,
-          selectedParts.month - 1,
-          selectedParts.day + 7,
-          12,
-          0,
-          0
-        )
-      )
-      onSelectDate(nextWeekNoon)
-    }
-  }
-
-  const toggleExpanded = () => {
-    haptics.selection()
-    setIsExpanded((prev) => !prev)
-  }
+  }, [selectedParts, timeZone, weekStartsOn])
 
   const handleSelectDay = (cellDate: Date) => {
     haptics.selection()
     onSelectDate(cellDate)
   }
 
-  const weekdayInitials = ["S", "M", "T", "W", "T", "F", "S"]
+  const handleTouchStart = (event: unknown) => {
+    touchStartRef.current = extractTouchPoint(event)
+  }
+
+  const handleTouchEnd = (event: unknown) => {
+    const start = touchStartRef.current
+    touchStartRef.current = null
+    if (!start) return
+    const end = extractTouchPoint(event)
+    if (!end) return
+    const dir = resolveHorizontalSwipeDirection(
+      end.x - start.x,
+      end.y - start.y
+    )
+    if (!dir) return
+    haptics.light()
+    onSelectDate(stepCalendarStripDate(selectedDate, timeZone, dir, isExpanded))
+  }
+
+  const handleTouchCancel = () => {
+    touchStartRef.current = null
+  }
+
+  const weekdayInitials =
+    weekStartsOn === 1
+      ? ["M", "T", "W", "T", "F", "S", "S"]
+      : ["S", "M", "T", "W", "T", "F", "S"]
 
   return (
-    <View style={styles.container}>
-      {/* Top Header: Month & Year + Prev/Next + Expand/Collapse button */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={toggleExpanded}
-          style={styles.monthTitleButton}
-          testID="calendar-strip-toggle"
-        >
-          <Text style={styles.monthTitleText}>{monthYearLabel}</Text>
-          {isExpanded ? (
-            <ChevronUp size={16} color={colors.textSecondary} />
-          ) : (
-            <ChevronDown size={16} color={colors.textSecondary} />
-          )}
-        </TouchableOpacity>
-
-        <View style={styles.navRow}>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handlePrev}
-            style={styles.navButton}
-            testID="calendar-strip-prev"
-          >
-            <ChevronLeft size={18} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handleNext}
-            style={styles.navButton}
-            testID="calendar-strip-next"
-          >
-            <ChevronRight size={18} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
+    <View
+      style={styles.container}
+      testID="calendar-date-strip"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
+    >
       {/* Weekday Initials Header (when expanded) */}
       {isExpanded && (
         <View style={styles.weekdayInitialsRow}>
@@ -305,37 +288,8 @@ const createStyles = (t: SaturnMobileTheme) => ({
     borderBottomWidth: 1,
     borderBottomColor: t.colors.border,
     paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 10,
-  },
-  header: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
-    marginBottom: 8,
-  },
-  monthTitleButton: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    borderRadius: t.radius.sm,
-  },
-  monthTitleText: {
-    fontSize: 16,
-    fontWeight: "700" as const,
-    color: t.colors.textPrimary,
-  },
-  navRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 4,
-  },
-  navButton: {
-    padding: 6,
-    borderRadius: t.radius.full,
-    backgroundColor: t.colors.surfaceElevated,
+    paddingTop: 6,
+    paddingBottom: 8,
   },
   weekRow: {
     flexDirection: "row" as const,
