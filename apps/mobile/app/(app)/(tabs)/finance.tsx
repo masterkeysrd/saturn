@@ -361,9 +361,9 @@ export default function FinanceHubScreen() {
 
   const getDueDateBadge = (dueDateStr?: string) => {
     if (!dueDateStr) return null
-    const due = parseDate(dueDateStr)
+    const due = parseDate(dueDateStr, tz.timezone)
     if (!due) return null
-    const now = new Date()
+    const now = tz.now()
 
     const startToday = tz.startOfDay(now)
     const startDue = tz.startOfDay(due)
@@ -374,20 +374,20 @@ export default function FinanceHubScreen() {
     if (diffDays < 0) {
       const absDays = Math.abs(diffDays)
       return {
-        label: absDays === 1 ? "Overdue 1 day" : `Overdue ${absDays} days`,
+        label: absDays === 1 ? "Overdue · 1d" : `Overdue · ${absDays}d`,
         isOverdue: true,
         isToday: false,
       }
     }
     if (diffDays === 0) {
       return {
-        label: "Due Today",
+        label: "Due today",
         isOverdue: false,
         isToday: true,
       }
     }
     return {
-      label: diffDays === 1 ? "Due tomorrow" : `Due in ${diffDays} days`,
+      label: diffDays === 1 ? "Due tomorrow" : `In ${diffDays}d`,
       isOverdue: false,
       isToday: false,
     }
@@ -1029,61 +1029,55 @@ export default function FinanceHubScreen() {
                             )}
                           </View>
                           <View style={styles.itemInfo}>
-                            <Text style={styles.txName} numberOfLines={1}>
-                              {getScheduledDisplayName(st, recurringTemplates)}
-                            </Text>
+                            <View style={styles.itemTopRow}>
+                              <Text style={styles.txName} numberOfLines={1}>
+                                {getScheduledDisplayName(
+                                  st,
+                                  recurringTemplates
+                                )}
+                              </Text>
+                              <MonoAmount
+                                size="sm"
+                                color={
+                                  isIncome ? colors.success : colors.textPrimary
+                                }
+                                style={styles.txAmount}
+                              >
+                                {isIncome ? "+" : "-"}
+                                {formatAmount(
+                                  st.amount,
+                                  st.currency || baseCurrency
+                                )}
+                              </MonoAmount>
+                            </View>
                             <View style={styles.badgeRow}>
                               {st.dueDate ? (
-                                <Text style={styles.txMeta}>
-                                  {formatDate(st.dueDate)}
+                                <Text style={styles.txMeta} numberOfLines={1}>
+                                  Due {formatDate(st.dueDate)}
                                 </Text>
                               ) : null}
                               {isIncome ? (
                                 <Badge
                                   size="sm"
-                                  label="Deposit Due"
-                                  bg={colors.successSubtle}
-                                  border="rgba(16, 185, 129, 0.3)"
-                                  color={colors.success}
+                                  variant="success"
+                                  label="Deposit due"
                                 />
                               ) : dueBadge ? (
                                 <Badge
                                   size="sm"
+                                  variant={
+                                    dueBadge.isOverdue
+                                      ? "destructive"
+                                      : dueBadge.isToday
+                                        ? "warning"
+                                        : "default"
+                                  }
                                   label={dueBadge.label}
-                                  bg={
-                                    dueBadge.isOverdue
-                                      ? colors.destructiveSubtle
-                                      : dueBadge.isToday
-                                        ? colors.warningSubtle
-                                        : colors.surfaceHighlight
-                                  }
-                                  border={
-                                    dueBadge.isOverdue
-                                      ? "rgba(244, 63, 94, 0.3)"
-                                      : dueBadge.isToday
-                                        ? "rgba(245, 158, 11, 0.3)"
-                                        : colors.border
-                                  }
-                                  color={
-                                    dueBadge.isOverdue
-                                      ? colors.destructive
-                                      : dueBadge.isToday
-                                        ? colors.warning
-                                        : colors.textMuted
-                                  }
                                 />
                               ) : null}
                             </View>
                           </View>
                         </View>
-
-                        <MonoAmount
-                          size="sm"
-                          color={isIncome ? colors.success : colors.textPrimary}
-                        >
-                          {isIncome ? "+" : "-"}
-                          {formatAmount(st.amount, st.currency || baseCurrency)}
-                        </MonoAmount>
                       </TouchableOpacity>
 
                       <ActionMenu
@@ -1198,45 +1192,37 @@ export default function FinanceHubScreen() {
                           />
                         </View>
                         <View style={styles.itemInfo}>
-                          <Text style={styles.txName} numberOfLines={1}>
-                            {b.counterparty || "Borrowing"}
-                          </Text>
-                          <View style={styles.badgeRow}>
-                            <Badge
+                          <View style={styles.itemTopRow}>
+                            <Text style={styles.txName} numberOfLines={1}>
+                              {b.counterparty || "Borrowing"}
+                            </Text>
+                            <MonoAmount
                               size="sm"
-                              label={isLent ? "Owed to you" : "You owe"}
-                              bg={
-                                isLent
-                                  ? colors.successSubtle
-                                  : colors.destructiveSubtle
-                              }
-                              border={
-                                isLent
-                                  ? "rgba(16, 185, 129, 0.3)"
-                                  : "rgba(244, 63, 94, 0.3)"
-                              }
                               color={
                                 isLent ? colors.success : colors.destructive
                               }
+                              style={styles.txAmount}
+                            >
+                              {formatAmount(
+                                b.remainingAmount || b.totalAmount,
+                                b.currency || baseCurrency
+                              )}
+                            </MonoAmount>
+                          </View>
+                          <View style={styles.badgeRow}>
+                            <Badge
+                              size="sm"
+                              variant={isLent ? "success" : "destructive"}
+                              label={isLent ? "Owed to you" : "You owe"}
                             />
                             {b.dueAt ? (
-                              <Text style={styles.txMeta}>
+                              <Text style={styles.txMeta} numberOfLines={1}>
                                 Due {formatDate(b.dueAt)}
                               </Text>
                             ) : null}
                           </View>
                         </View>
                       </View>
-
-                      <MonoAmount
-                        size="sm"
-                        color={isLent ? colors.success : colors.destructive}
-                      >
-                        {formatAmount(
-                          b.remainingAmount || b.totalAmount,
-                          b.currency || baseCurrency
-                        )}
-                      </MonoAmount>
                     </TouchableOpacity>
 
                     <ActionMenu
@@ -1448,15 +1434,15 @@ const createStyles = (t: SaturnMobileTheme) => ({
     alignItems: "center" as const,
     justifyContent: "space-between" as const,
     paddingLeft: 14,
-    paddingRight: 10,
-    paddingVertical: 10,
+    paddingRight: 8,
+    paddingVertical: 11,
   },
   txMainPressable: {
     flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
+    alignItems: "flex-start" as const,
     flex: 1,
-    marginRight: 6,
+    minWidth: 0,
+    marginRight: 4,
   },
   rowBorder: {
     borderBottomWidth: 1,
@@ -1464,10 +1450,10 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   txLeft: {
     flexDirection: "row" as const,
-    alignItems: "center" as const,
+    alignItems: "flex-start" as const,
     gap: 10,
     flex: 1,
-    marginRight: 10,
+    minWidth: 0,
   },
   txIconBadge: {
     width: 30,
@@ -1477,30 +1463,45 @@ const createStyles = (t: SaturnMobileTheme) => ({
     justifyContent: "center" as const,
   },
   actionIconBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    marginTop: 1,
+    flexShrink: 0,
     alignItems: "center" as const,
     justifyContent: "center" as const,
   },
   itemInfo: {
     flex: 1,
-    gap: 2,
+    minWidth: 0,
+    gap: 5,
+  },
+  itemTopRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    gap: 8,
+    minWidth: 0,
+  },
+  txAmount: {
+    flexShrink: 0,
   },
   badgeRow: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
+    flexWrap: "wrap" as const,
     gap: 6,
-    marginTop: 2,
+    minWidth: 0,
   },
   menuTriggerWrapper: {
     alignItems: "center" as const,
     justifyContent: "center" as const,
+    flexShrink: 0,
   },
   dotsBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center" as const,
     justifyContent: "center" as const,
   },
@@ -1512,14 +1513,16 @@ const createStyles = (t: SaturnMobileTheme) => ({
     gap: 12,
   },
   txName: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 14,
     fontWeight: "600" as const,
     color: t.colors.textPrimary,
   },
   txMeta: {
-    fontSize: 11,
+    fontSize: 12,
     color: t.colors.textMuted,
-    marginTop: 2,
+    flexShrink: 1,
   },
   emptyCard: {
     padding: 20,
@@ -1611,14 +1614,18 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flexDirection: "row" as const,
     alignItems: "center" as const,
     justifyContent: "space-between" as const,
+    gap: 12,
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: t.colors.border,
   },
   budgetStatsRemaining: {
     gap: 2,
+    flexShrink: 0,
   },
   budgetHealthPills: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 6,

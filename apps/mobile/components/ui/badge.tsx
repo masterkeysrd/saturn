@@ -51,6 +51,7 @@ export function Badge({
     >
       {icon && <View style={styles.iconContainer}>{icon}</View>}
       <Text
+        numberOfLines={1}
         style={[
           styles.text,
           styles[`${size}Text`],
@@ -70,15 +71,19 @@ const createStyles = (t: SaturnMobileTheme) => ({
     flexDirection: "row" as const,
     alignItems: "center" as const,
     alignSelf: "flex-start" as const,
+    maxWidth: "100%" as const,
+    flexShrink: 1,
     borderRadius: t.radius.full,
     borderWidth: 1,
     borderColor: "transparent",
   },
   iconContainer: {
     marginRight: 4,
+    flexShrink: 0,
   },
   text: {
     fontWeight: "600" as const,
+    flexShrink: 1,
   },
   // Sizes
   sm: {
@@ -91,9 +96,11 @@ const createStyles = (t: SaturnMobileTheme) => ({
   },
   smText: {
     fontSize: 11,
+    lineHeight: 14,
   },
   mdText: {
     fontSize: 12,
+    lineHeight: 16,
   },
   // Variants
   default: {
