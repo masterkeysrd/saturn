@@ -165,6 +165,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	ecdsaVerifier := crypto.NewECDSAVerifier()
 	passwordResetStore := identitystorage.NewPasswordResetStore(dbClient)
 	apiKeyStore := identitystorage.NewAPIKeyStore(dbClient)
+	platformSettingsStore := settings.NewPostgresStore(dbClient)
 	identityService := identity.NewService(
 		identity.Dependencies{
 			UserStore:          userStore,
@@ -180,11 +181,11 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 			DeviceVerifier:     ecdsaVerifier,
 			PasswordResetStore: passwordResetStore,
 			APIKeyStore:        apiKeyStore,
+			Preferences:        settings.Bind(platformSettingsStore, identity.UserPreferencesKey),
 		},
 	)
 
 	// Wire Space stores
-	platformSettingsStore := settings.NewPostgresStore(dbClient)
 	spaceStore := spacestorage.NewSpaceStore(dbClient)
 	memberStore := spacestorage.NewMemberStore(dbClient)
 	apiKeyGrantStore := spacestorage.NewAPIKeyGrantStore(dbClient)

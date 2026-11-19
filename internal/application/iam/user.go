@@ -39,6 +39,13 @@ type UpdateProfileRequest struct {
 	AvatarURL *string
 }
 
+// UpdateUserPreferencesRequest represents parameters for updating user-scoped preferences.
+type UpdateUserPreferencesRequest struct {
+	UserID      identity.UserID
+	Preferences identity.UserPreferences
+	UpdateMask  []string
+}
+
 // ChangeEmailRequest represents parameters for updating the user's primary email.
 type ChangeEmailRequest struct {
 	UserID          string
@@ -130,6 +137,34 @@ func (c *coordinator) UpdateProfile(ctx context.Context, req *UpdateProfileReque
 		UserID:    identity.UserID(req.UserID),
 		Name:      req.Name,
 		AvatarURL: req.AvatarURL,
+	})
+}
+
+// GetUserPreferences retrieves user-scoped UI language and regional preferences.
+func (c *coordinator) GetUserPreferences(ctx context.Context, userID identity.UserID) (*identity.UserPreferences, error) {
+	const op errors.Op = "application/iam.GetUserPreferences"
+
+	if !userID.IsValid() {
+		return nil, errors.E(op, errors.Invalid, identity.InvalidUserID, "user id is required")
+	}
+
+	return c.identityService.GetUserPreferences(ctx, userID)
+}
+
+// UpdateUserPreferences updates user-scoped UI language and regional preferences.
+func (c *coordinator) UpdateUserPreferences(ctx context.Context, req *UpdateUserPreferencesRequest) (*identity.UserPreferences, error) {
+	const op errors.Op = "application/iam.UpdateUserPreferences"
+
+	if req == nil {
+		return nil, errors.E(op, errors.Invalid, "request is required")
+	}
+	if !req.UserID.IsValid() {
+		return nil, errors.E(op, errors.Invalid, identity.InvalidUserID, "user id is required")
+	}
+
+	return c.identityService.UpdateUserPreferences(ctx, req.UserID, identity.UpdateUserPreferencesRequest{
+		Preferences: req.Preferences,
+		Paths:       req.UpdateMask,
 	})
 }
 

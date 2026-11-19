@@ -796,6 +796,54 @@ func (l *LoggingCoordinator) UpdateProfile(ctx context.Context, req *UpdateProfi
 	return res, nil
 }
 
+// GetUserPreferences executes next.GetUserPreferences and logs execution duration and errors.
+func (l *LoggingCoordinator) GetUserPreferences(ctx context.Context, userID identity.UserID) (*identity.UserPreferences, error) {
+	start := time.Now()
+	res, err := l.next.GetUserPreferences(ctx, userID)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.GetUserPreferences failed",
+			log.String("component", "iam"),
+			log.String("operation", "GetUserPreferences"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.GetUserPreferences completed",
+		log.String("component", "iam"),
+		log.String("operation", "GetUserPreferences"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
+// UpdateUserPreferences executes next.UpdateUserPreferences and logs execution duration and errors.
+func (l *LoggingCoordinator) UpdateUserPreferences(ctx context.Context, req *UpdateUserPreferencesRequest) (*identity.UserPreferences, error) {
+	start := time.Now()
+	res, err := l.next.UpdateUserPreferences(ctx, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		l.logger.Error(ctx, "iam.UpdateUserPreferences failed",
+			log.String("component", "iam"),
+			log.String("operation", "UpdateUserPreferences"),
+			log.Duration("duration", duration),
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	l.logger.Info(ctx, "iam.UpdateUserPreferences completed",
+		log.String("component", "iam"),
+		log.String("operation", "UpdateUserPreferences"),
+		log.Duration("duration", duration),
+	)
+	return res, nil
+}
+
 // ChangeEmail executes next.ChangeEmail and logs execution duration and errors.
 func (l *LoggingCoordinator) ChangeEmail(ctx context.Context, req *ChangeEmailRequest) (*identity.User, error) {
 	start := time.Now()

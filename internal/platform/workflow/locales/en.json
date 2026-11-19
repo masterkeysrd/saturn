@@ -1,0 +1,178 @@
+{
+  "trigger_topics": {
+    "calendar.event.created": {
+      "display_name": "Calendar Event Created",
+      "description": "Published when a calendar event is created."
+    },
+    "calendar.event.updated": {
+      "display_name": "Calendar Event Updated",
+      "description": "Published when a calendar event is updated."
+    },
+    "finance.inbox_item.approved": {
+      "display_name": "Inbox Item Approved",
+      "description": "Published when an inbox item is approved into the ledger."
+    },
+    "finance.inbox_item.created": {
+      "display_name": "Inbox Item Created",
+      "description": "Published when a new pending inbox item is staged."
+    },
+    "finance.scheduled_transaction.created": {
+      "display_name": "Scheduled Transaction Created",
+      "description": "Published when a pending scheduled transaction is created."
+    },
+    "finance.scheduled_transaction.paid": {
+      "display_name": "Scheduled Transaction Paid",
+      "description": "Published when a scheduled transaction transitions to paid."
+    },
+    "finance.scheduled_transaction.updated": {
+      "display_name": "Scheduled Transaction Updated",
+      "description": "Published when a scheduled transaction is modified."
+    },
+    "finance.transaction.created": {
+      "display_name": "Transaction Created",
+      "description": "Published when a ledger transaction is created."
+    },
+    "mail.message.received": {
+      "display_name": "Message Received",
+      "description": "Published on incremental delta syncs for newly ingested inbound messages."
+    }
+  },
+  "steps": {
+    "ai.agent_run": {
+      "display_name": "AI Agent Run",
+      "description": "Executes a workspace AI agent headlessly in a multi-step MCP-enabled run."
+    },
+    "calendar.upsert_event": {
+      "display_name": "Upsert Calendar Event",
+      "description": "Creates or idempotently updates a calendar event keyed by a deterministic iCalUID derived from external_ref."
+    },
+    "document.extract_text": {
+      "display_name": "Extract Document Text",
+      "description": "Extracts plain text from PDF, CSV, or text artifacts with optional password decryption."
+    },
+    "filter": {
+      "display_name": "Filter",
+      "description": "Evaluates a CEL boolean condition; halts the run cleanly with status 'filtered' if false."
+    },
+    "finance.create_inbox_item": {
+      "display_name": "Create Finance Inbox Item",
+      "description": "Stages an extracted financial receipt, invoice, or bank notification into the finance inbox queue with idempotency."
+    },
+    "finance.import_statement_draft": {
+      "display_name": "Import Statement Drafts",
+      "description": "Validates multi-currency ledger math and credit-card liability signs, resolves accounts, and persists finance.Statement drafts."
+    },
+    "for_each": {
+      "display_name": "For Each",
+      "description": "Iterates sequentially over a CEL list, binding loop.<alias>.item and loop.<alias>.index."
+    },
+    "llm.generate": {
+      "display_name": "LLM Generate",
+      "description": "Prompts a configured model or semantic role with optional structured JSON output schema and document attachments."
+    },
+    "mail.create_draft": {
+      "display_name": "Create Mail Draft",
+      "description": "Creates an email draft locally and syncs it to the connected mail provider."
+    },
+    "mail.modify_labels": {
+      "display_name": "Modify Mail Labels",
+      "description": "Adds/removes mailbox labels or archives an email thread."
+    },
+    "output": {
+      "display_name": "Output",
+      "description": "Terminates the current path and sets FlowRun.output for synchronous callers."
+    },
+    "stop": {
+      "display_name": "Stop",
+      "description": "Terminates the current branch or run cleanly with status 'stopped'."
+    },
+    "switch": {
+      "display_name": "Switch",
+      "description": "Evaluates ordered CEL case conditions and executes the first matching branch before rejoining."
+    },
+    "transform": {
+      "display_name": "Transform",
+      "description": "Evaluates arbitrary CEL expressions in inputs and binds the resulting object to steps.<id>."
+    }
+  },
+  "loaders": {
+    "calendar.calendars": {
+      "display_name": "Calendars",
+      "description": "Lists workspace calendars, optionally filtered to writable calendars only."
+    },
+    "calendar.event": {
+      "display_name": "Get Calendar Event",
+      "description": "Retrieves a single calendar event by ID or deterministic external_ref."
+    },
+    "calendar.events": {
+      "display_name": "Calendar Events",
+      "description": "Queries expanded calendar occurrences in a time window, optionally filtered by calendar_id or search query."
+    },
+    "finance.account": {
+      "display_name": "Resolve Finance Account",
+      "description": "Resolves a single account by exact ID in the workspace, falling back to name, last four digits, and currency."
+    },
+    "finance.accounts": {
+      "display_name": "Finance Accounts",
+      "description": "Lists workspace financial accounts, optionally filtered by currency or type."
+    },
+    "finance.borrowings": {
+      "display_name": "Borrowings & Loans",
+      "description": "Lists workspace borrowing/lending agreements, optionally filtered by status."
+    },
+    "finance.budget": {
+      "display_name": "Resolve Finance Budget",
+      "description": "Resolves a single budget by ID first, then case-insensitive name."
+    },
+    "finance.budgets": {
+      "display_name": "Finance Budgets",
+      "description": "Lists workspace budgets, optionally filtered by status."
+    },
+    "finance.recurring_templates": {
+      "display_name": "Recurring Templates",
+      "description": "Lists recurring transaction templates, optionally filtered by status."
+    },
+    "finance.scheduled_payments": {
+      "display_name": "Scheduled Payments",
+      "description": "Lists scheduled transactions, optionally filtered by status, type, or due window."
+    },
+    "finance.transactions": {
+      "display_name": "Finance Transactions",
+      "description": "Queries recent ledger transactions with optional amount tolerance, date window, account, and search filters (capped at 100)."
+    },
+    "mail.mailboxes": {
+      "display_name": "Mailboxes & Labels",
+      "description": "Lists mail folders and labels, optionally filtered by connected_account_id."
+    },
+    "mail.message": {
+      "display_name": "Get Mail Message",
+      "description": "Loads email metadata, cached plain/HTML body, and mail:// attachment artifact references."
+    }
+  },
+  "cel_helpers": {
+    "addDays": {
+      "description": "Adds signed days to a YYYY-MM-DD date or RFC3339 timestamp."
+    },
+    "coalesce": {
+      "description": "Returns the first non-null argument."
+    },
+    "formatMoney": {
+      "description": "Formats cents and ISO currency code into a display string."
+    },
+    "fromCents": {
+      "description": "Converts integer cents into a decimal currency number."
+    },
+    "inSpaceTz": {
+      "description": "Parses an RFC3339 timestamp or YYYY-MM-DD date in the workspace timezone."
+    },
+    "localTime": {
+      "description": "Combines a date or timestamp with HH:MM in the workspace timezone and returns RFC3339."
+    },
+    "toCents": {
+      "description": "Converts a decimal currency amount into rounded minor units (cents)."
+    },
+    "toJSON": {
+      "description": "Serializes any value to deterministic JSON."
+    }
+  }
+}

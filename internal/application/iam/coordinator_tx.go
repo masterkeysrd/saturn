@@ -378,6 +378,30 @@ func (t *TransactionalCoordinator) UpdateProfile(ctx context.Context, req *Updat
 	return res, nil
 }
 
+func (t *TransactionalCoordinator) GetUserPreferences(ctx context.Context, userID identity.UserID) (*identity.UserPreferences, error) {
+	return t.next.GetUserPreferences(ctx, userID)
+}
+
+// UpdateUserPreferences executes next.UpdateUserPreferences inside a database transaction.
+func (t *TransactionalCoordinator) UpdateUserPreferences(ctx context.Context, req *UpdateUserPreferencesRequest) (*identity.UserPreferences, error) {
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.UpdateUserPreferences(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 // ChangeEmail executes next.ChangeEmail inside a database transaction.
 func (t *TransactionalCoordinator) ChangeEmail(ctx context.Context, req *ChangeEmailRequest) (*identity.User, error) {
 	ctx, tx, err := t.txr.Begin(ctx)

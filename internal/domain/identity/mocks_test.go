@@ -9,7 +9,127 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/platform/crypto"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"github.com/masterkeysrd/saturn/internal/platform/settings"
 )
+
+// Compile-time interface assertion.
+var _ UserPreferencesClient = (*UserPreferencesClientMock)(nil)
+
+// UserPreferencesClientMock is a mock implementation of UserPreferencesClient.
+type UserPreferencesClientMock struct {
+	// GetFunc mocks the Get method.
+	GetFunc func(ctx context.Context, scopeID string) (*settings.Entry[UserPreferences], error)
+
+	// GetOrDefaultFunc mocks the GetOrDefault method.
+	GetOrDefaultFunc func(ctx context.Context, scopeID string, fallback UserPreferences) (*settings.Entry[UserPreferences], error)
+
+	// SaveFunc mocks the Save method.
+	SaveFunc func(ctx context.Context, entry *settings.Entry[UserPreferences]) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		Get []struct {
+			Ctx     context.Context
+			ScopeID string
+		}
+		GetOrDefault []struct {
+			Ctx      context.Context
+			ScopeID  string
+			Fallback UserPreferences
+		}
+		Save []struct {
+			Ctx   context.Context
+			Entry *settings.Entry[UserPreferences]
+		}
+	}
+	lockGet          sync.RWMutex
+	lockGetOrDefault sync.RWMutex
+	lockSave         sync.RWMutex
+}
+
+// Get calls GetFunc.
+func (mock *UserPreferencesClientMock) Get(ctx context.Context, scopeID string) (*settings.Entry[UserPreferences], error) {
+	if mock.GetFunc == nil {
+		panic("UserPreferencesClientMock.GetFunc: method is nil but UserPreferencesClient.Get was just called")
+	}
+	mock.lockGet.Lock()
+	mock.calls.Get = append(mock.calls.Get, struct {
+		Ctx     context.Context
+		ScopeID string
+	}{
+		Ctx:     ctx,
+		ScopeID: scopeID,
+	})
+	mock.lockGet.Unlock()
+	return mock.GetFunc(ctx, scopeID)
+}
+
+// GetCalls returns all calls made to Get.
+func (mock *UserPreferencesClientMock) GetCalls() []struct {
+	Ctx     context.Context
+	ScopeID string
+} {
+	mock.lockGet.RLock()
+	defer mock.lockGet.RUnlock()
+	return mock.calls.Get
+}
+
+// GetOrDefault calls GetOrDefaultFunc.
+func (mock *UserPreferencesClientMock) GetOrDefault(ctx context.Context, scopeID string, fallback UserPreferences) (*settings.Entry[UserPreferences], error) {
+	if mock.GetOrDefaultFunc == nil {
+		panic("UserPreferencesClientMock.GetOrDefaultFunc: method is nil but UserPreferencesClient.GetOrDefault was just called")
+	}
+	mock.lockGetOrDefault.Lock()
+	mock.calls.GetOrDefault = append(mock.calls.GetOrDefault, struct {
+		Ctx      context.Context
+		ScopeID  string
+		Fallback UserPreferences
+	}{
+		Ctx:      ctx,
+		ScopeID:  scopeID,
+		Fallback: fallback,
+	})
+	mock.lockGetOrDefault.Unlock()
+	return mock.GetOrDefaultFunc(ctx, scopeID, fallback)
+}
+
+// GetOrDefaultCalls returns all calls made to GetOrDefault.
+func (mock *UserPreferencesClientMock) GetOrDefaultCalls() []struct {
+	Ctx      context.Context
+	ScopeID  string
+	Fallback UserPreferences
+} {
+	mock.lockGetOrDefault.RLock()
+	defer mock.lockGetOrDefault.RUnlock()
+	return mock.calls.GetOrDefault
+}
+
+// Save calls SaveFunc.
+func (mock *UserPreferencesClientMock) Save(ctx context.Context, entry *settings.Entry[UserPreferences]) error {
+	if mock.SaveFunc == nil {
+		panic("UserPreferencesClientMock.SaveFunc: method is nil but UserPreferencesClient.Save was just called")
+	}
+	mock.lockSave.Lock()
+	mock.calls.Save = append(mock.calls.Save, struct {
+		Ctx   context.Context
+		Entry *settings.Entry[UserPreferences]
+	}{
+		Ctx:   ctx,
+		Entry: entry,
+	})
+	mock.lockSave.Unlock()
+	return mock.SaveFunc(ctx, entry)
+}
+
+// SaveCalls returns all calls made to Save.
+func (mock *UserPreferencesClientMock) SaveCalls() []struct {
+	Ctx   context.Context
+	Entry *settings.Entry[UserPreferences]
+} {
+	mock.lockSave.RLock()
+	defer mock.lockSave.RUnlock()
+	return mock.calls.Save
+}
 
 // Compile-time interface assertion.
 var _ SecurityEventStore = (*SecurityEventStoreMock)(nil)

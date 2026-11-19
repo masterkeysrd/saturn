@@ -360,6 +360,43 @@ func (c *Client) UpdateProfile(ctx context.Context, req *UpdateProfileRequest) (
 	return &resp, nil
 }
 
+// GetUserPreferences executes GET /api/v1/identity/users/me/preferences.
+func (c *Client) GetUserPreferences(ctx context.Context, req *GetUserPreferencesRequest) (*UserPreferences, error) {
+	var resp UserPreferences
+	path := "/api/v1/identity/users/me/preferences"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// UpdateUserPreferences executes PATCH /api/v1/identity/users/me/preferences.
+func (c *Client) UpdateUserPreferences(ctx context.Context, req *UpdateUserPreferencesRequest) (*UserPreferences, error) {
+	var resp UserPreferences
+	path := "/api/v1/identity/users/me/preferences"
+	var query []string
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetUserPreferences()
+	if payload == nil {
+		return nil, fmt.Errorf("user_preferences payload is required")
+	}
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 // ChangeEmail executes POST /api/v1/identity/users/me:change-email.
 func (c *Client) ChangeEmail(ctx context.Context, req *ChangeEmailRequest) (*User, error) {
 	var resp User

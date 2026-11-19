@@ -5086,6 +5086,61 @@
         ]
       }
     },
+    "/v1/identity/users/me/preferences": {
+      "get": {
+        "summary": "Authenticated RPC: Retrieves regional and UI language preferences for the current user.",
+        "operationId": "Identity_GetUserPreferences",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UserPreferences"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Identity"
+        ]
+      },
+      "patch": {
+        "summary": "Authenticated RPC: Updates regional and UI language preferences for the current user.",
+        "operationId": "Identity_UpdateUserPreferences",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UserPreferences"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userPreferences",
+            "description": "Required. Preferences payload containing fields to update.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UserPreferences"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
     "/v1/identity/users/me/security-events": {
       "get": {
         "summary": "Lists security audit log events for the authenticated user.",
@@ -7709,6 +7764,15 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "locale",
+            "description": "Optional. BCP 47 locale tag (e.g. \"en-US\", \"es-ES\") used to localize catalog display names and descriptions.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
         "tags": [
           "WorkflowService"
         ]
@@ -17594,6 +17658,25 @@
         }
       },
       "description": "Request message for Identity.UpdateProfile."
+    },
+    "v1UserPreferences": {
+      "type": "object",
+      "properties": {
+        "locale": {
+          "type": "string",
+          "description": "Optional. BCP 47 UI language and regional locale tag (e.g. \"en-US\", \"es-ES\", \"es-419\")."
+        },
+        "hourCycle": {
+          "type": "string",
+          "description": "Optional. Preferred clock hour cycle (\"h12\" for 12-hour, \"h23\" for 24-hour)."
+        },
+        "weekStartsOn": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Optional. Preferred first day of the week (0 = Sunday, 1 = Monday)."
+        }
+      },
+      "description": "UserPreferences stores user-scoped UI language and regional formatting preferences."
     },
     "v1UserSession": {
       "type": "object",

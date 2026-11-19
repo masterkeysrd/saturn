@@ -43,6 +43,8 @@ const (
 	Identity_CompleteResetPassword_FullMethodName = "/saturn.identity.v1.Identity/CompleteResetPassword"
 	Identity_ChangePassword_FullMethodName        = "/saturn.identity.v1.Identity/ChangePassword"
 	Identity_UpdateProfile_FullMethodName         = "/saturn.identity.v1.Identity/UpdateProfile"
+	Identity_GetUserPreferences_FullMethodName    = "/saturn.identity.v1.Identity/GetUserPreferences"
+	Identity_UpdateUserPreferences_FullMethodName = "/saturn.identity.v1.Identity/UpdateUserPreferences"
 	Identity_ChangeEmail_FullMethodName           = "/saturn.identity.v1.Identity/ChangeEmail"
 	Identity_DeleteAccount_FullMethodName         = "/saturn.identity.v1.Identity/DeleteAccount"
 	Identity_CreateAPIKey_FullMethodName          = "/saturn.identity.v1.Identity/CreateAPIKey"
@@ -105,6 +107,10 @@ type IdentityClient interface {
 	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error)
 	// Authenticated RPC: Updates profile information for the current user.
 	UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*User, error)
+	// Authenticated RPC: Retrieves regional and UI language preferences for the current user.
+	GetUserPreferences(ctx context.Context, in *GetUserPreferencesRequest, opts ...grpc.CallOption) (*UserPreferences, error)
+	// Authenticated RPC: Updates regional and UI language preferences for the current user.
+	UpdateUserPreferences(ctx context.Context, in *UpdateUserPreferencesRequest, opts ...grpc.CallOption) (*UserPreferences, error)
 	// Authenticated RPC: Updates the primary email for the current user, requiring re-authentication.
 	ChangeEmail(ctx context.Context, in *ChangeEmailRequest, opts ...grpc.CallOption) (*User, error)
 	// Authenticated RPC: Permanently deactivates and deletes personal credentials for the current user account.
@@ -359,6 +365,26 @@ func (c *identityClient) UpdateProfile(ctx context.Context, in *UpdateProfileReq
 	return out, nil
 }
 
+func (c *identityClient) GetUserPreferences(ctx context.Context, in *GetUserPreferencesRequest, opts ...grpc.CallOption) (*UserPreferences, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UserPreferences)
+	err := c.cc.Invoke(ctx, Identity_GetUserPreferences_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) UpdateUserPreferences(ctx context.Context, in *UpdateUserPreferencesRequest, opts ...grpc.CallOption) (*UserPreferences, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UserPreferences)
+	err := c.cc.Invoke(ctx, Identity_UpdateUserPreferences_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *identityClient) ChangeEmail(ctx context.Context, in *ChangeEmailRequest, opts ...grpc.CallOption) (*User, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(User)
@@ -482,6 +508,10 @@ type IdentityServer interface {
 	ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error)
 	// Authenticated RPC: Updates profile information for the current user.
 	UpdateProfile(context.Context, *UpdateProfileRequest) (*User, error)
+	// Authenticated RPC: Retrieves regional and UI language preferences for the current user.
+	GetUserPreferences(context.Context, *GetUserPreferencesRequest) (*UserPreferences, error)
+	// Authenticated RPC: Updates regional and UI language preferences for the current user.
+	UpdateUserPreferences(context.Context, *UpdateUserPreferencesRequest) (*UserPreferences, error)
 	// Authenticated RPC: Updates the primary email for the current user, requiring re-authentication.
 	ChangeEmail(context.Context, *ChangeEmailRequest) (*User, error)
 	// Authenticated RPC: Permanently deactivates and deletes personal credentials for the current user account.
@@ -573,6 +603,12 @@ func (UnimplementedIdentityServer) ChangePassword(context.Context, *ChangePasswo
 }
 func (UnimplementedIdentityServer) UpdateProfile(context.Context, *UpdateProfileRequest) (*User, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateProfile not implemented")
+}
+func (UnimplementedIdentityServer) GetUserPreferences(context.Context, *GetUserPreferencesRequest) (*UserPreferences, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUserPreferences not implemented")
+}
+func (UnimplementedIdentityServer) UpdateUserPreferences(context.Context, *UpdateUserPreferencesRequest) (*UserPreferences, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateUserPreferences not implemented")
 }
 func (UnimplementedIdentityServer) ChangeEmail(context.Context, *ChangeEmailRequest) (*User, error) {
 	return nil, status.Error(codes.Unimplemented, "method ChangeEmail not implemented")
@@ -1029,6 +1065,42 @@ func _Identity_UpdateProfile_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Identity_GetUserPreferences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserPreferencesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).GetUserPreferences(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_GetUserPreferences_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).GetUserPreferences(ctx, req.(*GetUserPreferencesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_UpdateUserPreferences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateUserPreferencesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).UpdateUserPreferences(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_UpdateUserPreferences_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).UpdateUserPreferences(ctx, req.(*UpdateUserPreferencesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Identity_ChangeEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChangeEmailRequest)
 	if err := dec(in); err != nil {
@@ -1253,6 +1325,14 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateProfile",
 			Handler:    _Identity_UpdateProfile_Handler,
+		},
+		{
+			MethodName: "GetUserPreferences",
+			Handler:    _Identity_GetUserPreferences_Handler,
+		},
+		{
+			MethodName: "UpdateUserPreferences",
+			Handler:    _Identity_UpdateUserPreferences_Handler,
 		},
 		{
 			MethodName: "ChangeEmail",

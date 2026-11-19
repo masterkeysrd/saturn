@@ -63,6 +63,9 @@ type Coordinator interface {
 	ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*ChangePasswordResponse, error)
 	// @transactional
 	UpdateProfile(ctx context.Context, req *UpdateProfileRequest) (*identity.User, error)
+	GetUserPreferences(ctx context.Context, userID identity.UserID) (*identity.UserPreferences, error)
+	// @transactional
+	UpdateUserPreferences(ctx context.Context, req *UpdateUserPreferencesRequest) (*identity.UserPreferences, error)
 	// @transactional
 	ChangeEmail(ctx context.Context, req *ChangeEmailRequest) (*identity.User, error)
 	// @transactional
@@ -189,6 +192,8 @@ type IdentityService interface {
 	CompletePasswordReset(ctx context.Context, req identity.CompletePasswordResetRequest) (*identity.User, error)
 	ChangePassword(ctx context.Context, req identity.ChangePasswordRequest) (*identity.User, error)
 	UpdateProfile(ctx context.Context, params identity.UpdateProfileParams) (*identity.User, error)
+	GetUserPreferences(ctx context.Context, userID identity.UserID) (*identity.UserPreferences, error)
+	UpdateUserPreferences(ctx context.Context, userID identity.UserID, req identity.UpdateUserPreferencesRequest) (*identity.UserPreferences, error)
 	ChangeEmail(ctx context.Context, params identity.ChangeEmailParams) (*identity.User, error)
 	DeleteAccount(ctx context.Context, params identity.DeleteAccountParams) error
 	CreateAPIKey(ctx context.Context, params identity.CreateAPIKeyParams) (*identity.APIKey, error)

@@ -188,6 +188,20 @@ service Identity {
     };
   }
 
+  // Authenticated RPC: Retrieves regional and UI language preferences for the current user.
+  rpc GetUserPreferences(GetUserPreferencesRequest) returns (UserPreferences) {
+    option (google.api.http) = {get: "/v1/identity/users/me/preferences"};
+  }
+
+  // Authenticated RPC: Updates regional and UI language preferences for the current user.
+  rpc UpdateUserPreferences(UpdateUserPreferencesRequest) returns (UserPreferences) {
+    option (google.api.http) = {
+      patch: "/v1/identity/users/me/preferences"
+      body: "user_preferences"
+    };
+    option (google.api.method_signature) = "user_preferences,update_mask";
+  }
+
   // Authenticated RPC: Updates the primary email for the current user, requiring re-authentication.
   rpc ChangeEmail(ChangeEmailRequest) returns (User) {
     option (google.api.http) = {
@@ -731,6 +745,30 @@ message UpdateProfileRequest {
 
   // Optional. The updated avatar URL for the user.
   optional string avatar_url = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// UserPreferences stores user-scoped UI language and regional formatting preferences.
+message UserPreferences {
+  // Optional. BCP 47 UI language and regional locale tag (e.g. "en-US", "es-ES", "es-419").
+  string locale = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Preferred clock hour cycle ("h12" for 12-hour, "h23" for 24-hour).
+  string hour_cycle = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Preferred first day of the week (0 = Sunday, 1 = Monday).
+  int32 week_starts_on = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for Identity.GetUserPreferences.
+message GetUserPreferencesRequest {}
+
+// Request message for Identity.UpdateUserPreferences.
+message UpdateUserPreferencesRequest {
+  // Required. Preferences payload containing fields to update.
+  UserPreferences user_preferences = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask specifying which fields (`locale`, `hour_cycle`, `week_starts_on`) to update.
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // Request message for Identity.ChangeEmail.

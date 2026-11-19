@@ -502,3 +502,164 @@ func TestCoordinator_DeleteAccount(t *testing.T) {
 		})
 	}
 }
+
+func TestCoordinator_UserPreferences(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("GetUserPreferences", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			userID      identity.UserID
+			setup       func(idMock *IdentityServiceMock)
+			want        identity.UserPreferences
+			expectedErr bool
+			errMsg      string
+		}{
+			{
+				name:        "missing user id",
+				userID:      "",
+				expectedErr: true,
+				errMsg:      "user id is required",
+			},
+			{
+				name:   "service error",
+				userID: "usr_123",
+				setup: func(idMock *IdentityServiceMock) {
+					idMock.GetUserPreferencesFunc = func(ctx context.Context, userID identity.UserID) (*identity.UserPreferences, error) {
+						return nil, errors.New("load failed")
+					}
+				},
+				expectedErr: true,
+				errMsg:      "load failed",
+			},
+			{
+				name:   "success",
+				userID: "usr_123",
+				setup: func(idMock *IdentityServiceMock) {
+					idMock.GetUserPreferencesFunc = func(ctx context.Context, userID identity.UserID) (*identity.UserPreferences, error) {
+						return &identity.UserPreferences{
+							Locale:       "es-ES",
+							HourCycle:    identity.HourCycle24,
+							WeekStartsOn: 1,
+						}, nil
+					}
+				},
+				want: identity.UserPreferences{
+					Locale:       "es-ES",
+					HourCycle:    identity.HourCycle24,
+					WeekStartsOn: 1,
+				},
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				idMock := &IdentityServiceMock{}
+				if tc.setup != nil {
+					tc.setup(idMock)
+				}
+				c := NewCoordinator(Dependencies{IdentityService: idMock})
+				got, err := c.GetUserPreferences(ctx, tc.userID)
+				if tc.expectedErr {
+					if err == nil {
+						t.Fatalf("expected error containing %q, got nil", tc.errMsg)
+					}
+					if tc.errMsg != "" && !strings.Contains(err.Error(), tc.errMsg) {
+						t.Fatalf("expected error containing %q, got %v", tc.errMsg, err)
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if *got != tc.want {
+					t.Fatalf("got %+v, want %+v", *got, tc.want)
+				}
+			})
+		}
+	})
+
+	t.Run("UpdateUserPreferences", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			req         *UpdateUserPreferencesRequest
+			setup       func(idMock *IdentityServiceMock)
+			want        identity.UserPreferences
+			expectedErr bool
+			errMsg      string
+		}{
+			{
+				name:        "nil request",
+				req:         nil,
+				expectedErr: true,
+				errMsg:      "request is required",
+			},
+			{
+				name: "missing user id",
+				req: &UpdateUserPreferencesRequest{
+					Preferences: identity.DefaultUserPreferences(),
+				},
+				expectedErr: true,
+				errMsg:      "user id is required",
+			},
+			{
+				name: "service error",
+				req: &UpdateUserPreferencesRequest{
+					UserID:      "usr_123",
+					Preferences: identity.UserPreferences{Locale: "bad"},
+					UpdateMask:  []string{"locale"},
+				},
+				setup: func(idMock *IdentityServiceMock) {
+					idMock.UpdateUserPreferencesFunc = func(ctx context.Context, userID identity.UserID, req identity.UpdateUserPreferencesRequest) (*identity.UserPreferences, error) {
+						return nil, errors.New("invalid locale")
+					}
+				},
+				expectedErr: true,
+				errMsg:      "invalid locale",
+			},
+			{
+				name: "success",
+				req: &UpdateUserPreferencesRequest{
+					UserID:      "usr_123",
+					Preferences: identity.UserPreferences{Locale: "es-419", HourCycle: identity.HourCycle24, WeekStartsOn: 1},
+					UpdateMask:  []string{"locale", "hour_cycle", "week_starts_on"},
+				},
+				setup: func(idMock *IdentityServiceMock) {
+					idMock.UpdateUserPreferencesFunc = func(ctx context.Context, userID identity.UserID, req identity.UpdateUserPreferencesRequest) (*identity.UserPreferences, error) {
+						if userID != "usr_123" || len(req.Paths) != 3 {
+							t.Fatalf("unexpected args: userID=%q paths=%v", userID, req.Paths)
+						}
+						return &req.Preferences, nil
+					}
+				},
+				want: identity.UserPreferences{Locale: "es-419", HourCycle: identity.HourCycle24, WeekStartsOn: 1},
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				idMock := &IdentityServiceMock{}
+				if tc.setup != nil {
+					tc.setup(idMock)
+				}
+				c := NewCoordinator(Dependencies{IdentityService: idMock})
+				got, err := c.UpdateUserPreferences(ctx, tc.req)
+				if tc.expectedErr {
+					if err == nil {
+						t.Fatalf("expected error containing %q, got nil", tc.errMsg)
+					}
+					if tc.errMsg != "" && !strings.Contains(err.Error(), tc.errMsg) {
+						t.Fatalf("expected error containing %q, got %v", tc.errMsg, err)
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if *got != tc.want {
+					t.Fatalf("got %+v, want %+v", *got, tc.want)
+				}
+			})
+		}
+	})
+}

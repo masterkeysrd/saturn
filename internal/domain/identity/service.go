@@ -77,6 +77,7 @@ type Dependencies struct {
 	DeviceVerifier     DeviceVerifier
 	PasswordResetStore PasswordResetStore
 	APIKeyStore        APIKeyStore
+	Preferences        UserPreferencesClient
 }
 
 // Hasher is the password hashing interface used for authentication.
@@ -1875,6 +1876,62 @@ func (s *Service) DeleteAPIKey(ctx context.Context, params DeleteAPIKeyParams) e
 	s.recordAPIKeySecurityEvent(ctx, params.UserID, SecurityEventAPIKeyRevoked, params.IPAddress, params.UserAgent, time.Now().UTC())
 
 	return nil
+}
+
+// GetUserPreferences retrieves user-scoped UI language and regional formatting preferences.
+func (s *Service) GetUserPreferences(ctx context.Context, userID UserID) (*UserPreferences, error) {
+	const op errors.Op = "domain/identity.GetUserPreferences"
+
+	if !userID.IsValid() {
+		return nil, errors.E(op, errors.Invalid, InvalidUserID, "user id is required")
+	}
+
+	entry, err := s.deps.Preferences.GetOrDefault(ctx, string(userID), DefaultUserPreferences())
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	defaults := DefaultUserPreferences()
+	if entry.Value.Locale == "" {
+		entry.Value.Locale = defaults.Locale
+	}
+	if entry.Value.HourCycle == "" {
+		entry.Value.HourCycle = defaults.HourCycle
+	}
+
+	return &entry.Value, nil
+}
+
+// UpdateUserPreferences updates user-scoped UI language and regional formatting preferences.
+func (s *Service) UpdateUserPreferences(ctx context.Context, userID UserID, req UpdateUserPreferencesRequest) (*UserPreferences, error) {
+	const op errors.Op = "domain/identity.UpdateUserPreferences"
+
+	if !userID.IsValid() {
+		return nil, errors.E(op, errors.Invalid, InvalidUserID, "user id is required")
+	}
+
+	entry, err := s.deps.Preferences.GetOrDefault(ctx, string(userID), DefaultUserPreferences())
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	defaults := DefaultUserPreferences()
+	if entry.Value.Locale == "" {
+		entry.Value.Locale = defaults.Locale
+	}
+	if entry.Value.HourCycle == "" {
+		entry.Value.HourCycle = defaults.HourCycle
+	}
+
+	if err := entry.Value.ApplyPatch(&req.Preferences, req.Paths); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	if err := s.deps.Preferences.Save(ctx, entry); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	return &entry.Value, nil
 }
 
 func (s *Service) recordAPIKeySecurityEvent(ctx context.Context, userID UserID, eventType SecurityEventType, ipAddress, userAgent string, now time.Time) {

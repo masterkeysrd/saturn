@@ -114,6 +114,12 @@ type CoordinatorMock struct {
 	// UpdateProfileFunc mocks the UpdateProfile method.
 	UpdateProfileFunc func(ctx context.Context, req *UpdateProfileRequest) (*identity.User, error)
 
+	// GetUserPreferencesFunc mocks the GetUserPreferences method.
+	GetUserPreferencesFunc func(ctx context.Context, userID identity.UserID) (*identity.UserPreferences, error)
+
+	// UpdateUserPreferencesFunc mocks the UpdateUserPreferences method.
+	UpdateUserPreferencesFunc func(ctx context.Context, req *UpdateUserPreferencesRequest) (*identity.UserPreferences, error)
+
 	// ChangeEmailFunc mocks the ChangeEmail method.
 	ChangeEmailFunc func(ctx context.Context, req *ChangeEmailRequest) (*identity.User, error)
 
@@ -265,6 +271,14 @@ type CoordinatorMock struct {
 			Ctx context.Context
 			Req *UpdateProfileRequest
 		}
+		GetUserPreferences []struct {
+			Ctx    context.Context
+			UserID identity.UserID
+		}
+		UpdateUserPreferences []struct {
+			Ctx context.Context
+			Req *UpdateUserPreferencesRequest
+		}
 		ChangeEmail []struct {
 			Ctx context.Context
 			Req *ChangeEmailRequest
@@ -326,6 +340,8 @@ type CoordinatorMock struct {
 	lockCompleteResetPassword sync.RWMutex
 	lockChangePassword        sync.RWMutex
 	lockUpdateProfile         sync.RWMutex
+	lockGetUserPreferences    sync.RWMutex
+	lockUpdateUserPreferences sync.RWMutex
 	lockChangeEmail           sync.RWMutex
 	lockDeleteAccount         sync.RWMutex
 	lockCreateAPIKey          sync.RWMutex
@@ -1199,6 +1215,60 @@ func (mock *CoordinatorMock) UpdateProfileCalls() []struct {
 	return mock.calls.UpdateProfile
 }
 
+// GetUserPreferences calls GetUserPreferencesFunc.
+func (mock *CoordinatorMock) GetUserPreferences(ctx context.Context, userID identity.UserID) (*identity.UserPreferences, error) {
+	if mock.GetUserPreferencesFunc == nil {
+		panic("CoordinatorMock.GetUserPreferencesFunc: method is nil but Coordinator.GetUserPreferences was just called")
+	}
+	mock.lockGetUserPreferences.Lock()
+	mock.calls.GetUserPreferences = append(mock.calls.GetUserPreferences, struct {
+		Ctx    context.Context
+		UserID identity.UserID
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+	})
+	mock.lockGetUserPreferences.Unlock()
+	return mock.GetUserPreferencesFunc(ctx, userID)
+}
+
+// GetUserPreferencesCalls returns all calls made to GetUserPreferences.
+func (mock *CoordinatorMock) GetUserPreferencesCalls() []struct {
+	Ctx    context.Context
+	UserID identity.UserID
+} {
+	mock.lockGetUserPreferences.RLock()
+	defer mock.lockGetUserPreferences.RUnlock()
+	return mock.calls.GetUserPreferences
+}
+
+// UpdateUserPreferences calls UpdateUserPreferencesFunc.
+func (mock *CoordinatorMock) UpdateUserPreferences(ctx context.Context, req *UpdateUserPreferencesRequest) (*identity.UserPreferences, error) {
+	if mock.UpdateUserPreferencesFunc == nil {
+		panic("CoordinatorMock.UpdateUserPreferencesFunc: method is nil but Coordinator.UpdateUserPreferences was just called")
+	}
+	mock.lockUpdateUserPreferences.Lock()
+	mock.calls.UpdateUserPreferences = append(mock.calls.UpdateUserPreferences, struct {
+		Ctx context.Context
+		Req *UpdateUserPreferencesRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockUpdateUserPreferences.Unlock()
+	return mock.UpdateUserPreferencesFunc(ctx, req)
+}
+
+// UpdateUserPreferencesCalls returns all calls made to UpdateUserPreferences.
+func (mock *CoordinatorMock) UpdateUserPreferencesCalls() []struct {
+	Ctx context.Context
+	Req *UpdateUserPreferencesRequest
+} {
+	mock.lockUpdateUserPreferences.RLock()
+	defer mock.lockUpdateUserPreferences.RUnlock()
+	return mock.calls.UpdateUserPreferences
+}
+
 // ChangeEmail calls ChangeEmailFunc.
 func (mock *CoordinatorMock) ChangeEmail(ctx context.Context, req *ChangeEmailRequest) (*identity.User, error) {
 	if mock.ChangeEmailFunc == nil {
@@ -1822,6 +1892,12 @@ type IdentityServiceMock struct {
 	// UpdateProfileFunc mocks the UpdateProfile method.
 	UpdateProfileFunc func(ctx context.Context, params identity.UpdateProfileParams) (*identity.User, error)
 
+	// GetUserPreferencesFunc mocks the GetUserPreferences method.
+	GetUserPreferencesFunc func(ctx context.Context, userID identity.UserID) (*identity.UserPreferences, error)
+
+	// UpdateUserPreferencesFunc mocks the UpdateUserPreferences method.
+	UpdateUserPreferencesFunc func(ctx context.Context, userID identity.UserID, req identity.UpdateUserPreferencesRequest) (*identity.UserPreferences, error)
+
 	// ChangeEmailFunc mocks the ChangeEmail method.
 	ChangeEmailFunc func(ctx context.Context, params identity.ChangeEmailParams) (*identity.User, error)
 
@@ -2021,6 +2097,15 @@ type IdentityServiceMock struct {
 			Ctx    context.Context
 			Params identity.UpdateProfileParams
 		}
+		GetUserPreferences []struct {
+			Ctx    context.Context
+			UserID identity.UserID
+		}
+		UpdateUserPreferences []struct {
+			Ctx    context.Context
+			UserID identity.UserID
+			Req    identity.UpdateUserPreferencesRequest
+		}
 		ChangeEmail []struct {
 			Ctx    context.Context
 			Params identity.ChangeEmailParams
@@ -2094,6 +2179,8 @@ type IdentityServiceMock struct {
 	lockCompletePasswordReset            sync.RWMutex
 	lockChangePassword                   sync.RWMutex
 	lockUpdateProfile                    sync.RWMutex
+	lockGetUserPreferences               sync.RWMutex
+	lockUpdateUserPreferences            sync.RWMutex
 	lockChangeEmail                      sync.RWMutex
 	lockDeleteAccount                    sync.RWMutex
 	lockCreateAPIKey                     sync.RWMutex
@@ -3274,6 +3361,63 @@ func (mock *IdentityServiceMock) UpdateProfileCalls() []struct {
 	mock.lockUpdateProfile.RLock()
 	defer mock.lockUpdateProfile.RUnlock()
 	return mock.calls.UpdateProfile
+}
+
+// GetUserPreferences calls GetUserPreferencesFunc.
+func (mock *IdentityServiceMock) GetUserPreferences(ctx context.Context, userID identity.UserID) (*identity.UserPreferences, error) {
+	if mock.GetUserPreferencesFunc == nil {
+		panic("IdentityServiceMock.GetUserPreferencesFunc: method is nil but IdentityService.GetUserPreferences was just called")
+	}
+	mock.lockGetUserPreferences.Lock()
+	mock.calls.GetUserPreferences = append(mock.calls.GetUserPreferences, struct {
+		Ctx    context.Context
+		UserID identity.UserID
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+	})
+	mock.lockGetUserPreferences.Unlock()
+	return mock.GetUserPreferencesFunc(ctx, userID)
+}
+
+// GetUserPreferencesCalls returns all calls made to GetUserPreferences.
+func (mock *IdentityServiceMock) GetUserPreferencesCalls() []struct {
+	Ctx    context.Context
+	UserID identity.UserID
+} {
+	mock.lockGetUserPreferences.RLock()
+	defer mock.lockGetUserPreferences.RUnlock()
+	return mock.calls.GetUserPreferences
+}
+
+// UpdateUserPreferences calls UpdateUserPreferencesFunc.
+func (mock *IdentityServiceMock) UpdateUserPreferences(ctx context.Context, userID identity.UserID, req identity.UpdateUserPreferencesRequest) (*identity.UserPreferences, error) {
+	if mock.UpdateUserPreferencesFunc == nil {
+		panic("IdentityServiceMock.UpdateUserPreferencesFunc: method is nil but IdentityService.UpdateUserPreferences was just called")
+	}
+	mock.lockUpdateUserPreferences.Lock()
+	mock.calls.UpdateUserPreferences = append(mock.calls.UpdateUserPreferences, struct {
+		Ctx    context.Context
+		UserID identity.UserID
+		Req    identity.UpdateUserPreferencesRequest
+	}{
+		Ctx:    ctx,
+		UserID: userID,
+		Req:    req,
+	})
+	mock.lockUpdateUserPreferences.Unlock()
+	return mock.UpdateUserPreferencesFunc(ctx, userID, req)
+}
+
+// UpdateUserPreferencesCalls returns all calls made to UpdateUserPreferences.
+func (mock *IdentityServiceMock) UpdateUserPreferencesCalls() []struct {
+	Ctx    context.Context
+	UserID identity.UserID
+	Req    identity.UpdateUserPreferencesRequest
+} {
+	mock.lockUpdateUserPreferences.RLock()
+	defer mock.lockUpdateUserPreferences.RUnlock()
+	return mock.calls.UpdateUserPreferences
 }
 
 // ChangeEmail calls ChangeEmailFunc.

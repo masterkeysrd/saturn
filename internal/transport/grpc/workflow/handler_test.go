@@ -10,6 +10,7 @@ import (
 	workflowapp "github.com/masterkeysrd/saturn/internal/application/workflow"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -78,7 +79,7 @@ type stubAggregator struct {
 	getFlowFn      func(ctx context.Context, id string) (*workflow.Flow, error)
 	listFlowRunsFn func(ctx context.Context, filter workflow.ListFlowRunsFilter) (*workflowaggregator.FlowRunListResult, error)
 	getFlowRunFn   func(ctx context.Context, id string) (*workflowaggregator.FlowRunView, error)
-	catalogFn      func() workflow.Catalog
+	catalogFn      func(locale string) workflow.Catalog
 }
 
 func (s *stubAggregator) ListFlows(ctx context.Context, filter workflow.ListFlowsFilter) ([]*workflow.Flow, error) {
@@ -97,8 +98,8 @@ func (s *stubAggregator) GetFlowRun(ctx context.Context, id string) (*workflowag
 	return s.getFlowRunFn(ctx, id)
 }
 
-func (s *stubAggregator) GetCatalog() workflow.Catalog {
-	return s.catalogFn()
+func (s *stubAggregator) GetCatalog(locale string) workflow.Catalog {
+	return s.catalogFn(locale)
 }
 
 func TestHandler_AllRPCs(t *testing.T) {
@@ -281,11 +282,13 @@ func TestHandler_AllRPCs(t *testing.T) {
 			getFlowRunFn: func(_ context.Context, id string) (*workflowaggregator.FlowRunView, error) {
 				return &workflowaggregator.FlowRunView{FlowRun: &workflow.FlowRun{ID: id}, FlowName: new("Flow A")}, nil
 			},
-			catalogFn: func() workflow.Catalog {
-				return workflow.Catalog{
+			catalogFn: func(locale string) workflow.Catalog {
+				return workflow.LocalizeCatalog(workflow.Catalog{
 					TriggerTopics: []workflow.TriggerTopicDescriptor{
 						{
-							Topic: "mail.message.received",
+							Topic:       "mail.message.received",
+							DisplayName: "Message Received",
+							Description: "Published on incremental delta syncs for newly ingested inbound messages.",
 							PayloadSchema: map[string]any{
 								"type":     "object",
 								"required": []string{"message"},
@@ -293,7 +296,7 @@ func TestHandler_AllRPCs(t *testing.T) {
 						},
 					},
 					CelHelpers: workflow.BuiltinCelHelpers(),
-				}
+				}, locale)
 			},
 		})
 
@@ -310,6 +313,78 @@ func TestHandler_AllRPCs(t *testing.T) {
 		catRes, err := h.GetCatalog(t.Context(), &workflowv1.GetCatalogRequest{})
 		if err != nil || len(catRes.TriggerTopics) != 1 || len(catRes.CelHelpers) == 0 {
 			t.Fatalf("GetCatalog = (%+v, %v)", catRes, err)
+		}
+	})
+
+	t.Run("GetCatalog_Localization", func(t *testing.T) {
+		reg := workflow.NewRegistry()
+		tests := []struct {
+			name             string
+			ctx              context.Context
+			req              *workflowv1.GetCatalogRequest
+			wantLocalePassed string
+			wantFilterName   string
+		}{
+			{
+				name:             "explicit locale es-ES",
+				ctx:              t.Context(),
+				req:              &workflowv1.GetCatalogRequest{Locale: new("es-ES")},
+				wantLocalePassed: "es-ES",
+				wantFilterName:   "Filtrar",
+			},
+			{
+				name:             "accept-language metadata fallback",
+				ctx:              metadata.NewIncomingContext(t.Context(), metadata.Pairs("accept-language", "es-419,es;q=0.9")),
+				req:              &workflowv1.GetCatalogRequest{},
+				wantLocalePassed: "es-419,es;q=0.9",
+				wantFilterName:   "Filtrar",
+			},
+			{
+				name:             "grpcgateway-accept-language metadata fallback",
+				ctx:              metadata.NewIncomingContext(t.Context(), metadata.Pairs("grpcgateway-accept-language", "es-DO")),
+				req:              &workflowv1.GetCatalogRequest{},
+				wantLocalePassed: "es-DO",
+				wantFilterName:   "Filtrar",
+			},
+			{
+				name:             "default english",
+				ctx:              t.Context(),
+				req:              &workflowv1.GetCatalogRequest{},
+				wantLocalePassed: "",
+				wantFilterName:   "Filter",
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				var gotLocale string
+				h := NewHandler(&stubCoordinator{}, &stubAggregator{
+					catalogFn: func(locale string) workflow.Catalog {
+						gotLocale = locale
+						return workflow.LocalizeCatalog(reg.Catalog(), locale)
+					},
+				})
+
+				cat, err := h.GetCatalog(tc.ctx, tc.req)
+				if err != nil {
+					t.Fatalf("GetCatalog error = %v", err)
+				}
+				if gotLocale != tc.wantLocalePassed {
+					t.Errorf("passed locale = %q, want %q", gotLocale, tc.wantLocalePassed)
+				}
+				found := false
+				for _, st := range cat.Steps {
+					if st.Type == workflow.StepFilter {
+						found = true
+						if st.DisplayName != tc.wantFilterName {
+							t.Errorf("StepFilter DisplayName = %q, want %q", st.DisplayName, tc.wantFilterName)
+						}
+					}
+				}
+				if !found {
+					t.Fatalf("StepFilter not found in response")
+				}
+			})
 		}
 	})
 }

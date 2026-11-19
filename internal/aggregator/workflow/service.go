@@ -314,7 +314,7 @@ func (s *Service) GetFlowRun(ctx context.Context, id string) (*FlowRunView, erro
 	return view, nil
 }
 
-// GetCatalog returns all registered trigger topics, steps, loaders, and CEL helpers.
-func (s *Service) GetCatalog() workflow.Catalog {
-	return s.workflow.Catalog()
+// GetCatalog returns all registered trigger topics, steps, loaders, and CEL helpers localized for locale.
+func (s *Service) GetCatalog(locale string) workflow.Catalog {
+	return workflow.LocalizeCatalog(s.workflow.Catalog(), locale)
 }

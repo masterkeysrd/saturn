@@ -637,7 +637,10 @@ message GetFlowRunRequest {
 }
 
 // Request message for WorkflowService.GetCatalog.
-message GetCatalogRequest {}
+message GetCatalogRequest {
+  // Optional. BCP 47 locale tag (e.g. "en-US", "es-ES") used to localize catalog display names and descriptions.
+  optional string locale = 1 [(google.api.field_behavior) = OPTIONAL];
+}
 
 // Catalog returns all registered workflow capabilities for authoring and AI generation.
 message Catalog {

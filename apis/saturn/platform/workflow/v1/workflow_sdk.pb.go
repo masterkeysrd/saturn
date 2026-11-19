@@ -264,6 +264,9 @@ func (c *Client) GetCatalog(ctx context.Context, req *GetCatalogRequest) (*Catal
 	var resp Catalog
 	path := "/api/v1/platform/workflows/catalog"
 	var query []string
+	if req.GetLocale() != "" {
+		query = append(query, fmt.Sprintf("locale=%s", req.GetLocale()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}

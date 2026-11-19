@@ -640,6 +640,60 @@ func (h *Handler) UpdateProfile(ctx context.Context, req *identityv1.UpdateProfi
 	}, nil
 }
 
+// GetUserPreferences retrieves regional and UI language preferences for the authenticated user.
+func (h *Handler) GetUserPreferences(ctx context.Context, _ *identityv1.GetUserPreferencesRequest) (*identityv1.UserPreferences, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	prefs, err := h.IAM.Coordinator.GetUserPreferences(ctx, identity.UserID(principal.Subject))
+	if err != nil {
+		return nil, err
+	}
+
+	return toProtoUserPreferences(prefs), nil
+}
+
+// UpdateUserPreferences updates regional and UI language preferences for the authenticated user.
+func (h *Handler) UpdateUserPreferences(ctx context.Context, req *identityv1.UpdateUserPreferencesRequest) (*identityv1.UserPreferences, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
+	}
+
+	pbPrefs := req.GetUserPreferences()
+	if pbPrefs == nil {
+		return nil, errors.E(errors.Invalid, "user_preferences is required")
+	}
+
+	prefs, err := h.IAM.Coordinator.UpdateUserPreferences(ctx, &iam.UpdateUserPreferencesRequest{
+		UserID: identity.UserID(principal.Subject),
+		Preferences: identity.UserPreferences{
+			Locale:       pbPrefs.GetLocale(),
+			HourCycle:    pbPrefs.GetHourCycle(),
+			WeekStartsOn: int(pbPrefs.GetWeekStartsOn()),
+		},
+		UpdateMask: req.GetUpdateMask().GetPaths(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return toProtoUserPreferences(prefs), nil
+}
+
+func toProtoUserPreferences(p *identity.UserPreferences) *identityv1.UserPreferences {
+	if p == nil {
+		return nil
+	}
+	return &identityv1.UserPreferences{
+		Locale:       p.Locale,
+		HourCycle:    p.HourCycle,
+		WeekStartsOn: int32(p.WeekStartsOn),
+	}
+}
+
 // ChangeEmail updates the primary email for the authenticated user, requiring re-authentication.
 func (h *Handler) ChangeEmail(ctx context.Context, req *identityv1.ChangeEmailRequest) (*identityv1.User, error) {
 	principal, ok := auth.PrincipalFromContext(ctx)

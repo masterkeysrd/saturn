@@ -9,6 +9,7 @@ import (
 	workflowapp "github.com/masterkeysrd/saturn/internal/application/workflow"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -18,7 +19,7 @@ type Aggregator interface {
 	GetFlow(ctx context.Context, idOrSystemKey string) (*workflow.Flow, error)
 	ListFlowRuns(ctx context.Context, filter workflow.ListFlowRunsFilter) (*workflowaggregator.FlowRunListResult, error)
 	GetFlowRun(ctx context.Context, id string) (*workflowaggregator.FlowRunView, error)
-	GetCatalog() workflow.Catalog
+	GetCatalog(locale string) workflow.Catalog
 }
 
 // Handler adapts gRPC WorkflowService RPCs to workflowapp.Coordinator and workflowaggregator.Service.
@@ -233,6 +234,28 @@ func (h *Handler) GetFlowRun(ctx context.Context, req *workflowv1.GetFlowRunRequ
 }
 
 // GetCatalog returns all registered trigger topics, steps, data loaders, and CEL helpers.
-func (h *Handler) GetCatalog(_ context.Context, _ *workflowv1.GetCatalogRequest) (*workflowv1.Catalog, error) {
-	return toProtoCatalog(h.aggregator.GetCatalog())
+func (h *Handler) GetCatalog(ctx context.Context, req *workflowv1.GetCatalogRequest) (*workflowv1.Catalog, error) {
+	locale := ""
+	if req != nil {
+		locale = strings.TrimSpace(req.GetLocale())
+	}
+	if locale == "" {
+		locale = extractAcceptLanguage(ctx)
+	}
+	return toProtoCatalog(h.aggregator.GetCatalog(locale))
+}
+
+func extractAcceptLanguage(ctx context.Context) string {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return ""
+	}
+	for _, key := range []string{"accept-language", "grpcgateway-accept-language"} {
+		for _, val := range md.Get(key) {
+			if trimmed := strings.TrimSpace(val); trimmed != "" {
+				return trimmed
+			}
+		}
+	}
+	return ""
 }

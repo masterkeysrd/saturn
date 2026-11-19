@@ -1,0 +1,178 @@
+{
+  "trigger_topics": {
+    "calendar.event.created": {
+      "display_name": "Evento de calendario creado",
+      "description": "Se publica cuando se crea un evento de calendario."
+    },
+    "calendar.event.updated": {
+      "display_name": "Evento de calendario actualizado",
+      "description": "Se publica cuando se actualiza un evento de calendario."
+    },
+    "finance.inbox_item.approved": {
+      "display_name": "Elemento de bandeja financiera aprobado",
+      "description": "Se publica cuando un elemento de la bandeja financiera se aprueba en el libro mayor."
+    },
+    "finance.inbox_item.created": {
+      "display_name": "Elemento de bandeja financiera creado",
+      "description": "Se publica cuando se registra un nuevo elemento pendiente en la bandeja financiera."
+    },
+    "finance.scheduled_transaction.created": {
+      "display_name": "Transacción programada creada",
+      "description": "Se publica cuando se crea una transacción programada pendiente."
+    },
+    "finance.scheduled_transaction.paid": {
+      "display_name": "Transacción programada pagada",
+      "description": "Se publica cuando una transacción programada pasa a estado pagado."
+    },
+    "finance.scheduled_transaction.updated": {
+      "display_name": "Transacción programada actualizada",
+      "description": "Se publica cuando se modifica una transacción programada."
+    },
+    "finance.transaction.created": {
+      "display_name": "Transacción creada",
+      "description": "Se publica cuando se crea una transacción en el libro mayor."
+    },
+    "mail.message.received": {
+      "display_name": "Mensaje recibido",
+      "description": "Se publica en sincronizaciones incrementales cuando ingresan nuevos correos entrantes."
+    }
+  },
+  "steps": {
+    "ai.agent_run": {
+      "display_name": "Ejecutar agente de IA",
+      "description": "Ejecuta un agente de IA del espacio de trabajo de forma autónoma en una ejecución multipaso con herramientas MCP."
+    },
+    "calendar.upsert_event": {
+      "display_name": "Crear o actualizar evento de calendario",
+      "description": "Crea o actualiza de forma idempotente un evento de calendario identificado mediante un iCalUID determinista derivado de external_ref."
+    },
+    "document.extract_text": {
+      "display_name": "Extraer texto de documento",
+      "description": "Extrae texto plano de archivos PDF, CSV o texto con descifrado opcional mediante contraseña."
+    },
+    "filter": {
+      "display_name": "Filtrar",
+      "description": "Evalúa una condición booleana CEL; detiene la ejecución limpiamente con estado 'filtered' si es falsa."
+    },
+    "finance.create_inbox_item": {
+      "display_name": "Crear elemento en bandeja financiera",
+      "description": "Registra con idempotencia un recibo, factura o notificación bancaria extraída en la cola de la bandeja financiera."
+    },
+    "finance.import_statement_draft": {
+      "display_name": "Importar borradores de estado de cuenta",
+      "description": "Valida cálculos contables multimoneda y signos de pasivo de tarjetas de crédito, resuelve cuentas y guarda borradores de finance.Statement."
+    },
+    "for_each": {
+      "display_name": "Para cada elemento",
+      "description": "Itera secuencialmente sobre una lista CEL, enlazando loop.<alias>.item y loop.<alias>.index."
+    },
+    "llm.generate": {
+      "display_name": "Generar con LLM",
+      "description": "Envía un prompt a un modelo o rol semántico configurado, con esquema JSON estructurado y documentos adjuntos opcionales."
+    },
+    "mail.create_draft": {
+      "display_name": "Crear borrador de correo",
+      "description": "Crea un borrador de correo electrónico localmente y lo sincroniza con el proveedor de correo conectado."
+    },
+    "mail.modify_labels": {
+      "display_name": "Modificar etiquetas de correo",
+      "description": "Agrega o quita etiquetas/carpetas de buzón o archiva un hilo de correo electrónico."
+    },
+    "output": {
+      "display_name": "Salida",
+      "description": "Finaliza la ruta actual y establece FlowRun.output para invocaciones síncronas."
+    },
+    "stop": {
+      "display_name": "Detener",
+      "description": "Finaliza limpiamente la rama o ejecución actual con estado 'stopped'."
+    },
+    "switch": {
+      "display_name": "Selector (Switch)",
+      "description": "Evalúa condiciones CEL en orden y ejecuta la primera rama coincidente antes de continuar."
+    },
+    "transform": {
+      "display_name": "Transformar",
+      "description": "Evalúa expresiones CEL arbitrarias en las entradas y enlaza el objeto resultante a steps.<id>."
+    }
+  },
+  "loaders": {
+    "calendar.calendars": {
+      "display_name": "Calendarios",
+      "description": "Lista los calendarios del espacio de trabajo, opcionalmente filtrados solo a calendarios editables."
+    },
+    "calendar.event": {
+      "display_name": "Obtener evento de calendario",
+      "description": "Obtiene un único evento de calendario por ID o external_ref determinista."
+    },
+    "calendar.events": {
+      "display_name": "Eventos de calendario",
+      "description": "Consulta ocurrencias de calendario expandidas en una ventana de tiempo, opcionalmente filtradas por calendar_id o búsqueda."
+    },
+    "finance.account": {
+      "display_name": "Resolver cuenta financiera",
+      "description": "Resuelve una cuenta por ID exacto en el espacio de trabajo o, en su defecto, por nombre, últimos cuatro dígitos y moneda."
+    },
+    "finance.accounts": {
+      "display_name": "Cuentas financieras",
+      "description": "Lista las cuentas financieras del espacio de trabajo, opcionalmente filtradas por moneda o tipo."
+    },
+    "finance.borrowings": {
+      "display_name": "Préstamos y créditos",
+      "description": "Lista acuerdos de préstamo o deuda del espacio de trabajo, opcionalmente filtrados por estado."
+    },
+    "finance.budget": {
+      "display_name": "Resolver presupuesto financiero",
+      "description": "Resuelve un presupuesto por ID primero y luego por nombre sin distinguir mayúsculas o minúsculas."
+    },
+    "finance.budgets": {
+      "display_name": "Presupuestos financieros",
+      "description": "Lista los presupuestos del espacio de trabajo, opcionalmente filtrados por estado."
+    },
+    "finance.recurring_templates": {
+      "display_name": "Plantillas recurrentes",
+      "description": "Lista plantillas de transacciones recurrentes, opcionalmente filtradas por estado."
+    },
+    "finance.scheduled_payments": {
+      "display_name": "Pagos programados",
+      "description": "Lista transacciones programadas, opcionalmente filtradas por estado, tipo o ventana de vencimiento."
+    },
+    "finance.transactions": {
+      "display_name": "Transacciones financieras",
+      "description": "Consulta transacciones recientes del libro mayor con filtros opcionales de tolerancia de monto, ventana de fechas, cuenta y búsqueda (máximo 100)."
+    },
+    "mail.mailboxes": {
+      "display_name": "Buzones y etiquetas",
+      "description": "Lista carpetas y etiquetas de correo, opcionalmente filtradas por connected_account_id."
+    },
+    "mail.message": {
+      "display_name": "Obtener mensaje de correo",
+      "description": "Carga los metadatos del correo, el cuerpo en texto plano/HTML en caché y las referencias de adjuntos mail://."
+    }
+  },
+  "cel_helpers": {
+    "addDays": {
+      "description": "Suma días con signo a una fecha YYYY-MM-DD o marca de tiempo RFC3339."
+    },
+    "coalesce": {
+      "description": "Devuelve el primer argumento no nulo."
+    },
+    "formatMoney": {
+      "description": "Da formato de texto legible a centavos y un código de moneda ISO."
+    },
+    "fromCents": {
+      "description": "Convierte centavos enteros en un número decimal de moneda."
+    },
+    "inSpaceTz": {
+      "description": "Interpreta una marca de tiempo RFC3339 o fecha YYYY-MM-DD en la zona horaria del espacio de trabajo."
+    },
+    "localTime": {
+      "description": "Combina una fecha o marca de tiempo con HH:MM en la zona horaria del espacio de trabajo y devuelve RFC3339."
+    },
+    "toCents": {
+      "description": "Convierte un monto decimal de moneda en unidades menores redondeadas (centavos)."
+    },
+    "toJSON": {
+      "description": "Serializa cualquier valor a JSON determinista."
+    }
+  }
+}

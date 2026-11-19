@@ -135,13 +135,14 @@ func Execute() error {
 				return fmt.Errorf("create password hasher: %w", err)
 			}
 			sessionStore := identitystorage.NewSessionStore(dbClient)
+			platformSettingsStore := settings.NewPostgresStore(dbClient)
 			identityService := identity.NewService(identity.Dependencies{
 				UserStore:       userStore,
 				CredentialStore: credentialStore,
 				SessionStore:    sessionStore,
 				Hasher:          passwordHasher,
+				Preferences:     settings.Bind(platformSettingsStore, identity.UserPreferencesKey),
 			})
-			platformSettingsStore := settings.NewPostgresStore(dbClient)
 			spaceStore := spacestorage.NewSpaceStore(dbClient)
 			memberStore := spacestorage.NewMemberStore(dbClient)
 			apiKeyGrantStore := spacestorage.NewAPIKeyGrantStore(dbClient)

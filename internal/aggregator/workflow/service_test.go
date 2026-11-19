@@ -242,9 +242,37 @@ func TestService_FlowRunsAndCatalog(t *testing.T) {
 				CatalogFunc: reg.Catalog,
 			},
 		})
-		cat := svc.GetCatalog()
-		if len(cat.Steps) == 0 || len(cat.CelHelpers) == 0 {
-			t.Errorf("expected built-in steps and CEL helpers in catalog, got %+v", cat)
+
+		tests := []struct {
+			name       string
+			locale     string
+			wantFilter string
+		}{
+			{name: "English default", locale: "en-US", wantFilter: "Filter"},
+			{name: "Spanish es-ES", locale: "es-ES", wantFilter: "Filtrar"},
+			{name: "Spanish es-DO", locale: "es-DO", wantFilter: "Filtrar"},
+			{name: "Unknown locale falls back to English", locale: "fr-FR", wantFilter: "Filter"},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				cat := svc.GetCatalog(tc.locale)
+				if len(cat.Steps) == 0 || len(cat.CelHelpers) == 0 {
+					t.Fatalf("expected built-in steps and CEL helpers in catalog, got %+v", cat)
+				}
+				found := false
+				for _, st := range cat.Steps {
+					if st.Type == workflow.StepFilter {
+						found = true
+						if st.DisplayName != tc.wantFilter {
+							t.Errorf("StepFilter DisplayName = %q, want %q", st.DisplayName, tc.wantFilter)
+						}
+					}
+				}
+				if !found {
+					t.Fatalf("StepFilter not found in catalog")
+				}
+			})
 		}
 	})
 }
