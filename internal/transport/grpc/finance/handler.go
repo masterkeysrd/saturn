@@ -844,6 +844,8 @@ func (h *Handler) GetTransaction(ctx context.Context, req *financev1.GetTransact
 }
 
 func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTransactionsRequest) (*financev1.ListTransactionsResponse, error) {
+	const op errors.Op = "grpc/finance.ListTransactions"
+
 	rCtx, err := h.Coordinator.ResolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -895,6 +897,20 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 		borrowingID = new(finance.BorrowingID(*req.BorrowingId))
 	}
 
+	var startDate *time.Time
+	if req.StartDate != nil {
+		startDate = new(req.GetStartDate().AsTime())
+	}
+
+	var endDate *time.Time
+	if req.EndDate != nil {
+		endDate = new(req.GetEndDate().AsTime())
+	}
+
+	if startDate != nil && endDate != nil && startDate.After(*endDate) {
+		return nil, errors.E(op, errors.Invalid, "start_date cannot be after end_date")
+	}
+
 	filter := finance.TransactionFilter{
 		BudgetID:               budgetID,
 		Types:                  txnTypes,
@@ -902,6 +918,8 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 		TransferID:             transferID,
 		ScheduledTransactionID: scheduledTransactionID,
 		BorrowingID:            borrowingID,
+		StartDate:              startDate,
+		EndDate:                endDate,
 		PageSize:               req.GetPageSize(),
 		NextPageToken:          req.GetPageToken(),
 		Sort:                   sorting.Parse(req.GetSort()),

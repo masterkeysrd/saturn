@@ -21,7 +21,8 @@ interface BorrowingSelectorProps {
   onOpenChange: (open: boolean) => void
   spaceId?: string
   onSelect: (borrowing: Borrowing) => void
-  onBack: () => void
+  onBack?: () => void
+  headerExtra?: React.ReactNode
 }
 
 export function BorrowingSelector({
@@ -30,6 +31,7 @@ export function BorrowingSelector({
   spaceId,
   onSelect,
   onBack,
+  headerExtra,
 }: BorrowingSelectorProps) {
   const navigate = useNavigate()
   const [searchText, setSearchText] = useState("")
@@ -64,6 +66,7 @@ export function BorrowingSelector({
       onOpenChange={onOpenChange}
       title="Select Borrowing Agreement"
       description="Choose an active borrowing or lending record to log a payment or disbursement."
+      headerExtra={headerExtra}
       submitLabel="Select a borrowing above"
       disabled
       hideSubmitButton
@@ -71,23 +74,29 @@ export function BorrowingSelector({
     >
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onBack}
-            className="-ml-2 h-8 rounded-lg px-2 text-xs font-semibold text-muted-foreground hover:bg-muted/10 hover:text-foreground"
-          >
-            ← Back to types
-          </Button>
+          {onBack ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onBack}
+              className="-ml-2 h-8 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+            >
+              ← Back to types
+            </Button>
+          ) : (
+            <span className="text-xs font-medium text-muted-foreground">
+              Active debt &amp; loan agreements
+            </span>
+          )}
 
           <Button
             type="button"
             variant="link"
             onClick={() => {
               onOpenChange(false)
-              navigate("/finance/borrowing")
+              navigate("/finance/borrowings")
             }}
-            className="h-8 cursor-pointer px-0 text-xs font-bold text-indigo-400 hover:text-indigo-300 hover:underline"
+            className="h-8 cursor-pointer px-0 text-xs font-medium text-primary hover:underline"
           >
             Manage Borrowings
           </Button>

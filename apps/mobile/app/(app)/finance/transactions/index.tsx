@@ -17,6 +17,10 @@ import {
   ReceiptText,
   X,
   SlidersHorizontal,
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react-native"
 import {
   listTransactions,
@@ -28,7 +32,14 @@ import {
   type Account,
   type Budget,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { groupTransactionsByDate } from "@saturn/core"
+import {
+  formatYm,
+  groupTransactionsByDate,
+  parseYm,
+  resolveFinancePeriodBounds,
+  shiftYearMonth,
+  type FinancePeriodPreset,
+} from "@saturn/core"
 import { useDebounce, useTimezone } from "@saturn/hooks"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
@@ -56,6 +67,53 @@ export default function TransactionsScreen() {
   const [selectedType, setSelectedType] = useState<string>("")
   const [selectedAccountId, setSelectedAccountId] = useState<string>("")
   const [selectedBudgetId, setSelectedBudgetId] = useState<string>("")
+  const [period, setPeriod] = useState<FinancePeriodPreset>("this_month")
+  const [selectedMonth, setSelectedMonth] = useState<string>("")
+
+  const now = tz.now()
+  const nowParts = tz.parts(now)
+  const nowYear = nowParts?.year ?? now.getUTCFullYear()
+  const nowMonth = nowParts?.month ?? now.getUTCMonth() + 1
+  const currentMonthYm = formatYm(nowYear, nowMonth)
+  const [pickerYear, setPickerYear] = useState<number>(nowYear)
+
+  const periodBounds = useMemo(
+    () =>
+      resolveFinancePeriodBounds(
+        {
+          period,
+          month: selectedMonth,
+          dateFrom: "",
+          dateTo: "",
+        },
+        now,
+        tz.timezone,
+        tz.locale
+      ),
+    [period, selectedMonth, now, tz.timezone, tz.locale]
+  )
+
+  const shortMonthNames = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat(tz.locale, {
+      month: "short",
+      timeZone: "UTC",
+    })
+    return Array.from({ length: 12 }, (_, idx) => ({
+      month: idx + 1,
+      label: fmt.format(new Date(Date.UTC(2026, idx, 15, 12, 0, 0))),
+    }))
+  }, [tz.locale])
+
+  const handleStepMonth = (delta: -1 | 1) => {
+    haptics.selection()
+    const active = parseYm(periodBounds.activeMonth)
+    const baseYear = active ? active.year : nowYear
+    const baseMonth = active ? active.month : nowMonth
+    const next = shiftYearMonth(baseYear, baseMonth, delta)
+    setPeriod("month")
+    setSelectedMonth(formatYm(next.year, next.month))
+    setPickerYear(next.year)
+  }
 
   // BottomSheet Ref for Filters
   const filterSheetRef = useRef<BottomSheet>(null)
@@ -99,7 +157,7 @@ export default function TransactionsScreen() {
     return map
   }, [budgets])
 
-  // Keyset Infinite Query
+  // Keyset Infinite Query (server-side date & attribute filtering)
   const {
     data,
     fetchNextPage,
@@ -115,6 +173,8 @@ export default function TransactionsScreen() {
       selectedType,
       selectedAccountId,
       selectedBudgetId,
+      periodBounds.startISO,
+      periodBounds.endISO,
     ],
     queryFn: async ({ pageParam = "" }) => {
       return listTransactions({
@@ -122,6 +182,8 @@ export default function TransactionsScreen() {
         types: selectedType ? [selectedType as Transaction_Type] : undefined,
         accountId: selectedAccountId || undefined,
         budgetId: selectedBudgetId || undefined,
+        startDate: periodBounds.startISO || undefined,
+        endDate: periodBounds.endISO || undefined,
         pageSize: 20,
         pageToken: pageParam,
       })
@@ -171,6 +233,9 @@ export default function TransactionsScreen() {
     setSelectedType("")
     setSelectedAccountId("")
     setSelectedBudgetId("")
+    setPeriod("this_month")
+    setSelectedMonth("")
+    setPickerYear(nowYear)
     setSearch("")
   }
 
@@ -244,67 +309,56 @@ export default function TransactionsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Quick Filter Horizontal Chips */}
-        <View style={styles.quickFiltersRow}>
-          <TouchableOpacity
-            style={[styles.quickChip, !selectedType && styles.quickChipActive]}
-            onPress={() => {
-              haptics.light()
-              setSelectedType("")
-            }}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.quickChipText,
-                !selectedType && styles.quickChipTextActive,
-              ]}
+        {/* Month Stepper + Contextual Active Filter Chips */}
+        <View style={styles.periodAndChipsRow}>
+          <View style={styles.monthStepper}>
+            <TouchableOpacity
+              accessibilityLabel="Previous month"
+              style={styles.monthStepBtn}
+              onPress={() => handleStepMonth(-1)}
+              activeOpacity={0.7}
             >
-              All
-            </Text>
-          </TouchableOpacity>
+              <ChevronLeft size={16} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[
-              styles.quickChip,
-              selectedType === "EXPENSE" && styles.quickChipActive,
-            ]}
-            onPress={() => {
-              haptics.light()
-              setSelectedType(selectedType === "EXPENSE" ? "" : "EXPENSE")
-            }}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.quickChipText,
-                selectedType === "EXPENSE" && styles.quickChipTextActive,
-              ]}
+            <TouchableOpacity
+              accessibilityLabel="Select period"
+              style={styles.monthCenterBtn}
+              onPress={() => {
+                haptics.light()
+                const active = parseYm(periodBounds.activeMonth)
+                if (active) setPickerYear(active.year)
+                filterSheetRef.current?.expand()
+              }}
+              activeOpacity={0.7}
             >
-              Expenses
-            </Text>
-          </TouchableOpacity>
+              <CalendarIcon size={13} color={theme.colors.textMuted} />
+              <Text style={styles.monthCenterText}>{periodBounds.label}</Text>
+              <ChevronDown size={13} color={theme.colors.textMuted} />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[
-              styles.quickChip,
-              selectedType === "INCOME" && styles.quickChipActive,
-            ]}
-            onPress={() => {
-              haptics.light()
-              setSelectedType(selectedType === "INCOME" ? "" : "INCOME")
-            }}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.quickChipText,
-                selectedType === "INCOME" && styles.quickChipTextActive,
-              ]}
+            <TouchableOpacity
+              accessibilityLabel="Next month"
+              style={styles.monthStepBtn}
+              onPress={() => handleStepMonth(1)}
+              activeOpacity={0.7}
             >
-              Income
-            </Text>
-          </TouchableOpacity>
+              <ChevronRight size={16} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {selectedType ? (
+            <TouchableOpacity
+              style={[styles.quickChip, styles.quickChipActive]}
+              onPress={() => setSelectedType("")}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.quickChipTextActive}>
+                {selectedType === "EXPENSE" ? "Expenses" : "Income"}
+              </Text>
+              <X size={12} color={theme.colors.primary} />
+            </TouchableOpacity>
+          ) : null}
 
           {selectedAccountId ? (
             <TouchableOpacity
@@ -411,13 +465,114 @@ export default function TransactionsScreen() {
       {/* Filter Bottom Sheet */}
       <AppBottomSheet
         ref={filterSheetRef}
-        snapPoints={["60%"]}
+        snapPoints={["78%"]}
         title="Filter Transactions"
       >
         <BottomSheetScrollView
           contentContainerStyle={styles.filterSheetContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Period & Quick Month Grid */}
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>Period</Text>
+            <View style={styles.filterPillsContainer}>
+              {(
+                [
+                  { label: "This Month", value: "this_month" },
+                  { label: "Last Month", value: "last_month" },
+                  { label: "Last 3M", value: "3m" },
+                  { label: "YTD", value: "ytd" },
+                  { label: "All Time", value: "all" },
+                ] as const
+              ).map((preset) => {
+                const isActive = periodBounds.period === preset.value
+                return (
+                  <TouchableOpacity
+                    key={preset.value}
+                    style={[
+                      styles.filterPill,
+                      isActive && styles.filterPillActive,
+                    ]}
+                    onPress={() => {
+                      haptics.selection()
+                      setPeriod(preset.value)
+                      setSelectedMonth("")
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.filterPillText,
+                        isActive && styles.filterPillTextActive,
+                      ]}
+                    >
+                      {preset.label}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+
+            <View style={styles.monthGridCard}>
+              <View style={styles.yearHeaderRow}>
+                <TouchableOpacity
+                  accessibilityLabel="Previous year"
+                  style={styles.yearNavBtn}
+                  onPress={() => {
+                    haptics.selection()
+                    setPickerYear((y) => y - 1)
+                  }}
+                >
+                  <ChevronLeft size={16} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+                <Text style={styles.yearHeaderText}>{pickerYear}</Text>
+                <TouchableOpacity
+                  accessibilityLabel="Next year"
+                  style={styles.yearNavBtn}
+                  onPress={() => {
+                    haptics.selection()
+                    setPickerYear((y) => y + 1)
+                  }}
+                >
+                  <ChevronRight size={16} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.monthGrid}>
+                {shortMonthNames.map((item) => {
+                  const cellYm = formatYm(pickerYear, item.month)
+                  const isActive = periodBounds.activeMonth === cellYm
+                  const isCurrent = cellYm === currentMonthYm
+                  return (
+                    <TouchableOpacity
+                      key={cellYm}
+                      style={[
+                        styles.monthCell,
+                        isCurrent && !isActive && styles.monthCellCurrent,
+                        isActive && styles.monthCellActive,
+                      ]}
+                      onPress={() => {
+                        haptics.selection()
+                        setPeriod("month")
+                        setSelectedMonth(cellYm)
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.monthCellText,
+                          isActive && styles.monthCellTextActive,
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </View>
+          </View>
+
           {/* Flow Type Filter */}
           <View style={styles.filterSection}>
             <Text style={styles.filterSectionTitle}>Flow Type</Text>
@@ -640,11 +795,98 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#090d16",
   },
-  quickFiltersRow: {
+  periodAndChipsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
     alignItems: "center",
+  },
+  monthStepper: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 34,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+  },
+  monthStepBtn: {
+    width: 32,
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  monthCenterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    height: "100%",
+    paddingHorizontal: 10,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  monthCenterText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+  },
+  monthGridCard: {
+    marginTop: 4,
+    padding: 10,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: 8,
+  },
+  yearHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  yearNavBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: theme.radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  yearHeaderText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  monthGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  monthCell: {
+    width: "23%",
+    paddingVertical: 7,
+    borderRadius: theme.radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  monthCellCurrent: {
+    borderColor: theme.colors.primary,
+  },
+  monthCellActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  monthCellText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: theme.colors.textSecondary,
+  },
+  monthCellTextActive: {
+    color: "#090d16",
+    fontWeight: "700",
   },
   quickChip: {
     flexDirection: "row",

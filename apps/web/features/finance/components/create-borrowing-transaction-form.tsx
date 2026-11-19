@@ -28,6 +28,7 @@ interface CreateBorrowingTransactionFormProps {
   accounts?: Account[]
   refetchData?: () => void
   onBack: () => void
+  headerExtra?: React.ReactNode
 }
 
 export function CreateBorrowingTransactionForm({
@@ -37,6 +38,7 @@ export function CreateBorrowingTransactionForm({
   accounts = [],
   refetchData,
   onBack,
+  headerExtra,
 }: CreateBorrowingTransactionFormProps) {
   const queryClient = useQueryClient()
   const logTransactionMutation = useLogBorrowingTransactionMutation()
@@ -117,6 +119,7 @@ export function CreateBorrowingTransactionForm({
       onOpenChange={onOpenChange}
       title={isLent ? "Log Lending Transaction" : "Log Borrowing Transaction"}
       description={`Record a payment or disbursement linked to ${borrowing.counterparty}.`}
+      headerExtra={headerExtra}
       submitLabel="Record Transaction"
       onSubmit={handleSubmit(onSubmit)}
       isPending={logTransactionMutation.isPending}
@@ -129,10 +132,10 @@ export function CreateBorrowingTransactionForm({
             variant="ghost"
             size="sm"
             onClick={onBack}
-            className="-ml-2 h-8 rounded-lg px-2 text-xs font-semibold text-muted-foreground hover:bg-muted/10 hover:text-foreground"
+            className="-ml-2 h-8 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           >
             <ArrowLeft className="mr-1 h-3.5 w-3.5" />
-            Back to list
+            Back to debt records
           </Button>
         </div>
 

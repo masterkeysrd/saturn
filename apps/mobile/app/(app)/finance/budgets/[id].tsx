@@ -182,7 +182,12 @@ export default function BudgetDetailScreen() {
     ? periodData
     : budget?.currentPeriod || periodData
 
-  // Fetch transactions for this budget
+  const periodStartDate = currentPeriod?.startDate
+  const periodEndDate = currentPeriod?.endDate
+  const budgetInterval = budget?.interval
+  const isOneTime = budgetInterval === "ONE_TIME"
+
+  // Fetch expense transactions for this budget and period directly from the backend
   const {
     data: txnsData,
     isLoading: isTxnsLoading,
@@ -190,12 +195,20 @@ export default function BudgetDetailScreen() {
   } = useListTransactionsQuery(
     {
       budgetId: id || "",
-      types: [],
+      types: ["EXPENSE"],
+      startDate: isOneTime ? undefined : periodStartDate || undefined,
+      endDate: isOneTime ? undefined : periodEndDate || undefined,
       pageSize: 100,
       pageToken: "",
       view: "FULL",
     },
-    { enabled: !!id && !!activeSpaceId }
+    {
+      enabled:
+        !!id &&
+        !!activeSpaceId &&
+        !!budget &&
+        (isOneTime || Boolean(periodStartDate && periodEndDate)),
+    }
   )
 
   // Fetch accounts to map account info
@@ -215,32 +228,10 @@ export default function BudgetDetailScreen() {
     return map
   }, [accounts])
 
-  const transactions = useMemo(
+  const periodTransactions = useMemo(
     () => txnsData?.transactions || [],
     [txnsData?.transactions]
   )
-
-  const periodId =
-    currentPeriod && "id" in currentPeriod ? currentPeriod.id : undefined
-  const periodStartDate = currentPeriod?.startDate
-  const periodEndDate = currentPeriod?.endDate
-  const budgetInterval = budget?.interval
-
-  // Filter transactions to the displayed period
-  const periodTransactions = useMemo(() => {
-    return transactions.filter((t) => {
-      if (t.type !== "EXPENSE") return false
-      if (budgetInterval === "ONE_TIME") return true
-      if (periodId && t.periodId) {
-        return t.periodId === periodId
-      }
-      if (!periodStartDate || !periodEndDate || !t.transactionDate) return false
-      const tTime = new Date(t.transactionDate).getTime()
-      const start = new Date(periodStartDate).getTime()
-      const end = new Date(periodEndDate).getTime()
-      return tTime >= start && tTime <= end
-    })
-  }, [transactions, budgetInterval, periodId, periodStartDate, periodEndDate])
 
   const sections = useMemo(
     () => groupTransactionsByDate(periodTransactions, tz.timezone),

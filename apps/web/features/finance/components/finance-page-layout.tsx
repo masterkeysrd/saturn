@@ -1,21 +1,27 @@
 import { useState } from "react"
 import type { ElementType } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { useActiveSpaceContext } from "@/features/space/use-space"
+import { invalidateFinanceQueries } from "@saturn/hooks"
 import {
   useGetSettingsQuery,
   useSetupMutation,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { Button } from "@/components/ui/button"
-import { Coins, Loader2, PiggyBank } from "lucide-react"
-import { Label } from "@/components/ui/label"
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select"
+  CheckCircle2,
+  Coins,
+  CreditCard,
+  Loader2,
+  PiggyBank,
+  ShieldAlert,
+  Target,
+} from "lucide-react"
+import { Label } from "@/components/ui/label"
 import { PageLayout } from "@/components/ui/page-layout"
+import { CurrencyCombobox } from "./currency-combobox"
+import { CreateAccountSheet } from "./create-account-sheet"
+import { CreateBudgetSheet } from "./create-budget-sheet"
 
 interface FinancePageLayoutProps {
   title: string
@@ -32,13 +38,16 @@ export function FinancePageLayout({
   actions,
   icon = PiggyBank,
 }: FinancePageLayoutProps) {
+  const queryClient = useQueryClient()
   const { spaceId, spaceRole } = useActiveSpaceContext()
   const isWritable =
     spaceRole === "owner" ||
     spaceRole === "admin" ||
-    spaceRole === "finance_manager"
+    spaceRole === "finance_manager" ||
+    spaceRole === "member"
 
   const {
+    data: settings,
     isLoading: settingsLoading,
     error: settingsError,
     refetch: refetchSettings,
@@ -54,6 +63,12 @@ export function FinancePageLayout({
   const isNotConfigured = !!settingsError && !settingsLoading
 
   const [setupCurrency, setSetupCurrency] = useState("USD")
+  const [onboardingStep, setOnboardingStep] = useState<
+    "configure" | "next-steps" | "done"
+  >("configure")
+  const [accountSheetOpen, setAccountSheetOpen] = useState(false)
+  const [budgetSheetOpen, setBudgetSheetOpen] = useState(false)
+
   const setupMutation = useSetupMutation()
 
   const handleSetup = async (e: React.FormEvent) => {
@@ -61,7 +76,9 @@ export function FinancePageLayout({
     await setupMutation.mutateAsync({
       baseCurrency: setupCurrency,
     })
-    refetchSettings()
+    setOnboardingStep("next-steps")
+    await invalidateFinanceQueries(queryClient)
+    await refetchSettings()
   }
 
   if (isLoading) {
@@ -75,64 +92,188 @@ export function FinancePageLayout({
   if (isNotConfigured) {
     return (
       <div className="flex min-h-[500px] flex-1 items-center justify-center p-6">
-        <div className="relative w-full max-w-lg animate-in overflow-hidden rounded-3xl border border-border/40 bg-card/40 p-8 shadow-2xl backdrop-blur-xl duration-500 fade-in slide-in-from-bottom-6 md:p-10">
-          <div className="absolute top-0 right-0 -mt-16 -mr-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl"></div>
-
-          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-            <Coins className="h-8 w-8" />
+        <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex size-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+              <Coins className="size-6" />
+            </div>
+            <span className="rounded-md border border-border bg-muted/50 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              Step 1 of 2
+            </span>
           </div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground">
+
+          <h2 className="mt-5 text-xl font-semibold tracking-tight text-foreground md:text-2xl">
             Configure Finance settings
           </h2>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            Select the base currency for this workspace. This will serve as your
-            default reporting currency and cannot be changed later. All budgets
-            will be automatically converted to this base currency for aggregate
-            reporting.
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Select the base currency for this workspace. This serves as your
+            default reporting currency across budgets, accounts, and insights.
           </p>
 
-          <form onSubmit={handleSetup} className="mt-8 space-y-6">
-            <div className="space-y-2">
-              <Label
-                htmlFor="baseCurrency"
-                className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
-              >
-                Base Currency
-              </Label>
-              <Select
-                value={setupCurrency}
-                onValueChange={(val) => setSetupCurrency(val || "USD")}
-                disabled={!isWritable}
-              >
-                <SelectTrigger
-                  id="baseCurrency"
-                  className="!h-12 w-full rounded-xl border-border/60 bg-background/50"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                  <SelectItem value="USD">USD - US Dollar</SelectItem>
-                  <SelectItem value="EUR">EUR - Euro</SelectItem>
-                  <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                  <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
-                  <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
-                  <SelectItem value="DOP">DOP - Dominican Peso</SelectItem>
-                </SelectContent>
-              </Select>
+          {!isWritable ? (
+            <div className="mt-6 flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+              <ShieldAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+              <div>
+                <p className="font-medium text-foreground">
+                  Read-only workspace access
+                </p>
+                <p className="mt-0.5 text-xs leading-relaxed">
+                  Only workspace owners, administrators, or editors can
+                  initialize the Finance module. Ask an administrator to select
+                  the workspace base currency.
+                </p>
+              </div>
             </div>
+          ) : (
+            <form onSubmit={handleSetup} className="mt-6 space-y-5">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="baseCurrency"
+                  className="text-[13px] font-medium text-foreground/90"
+                >
+                  Base currency
+                </Label>
+                <CurrencyCombobox
+                  id="baseCurrency"
+                  value={setupCurrency}
+                  onValueChange={setSetupCurrency}
+                  disabled={!isWritable || setupMutation.isPending}
+                  aria-label="Base currency"
+                />
+              </div>
 
-            <Button
-              type="submit"
-              disabled={setupMutation.isPending || !isWritable}
-              className="h-12 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
-            >
-              {setupMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Initialize Finance Module
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                disabled={setupMutation.isPending || !isWritable}
+                className="h-10 w-full cursor-pointer rounded-lg font-medium"
+              >
+                {setupMutation.isPending && (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                )}
+                Initialize Finance module
+              </Button>
+            </form>
+          )}
         </div>
+      </div>
+    )
+  }
+
+  if (onboardingStep === "next-steps" && isWritable) {
+    const resolvedCurrency = settings?.baseCurrency || setupCurrency
+    return (
+      <div className="flex min-h-[500px] flex-1 items-center justify-center p-6">
+        <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex size-12 items-center justify-center rounded-xl border border-success/20 bg-success/10 text-success">
+              <CheckCircle2 className="size-6" />
+            </div>
+            <span className="rounded-md border border-border bg-muted/50 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              Step 2 of 2
+            </span>
+          </div>
+
+          <h2 className="mt-5 text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+            Finance workspace ready
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Base currency is set to{" "}
+            <span className="font-mono font-medium text-foreground">
+              {resolvedCurrency}
+            </span>
+            . Start by adding an account or creating your first budget, or jump
+            straight in.
+          </p>
+
+          <div className="mt-6 divide-y divide-border/70 border-t border-b border-border/70">
+            <button
+              type="button"
+              onClick={() => setAccountSheetOpen(true)}
+              className="flex w-full cursor-pointer items-center justify-between gap-4 py-3.5 text-left transition-colors hover:bg-muted/40"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-control text-primary">
+                  <CreditCard className="size-4" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-foreground">
+                    Create your first account
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Track checking, credit card, cash, or digital balances
+                  </div>
+                </div>
+              </div>
+              <span className="text-xs font-medium text-primary">Add</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setBudgetSheetOpen(true)}
+              className="flex w-full cursor-pointer items-center justify-between gap-4 py-3.5 text-left transition-colors hover:bg-muted/40"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-control text-primary">
+                  <Target className="size-4" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-foreground">
+                    Create your first budget
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Set spending limits and monitor period pacing
+                  </div>
+                </div>
+              </div>
+              <span className="text-xs font-medium text-primary">Add</span>
+            </button>
+          </div>
+
+          <div className="mt-6 flex items-center justify-end">
+            <Button
+              type="button"
+              onClick={() => setOnboardingStep("done")}
+              className="h-10 cursor-pointer rounded-lg px-4 font-medium"
+            >
+              Skip to Finance
+            </Button>
+          </div>
+        </div>
+
+        {accountSheetOpen && (
+          <CreateAccountSheet
+            open={accountSheetOpen}
+            onOpenChange={(open) => {
+              setAccountSheetOpen(open)
+              if (!open) {
+                void invalidateFinanceQueries(queryClient)
+              }
+            }}
+            spaceId={spaceId}
+            baseCurrency={resolvedCurrency}
+            editAccount={null}
+            refetchAccounts={() => {
+              void invalidateFinanceQueries(queryClient)
+            }}
+          />
+        )}
+
+        {budgetSheetOpen && (
+          <CreateBudgetSheet
+            open={budgetSheetOpen}
+            onOpenChange={(open) => {
+              setBudgetSheetOpen(open)
+              if (!open) {
+                void invalidateFinanceQueries(queryClient)
+              }
+            }}
+            spaceId={spaceId}
+            baseCurrency={resolvedCurrency}
+            refetchBudgets={() => {
+              void invalidateFinanceQueries(queryClient)
+            }}
+          />
+        )}
       </div>
     )
   }

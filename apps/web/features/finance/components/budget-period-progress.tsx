@@ -1,8 +1,13 @@
 import { useEffect } from "react"
 import { type Budget } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useTimezone } from "@saturn/hooks"
+import { MoneyAmount } from "@/components/ui/money-amount"
 import { AlertTriangle } from "lucide-react"
-import { formatCents, formatAmount, getBudgetColors } from "../utils"
+import {
+  formatCents,
+  getBudgetColors,
+  computeBudgetPacePercent,
+} from "../utils"
 import { cn } from "@/lib/utils"
 
 interface BudgetPeriodProgressProps {
@@ -18,7 +23,6 @@ export function BudgetPeriodProgress({
   const period = budget.currentPeriod
   const themeColors = getBudgetColors(budget.color)
 
-  // Propagate total limit in base currency to parent for dashboard overview stats
   useEffect(() => {
     if (period && onPeriodLoaded && (period.exchangeRateToBase ?? 0) > 0) {
       const limit = formatCents(budget.limitAmount)
@@ -40,7 +44,6 @@ export function BudgetPeriodProgress({
 
   const isOneTime = budget.interval === "ONE_TIME"
 
-  // Date range and remaining days
   const startStr = period?.startDate
     ? tz.format(period.startDate, { month: "short", day: "numeric" })
     : ""
@@ -58,7 +61,10 @@ export function BudgetPeriodProgress({
   const diffMs = end ? end.getTime() - now.getTime() : 0
   const daysLeft = diffMs > 0 ? Math.ceil(diffMs / (1000 * 60 * 60 * 24)) : 0
 
-  // Cross-currency conversion calculation
+  const pacePercent = computeBudgetPacePercent(budget, now)
+  const paceDelta =
+    pacePercent !== null ? Math.round(actualPercent - pacePercent) : null
+
   const isCrossCurrency =
     period && budget.currency && period.baseCurrency
       ? budget.currency !== period.baseCurrency
@@ -67,38 +73,30 @@ export function BudgetPeriodProgress({
   const isRateMissing = isCrossCurrency && rateToBase <= 0
   const baseLimitCents = Math.round(limitCents * rateToBase)
 
-  // Dynamic status-colored bar
   const barColor = isOverBudget
-    ? "bg-rose-500 shadow-sm shadow-rose-500/50"
+    ? "bg-destructive"
     : isNearLimit
-      ? "bg-amber-500 shadow-sm shadow-amber-500/50"
+      ? "bg-warning"
       : themeColors.bar
 
   const badgeColorClass = isOverBudget
-    ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+    ? "border-destructive/20 bg-destructive/10 text-destructive"
     : isNearLimit
-      ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-      : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+      ? "border-warning/20 bg-warning/10 text-warning"
+      : "border-success/20 bg-success/10 text-success"
 
-  // Fallback when no period is active yet
   if (!period) {
     return (
-      <div className="mt-4 space-y-2">
-        <div>
-          <span className="block text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-            Template Limit
-          </span>
-          <div className="mt-0.5 flex min-w-0 items-baseline gap-1.5">
-            <span className="text-2xl font-black tracking-tight whitespace-nowrap text-foreground">
-              {formatAmount(limitCents)}
-            </span>
-            {budget.currency && (
-              <span className="shrink-0 text-xs font-bold text-muted-foreground uppercase">
-                {budget.currency}
-              </span>
-            )}
-          </div>
-        </div>
+      <div className="mt-4 space-y-1.5">
+        <span className="block text-xs font-medium text-muted-foreground">
+          Template limit
+        </span>
+        <MoneyAmount
+          cents={limitCents}
+          currency={budget.currency}
+          size="xl"
+          className="block text-foreground"
+        />
         <p className="text-xs text-muted-foreground">
           No activity recorded for this period yet.
         </p>
@@ -106,121 +104,111 @@ export function BudgetPeriodProgress({
     )
   }
 
-  // Check if exchange rate is missing
   if (isRateMissing) {
     return (
-      <div className="mt-4 flex animate-in flex-col gap-1.5 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3.5 text-xs duration-300 fade-in">
-        <div className="flex items-center gap-1.5 font-bold text-amber-600 dark:text-amber-400">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          <span>Exchange Rate Required</span>
+      <div className="mt-4 flex flex-col gap-1.5 rounded-lg border border-warning/25 bg-warning/10 p-3 text-xs">
+        <div className="flex items-center gap-1.5 font-medium text-warning">
+          <AlertTriangle className="size-4 shrink-0" />
+          <span>Exchange rate required</span>
         </div>
         <p className="leading-relaxed text-muted-foreground">
           No conversion rate configured from{" "}
-          <span className="font-semibold text-foreground">
+          <span className="font-mono font-medium text-foreground">
             {budget.currency}
           </span>{" "}
           to{" "}
-          <span className="font-semibold text-foreground">
+          <span className="font-mono font-medium text-foreground">
             {period?.baseCurrency}
           </span>
-          . Configure a rate in settings to track this budget.
+          . Configure a rate to track this budget.
         </p>
       </div>
     )
   }
 
-  // Dynamic font sizing for large numbers (e.g. 10,000.00 DOP or 1,000,000.00 COP)
-  const heroRawNumber = isOverBudget
-    ? `+${formatAmount(overCents)}`
-    : formatAmount(remainingCents)
-
-  const heroFontSize =
-    heroRawNumber.length > 14
-      ? "text-lg"
-      : heroRawNumber.length > 10
-        ? "text-xl"
-        : "text-2xl"
-
   return (
-    <div className="mt-5 space-y-3">
-      {/* Hero Metric Row: Remaining / Over Budget + Percentage Badge */}
+    <div className="mt-4 space-y-2.5">
+      {/* Hero Metric Row */}
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <span className="block text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-            {isOverBudget ? "Over Budget" : "Remaining"}
+          <span className="block text-xs font-medium text-muted-foreground">
+            {isOverBudget ? "Over budget" : "Remaining"}
           </span>
           <div className="mt-0.5 flex min-w-0 items-baseline gap-1.5">
-            <span
-              title={`${heroRawNumber} ${budget.currency}`}
+            <MoneyAmount
+              cents={isOverBudget ? overCents : remainingCents}
+              currency={budget.currency}
+              showSign={isOverBudget}
+              size="xl"
               className={cn(
-                "truncate font-black tracking-tight whitespace-nowrap",
-                heroFontSize,
-                isOverBudget ? "text-rose-500" : "text-foreground"
+                "truncate",
+                isOverBudget ? "text-destructive" : "text-foreground"
               )}
-            >
-              {heroRawNumber}
-            </span>
-            {budget.currency && (
-              <span className="shrink-0 text-xs font-bold text-muted-foreground uppercase">
-                {budget.currency}
-              </span>
-            )}
-            <span
-              className={cn(
-                "ml-0.5 shrink-0 text-xs font-semibold",
-                isOverBudget ? "text-rose-500/80" : "text-muted-foreground"
-              )}
-            >
-              {isOverBudget ? "exceeded" : "left"}
-            </span>
+            />
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center">
-          <span
-            className={cn(
-              "rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wide whitespace-nowrap uppercase transition-colors",
-              badgeColorClass
-            )}
-          >
-            {actualPercent}%
-          </span>
-        </div>
-      </div>
-
-      {/* Progress Track */}
-      <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary/70 shadow-inner">
-        <div
+        <span
           className={cn(
-            "h-full rounded-full transition-all duration-700 ease-out",
-            barColor
+            "shrink-0 rounded-md border px-2 py-0.5 font-mono text-xs font-medium tabular-nums",
+            badgeColorClass
           )}
-          style={{ width: `${progressPercent}%` }}
-        />
-      </div>
-
-      {/* Sub-caption Directly Below Track */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span className="truncate">
-          Spent {formatAmount(spentCents)} of{" "}
-          {formatAmount(limitCents, budget.currency)}
-        </span>
-        <span className="ml-2 shrink-0 text-[11px] font-medium">
-          {daysLeft > 0 ? `${daysLeft}d left` : dateRangeStr}
+        >
+          {actualPercent}%
         </span>
       </div>
 
-      {/* Cross-Currency Conversion Banner */}
+      {/* 6px Progress Track with Today Pace Tick */}
+      <div className="relative w-full py-1">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-500 ease-out",
+              barColor
+            )}
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+        {pacePercent !== null && (
+          <div
+            data-testid="budget-pace-tick"
+            title={`Today · ${Math.round(pacePercent)}% elapsed`}
+            aria-label={`Today pace marker at ${Math.round(pacePercent)}% elapsed`}
+            className="pointer-events-none absolute top-0 h-3.5 w-0.5 -translate-x-1/2 rounded-full bg-foreground/70 ring-1 ring-card"
+            style={{ left: `${pacePercent}%` }}
+          />
+        )}
+      </div>
+
+      {/* Sub-captions */}
+      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span className="truncate font-mono tabular-nums">
+          {tz.formatMoney(spentCents, budget.currency)} /{" "}
+          {tz.formatMoney(limitCents, budget.currency)}
+        </span>
+        <span className="shrink-0 font-medium">
+          {isOverBudget ? (
+            <span className="text-destructive">Exceeded</span>
+          ) : paceDelta !== null && paceDelta > 5 ? (
+            <span className="text-warning">Ahead of pace (+{paceDelta}%)</span>
+          ) : pacePercent !== null ? (
+            <span>
+              On pace · {daysLeft > 0 ? `${daysLeft}d left` : dateRangeStr}
+            </span>
+          ) : (
+            <span>{daysLeft > 0 ? `${daysLeft}d left` : dateRangeStr}</span>
+          )}
+        </span>
+      </div>
+
+      {/* Cross-Currency Conversion Info */}
       {isCrossCurrency && rateToBase > 0 && (
-        <div className="flex items-center justify-between rounded-xl border border-border/30 bg-muted/20 px-3 py-1.5 text-[11px] text-muted-foreground">
-          <span className="font-mono text-[10px]">
+        <div className="flex items-center justify-between border-t border-border/60 pt-2 text-xs text-muted-foreground">
+          <span className="font-mono text-[11px]">
             1 {budget.currency} = {rateToBase.toFixed(4)} {period?.baseCurrency}
           </span>
-          <span>
-            Limit:{" "}
-            <strong className="font-semibold text-foreground">
-              {formatAmount(baseLimitCents, period?.baseCurrency)}
-            </strong>
+          <span className="font-mono text-[11px] tabular-nums">
+            Limit: {tz.formatMoney(baseLimitCents, period?.baseCurrency)}
           </span>
         </div>
       )}

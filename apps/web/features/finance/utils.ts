@@ -27,7 +27,192 @@ import {
   Store,
 } from "lucide-react"
 
+import type {
+  Budget,
+  InsightGranularity,
+} from "@saturn/api/gen/saturn/finance/v1/finance"
+import {
+  getEndOfDay,
+  getStartOfDay,
+  getTimezoneParts,
+  MS_PER_DAY,
+  parseDate,
+} from "@saturn/core"
+
 export * from "@saturn/core"
+
+export function computeBudgetPacePercent(
+  budget: Budget,
+  now: Date
+): number | null {
+  if (budget.interval === "ONE_TIME" || budget.status === "CLOSED") {
+    return null
+  }
+  const period = budget.currentPeriod
+  if (!period?.startDate || !period?.endDate) {
+    return null
+  }
+  const startMs = new Date(period.startDate).getTime()
+  const endMs = new Date(period.endDate).getTime()
+  const totalMs = endMs - startMs
+  if (isNaN(startMs) || isNaN(endMs) || totalMs <= 0) {
+    return null
+  }
+  const raw = ((now.getTime() - startMs) / totalMs) * 100
+  return Math.min(Math.max(raw, 0), 100)
+}
+
+export type InsightsDateRangePreset =
+  | "THIS_MONTH"
+  | "LAST_3M"
+  | "LAST_6M"
+  | "YTD"
+  | "LAST_12M"
+  | "ALL_TIME"
+  | "CUSTOM"
+
+function toYmd(
+  date: Date | string | number | null | undefined,
+  timeZone: string
+): string {
+  const parts = getTimezoneParts(date, timeZone)
+  if (!parts) return ""
+  return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`
+}
+
+export function computeInsightsQueryBounds(
+  range: InsightsDateRangePreset,
+  customFrom: string,
+  customTo: string,
+  now: Date,
+  timeZone: string
+): {
+  startDate: string
+  endDate: string
+  ymdFrom: string
+  ymdTo: string
+  recommendedGranularity: InsightGranularity
+} {
+  if (range === "ALL_TIME") {
+    return {
+      startDate: "",
+      endDate: "",
+      ymdFrom: "",
+      ymdTo: "",
+      recommendedGranularity: "MONTHLY",
+    }
+  }
+
+  const parts = getTimezoneParts(now, timeZone)
+  const year = parts?.year ?? now.getUTCFullYear()
+  const month = parts?.month ?? now.getUTCMonth() + 1
+
+  if (range === "CUSTOM") {
+    const startDate = customFrom
+      ? getStartOfDay(customFrom, timeZone).toISOString()
+      : ""
+    const endDate = customTo
+      ? getEndOfDay(customTo, timeZone).toISOString()
+      : ""
+
+    let recommendedGranularity: InsightGranularity = "MONTHLY"
+    if (customFrom && customTo) {
+      const s = parseDate(customFrom, timeZone)
+      const e = parseDate(customTo, timeZone)
+      if (s && e) {
+        const days = Math.max(
+          1,
+          Math.round((e.getTime() - s.getTime()) / MS_PER_DAY)
+        )
+        recommendedGranularity =
+          days <= 31
+            ? "DAILY"
+            : days <= 120
+              ? "WEEKLY"
+              : days <= 730
+                ? "MONTHLY"
+                : "YEARLY"
+      }
+    }
+
+    return {
+      startDate,
+      endDate,
+      ymdFrom: customFrom,
+      ymdTo: customTo,
+      recommendedGranularity,
+    }
+  }
+
+  let startAnchor: Date | string
+  let recommendedGranularity: InsightGranularity
+
+  switch (range) {
+    case "THIS_MONTH":
+      startAnchor = `${year}-${String(month).padStart(2, "0")}-01`
+      recommendedGranularity = "DAILY"
+      break
+    case "YTD":
+      startAnchor = `${year}-01-01`
+      recommendedGranularity = "MONTHLY"
+      break
+    case "LAST_3M":
+      startAnchor = new Date(Date.UTC(year, month - 3, 1, 12, 0, 0))
+      recommendedGranularity = "WEEKLY"
+      break
+    case "LAST_12M":
+      startAnchor = new Date(Date.UTC(year, month - 12, 1, 12, 0, 0))
+      recommendedGranularity = "MONTHLY"
+      break
+    case "LAST_6M":
+    default:
+      startAnchor = new Date(Date.UTC(year, month - 6, 1, 12, 0, 0))
+      recommendedGranularity = "MONTHLY"
+      break
+  }
+
+  const startDt = getStartOfDay(startAnchor, timeZone)
+  const endDt = getEndOfDay(now, timeZone)
+
+  return {
+    startDate: startDt.toISOString(),
+    endDate: endDt.toISOString(),
+    ymdFrom: toYmd(startDt, timeZone),
+    ymdTo: toYmd(endDt, timeZone),
+    recommendedGranularity,
+  }
+}
+
+export function getPeriodDateBounds(
+  startDateStr: string,
+  granularity: InsightGranularity,
+  timeZone: string
+): { dateFrom: string; dateTo: string } {
+  const parts = getTimezoneParts(startDateStr, timeZone)
+  if (!parts) return { dateFrom: "", dateTo: "" }
+  const ymdFrom = `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`
+
+  if (granularity === "DAILY") {
+    return { dateFrom: ymdFrom, dateTo: ymdFrom }
+  }
+  if (granularity === "WEEKLY") {
+    const startDt = parseDate(startDateStr, timeZone)
+    if (!startDt) return { dateFrom: ymdFrom, dateTo: ymdFrom }
+    const endDt = new Date(startDt.getTime() + 6 * MS_PER_DAY)
+    return { dateFrom: ymdFrom, dateTo: toYmd(endDt, timeZone) }
+  }
+  if (granularity === "YEARLY") {
+    return {
+      dateFrom: `${parts.year}-01-01`,
+      dateTo: `${parts.year}-12-31`,
+    }
+  }
+  const lastDay = new Date(Date.UTC(parts.year, parts.month, 0)).getUTCDate()
+  return {
+    dateFrom: `${parts.year}-${String(parts.month).padStart(2, "0")}-01`,
+    dateTo: `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`,
+  }
+}
 
 export const BUDGET_ICONS = [
   { value: "piggy-bank", label: "General", icon: PiggyBank },

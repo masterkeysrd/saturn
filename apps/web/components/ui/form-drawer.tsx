@@ -17,6 +17,8 @@ export interface FormDrawerProps {
   title: React.ReactNode
   description?: React.ReactNode
   icon?: React.ReactNode
+  headerExtra?: React.ReactNode
+  customFooter?: React.ReactNode
   submitLabel: string
   cancelLabel?: string
   isPending?: boolean
@@ -64,6 +66,8 @@ export function FormDrawer({
   title,
   description,
   icon,
+  headerExtra,
+  customFooter,
   submitLabel,
   cancelLabel = "Cancel",
   isPending = false,
@@ -89,6 +93,12 @@ export function FormDrawer({
         )}
       </DialogHeader>
 
+      {headerExtra && (
+        <div className="shrink-0 border-b border-border/60 bg-card px-6 py-2.5">
+          {headerExtra}
+        </div>
+      )}
+
       <form
         onSubmit={onSubmit}
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
@@ -97,25 +107,31 @@ export function FormDrawer({
           {children}
         </div>
 
-        {!hideSubmitButton && (
-          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border/60 bg-card px-6 py-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-            >
-              {cancelLabel}
-            </Button>
-            <Button
-              type="submit"
-              disabled={isPending || disabled}
-              className="min-w-28"
-            >
-              {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              <span>{submitLabel}</span>
-            </Button>
+        {customFooter ? (
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border/60 bg-card px-6 py-4">
+            {customFooter}
           </div>
+        ) : (
+          !hideSubmitButton && (
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border/60 bg-card px-6 py-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isPending}
+              >
+                {cancelLabel}
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending || disabled}
+                className="min-w-28"
+              >
+                {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                <span>{submitLabel}</span>
+              </Button>
+            </div>
+          )
         )}
       </form>
     </>

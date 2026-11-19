@@ -63,15 +63,6 @@ export function BudgetCard({
   const isPaused = budget.status === "PAUSED"
   const isActive = budget.status === "ACTIVE" || !budget.status
 
-  const intervalColorClass =
-    budget.interval === "WEEKLY"
-      ? "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20"
-      : budget.interval === "YEARLY"
-        ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
-        : budget.interval === "ONE_TIME"
-          ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-          : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20"
-
   const intervalLabel = formatInterval(budget.interval)
 
   return (
@@ -86,71 +77,59 @@ export function BudgetCard({
         }
       }}
       className={cn(
-        "group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-3xl border border-border/50 bg-card/60 p-5.5 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-border/80 hover:shadow-xl",
-        isPaused && "border-amber-500/20 bg-card/40 opacity-90",
-        isClosed && "border-border/30 bg-card/25 opacity-70 grayscale-[0.3]"
+        "group flex cursor-pointer flex-col justify-between rounded-xl border border-border bg-card p-5 shadow-2xs transition-colors outline-none hover:border-foreground/20 focus-visible:ring-2 focus-visible:ring-ring/40",
+        isPaused && "border-warning/30 opacity-90",
+        isClosed && "opacity-75"
       )}
     >
-      {/* Ambient Theme Color Sheen & Watermark */}
-      <div
-        className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full opacity-15 blur-3xl transition-opacity group-hover:opacity-30 dark:opacity-25 dark:group-hover:opacity-40"
-        style={{ backgroundColor: themeColors.hex }}
-      />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-white/[0.04] via-transparent to-white/[0.01]" />
-
-      <div className="relative z-10 flex flex-1 flex-col justify-between">
+      <div className="flex flex-1 flex-col justify-between">
         {/* Header: Icon, Name, Badges, and Dropdown */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-start gap-3">
             <div
               className={cn(
-                "shrink-0 rounded-2xl border p-2.5 transition-transform duration-200 group-hover:scale-105",
+                "shrink-0 rounded-lg border p-2",
                 themeColors.bg,
                 themeColors.text,
                 themeColors.border
               )}
             >
               {createElement(getBudgetIcon(budget.icon), {
-                className: "h-5 w-5 shrink-0",
+                className: "size-5 shrink-0",
               })}
             </div>
 
             <div className="min-w-0 flex-1">
               <h3
                 title={budget.name}
-                className="truncate text-base font-bold tracking-tight text-foreground transition-colors group-hover:text-primary"
+                className="truncate text-[15px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary"
               >
                 {budget.name}
               </h3>
 
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                <span
-                  className={cn(
-                    "rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase",
-                    intervalColorClass
-                  )}
-                >
+                <span className="rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-foreground/80">
                   {intervalLabel}
                 </span>
 
                 {account && (
                   <span
                     title={`Default Account: ${account.name}`}
-                    className="flex max-w-[140px] items-center gap-1 truncate rounded-full border border-border/50 bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                    className="inline-flex max-w-[150px] items-center gap-1 truncate rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground"
                   >
-                    <CreditCard className="h-2.5 w-2.5 shrink-0" />
+                    <CreditCard className="size-3 shrink-0" />
                     <span className="truncate">{account.name}</span>
                   </span>
                 )}
 
                 {isClosed ? (
-                  <span className="flex items-center gap-1 rounded-full border border-rose-500/20 bg-rose-500/10 px-2 py-0.5 text-[10px] font-bold text-rose-500 uppercase dark:text-rose-400">
-                    <Lock className="h-2.5 w-2.5" />
+                  <span className="inline-flex items-center gap-1 rounded-md border border-destructive/20 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+                    <Lock className="size-3" />
                     Closed
                   </span>
                 ) : isPaused ? (
-                  <span className="flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase dark:text-amber-400">
-                    <PauseCircle className="h-2.5 w-2.5" />
+                  <span className="inline-flex items-center gap-1 rounded-md border border-warning/20 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                    <PauseCircle className="size-3" />
                     Paused
                   </span>
                 ) : null}
@@ -183,22 +162,23 @@ export function BudgetCard({
                 render={
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 cursor-pointer rounded-full text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                    size="icon-sm"
+                    aria-label="Budget actions"
+                    className="cursor-pointer rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
                   >
-                    <MoreVertical className="h-4 w-4" />
+                    <MoreVertical className="size-4" />
                   </Button>
                 }
               />
               <DropdownMenuContent
                 align="end"
-                className="w-48 rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl"
+                className="w-48 rounded-xl border border-border bg-popover p-1 shadow-xl"
               >
                 <DropdownMenuItem
                   onClick={() => onViewHistory(budget)}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm hover:bg-muted/60"
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm"
                 >
-                  <History className="h-3.5 w-3.5" />
+                  <History className="size-3.5" />
                   View Activity
                 </DropdownMenuItem>
 
@@ -207,61 +187,61 @@ export function BudgetCard({
                     {onAddExpense && isActive && (
                       <DropdownMenuItem
                         onClick={() => onAddExpense(budget)}
-                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm hover:bg-muted/60"
+                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm"
                       >
-                        <Plus className="h-3.5 w-3.5" />
+                        <Plus className="size-3.5" />
                         Record Expense
                       </DropdownMenuItem>
                     )}
                     {isActive && onPause && (
                       <DropdownMenuItem
                         onClick={() => onPause(budget)}
-                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-amber-600 hover:bg-amber-500/10 dark:text-amber-400"
+                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-warning"
                       >
-                        <PauseCircle className="h-3.5 w-3.5 text-amber-500" />
+                        <PauseCircle className="size-3.5" />
                         Pause Budget
                       </DropdownMenuItem>
                     )}
                     {isPaused && onResume && (
                       <DropdownMenuItem
                         onClick={() => onResume(budget)}
-                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
+                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-success"
                       >
-                        <PlayCircle className="h-3.5 w-3.5 text-emerald-500" />
+                        <PlayCircle className="size-3.5" />
                         Resume Budget
                       </DropdownMenuItem>
                     )}
                     {!isClosed && onClose && (
                       <DropdownMenuItem
                         onClick={() => onClose(budget)}
-                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-amber-600 hover:bg-amber-500/10 dark:text-amber-400"
+                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-warning"
                       >
-                        <Lock className="h-3.5 w-3.5" />
+                        <Lock className="size-3.5" />
                         Close Budget
                       </DropdownMenuItem>
                     )}
                     {isClosed && onReopen && (
                       <DropdownMenuItem
                         onClick={() => onReopen(budget)}
-                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
+                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-success"
                       >
-                        <Unlock className="h-3.5 w-3.5 text-emerald-500" />
+                        <Unlock className="size-3.5" />
                         Reopen Budget
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuSeparator className="my-1 border-border/40" />
+                    <DropdownMenuSeparator className="my-1 border-border/60" />
                     <DropdownMenuItem
                       onClick={() => onEdit(budget)}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm hover:bg-muted/60"
+                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm"
                     >
-                      <Edit2 className="h-3.5 w-3.5" />
+                      <Edit2 className="size-3.5" />
                       Edit Template
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => onDelete(budget)}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-destructive hover:bg-destructive/10"
+                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-destructive focus:bg-destructive/10 focus:text-destructive"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="size-3.5" />
                       Delete
                     </DropdownMenuItem>
                   </>

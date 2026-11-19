@@ -33,6 +33,7 @@ interface ConfirmScheduledFormProps {
   recurringTemplates?: RecurringTransaction[]
   refetchData?: () => void
   onBack: () => void
+  headerExtra?: React.ReactNode
 }
 
 export function ConfirmScheduledForm({
@@ -44,6 +45,7 @@ export function ConfirmScheduledForm({
   recurringTemplates = [],
   refetchData,
   onBack,
+  headerExtra,
 }: ConfirmScheduledFormProps) {
   const queryClient = useQueryClient()
   const confirmMutation = useConfirmScheduledTransactionMutation()
@@ -151,6 +153,7 @@ export function ConfirmScheduledForm({
       onOpenChange={onOpenChange}
       title={isExpense ? "Confirm Payment" : "Confirm Deposit"}
       description={`Clear this scheduled ${isExpense ? "outflow" : "inflow"} from your calendar.`}
+      headerExtra={headerExtra}
       submitLabel={isExpense ? "Confirm Payment" : "Confirm Deposit"}
       onSubmit={handleSubmit(onSubmit)}
       isPending={confirmMutation.isPending}
@@ -163,10 +166,10 @@ export function ConfirmScheduledForm({
             variant="ghost"
             size="sm"
             onClick={onBack}
-            className="-ml-2 h-8 rounded-lg px-2 text-xs font-semibold text-muted-foreground hover:bg-muted/10 hover:text-foreground"
+            className="-ml-2 h-8 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           >
             <ArrowLeft className="mr-1 h-3.5 w-3.5" />
-            Back to list
+            Back to scheduled items
           </Button>
         </div>
 

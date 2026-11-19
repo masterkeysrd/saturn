@@ -16,6 +16,7 @@ interface BaseAmountInputProps extends Omit<
   className?: string
   showError?: boolean
   allowNegative?: boolean
+  inputRef?: React.Ref<HTMLInputElement>
 }
 
 export type AmountInputProps<TFieldValues extends FieldValues = FieldValues> =
@@ -94,6 +95,7 @@ const AmountInputInner = React.forwardRef<
       placeholder = "0.00",
       disabled,
       allowNegative,
+      inputRef: externalInputRef,
       ...props
     },
     forwardedRef
@@ -101,6 +103,7 @@ const AmountInputInner = React.forwardRef<
     const inputRef = React.useRef<HTMLInputElement | null>(null)
 
     React.useImperativeHandle(forwardedRef, () => inputRef.current!)
+    React.useImperativeHandle(externalInputRef, () => inputRef.current!)
 
     const displayValue = React.useMemo(() => {
       const strVal = typeof value === "number" ? value.toString() : value || ""
@@ -167,7 +170,7 @@ const AmountInputInner = React.forwardRef<
     return (
       <div className="relative flex w-full items-center">
         {currency && (
-          <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-xs font-extrabold text-muted-foreground uppercase select-none">
+          <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 font-mono text-xs font-medium text-muted-foreground select-none">
             {currency}
           </span>
         )}

@@ -4147,6 +4147,22 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "startDate",
+            "description": "Optional. Start boundary timestamp (inclusive) for transaction_date filter.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "endDate",
+            "description": "Optional. End boundary timestamp (inclusive) for transaction_date filter.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
           }
         ],
         "tags": [

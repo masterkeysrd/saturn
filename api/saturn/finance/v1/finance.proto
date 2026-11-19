@@ -1110,6 +1110,12 @@ message ListTransactionsRequest {
   // Optional. Target borrowing ID filter.
   // Values are of the form `bor_[a-zA-Z0-9]+`.
   optional string borrowing_id = 14 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Start boundary timestamp (inclusive) for transaction_date filter.
+  optional google.protobuf.Timestamp start_date = 15 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. End boundary timestamp (inclusive) for transaction_date filter.
+  optional google.protobuf.Timestamp end_date = 16 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The response for

@@ -8,7 +8,11 @@ import {
   ArrowUpRight,
   Plus,
 } from "lucide-react-native"
-import { formatAmount, calculateAccountMetrics } from "@saturn/core"
+import {
+  formatAmount,
+  calculateAccountMetrics,
+  resolveFinancePeriodBounds,
+} from "@saturn/core"
 import {
   useListAccountsQuery,
   useGetSettingsQuery,
@@ -45,13 +49,24 @@ export function FinanceSummaryWidget() {
   const { data: accountsData, isLoading: accountsLoading } =
     useListAccountsQuery({ activeOnly: true }, { enabled: !!activeSpaceId })
 
-  // 4. Fetch pre-aggregated backend Insights (monthly income & expenses)
+  // 4. Fetch pre-aggregated backend Insights (current month income & expenses)
+  const thisMonthBounds = useMemo(
+    () =>
+      resolveFinancePeriodBounds(
+        { period: "this_month", month: "", dateFrom: "", dateTo: "" },
+        tz.now(),
+        tz.timezone,
+        tz.locale
+      ),
+    [tz]
+  )
+
   const { data: insightsData, isLoading: insightsLoading } =
     useGetInsightsQuery(
       {
         granularity: "MONTHLY",
-        startDate: "",
-        endDate: "",
+        startDate: thisMonthBounds.startISO,
+        endDate: thisMonthBounds.endISO,
       },
       { enabled: !!activeSpaceId }
     )

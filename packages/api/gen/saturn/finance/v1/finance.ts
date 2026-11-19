@@ -1338,6 +1338,14 @@ export interface ListTransactionsRequest {
    * Values are of the form `bor_[a-zA-Z0-9]+`.
    */
   borrowingId?: string
+  /**
+   * Optional. Start boundary timestamp (inclusive) for transaction_date filter.
+   */
+  startDate?: string
+  /**
+   * Optional. End boundary timestamp (inclusive) for transaction_date filter.
+   */
+  endDate?: string
 }
 
 /**

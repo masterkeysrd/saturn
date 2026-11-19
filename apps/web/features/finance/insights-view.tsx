@@ -1,26 +1,22 @@
-import { useState } from "react"
-import { useActiveSpaceContext } from "@/features/space/use-space"
+import { useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { useUrlState } from "@/lib/use-url-state"
+import {
+  resolveSpacePath,
+  useActiveSpaceContext,
+} from "@/features/space/use-space"
 import { useTimezone } from "@saturn/hooks"
+import { useRegisterCopilotView } from "@saturn/hooks/ai"
+import { formatCents } from "@saturn/core"
 import {
   useGetInsightsQuery,
   type InsightGranularity,
-  type SpentInsights_BudgetContribution,
-  type IncomeInsights_AccountContribution,
   useGetSettingsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
-import { FinancePageLayout } from "./components/finance-page-layout"
-import {
-  formatCents,
-  formatAmount,
-  getBudgetColors,
-  getBudgetIcon,
-} from "./utils"
-import { cn } from "@/lib/utils"
 import {
   TrendingDownIcon,
   TrendingUp,
   DollarSignIcon,
-  CalendarIcon,
   PercentIcon,
   FlameIcon,
   LayersIcon,
@@ -32,6 +28,27 @@ import {
   Scale,
 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { MoneyAmount } from "@/components/ui/money-amount"
+import { cn } from "@/lib/utils"
+import { FinancePageLayout } from "./components/finance-page-layout"
+import { FinancePeriodPicker } from "./components/finance-period-picker"
+import { resolveFinancePeriodBounds } from "./period-bounds"
+import {
+  CashFlowSvgChart,
+  StackedBreakdownSvgChart,
+  type InspectedSegmentInfo,
+  type MergedTrendPoint,
+} from "./components/insights-charts"
+import { getBudgetColors, getBudgetIcon, getPeriodDateBounds } from "./utils"
+
+const INSIGHTS_URL_DEFAULTS = {
+  period: "this_month" as string,
+  month: "" as string,
+  from: "" as string,
+  to: "" as string,
+  granularity: "" as string,
+  tab: "CASH_FLOW" as string,
+}
 
 const ACCOUNT_COLORS = [
   { bar: "bg-teal-500", text: "text-teal-500", bg: "bg-teal-500/10" },
@@ -49,13 +66,49 @@ function getAccountColor(index: number) {
 export function InsightsView() {
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
+  const navigate = useNavigate()
   const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
-  const [granularity, setGranularity] = useState<InsightGranularity>("MONTHLY")
-  const [activeTab, setActiveTab] = useState<
-    "OUTFLOWS" | "INFLOWS" | "CASH_FLOW"
-  >("CASH_FLOW")
 
-  // Fetch unified spent and income insights from the backend
+  const [urlState, setUrlState] = useUrlState(INSIGHTS_URL_DEFAULTS)
+
+  const activeTab: "OUTFLOWS" | "INFLOWS" | "CASH_FLOW" =
+    urlState.tab === "OUTFLOWS" || urlState.tab === "INFLOWS"
+      ? urlState.tab
+      : "CASH_FLOW"
+
+  const now = tz.now()
+  const periodBounds = useMemo(
+    () =>
+      resolveFinancePeriodBounds(
+        {
+          period: urlState.period,
+          month: urlState.month,
+          dateFrom: urlState.from,
+          dateTo: urlState.to,
+        },
+        now,
+        tz.timezone,
+        tz.locale
+      ),
+    [
+      urlState.period,
+      urlState.month,
+      urlState.from,
+      urlState.to,
+      now,
+      tz.timezone,
+      tz.locale,
+    ]
+  )
+
+  const granularity: InsightGranularity =
+    urlState.granularity === "DAILY" ||
+    urlState.granularity === "WEEKLY" ||
+    urlState.granularity === "MONTHLY" ||
+    urlState.granularity === "YEARLY"
+      ? urlState.granularity
+      : periodBounds.recommendedGranularity
+
   const {
     data: insightsData,
     isLoading: insightsLoading,
@@ -64,8 +117,8 @@ export function InsightsView() {
   } = useGetInsightsQuery(
     {
       granularity,
-      startDate: "",
-      endDate: "",
+      startDate: periodBounds.startISO,
+      endDate: periodBounds.endISO,
     },
     {
       enabled: !!spaceId && !!settings,
@@ -73,105 +126,28 @@ export function InsightsView() {
     }
   )
 
+  useRegisterCopilotView({
+    viewId: "finance.insights",
+    title: "Financial Insights",
+    suggestions: [
+      "Summarize my cash flow and biggest spending drivers for this period",
+      "Where am I spending more compared to my budget limits?",
+      "How can I improve my savings rate based on these trends?",
+    ],
+  })
+
+  const [inspectedIndex, setInspectedIndex] = useState<number | null>(null)
+  const [inspectedSegment, setInspectedSegment] =
+    useState<InspectedSegmentInfo | null>(null)
+
   const spentInsights = insightsData?.spent
   const incomeInsights = insightsData?.income
   const baseCurrency = settings?.baseCurrency || "USD"
 
-  // Active hover states for tooltips
-  const [activeTooltip, setActiveTooltip] = useState<{
-    label: string
-    total: number
-    title: string
-    colorClass: string
-    amountInBase: number
-    amountInLocal: number
-    localCurrency: string
-    percentage: number
-  } | null>(null)
-
-  const [activeCashFlowTooltip, setActiveCashFlowTooltip] = useState<{
-    label: string
-    inflow: number
-    outflow: number
-    net: number
-    savingsRate: number
-  } | null>(null)
-
-  // Track loading status
-  const isQueryEnabled = !!spaceId && !!settings
-  const showLoadingSpinner =
-    insightsLoading || (insightsPending && isQueryEnabled)
-
-  if (showLoadingSpinner) {
-    return (
-      <FinancePageLayout
-        title="Insights"
-        description="Loading financial insights"
-        icon={TrendingUp}
-      >
-        <div className="flex h-[400px] items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="h-8 w-8 animate-pulse animate-spin text-primary" />
-            <p className="animate-pulse text-xs font-medium text-muted-foreground">
-              Generating your financial insights...
-            </p>
-          </div>
-        </div>
-      </FinancePageLayout>
-    )
-  }
-
-  if (!settings) {
-    return (
-      <FinancePageLayout
-        title="Insights"
-        description="Configure finance to view insights"
-        icon={TrendingUp}
-      >
-        <div className="flex min-h-[400px] items-center justify-center" />
-      </FinancePageLayout>
-    )
-  }
-
-  if (insightsError || (isQueryEnabled && !spentInsights && !insightsPending)) {
-    return (
-      <FinancePageLayout
-        title="Insights"
-        description="Unable to load insights"
-        icon={TrendingUp}
-      >
-        <div className="flex h-[300px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-muted/30 bg-muted/10 p-8 text-center">
-          <TrendingDownIcon className="h-10 w-10 text-muted-foreground/60" />
-          <h3 className="text-sm font-semibold">Could not load insights</h3>
-          <p className="max-w-sm text-xs text-muted-foreground">
-            Please make sure exchange rates are configured and transactions are
-            logged in the active workspace.
-          </p>
-        </div>
-      </FinancePageLayout>
-    )
-  }
-
-  if (!spentInsights) {
-    return null
-  }
-
-  // Merge spent and income trends chronologically to guarantee no missing intervals
-  const mergedTrend = (() => {
-    const spentTrend = spentInsights.trend || []
+  const mergedTrend = useMemo<MergedTrendPoint[]>(() => {
+    const spentTrend = spentInsights?.trend || []
     const incomeTrend = incomeInsights?.trend || []
-
-    const pointsMap = new Map<
-      string,
-      {
-        label: string
-        startDate: string
-        outflowTotal: number
-        inflowTotal: number
-        spentContributions: SpentInsights_BudgetContribution[]
-        incomeContributions: IncomeInsights_AccountContribution[]
-      }
-    >()
+    const pointsMap = new Map<string, MergedTrendPoint>()
 
     for (const pt of spentTrend) {
       pointsMap.set(pt.startDate, {
@@ -205,216 +181,311 @@ export function InsightsView() {
       (a, b) =>
         new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
     )
-  })()
+  }, [spentInsights?.trend, incomeInsights?.trend])
 
-  // Calculate chart max ranges based on active mode using merged trends
-  let maxTrendAmount = 100
-  if (activeTab === "OUTFLOWS") {
-    maxTrendAmount = Math.max(...mergedTrend.map((pt) => pt.outflowTotal), 100)
-  } else if (activeTab === "INFLOWS") {
-    maxTrendAmount = Math.max(...mergedTrend.map((pt) => pt.inflowTotal), 100)
-  } else if (activeTab === "CASH_FLOW") {
-    maxTrendAmount = Math.max(
-      ...mergedTrend.map((pt) => Math.max(pt.outflowTotal, pt.inflowTotal)),
-      100
+  const navigateToTransactions = (params: Record<string, string>) => {
+    const search = new URLSearchParams()
+    for (const [k, v] of Object.entries(params)) {
+      if (v) search.set(k, v)
+    }
+    const basePath = resolveSpacePath("/finance/transactions", spaceId, true)
+    const qs = search.toString()
+    navigate(qs ? `${basePath}?${qs}` : basePath)
+  }
+
+  const handlePeriodDrilldown = (point: MergedTrendPoint) => {
+    const bounds = getPeriodDateBounds(
+      point.startDate,
+      granularity,
+      tz.timezone
+    )
+    const params: Record<string, string> = {}
+    if (bounds.dateFrom) params.dateFrom = bounds.dateFrom
+    if (bounds.dateTo) params.dateTo = bounds.dateTo
+    if (activeTab === "OUTFLOWS") params.type = "EXPENSE"
+    if (activeTab === "INFLOWS") params.type = "INCOME"
+    navigateToTransactions(params)
+  }
+
+  const isQueryEnabled = !!spaceId && !!settings
+  const showLoadingSpinner =
+    insightsLoading || (insightsPending && isQueryEnabled)
+
+  if (showLoadingSpinner) {
+    return (
+      <FinancePageLayout
+        title="Insights"
+        description="Financial trends, cash flow pacing, and category allocation."
+        icon={TrendingUp}
+      >
+        <div className="flex h-[400px] items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-xs font-medium text-muted-foreground">
+              Generating your financial insights...
+            </p>
+          </div>
+        </div>
+      </FinancePageLayout>
     )
   }
+
+  if (!settings) {
+    return (
+      <FinancePageLayout
+        title="Insights"
+        description="Configure finance to view insights"
+        icon={TrendingUp}
+      >
+        <div className="flex min-h-[400px] items-center justify-center" />
+      </FinancePageLayout>
+    )
+  }
+
+  if (insightsError || (isQueryEnabled && !spentInsights && !insightsPending)) {
+    return (
+      <FinancePageLayout
+        title="Insights"
+        description="Unable to load insights"
+        icon={TrendingUp}
+      >
+        <div className="flex h-[300px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card p-8 text-center">
+          <TrendingDownIcon className="h-10 w-10 text-muted-foreground/60" />
+          <h3 className="text-sm font-semibold">Could not load insights</h3>
+          <p className="max-w-sm text-xs text-muted-foreground">
+            Please make sure exchange rates are configured and transactions are
+            logged in the active workspace.
+          </p>
+        </div>
+      </FinancePageLayout>
+    )
+  }
+
+  if (!spentInsights) {
+    return null
+  }
+
+  const activePoint =
+    inspectedIndex !== null && mergedTrend[inspectedIndex]
+      ? mergedTrend[inspectedIndex]
+      : mergedTrend.length > 0
+        ? mergedTrend[mergedTrend.length - 1]
+        : null
 
   return (
     <FinancePageLayout
       title="Insights"
-      description="Financial trends and overview"
+      description="Financial trends, cash flow pacing, and category allocation."
       icon={TrendingUp}
     >
-      <div className="animate-in space-y-6 pb-6 duration-500 fade-in">
-        {/* Navigation Selector Tabs at the Top */}
-        <div className="flex max-w-sm items-center gap-1 self-start rounded-2xl border border-border/40 bg-muted/20 p-1">
-          <button
-            onClick={() => {
-              setActiveTab("CASH_FLOW")
-              setActiveTooltip(null)
-              setActiveCashFlowTooltip(null)
-            }}
-            className={cn(
-              "flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-300",
-              activeTab === "CASH_FLOW"
-                ? "border border-border/40 bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
+      <div className="space-y-6 pb-6">
+        {/* Top Controls: Stream Tabs + Period Picker */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          {/* Stream Tabs */}
+          <div
+            role="tablist"
+            aria-label="Insights view"
+            className="flex max-w-sm items-center gap-1 rounded-lg bg-muted/60 p-1"
           >
-            <Scale className="h-3.5 w-3.5 text-indigo-500" />
-            Cash Flow
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab("OUTFLOWS")
-              setActiveTooltip(null)
-              setActiveCashFlowTooltip(null)
-            }}
-            className={cn(
-              "flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-300",
-              activeTab === "OUTFLOWS"
-                ? "border border-border/40 bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <TrendingDownIcon className="h-3.5 w-3.5 text-rose-500" />
-            Outflows
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab("INFLOWS")
-              setActiveTooltip(null)
-              setActiveCashFlowTooltip(null)
-            }}
-            className={cn(
-              "flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-300",
-              activeTab === "INFLOWS"
-                ? "border border-border/40 bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-            Inflows
-          </button>
+            {(
+              [
+                {
+                  id: "CASH_FLOW",
+                  label: "Cash Flow",
+                  icon: Scale,
+                  iconColor: "text-primary",
+                },
+                {
+                  id: "OUTFLOWS",
+                  label: "Outflows",
+                  icon: TrendingDownIcon,
+                  iconColor: "text-destructive",
+                },
+                {
+                  id: "INFLOWS",
+                  label: "Inflows",
+                  icon: TrendingUp,
+                  iconColor: "text-success",
+                },
+              ] as const
+            ).map((tab) => {
+              const Icon = tab.icon
+              const isSelected = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  onClick={() => {
+                    setUrlState({ tab: tab.id })
+                    setInspectedIndex(null)
+                    setInspectedSegment(null)
+                  }}
+                  className={cn(
+                    "flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
+                    isSelected
+                      ? "bg-card text-foreground shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Icon className={cn("size-3.5", tab.iconColor)} />
+                  <span>{tab.label}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Shared Period Picker */}
+          <div className="flex flex-wrap items-center gap-2">
+            <FinancePeriodPicker
+              value={{
+                period: urlState.period,
+                month: urlState.month,
+                dateFrom: urlState.from,
+                dateTo: urlState.to,
+              }}
+              onChange={(next) => {
+                setUrlState({
+                  period: next.period,
+                  month: next.month,
+                  from: next.dateFrom,
+                  to: next.dateTo,
+                  granularity: "",
+                })
+                setInspectedIndex(null)
+                setInspectedSegment(null)
+              }}
+            />
+          </div>
         </div>
 
-        {/* Top Half split layout: 1/3 Metrics Sidebar, 2/3 Stacked Trend Chart */}
+        {/* Top Half split layout: 1/3 Metrics Sidebar, 2/3 SVG Chart */}
         <div className="grid gap-6 md:grid-cols-3">
           {/* 1/3 Sidebar Metrics Column */}
           {activeTab === "OUTFLOWS" && (
             <div className="flex flex-col justify-between gap-3 md:col-span-1">
-              <div className="relative overflow-hidden rounded-2xl border border-muted/15 bg-card/60 p-4 shadow-sm transition-all duration-300 hover:shadow">
+              <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Total Spent
                   </span>
-                  <TrendingDownIcon className="h-3.5 w-3.5 text-rose-500" />
+                  <TrendingDownIcon className="size-4 text-destructive" />
                 </div>
-                <div className="mt-2.5 flex items-baseline gap-1">
-                  <span className="text-xl font-bold tracking-tight">
-                    {formatAmount(spentInsights.totalSpent, baseCurrency)}
-                  </span>
-                </div>
+                <MoneyAmount
+                  cents={spentInsights.totalSpent}
+                  currency={baseCurrency}
+                  size="lg"
+                  className="mt-2 block text-foreground"
+                />
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl border border-muted/15 bg-card/60 p-4 shadow-sm transition-all duration-300 hover:shadow">
+              <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Active Limit
                   </span>
-                  <LayersIcon className="h-3.5 w-3.5 text-blue-500" />
+                  <LayersIcon className="size-4 text-info" />
                 </div>
-                <div className="mt-2.5 flex items-baseline gap-1">
-                  <span className="text-xl font-bold tracking-tight">
-                    {formatAmount(spentInsights.totalLimit, baseCurrency)}
-                  </span>
-                </div>
+                <MoneyAmount
+                  cents={spentInsights.totalLimit}
+                  currency={baseCurrency}
+                  size="lg"
+                  className="mt-2 block text-foreground"
+                />
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl border border-muted/15 bg-card/60 p-4 shadow-sm transition-all duration-300 hover:shadow">
+              <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Remaining
                   </span>
-                  <PercentIcon className="h-3.5 w-3.5 text-emerald-500" />
+                  <PercentIcon className="size-4 text-success" />
                 </div>
-                <div className="mt-2.5 flex items-baseline gap-1">
-                  <span className="text-xl font-bold tracking-tight">
-                    {formatAmount(spentInsights.remainingBudget, baseCurrency)}
-                  </span>
-                </div>
+                <MoneyAmount
+                  cents={spentInsights.remainingBudget}
+                  currency={baseCurrency}
+                  size="lg"
+                  className="mt-2 block text-foreground"
+                />
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl border border-muted/15 bg-card/60 p-4 shadow-sm transition-all duration-300 hover:shadow">
+              <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Daily Burn Rate
                   </span>
-                  <FlameIcon className="h-3.5 w-3.5 text-amber-500" />
+                  <FlameIcon className="size-4 text-warning" />
                 </div>
-                <div className="mt-2.5 flex items-baseline gap-1">
-                  <span className="text-xl font-bold tracking-tight">
-                    {baseCurrency}{" "}
-                    {formatCents(
-                      Math.round(spentInsights.burnRate)
-                    ).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
-                </div>
+                <MoneyAmount
+                  cents={Math.round(spentInsights.burnRate)}
+                  currency={baseCurrency}
+                  size="lg"
+                  className="mt-2 block text-foreground"
+                />
               </div>
             </div>
           )}
 
           {activeTab === "INFLOWS" && (
             <div className="flex flex-col justify-between gap-3 md:col-span-1">
-              <div className="relative overflow-hidden rounded-2xl border border-muted/15 bg-card/60 p-4 shadow-sm transition-all duration-300 hover:shadow">
+              <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Total Inflow
                   </span>
-                  <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                  <TrendingUp className="size-4 text-success" />
                 </div>
-                <div className="mt-2.5 flex items-baseline gap-1">
-                  <span className="text-xl font-bold tracking-tight">
-                    {formatAmount(
-                      incomeInsights?.totalIncome || "0",
-                      baseCurrency
-                    )}
-                  </span>
-                </div>
+                <MoneyAmount
+                  cents={incomeInsights?.totalIncome || "0"}
+                  currency={baseCurrency}
+                  size="lg"
+                  className="mt-2 block text-foreground"
+                />
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl border border-muted/15 bg-card/60 p-4 shadow-sm transition-all duration-300 hover:shadow">
+              <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Top Inflow Source
                   </span>
-                  <CoinsIcon className="h-3.5 w-3.5 text-teal-400" />
+                  <CoinsIcon className="size-4 text-primary" />
                 </div>
-                <div className="mt-2.5 flex w-full min-w-0 items-baseline gap-1">
-                  <span className="max-w-[200px] truncate text-base font-bold tracking-tight">
-                    {incomeInsights?.distributions?.[0]?.name || "None"}
-                  </span>
-                </div>
+                <span className="mt-2 block truncate text-base font-semibold text-foreground">
+                  {incomeInsights?.distributions?.[0]?.name || "None"}
+                </span>
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl border border-muted/15 bg-card/60 p-4 shadow-sm transition-all duration-300 hover:shadow">
+              <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Inflow Events
                   </span>
-                  <LayersIcon className="h-3.5 w-3.5 text-sky-400" />
+                  <LayersIcon className="size-4 text-info" />
                 </div>
-                <div className="mt-2.5 flex items-baseline gap-1">
-                  <span className="text-xl font-bold tracking-tight">
-                    {incomeInsights?.topIncomes?.length || 0}
-                  </span>
-                </div>
+                <span className="mt-2 block font-mono text-lg font-semibold text-foreground tabular-nums">
+                  {incomeInsights?.topIncomes?.length || 0}
+                </span>
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl border border-muted/15 bg-card/60 p-4 shadow-sm transition-all duration-300 hover:shadow">
+              <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Target Accounts
                   </span>
-                  <ArrowRightLeft className="h-3.5 w-3.5 text-indigo-400" />
+                  <ArrowRightLeft className="size-4 text-primary" />
                 </div>
-                <div className="mt-2.5 flex items-baseline gap-1">
-                  <span className="text-xl font-bold tracking-tight">
-                    {
-                      Array.from(
-                        new Set(
-                          (incomeInsights?.trend || []).flatMap((pt) =>
-                            pt.contributions.map((c) => c.accountId)
-                          )
+                <span className="mt-2 block font-mono text-lg font-semibold text-foreground tabular-nums">
+                  {
+                    Array.from(
+                      new Set(
+                        (incomeInsights?.trend || []).flatMap((pt) =>
+                          pt.contributions.map((c) => c.accountId)
                         )
-                      ).length
-                    }
-                  </span>
-                </div>
+                      )
+                    ).length
+                  }
+                </span>
               </div>
             </div>
           )}
@@ -422,92 +493,80 @@ export function InsightsView() {
           {activeTab === "CASH_FLOW" && (
             <div className="flex flex-col justify-between gap-3 md:col-span-1">
               {(() => {
-                const totalIn = incomeInsights?.totalIncome || 0
-                const totalOut = spentInsights.totalSpent
-                const netCash = Number(totalIn) - Number(totalOut)
-                const savingsPct =
-                  Number(totalIn) > 0
-                    ? (float64(netCash) / float64(totalIn)) * 100
-                    : 0
-
-                function float64(val: number | string) {
-                  return typeof val === "string" ? parseFloat(val) : val
-                }
+                const totalIn = Number(incomeInsights?.totalIncome || 0)
+                const totalOut = Number(spentInsights.totalSpent || 0)
+                const netCash = totalIn - totalOut
+                const savingsPct = totalIn > 0 ? (netCash / totalIn) * 100 : 0
 
                 return (
                   <>
-                    <div className="relative overflow-hidden rounded-2xl border border-muted/15 bg-card/60 p-4 shadow-sm transition-all duration-300 hover:shadow">
+                    <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                        <span className="text-xs font-medium text-muted-foreground">
                           Net Savings
                         </span>
                         <Scale
                           className={cn(
-                            "h-3.5 w-3.5",
-                            netCash >= 0 ? "text-emerald-500" : "text-rose-500"
+                            "size-4",
+                            netCash >= 0 ? "text-success" : "text-destructive"
                           )}
                         />
                       </div>
-                      <div className="mt-2.5 flex items-baseline gap-1">
-                        <span
-                          className={cn(
-                            "text-xl font-bold tracking-tight",
-                            netCash >= 0 ? "text-emerald-400" : "text-rose-400"
-                          )}
-                        >
-                          {netCash >= 0 ? "+" : ""}
-                          {formatAmount(netCash.toString(), baseCurrency)}
-                        </span>
-                      </div>
+                      <MoneyAmount
+                        cents={netCash}
+                        currency={baseCurrency}
+                        showSign
+                        colored
+                        size="lg"
+                        className="mt-2 block"
+                      />
                     </div>
 
-                    <div className="relative overflow-hidden rounded-2xl border border-muted/15 bg-card/60 p-4 shadow-sm transition-all duration-300 hover:shadow">
+                    <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                        <span className="text-xs font-medium text-muted-foreground">
                           Savings Rate
                         </span>
-                        <PercentIcon className="h-3.5 w-3.5 text-primary" />
+                        <PercentIcon className="size-4 text-primary" />
                       </div>
-                      <div className="mt-2.5 flex items-baseline gap-1">
-                        <span
-                          className={cn(
-                            "text-xl font-bold tracking-tight",
-                            savingsPct >= 0
-                              ? "text-emerald-400"
-                              : "text-rose-400"
-                          )}
-                        >
-                          {savingsPct.toFixed(1)}%
-                        </span>
-                      </div>
+                      <span
+                        className={cn(
+                          "mt-2 block font-mono text-lg font-semibold tabular-nums",
+                          savingsPct >= 0 ? "text-success" : "text-destructive"
+                        )}
+                      >
+                        {savingsPct.toFixed(1)}%
+                      </span>
                     </div>
 
-                    <div className="relative overflow-hidden rounded-2xl border border-muted/15 bg-card/60 p-4 shadow-sm transition-all duration-300 hover:shadow">
+                    <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                          Summary Inflow
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Total Inflow
                         </span>
-                        <ArrowUpRight className="h-3.5 w-3.5 text-emerald-400" />
+                        <ArrowUpRight className="size-4 text-success" />
                       </div>
-                      <div className="mt-2.5 flex items-baseline gap-1">
-                        <span className="text-xl font-bold tracking-tight">
-                          {formatAmount(totalIn.toString(), baseCurrency)}
-                        </span>
-                      </div>
+                      <MoneyAmount
+                        cents={totalIn}
+                        currency={baseCurrency}
+                        size="lg"
+                        className="mt-2 block text-foreground"
+                      />
                     </div>
 
-                    <div className="relative overflow-hidden rounded-2xl border border-muted/15 bg-card/60 p-4 shadow-sm transition-all duration-300 hover:shadow">
+                    <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                          Summary Outflow
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Total Outflow
                         </span>
-                        <ArrowDownLeft className="h-3.5 w-3.5 text-rose-400" />
+                        <ArrowDownLeft className="size-4 text-destructive" />
                       </div>
-                      <div className="mt-2.5 flex items-baseline gap-1">
-                        <span className="text-xl font-bold tracking-tight">
-                          {formatAmount(totalOut.toString(), baseCurrency)}
-                        </span>
-                      </div>
+                      <MoneyAmount
+                        cents={totalOut}
+                        currency={baseCurrency}
+                        size="lg"
+                        className="mt-2 block text-foreground"
+                      />
                     </div>
                   </>
                 )
@@ -515,34 +574,38 @@ export function InsightsView() {
             </div>
           )}
 
-          {/* 2/3 Trend Chart Column */}
-          <div className="flex flex-col justify-between rounded-3xl border border-muted/20 bg-card p-5 shadow-sm md:col-span-2">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {/* 2/3 Trend SVG Chart Column */}
+          <div className="flex flex-col justify-between rounded-xl border border-border bg-card p-5 shadow-2xs md:col-span-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="flex items-center gap-1.5 text-xs font-bold tracking-tight text-muted-foreground uppercase">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                   {activeTab === "OUTFLOWS" && (
                     <>
-                      <TrendingDownIcon className="h-3.5 w-3.5 text-rose-400" />
-                      Outflow Trend
+                      <TrendingDownIcon className="size-4 text-destructive" />
+                      <span>Outflow Trend</span>
                     </>
                   )}
                   {activeTab === "INFLOWS" && (
                     <>
-                      <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
-                      Inflow Trend
+                      <TrendingUp className="size-4 text-success" />
+                      <span>Inflow Trend</span>
                     </>
                   )}
                   {activeTab === "CASH_FLOW" && (
                     <>
-                      <Scale className="h-3.5 w-3.5 text-indigo-400" />
-                      Cash Flow Comparison
+                      <Scale className="size-4 text-primary" />
+                      <span>Cash Flow Comparison</span>
                     </>
                   )}
                 </h3>
               </div>
 
-              {/* Granularity Selector buttons */}
-              <div className="flex items-center self-start rounded-xl border border-muted/20 bg-muted/30 p-0.5 sm:self-auto">
+              {/* Granularity Selector */}
+              <div
+                role="group"
+                aria-label="Chart granularity"
+                className="flex items-center self-start rounded-lg bg-muted/60 p-0.5 sm:self-auto"
+              >
                 {(
                   [
                     "DAILY",
@@ -553,382 +616,159 @@ export function InsightsView() {
                 ).map((mode) => (
                   <button
                     key={mode}
-                    onClick={() => setGranularity(mode)}
-                    className={`cursor-pointer rounded-lg px-2.5 py-1 text-[9px] font-bold transition-all duration-300 ${
+                    type="button"
+                    aria-pressed={granularity === mode}
+                    onClick={() => setUrlState({ granularity: mode })}
+                    className={cn(
+                      "cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
                       granularity === mode
-                        ? "bg-card text-foreground shadow-sm"
+                        ? "bg-card text-foreground shadow-2xs"
                         : "text-muted-foreground hover:text-foreground"
-                    }`}
+                    )}
                   >
-                    {mode}
+                    {mode.charAt(0) + mode.slice(1).toLowerCase()}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Custom Interactive Charts */}
-            <div className="relative mt-4">
-              <div className="relative flex h-[170px] items-end gap-2.5 border-b border-muted/15 px-2 sm:gap-4">
-                {/* Vertical Grid Y-axis Guide Markers */}
-                <div className="pointer-events-none absolute top-0 right-0 bottom-0 left-0 flex flex-col justify-between font-mono text-[8px] text-muted-foreground/30">
-                  <div className="w-full border-t border-dashed border-muted/10 pt-0.5">
-                    {baseCurrency}{" "}
-                    {formatCents(Math.round(maxTrendAmount)).toLocaleString()}
-                  </div>
-                  <div className="w-full border-t border-dashed border-muted/10 pt-0.5">
-                    {baseCurrency}{" "}
-                    {formatCents(
-                      Math.round(maxTrendAmount / 2)
-                    ).toLocaleString()}
-                  </div>
-                  <div className="w-full"></div>
-                </div>
-
-                {activeTab === "OUTFLOWS" &&
-                  (mergedTrend.length === 0 ? (
-                    <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                      No outflow transactions recorded for this range.
-                    </div>
-                  ) : (
-                    mergedTrend.map((pt, ptIdx) => {
-                      const ptTotal = pt.outflowTotal
-                      const heightPercent =
-                        ptTotal > 0 ? (ptTotal / maxTrendAmount) * 100 : 0
-
-                      return (
-                        <div
-                          key={ptIdx}
-                          className="group relative flex h-full flex-1 flex-col items-center justify-end"
-                        >
-                          <div
-                            className="flex w-full flex-col justify-end overflow-hidden rounded-t-md bg-muted/5 transition-all duration-350 hover:ring-2 hover:ring-primary/20 sm:w-8"
-                            style={{ height: `${heightPercent}%` }}
-                          >
-                            {pt.spentContributions.map((c, cIdx) => {
-                              const cPercent =
-                                ptTotal > 0
-                                  ? (Number(c.amountInBase) / ptTotal) * 100
-                                  : 0
-                              const color = getBudgetColors(c.budgetColor)
-
-                              return (
-                                <div
-                                  key={cIdx}
-                                  className={cn(
-                                    "relative w-full cursor-pointer border-t border-background/25 transition-all first:border-0 hover:brightness-110 active:scale-[0.98]",
-                                    color.bar
-                                  )}
-                                  style={{
-                                    height: `${cPercent}%`,
-                                  }}
-                                  onMouseEnter={() =>
-                                    setActiveTooltip({
-                                      label: pt.label,
-                                      total: ptTotal,
-                                      title: c.budgetName,
-                                      colorClass: color.bar,
-                                      amountInBase: Number(c.amountInBase),
-                                      amountInLocal: Number(c.amountInLocal),
-                                      localCurrency: c.localCurrency,
-                                      percentage: c.contributionPercentage,
-                                    })
-                                  }
-                                  onMouseLeave={() => setActiveTooltip(null)}
-                                />
-                              )
-                            })}
-                          </div>
-                          <span className="mt-1.5 text-[8px] font-bold text-muted-foreground transition-colors duration-200 group-hover:text-foreground">
-                            {pt.label}
-                          </span>
-                        </div>
-                      )
-                    })
-                  ))}
-
-                {activeTab === "INFLOWS" &&
-                  (mergedTrend.length === 0 ? (
-                    <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                      No inflow transactions recorded for this range.
-                    </div>
-                  ) : (
-                    mergedTrend.map((pt, ptIdx) => {
-                      const ptTotal = pt.inflowTotal
-                      const heightPercent =
-                        ptTotal > 0 ? (ptTotal / maxTrendAmount) * 100 : 0
-
-                      return (
-                        <div
-                          key={ptIdx}
-                          className="group relative flex h-full flex-1 flex-col items-center justify-end"
-                        >
-                          <div
-                            className="flex w-full flex-col justify-end overflow-hidden rounded-t-md bg-muted/5 transition-all duration-350 hover:ring-2 hover:ring-emerald-500/20 sm:w-8"
-                            style={{ height: `${heightPercent}%` }}
-                          >
-                            {pt.incomeContributions.map((c, cIdx) => {
-                              const cPercent =
-                                ptTotal > 0
-                                  ? (Number(c.amountInBase) / ptTotal) * 100
-                                  : 0
-                              const color = getAccountColor(cIdx)
-
-                              return (
-                                <div
-                                  key={cIdx}
-                                  className={cn(
-                                    "relative w-full cursor-pointer border-t border-background/25 transition-all first:border-0 hover:brightness-110 active:scale-[0.98]",
-                                    color.bar
-                                  )}
-                                  style={{
-                                    height: `${cPercent}%`,
-                                  }}
-                                  onMouseEnter={() =>
-                                    setActiveTooltip({
-                                      label: pt.label,
-                                      total: ptTotal,
-                                      title: c.accountName,
-                                      colorClass: color.bar,
-                                      amountInBase: Number(c.amountInBase),
-                                      amountInLocal: Number(c.amountInLocal),
-                                      localCurrency: c.localCurrency,
-                                      percentage:
-                                        ptTotal > 0
-                                          ? (Number(c.amountInBase) / ptTotal) *
-                                            100
-                                          : 0,
-                                    })
-                                  }
-                                  onMouseLeave={() => setActiveTooltip(null)}
-                                />
-                              )
-                            })}
-                          </div>
-                          <span className="mt-1.5 text-[8px] font-bold text-muted-foreground transition-colors duration-200 group-hover:text-foreground">
-                            {pt.label}
-                          </span>
-                        </div>
-                      )
-                    })
-                  ))}
-
-                {activeTab === "CASH_FLOW" &&
-                  (mergedTrend.length === 0 ? (
-                    <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                      No data recorded for this range.
-                    </div>
-                  ) : (
-                    mergedTrend.map((pt, ptIdx) => {
-                      const outflowTotal = pt.outflowTotal
-                      const inflowTotal = pt.inflowTotal
-
-                      const inflowHeight = (inflowTotal / maxTrendAmount) * 100
-                      const outflowHeight =
-                        (outflowTotal / maxTrendAmount) * 100
-
-                      const net = inflowTotal - outflowTotal
-                      const savingsRate =
-                        inflowTotal > 0 ? (net / inflowTotal) * 100 : 0
-
-                      return (
-                        <div
-                          key={ptIdx}
-                          className="group relative flex h-full flex-1 flex-col items-center justify-end"
-                        >
-                          <div className="flex h-full w-full max-w-[40px] items-end justify-center gap-1 sm:gap-1.5">
-                            {/* Inflow Bar (Green) */}
-                            <div
-                              className="w-[10px] cursor-pointer rounded-t-sm bg-emerald-500 transition-all duration-350 hover:brightness-110 sm:w-[14px]"
-                              style={{
-                                height: `${Math.max(inflowHeight, 2)}%`,
-                              }}
-                              onMouseEnter={() =>
-                                setActiveCashFlowTooltip({
-                                  label: pt.label,
-                                  inflow: inflowTotal,
-                                  outflow: outflowTotal,
-                                  net,
-                                  savingsRate,
-                                })
-                              }
-                              onMouseLeave={() =>
-                                setActiveCashFlowTooltip(null)
-                              }
-                            />
-                            {/* Outflow Bar (Rose) */}
-                            <div
-                              className="w-[10px] cursor-pointer rounded-t-sm bg-rose-500 transition-all duration-350 hover:brightness-110 sm:w-[14px]"
-                              style={{
-                                height: `${Math.max(outflowHeight, 2)}%`,
-                              }}
-                              onMouseEnter={() =>
-                                setActiveCashFlowTooltip({
-                                  label: pt.label,
-                                  inflow: inflowTotal,
-                                  outflow: outflowTotal,
-                                  net,
-                                  savingsRate,
-                                })
-                              }
-                              onMouseLeave={() =>
-                                setActiveCashFlowTooltip(null)
-                              }
-                            />
-                          </div>
-                          <span className="mt-1.5 text-[8px] font-bold text-muted-foreground transition-colors duration-200 group-hover:text-foreground">
-                            {pt.label}
-                          </span>
-                        </div>
-                      )
-                    })
-                  ))}
-              </div>
-
-              {/* General Interactive Tooltip Card for Single Streams */}
-              {activeTooltip && (
-                <div className="absolute top-0 right-0 z-20 w-56 animate-in rounded-xl border border-muted/15 bg-card p-3 shadow-lg duration-150 zoom-in-95 sm:right-2">
-                  <div className="mb-1.5 flex items-center gap-1">
-                    <CalendarIcon className="h-2.5 w-2.5 text-primary" />
-                    <span className="text-[8px] font-bold tracking-wide text-muted-foreground uppercase">
-                      {activeTooltip.label} • {baseCurrency}{" "}
-                      {formatCents(activeTooltip.total).toLocaleString(
-                        undefined,
-                        { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-                      )}
+            {/* Pinned Interactive Inspection Strip */}
+            <div
+              aria-live="polite"
+              className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-xs"
+            >
+              {activeTab === "CASH_FLOW" && activePoint ? (
+                <>
+                  <span className="font-medium text-foreground">
+                    {activePoint.label}
+                  </span>
+                  <div className="flex flex-wrap items-center gap-4 font-mono tabular-nums">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <span className="size-2 rounded-full bg-success" />
+                      In:{" "}
+                      <strong className="font-medium text-foreground">
+                        {tz.formatMoney(activePoint.inflowTotal, baseCurrency)}
+                      </strong>
+                    </span>
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <span className="size-2 rounded-full bg-destructive" />
+                      Out:{" "}
+                      <strong className="font-medium text-foreground">
+                        {tz.formatMoney(activePoint.outflowTotal, baseCurrency)}
+                      </strong>
+                    </span>
+                    <span className="text-muted-foreground">
+                      Net:{" "}
+                      <strong
+                        className={cn(
+                          "font-medium",
+                          activePoint.inflowTotal - activePoint.outflowTotal >=
+                            0
+                            ? "text-success"
+                            : "text-destructive"
+                        )}
+                      >
+                        {tz.formatMoney(
+                          activePoint.inflowTotal - activePoint.outflowTotal,
+                          baseCurrency,
+                          { showSign: true }
+                        )}
+                      </strong>
                     </span>
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={cn(
-                          "h-2 w-2 rounded-full",
-                          activeTooltip.colorClass
-                        )}
-                      />
-                      <span className="max-w-[150px] truncate text-[10px] font-bold text-foreground">
-                        {activeTooltip.title}
-                      </span>
-                    </div>
-                    <div className="space-y-0.5 pl-3.5 text-[9px]">
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>Local:</span>
-                        <span className="font-bold text-foreground">
-                          {activeTooltip.localCurrency}{" "}
-                          {formatCents(
-                            activeTooltip.amountInLocal
-                          ).toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-                      {activeTooltip.localCurrency !== baseCurrency && (
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>Converted:</span>
-                          <span className="font-semibold text-foreground">
-                            {baseCurrency}{" "}
-                            {formatCents(
-                              activeTooltip.amountInBase
-                            ).toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex justify-between border-t border-muted/10 pt-0.5 text-muted-foreground">
-                        <span>Ratio:</span>
-                        <span className="font-black text-primary">
-                          {activeTooltip.percentage.toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
+                </>
+              ) : inspectedSegment ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: inspectedSegment.colorHex }}
+                    />
+                    <span className="font-medium text-foreground">
+                      {inspectedSegment.periodLabel} · {inspectedSegment.title}
+                    </span>
                   </div>
-                </div>
+                  <div className="flex items-center gap-3 font-mono tabular-nums">
+                    <span className="font-medium text-foreground">
+                      {tz.formatMoney(
+                        inspectedSegment.amountInBase,
+                        baseCurrency
+                      )}
+                    </span>
+                    {inspectedSegment.localCurrency !== baseCurrency && (
+                      <span className="text-muted-foreground">
+                        (
+                        {tz.formatMoney(
+                          inspectedSegment.amountInLocal,
+                          inspectedSegment.localCurrency
+                        )}
+                        )
+                      </span>
+                    )}
+                    <span className="text-primary">
+                      {inspectedSegment.percentage.toFixed(1)}%
+                    </span>
+                  </div>
+                </>
+              ) : activePoint ? (
+                <>
+                  <span className="font-medium text-foreground">
+                    {activePoint.label}
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono font-medium text-foreground tabular-nums">
+                      {tz.formatMoney(
+                        activeTab === "OUTFLOWS"
+                          ? activePoint.outflowTotal
+                          : activePoint.inflowTotal,
+                        baseCurrency
+                      )}
+                    </span>
+                    <span className="text-muted-foreground">
+                      Click or press Enter on a bar to filter ledger
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <span className="text-muted-foreground">
+                  No period data available
+                </span>
               )}
+            </div>
 
-              {/* Cash Flow Interactive Tooltip Card */}
-              {activeCashFlowTooltip && (
-                <div className="absolute top-0 right-0 z-20 w-56 animate-in rounded-xl border border-muted/15 bg-card p-3 shadow-lg duration-150 zoom-in-95 sm:right-2">
-                  <div className="mb-1.5 flex items-center gap-1">
-                    <CalendarIcon className="h-2.5 w-2.5 text-indigo-400" />
-                    <span className="text-[8px] font-bold tracking-wide text-muted-foreground uppercase">
-                      {activeCashFlowTooltip.label} Metrics
-                    </span>
-                  </div>
-                  <div className="space-y-1.5 text-[10px]">
-                    <div className="flex justify-between text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                        Inflow:
-                      </span>
-                      <span className="font-bold text-foreground">
-                        {formatAmount(
-                          activeCashFlowTooltip.inflow.toString(),
-                          baseCurrency
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-rose-500" />
-                        Outflow:
-                      </span>
-                      <span className="font-bold text-foreground">
-                        {formatAmount(
-                          activeCashFlowTooltip.outflow.toString(),
-                          baseCurrency
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between border-t border-muted/10 pt-1 text-muted-foreground">
-                      <span className="font-semibold">Net Cash:</span>
-                      <span
-                        className={cn(
-                          "font-bold",
-                          activeCashFlowTooltip.net >= 0
-                            ? "text-emerald-400"
-                            : "text-rose-400"
-                        )}
-                      >
-                        {activeCashFlowTooltip.net >= 0 ? "+" : ""}
-                        {formatAmount(
-                          activeCashFlowTooltip.net.toString(),
-                          baseCurrency
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Savings Rate:</span>
-                      <span
-                        className={cn(
-                          "font-black",
-                          activeCashFlowTooltip.savingsRate >= 0
-                            ? "text-emerald-400"
-                            : "text-rose-400"
-                        )}
-                      >
-                        {activeCashFlowTooltip.savingsRate.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
+            {/* Native Accessible SVG Chart */}
+            <div className="mt-4">
+              {activeTab === "CASH_FLOW" ? (
+                <CashFlowSvgChart
+                  points={mergedTrend}
+                  baseCurrency={baseCurrency}
+                  activeIndex={inspectedIndex}
+                  onInspectIndex={setInspectedIndex}
+                  onSelectPeriod={handlePeriodDrilldown}
+                />
+              ) : (
+                <StackedBreakdownSvgChart
+                  mode={activeTab}
+                  points={mergedTrend}
+                  baseCurrency={baseCurrency}
+                  activeIndex={inspectedIndex}
+                  onInspectIndex={setInspectedIndex}
+                  onInspectSegment={setInspectedSegment}
+                  onSelectPeriod={handlePeriodDrilldown}
+                />
               )}
             </div>
           </div>
         </div>
 
-        {/* Bottom Half grid layout: Distributions and Lists */}
+        {/* Bottom Half Distributions & Lists */}
         {activeTab === "OUTFLOWS" && (
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Budget Distributions */}
-            <div className="flex flex-col rounded-3xl border border-muted/20 bg-card p-5 shadow-sm">
-              <h3 className="mb-3.5 flex items-center gap-1.5 text-xs font-bold tracking-tight text-muted-foreground uppercase">
-                <CoinsIcon className="h-4 w-4 text-primary" />
-                Budget Allocations
+            {/* Budget Allocations */}
+            <div className="flex flex-col rounded-xl border border-border bg-card p-5 shadow-2xs">
+              <h3 className="mb-3.5 flex items-center gap-2 text-sm font-semibold text-foreground">
+                <CoinsIcon className="size-4 text-primary" />
+                <span>Budget Allocations</span>
               </h3>
 
               {spentInsights.distributions.length === 0 ? (
@@ -937,82 +777,90 @@ export function InsightsView() {
                 </div>
               ) : (
                 <ScrollArea className="h-[260px]">
-                  <div className="space-y-3 pr-3">
+                  <div className="space-y-2.5 pr-3">
                     {spentInsights.distributions.map((dist) => {
                       const Icon = getBudgetIcon(dist.budgetIcon)
                       const colors = getBudgetColors(dist.budgetColor)
-
                       const isOver = dist.usagePercentage >= 100
                       const isNear =
                         dist.usagePercentage >= 85 && dist.usagePercentage < 100
                       const barColor = isOver
-                        ? "bg-rose-500 animate-pulse"
+                        ? "bg-destructive"
                         : isNear
-                          ? "bg-amber-500"
+                          ? "bg-warning"
                           : colors.bar
                       const textColor = isOver
-                        ? "text-rose-500 font-extrabold"
+                        ? "text-destructive"
                         : isNear
-                          ? "text-amber-500 font-extrabold"
+                          ? "text-warning"
                           : colors.text
 
                       return (
-                        <div
+                        <button
                           key={dist.budgetId}
-                          className="group rounded-xl border border-muted/10 bg-muted/5 p-3 transition-all duration-300 hover:bg-muted/10"
+                          type="button"
+                          onClick={() =>
+                            navigateToTransactions({
+                              type: "EXPENSE",
+                              budgetId: dist.budgetId,
+                              dateFrom: periodBounds.ymdFrom,
+                              dateTo: periodBounds.ymdTo,
+                            })
+                          }
+                          className="group block w-full cursor-pointer rounded-xl border border-border/70 bg-muted/20 p-3 text-left transition-colors hover:border-foreground/20 hover:bg-muted/40"
                         >
-                          <div className="mb-1.5 flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
+                          <div className="mb-1.5 flex items-center justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-2.5">
                               <div
                                 className={cn(
-                                  "rounded-lg p-2",
+                                  "rounded-lg border p-2",
                                   colors.bg,
+                                  colors.border,
                                   isOver
-                                    ? "border border-rose-500/20 text-rose-500"
+                                    ? "border-destructive/20 text-destructive"
                                     : isNear
-                                      ? "border border-amber-500/20 text-amber-500"
+                                      ? "border-warning/20 text-warning"
                                       : colors.text
                                 )}
                               >
-                                <Icon className="h-3.5 w-3.5" />
+                                <Icon className="size-3.5" />
                               </div>
-                              <div>
-                                <span className="text-xs font-bold text-foreground">
+                              <div className="min-w-0">
+                                <span className="block truncate text-xs font-semibold text-foreground group-hover:text-primary">
                                   {dist.budgetName}
                                 </span>
-                                <div className="text-[9px] text-muted-foreground">
+                                <span className="block text-[11px] text-muted-foreground">
                                   Limit:{" "}
                                   {Number(dist.limit) > 0
-                                    ? `${formatCents(dist.limit).toLocaleString()}`
+                                    ? formatCents(dist.limit).toLocaleString()
                                     : "No limit"}
-                                </div>
+                                </span>
                               </div>
                             </div>
 
-                            <div className="text-right">
+                            <div className="shrink-0 text-right font-mono tabular-nums">
                               <span
                                 className={cn(
-                                  "text-xs font-bold",
+                                  "block text-xs font-semibold",
                                   isOver
-                                    ? "text-rose-500"
+                                    ? "text-destructive"
                                     : isNear
-                                      ? "text-amber-500"
+                                      ? "text-warning"
                                       : "text-foreground"
                                 )}
                               >
                                 {formatCents(dist.spent).toLocaleString()}
                               </span>
-                              <span className="block text-[9px] text-muted-foreground">
-                                {baseCurrency}{" "}
-                                {formatCents(dist.spentInBase).toLocaleString()}
+                              <span className="block text-[11px] text-muted-foreground">
+                                {tz.formatMoney(dist.spentInBase, baseCurrency)}
                               </span>
                             </div>
                           </div>
 
-                          <div className="h-1 w-full overflow-hidden rounded-full bg-muted/20">
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
                             <div
                               className={cn(
-                                "h-full rounded-full transition-all duration-550",
+                                "h-full rounded-full transition-all duration-500",
                                 barColor
                               )}
                               style={{
@@ -1020,15 +868,20 @@ export function InsightsView() {
                               }}
                             />
                           </div>
-                          <div className="mt-1 flex items-center justify-between">
-                            <span className="text-[8px] font-bold text-muted-foreground uppercase">
-                              Usage Pacing
+                          <div className="mt-1.5 flex items-center justify-between text-[11px]">
+                            <span className="text-muted-foreground">
+                              Usage pacing
                             </span>
-                            <span className={cn("text-[8px]", textColor)}>
+                            <span
+                              className={cn(
+                                "font-mono font-medium tabular-nums",
+                                textColor
+                              )}
+                            >
                               {dist.usagePercentage.toFixed(1)}%
                             </span>
                           </div>
-                        </div>
+                        </button>
                       )
                     })}
                   </div>
@@ -1036,11 +889,11 @@ export function InsightsView() {
               )}
             </div>
 
-            {/* Top Outflows (High value expenses) */}
-            <div className="flex flex-col rounded-3xl border border-muted/20 bg-card p-5 shadow-sm">
-              <h3 className="mb-3.5 flex items-center gap-1.5 text-xs font-bold tracking-tight text-muted-foreground uppercase">
-                <DollarSignIcon className="h-4 w-4 text-primary" />
-                Top Outflows
+            {/* Top Outflows */}
+            <div className="flex flex-col rounded-xl border border-border bg-card p-5 shadow-2xs">
+              <h3 className="mb-3.5 flex items-center gap-2 text-sm font-semibold text-foreground">
+                <DollarSignIcon className="size-4 text-primary" />
+                <span>Top Outflows</span>
               </h3>
 
               {spentInsights.topExpenses.length === 0 ? (
@@ -1049,22 +902,31 @@ export function InsightsView() {
                 </div>
               ) : (
                 <ScrollArea className="h-[260px]">
-                  <div className="space-y-3 pr-3">
+                  <div className="divide-y divide-border/60 pr-3">
                     {spentInsights.topExpenses.map((exp, idx) => (
-                      <div
+                      <button
                         key={exp.transactionId}
-                        className="flex items-center justify-between border-b border-muted/10 pb-2.5 last:border-0 last:pb-0"
+                        type="button"
+                        onClick={() =>
+                          navigateToTransactions({
+                            type: "EXPENSE",
+                            q: exp.description || "",
+                            dateFrom: periodBounds.ymdFrom,
+                            dateTo: periodBounds.ymdTo,
+                          })
+                        }
+                        className="flex w-full cursor-pointer items-center justify-between gap-3 py-2.5 text-left transition-colors first:pt-0 last:pb-0 hover:bg-muted/30"
                       >
-                        <div className="flex items-center gap-2.5">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500/10 font-mono text-[9px] font-black text-rose-500">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-destructive/10 font-mono text-[11px] font-medium text-destructive">
                             #{idx + 1}
                           </div>
                           <div className="min-w-0">
-                            <span className="block max-w-[150px] truncate text-xs font-semibold text-foreground sm:max-w-none">
+                            <span className="block truncate text-xs font-medium text-foreground">
                               {exp.description || "Unspecified Expense"}
                             </span>
-                            <span className="block text-[9px] text-muted-foreground">
-                              {exp.budgetName} •{" "}
+                            <span className="block text-[11px] text-muted-foreground">
+                              {exp.budgetName} ·{" "}
                               {tz.format(exp.transactionDate, {
                                 month: "short",
                                 day: "numeric",
@@ -1073,28 +935,25 @@ export function InsightsView() {
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          <span className="text-xs font-bold text-rose-500">
-                            -{exp.currency}{" "}
-                            {formatCents(exp.amount).toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </span>
+                        <div className="shrink-0 text-right">
+                          <MoneyAmount
+                            cents={-Math.abs(Number(exp.amount || 0))}
+                            currency={exp.currency}
+                            showSign
+                            colored
+                            size="sm"
+                            className="block font-medium"
+                          />
                           {exp.currency !== baseCurrency && (
-                            <span className="block text-[9px] text-muted-foreground">
-                              {baseCurrency}{" "}
-                              {formatCents(exp.amountInBase).toLocaleString(
-                                undefined,
-                                {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                }
-                              )}
-                            </span>
+                            <MoneyAmount
+                              cents={exp.amountInBase}
+                              currency={baseCurrency}
+                              size="sm"
+                              className="block text-[11px] text-muted-foreground"
+                            />
                           )}
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </ScrollArea>
@@ -1105,11 +964,11 @@ export function InsightsView() {
 
         {activeTab === "INFLOWS" && (
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Income Sources breakdown */}
-            <div className="flex flex-col rounded-3xl border border-muted/20 bg-card p-5 shadow-sm">
-              <h3 className="mb-3.5 flex items-center gap-1.5 text-xs font-bold tracking-tight text-muted-foreground uppercase">
-                <CoinsIcon className="h-4 w-4 text-emerald-500" />
-                Income Sources Breakdown
+            {/* Income Sources */}
+            <div className="flex flex-col rounded-xl border border-border bg-card p-5 shadow-2xs">
+              <h3 className="mb-3.5 flex items-center gap-2 text-sm font-semibold text-foreground">
+                <CoinsIcon className="size-4 text-success" />
+                <span>Income Sources Breakdown</span>
               </h3>
 
               {!incomeInsights || incomeInsights.distributions.length === 0 ? (
@@ -1118,15 +977,24 @@ export function InsightsView() {
                 </div>
               ) : (
                 <ScrollArea className="h-[260px]">
-                  <div className="space-y-3 pr-3">
+                  <div className="space-y-2.5 pr-3">
                     {incomeInsights.distributions.map((source, idx) => {
                       const color = getAccountColor(idx)
                       return (
-                        <div
+                        <button
                           key={source.name}
-                          className="group rounded-xl border border-muted/10 bg-muted/5 p-3 transition-all duration-300 hover:bg-muted/10"
+                          type="button"
+                          onClick={() =>
+                            navigateToTransactions({
+                              type: "INCOME",
+                              q: source.name,
+                              dateFrom: periodBounds.ymdFrom,
+                              dateTo: periodBounds.ymdTo,
+                            })
+                          }
+                          className="group block w-full cursor-pointer rounded-xl border border-border/70 bg-muted/20 p-3 text-left transition-colors hover:border-foreground/20 hover:bg-muted/40"
                         >
-                          <div className="mb-1.5 flex items-center justify-between">
+                          <div className="mb-1.5 flex items-center justify-between gap-2">
                             <div className="flex min-w-0 items-center gap-2.5">
                               <div
                                 className={cn(
@@ -1135,29 +1003,25 @@ export function InsightsView() {
                                   color.text
                                 )}
                               >
-                                <ArrowUpRight className="h-3.5 w-3.5" />
+                                <ArrowUpRight className="size-3.5" />
                               </div>
-                              <div className="min-w-0">
-                                <span className="block max-w-[180px] truncate text-xs font-bold text-foreground">
-                                  {source.name}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="shrink-0 text-right">
-                              <span className="text-xs font-bold text-emerald-400">
-                                {formatAmount(
-                                  source.amount.toString(),
-                                  baseCurrency
-                                )}
+                              <span className="truncate text-xs font-semibold text-foreground group-hover:text-primary">
+                                {source.name}
                               </span>
                             </div>
+
+                            <MoneyAmount
+                              cents={source.amount}
+                              currency={baseCurrency}
+                              size="sm"
+                              className="shrink-0 font-semibold text-success"
+                            />
                           </div>
 
-                          <div className="h-1 w-full overflow-hidden rounded-full bg-muted/20">
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
                             <div
                               className={cn(
-                                "h-full rounded-full transition-all duration-550",
+                                "h-full rounded-full transition-all duration-500",
                                 color.bar
                               )}
                               style={{
@@ -1165,17 +1029,20 @@ export function InsightsView() {
                               }}
                             />
                           </div>
-                          <div className="mt-1 flex items-center justify-between">
-                            <span className="text-[8px] font-bold text-muted-foreground uppercase">
+                          <div className="mt-1.5 flex items-center justify-between text-[11px]">
+                            <span className="text-muted-foreground">
                               Contribution
                             </span>
                             <span
-                              className={cn("text-[8px] font-bold", color.text)}
+                              className={cn(
+                                "font-mono font-medium tabular-nums",
+                                color.text
+                              )}
                             >
                               {source.percentage.toFixed(1)}%
                             </span>
                           </div>
-                        </div>
+                        </button>
                       )
                     })}
                   </div>
@@ -1183,11 +1050,11 @@ export function InsightsView() {
               )}
             </div>
 
-            {/* Top Inflows (High value incomes) */}
-            <div className="flex flex-col rounded-3xl border border-muted/20 bg-card p-5 shadow-sm">
-              <h3 className="mb-3.5 flex items-center gap-1.5 text-xs font-bold tracking-tight text-muted-foreground uppercase">
-                <DollarSignIcon className="h-4 w-4 text-emerald-500" />
-                Top Inflows
+            {/* Top Inflows */}
+            <div className="flex flex-col rounded-xl border border-border bg-card p-5 shadow-2xs">
+              <h3 className="mb-3.5 flex items-center gap-2 text-sm font-semibold text-foreground">
+                <DollarSignIcon className="size-4 text-success" />
+                <span>Top Inflows</span>
               </h3>
 
               {!incomeInsights || incomeInsights.topIncomes.length === 0 ? (
@@ -1196,21 +1063,30 @@ export function InsightsView() {
                 </div>
               ) : (
                 <ScrollArea className="h-[260px]">
-                  <div className="space-y-3 pr-3">
+                  <div className="divide-y divide-border/60 pr-3">
                     {incomeInsights.topIncomes.map((inc, idx) => (
-                      <div
+                      <button
                         key={inc.transactionId}
-                        className="flex items-center justify-between border-b border-muted/10 pb-2.5 last:border-0 last:pb-0"
+                        type="button"
+                        onClick={() =>
+                          navigateToTransactions({
+                            type: "INCOME",
+                            q: inc.description || "",
+                            dateFrom: periodBounds.ymdFrom,
+                            dateTo: periodBounds.ymdTo,
+                          })
+                        }
+                        className="flex w-full cursor-pointer items-center justify-between gap-3 py-2.5 text-left transition-colors first:pt-0 last:pb-0 hover:bg-muted/30"
                       >
-                        <div className="flex items-center gap-2.5">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/10 font-mono text-[9px] font-black text-emerald-500">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-success/10 font-mono text-[11px] font-medium text-success">
                             #{idx + 1}
                           </div>
                           <div className="min-w-0">
-                            <span className="block max-w-[150px] truncate text-xs font-semibold text-foreground sm:max-w-none">
+                            <span className="block truncate text-xs font-medium text-foreground">
                               {inc.description || "Unspecified Income"}
                             </span>
-                            <span className="block text-[9px] text-muted-foreground">
+                            <span className="block text-[11px] text-muted-foreground">
                               {tz.format(inc.transactionDate, {
                                 month: "short",
                                 day: "numeric",
@@ -1219,28 +1095,25 @@ export function InsightsView() {
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          <span className="text-xs font-bold text-emerald-500">
-                            +{inc.currency}{" "}
-                            {formatCents(inc.amount).toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </span>
+                        <div className="shrink-0 text-right">
+                          <MoneyAmount
+                            cents={Math.abs(Number(inc.amount || 0))}
+                            currency={inc.currency}
+                            showSign
+                            colored
+                            size="sm"
+                            className="block font-medium"
+                          />
                           {inc.currency !== baseCurrency && (
-                            <span className="block text-[9px] text-muted-foreground">
-                              {baseCurrency}{" "}
-                              {formatCents(inc.amountInBase).toLocaleString(
-                                undefined,
-                                {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                }
-                              )}
-                            </span>
+                            <MoneyAmount
+                              cents={inc.amountInBase}
+                              currency={baseCurrency}
+                              size="sm"
+                              className="block text-[11px] text-muted-foreground"
+                            />
                           )}
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </ScrollArea>
@@ -1251,11 +1124,11 @@ export function InsightsView() {
 
         {activeTab === "CASH_FLOW" && (
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Top Inflows List in Cash Flow view */}
-            <div className="flex flex-col rounded-3xl border border-muted/20 bg-card p-5 shadow-sm">
-              <h3 className="mb-3.5 flex items-center gap-1.5 text-xs font-bold tracking-tight text-muted-foreground uppercase">
-                <ArrowUpRight className="h-4 w-4 text-emerald-500" />
-                Recent Inflows
+            {/* Recent Inflows */}
+            <div className="flex flex-col rounded-xl border border-border bg-card p-5 shadow-2xs">
+              <h3 className="mb-3.5 flex items-center gap-2 text-sm font-semibold text-foreground">
+                <ArrowUpRight className="size-4 text-success" />
+                <span>Recent Inflows</span>
               </h3>
               {!incomeInsights || incomeInsights.topIncomes.length === 0 ? (
                 <div className="flex h-[200px] items-center justify-center text-xs text-muted-foreground">
@@ -1263,44 +1136,52 @@ export function InsightsView() {
                 </div>
               ) : (
                 <ScrollArea className="h-[260px]">
-                  <div className="space-y-3 pr-3">
+                  <div className="divide-y divide-border/60 pr-3">
                     {incomeInsights.topIncomes.map((inc) => (
-                      <div
+                      <button
                         key={inc.transactionId}
-                        className="flex items-center justify-between border-b border-muted/10 pb-2.5 last:border-0 last:pb-0"
+                        type="button"
+                        onClick={() =>
+                          navigateToTransactions({
+                            type: "INCOME",
+                            q: inc.description || "",
+                            dateFrom: periodBounds.ymdFrom,
+                            dateTo: periodBounds.ymdTo,
+                          })
+                        }
+                        className="flex w-full cursor-pointer items-center justify-between gap-3 py-2.5 text-left transition-colors first:pt-0 last:pb-0 hover:bg-muted/30"
                       >
-                        <div>
-                          <span className="block max-w-[200px] truncate text-xs font-semibold text-foreground sm:max-w-none">
+                        <div className="min-w-0">
+                          <span className="block truncate text-xs font-medium text-foreground">
                             {inc.description || "Unspecified Income"}
                           </span>
-                          <span className="block text-[9px] text-muted-foreground">
+                          <span className="block text-[11px] text-muted-foreground">
                             {tz.format(inc.transactionDate, {
                               month: "short",
                               day: "numeric",
                             })}
                           </span>
                         </div>
-                        <div className="text-right">
-                          <span className="text-xs font-bold text-emerald-500">
-                            +{inc.currency}{" "}
-                            {formatCents(inc.amount).toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </span>
-                        </div>
-                      </div>
+                        <MoneyAmount
+                          cents={Math.abs(Number(inc.amount || 0))}
+                          currency={inc.currency}
+                          showSign
+                          colored
+                          size="sm"
+                          className="shrink-0 font-medium"
+                        />
+                      </button>
                     ))}
                   </div>
                 </ScrollArea>
               )}
             </div>
 
-            {/* Top Outflows List in Cash Flow view */}
-            <div className="flex flex-col rounded-3xl border border-muted/20 bg-card p-5 shadow-sm">
-              <h3 className="mb-3.5 flex items-center gap-1.5 text-xs font-bold tracking-tight text-muted-foreground uppercase">
-                <ArrowDownLeft className="h-4 w-4 text-rose-500" />
-                Recent Outflows
+            {/* Recent Outflows */}
+            <div className="flex flex-col rounded-xl border border-border bg-card p-5 shadow-2xs">
+              <h3 className="mb-3.5 flex items-center gap-2 text-sm font-semibold text-foreground">
+                <ArrowDownLeft className="size-4 text-destructive" />
+                <span>Recent Outflows</span>
               </h3>
               {spentInsights.topExpenses.length === 0 ? (
                 <div className="flex h-[200px] items-center justify-center text-xs text-muted-foreground">
@@ -1308,34 +1189,42 @@ export function InsightsView() {
                 </div>
               ) : (
                 <ScrollArea className="h-[260px]">
-                  <div className="space-y-3 pr-3">
+                  <div className="divide-y divide-border/60 pr-3">
                     {spentInsights.topExpenses.map((exp) => (
-                      <div
+                      <button
                         key={exp.transactionId}
-                        className="flex items-center justify-between border-b border-muted/10 pb-2.5 last:border-0 last:pb-0"
+                        type="button"
+                        onClick={() =>
+                          navigateToTransactions({
+                            type: "EXPENSE",
+                            q: exp.description || "",
+                            dateFrom: periodBounds.ymdFrom,
+                            dateTo: periodBounds.ymdTo,
+                          })
+                        }
+                        className="flex w-full cursor-pointer items-center justify-between gap-3 py-2.5 text-left transition-colors first:pt-0 last:pb-0 hover:bg-muted/30"
                       >
-                        <div>
-                          <span className="block max-w-[200px] truncate text-xs font-semibold text-foreground sm:max-w-none">
+                        <div className="min-w-0">
+                          <span className="block truncate text-xs font-medium text-foreground">
                             {exp.description || "Unspecified Expense"}
                           </span>
-                          <span className="block text-[9px] text-muted-foreground">
-                            {exp.budgetName} •{" "}
+                          <span className="block text-[11px] text-muted-foreground">
+                            {exp.budgetName} ·{" "}
                             {tz.format(exp.transactionDate, {
                               month: "short",
                               day: "numeric",
                             })}
                           </span>
                         </div>
-                        <div className="text-right">
-                          <span className="text-xs font-bold text-rose-500">
-                            -{exp.currency}{" "}
-                            {formatCents(exp.amount).toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </span>
-                        </div>
-                      </div>
+                        <MoneyAmount
+                          cents={-Math.abs(Number(exp.amount || 0))}
+                          currency={exp.currency}
+                          showSign
+                          colored
+                          size="sm"
+                          className="shrink-0 font-medium"
+                        />
+                      </button>
                     ))}
                   </div>
                 </ScrollArea>
@@ -1347,4 +1236,5 @@ export function InsightsView() {
     </FinancePageLayout>
   )
 }
+
 export default InsightsView

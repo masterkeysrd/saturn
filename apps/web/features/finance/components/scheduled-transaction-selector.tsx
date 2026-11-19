@@ -30,7 +30,8 @@ interface ScheduledTransactionSelectorProps {
     st: ScheduledTransaction,
     recurringTemplates: RecurringTransaction[]
   ) => void
-  onBack: () => void
+  onBack?: () => void
+  headerExtra?: React.ReactNode
 }
 
 export function ScheduledTransactionSelector({
@@ -40,6 +41,7 @@ export function ScheduledTransactionSelector({
   budgets = [],
   onSelect,
   onBack,
+  headerExtra,
 }: ScheduledTransactionSelectorProps) {
   const navigate = useNavigate()
   const tz = useTimezone()
@@ -95,6 +97,7 @@ export function ScheduledTransactionSelector({
       onOpenChange={onOpenChange}
       title="Confirm Scheduled Bill/Income"
       description="Select a pending scheduled transaction to confirm and record to the ledger."
+      headerExtra={headerExtra}
       submitLabel="Select a transaction above"
       disabled
       hideSubmitButton
@@ -102,14 +105,20 @@ export function ScheduledTransactionSelector({
     >
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onBack}
-            className="-ml-2 h-8 rounded-lg px-2 text-xs font-semibold text-muted-foreground hover:bg-muted/10 hover:text-foreground"
-          >
-            ← Back to types
-          </Button>
+          {onBack ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onBack}
+              className="-ml-2 h-8 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+            >
+              ← Back to types
+            </Button>
+          ) : (
+            <span className="text-xs font-medium text-muted-foreground">
+              Pending scheduled items
+            </span>
+          )}
 
           <Button
             type="button"
@@ -118,7 +127,7 @@ export function ScheduledTransactionSelector({
               onOpenChange(false)
               navigate("/finance/recurring")
             }}
-            className="h-8 cursor-pointer px-0 text-xs font-bold text-indigo-400 hover:text-indigo-300 hover:underline"
+            className="h-8 cursor-pointer px-0 text-xs font-medium text-primary hover:underline"
           >
             Manage Templates
           </Button>
