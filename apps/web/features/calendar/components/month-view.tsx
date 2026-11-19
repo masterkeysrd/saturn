@@ -1,4 +1,5 @@
 import { useMemo } from "react"
+import { ArrowDownLeft, ArrowUpRight } from "lucide-react"
 import { useTimezone } from "@saturn/hooks"
 import {
   getMonthMatrix,
@@ -6,25 +7,34 @@ import {
   type MonthDayCell,
 } from "@saturn/core"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
+import type { ScheduledTransaction } from "@saturn/api/gen/saturn/finance/v1/finance"
+import { MoneyAmount } from "@/components/ui/money-amount"
+import type { CalendarFinanceItem } from "../calendar-finance"
 import { cn } from "@/lib/utils"
 
 export interface MonthViewProps {
   currentDate: Date
   occurrences: EventOccurrence[]
+  financeItems?: CalendarFinanceItem[]
   onSelectDate: (d: Date) => void
   onSelectSlot: (dateStr: string) => void
   onSelectOccurrence: (
     occ: EventOccurrence,
     anchorEl?: HTMLElement | null
   ) => void
+  onEditOccurrence?: (occ: EventOccurrence) => void
+  onSelectFinanceItem?: (item: ScheduledTransaction) => void
 }
 
 export function MonthView({
   currentDate,
   occurrences,
+  financeItems = [],
   onSelectDate,
   onSelectSlot,
   onSelectOccurrence,
+  onEditOccurrence,
+  onSelectFinanceItem,
 }: MonthViewProps) {
   const tz = useTimezone()
 
@@ -110,6 +120,9 @@ export function MonthView({
                   const dStr = `${String(sParts.year).padStart(4, "0")}-${String(sParts.month).padStart(2, "0")}-${String(sParts.day).padStart(2, "0")}`
                   return dStr === cell.dateString
                 })
+                const cellFinance = financeItems.filter(
+                  (f) => f.dateKey === cell.dateString
+                )
 
                 return (
                   <div
@@ -157,6 +170,59 @@ export function MonthView({
                       />
                     )}
 
+                    {/* Finance Bills & Paydays Pills */}
+                    {cellFinance.length > 0 && (
+                      <div className="pointer-events-auto mt-1 flex flex-col gap-1">
+                        {cellFinance.slice(0, 2).map((fin) => {
+                          const isIncome = fin.type === "INCOME"
+                          return (
+                            <button
+                              key={fin.id}
+                              type="button"
+                              data-testid={`finance-pill-${fin.id}`}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onSelectFinanceItem?.(fin.scheduledTransaction)
+                              }}
+                              className={cn(
+                                "flex w-full items-center justify-between gap-1 rounded-md border px-1.5 py-0.5 text-left text-[11px] font-medium transition hover:brightness-95",
+                                isIncome
+                                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                  : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                              )}
+                            >
+                              <span className="flex min-w-0 flex-1 items-center gap-1">
+                                {isIncome ? (
+                                  <ArrowUpRight className="size-3 shrink-0" />
+                                ) : (
+                                  <ArrowDownLeft className="size-3 shrink-0" />
+                                )}
+                                <span className="truncate">{fin.title}</span>
+                              </span>
+                              <MoneyAmount
+                                cents={fin.amountCents}
+                                currency={fin.currency}
+                                size="sm"
+                                className="shrink-0 text-[10px]"
+                              />
+                            </button>
+                          )
+                        })}
+                        {cellFinance.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onSelectDate(cell.date)
+                            }}
+                            className="pl-1 text-left text-[10px] font-medium text-muted-foreground hover:text-foreground"
+                          >
+                            +{cellFinance.length - 2} bills
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     {/* Timed Events List */}
                     <div className="pointer-events-auto mt-1 flex flex-1 flex-col gap-1 overflow-hidden">
                       {cellTimed.slice(0, 3).map((occ) => (
@@ -167,6 +233,10 @@ export function MonthView({
                           onClick={(e) => {
                             e.stopPropagation()
                             onSelectOccurrence(occ, e.currentTarget)
+                          }}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation()
+                            onEditOccurrence?.(occ)
                           }}
                           className="flex w-full items-center justify-between gap-1 rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-foreground transition hover:opacity-80"
                           style={{
@@ -220,6 +290,10 @@ export function MonthView({
                     onClick={(e) => {
                       e.stopPropagation()
                       onSelectOccurrence(occ, e.currentTarget)
+                    }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation()
+                      onEditOccurrence?.(occ)
                     }}
                     style={{
                       gridColumn: `${colStart} / span ${colSpan}`,

@@ -1,12 +1,37 @@
-import { useState, useMemo, useEffect, useRef } from "react"
-import { useInRouterContext, useSearchParams } from "react-router-dom"
-import { ChevronLeft, ChevronRight, PanelLeft } from "lucide-react"
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
+import {
+  MemoryRouter,
+  useInRouterContext,
+  useSearchParams,
+} from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
+import {
+  ChevronLeft,
+  ChevronRight,
+  PanelLeft,
+  Plus,
+  Receipt,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "@/components/ui/toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   useTimezone,
   useCalendars,
   useCalendarEvents,
   useEnsureDefaultCalendar,
+  useDeleteEvent,
+  calendarKeys,
+  invalidateFinanceQueries,
 } from "@saturn/hooks"
 import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import {
@@ -14,7 +39,20 @@ import {
   getWeekDays,
   getMonthMatrix,
 } from "@saturn/core"
-import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
+import type {
+  Event,
+  EventOccurrence,
+  RecurrenceScope,
+} from "@saturn/api/saturn/calendar/v1/calendar"
+import {
+  useGetSettingsQuery,
+  useListRecurringTransactionsQuery,
+  useListScheduledTransactionsQuery,
+  type ScheduledTransaction,
+} from "@saturn/api/gen/saturn/finance/v1/finance"
+import { useOptionalSpacePermissions } from "@/features/space/use-space"
+import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
+import { ConfirmTransactionSheet } from "@/features/finance/components/confirm-transaction-sheet"
 import { CalendarSidebar } from "./components/calendar-sidebar"
 import { MonthView } from "./components/month-view"
 import { WeekView } from "./components/week-view"
@@ -22,6 +60,14 @@ import { DayView } from "./components/day-view"
 import { AgendaView } from "./components/agenda-view"
 import { EventDialog } from "./components/event-dialog"
 import { EventPreviewPopover } from "./components/event-preview-popover"
+import { RecurrenceScopeDialog } from "./components/recurrence-scope-dialog"
+import {
+  extractOccurrenceDuplicateDraft,
+  isRecurringOccurrence,
+  mapScheduledToCalendarFinanceItems,
+  readCalendarFinanceOverlayPref,
+  writeCalendarFinanceOverlayPref,
+} from "./calendar-finance"
 import { cn } from "@/lib/utils"
 
 export type CalendarViewType = "month" | "week" | "day" | "agenda"
@@ -57,7 +103,9 @@ function CalendarSearchParamsSync({
 
 export function CalendarView() {
   const inRouter = useInRouterContext()
+  const queryClient = useQueryClient()
   const tz = useTimezone()
+  const { spaceId, isWritable } = useOptionalSpacePermissions()
   const { data: calendarsData } = useCalendars()
   const calendars = useMemo(
     () => calendarsData?.calendars || [],
@@ -65,6 +113,7 @@ export function CalendarView() {
   )
 
   const ensureDefaultMutation = useEnsureDefaultCalendar()
+  const deleteEventMutation = useDeleteEvent()
 
   // Ensure default native calendar exists if workspace has none
   useEffect(() => {
@@ -84,6 +133,18 @@ export function CalendarView() {
   const [currentDate, setCurrentDate] = useState<Date>(() => tz.now())
   // Sidebar rail visibility
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  // Scheduled Bills & Paydays overlay toggle
+  const [showFinanceOverlay, setShowFinanceOverlay] = useState<boolean>(() =>
+    readCalendarFinanceOverlayPref()
+  )
+
+  const handleToggleFinanceOverlay = useCallback(() => {
+    setShowFinanceOverlay((prev) => {
+      const next = !prev
+      writeCalendarFinanceOverlayPref(next)
+      return next
+    })
+  }, [])
 
   // Event Dialog state
   const [eventDialogOpen, setEventDialogOpen] = useState(false)
@@ -96,12 +157,30 @@ export function CalendarView() {
   const [dialogInitialEndTime, setDialogInitialEndTime] = useState<
     string | undefined
   >()
+  const [dialogInitialCalendarId, setDialogInitialCalendarId] = useState<
+    string | undefined
+  >()
+  const [dialogInitialValues, setDialogInitialValues] = useState<
+    Partial<Event> | undefined
+  >()
+  const [dialogKeyCounter, setDialogKeyCounter] = useState(0)
   const [selectedOccurrence, setSelectedOccurrence] = useState<
     EventOccurrence | undefined
   >()
   const [previewOccurrence, setPreviewOccurrence] =
     useState<EventOccurrence | null>(null)
   const [previewAnchor, setPreviewAnchor] = useState<HTMLElement | null>(null)
+
+  // Quick delete from preview state
+  const [deleteTargetOccurrence, setDeleteTargetOccurrence] =
+    useState<EventOccurrence | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteScopeDialogOpen, setDeleteScopeDialogOpen] = useState(false)
+
+  // Finance scheduled confirmation sheet state
+  const [selectedScheduledTxn, setSelectedScheduledTxn] =
+    useState<ScheduledTransaction | null>(null)
+  const [confirmSheetOpen, setConfirmSheetOpen] = useState(false)
 
   // Active calendars filter
   const enabledCalendarIds = useMemo(() => {
@@ -187,12 +266,79 @@ export function CalendarView() {
   )
   const occurrences = allCalendarsDisabled ? [] : eventsData?.occurrences || []
 
-  // Navigation handlers
-  const handleToday = () => {
-    setCurrentDate(tz.now())
-  }
+  // Scheduled Bills & Paydays overlay queries
+  const financeOverlayEnabled = showFinanceOverlay && Boolean(spaceId)
+  const { data: scheduledData, refetch: refetchScheduled } =
+    useListScheduledTransactionsQuery(
+      {
+        status: "PENDING",
+        startDate: rangeStart,
+        endDate: rangeEnd,
+        pageSize: 100,
+        pageToken: "",
+        view: "FULL",
+      },
+      {
+        enabled: financeOverlayEnabled,
+        retry: false,
+      }
+    )
+  const { data: recurringData, refetch: refetchRecurring } =
+    useListRecurringTransactionsQuery(
+      {
+        status: "STATUS_UNSPECIFIED",
+        pageSize: 100,
+        pageToken: "",
+      },
+      {
+        enabled: financeOverlayEnabled,
+        retry: false,
+      }
+    )
+  const { data: financeSettings } = useGetSettingsQuery(
+    {},
+    {
+      enabled: financeOverlayEnabled,
+      retry: false,
+    }
+  )
+  const { getConversionPreview } = useCurrencyConversionPreview({
+    spaceId,
+    enabled: Boolean(financeOverlayEnabled && financeSettings),
+    baseCurrency: financeSettings?.baseCurrency || "USD",
+  })
 
-  const handlePrev = () => {
+  const financeItems = useMemo(() => {
+    if (!financeOverlayEnabled) return []
+    return mapScheduledToCalendarFinanceItems(
+      scheduledData?.scheduledTransactions || [],
+      recurringData?.recurringTransactions || [],
+      tz.timezone
+    )
+  }, [
+    financeOverlayEnabled,
+    scheduledData?.scheduledTransactions,
+    recurringData?.recurringTransactions,
+    tz.timezone,
+  ])
+
+  const handleSelectFinanceItem = useCallback(
+    (item: ScheduledTransaction) => {
+      if (!isWritable) return
+      setPreviewOccurrence(null)
+      setPreviewAnchor(null)
+      setSelectedScheduledTxn(item)
+      setConfirmSheetOpen(true)
+    },
+    [isWritable]
+  )
+
+  // Navigation handlers
+  const handleToday = useCallback(() => {
+    setCurrentDate(tz.now())
+  }, [tz])
+
+  const handlePrev = useCallback(() => {
     const p = tz.parts(currentDate) || { year: 2026, month: 10, day: 20 }
 
     if (activeView === "month") {
@@ -204,9 +350,9 @@ export function CalendarView() {
     } else {
       setCurrentDate(new Date(currentDate.getTime() - 86_400_000))
     }
-  }
+  }, [activeView, currentDate, tz])
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     const p = tz.parts(currentDate) || { year: 2026, month: 10, day: 20 }
 
     if (activeView === "month") {
@@ -218,7 +364,7 @@ export function CalendarView() {
     } else {
       setCurrentDate(new Date(currentDate.getTime() + 86_400_000))
     }
-  }
+  }, [activeView, currentDate, tz])
 
   // Header title label
   const headerTitle = useMemo(() => {
@@ -249,7 +395,7 @@ export function CalendarView() {
   }, [activeView, currentDate, tz])
 
   // Open create event dialog from slot click
-  const handleSelectSlot = (dateStr: string, timeStr?: string) => {
+  const handleSelectSlot = useCallback((dateStr: string, timeStr?: string) => {
     setPreviewOccurrence(null)
     setPreviewAnchor(null)
     setDialogInitialDate(dateStr)
@@ -264,40 +410,231 @@ export function CalendarView() {
       setDialogInitialStartTime("09:00")
       setDialogInitialEndTime("10:00")
     }
+    setDialogInitialCalendarId(undefined)
+    setDialogInitialValues(undefined)
     setSelectedOccurrence(undefined)
+    setDialogKeyCounter((c) => c + 1)
     setEventDialogOpen(true)
-  }
+  }, [])
 
-  const handleSelectOccurrence = (
-    occ: EventOccurrence,
-    anchorEl?: HTMLElement | null
-  ) => {
-    setPreviewOccurrence(occ)
-    setPreviewAnchor(anchorEl ?? null)
-  }
+  const handleSelectOccurrence = useCallback(
+    (occ: EventOccurrence, anchorEl?: HTMLElement | null) => {
+      setPreviewOccurrence(occ)
+      setPreviewAnchor(anchorEl ?? null)
+    },
+    []
+  )
 
-  const handleEditFromPreview = (occ: EventOccurrence) => {
+  const handleEditFromPreview = useCallback((occ: EventOccurrence) => {
     setPreviewOccurrence(null)
     setPreviewAnchor(null)
     setSelectedOccurrence(occ)
     setDialogInitialDate(undefined)
     setDialogInitialStartTime(undefined)
     setDialogInitialEndTime(undefined)
+    setDialogInitialCalendarId(undefined)
+    setDialogInitialValues(undefined)
+    setDialogKeyCounter((c) => c + 1)
     setEventDialogOpen(true)
-  }
+  }, [])
 
-  const handleOpenNewEvent = () => {
+  const handleDuplicateFromPreview = useCallback(
+    (occ: EventOccurrence) => {
+      const draft = extractOccurrenceDuplicateDraft(occ, tz.timezone)
+      setPreviewOccurrence(null)
+      setPreviewAnchor(null)
+      setSelectedOccurrence(undefined)
+      setDialogInitialCalendarId(draft.calendarId || undefined)
+      setDialogInitialDate(draft.startDate || undefined)
+      setDialogInitialStartTime(draft.startTime)
+      setDialogInitialEndTime(draft.endTime)
+      setDialogInitialValues({
+        title: draft.title,
+        description: draft.description,
+        location: draft.location,
+        isAllDay: draft.isAllDay,
+        startDate: draft.startDate,
+        endDate: draft.endDate,
+        timezone: draft.timezone,
+        meetUrl: draft.meetUrl,
+      })
+      setDialogKeyCounter((c) => c + 1)
+      setEventDialogOpen(true)
+    },
+    [tz.timezone]
+  )
+
+  const handleDeleteFromPreview = useCallback((occ: EventOccurrence) => {
+    setPreviewOccurrence(null)
+    setPreviewAnchor(null)
+    setDeleteTargetOccurrence(occ)
+    if (isRecurringOccurrence(occ)) {
+      setDeleteScopeDialogOpen(true)
+    } else {
+      setDeleteConfirmOpen(true)
+    }
+  }, [])
+
+  const executeQuickDelete = useCallback(
+    async (occ: EventOccurrence, scope?: RecurrenceScope) => {
+      try {
+        await deleteEventMutation.mutateAsync({
+          id: occ.eventId,
+          req: {
+            recurrenceScope: scope || "RECURRENCE_SCOPE_ALL_EVENTS",
+            targetStartTime: occ.startTime || "",
+            targetStartDate: occ.startDate || "",
+          },
+        })
+        await queryClient.invalidateQueries({
+          queryKey: calendarKeys.allEvents(),
+        })
+        toast.add({ title: "Event deleted", type: "success" })
+      } catch (err) {
+        toast.add({
+          title: "Failed to delete event",
+          description: err instanceof Error ? err.message : "An error occurred",
+          type: "error",
+        })
+      } finally {
+        setDeleteConfirmOpen(false)
+        setDeleteScopeDialogOpen(false)
+        setDeleteTargetOccurrence(null)
+      }
+    },
+    [deleteEventMutation, queryClient]
+  )
+
+  const handleOpenNewEvent = useCallback(() => {
     setPreviewOccurrence(null)
     setPreviewAnchor(null)
     setSelectedOccurrence(undefined)
+    setDialogInitialCalendarId(undefined)
+    setDialogInitialValues(undefined)
     const p = tz.parts(currentDate) || { year: 2026, month: 10, day: 20 }
     setDialogInitialDate(
       `${String(p.year).padStart(4, "0")}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`
     )
     setDialogInitialStartTime("09:00")
     setDialogInitialEndTime("10:00")
+    setDialogKeyCounter((c) => c + 1)
     setEventDialogOpen(true)
-  }
+  }, [currentDate, tz])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+
+      const target = e.target as HTMLElement | null
+      if (target) {
+        const tag = target.tagName
+        if (
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT" ||
+          target.isContentEditable ||
+          (typeof target.closest === "function" &&
+            target.closest("[role='combobox']"))
+        ) {
+          return
+        }
+      }
+
+      if (
+        eventDialogOpen ||
+        deleteConfirmOpen ||
+        deleteScopeDialogOpen ||
+        confirmSheetOpen
+      ) {
+        return
+      }
+      if (
+        typeof document !== "undefined" &&
+        document.querySelector(
+          '[role="dialog"]:not([data-testid="event-preview-popover"]):not([data-slot="toast"]), [role="alertdialog"]'
+        )
+      ) {
+        return
+      }
+
+      const key = e.key
+      if (previewOccurrence) {
+        if (key === "e" || key === "E") {
+          e.preventDefault()
+          handleEditFromPreview(previewOccurrence)
+          return
+        }
+        if (key === "Escape") {
+          e.preventDefault()
+          setPreviewOccurrence(null)
+          setPreviewAnchor(null)
+          return
+        }
+      }
+
+      switch (key) {
+        case "t":
+        case "T":
+          e.preventDefault()
+          handleToday()
+          break
+        case "d":
+        case "D":
+          e.preventDefault()
+          setActiveView("day")
+          break
+        case "w":
+        case "W":
+          e.preventDefault()
+          setActiveView("week")
+          break
+        case "m":
+        case "M":
+          e.preventDefault()
+          setActiveView("month")
+          break
+        case "a":
+        case "A":
+          e.preventDefault()
+          setActiveView("agenda")
+          break
+        case "c":
+        case "C":
+        case "n":
+        case "N":
+          e.preventDefault()
+          handleOpenNewEvent()
+          break
+        case "ArrowLeft":
+          if (!previewOccurrence) {
+            e.preventDefault()
+            handlePrev()
+          }
+          break
+        case "ArrowRight":
+          if (!previewOccurrence) {
+            e.preventDefault()
+            handleNext()
+          }
+          break
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [
+    eventDialogOpen,
+    deleteConfirmOpen,
+    deleteScopeDialogOpen,
+    confirmSheetOpen,
+    previewOccurrence,
+    handleEditFromPreview,
+    handleToday,
+    handleOpenNewEvent,
+    handlePrev,
+    handleNext,
+  ])
 
   return (
     <div
@@ -318,11 +655,15 @@ export function CalendarView() {
       )}
       {/* Sidebar Rail */}
       {sidebarOpen && (
-        <CalendarSidebar
-          currentDate={currentDate}
-          onSelectDate={setCurrentDate}
-          onOpenCreateDialog={handleOpenNewEvent}
-        />
+        <div className="hidden h-full md:flex">
+          <CalendarSidebar
+            currentDate={currentDate}
+            onSelectDate={setCurrentDate}
+            onOpenCreateDialog={handleOpenNewEvent}
+            showFinanceOverlay={showFinanceOverlay}
+            onToggleFinanceOverlay={handleToggleFinanceOverlay}
+          />
+        </div>
       )}
 
       {/* Main View Area */}
@@ -381,8 +722,26 @@ export function CalendarView() {
             </h2>
           </div>
 
-          {/* Right: View Switcher */}
+          {/* Right: Overlays, View Switcher & New Event CTA */}
           <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              variant={showFinanceOverlay ? "secondary" : "outline"}
+              size="sm"
+              data-testid="calendar-finance-overlay-btn"
+              aria-pressed={showFinanceOverlay}
+              onClick={handleToggleFinanceOverlay}
+              className={cn(
+                "h-8 shrink-0 gap-1.5 px-2.5 text-xs font-medium",
+                showFinanceOverlay &&
+                  "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+              )}
+              title="Toggle Scheduled Bills & Paydays"
+            >
+              <Receipt className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Bills</span>
+            </Button>
+
             <div
               data-testid="calendar-view-switcher"
               className="flex items-center rounded-lg border border-border/60 bg-muted/30 p-0.5 text-xs font-medium"
@@ -440,6 +799,20 @@ export function CalendarView() {
                 Agenda
               </button>
             </div>
+
+            <Button
+              type="button"
+              size="sm"
+              data-testid="calendar-toolbar-new-event-btn"
+              onClick={handleOpenNewEvent}
+              className={cn(
+                "h-8 shrink-0 gap-1.5 px-2.5 text-xs font-medium",
+                sidebarOpen && "md:hidden"
+              )}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>New Event</span>
+            </Button>
           </div>
         </div>
 
@@ -449,12 +822,15 @@ export function CalendarView() {
             <MonthView
               currentDate={currentDate}
               occurrences={occurrences}
+              financeItems={financeItems}
               onSelectDate={(d) => {
                 setCurrentDate(d)
                 setActiveView("day")
               }}
               onSelectSlot={handleSelectSlot}
               onSelectOccurrence={handleSelectOccurrence}
+              onEditOccurrence={handleEditFromPreview}
+              onSelectFinanceItem={handleSelectFinanceItem}
             />
           )}
 
@@ -462,12 +838,15 @@ export function CalendarView() {
             <WeekView
               currentDate={currentDate}
               occurrences={occurrences}
+              financeItems={financeItems}
               onSelectDate={(d) => {
                 setCurrentDate(d)
                 setActiveView("day")
               }}
               onSelectSlot={handleSelectSlot}
               onSelectOccurrence={handleSelectOccurrence}
+              onEditOccurrence={handleEditFromPreview}
+              onSelectFinanceItem={handleSelectFinanceItem}
             />
           )}
 
@@ -475,8 +854,11 @@ export function CalendarView() {
             <DayView
               currentDate={currentDate}
               occurrences={occurrences}
+              financeItems={financeItems}
               onSelectSlot={handleSelectSlot}
               onSelectOccurrence={handleSelectOccurrence}
+              onEditOccurrence={handleEditFromPreview}
+              onSelectFinanceItem={handleSelectFinanceItem}
             />
           )}
 
@@ -484,7 +866,10 @@ export function CalendarView() {
             <AgendaView
               currentDate={currentDate}
               occurrences={occurrences}
+              financeItems={financeItems}
               onSelectOccurrence={handleSelectOccurrence}
+              onEditOccurrence={handleEditFromPreview}
+              onSelectFinanceItem={handleSelectFinanceItem}
               onOpenCreateDialog={handleOpenNewEvent}
             />
           )}
@@ -502,6 +887,8 @@ export function CalendarView() {
           }
         }}
         onEdit={handleEditFromPreview}
+        onDuplicate={handleDuplicateFromPreview}
+        onDelete={handleDeleteFromPreview}
       />
 
       {/* Event Create / Edit Dialog */}
@@ -509,8 +896,8 @@ export function CalendarView() {
         key={
           eventDialogOpen
             ? selectedOccurrence
-              ? selectedOccurrence.instanceId || selectedOccurrence.eventId
-              : `new-${dialogInitialDate}-${dialogInitialStartTime}`
+              ? `edit-${selectedOccurrence.instanceId || selectedOccurrence.eventId}-${dialogKeyCounter}`
+              : `new-${dialogInitialDate}-${dialogInitialStartTime}-${dialogKeyCounter}`
             : "closed"
         }
         open={eventDialogOpen}
@@ -518,10 +905,101 @@ export function CalendarView() {
         initialDate={dialogInitialDate}
         initialStartTime={dialogInitialStartTime}
         initialEndTime={dialogInitialEndTime}
+        initialCalendarId={dialogInitialCalendarId}
         initialValues={
-          selectedOccurrence ? { occurrence: selectedOccurrence } : undefined
+          selectedOccurrence
+            ? { occurrence: selectedOccurrence }
+            : dialogInitialValues
         }
       />
+
+      {/* Quick Delete Non-Recurring Confirmation */}
+      <AlertDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          setDeleteConfirmOpen(open)
+          if (!open) setDeleteTargetOccurrence(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Event</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-foreground">
+                {deleteTargetOccurrence?.title || "this event"}
+              </span>
+              ? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              data-testid="confirm-delete-event-btn"
+              onClick={() => {
+                if (deleteTargetOccurrence) {
+                  void executeQuickDelete(deleteTargetOccurrence)
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Quick Delete Recurring Event Scope Dialog */}
+      <RecurrenceScopeDialog
+        open={deleteScopeDialogOpen}
+        action="delete"
+        onClose={() => {
+          setDeleteScopeDialogOpen(false)
+          setDeleteTargetOccurrence(null)
+        }}
+        onConfirm={(scope) => {
+          if (deleteTargetOccurrence) {
+            void executeQuickDelete(deleteTargetOccurrence, scope)
+          }
+        }}
+      />
+
+      {/* Confirm Scheduled Bill / Payday Sheet */}
+      {confirmSheetOpen &&
+        selectedScheduledTxn &&
+        (inRouter ? (
+          <ConfirmTransactionSheet
+            open={confirmSheetOpen}
+            onOpenChange={(open) => {
+              setConfirmSheetOpen(open)
+              if (!open) setSelectedScheduledTxn(null)
+            }}
+            transaction={selectedScheduledTxn}
+            refetchTransactions={() => {
+              invalidateFinanceQueries(queryClient)
+              void refetchScheduled()
+              void refetchRecurring()
+            }}
+            getConversionPreview={getConversionPreview}
+          />
+        ) : (
+          <MemoryRouter>
+            <ConfirmTransactionSheet
+              open={confirmSheetOpen}
+              onOpenChange={(open) => {
+                setConfirmSheetOpen(open)
+                if (!open) setSelectedScheduledTxn(null)
+              }}
+              transaction={selectedScheduledTxn}
+              refetchTransactions={() => {
+                invalidateFinanceQueries(queryClient)
+                void refetchScheduled()
+                void refetchRecurring()
+              }}
+              getConversionPreview={getConversionPreview}
+            />
+          </MemoryRouter>
+        ))}
     </div>
   )
 }

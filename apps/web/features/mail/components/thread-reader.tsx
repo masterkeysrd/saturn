@@ -19,6 +19,8 @@ import {
   AlertCircle,
   Image as ImageIcon,
   Sparkles,
+  ArrowLeft,
+  Receipt,
 } from "lucide-react"
 import { openAIDrawer } from "@/features/ai/lib/drawer-events"
 import { CopilotAttachButton } from "@/features/ai/components/copilot-attach-button"
@@ -50,12 +52,16 @@ import { SandboxedEmailFrame } from "./sandboxed-email-frame"
 import { AttachmentList } from "./attachment-list"
 import { MailComposer } from "./mail-composer"
 import { SenderAvatar } from "./sender-avatar"
+import { hasFinancialSignal } from "../mail-utils"
 import { cn } from "@/lib/utils"
 
 export interface ThreadReaderProps {
   threadId?: string
   initialThread?: Thread
   replyTrigger?: { threadId: string; seq: number } | null
+  showBackButton?: boolean
+  onBack?: () => void
+  borderless?: boolean
   onArchive: (thread: Thread) => void
   onTrash: (thread: Thread) => void
   onToggleStar: (thread: Thread) => void
@@ -66,6 +72,7 @@ export interface ThreadReaderProps {
     sourceMailMessageId: string
     attendees: Array<{ email: string; displayName?: string }>
   }) => void
+  onStageToFinance?: (thread: Thread, message?: Message) => void
   onSendReply: (data: {
     id?: string
     connectedAccountId: string
@@ -87,11 +94,15 @@ export function ThreadReader({
   threadId,
   initialThread,
   replyTrigger,
+  showBackButton = false,
+  onBack,
+  borderless = false,
   onArchive,
   onTrash,
   onToggleStar,
   onToggleRead,
   onCreateEvent,
+  onStageToFinance,
   onSendReply,
   onSaveDraft,
   onDiscardDraft,
@@ -435,14 +446,39 @@ export function ThreadReader({
     )
   }
 
+  const showStageReceiptChip = Boolean(
+    onStageToFinance &&
+    thread &&
+    hasFinancialSignal(
+      thread.subject,
+      messages[messages.length - 1]?.snippet || thread.snippet
+    )
+  )
+
   return (
     <div
       data-testid="thread-reader-pane"
-      className="flex min-w-0 flex-1 flex-col overflow-hidden border-l border-border/40 bg-muted/15 text-foreground"
+      className={cn(
+        "flex min-w-0 flex-1 flex-col overflow-hidden bg-muted/15 text-foreground",
+        !borderless && "border-l border-border/40"
+      )}
     >
       {/* Thread Header Toolbar */}
-      <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border/40 bg-card/60 px-6 backdrop-blur">
+      <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border/40 bg-card/60 px-4 backdrop-blur sm:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          {showBackButton && onBack && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              data-testid="thread-reader-back-btn"
+              onClick={onBack}
+              className="h-8 shrink-0 gap-1 px-2 text-xs font-medium text-foreground hover:bg-muted"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back</span>
+            </Button>
+          )}
           {account && (
             <span
               className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -573,6 +609,20 @@ export function ThreadReader({
             </Button>
           )}
           <div className="mx-1 h-4 w-px bg-border/60" />
+          {showStageReceiptChip && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              data-testid="stage-receipt-chip-btn"
+              onClick={() => onStageToFinance?.(thread)}
+              className="h-8 gap-1.5 border-primary/30 bg-primary/5 px-2.5 text-xs font-medium text-primary hover:bg-primary/10"
+              title="Stage Receipt to Finance Inbox"
+            >
+              <Receipt className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Stage Receipt</span>
+            </Button>
+          )}
           {/* Create Calendar Event from Email Button */}
           <Button
             variant="outline"
@@ -841,6 +891,16 @@ export function ThreadReader({
                           <span>Forward</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="my-1 bg-border/40" />
+                        {onStageToFinance && (
+                          <DropdownMenuItem
+                            data-testid="stage-to-finance-menu-item"
+                            onClick={() => onStageToFinance(thread, msg)}
+                            className="gap-2.5 px-2.5 py-1.5 text-xs text-foreground hover:bg-muted focus:bg-muted focus:text-foreground"
+                          >
+                            <Receipt className="h-3.5 w-3.5 text-primary" />
+                            <span>Stage to Finance Inbox</span>
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           data-testid={`menu-print-${msg.id}`}
                           onClick={() => window.print()}

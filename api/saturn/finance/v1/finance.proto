@@ -371,6 +371,14 @@ service Finance {
     option (google.api.http) = {get: "/v1/finance/currencies"};
   }
 
+  // Stages a new inbox item into the finance staging queue for manual review.
+  rpc CreateInboxItem(CreateInboxItemRequest) returns (InboxItem) {
+    option (google.api.http) = {
+      post: "/v1/finance/inbox-items"
+      body: "*"
+    };
+  }
+
   // Lists staging inbox items queue awaiting manual approval or transaction matching.
   rpc ListInboxItems(ListInboxItemsRequest) returns (ListInboxItemsResponse) {
     option (google.api.http) = {get: "/v1/finance/inbox-items"};
@@ -2639,6 +2647,19 @@ enum BorrowingLinkType {
 
   // Top-up or extra drawdown (increases balance).
   BORROWING_LINK_TYPE_ADDITIONAL_LOAN = 3;
+}
+
+// The request for
+// [CreateInboxItem][saturn.finance.v1.Finance.CreateInboxItem].
+message CreateInboxItemRequest {
+  // Required. Staged inbox item parameters.
+  InboxItem inbox_item = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Idempotency key preventing duplicate staging from the same source.
+  optional string idempotency_key = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Raw source text payload for context during inbox review.
+  optional string raw_payload = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The request for

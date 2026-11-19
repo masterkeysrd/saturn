@@ -6,6 +6,22 @@ import { MemoryRouter } from "react-router-dom"
 import { CalendarView } from "./calendar-view"
 import * as hooks from "@saturn/hooks"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
+import * as financeApi from "@saturn/api/gen/saturn/finance/v1/finance"
+
+vi.mock("@/features/space/use-space", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/features/space/use-space")
+  >("@/features/space/use-space")
+  return {
+    ...actual,
+    useOptionalSpacePermissions: () => ({
+      spaceId: "sp_1",
+      spaceRole: "owner",
+      isWritable: true,
+      canManageSpace: true,
+    }),
+  }
+})
 
 const mockCalendars = [
   {
@@ -255,6 +271,7 @@ describe("CalendarView Component", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
     mockUseCalendars.mockReturnValue({
       data: { calendars: mockCalendars },
       isLoading: false,
@@ -724,5 +741,195 @@ describe("CalendarView Component", () => {
     await waitFor(() => {
       expect(screen.getByTestId("day-view-container")).toBeDefined()
     })
+  })
+
+  it("keeps + New Event toolbar CTA accessible when CalendarSidebar is collapsed", () => {
+    render(<CalendarView />, { wrapper: createWrapper() })
+
+    // Collapse sidebar
+    fireEvent.click(screen.getByLabelText("Collapse sidebar"))
+    expect(screen.queryByTestId("create-event-btn")).toBeNull()
+
+    // Toolbar + New Event button is visible and opens Create Calendar Event dialog
+    const toolbarNewBtn = screen.getByTestId("calendar-toolbar-new-event-btn")
+    expect(toolbarNewBtn).toBeDefined()
+    fireEvent.click(toolbarNewBtn)
+
+    expect(screen.getByText("Create Calendar Event")).toBeDefined()
+  })
+
+  it("supports keyboard shortcuts (d/w/m/a/t/n) and ignores them while typing in inputs", () => {
+    render(<CalendarView />, { wrapper: createWrapper() })
+
+    // 'd' -> Day view
+    fireEvent.keyDown(window, { key: "d" })
+    expect(screen.getByTestId("day-view-container")).toBeDefined()
+
+    // 'w' -> Week view
+    fireEvent.keyDown(window, { key: "w" })
+    expect(screen.getByTestId("week-view-container")).toBeDefined()
+
+    // 'a' -> Agenda view
+    fireEvent.keyDown(window, { key: "a" })
+    expect(screen.getByTestId("agenda-view-container")).toBeDefined()
+
+    // 'm' -> Month view
+    fireEvent.keyDown(window, { key: "m" })
+    expect(screen.getByTestId("month-view-container")).toBeDefined()
+
+    // ArrowRight navigates forward, 't' jumps back to Today
+    fireEvent.keyDown(window, { key: "ArrowRight" })
+    fireEvent.keyDown(window, { key: "t" })
+    expect(screen.getByTestId("calendar-header-title").textContent).toContain(
+      "October 2026"
+    )
+
+    // 'n' opens Create Calendar Event dialog
+    fireEvent.keyDown(window, { key: "n" })
+    expect(screen.getByText("Create Calendar Event")).toBeDefined()
+
+    // While inside dialog input, pressing 'd' must NOT switch away or close
+    const titleInput = screen.getByTestId("event-title-input")
+    fireEvent.keyDown(titleInput, { key: "d" })
+    expect(screen.getByTestId("month-view-container")).toBeDefined()
+  })
+
+  it("opens EventDialog in edit mode on double-click and on 'e' while preview popover is open", () => {
+    render(<CalendarView />, { wrapper: createWrapper() })
+
+    // Double-click event pill jumps straight into Edit Event dialog
+    fireEvent.doubleClick(screen.getByTestId("event-pill-inst_standup"))
+    expect(screen.queryByTestId("event-preview-popover")).toBeNull()
+    expect(screen.getByText("Edit Event")).toBeDefined()
+    expect(
+      (screen.getByTestId("event-title-input") as HTMLInputElement).value
+    ).toBe("Daily Standup")
+
+    // Close dialog
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+
+    // Single click opens preview, pressing 'e' opens Edit Event dialog
+    fireEvent.click(screen.getByTestId("event-pill-inst_standup"))
+    expect(screen.getByTestId("event-preview-popover")).toBeDefined()
+    fireEvent.keyDown(window, { key: "e" })
+    expect(screen.queryByTestId("event-preview-popover")).toBeNull()
+    expect(screen.getByText("Edit Event")).toBeDefined()
+  })
+
+  it("duplicates and deletes events from EventPreviewPopover quick actions", async () => {
+    mutateCreateEvent.mockResolvedValueOnce({ id: "ev_dup" })
+    mutateDeleteEvent.mockResolvedValueOnce({})
+
+    render(<CalendarView />, { wrapper: createWrapper() })
+
+    // Open preview -> click Duplicate -> opens Create Calendar Event pre-filled
+    fireEvent.click(screen.getByTestId("event-pill-inst_standup"))
+    fireEvent.click(screen.getByTestId("preview-duplicate-event-btn"))
+
+    expect(screen.getByText("Create Calendar Event")).toBeDefined()
+    expect(
+      (screen.getByTestId("event-title-input") as HTMLInputElement).value
+    ).toBe("Daily Standup")
+
+    fireEvent.click(screen.getByTestId("save-event-btn"))
+    await waitFor(() => {
+      expect(mutateCreateEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: expect.objectContaining({
+            title: "Daily Standup",
+            location: "Zoom",
+            description: "Morning sync",
+            meetUrl: "https://zoom.us/j/123",
+            isAllDay: false,
+          }),
+        })
+      )
+    })
+
+    // Open preview on non-recurring event -> click Delete -> AlertDialog confirmation -> deletes
+    fireEvent.click(screen.getByTestId("event-pill-inst_standup"))
+    fireEvent.click(screen.getByTestId("preview-delete-event-btn"))
+    expect(screen.getByText("Delete Event")).toBeDefined()
+
+    fireEvent.click(screen.getByTestId("confirm-delete-event-btn"))
+    await waitFor(() => {
+      expect(mutateDeleteEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "ev_standup",
+        })
+      )
+    })
+  })
+
+  it("toggles Scheduled Bills & Paydays overlay and renders scheduled transactions across views", () => {
+    vi.spyOn(financeApi, "useListScheduledTransactionsQuery").mockReturnValue({
+      data: {
+        scheduledTransactions: [
+          {
+            id: "sch_aws",
+            sourceType: "RECURRENT_TRANSACTION",
+            sourceId: "rec_aws",
+            amount: "4250",
+            currency: "USD",
+            dueDate: "2026-10-20T12:00:00Z",
+            status: "PENDING",
+            metadata: { description: "AWS Cloud" },
+            type: "EXPENSE",
+          },
+          {
+            id: "sch_payday",
+            sourceType: "RECURRENT_TRANSACTION",
+            sourceId: "rec_payday",
+            amount: "250000",
+            currency: "USD",
+            dueDate: "2026-10-20T12:00:00Z",
+            status: "PENDING",
+            metadata: { description: "Client Retainer" },
+            type: "INCOME",
+          },
+        ],
+        nextPageToken: "",
+      },
+      refetch: vi.fn(),
+    } as unknown as ReturnType<
+      typeof financeApi.useListScheduledTransactionsQuery
+    >)
+    vi.spyOn(financeApi, "useListRecurringTransactionsQuery").mockReturnValue({
+      data: {
+        recurringTransactions: [],
+        nextPageToken: "",
+      },
+      refetch: vi.fn(),
+    } as unknown as ReturnType<
+      typeof financeApi.useListRecurringTransactionsQuery
+    >)
+    vi.spyOn(financeApi, "useGetSettingsQuery").mockReturnValue({
+      data: { baseCurrency: "USD" },
+    } as unknown as ReturnType<typeof financeApi.useGetSettingsQuery>)
+    vi.spyOn(financeApi, "useListExchangeRatesQuery").mockReturnValue({
+      data: { exchangeRates: [] },
+    } as unknown as ReturnType<typeof financeApi.useListExchangeRatesQuery>)
+
+    render(<CalendarView />, { wrapper: createWrapper() })
+
+    // Initially off
+    expect(screen.queryByTestId("finance-pill-sch_aws")).toBeNull()
+
+    // Toggle Bills overlay from toolbar
+    fireEvent.click(screen.getByTestId("calendar-finance-overlay-btn"))
+    expect(localStorage.getItem("saturn:calendar-finance-overlay")).toBe("true")
+
+    expect(screen.getByTestId("finance-pill-sch_aws")).toBeDefined()
+    expect(screen.getByTestId("finance-pill-sch_aws").textContent).toContain(
+      "AWS Cloud"
+    )
+    expect(screen.getByTestId("finance-pill-sch_payday").textContent).toContain(
+      "Client Retainer"
+    )
+
+    // Switch to Agenda view and verify scheduled bills/paydays render there too
+    fireEvent.click(screen.getByTestId("view-tab-agenda"))
+    expect(screen.getByTestId("agenda-finance-sch_aws")).toBeDefined()
+    expect(screen.getByTestId("agenda-finance-sch_payday")).toBeDefined()
   })
 })

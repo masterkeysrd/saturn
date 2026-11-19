@@ -2,24 +2,42 @@ import { useContext, useMemo } from "react"
 import { useConnectedAccounts, useTimezone } from "@saturn/hooks"
 import { findSelfAttendee, parseDate } from "@saturn/core"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
+import type { ScheduledTransaction } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { AuthContext } from "@/features/auth/auth-context"
-import { Video, MapPin, Calendar, Check, HelpCircle, X } from "lucide-react"
+import {
+  Video,
+  MapPin,
+  Calendar,
+  Check,
+  HelpCircle,
+  X,
+  ArrowDownLeft,
+  ArrowUpRight,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { MoneyAmount } from "@/components/ui/money-amount"
+import type { CalendarFinanceItem } from "../calendar-finance"
 import { cn } from "@/lib/utils"
 
 export interface AgendaViewProps {
   currentDate?: Date
   occurrences: EventOccurrence[]
+  financeItems?: CalendarFinanceItem[]
   onSelectOccurrence: (
     occ: EventOccurrence,
     anchorEl?: HTMLElement | null
   ) => void
+  onEditOccurrence?: (occ: EventOccurrence) => void
+  onSelectFinanceItem?: (item: ScheduledTransaction) => void
   onOpenCreateDialog: () => void
 }
 
 export function AgendaView({
   occurrences,
+  financeItems = [],
   onSelectOccurrence,
+  onEditOccurrence,
+  onSelectFinanceItem,
   onOpenCreateDialog,
 }: AgendaViewProps) {
   const tz = useTimezone()
@@ -33,7 +51,7 @@ export function AgendaView({
     [auth?.user?.email, accountsData?.accounts]
   )
 
-  // Sort occurrences chronologically and group by day
+  // Sort occurrences chronologically and group by day alongside finance items
   const groupedEvents = useMemo(() => {
     const sorted = [...occurrences].sort((a, b) => {
       const aTime = a.isAllDay
@@ -50,6 +68,7 @@ export function AgendaView({
       dateObj: Date
       isToday: boolean
       events: EventOccurrence[]
+      finItems: CalendarFinanceItem[]
     }> = []
 
     for (const occ of sorted) {
@@ -75,14 +94,34 @@ export function AgendaView({
           dateObj: dObj,
           isToday: tz.isToday(occ.isAllDay ? occ.startDate : dObj),
           events: [],
+          finItems: [],
         }
         groups.push(group)
       }
       group.events.push(occ)
     }
 
+    for (const fin of financeItems) {
+      let group = groups.find((g) => g.dateKey === fin.dateKey)
+      if (!group) {
+        const dObj =
+          parseDate(fin.dateKey, tz.timezone) ?? tz.startOfDay(fin.dateKey)
+        group = {
+          dateKey: fin.dateKey,
+          dateObj: dObj,
+          isToday: tz.isToday(fin.dateKey),
+          events: [],
+          finItems: [],
+        }
+        groups.push(group)
+      }
+      group.finItems.push(fin)
+    }
+
+    groups.sort((a, b) => a.dateKey.localeCompare(b.dateKey))
+
     return groups
-  }, [occurrences, tz])
+  }, [occurrences, financeItems, tz])
 
   if (groupedEvents.length === 0) {
     return (
@@ -141,8 +180,56 @@ export function AgendaView({
               </div>
             </div>
 
-            {/* Events on this day */}
+            {/* Events & Scheduled Bills on this day */}
             <div className="divide-y divide-border/40 overflow-hidden rounded-xl border border-border/40 bg-card shadow-2xs">
+              {group.finItems.map((fin) => {
+                const isIncome = fin.type === "INCOME"
+                return (
+                  <button
+                    key={fin.id}
+                    type="button"
+                    data-testid={`agenda-finance-${fin.id}`}
+                    onClick={() =>
+                      onSelectFinanceItem?.(fin.scheduledTransaction)
+                    }
+                    className="flex w-full cursor-pointer items-center justify-between gap-3 p-3.5 text-left transition hover:bg-muted/30"
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <span
+                        className={cn(
+                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border",
+                          isIncome
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                            : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                        )}
+                      >
+                        {isIncome ? (
+                          <ArrowUpRight className="size-3.5" />
+                        ) : (
+                          <ArrowDownLeft className="size-3.5" />
+                        )}
+                      </span>
+                      <div className="w-32 shrink-0 text-xs font-medium text-muted-foreground">
+                        {isIncome ? "Payday" : "Scheduled Bill"}
+                      </div>
+                      <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+                        {fin.title}
+                      </span>
+                    </div>
+                    <MoneyAmount
+                      cents={fin.amountCents}
+                      currency={fin.currency}
+                      size="md"
+                      className={cn(
+                        "shrink-0 font-semibold",
+                        isIncome
+                          ? "text-emerald-700 dark:text-emerald-300"
+                          : "text-rose-700 dark:text-rose-300"
+                      )}
+                    />
+                  </button>
+                )
+              })}
               {group.events.map((occ) => {
                 const selfAttendee = findSelfAttendee(occ.attendees, selfEmails)
                 const rsvpStatus = selfAttendee?.responseStatus
@@ -156,6 +243,10 @@ export function AgendaView({
                     key={occ.instanceId || occ.eventId}
                     data-testid={`agenda-event-${occ.instanceId || occ.eventId}`}
                     onClick={(e) => onSelectOccurrence(occ, e.currentTarget)}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation()
+                      onEditOccurrence?.(occ)
+                    }}
                     className="group flex cursor-pointer flex-col justify-between gap-3 p-3.5 transition hover:bg-muted/30 sm:flex-row sm:items-center"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">

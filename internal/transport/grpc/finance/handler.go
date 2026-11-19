@@ -1830,6 +1830,83 @@ func toDomainInboxItem(pb *financev1.InboxItem) *finance.InboxItem {
 	}
 }
 
+func (h *Handler) CreateInboxItem(ctx context.Context, req *financev1.CreateInboxItemRequest) (*financev1.InboxItem, error) {
+	const op errors.Op = "grpc/finance.CreateInboxItem"
+
+	pbItem := req.GetInboxItem()
+	if pbItem == nil {
+		return nil, errors.E(op, errors.Invalid, "inbox_item is required")
+	}
+
+	vendor := strings.TrimSpace(pbItem.GetVendorName())
+	if vendor == "" {
+		return nil, errors.E(op, errors.Invalid, "vendor_name is required")
+	}
+	if pbItem.GetAmount() <= 0 {
+		return nil, errors.E(op, errors.Invalid, "amount must be greater than zero")
+	}
+
+	curr, err := finance.ParseCurrency(pbItem.GetCurrency())
+	if err != nil {
+		return nil, errors.E(op, errors.Invalid, err)
+	}
+
+	rCtx, err := h.Coordinator.ResolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	dateStr := rCtx.Now().Format("2006-01-02")
+	if pbItem.GetTransactionDate() != nil {
+		dateStr = pbItem.GetTransactionDate().AsTime().In(rCtx.Location()).Format("2006-01-02")
+	}
+
+	var accID *string
+	if acc := strings.TrimSpace(pbItem.GetAccountId()); acc != "" {
+		accID = new(acc)
+	}
+
+	var idempotencyKey *string
+	if req.IdempotencyKey != nil {
+		if k := strings.TrimSpace(*req.IdempotencyKey); k != "" {
+			idempotencyKey = new(k)
+		}
+	}
+
+	rawPayload := strings.TrimSpace(req.GetRawPayload())
+	if rawPayload == "" {
+		rawPayload = strings.TrimSpace(pbItem.GetRawPayload())
+	}
+
+	var metadata map[string]any
+	if len(pbItem.GetMetadata()) > 0 {
+		metadata = make(map[string]any, len(pbItem.GetMetadata()))
+		for k, v := range pbItem.GetMetadata() {
+			metadata[k] = v
+		}
+	}
+
+	stageReq := &finance.StageInboxItem{
+		IdempotencyKey:  idempotencyKey,
+		DocType:         toDomainInboxDocType(pbItem.GetDocType()),
+		Vendor:          vendor,
+		Amount:          pbItem.GetAmount(),
+		Currency:        string(curr),
+		AccountID:       accID,
+		SuggestedBudget: strings.TrimSpace(pbItem.GetBudgetId()),
+		Date:            dateStr,
+		RawPayload:      rawPayload,
+		Metadata:        metadata,
+	}
+
+	staged, err := h.Coordinator.StageInboxItem(ctx, stageReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return toProtoInboxItem(staged), nil
+}
+
 func (h *Handler) UpdateInboxItem(ctx context.Context, req *financev1.UpdateInboxItemRequest) (*financev1.InboxItem, error) {
 	const op errors.Op = "grpc/finance.UpdateInboxItem"
 

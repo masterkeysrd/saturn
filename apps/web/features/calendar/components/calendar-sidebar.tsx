@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Receipt } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -15,12 +15,16 @@ export interface CalendarSidebarProps {
   currentDate: Date
   onSelectDate: (d: Date) => void
   onOpenCreateDialog: () => void
+  showFinanceOverlay?: boolean
+  onToggleFinanceOverlay?: () => void
 }
 
 export function CalendarSidebar({
   currentDate,
   onSelectDate,
   onOpenCreateDialog,
+  showFinanceOverlay = false,
+  onToggleFinanceOverlay,
 }: CalendarSidebarProps) {
   const tz = useTimezone()
   const { data: calendarsData } = useCalendars()
@@ -306,6 +310,31 @@ export function CalendarSidebar({
             </div>
           )}
         </div>
+
+        {/* Overlays */}
+        {onToggleFinanceOverlay && (
+          <div>
+            <div className="flex items-center justify-between pb-1.5 text-xs font-medium text-muted-foreground">
+              <span>Overlays</span>
+            </div>
+            <label
+              data-testid="calendar-finance-overlay-sidebar-toggle"
+              className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-xs hover:bg-muted/50"
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <Receipt className="h-3.5 w-3.5 shrink-0 text-primary" />
+                <span className="truncate font-medium text-foreground">
+                  Scheduled Bills & Paydays
+                </span>
+              </div>
+              <Checkbox
+                checked={showFinanceOverlay}
+                onCheckedChange={() => onToggleFinanceOverlay()}
+                className="h-3.5 w-3.5"
+              />
+            </label>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -1,20 +1,28 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, fireEvent, waitFor } from "@testing-library/react"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { createElement, type ReactNode } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { MemoryRouter } from "react-router-dom"
+import { Toaster } from "@/components/ui/toast"
 import { MailView } from "./mail-view"
 import { MailUnreadBadge } from "./components/mail-unread-badge"
 import * as hooks from "@saturn/hooks"
+import * as financeApi from "@saturn/api/gen/saturn/finance/v1/finance"
 import type { Thread, Mailbox } from "@saturn/api/saturn/mail/v1/mail"
 
-vi.mock("@/features/space/use-space", () => ({
-  useActiveSpaceContext: () => ({
-    spaceId: "sp_1",
-    spaceName: "Personal",
-    spaceRole: "owner",
-  }),
-}))
+vi.mock("@/features/space/use-space", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/features/space/use-space")
+  >("@/features/space/use-space")
+  return {
+    ...actual,
+    useActiveSpaceContext: () => ({
+      spaceId: "sp_1",
+      spaceName: "Personal",
+      spaceRole: "owner",
+    }),
+  }
+})
 
 const mockAccounts = [
   {
@@ -268,6 +276,13 @@ describe("MailView Web Feature", () => {
     .fn()
     .mockResolvedValue({ id: "msg_sent_1" })
   const mockDeleteDraftMutateAsync = vi.fn().mockResolvedValue({})
+  const mockCreateInboxItemMutateAsync = vi
+    .fn()
+    .mockResolvedValue({ id: "ibx_1" })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -278,6 +293,23 @@ describe("MailView Web Feature", () => {
         mutations: { retry: false },
       },
     })
+
+    vi.spyOn(financeApi, "useGetSettingsQuery").mockReturnValue({
+      data: { baseCurrency: "USD" },
+    } as unknown as ReturnType<typeof financeApi.useGetSettingsQuery>)
+    vi.spyOn(financeApi, "useListAccountsQuery").mockReturnValue({
+      data: { accounts: [] },
+    } as unknown as ReturnType<typeof financeApi.useListAccountsQuery>)
+    vi.spyOn(financeApi, "useListBudgetsQuery").mockReturnValue({
+      data: { budgets: [] },
+    } as unknown as ReturnType<typeof financeApi.useListBudgetsQuery>)
+    vi.spyOn(financeApi, "useListCurrenciesQuery").mockReturnValue({
+      data: { currencies: [{ code: "USD", name: "US Dollar" }] },
+    } as unknown as ReturnType<typeof financeApi.useListCurrenciesQuery>)
+    vi.spyOn(financeApi, "useCreateInboxItemMutation").mockReturnValue({
+      mutateAsync: mockCreateInboxItemMutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof financeApi.useCreateInboxItemMutation>)
 
     vi.spyOn(hooks, "useConnectedAccounts").mockReturnValue({
       data: { accounts: mockAccounts },
@@ -377,7 +409,7 @@ describe("MailView Web Feature", () => {
       return createElement(
         QueryClientProvider,
         { client: queryClient },
-        children
+        createElement(Toaster, null, children)
       )
     }
   }
@@ -462,7 +494,8 @@ describe("MailView Web Feature", () => {
     )
   })
 
-  it("opens docked composer and sends email with recipient", async () => {
+  it("opens docked composer and sends email with recipient after undo-send buffer", async () => {
+    vi.useFakeTimers()
     render(<MailView />, { wrapper: createWrapper() })
 
     // Open Compose modal
@@ -480,14 +513,22 @@ describe("MailView Web Feature", () => {
     const subjectInput = screen.getByTestId("composer-subject-input")
     fireEvent.change(subjectInput, { target: { value: "Proposal Discussion" } })
 
-    // Send
+    // Send -> saves draft and buffers send for 7s
     const sendBtn = screen.getByTestId("composer-send-btn")
-    fireEvent.click(sendBtn)
-
-    await waitFor(() => {
-      expect(mockSaveDraftMutateAsync).toHaveBeenCalled()
-      expect(mockSendDraftMutateAsync).toHaveBeenCalled()
+    await act(async () => {
+      fireEvent.click(sendBtn)
+      await Promise.resolve()
     })
+
+    expect(mockSaveDraftMutateAsync).toHaveBeenCalled()
+    expect(mockSendDraftMutateAsync).not.toHaveBeenCalled()
+
+    await act(async () => {
+      vi.advanceTimersByTime(7000)
+      await Promise.resolve()
+    })
+
+    expect(mockSendDraftMutateAsync).toHaveBeenCalledWith({ id: "mdf_new_1" })
   })
 
   it("opens Create Calendar Event dialog pre-populated with email thread details", async () => {
@@ -920,5 +961,233 @@ describe("MailView Web Feature", () => {
       "Q3 Budget Review"
     )
     expect(screen.getByTestId("mail-compose-modal")).toBeDefined()
+  })
+
+  it("collapses MailboxRail, toggles Split vs List Only layout with Back navigation, and resizes split pane", () => {
+    render(<MailView />, { wrapper: createWrapper() })
+
+    // Collapse MailboxRail
+    expect(screen.getByTestId("mailbox-rail")).toBeDefined()
+    fireEvent.click(screen.getByTestId("mail-toggle-rail-btn"))
+    expect(screen.queryByTestId("mailbox-rail")).toBeNull()
+    expect(localStorage.getItem("saturn:mail-rail-open")).toBe("false")
+
+    // Expand MailboxRail
+    fireEvent.click(screen.getByTestId("mail-toggle-rail-btn"))
+    expect(screen.getByTestId("mailbox-rail")).toBeDefined()
+
+    // Keyboard resize split pane
+    const resizer = screen.getByTestId("mail-split-resizer")
+    fireEvent.keyDown(resizer, { key: "ArrowRight" })
+    expect(localStorage.getItem("saturn:mail-list-width")).toBe("376")
+
+    // Toggle to List Only layout
+    fireEvent.click(screen.getByTestId("mail-layout-toggle-btn"))
+    expect(localStorage.getItem("saturn:mail-layout")).toBe("list")
+    expect(screen.getByTestId("thread-list-pane")).toBeDefined()
+    expect(screen.queryByTestId("thread-reader-empty")).toBeNull()
+
+    // Select thread -> ThreadReader renders full-width with Back button
+    fireEvent.click(screen.getByTestId("thread-row-mth_101"))
+    expect(screen.queryByTestId("thread-list-pane")).toBeNull()
+    expect(screen.getByTestId("thread-reader-pane")).toBeDefined()
+    const backBtn = screen.getByTestId("thread-reader-back-btn")
+    expect(backBtn).toBeDefined()
+
+    // Click Back -> returns to ThreadList
+    fireEvent.click(backBtn)
+    expect(screen.getByTestId("thread-list-pane")).toBeDefined()
+    expect(screen.queryByTestId("thread-reader-pane")).toBeNull()
+  })
+
+  it("supports Superhuman-grade keyboard triage (j, k, s, e, /)", () => {
+    render(<MailView />, { wrapper: createWrapper() })
+
+    // 'j' selects first thread (mth_101)
+    fireEvent.keyDown(window, { key: "j" })
+    expect(screen.getByTestId("thread-subject-heading").textContent).toContain(
+      "Q3 Budget Review"
+    )
+
+    // 'j' again selects next thread (mth_draft_thread)
+    fireEvent.keyDown(window, { key: "j" })
+    expect(screen.getByTestId("thread-subject-heading").textContent).toContain(
+      "Draft Proposal"
+    )
+
+    // 'k' selects previous thread (mth_101)
+    fireEvent.keyDown(window, { key: "k" })
+    expect(screen.getByTestId("thread-subject-heading").textContent).toContain(
+      "Q3 Budget Review"
+    )
+
+    // 's' toggles star
+    fireEvent.keyDown(window, { key: "s" })
+    expect(mockModifyThreadMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "mth_101",
+        req: expect.objectContaining({ isStarred: true }),
+      })
+    )
+
+    // 'e' archives thread
+    fireEvent.keyDown(window, { key: "e" })
+    expect(mockModifyThreadMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "mth_101",
+        req: expect.objectContaining({ inInbox: false }),
+      })
+    )
+
+    // '/' focuses search input without typing '/'
+    const searchInput = screen.getByTestId(
+      "mail-search-input"
+    ) as HTMLInputElement
+    const slashEvent = new KeyboardEvent("keydown", {
+      key: "/",
+      bubbles: true,
+      cancelable: true,
+    })
+    window.dispatchEvent(slashEvent)
+    expect(slashEvent.defaultPrevented).toBe(true)
+    expect(document.activeElement).toBe(searchInput)
+  })
+
+  it("buffers outgoing email for 7s and cancels send + reopens composer when Undo is clicked", async () => {
+    vi.useFakeTimers()
+    render(<MailView />, { wrapper: createWrapper() })
+
+    fireEvent.click(screen.getByTestId("compose-btn"))
+    const toInput = screen.getByTestId("to-input")
+    fireEvent.change(toInput, { target: { value: "billing@vendor.com" } })
+    fireEvent.keyDown(toInput, { key: "Enter" })
+    fireEvent.change(screen.getByTestId("composer-subject-input"), {
+      target: { value: "Invoice Question" },
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("composer-send-btn"))
+      await Promise.resolve()
+    })
+
+    expect(mockSaveDraftMutateAsync).toHaveBeenCalled()
+    expect(mockSendDraftMutateAsync).not.toHaveBeenCalled()
+    expect(screen.queryByTestId("mail-compose-modal")).toBeNull()
+
+    // Click Undo inside toast before 7s expires
+    const undoBtn = screen.getByRole("button", { name: "Undo" })
+    fireEvent.click(undoBtn)
+
+    // Composer reopens with draft subject & recipient
+    expect(screen.getByTestId("mail-compose-modal")).toBeDefined()
+    expect(
+      (screen.getByTestId("composer-subject-input") as HTMLInputElement).value
+    ).toBe("Invoice Question")
+    expect(screen.getByTestId("to-chip-billing@vendor.com")).toBeDefined()
+
+    // Even after 7s passes, sendDraft must NOT have been called
+    await act(async () => {
+      vi.advanceTimersByTime(8000)
+      await Promise.resolve()
+    })
+    expect(mockSendDraftMutateAsync).not.toHaveBeenCalled()
+  })
+
+  it("stages a receipt/invoice email to Finance Inbox with pre-extracted defaults and idempotency key", async () => {
+    const receiptThread: Thread = {
+      ...mockThreads[0],
+      id: "mth_receipt",
+      subject: "Your Stripe Receipt #1042",
+      snippet: "Payment of $42.50 was charged to your card.",
+      messages: [
+        {
+          ...mockThreads[0].messages[0],
+          id: "msg_receipt_1",
+          threadId: "mth_receipt",
+          subject: "Your Stripe Receipt #1042",
+          snippet: "Payment of $42.50 was charged to your card.",
+          from: {
+            name: "Stripe",
+            email: "receipts@stripe.com",
+            avatarUrl: "",
+            isVerified: true,
+          },
+          bodyHtml: "<p>Thank you for your payment of $42.50.</p>",
+          bodyPlain: "Thank you for your payment of $42.50.",
+        },
+      ],
+    }
+
+    vi.spyOn(hooks, "useInfiniteMailThreads").mockReturnValue({
+      data: {
+        pages: [
+          {
+            threads: [receiptThread],
+            nextPageToken: "",
+            totalSize: 1,
+          },
+        ],
+        pageParams: [""],
+      },
+      isLoading: false,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof hooks.useInfiniteMailThreads>)
+
+    vi.spyOn(hooks, "useMailThread").mockReturnValue({
+      data: receiptThread,
+      isLoading: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof hooks.useMailThread>)
+
+    render(<MailView />, { wrapper: createWrapper() })
+    fireEvent.click(screen.getByTestId("thread-row-mth_receipt"))
+
+    // 1-click "Stage Receipt" chip appears on financial signals
+    const stageChip = screen.getByTestId("stage-receipt-chip-btn")
+    expect(stageChip).toBeDefined()
+
+    // Also verify it exists in the message More menu
+    fireEvent.click(screen.getByTestId("message-more-btn-msg_receipt_1"))
+    expect(screen.getByTestId("stage-to-finance-menu-item")).toBeDefined()
+
+    // Click Stage Receipt chip to open StageToFinanceDialog
+    fireEvent.click(stageChip)
+
+    expect(screen.getByTestId("stage-to-finance-dialog")).toBeDefined()
+    expect(
+      (screen.getByTestId("stage-finance-vendor-input") as HTMLInputElement)
+        .value
+    ).toBe("Stripe")
+    expect(
+      (screen.getByTestId("stage-finance-amount-input") as HTMLInputElement)
+        .value
+    ).toBe("42.50")
+
+    // Submit form
+    fireEvent.click(
+      screen.getByRole("button", { name: "Stage to Finance Inbox" })
+    )
+
+    await waitFor(() => {
+      expect(mockCreateInboxItemMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idempotencyKey: "mail_message:msg_receipt_1",
+          inboxItem: expect.objectContaining({
+            vendorName: "Stripe",
+            amount: "4250",
+            currency: "USD",
+            docType: "RECEIPT",
+            metadata: expect.objectContaining({
+              source: "mail",
+              mail_thread_id: "mth_receipt",
+              mail_message_id: "msg_receipt_1",
+            }),
+          }),
+        })
+      )
+    })
   })
 })

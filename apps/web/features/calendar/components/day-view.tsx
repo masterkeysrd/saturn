@@ -7,24 +7,33 @@ import {
   formatLocalDateString,
 } from "@saturn/core"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
+import type { ScheduledTransaction } from "@saturn/api/gen/saturn/finance/v1/finance"
+import { MoneyAmount } from "@/components/ui/money-amount"
+import type { CalendarFinanceItem } from "../calendar-finance"
 import { cn } from "@/lib/utils"
-import { Video, MapPin } from "lucide-react"
+import { Video, MapPin, ArrowDownLeft, ArrowUpRight } from "lucide-react"
 
 export interface DayViewProps {
   currentDate: Date
   occurrences: EventOccurrence[]
+  financeItems?: CalendarFinanceItem[]
   onSelectSlot: (dateStr: string, timeStr: string) => void
   onSelectOccurrence: (
     occ: EventOccurrence,
     anchorEl?: HTMLElement | null
   ) => void
+  onEditOccurrence?: (occ: EventOccurrence) => void
+  onSelectFinanceItem?: (item: ScheduledTransaction) => void
 }
 
 export function DayView({
   currentDate,
   occurrences,
+  financeItems = [],
   onSelectSlot,
   onSelectOccurrence,
+  onEditOccurrence,
+  onSelectFinanceItem,
 }: DayViewProps) {
   const tz = useTimezone()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -119,36 +128,85 @@ export function DayView({
           </div>
         </div>
 
-        {/* All-Day Events Section (if any all-day events exist) */}
-        {bannerLayout.totalRows > 0 && (
+        {/* All-Day Events & Scheduled Finance Section */}
+        {(bannerLayout.totalRows > 0 ||
+          financeItems.some((f) => f.dateKey === dateStr)) && (
           <div className="grid grid-cols-[72px_1fr] border-t border-border/30">
             <div className="flex items-center justify-center border-r border-border/30 text-[10px] font-medium text-muted-foreground">
               all-day
             </div>
-            <div
-              className="relative p-1"
-              style={{ height: `${bannerLayout.totalRows * 24 + 4}px` }}
-            >
-              {bannerLayout.items.map((item) => {
-                const occ = (
-                  item.event as unknown as { occurrence: EventOccurrence }
-                ).occurrence
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    data-testid={`banner-${item.id}`}
-                    onClick={(e) => onSelectOccurrence(occ, e.currentTarget)}
-                    style={{
-                      top: `${2 + item.rowIndex * 24}px`,
-                      backgroundColor: occ.color || "#3b82f6",
-                    }}
-                    className="absolute right-2 left-2 z-10 flex h-5 items-center truncate rounded-md px-2 text-[11px] font-semibold text-white shadow-2xs transition hover:brightness-110"
-                  >
-                    <span className="truncate">{occ.title}</span>
-                  </button>
-                )
-              })}
+            <div className="flex flex-col">
+              {bannerLayout.totalRows > 0 && (
+                <div
+                  className="relative p-1"
+                  style={{ height: `${bannerLayout.totalRows * 24 + 4}px` }}
+                >
+                  {bannerLayout.items.map((item) => {
+                    const occ = (
+                      item.event as unknown as { occurrence: EventOccurrence }
+                    ).occurrence
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        data-testid={`banner-${item.id}`}
+                        onClick={(e) =>
+                          onSelectOccurrence(occ, e.currentTarget)
+                        }
+                        onDoubleClick={(e) => {
+                          e.stopPropagation()
+                          onEditOccurrence?.(occ)
+                        }}
+                        style={{
+                          top: `${2 + item.rowIndex * 24}px`,
+                          backgroundColor: occ.color || "#3b82f6",
+                        }}
+                        className="absolute right-2 left-2 z-10 flex h-5 items-center truncate rounded-md px-2 text-[11px] font-semibold text-white shadow-2xs transition hover:brightness-110"
+                      >
+                        <span className="truncate">{occ.title}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {financeItems.some((f) => f.dateKey === dateStr) && (
+                <div className="flex flex-wrap gap-1.5 px-2 py-1.5">
+                  {financeItems
+                    .filter((f) => f.dateKey === dateStr)
+                    .map((fin) => {
+                      const isIncome = fin.type === "INCOME"
+                      return (
+                        <button
+                          key={fin.id}
+                          type="button"
+                          data-testid={`finance-pill-${fin.id}`}
+                          onClick={() =>
+                            onSelectFinanceItem?.(fin.scheduledTransaction)
+                          }
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition hover:brightness-95",
+                            isIncome
+                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                              : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                          )}
+                        >
+                          {isIncome ? (
+                            <ArrowUpRight className="size-3.5 shrink-0" />
+                          ) : (
+                            <ArrowDownLeft className="size-3.5 shrink-0" />
+                          )}
+                          <span>{fin.title}</span>
+                          <MoneyAmount
+                            cents={fin.amountCents}
+                            currency={fin.currency}
+                            size="sm"
+                          />
+                        </button>
+                      )
+                    })}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -221,6 +279,10 @@ export function DayView({
                   onClick={(e) => {
                     e.stopPropagation()
                     onSelectOccurrence(occ, e.currentTarget)
+                  }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation()
+                    onEditOccurrence?.(occ)
                   }}
                   style={{
                     top: `${item.topPct}%`,

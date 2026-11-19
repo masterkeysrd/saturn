@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { useInRouterContext, useSearchParams } from "react-router-dom"
 import {
   useInfiniteMailThreads,
@@ -14,17 +14,63 @@ import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import { buildCopilotEntityKey } from "@saturn/core"
 import type {
   Thread,
+  Message,
+  Draft,
   MailboxRole,
   ListThreadsRequest,
   Attachment,
 } from "@saturn/api/saturn/mail/v1/mail"
 import { useActiveSpaceContext } from "@/features/space/use-space"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { MailboxRail } from "./components/mailbox-rail"
 import { ThreadList } from "./components/thread-list"
 import { ThreadReader } from "./components/thread-reader"
 import { MailComposer } from "./components/mail-composer"
+import { StageToFinanceDialog } from "./components/stage-to-finance-dialog"
 import { EventDialog } from "@/features/calendar/components/event-dialog"
 import { toast } from "@/components/ui/toast"
+import {
+  buildFinanceStageDefaults,
+  clampMailListWidth,
+  MAIL_LIST_MAX_WIDTH,
+  MAIL_LIST_MIN_WIDTH,
+  readMailLayoutPref,
+  readMailListWidthPref,
+  readMailRailOpenPref,
+  UNDO_SEND_DELAY_MS,
+  writeMailLayoutPref,
+  writeMailListWidthPref,
+  writeMailRailOpenPref,
+  type MailLayoutMode,
+  type StageToFinanceInitialData,
+} from "./mail-utils"
+
+function useIsDesktop(): boolean {
+  const [isDesktop, setIsDesktop] = useState<boolean>(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
+      return true
+    }
+    return window.matchMedia("(min-width: 768px)").matches
+  })
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
+      return
+    }
+    const mq = window.matchMedia("(min-width: 768px)")
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener("change", onChange)
+    return () => mq.removeEventListener("change", onChange)
+  }, [])
+
+  return isDesktop
+}
 
 function MailSearchParamsSync({
   onSelectThreadId,
@@ -61,6 +107,7 @@ function MailSearchParamsSync({
 
 export function MailView() {
   const inRouter = useInRouterContext()
+  const isDesktop = useIsDesktop()
   const { spaceId } = useActiveSpaceContext()
   const { data: accountsData } = useConnectedAccounts()
   const accounts = useMemo(() => {
@@ -70,6 +117,39 @@ export function MailView() {
         a.enabledCapabilities?.includes("MAIL")
     )
   }, [accountsData])
+
+  // Pane & layout state
+  const [railOpen, setRailOpen] = useState<boolean>(() =>
+    readMailRailOpenPref()
+  )
+  const [mobileRailOpen, setMobileRailOpen] = useState(false)
+  const [layoutMode, setLayoutMode] = useState<MailLayoutMode>(() =>
+    readMailLayoutPref()
+  )
+  const [listWidth, setListWidth] = useState<number>(() =>
+    readMailListWidthPref()
+  )
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
+
+  const handleToggleRail = useCallback(() => {
+    if (isDesktop) {
+      setRailOpen((prev) => {
+        const next = !prev
+        writeMailRailOpenPref(next)
+        return next
+      })
+    } else {
+      setMobileRailOpen((prev) => !prev)
+    }
+  }, [isDesktop])
+
+  const handleToggleLayoutMode = useCallback(() => {
+    setLayoutMode((prev) => {
+      const next: MailLayoutMode = prev === "split" ? "list" : "split"
+      writeMailLayoutPref(next)
+      return next
+    })
+  }, [])
 
   // Navigation filter state
   const [selectedRole, setSelectedRole] =
@@ -82,11 +162,16 @@ export function MailView() {
   >()
   const [searchQuery, setSearchQuery] = useState("")
 
-  // Active selected thread
+  // Active selected & keyboard-focused thread
   const [selectedThreadId, setSelectedThreadId] = useState<string | undefined>()
+  const [focusedThreadId, setFocusedThreadId] = useState<string | undefined>()
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   // Compose modal state
   const [composeOpen, setComposeOpen] = useState(false)
+  const [reopenedDraft, setReopenedDraft] = useState<
+    Partial<Draft> | undefined
+  >()
   const [replyTrigger, setReplyTrigger] = useState<{
     threadId: string
     seq: number
@@ -106,6 +191,11 @@ export function MailView() {
     attendees: [],
   })
 
+  // Stage to Finance Inbox dialog state
+  const [stageDialogOpen, setStageDialogOpen] = useState(false)
+  const [stageInitialData, setStageInitialData] =
+    useState<StageToFinanceInitialData | null>(null)
+
   const [prevSpaceId, setPrevSpaceId] = useState(spaceId)
   if (prevSpaceId !== spaceId) {
     setPrevSpaceId(spaceId)
@@ -114,8 +204,13 @@ export function MailView() {
     setSelectedMailboxId(undefined)
     setSearchQuery("")
     setSelectedThreadId(undefined)
+    setFocusedThreadId(undefined)
+    setSelectedIds(new Set())
     setComposeOpen(false)
+    setReopenedDraft(undefined)
     setEventDialogOpen(false)
+    setStageDialogOpen(false)
+    setStageInitialData(null)
     setReplyTrigger(null)
   }
 
@@ -265,123 +360,166 @@ export function MailView() {
   }
 
   // Actions
-  const handleArchiveThread = (thread: Thread) => {
-    if (selectedThreadId === thread.id) {
-      const idx = threads.findIndex((t) => t.id === thread.id)
-      const nextThread = threads[idx + 1] || threads[idx - 1]
-      setSelectedThreadId(nextThread?.id)
-    }
+  const handleArchiveThread = useCallback(
+    (thread: Thread) => {
+      if (selectedThreadId === thread.id) {
+        const idx = threads.findIndex((t) => t.id === thread.id)
+        const nextThread = threads[idx + 1] || threads[idx - 1]
+        setSelectedThreadId(nextThread?.id)
+        setFocusedThreadId(nextThread?.id)
+      }
 
-    modifyThreadMutation.mutate({
-      id: thread.id,
-      req: { id: thread.id, inInbox: false },
-    })
-
-    toast.add({
-      title: "Conversation archived",
-      type: "success",
-      actionProps: {
-        children: "Undo",
-        onClick: () => {
-          modifyThreadMutation.mutate({
-            id: thread.id,
-            req: { id: thread.id, inInbox: true },
-          })
-          setSelectedThreadId(thread.id)
-          toast.add({
-            title: "Conversation restored to inbox",
-            type: "success",
-          })
-        },
-      },
-    })
-  }
-
-  const handleTrashThread = (thread: Thread) => {
-    if (selectedThreadId === thread.id) {
-      const idx = threads.findIndex((t) => t.id === thread.id)
-      const nextThread = threads[idx + 1] || threads[idx - 1]
-      setSelectedThreadId(nextThread?.id)
-    }
-
-    modifyThreadMutation.mutate({
-      id: thread.id,
-      req: { id: thread.id, inTrash: true },
-    })
-
-    toast.add({
-      title: "Conversation moved to trash",
-      type: "success",
-      actionProps: {
-        children: "Undo",
-        onClick: () => {
-          modifyThreadMutation.mutate({
-            id: thread.id,
-            req: { id: thread.id, inTrash: false, inInbox: true },
-          })
-          setSelectedThreadId(thread.id)
-          toast.add({ title: "Conversation restored", type: "success" })
-        },
-      },
-    })
-  }
-
-  const handleToggleStar = (thread: Thread) => {
-    modifyThreadMutation.mutate({
-      id: thread.id,
-      req: { id: thread.id, isStarred: !thread.isStarred },
-    })
-  }
-
-  const handleToggleRead = (thread: Thread) => {
-    if (thread.isUnread) {
-      // User is explicitly marking as unread: remove from auto-marked set
-      markedAsReadRef.current.delete(thread.id)
-    }
-    modifyThreadMutation.mutate({
-      id: thread.id,
-      req: { id: thread.id, isUnread: !thread.isUnread },
-    })
-  }
-
-  const handleBulkAction = (
-    action: "archive" | "trash" | "read" | "unread",
-    threadIds: string[]
-  ) => {
-    if (threadIds.length === 0) return
-
-    if (action === "archive") {
-      batchModifyMutation.mutate({
-        ids: threadIds,
-        inInbox: false,
+      modifyThreadMutation.mutate({
+        id: thread.id,
+        req: { id: thread.id, inInbox: false },
       })
+
       toast.add({
-        title: `${threadIds.length} conversations archived`,
+        title: "Conversation archived",
         type: "success",
+        actionProps: {
+          children: "Undo",
+          onClick: () => {
+            modifyThreadMutation.mutate({
+              id: thread.id,
+              req: { id: thread.id, inInbox: true },
+            })
+            setSelectedThreadId(thread.id)
+            setFocusedThreadId(thread.id)
+            toast.add({
+              title: "Conversation restored to inbox",
+              type: "success",
+            })
+          },
+        },
       })
-    } else if (action === "trash") {
-      batchModifyMutation.mutate({
-        ids: threadIds,
-        inTrash: true,
-      })
-      toast.add({
-        title: `${threadIds.length} conversations moved to trash`,
-        type: "success",
-      })
-    } else if (action === "read") {
-      batchModifyMutation.mutate({
-        ids: threadIds,
-        isUnread: false,
-      })
-    } else if (action === "unread") {
-      batchModifyMutation.mutate({
-        ids: threadIds,
-        isUnread: true,
-      })
-    }
-  }
+    },
+    [selectedThreadId, threads, modifyThreadMutation]
+  )
 
-  // Handle send from compose modal or inline reply
+  const handleTrashThread = useCallback(
+    (thread: Thread) => {
+      if (selectedThreadId === thread.id) {
+        const idx = threads.findIndex((t) => t.id === thread.id)
+        const nextThread = threads[idx + 1] || threads[idx - 1]
+        setSelectedThreadId(nextThread?.id)
+        setFocusedThreadId(nextThread?.id)
+      }
+
+      modifyThreadMutation.mutate({
+        id: thread.id,
+        req: { id: thread.id, inTrash: true },
+      })
+
+      toast.add({
+        title: "Conversation moved to trash",
+        type: "success",
+        actionProps: {
+          children: "Undo",
+          onClick: () => {
+            modifyThreadMutation.mutate({
+              id: thread.id,
+              req: { id: thread.id, inTrash: false, inInbox: true },
+            })
+            setSelectedThreadId(thread.id)
+            setFocusedThreadId(thread.id)
+            toast.add({ title: "Conversation restored", type: "success" })
+          },
+        },
+      })
+    },
+    [selectedThreadId, threads, modifyThreadMutation]
+  )
+
+  const handleToggleStar = useCallback(
+    (thread: Thread) => {
+      modifyThreadMutation.mutate({
+        id: thread.id,
+        req: { id: thread.id, isStarred: !thread.isStarred },
+      })
+    },
+    [modifyThreadMutation]
+  )
+
+  const handleToggleRead = useCallback(
+    (thread: Thread) => {
+      if (thread.isUnread) {
+        // User is explicitly marking as unread: remove from auto-marked set
+        markedAsReadRef.current.delete(thread.id)
+      }
+      modifyThreadMutation.mutate({
+        id: thread.id,
+        req: { id: thread.id, isUnread: !thread.isUnread },
+      })
+    },
+    [modifyThreadMutation]
+  )
+
+  const handleBulkAction = useCallback(
+    (action: "archive" | "trash" | "read" | "unread", threadIds: string[]) => {
+      if (threadIds.length === 0) return
+
+      if (action === "archive") {
+        batchModifyMutation.mutate({
+          ids: threadIds,
+          inInbox: false,
+        })
+        toast.add({
+          title: `${threadIds.length} conversations archived`,
+          type: "success",
+        })
+      } else if (action === "trash") {
+        batchModifyMutation.mutate({
+          ids: threadIds,
+          inTrash: true,
+        })
+        toast.add({
+          title: `${threadIds.length} conversations moved to trash`,
+          type: "success",
+        })
+      } else if (action === "read") {
+        batchModifyMutation.mutate({
+          ids: threadIds,
+          isUnread: false,
+        })
+      } else if (action === "unread") {
+        batchModifyMutation.mutate({
+          ids: threadIds,
+          isUnread: true,
+        })
+      }
+    },
+    [batchModifyMutation]
+  )
+
+  // Undo Send (7s buffer timer)
+  const pendingSendsRef = useRef<
+    Map<
+      string,
+      {
+        timer: ReturnType<typeof setTimeout>
+        draft: Partial<Draft>
+      }
+    >
+  >(new Map())
+  const sendDraftMutationRef = useRef(sendDraftMutation)
+  useEffect(() => {
+    sendDraftMutationRef.current = sendDraftMutation
+  }, [sendDraftMutation])
+
+  // Flush any un-cancelled sends if user navigates away before 7s expires
+  useEffect(() => {
+    const pendingMap = pendingSendsRef.current
+    return () => {
+      for (const [draftId, entry] of pendingMap.entries()) {
+        clearTimeout(entry.timer)
+        void sendDraftMutationRef.current.mutateAsync({ id: draftId })
+      }
+      pendingMap.clear()
+    }
+  }, [])
+
+  // Handle send from compose modal or inline reply with 7s Undo Send buffer
   const handleSendMail = async (data: {
     id?: string
     connectedAccountId: string
@@ -395,40 +533,106 @@ export function MailView() {
     replyToMessageId?: string
     attachments?: Attachment[]
   }) => {
-    // Save draft first then send
+    // 1. Save draft immediately so content & attachments are safely persisted
+    const mappedTo = data.to.map((t) => ({
+      email: t.email,
+      name: t.displayName || "",
+      avatarUrl: "",
+      isVerified: false,
+    }))
+    const mappedCc = data.cc.map((t) => ({
+      email: t.email,
+      name: t.displayName || "",
+      avatarUrl: "",
+      isVerified: false,
+    }))
+    const mappedBcc = data.bcc.map((t) => ({
+      email: t.email,
+      name: t.displayName || "",
+      avatarUrl: "",
+      isVerified: false,
+    }))
+
     const draft = await saveDraftMutation.mutateAsync({
       id: data.id,
       connectedAccountId: data.connectedAccountId,
       threadId: data.threadId,
       replyToMessageId: data.replyToMessageId,
-      to: data.to.map((t) => ({
-        email: t.email,
-        name: t.displayName || "",
-        avatarUrl: "",
-        isVerified: false,
-      })),
-      cc: data.cc.map((t) => ({
-        email: t.email,
-        name: t.displayName || "",
-        avatarUrl: "",
-        isVerified: false,
-      })),
-      bcc: data.bcc.map((t) => ({
-        email: t.email,
-        name: t.displayName || "",
-        avatarUrl: "",
-        isVerified: false,
-      })),
+      to: mappedTo,
+      cc: mappedCc,
+      bcc: mappedBcc,
       subject: data.subject,
       bodyHtml: data.bodyHtml,
       bodyText: data.bodyText,
       attachments: data.attachments,
     })
 
-    if (draft?.id) {
-      await sendDraftMutation.mutateAsync({ id: draft.id })
-      toast.add({ title: "Email sent", type: "success" })
+    const draftId = draft?.id
+    if (!draftId) return
+
+    const existingPending = pendingSendsRef.current.get(draftId)
+    if (existingPending) {
+      clearTimeout(existingPending.timer)
+      pendingSendsRef.current.delete(draftId)
     }
+
+    const draftSnapshot: Partial<Draft> = {
+      ...draft,
+      id: draftId,
+      connectedAccountId: data.connectedAccountId,
+      threadId: data.threadId || draft.threadId,
+      replyToMessageId: data.replyToMessageId || draft.replyToMessageId,
+      to: mappedTo,
+      cc: mappedCc,
+      bcc: mappedBcc,
+      subject: data.subject,
+      bodyHtml: data.bodyHtml,
+      bodyText: data.bodyText,
+      attachments: data.attachments ?? draft.attachments ?? [],
+    }
+
+    const timer = setTimeout(() => {
+      pendingSendsRef.current.delete(draftId)
+      void sendDraftMutationRef.current
+        .mutateAsync({ id: draftId })
+        .then(() => {
+          toast.add({ title: "Email sent", type: "success" })
+        })
+        .catch((err: unknown) => {
+          toast.add({
+            title: "Failed to send email",
+            description:
+              err instanceof Error ? err.message : "An error occurred",
+            type: "error",
+          })
+        })
+    }, UNDO_SEND_DELAY_MS)
+
+    pendingSendsRef.current.set(draftId, {
+      timer,
+      draft: draftSnapshot,
+    })
+
+    toast.add({
+      title: "Sending email…",
+      type: "info",
+      timeout: UNDO_SEND_DELAY_MS,
+      actionProps: {
+        children: "Undo",
+        onClick: () => {
+          const pending = pendingSendsRef.current.get(draftId)
+          if (!pending) return
+          clearTimeout(pending.timer)
+          pendingSendsRef.current.delete(draftId)
+          setReopenedDraft(pending.draft)
+          setComposeOpen(true)
+          toast.add({
+            title: "Send cancelled — draft reopened",
+            type: "info",
+          })
+        },
+      },
+    })
   }
 
   // Open "Create Calendar Event from Email" dialog
@@ -442,6 +646,259 @@ export function MailView() {
     setEventDialogOpen(true)
   }
 
+  // Open "Stage to Finance Inbox" dialog
+  const handleOpenStageToFinance = (thread: Thread, message?: Message) => {
+    setStageInitialData(buildFinanceStageDefaults(thread, message))
+    setStageDialogOpen(true)
+  }
+
+  const isStackedMode = !isDesktop || layoutMode === "list"
+
+  // Superhuman-grade keyboard triage
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) {
+        return
+      }
+
+      const target = e.target as HTMLElement | null
+      if (target) {
+        const tag = target.tagName
+        if (
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT" ||
+          tag === "IFRAME" ||
+          target.isContentEditable ||
+          (typeof target.closest === "function" &&
+            (target.closest('[role="combobox"]') ||
+              target.closest('[role="dialog"]') ||
+              target.closest('[role="alertdialog"]') ||
+              target.closest('[contenteditable="true"]')))
+        ) {
+          return
+        }
+      }
+
+      if (
+        composeOpen ||
+        eventDialogOpen ||
+        stageDialogOpen ||
+        (typeof document !== "undefined" &&
+          (document.querySelector(
+            '[role="dialog"]:not([data-slot="toast"]), [role="alertdialog"]'
+          ) ||
+            document.querySelector('[data-testid="mail-compose-modal"]')))
+      ) {
+        return
+      }
+
+      const activeId = selectedThreadId || focusedThreadId
+      const currentIndex = activeId
+        ? threads.findIndex((t) => t.id === activeId)
+        : -1
+      const currentThread =
+        currentIndex !== -1 ? threads[currentIndex] : undefined
+
+      switch (e.key) {
+        case "/":
+          e.preventDefault()
+          searchInputRef.current?.focus()
+          break
+        case "j":
+        case "J": {
+          e.preventDefault()
+          if (threads.length === 0) break
+          const next =
+            currentIndex === -1
+              ? threads[0]
+              : threads[Math.min(threads.length - 1, currentIndex + 1)]
+          if (next) {
+            setFocusedThreadId(next.id)
+            if (!isStackedMode || selectedThreadId) {
+              setSelectedThreadId(next.id)
+            }
+          }
+          break
+        }
+        case "k":
+        case "K": {
+          e.preventDefault()
+          if (threads.length === 0) break
+          const prev =
+            currentIndex === -1
+              ? threads[0]
+              : threads[Math.max(0, currentIndex - 1)]
+          if (prev) {
+            setFocusedThreadId(prev.id)
+            if (!isStackedMode || selectedThreadId) {
+              setSelectedThreadId(prev.id)
+            }
+          }
+          break
+        }
+        case "Enter": {
+          const targetThread = currentThread || threads[0]
+          if (targetThread) {
+            e.preventDefault()
+            setFocusedThreadId(targetThread.id)
+            setSelectedThreadId(targetThread.id)
+          }
+          break
+        }
+        case "Escape":
+          if (isStackedMode && selectedThreadId) {
+            e.preventDefault()
+            setSelectedThreadId(undefined)
+          }
+          break
+        case "e":
+        case "E":
+          e.preventDefault()
+          if (selectedIds.size > 0) {
+            handleBulkAction("archive", Array.from(selectedIds))
+            setSelectedIds(new Set())
+          } else if (currentThread) {
+            handleArchiveThread(currentThread)
+          }
+          break
+        case "#":
+        case "Delete":
+          e.preventDefault()
+          if (selectedIds.size > 0) {
+            handleBulkAction("trash", Array.from(selectedIds))
+            setSelectedIds(new Set())
+          } else if (currentThread) {
+            handleTrashThread(currentThread)
+          }
+          break
+        case "s":
+        case "S":
+          e.preventDefault()
+          if (currentThread) {
+            handleToggleStar(currentThread)
+          }
+          break
+        case "u":
+        case "U":
+          e.preventDefault()
+          if (selectedIds.size > 0) {
+            handleBulkAction("unread", Array.from(selectedIds))
+          } else if (currentThread) {
+            handleToggleRead(currentThread)
+          }
+          break
+        case "c":
+        case "C":
+          e.preventDefault()
+          setReopenedDraft(undefined)
+          setComposeOpen(true)
+          break
+        case "r":
+        case "R":
+          e.preventDefault()
+          if (currentThread) {
+            setSelectedThreadId(currentThread.id)
+            setReplyTrigger((prev) => ({
+              threadId: currentThread.id,
+              seq: (prev?.seq ?? 0) + 1,
+            }))
+          }
+          break
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [
+    threads,
+    selectedThreadId,
+    focusedThreadId,
+    selectedIds,
+    isStackedMode,
+    composeOpen,
+    eventDialogOpen,
+    stageDialogOpen,
+    handleArchiveThread,
+    handleTrashThread,
+    handleToggleStar,
+    handleToggleRead,
+    handleBulkAction,
+  ])
+
+  // Split pane resizer drag handler
+  const handleStartResize = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = listWidth
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const next = clampMailListWidth(startWidth + (moveEvent.clientX - startX))
+      setListWidth(next)
+    }
+    const onMouseUp = (upEvent: MouseEvent) => {
+      const finalWidth = clampMailListWidth(
+        startWidth + (upEvent.clientX - startX)
+      )
+      setListWidth(finalWidth)
+      writeMailListWidthPref(finalWidth)
+      window.removeEventListener("mousemove", onMouseMove)
+      window.removeEventListener("mouseup", onMouseUp)
+    }
+
+    window.addEventListener("mousemove", onMouseMove)
+    window.addEventListener("mouseup", onMouseUp)
+  }
+
+  const handleResizerKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "ArrowLeft") {
+      e.preventDefault()
+      const next = clampMailListWidth(listWidth - 16)
+      setListWidth(next)
+      writeMailListWidthPref(next)
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault()
+      const next = clampMailListWidth(listWidth + 16)
+      setListWidth(next)
+      writeMailListWidthPref(next)
+    }
+  }
+
+  const railContent = (
+    <MailboxRail
+      selectedRole={selectedRole}
+      selectedAccountId={selectedAccountId}
+      selectedMailboxId={selectedMailboxId}
+      onSelectRole={(role) => {
+        setSelectedRole(role)
+        setSelectedMailboxId(undefined)
+        setSelectedThreadId(undefined)
+        setFocusedThreadId(undefined)
+        setMobileRailOpen(false)
+      }}
+      onSelectAccount={(accId) => {
+        setSelectedAccountId(accId)
+        setSelectedThreadId(undefined)
+        setFocusedThreadId(undefined)
+        setMobileRailOpen(false)
+      }}
+      onSelectMailbox={(mbxId) => {
+        setSelectedMailboxId(mbxId)
+        setSelectedThreadId(undefined)
+        setFocusedThreadId(undefined)
+        setMobileRailOpen(false)
+      }}
+      onOpenCompose={() => {
+        setReopenedDraft(undefined)
+        setComposeOpen(true)
+        setMobileRailOpen(false)
+      }}
+    />
+  )
+
+  const showThreadList = !isStackedMode || !activeThread
+  const showThreadReader = !isStackedMode || Boolean(activeThread)
+
   return (
     <div
       data-testid="mail-main-view"
@@ -450,99 +907,134 @@ export function MailView() {
       {inRouter && (
         <MailSearchParamsSync
           onSelectThreadId={setSelectedThreadId}
-          onOpenCompose={() => setComposeOpen(true)}
+          onOpenCompose={() => {
+            setReopenedDraft(undefined)
+            setComposeOpen(true)
+          }}
         />
       )}
-      {/* Pane 1: Mailbox & Accounts Rail */}
-      <MailboxRail
-        selectedRole={selectedRole}
-        selectedAccountId={selectedAccountId}
-        selectedMailboxId={selectedMailboxId}
-        onSelectRole={(role) => {
-          setSelectedRole(role)
-          setSelectedMailboxId(undefined)
-          setSelectedThreadId(undefined)
-        }}
-        onSelectAccount={(accId) => {
-          setSelectedAccountId(accId)
-          setSelectedThreadId(undefined)
-        }}
-        onSelectMailbox={(mbxId) => {
-          setSelectedMailboxId(mbxId)
-          setSelectedThreadId(undefined)
-        }}
-        onOpenCompose={() => setComposeOpen(true)}
-      />
+
+      {/* Pane 1: Desktop Collapsible Mailbox Rail */}
+      {isDesktop && railOpen && railContent}
+
+      {/* Mobile Left Navigation Drawer */}
+      {!isDesktop && (
+        <Sheet open={mobileRailOpen} onOpenChange={setMobileRailOpen}>
+          <SheetContent side="left" className="w-64 p-0">
+            {railContent}
+          </SheetContent>
+        </Sheet>
+      )}
 
       {/* Pane 2: Thread List */}
-      <ThreadList
-        threads={threads}
-        selectedThreadId={activeThread?.id}
-        onSelectThread={(t) => setSelectedThreadId(t.id)}
-        onArchiveThread={handleArchiveThread}
-        onTrashThread={handleTrashThread}
-        onToggleStar={handleToggleStar}
-        onToggleRead={handleToggleRead}
-        onBulkAction={handleBulkAction}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onReply={(t) => {
-          setSelectedThreadId(t.id)
-          setReplyTrigger((prev) => ({
-            threadId: t.id,
-            seq: (prev?.seq ?? 0) + 1,
-          }))
-        }}
-        onOpenCompose={() => setComposeOpen(true)}
-        onRefresh={handleRefresh}
-        isLoading={threadsLoading || syncAccountMutation.isPending}
-        hasNextPage={Boolean(hasNextPage)}
-        isFetchingNextPage={Boolean(isFetchingNextPage)}
-        totalCount={totalCount}
-        onLoadMore={() => {
-          if (hasNextPage && !isFetchingNextPage) {
-            fetchNextPage()
-          }
-        }}
-      />
+      {showThreadList && (
+        <ThreadList
+          threads={threads}
+          selectedThreadId={activeThread?.id}
+          focusedThreadId={focusedThreadId}
+          selectedIds={selectedIds}
+          onSelectedIdsChange={setSelectedIds}
+          onSelectThread={(t) => {
+            setSelectedThreadId(t.id)
+            setFocusedThreadId(t.id)
+          }}
+          onArchiveThread={handleArchiveThread}
+          onTrashThread={handleTrashThread}
+          onToggleStar={handleToggleStar}
+          onToggleRead={handleToggleRead}
+          onBulkAction={handleBulkAction}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchInputRef={searchInputRef}
+          railOpen={isDesktop ? railOpen : mobileRailOpen}
+          onToggleRail={handleToggleRail}
+          layoutMode={layoutMode}
+          onToggleLayoutMode={handleToggleLayoutMode}
+          widthPx={isStackedMode ? undefined : listWidth}
+          fullWidth={isStackedMode}
+          onRefresh={handleRefresh}
+          isLoading={threadsLoading || syncAccountMutation.isPending}
+          hasNextPage={Boolean(hasNextPage)}
+          isFetchingNextPage={Boolean(isFetchingNextPage)}
+          totalCount={totalCount}
+          onLoadMore={() => {
+            if (hasNextPage && !isFetchingNextPage) {
+              fetchNextPage()
+            }
+          }}
+        />
+      )}
+
+      {/* Resizable Split Handle (Desktop Split Mode) */}
+      {!isStackedMode && (
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize thread list"
+          aria-valuemin={MAIL_LIST_MIN_WIDTH}
+          aria-valuemax={MAIL_LIST_MAX_WIDTH}
+          aria-valuenow={listWidth}
+          tabIndex={0}
+          data-testid="mail-split-resizer"
+          onMouseDown={handleStartResize}
+          onKeyDown={handleResizerKeyDown}
+          className="hidden w-1.5 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-primary/25 focus-visible:bg-primary/40 focus-visible:outline-none md:block"
+        />
+      )}
 
       {/* Pane 3: Thread Reader */}
-      <ThreadReader
-        key={activeThread?.id}
-        threadId={activeThread?.id}
-        initialThread={activeThread}
-        replyTrigger={replyTrigger}
-        onArchive={handleArchiveThread}
-        onTrash={handleTrashThread}
-        onToggleStar={handleToggleStar}
-        onToggleRead={handleToggleRead}
-        onCreateEvent={handleOpenCreateEventDialog}
-        onSendReply={handleSendMail}
-        onSaveDraft={async (draft) => {
-          return saveDraftMutation.mutateAsync({
-            ...draft,
-            connectedAccountId:
-              draft.connectedAccountId || accounts[0]?.id || "",
-          })
-        }}
-        onDiscardDraft={async (draftId) => {
-          await deleteDraftMutation.mutateAsync({ id: draftId })
-          refetchThreads()
-          if (activeThread && activeThread.messageCount <= 1) {
-            setSelectedThreadId(undefined)
-          }
-        }}
-      />
+      {showThreadReader && (
+        <ThreadReader
+          key={activeThread?.id}
+          threadId={activeThread?.id}
+          initialThread={activeThread}
+          replyTrigger={replyTrigger}
+          showBackButton={isStackedMode && Boolean(activeThread)}
+          onBack={() => setSelectedThreadId(undefined)}
+          borderless={isStackedMode}
+          onArchive={handleArchiveThread}
+          onTrash={handleTrashThread}
+          onToggleStar={handleToggleStar}
+          onToggleRead={handleToggleRead}
+          onCreateEvent={handleOpenCreateEventDialog}
+          onStageToFinance={handleOpenStageToFinance}
+          onSendReply={handleSendMail}
+          onSaveDraft={async (draft) => {
+            return saveDraftMutation.mutateAsync({
+              ...draft,
+              connectedAccountId:
+                draft.connectedAccountId || accounts[0]?.id || "",
+            })
+          }}
+          onDiscardDraft={async (draftId) => {
+            await deleteDraftMutation.mutateAsync({ id: draftId })
+            refetchThreads()
+            if (activeThread && activeThread.messageCount <= 1) {
+              setSelectedThreadId(undefined)
+            }
+          }}
+        />
+      )}
 
       {/* Docked / Floating Compose Modal */}
       {composeOpen && (
         <MailComposer
+          key={reopenedDraft?.id || "new-compose"}
           isOpen={composeOpen}
-          defaultAccountId={selectedAccountId || accounts[0]?.id}
-          onClose={() => setComposeOpen(false)}
+          initialDraft={reopenedDraft}
+          defaultAccountId={
+            reopenedDraft?.connectedAccountId ||
+            selectedAccountId ||
+            accounts[0]?.id
+          }
+          onClose={() => {
+            setComposeOpen(false)
+            setReopenedDraft(undefined)
+          }}
           onSend={async (data) => {
             await handleSendMail(data)
             setComposeOpen(false)
+            setReopenedDraft(undefined)
           }}
           onSaveDraft={async (draft) => {
             return saveDraftMutation.mutateAsync({
@@ -551,7 +1043,10 @@ export function MailView() {
                 draft.connectedAccountId || accounts[0]?.id || "",
             })
           }}
-          onDiscard={() => setComposeOpen(false)}
+          onDiscard={() => {
+            setComposeOpen(false)
+            setReopenedDraft(undefined)
+          }}
         />
       )}
 
@@ -571,6 +1066,17 @@ export function MailView() {
             responseStatus: "ATTENDEE_RESPONSE_STATUS_NEEDS_ACTION",
           })),
         }}
+      />
+
+      {/* Stage Receipt / Invoice to Finance Inbox Dialog */}
+      <StageToFinanceDialog
+        open={stageDialogOpen}
+        onOpenChange={(open) => {
+          setStageDialogOpen(open)
+          if (!open) setStageInitialData(null)
+        }}
+        spaceId={spaceId}
+        initialData={stageInitialData}
       />
     </div>
   )

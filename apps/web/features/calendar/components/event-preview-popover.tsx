@@ -3,10 +3,12 @@ import {
   Calendar,
   Check,
   Clock,
+  Copy,
   ExternalLink,
   HelpCircle,
   MapPin,
   Pencil,
+  Trash2,
   Users,
   Video,
   X,
@@ -33,6 +35,8 @@ export interface EventPreviewPopoverProps {
   anchorEl?: HTMLElement | null
   onOpenChange: (open: boolean) => void
   onEdit: (occurrence: EventOccurrence) => void
+  onDuplicate?: (occurrence: EventOccurrence) => void
+  onDelete?: (occurrence: EventOccurrence) => void
 }
 
 function getRsvpMeta(status?: AttendeeResponseStatus): {
@@ -73,6 +77,8 @@ export function EventPreviewPopover({
   anchorEl,
   onOpenChange,
   onEdit,
+  onDuplicate,
+  onDelete,
 }: EventPreviewPopoverProps) {
   const tz = useTimezone()
 
@@ -294,26 +300,58 @@ export function EventPreviewPopover({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-border/60 bg-popover px-4 py-2.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-            className="cursor-pointer"
-          >
-            Close
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            data-testid="preview-edit-event-btn"
-            onClick={() => onEdit(occurrence)}
-            className="cursor-pointer gap-1.5"
-          >
-            <Pencil className="size-3.5" />
-            <span>Edit</span>
-          </Button>
+        <div className="flex items-center justify-between gap-2 border-t border-border/60 bg-popover px-4 py-2.5">
+          <div className="flex items-center gap-1">
+            {onDuplicate && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                data-testid="preview-duplicate-event-btn"
+                onClick={() => onDuplicate(occurrence)}
+                className="cursor-pointer gap-1 px-2 text-muted-foreground hover:text-foreground"
+                title="Duplicate event"
+              >
+                <Copy className="size-3.5" />
+                <span>Duplicate</span>
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                data-testid="preview-delete-event-btn"
+                onClick={() => onDelete(occurrence)}
+                className="cursor-pointer gap-1 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                title="Delete event"
+              >
+                <Trash2 className="size-3.5" />
+                <span>Delete</span>
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              className="cursor-pointer"
+            >
+              Close
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              data-testid="preview-edit-event-btn"
+              onClick={() => onEdit(occurrence)}
+              className="cursor-pointer gap-1.5"
+            >
+              <Pencil className="size-3.5" />
+              <span>Edit</span>
+            </Button>
+          </div>
         </div>
       </PopoverContent>
     </Popover>

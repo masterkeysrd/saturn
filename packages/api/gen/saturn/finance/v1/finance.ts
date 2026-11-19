@@ -3182,6 +3182,25 @@ export interface InboxItem {
 
 /**
  * The request for
+ * [CreateInboxItem][saturn.finance.v1.Finance.CreateInboxItem].
+ */
+export interface CreateInboxItemRequest {
+  /**
+   * Required. Staged inbox item parameters.
+   */
+  inboxItem: InboxItem
+  /**
+   * Optional. Idempotency key preventing duplicate staging from the same source.
+   */
+  idempotencyKey?: string
+  /**
+   * Optional. Raw source text payload for context during inbox review.
+   */
+  rawPayload?: string
+}
+
+/**
+ * The request for
  * [ListInboxItems][saturn.finance.v1.Finance.ListInboxItems].
  */
 export interface ListInboxItemsRequest {
@@ -5428,6 +5447,28 @@ export function useListCurrenciesQuery(
   return useQuery<ListCurrenciesResponse, Error>({
     queryKey: ["/api/v1/finance/currencies", req],
     queryFn: () => listCurrencies(req),
+    ...options,
+  })
+}
+
+/**
+ * Stages a new inbox item into the finance staging queue for manual review.
+ */
+export async function createInboxItem(
+  req: CreateInboxItemRequest
+): Promise<InboxItem> {
+  return request<InboxItem>({
+    method: "POST",
+    url: "/api/v1/finance/inbox-items",
+    data: req,
+  })
+}
+
+export function useCreateInboxItemMutation(
+  options?: UseMutationOptions<InboxItem, Error, CreateInboxItemRequest>
+) {
+  return useMutation<InboxItem, Error, CreateInboxItemRequest>({
+    mutationFn: (req) => createInboxItem(req),
     ...options,
   })
 }

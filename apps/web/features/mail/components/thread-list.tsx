@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import {
   Search,
   Star,
@@ -11,17 +11,24 @@ import {
   Square,
   RefreshCw,
   Loader2,
+  PanelLeft,
+  Columns2,
+  Rows2,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useTimezone, useConnectedAccounts } from "@saturn/hooks"
 import { formatThreadParticipants } from "@saturn/core"
 import type { Thread } from "@saturn/api/saturn/mail/v1/mail"
+import type { MailLayoutMode } from "../mail-utils"
 import { cn } from "@/lib/utils"
 
 export interface ThreadListProps {
   threads: Thread[]
   selectedThreadId?: string
+  focusedThreadId?: string
+  selectedIds?: Set<string>
+  onSelectedIdsChange?: (ids: Set<string>) => void
   onSelectThread: (thread: Thread) => void
   onArchiveThread: (thread: Thread) => void
   onTrashThread: (thread: Thread) => void
@@ -33,8 +40,13 @@ export interface ThreadListProps {
   ) => void
   searchQuery: string
   onSearchChange: (q: string) => void
-  onReply?: (thread: Thread) => void
-  onOpenCompose?: () => void
+  searchInputRef?: React.RefObject<HTMLInputElement | null>
+  railOpen?: boolean
+  onToggleRail?: () => void
+  layoutMode?: MailLayoutMode
+  onToggleLayoutMode?: () => void
+  widthPx?: number
+  fullWidth?: boolean
   onRefresh?: () => void
   isLoading?: boolean
   hasNextPage?: boolean
@@ -46,16 +58,21 @@ export interface ThreadListProps {
 export function ThreadList({
   threads,
   selectedThreadId,
+  focusedThreadId,
+  selectedIds: controlledSelectedIds,
+  onSelectedIdsChange,
   onSelectThread,
-  onArchiveThread,
-  onTrashThread,
   onToggleStar,
-  onToggleRead,
   onBulkAction,
   searchQuery,
   onSearchChange,
-  onReply,
-  onOpenCompose,
+  searchInputRef,
+  railOpen = true,
+  onToggleRail,
+  layoutMode = "split",
+  onToggleLayoutMode,
+  widthPx,
+  fullWidth = false,
   onRefresh,
   isLoading = false,
   hasNextPage = false,
@@ -85,8 +102,21 @@ export function ThreadList({
     return accounts.map((a) => a.email).filter(Boolean) as string[]
   }, [accounts])
 
-  // Multi-select state
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  // Multi-select state (supports controlled or uncontrolled usage)
+  const [internalSelectedIds, setInternalSelectedIds] = useState<Set<string>>(
+    new Set()
+  )
+  const selectedIds = controlledSelectedIds ?? internalSelectedIds
+  const setSelectedIds = (
+    updater: Set<string> | ((prev: Set<string>) => Set<string>)
+  ) => {
+    const next = typeof updater === "function" ? updater(selectedIds) : updater
+    if (onSelectedIdsChange) {
+      onSelectedIdsChange(next)
+    } else {
+      setInternalSelectedIds(next)
+    }
+  }
 
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null)
@@ -147,132 +177,76 @@ export function ThreadList({
     })
   }
 
-  // Keyboard navigation shortcuts
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) {
-        return
-      }
-      const target = e.target as HTMLElement | null
-      if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable ||
-          (typeof target.closest === "function" &&
-            (target.closest('[role="dialog"]') ||
-              target.closest('[contenteditable="true"]'))))
-      ) {
-        return
-      }
-      if (document.querySelector('[role="dialog"]')) {
-        return
-      }
-
-      const currentIndex = threads.findIndex((t) => t.id === selectedThreadId)
-      const currentThread =
-        currentIndex !== -1 ? threads[currentIndex] : undefined
-
-      switch (e.key) {
-        case "j": // Down
-          e.preventDefault()
-          if (currentIndex < threads.length - 1) {
-            onSelectThread(threads[currentIndex + 1])
-          }
-          break
-        case "k": // Up
-          e.preventDefault()
-          if (currentIndex > 0) {
-            onSelectThread(threads[currentIndex - 1])
-          }
-          break
-        case "e": // Archive
-          e.preventDefault()
-          if (selectedIds.size > 0) {
-            onBulkAction("archive", Array.from(selectedIds))
-            setSelectedIds(new Set())
-          } else if (currentThread) {
-            onArchiveThread(currentThread)
-          }
-          break
-        case "s": // Toggle star
-          e.preventDefault()
-          if (currentThread) {
-            onToggleStar(currentThread)
-          }
-          break
-        case "u": // Toggle read/unread
-          e.preventDefault()
-          if (selectedIds.size > 0) {
-            onBulkAction("unread", Array.from(selectedIds))
-          } else if (currentThread) {
-            onToggleRead(currentThread)
-          }
-          break
-        case "#": // Trash
-          e.preventDefault()
-          if (selectedIds.size > 0) {
-            onBulkAction("trash", Array.from(selectedIds))
-            setSelectedIds(new Set())
-          } else if (currentThread) {
-            onTrashThread(currentThread)
-          }
-          break
-        case "c": // Compose
-          e.preventDefault()
-          onOpenCompose?.()
-          break
-        case "r": // Reply
-          e.preventDefault()
-          if (currentThread) {
-            onReply?.(currentThread)
-          }
-          break
-      }
-    },
-    [
-      threads,
-      selectedThreadId,
-      selectedIds,
-      onSelectThread,
-      onArchiveThread,
-      onTrashThread,
-      onToggleStar,
-      onToggleRead,
-      onBulkAction,
-      onOpenCompose,
-      onReply,
-    ]
-  )
-
-  useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [handleKeyDown])
-
   return (
     <div
       data-testid="thread-list-pane"
-      className="flex h-full min-h-0 w-80 shrink-0 flex-col overflow-hidden border-r border-border/40 bg-background select-none lg:w-96"
+      style={!fullWidth && widthPx ? { width: `${widthPx}px` } : undefined}
+      className={cn(
+        "flex h-full min-h-0 flex-col overflow-hidden bg-background select-none",
+        fullWidth
+          ? "w-full flex-1"
+          : "w-full shrink-0 border-r border-border/40 md:w-[360px]"
+      )}
     >
       {/* Search Header */}
-      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border/40 bg-card/40 px-3 backdrop-blur">
+      <div className="flex h-14 shrink-0 items-center justify-between gap-1.5 border-b border-border/40 bg-card/40 px-3 backdrop-blur">
+        {onToggleRail && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            data-testid="mail-toggle-rail-btn"
+            onClick={onToggleRail}
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+            title={railOpen ? "Collapse folders" : "Expand folders"}
+            aria-label={railOpen ? "Collapse folders" : "Expand folders"}
+          >
+            <PanelLeft className="h-4 w-4" />
+          </Button>
+        )}
         <div className="relative flex-1">
           <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
           <Input
+            ref={searchInputRef}
             data-testid="mail-search-input"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search mail..."
+            placeholder="Search mail... (/)"
             className="h-8 bg-background/80 pl-8 text-xs"
           />
         </div>
+        {onToggleLayoutMode && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            data-testid="mail-layout-toggle-btn"
+            onClick={onToggleLayoutMode}
+            className="hidden h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground md:inline-flex"
+            title={
+              layoutMode === "split"
+                ? "Switch to list view"
+                : "Switch to split view"
+            }
+            aria-label={
+              layoutMode === "split"
+                ? "Switch to list view"
+                : "Switch to split view"
+            }
+          >
+            {layoutMode === "split" ? (
+              <Rows2 className="h-4 w-4" />
+            ) : (
+              <Columns2 className="h-4 w-4" />
+            )}
+          </Button>
+        )}
         {onRefresh && (
           <Button
             variant="ghost"
             size="icon-sm"
             onClick={onRefresh}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
             title="Refresh"
             aria-label="Refresh mail"
           >
@@ -403,6 +377,7 @@ export function ThreadList({
         ) : (
           threads.map((thread) => {
             const isSelected = selectedThreadId === thread.id
+            const isFocused = !isSelected && focusedThreadId === thread.id
             const isChecked = selectedIds.has(thread.id)
             const account = accountMap.get(thread.connectedAccountId)
             const dateStr = thread.lastMessageAt
@@ -436,9 +411,11 @@ export function ThreadList({
                   "group relative flex shrink-0 cursor-pointer gap-2 p-3 transition",
                   isSelected
                     ? "bg-accent/60"
-                    : thread.isUnread
-                      ? "bg-primary/[0.03] hover:bg-muted/40"
-                      : "hover:bg-muted/30"
+                    : isFocused
+                      ? "bg-accent/35 ring-1 ring-primary/40 ring-inset"
+                      : thread.isUnread
+                        ? "bg-primary/[0.03] hover:bg-muted/40"
+                        : "hover:bg-muted/30"
                 )}
               >
                 {/* Column 1: Unread Dot Gutter */}

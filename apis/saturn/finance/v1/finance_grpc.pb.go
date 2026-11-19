@@ -75,6 +75,7 @@ const (
 	Finance_CreateTransfer_FullMethodName              = "/saturn.finance.v1.Finance/CreateTransfer"
 	Finance_ListTransfers_FullMethodName               = "/saturn.finance.v1.Finance/ListTransfers"
 	Finance_ListCurrencies_FullMethodName              = "/saturn.finance.v1.Finance/ListCurrencies"
+	Finance_CreateInboxItem_FullMethodName             = "/saturn.finance.v1.Finance/CreateInboxItem"
 	Finance_ListInboxItems_FullMethodName              = "/saturn.finance.v1.Finance/ListInboxItems"
 	Finance_UpdateInboxItem_FullMethodName             = "/saturn.finance.v1.Finance/UpdateInboxItem"
 	Finance_ApproveInboxItem_FullMethodName            = "/saturn.finance.v1.Finance/ApproveInboxItem"
@@ -208,6 +209,8 @@ type FinanceClient interface {
 	ListTransfers(ctx context.Context, in *ListTransfersRequest, opts ...grpc.CallOption) (*ListTransfersResponse, error)
 	// Retrieves a static list of supported currencies.
 	ListCurrencies(ctx context.Context, in *ListCurrenciesRequest, opts ...grpc.CallOption) (*ListCurrenciesResponse, error)
+	// Stages a new inbox item into the finance staging queue for manual review.
+	CreateInboxItem(ctx context.Context, in *CreateInboxItemRequest, opts ...grpc.CallOption) (*InboxItem, error)
 	// Lists staging inbox items queue awaiting manual approval or transaction matching.
 	ListInboxItems(ctx context.Context, in *ListInboxItemsRequest, opts ...grpc.CallOption) (*ListInboxItemsResponse, error)
 	// Updates a staged inbox item's draft properties.
@@ -797,6 +800,16 @@ func (c *financeClient) ListCurrencies(ctx context.Context, in *ListCurrenciesRe
 	return out, nil
 }
 
+func (c *financeClient) CreateInboxItem(ctx context.Context, in *CreateInboxItemRequest, opts ...grpc.CallOption) (*InboxItem, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InboxItem)
+	err := c.cc.Invoke(ctx, Finance_CreateInboxItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *financeClient) ListInboxItems(ctx context.Context, in *ListInboxItemsRequest, opts ...grpc.CallOption) (*ListInboxItemsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListInboxItemsResponse)
@@ -1045,6 +1058,8 @@ type FinanceServer interface {
 	ListTransfers(context.Context, *ListTransfersRequest) (*ListTransfersResponse, error)
 	// Retrieves a static list of supported currencies.
 	ListCurrencies(context.Context, *ListCurrenciesRequest) (*ListCurrenciesResponse, error)
+	// Stages a new inbox item into the finance staging queue for manual review.
+	CreateInboxItem(context.Context, *CreateInboxItemRequest) (*InboxItem, error)
 	// Lists staging inbox items queue awaiting manual approval or transaction matching.
 	ListInboxItems(context.Context, *ListInboxItemsRequest) (*ListInboxItemsResponse, error)
 	// Updates a staged inbox item's draft properties.
@@ -1247,6 +1262,9 @@ func (UnimplementedFinanceServer) ListTransfers(context.Context, *ListTransfersR
 }
 func (UnimplementedFinanceServer) ListCurrencies(context.Context, *ListCurrenciesRequest) (*ListCurrenciesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCurrencies not implemented")
+}
+func (UnimplementedFinanceServer) CreateInboxItem(context.Context, *CreateInboxItemRequest) (*InboxItem, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateInboxItem not implemented")
 }
 func (UnimplementedFinanceServer) ListInboxItems(context.Context, *ListInboxItemsRequest) (*ListInboxItemsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListInboxItems not implemented")
@@ -2297,6 +2315,24 @@ func _Finance_ListCurrencies_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_CreateInboxItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateInboxItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).CreateInboxItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_CreateInboxItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).CreateInboxItem(ctx, req.(*CreateInboxItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Finance_ListInboxItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListInboxItemsRequest)
 	if err := dec(in); err != nil {
@@ -2757,6 +2793,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListCurrencies",
 			Handler:    _Finance_ListCurrencies_Handler,
+		},
+		{
+			MethodName: "CreateInboxItem",
+			Handler:    _Finance_CreateInboxItem_Handler,
 		},
 		{
 			MethodName: "ListInboxItems",

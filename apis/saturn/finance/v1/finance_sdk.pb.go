@@ -1098,6 +1098,20 @@ func (c *Client) ListCurrencies(ctx context.Context, req *ListCurrenciesRequest)
 	return &resp, nil
 }
 
+// CreateInboxItem executes POST /api/v1/finance/inbox-items.
+func (c *Client) CreateInboxItem(ctx context.Context, req *CreateInboxItemRequest) (*InboxItem, error) {
+	var resp InboxItem
+	path := "/api/v1/finance/inbox-items"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 // ListInboxItems executes GET /api/v1/finance/inbox-items.
 func (c *Client) ListInboxItems(ctx context.Context, req *ListInboxItemsRequest) (*ListInboxItemsResponse, error) {
 	var resp ListInboxItemsResponse

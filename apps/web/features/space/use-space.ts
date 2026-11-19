@@ -13,6 +13,7 @@ import {
   useGetSettingsQuery,
 } from "@saturn/api/gen/saturn/space/v1/space"
 import { TimezoneProvider, useSpaceRole } from "@saturn/hooks"
+import { AuthContext } from "@/features/auth/auth-context"
 import { useAuth } from "@/features/auth/use-auth"
 
 const ACTIVE_SPACE_KEY = "active_space_id"
@@ -187,6 +188,52 @@ export function useSpacePermissions() {
     spaceRole === "owner" || spaceRole === "admin" || spaceRole === "member"
   const canManageSpace = spaceRole === "owner" || spaceRole === "admin"
   return { spaceId, spaceRole, isWritable, canManageSpace }
+}
+
+export function useOptionalSpacePermissions() {
+  const spaceCtx = useContext(ActiveSpaceContext)
+  const authCtx = useContext(AuthContext)
+  const spaceId = spaceCtx?.spaceId ?? ""
+  const isAuthenticated = authCtx?.isAuthenticated ?? false
+  const userId = authCtx?.user?.id ?? ""
+
+  const { data: spacesData } = useListSpacesQuery(
+    { pageSize: 100, pageToken: "" },
+    {
+      enabled: Boolean(spaceCtx && isAuthenticated && spaceId),
+      staleTime: 1000 * 60 * 30,
+    }
+  )
+
+  const activeSpace = useMemo(() => {
+    return (spacesData?.spaces ?? []).find((s) => s.id === spaceId) ?? null
+  }, [spacesData?.spaces, spaceId])
+
+  const { role: resolvedRole, isLoading: isRoleLoading } = useSpaceRole({
+    space: activeSpace,
+    userId,
+    enabled: Boolean(spaceCtx && isAuthenticated && activeSpace && userId),
+  })
+
+  const currentRole = useMemo(() => {
+    if (!spaceId) return ""
+    if (activeSpace && userId) {
+      if (activeSpace.ownerId === userId) {
+        return "owner"
+      }
+      if (!isRoleLoading) {
+        return resolvedRole
+      }
+    }
+    return spaceCtx?.spaceRole || ""
+  }, [spaceId, activeSpace, userId, isRoleLoading, resolvedRole, spaceCtx])
+
+  const isWritable =
+    currentRole === "owner" ||
+    currentRole === "admin" ||
+    currentRole === "member"
+  const canManageSpace = currentRole === "owner" || currentRole === "admin"
+  return { spaceId, spaceRole: currentRole, isWritable, canManageSpace }
 }
 
 export function resolveSpacePath(

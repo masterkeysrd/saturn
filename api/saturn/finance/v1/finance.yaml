@@ -195,6 +195,9 @@ authentication:
     - selector: "saturn.finance.v1.Finance.CreateTransfer"
       auth_required: true
       api_key_scopes: [finance:write]
+    - selector: "saturn.finance.v1.Finance.CreateInboxItem"
+      auth_required: true
+      api_key_scopes: [finance:write]
     - selector: "saturn.finance.v1.Finance.UpdateInboxItem"
       auth_required: true
       api_key_scopes: [finance:write]
