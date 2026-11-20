@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { useTimezone } from "@saturn/hooks"
+import { useTimezone, useI18n } from "@saturn/hooks"
 import {
   useListBackupsQuery,
   useTriggerBackupMutation,
@@ -21,6 +21,7 @@ import { PageLayout } from "@/components/ui/page-layout"
 export function BackupAdminView() {
   const queryClient = useQueryClient()
   const tz = useTimezone()
+  const { t } = useI18n()
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   // Fetch index
@@ -44,10 +45,10 @@ export function BackupAdminView() {
 
   // Format timestamp nicely
   const formatDateTime = (dateStr?: string) => {
-    if (!dateStr) return "Never"
+    if (!dateStr) return t("admin.backups.never")
     try {
       const d = new Date(dateStr)
-      if (isNaN(d.getTime())) return "Never"
+      if (isNaN(d.getTime())) return t("admin.backups.never")
       return tz.formatDateTime(d, {
         year: "numeric",
         month: "short",
@@ -57,17 +58,18 @@ export function BackupAdminView() {
         second: "2-digit",
       })
     } catch {
-      return "Never"
+      return t("admin.backups.never")
     }
   }
 
   // Format file size
   const formatBytes = (bytes?: string | number) => {
-    if (bytes === undefined || bytes === null) return "0 Bytes"
+    if (bytes === undefined || bytes === null)
+      return t("admin.backups.sizeZero")
     const num = typeof bytes === "string" ? parseInt(bytes, 10) : bytes
-    if (isNaN(num) || num === 0) return "0 Bytes"
+    if (isNaN(num) || num === 0) return t("admin.backups.sizeZero")
     const k = 1024
-    const sizes = ["Bytes", "KB", "MB", "GB"]
+    const sizes = [t("admin.backups.sizeBytes"), "KB", "MB", "GB"]
     const i = Math.floor(Math.log(num) / Math.log(k))
     return parseFloat((num / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   }
@@ -75,7 +77,7 @@ export function BackupAdminView() {
   const backups = data?.backups || []
   const lastUpdated = data?.lastUpdated
     ? formatDateTime(data.lastUpdated)
-    : "Never"
+    : t("admin.backups.never")
   const successBackups = backups.filter((b) => b.status === "success")
 
   const backupActions = (
@@ -91,7 +93,7 @@ export function BackupAdminView() {
             isLoading ? "animate-spin" : ""
           }`}
         />
-        Sync Index
+        {t("admin.backups.syncIndex")}
       </Button>
 
       <Button
@@ -104,15 +106,15 @@ export function BackupAdminView() {
             triggerMutation.isPending ? "animate-spin" : ""
           }`}
         />
-        Backup Now
+        {t("admin.backups.backupNow")}
       </Button>
     </div>
   )
 
   return (
     <PageLayout
-      title="Database Backups"
-      description="Manage your Postgres database snapshots, track logs, and verify storage backups."
+      title={t("admin.backups.title")}
+      description={t("admin.backups.description")}
       icon={DatabaseIcon}
       actions={backupActions}
     >
@@ -124,7 +126,7 @@ export function BackupAdminView() {
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">
-              Total Backups
+              {t("admin.backups.total")}
             </p>
             <h4 className="mt-0.5 text-2xl font-bold text-foreground">
               {backups.length}
@@ -138,7 +140,7 @@ export function BackupAdminView() {
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">
-              Successful
+              {t("admin.backups.successful")}
             </p>
             <h4 className="mt-0.5 text-2xl font-bold text-foreground">
               {successBackups.length}
@@ -152,7 +154,7 @@ export function BackupAdminView() {
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">
-              Index Last Updated
+              {t("admin.backups.indexLastUpdated")}
             </p>
             <h4 className="mt-1.5 max-w-[200px] truncate text-sm font-semibold text-foreground">
               {lastUpdated}
@@ -166,7 +168,9 @@ export function BackupAdminView() {
         <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-600 dark:text-emerald-400">
           <CheckCircle2Icon className="h-5 w-5 shrink-0" />
           <div className="text-sm">
-            <span className="font-bold">Backup Completed Successfully: </span>
+            <span className="font-bold">
+              {t("admin.backups.backupCompleted")}{" "}
+            </span>
             {triggerMutation.data?.backup?.filename} (
             {formatBytes(triggerMutation.data?.backup?.sizeBytes)})
           </div>
@@ -177,7 +181,9 @@ export function BackupAdminView() {
         <div className="flex items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">
           <AlertCircleIcon className="h-5 w-5 shrink-0" />
           <div className="text-sm">
-            <span className="font-bold">Backup Failed: </span>
+            <span className="font-bold">
+              {t("admin.backups.backupFailed")}{" "}
+            </span>
             {triggerMutation.error?.message}
           </div>
         </div>
@@ -189,12 +195,18 @@ export function BackupAdminView() {
           <table className="w-full table-fixed border-collapse text-left text-xs">
             <thead>
               <tr className="border-b border-border/40 bg-muted/20 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                <th className="px-5 py-4">Snapshot Name</th>
-                <th className="w-28 px-5 py-4">Size</th>
-                <th className="w-32 px-5 py-4">Triggered By</th>
-                <th className="w-28 px-5 py-4">Status</th>
-                <th className="w-44 px-5 py-4">SHA256 Checksum</th>
-                <th className="w-44 px-5 py-4">Created At</th>
+                <th className="px-5 py-4">{t("admin.backups.name")}</th>
+                <th className="w-28 px-5 py-4">{t("admin.backups.size")}</th>
+                <th className="w-32 px-5 py-4">
+                  {t("admin.backups.triggeredBy")}
+                </th>
+                <th className="w-28 px-5 py-4">{t("admin.backups.status")}</th>
+                <th className="w-44 px-5 py-4">
+                  {t("admin.backups.checksum")}
+                </th>
+                <th className="w-44 px-5 py-4">
+                  {t("admin.backups.createdAt")}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30 text-xs">
@@ -205,7 +217,7 @@ export function BackupAdminView() {
                     className="px-5 py-10 text-center text-muted-foreground"
                   >
                     <RefreshCwIcon className="mx-auto mb-2 h-6 w-6 animate-spin text-muted-foreground/60" />
-                    Loading backups list...
+                    {t("admin.backups.loading")}
                   </td>
                 </tr>
               ) : backups.length === 0 ? (
@@ -215,8 +227,7 @@ export function BackupAdminView() {
                     className="px-5 py-12 text-center text-muted-foreground"
                   >
                     <DatabaseIcon className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-                    No backups found. Click "Backup Now" to trigger your first
-                    snapshot.
+                    {t("admin.backups.empty")}
                   </td>
                 </tr>
               ) : (
@@ -245,12 +256,12 @@ export function BackupAdminView() {
                         {b.status === "success" ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                            Success
+                            {t("admin.backups.success")}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
                             <span className="h-1.5 w-1.5 rounded-full bg-destructive"></span>
-                            Failed
+                            {t("admin.backups.failed")}
                           </span>
                         )}
                       </td>
@@ -265,7 +276,7 @@ export function BackupAdminView() {
                           <button
                             onClick={() => handleCopy(b.sha256, b.id)}
                             className="shrink-0 cursor-pointer rounded p-1 text-muted-foreground/50 transition-all hover:bg-muted/60 hover:text-foreground"
-                            title="Copy Checksum"
+                            title={t("admin.backups.copyChecksum")}
                           >
                             {copiedId === b.id ? (
                               <CheckIcon className="h-3.5 w-3.5 text-emerald-500" />

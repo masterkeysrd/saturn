@@ -1184,4 +1184,66 @@ describe("@saturn/i18n", () => {
       "Unknown"
     )
   })
+
+  it("translates admin keys and enums in English and Spanish", () => {
+    expect(translate("en-US", "admin.users.title")).toBe("User Administration")
+    expect(translate("es-ES", "admin.users.title")).toBe(
+      "Administración de usuarios"
+    )
+    expect(translate("en-US", "admin.scheduler.executionQueue")).toBe(
+      "Execution Queue"
+    )
+    expect(translate("es-ES", "admin.scheduler.executionQueue")).toBe(
+      "Cola de ejecución"
+    )
+    expect(translate("en-US", "admin.messages.queueTitle")).toBe(
+      "Queue Breakdown by Topic"
+    )
+    expect(translate("en-US", "admin.backups.backupNow")).toBe("Backup Now")
+    expect(translate("es-ES", "admin.backups.backupNow")).toBe("Copiar ahora")
+    expect(translate("es-ES", "admin.security.title")).toBe(
+      "Auditoría de seguridad y accesos"
+    )
+
+    expect(translate("en-US", "admin.users.linkGenerated", { n: 15 })).toBe(
+      "Link generated! Valid for 15 minutes."
+    )
+    expect(translate("es-ES", "admin.users.minutesN", { n: 30 })).toBe(
+      "30 minutos"
+    )
+    expect(translate("en-US", "admin.scheduler.schedulesN", { n: 7 })).toBe(
+      "Schedules (7)"
+    )
+    expect(translate("en-US", "admin.shared.pageN", { n: 2 })).toBe("Page 2")
+    expect(translate("es-ES", "admin.shared.eventsN", { n: 10 })).toBe(
+      "10 eventos"
+    )
+    expect(
+      translate("en-US", "admin.messages.filteredByTopic", { topic: "mail" })
+    ).toBe("Filtered by topic: mail")
+
+    expect(getLocalizedEnumLabel("admin", "jobStatus", "failed", "es")).toBe(
+      "Fallido"
+    )
+    expect(
+      getLocalizedEnumLabel("admin", "jobStatus", "processing", "en")
+    ).toBe("Processing")
+    expect(
+      getLocalizedEnumLabel("admin", "userStatus", "pending_approval", "es")
+    ).toBe("Pendiente de aprobación")
+    expect(
+      getLocalizedEnumLabel("admin", "scheduleStatus", "paused", "es")
+    ).toBe("En pausa")
+    expect(
+      getLocalizedEnumLabel("admin", "securityEventType", "login_failed", "en")
+    ).toBe("Login Failure")
+    expect(
+      getLocalizedEnumLabel(
+        "admin",
+        "securityEventType",
+        "account_unlocked",
+        "es"
+      )
+    ).toBe("Cuenta desbloqueada")
+  })
 })

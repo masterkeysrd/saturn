@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { useTimezone } from "@saturn/hooks"
 import {
   useListSchedulesQuery,
   useListJobsQuery,
@@ -11,6 +10,8 @@ import {
   useDeleteJobMutation,
   useGetSchedulerStatusQuery,
 } from "@saturn/api/gen/saturn/platform/scheduler/v1/admin"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
+import { useTimezone, useI18n } from "@saturn/hooks"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -38,6 +39,7 @@ import { formatRelativeTime } from "@/lib/utils"
 export function SchedulerAdminView() {
   const queryClient = useQueryClient()
   const tz = useTimezone()
+  const { t, language } = useI18n()
   const [activeTab, setActiveTab] = useState<"schedules" | "jobs">("schedules")
   const [jobStatusFilter, setJobStatusFilter] = useState<string>("")
   const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(0)
@@ -175,8 +177,8 @@ export function SchedulerAdminView() {
     deleteMutation.isPending
 
   const formatTime = (timeStr?: string) => {
-    if (!timeStr) return "N/A"
-    return tz.formatDateTime(timeStr) || "N/A"
+    if (!timeStr) return t("admin.scheduler.na")
+    return tz.formatDateTime(timeStr) || t("admin.scheduler.na")
   }
 
   // Calculate summary stats
@@ -193,7 +195,7 @@ export function SchedulerAdminView() {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
           </span>
-          Live
+          {t("admin.scheduler.live")}
         </div>
       )}
 
@@ -203,17 +205,17 @@ export function SchedulerAdminView() {
       >
         <SelectTrigger className="w-[160px] cursor-pointer rounded-xl border border-border/60 bg-muted/30 text-xs font-semibold hover:bg-muted/50 dark:bg-muted/10">
           <SelectValue>
-            {autoRefreshInterval === 0 && "Manual Refresh"}
-            {autoRefreshInterval === 5000 && "Auto Update (5s)"}
-            {autoRefreshInterval === 10000 && "Auto Update (10s)"}
-            {autoRefreshInterval === 15000 && "Auto Update (15s)"}
+            {autoRefreshInterval === 0 && t("admin.scheduler.manual")}
+            {autoRefreshInterval === 5000 && t("admin.scheduler.auto5s")}
+            {autoRefreshInterval === 10000 && t("admin.scheduler.auto10s")}
+            {autoRefreshInterval === 15000 && t("admin.scheduler.auto15s")}
           </SelectValue>
         </SelectTrigger>
         <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-          <SelectItem value="0">Manual Refresh</SelectItem>
-          <SelectItem value="5000">Auto Update (5s)</SelectItem>
-          <SelectItem value="10000">Auto Update (10s)</SelectItem>
-          <SelectItem value="15000">Auto Update (15s)</SelectItem>
+          <SelectItem value="0">{t("admin.scheduler.manual")}</SelectItem>
+          <SelectItem value="5000">{t("admin.scheduler.auto5s")}</SelectItem>
+          <SelectItem value="10000">{t("admin.scheduler.auto10s")}</SelectItem>
+          <SelectItem value="15000">{t("admin.scheduler.auto15s")}</SelectItem>
         </SelectContent>
       </Select>
 
@@ -231,15 +233,15 @@ export function SchedulerAdminView() {
         <RefreshCwIcon
           className={`mr-2 h-4 w-4 ${schedulesLoading || jobsLoading || statusLoading ? "animate-spin" : ""}`}
         />
-        Refresh
+        {t("admin.shared.refresh")}
       </Button>
     </div>
   )
 
   return (
     <PageLayout
-      title="Platform Scheduler Panel"
-      description="Monitor, run, and manage background cron jobs and execution queues."
+      title={t("admin.scheduler.title")}
+      description={t("admin.scheduler.description")}
       icon={ActivityIcon}
       actions={schedulerActions}
     >
@@ -248,14 +250,14 @@ export function SchedulerAdminView() {
         <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/35 p-6 shadow-md backdrop-blur-md">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground">
-              Active Schedules
+              {t("admin.scheduler.activeSchedules")}
             </span>
             <CalendarIcon className="h-5 w-5 text-primary" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold">{activeSchedules}</span>
             <span className="text-xs text-muted-foreground">
-              / {totalSchedules} total
+              {t("admin.scheduler.totalN", { n: totalSchedules })}
             </span>
           </div>
         </div>
@@ -263,14 +265,14 @@ export function SchedulerAdminView() {
         <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/35 p-6 shadow-md backdrop-blur-md">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground">
-              Paused Rules
+              {t("admin.scheduler.paused")}
             </span>
             <PauseIcon className="h-5 w-5 text-amber-500" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold">{pausedSchedules}</span>
             <span className="text-xs text-muted-foreground">
-              currently disabled
+              {t("admin.scheduler.pausedSub")}
             </span>
           </div>
         </div>
@@ -278,7 +280,7 @@ export function SchedulerAdminView() {
         <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/35 p-6 shadow-md backdrop-blur-md">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground">
-              Running Workers
+              {t("admin.scheduler.runningWorkers")}
             </span>
             <ActivityIcon className="h-5 w-5 text-green-500" />
           </div>
@@ -287,7 +289,7 @@ export function SchedulerAdminView() {
               {statusData?.workerCount ?? 0}
             </span>
             <span className="text-xs text-muted-foreground">
-              max concurrent threads
+              {t("admin.scheduler.concurrency")}
             </span>
           </div>
         </div>
@@ -295,7 +297,7 @@ export function SchedulerAdminView() {
         <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/35 p-6 shadow-md backdrop-blur-md">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground">
-              Jobs in Queue
+              {t("admin.scheduler.jobsInQueue")}
             </span>
             <LayersIcon className="h-5 w-5 text-blue-500" />
           </div>
@@ -304,7 +306,7 @@ export function SchedulerAdminView() {
               {statusData?.queueSize ?? 0}
             </span>
             <span className="text-xs text-muted-foreground">
-              active job queue size
+              {t("admin.scheduler.queueSize")}
             </span>
           </div>
         </div>
@@ -322,7 +324,7 @@ export function SchedulerAdminView() {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Schedules ({totalSchedules})
+            {t("admin.scheduler.schedulesN", { n: totalSchedules })}
           </button>
           <button
             onClick={() => setActiveTab("jobs")}
@@ -332,7 +334,7 @@ export function SchedulerAdminView() {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Execution Queue
+            {t("admin.scheduler.executionQueue")}
           </button>
         </div>
 
@@ -347,7 +349,7 @@ export function SchedulerAdminView() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              All
+              {t("admin.shared.all")}
             </button>
             <button
               onClick={() => setJobStatusFilter("pending")}
@@ -357,7 +359,7 @@ export function SchedulerAdminView() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Pending
+              {getLocalizedEnumLabel("admin", "jobStatus", "pending", language)}
             </button>
             <button
               onClick={() => setJobStatusFilter("processing")}
@@ -367,7 +369,12 @@ export function SchedulerAdminView() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Processing
+              {getLocalizedEnumLabel(
+                "admin",
+                "jobStatus",
+                "processing",
+                language
+              )}
             </button>
             <button
               onClick={() => setJobStatusFilter("failed")}
@@ -377,7 +384,7 @@ export function SchedulerAdminView() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Failed
+              {getLocalizedEnumLabel("admin", "jobStatus", "failed", language)}
             </button>
             <button
               onClick={() => setJobStatusFilter("completed")}
@@ -387,7 +394,12 @@ export function SchedulerAdminView() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Completed
+              {getLocalizedEnumLabel(
+                "admin",
+                "jobStatus",
+                "completed",
+                language
+              )}
             </button>
           </div>
         )}
@@ -404,7 +416,7 @@ export function SchedulerAdminView() {
                 <div className="h-4 w-4 animate-pulse rounded-full bg-primary" />
               </div>
               <span className="text-sm text-muted-foreground">
-                Loading schedules...
+                {t("admin.scheduler.loadingSchedules")}
               </span>
             </div>
           ) : schedulesError ? (
@@ -413,11 +425,10 @@ export function SchedulerAdminView() {
                 <AlertOctagonIcon className="h-6 w-6" />
               </div>
               <h3 className="text-sm font-bold text-foreground">
-                Failed to load schedules
+                {t("admin.scheduler.scheduleErrorTitle")}
               </h3>
               <p className="max-w-xs text-xs text-muted-foreground">
-                An error occurred while fetching the platform schedules from the
-                gateway server.
+                {t("admin.scheduler.scheduleError")}
               </p>
             </div>
           ) : !scheduleData?.schedules ||
@@ -427,11 +438,10 @@ export function SchedulerAdminView() {
                 <HelpCircleIcon className="h-6 w-6" />
               </div>
               <h3 className="text-sm font-bold text-foreground">
-                No schedules registered
+                {t("admin.scheduler.emptySchedules")}
               </h3>
               <p className="max-w-xs text-xs text-muted-foreground">
-                There are currently no background cron jobs seeded in the
-                database.
+                {t("admin.scheduler.emptySchedulesBody")}
               </p>
             </div>
           ) : (
@@ -439,11 +449,17 @@ export function SchedulerAdminView() {
               <table className="w-full border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-border/40 bg-muted/10 text-xs font-semibold text-muted-foreground select-none">
-                    <th className="px-6 py-4">Job Details</th>
-                    <th className="px-6 py-4">Cron Expression</th>
-                    <th className="px-6 py-4">Next Target Run</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
+                    <th className="px-6 py-4">
+                      {t("admin.scheduler.jobDetails")}
+                    </th>
+                    <th className="px-6 py-4">{t("admin.scheduler.cron")}</th>
+                    <th className="px-6 py-4">
+                      {t("admin.scheduler.nextRun")}
+                    </th>
+                    <th className="px-6 py-4">{t("admin.shared.status")}</th>
+                    <th className="px-6 py-4 text-right">
+                      {t("admin.shared.actions")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/30">
@@ -462,7 +478,9 @@ export function SchedulerAdminView() {
                               {s.id}
                             </span>
                             <span className="mt-0.5 font-mono text-xs text-muted-foreground/80">
-                              Type: {s.jobType}
+                              {t("admin.scheduler.typeN", {
+                                type: s.jobType ?? "",
+                              })}
                             </span>
                           </div>
                         </td>
@@ -493,7 +511,12 @@ export function SchedulerAdminView() {
                                 : "border-amber-500/20 bg-amber-500/10 text-amber-400"
                             }`}
                           >
-                            {s.status}
+                            {getLocalizedEnumLabel(
+                              "admin",
+                              "scheduleStatus",
+                              s.status,
+                              language
+                            )}
                           </span>
                         </td>
 
@@ -509,7 +532,7 @@ export function SchedulerAdminView() {
                                 className="h-8 cursor-pointer rounded-xl px-2.5 text-amber-500 hover:bg-amber-500/10 hover:text-amber-500"
                               >
                                 <PauseIcon className="mr-1 h-3.5 w-3.5" />
-                                Pause
+                                {t("admin.scheduler.pause")}
                               </Button>
                             ) : (
                               <Button
@@ -520,7 +543,7 @@ export function SchedulerAdminView() {
                                 className="h-8 cursor-pointer rounded-xl px-2.5 text-green-500 hover:bg-green-500/10 hover:text-green-500"
                               >
                                 <PlayIcon className="mr-1 h-3.5 w-3.5" />
-                                Resume
+                                {t("admin.scheduler.resume")}
                               </Button>
                             )}
 
@@ -530,7 +553,7 @@ export function SchedulerAdminView() {
                               className="h-8 cursor-pointer rounded-xl bg-primary px-3 text-primary-foreground shadow-sm hover:bg-primary/95"
                             >
                               <PlayIcon className="mr-1.5 h-3.5 w-3.5 fill-current" />
-                              Run Now
+                              {t("admin.scheduler.runNow")}
                             </Button>
                           </div>
                         </td>
@@ -549,7 +572,7 @@ export function SchedulerAdminView() {
               <div className="h-4 w-4 animate-pulse rounded-full bg-primary" />
             </div>
             <span className="text-sm text-muted-foreground">
-              Loading queue...
+              {t("admin.scheduler.loadingQueue")}
             </span>
           </div>
         ) : jobsError ? (
@@ -558,11 +581,10 @@ export function SchedulerAdminView() {
               <AlertOctagonIcon className="h-6 w-6" />
             </div>
             <h3 className="text-sm font-bold text-foreground">
-              Failed to load queue
+              {t("admin.scheduler.queueErrorTitle")}
             </h3>
             <p className="max-w-xs text-xs text-muted-foreground">
-              An error occurred while fetching the execution queue from the
-              gateway.
+              {t("admin.scheduler.queueError")}
             </p>
           </div>
         ) : !jobData?.jobs || jobData.jobs.length === 0 ? (
@@ -571,11 +593,10 @@ export function SchedulerAdminView() {
               <CheckCircle2Icon className="h-6 w-6 text-green-500" />
             </div>
             <h3 className="text-sm font-bold text-foreground">
-              Queue is completely empty
+              {t("admin.scheduler.emptyQueue")}
             </h3>
             <p className="max-w-xs text-xs text-muted-foreground">
-              No background jobs matching the status filter are currently
-              waiting in the execution queue.
+              {t("admin.scheduler.emptyQueueBody")}
             </p>
           </div>
         ) : (
@@ -583,12 +604,18 @@ export function SchedulerAdminView() {
             <table className="w-full border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-border/40 bg-muted/10 text-xs font-semibold text-muted-foreground select-none">
-                  <th className="px-6 py-4">Job Info</th>
-                  <th className="px-6 py-4">Schedule ID</th>
-                  <th className="px-6 py-4">Attempts</th>
-                  <th className="px-6 py-4">Execution Time</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-6 py-4">{t("admin.scheduler.jobInfo")}</th>
+                  <th className="px-6 py-4">
+                    {t("admin.scheduler.scheduleId")}
+                  </th>
+                  <th className="px-6 py-4">{t("admin.scheduler.attempts")}</th>
+                  <th className="px-6 py-4">
+                    {t("admin.scheduler.executionTime")}
+                  </th>
+                  <th className="px-6 py-4">{t("admin.shared.status")}</th>
+                  <th className="px-6 py-4 text-right">
+                    {t("admin.shared.actions")}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
@@ -612,7 +639,7 @@ export function SchedulerAdminView() {
                           </span>
                           {j.lastError && (
                             <span className="mt-1 max-w-sm rounded border border-red-500/10 bg-red-500/5 px-2 py-1 font-mono text-[10px] break-all text-destructive">
-                              Err: {j.lastError}
+                              {t("admin.scheduler.err")} {j.lastError}
                             </span>
                           )}
                         </div>
@@ -620,7 +647,7 @@ export function SchedulerAdminView() {
 
                       {/* Schedule ID */}
                       <td className="px-6 py-4.5 font-mono text-xs text-muted-foreground">
-                        {j.scheduleId || "One-Off Job"}
+                        {j.scheduleId || t("admin.scheduler.oneOff")}
                       </td>
 
                       {/* Attempts */}
@@ -663,7 +690,12 @@ export function SchedulerAdminView() {
                                   : "border-amber-500/20 bg-amber-500/10 text-amber-400"
                           }`}
                         >
-                          {j.status}
+                          {getLocalizedEnumLabel(
+                            "admin",
+                            "jobStatus",
+                            j.status,
+                            language
+                          )}
                         </span>
                       </td>
 
@@ -679,7 +711,7 @@ export function SchedulerAdminView() {
                               className="h-8 cursor-pointer rounded-xl px-2.5 text-green-500 hover:bg-green-500/10 hover:text-green-500"
                             >
                               <RotateCwIcon className="mr-1 h-3.5 w-3.5" />
-                              Retry
+                              {t("admin.shared.retry")}
                             </Button>
                           )}
 
@@ -692,13 +724,15 @@ export function SchedulerAdminView() {
                               className="h-8 cursor-pointer rounded-xl px-2.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
                             >
                               <TrashIcon className="mr-1 h-3.5 w-3.5" />
-                              {j.status === "pending" ? "Cancel" : "Delete"}
+                              {j.status === "pending"
+                                ? t("admin.scheduler.cancelJob")
+                                : t("admin.shared.deleteJob")}
                             </Button>
                           )}
 
                           {isProcessing && (
                             <span className="text-xs text-muted-foreground/60 select-none">
-                              Running...
+                              {t("admin.scheduler.running")}
                             </span>
                           )}
                         </div>

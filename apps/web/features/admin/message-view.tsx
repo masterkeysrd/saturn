@@ -1,12 +1,13 @@
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { useTimezone } from "@saturn/hooks"
 import {
   useGetQueueMetricsQuery,
   useListDeliveriesQuery,
   useRetryDeliveryMutation,
   type DeliveryInfo,
 } from "@saturn/api/gen/saturn/platform/message/v1/admin"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
+import { useTimezone, useI18n } from "@saturn/hooks"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -57,6 +58,7 @@ import { formatRelativeTime } from "@/lib/utils"
 export function MessageQueueAdminView() {
   const queryClient = useQueryClient()
   const tz = useTimezone()
+  const { t, language } = useI18n()
   const [selectedTopic, setSelectedTopic] = useState<string>("")
   const [selectedStatus, setSelectedStatus] = useState<string>("")
   const [pageToken, setPageToken] = useState<string>("")
@@ -147,28 +149,33 @@ export function MessageQueueAdminView() {
         return (
           <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
             <CheckCircle2Icon className="h-3.5 w-3.5" />
-            Completed
+            {getLocalizedEnumLabel("admin", "jobStatus", "completed", language)}
           </span>
         )
       case "processing":
         return (
           <span className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400">
             <RefreshCwIcon className="h-3.5 w-3.5 animate-spin" />
-            Processing
+            {getLocalizedEnumLabel(
+              "admin",
+              "jobStatus",
+              "processing",
+              language
+            )}
           </span>
         )
       case "pending":
         return (
           <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-600 dark:text-amber-400">
             <ClockIcon className="h-3.5 w-3.5" />
-            Pending
+            {getLocalizedEnumLabel("admin", "jobStatus", "pending", language)}
           </span>
         )
       case "failed":
         return (
           <span className="inline-flex items-center gap-1 rounded-md bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
             <AlertOctagonIcon className="h-3.5 w-3.5" />
-            Failed
+            {getLocalizedEnumLabel("admin", "jobStatus", "failed", language)}
           </span>
         )
       default:
@@ -183,8 +190,8 @@ export function MessageQueueAdminView() {
   return (
     <TooltipProvider>
       <PageLayout
-        title="Event Bus & Message Queue"
-        description="Monitor asynchronous event delivery queues, topic metrics, and retry stuck messages."
+        title={t("admin.messages.title")}
+        description={t("admin.messages.description")}
         actions={
           <Button
             variant="outline"
@@ -195,7 +202,7 @@ export function MessageQueueAdminView() {
             <RefreshCwIcon
               className={`h-4 w-4 ${isMetricsLoading || isDeliveriesLoading ? "animate-spin" : ""}`}
             />
-            Refresh
+            {t("admin.shared.refresh")}
           </Button>
         }
       >
@@ -217,7 +224,7 @@ export function MessageQueueAdminView() {
                   <CardContent className="p-3.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-muted-foreground">
-                        Total Deliveries
+                        {t("admin.messages.totalDeliveries")}
                       </span>
                       <LayersIcon className="h-4 w-4 text-muted-foreground" />
                     </div>
@@ -231,7 +238,12 @@ export function MessageQueueAdminView() {
                   <CardContent className="p-3.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-muted-foreground">
-                        Pending
+                        {getLocalizedEnumLabel(
+                          "admin",
+                          "jobStatus",
+                          "pending",
+                          language
+                        )}
                       </span>
                       <ClockIcon className="h-4 w-4 text-amber-500" />
                     </div>
@@ -245,7 +257,12 @@ export function MessageQueueAdminView() {
                   <CardContent className="p-3.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-muted-foreground">
-                        Processing
+                        {getLocalizedEnumLabel(
+                          "admin",
+                          "jobStatus",
+                          "processing",
+                          language
+                        )}
                       </span>
                       <ActivityIcon className="h-4 w-4 text-blue-500" />
                     </div>
@@ -259,7 +276,12 @@ export function MessageQueueAdminView() {
                   <CardContent className="p-3.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-muted-foreground">
-                        Completed
+                        {getLocalizedEnumLabel(
+                          "admin",
+                          "jobStatus",
+                          "completed",
+                          language
+                        )}
                       </span>
                       <CheckCircle2Icon className="h-4 w-4 text-emerald-500" />
                     </div>
@@ -273,7 +295,12 @@ export function MessageQueueAdminView() {
                   <CardContent className="p-3.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-muted-foreground">
-                        Failed
+                        {getLocalizedEnumLabel(
+                          "admin",
+                          "jobStatus",
+                          "failed",
+                          language
+                        )}
                       </span>
                       <AlertOctagonIcon className="h-4 w-4 text-destructive" />
                     </div>
@@ -292,16 +319,16 @@ export function MessageQueueAdminView() {
               <CardContent className="p-4">
                 <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
                   <ListFilterIcon className="h-4 w-4 text-primary" />
-                  Queue Breakdown by Topic
+                  {t("admin.messages.queueTitle")}
                 </h3>
                 <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-                  {metrics.topics.map((t) => {
-                    const isSelected = selectedTopic === t.topic
+                  {metrics.topics.map((topic) => {
+                    const isSelected = selectedTopic === topic.topic
                     return (
                       <div
-                        key={t.topic}
+                        key={topic.topic}
                         onClick={() =>
-                          handleTopicChange(isSelected ? "" : t.topic || "")
+                          handleTopicChange(isSelected ? "" : topic.topic || "")
                         }
                         className={`group cursor-pointer rounded-lg border p-2.5 transition-all ${
                           isSelected
@@ -313,36 +340,40 @@ export function MessageQueueAdminView() {
                           <Tooltip>
                             <TooltipTrigger>
                               <span className="block max-w-[180px] truncate">
-                                {t.topic}
+                                {topic.topic}
                               </span>
                             </TooltipTrigger>
-                            <TooltipContent>{t.topic}</TooltipContent>
+                            <TooltipContent>{topic.topic}</TooltipContent>
                           </Tooltip>
                           <ChevronRightIcon
                             className={`h-3.5 w-3.5 transition-transform ${isSelected ? "translate-x-0.5 text-primary" : "text-muted-foreground"}`}
                           />
                         </div>
                         <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
-                          <span>Total: {t.total}</span>
+                          <span>
+                            {t("admin.messages.totalN", {
+                              n: topic.total || "0",
+                            })}
+                          </span>
                           <div className="flex items-center gap-2">
-                            {parseInt(t.pending || "0") > 0 && (
+                            {parseInt(topic.pending || "0") > 0 && (
                               <span className="font-medium text-amber-500">
-                                {t.pending} pend
+                                {topic.pending} {t("admin.messages.pend")}
                               </span>
                             )}
-                            {parseInt(t.processing || "0") > 0 && (
+                            {parseInt(topic.processing || "0") > 0 && (
                               <span className="font-medium text-blue-500">
-                                {t.processing} proc
+                                {topic.processing} {t("admin.messages.proc")}
                               </span>
                             )}
-                            {parseInt(t.failed || "0") > 0 && (
+                            {parseInt(topic.failed || "0") > 0 && (
                               <span className="font-medium text-destructive">
-                                {t.failed} fail
+                                {topic.failed} {t("admin.messages.fail")}
                               </span>
                             )}
-                            {parseInt(t.completed || "0") > 0 && (
+                            {parseInt(topic.completed || "0") > 0 && (
                               <span className="font-medium text-emerald-500">
-                                {t.completed} ok
+                                {topic.completed} {t("admin.messages.ok")}
                               </span>
                             )}
                           </div>
@@ -361,12 +392,14 @@ export function MessageQueueAdminView() {
               <div className="flex flex-col items-start justify-between gap-4 border-b border-border/40 p-5 sm:flex-row sm:items-center">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">
-                    Message Deliveries
+                    {t("admin.messages.tableTitle")}
                   </h3>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {selectedTopic
-                      ? `Filtered by topic: ${selectedTopic}`
-                      : "Showing all delivery events"}
+                      ? t("admin.messages.filteredByTopic", {
+                          topic: selectedTopic,
+                        })
+                      : t("admin.messages.showingAll")}
                   </p>
                 </div>
 
@@ -379,13 +412,17 @@ export function MessageQueueAdminView() {
                     }
                   >
                     <SelectTrigger className="h-9 w-[180px] text-xs">
-                      <SelectValue placeholder="All Topics" />
+                      <SelectValue
+                        placeholder={t("admin.messages.allTopics")}
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ALL">All Topics</SelectItem>
-                      {metrics?.topics?.map((t) => (
-                        <SelectItem key={t.topic} value={t.topic}>
-                          {t.topic}
+                      <SelectItem value="ALL">
+                        {t("admin.messages.allTopics")}
+                      </SelectItem>
+                      {metrics?.topics?.map((topic) => (
+                        <SelectItem key={topic.topic} value={topic.topic}>
+                          {topic.topic}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -399,14 +436,46 @@ export function MessageQueueAdminView() {
                     }
                   >
                     <SelectTrigger className="h-9 w-[140px] text-xs">
-                      <SelectValue placeholder="All Statuses" />
+                      <SelectValue
+                        placeholder={t("admin.messages.allStatuses")}
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ALL">All Statuses</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="processing">Processing</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="failed">Failed</SelectItem>
+                      <SelectItem value="ALL">
+                        {t("admin.messages.allStatuses")}
+                      </SelectItem>
+                      <SelectItem value="pending">
+                        {getLocalizedEnumLabel(
+                          "admin",
+                          "jobStatus",
+                          "pending",
+                          language
+                        )}
+                      </SelectItem>
+                      <SelectItem value="processing">
+                        {getLocalizedEnumLabel(
+                          "admin",
+                          "jobStatus",
+                          "processing",
+                          language
+                        )}
+                      </SelectItem>
+                      <SelectItem value="completed">
+                        {getLocalizedEnumLabel(
+                          "admin",
+                          "jobStatus",
+                          "completed",
+                          language
+                        )}
+                      </SelectItem>
+                      <SelectItem value="failed">
+                        {getLocalizedEnumLabel(
+                          "admin",
+                          "jobStatus",
+                          "failed",
+                          language
+                        )}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -417,14 +486,26 @@ export function MessageQueueAdminView() {
                 <table className="w-full table-fixed border-collapse text-left text-xs">
                   <thead className="border-b border-border/40 bg-muted/40 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                     <tr>
-                      <th className="w-40 px-4 py-3 pl-6">Delivery ID</th>
-                      <th className="w-48 px-4 py-3">Topic / Subscriber</th>
-                      <th className="w-28 px-4 py-3">Status</th>
-                      <th className="w-20 px-4 py-3">Attempts</th>
-                      <th className="px-4 py-3">Last Error</th>
-                      <th className="w-32 px-4 py-3">Created</th>
+                      <th className="w-40 px-4 py-3 pl-6">
+                        {t("admin.messages.deliveryId")}
+                      </th>
+                      <th className="w-48 px-4 py-3">
+                        {t("admin.messages.subscriber")}
+                      </th>
+                      <th className="w-28 px-4 py-3">
+                        {t("admin.shared.status")}
+                      </th>
+                      <th className="w-20 px-4 py-3">
+                        {t("admin.messages.attempts")}
+                      </th>
+                      <th className="px-4 py-3">
+                        {t("admin.messages.lastError")}
+                      </th>
+                      <th className="w-32 px-4 py-3">
+                        {t("admin.messages.created")}
+                      </th>
                       <th className="w-28 px-4 py-3 pr-6 text-right">
-                        Actions
+                        {t("admin.shared.actions")}
                       </th>
                     </tr>
                   </thead>
@@ -523,7 +604,7 @@ export function MessageQueueAdminView() {
                                 variant="ghost"
                                 size="icon-sm"
                                 onClick={() => setSelectedDelivery(item)}
-                                title="View Full Details"
+                                title={t("admin.messages.viewDetails")}
                                 className="h-7 w-7"
                               >
                                 <EyeIcon className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
@@ -544,7 +625,7 @@ export function MessageQueueAdminView() {
                                 <RotateCwIcon
                                   className={`h-3 w-3 ${retryMutation.isPending ? "animate-spin" : ""}`}
                                 />
-                                Retry
+                                {t("admin.shared.retry")}
                               </Button>
                             </div>
                           </td>
@@ -556,8 +637,7 @@ export function MessageQueueAdminView() {
                           colSpan={7}
                           className="px-4 py-8 text-center text-muted-foreground"
                         >
-                          No message delivery records found matching your
-                          filters.
+                          {t("admin.messages.empty")}
                         </td>
                       </tr>
                     )}
@@ -568,10 +648,14 @@ export function MessageQueueAdminView() {
               {/* Shared Pagination Controls */}
               <div className="flex items-center justify-between border-t border-border/40 bg-muted/10 p-4">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>Page {tokenHistory.length + 1}</span>
+                  <span>
+                    {t("admin.shared.pageN", { n: tokenHistory.length + 1 })}
+                  </span>
                   {deliveriesData?.deliveries && (
                     <span className="rounded border border-border/40 bg-muted/50 px-2 py-0.5 font-mono text-[11px]">
-                      {deliveriesData.deliveries.length} items
+                      {t("admin.shared.itemsN", {
+                        n: deliveriesData.deliveries.length,
+                      })}
                     </span>
                   )}
                 </div>
@@ -587,7 +671,7 @@ export function MessageQueueAdminView() {
                         className="h-8 gap-1 text-xs"
                       >
                         <ChevronLeftIcon className="h-3.5 w-3.5" />
-                        Previous
+                        {t("admin.shared.previous")}
                       </Button>
                     </PaginationItem>
                     <PaginationItem>
@@ -598,7 +682,7 @@ export function MessageQueueAdminView() {
                         disabled={!deliveriesData?.nextPageToken}
                         className="h-8 gap-1 text-xs"
                       >
-                        Next
+                        {t("admin.shared.next")}
                         <ChevronRightIcon className="h-3.5 w-3.5" />
                       </Button>
                     </PaginationItem>
@@ -623,7 +707,7 @@ export function MessageQueueAdminView() {
                 {selectedDelivery && getStatusBadge(selectedDelivery.status)}
               </div>
               <DialogDescription className="truncate text-xs">
-                Delivery record for topic{" "}
+                {t("admin.messages.deliveryPrefix")}{" "}
                 <span className="font-mono font-semibold text-foreground">
                   {selectedDelivery?.topic}
                 </span>
@@ -636,7 +720,7 @@ export function MessageQueueAdminView() {
                 <div className="grid grid-cols-1 gap-3 rounded-lg border border-border/50 bg-muted/20 p-3.5 text-xs sm:grid-cols-2">
                   <div>
                     <span className="block text-[11px] font-medium text-muted-foreground">
-                      Message ID
+                      {t("admin.messages.messageId")}
                     </span>
                     <div className="mt-0.5 flex min-w-0 items-center gap-1.5 font-mono font-semibold text-foreground">
                       <span className="truncate">
@@ -661,7 +745,7 @@ export function MessageQueueAdminView() {
 
                   <div>
                     <span className="block text-[11px] font-medium text-muted-foreground">
-                      Subscriber ID
+                      {t("admin.messages.subscriberId")}
                     </span>
                     <span className="mt-0.5 block truncate font-mono font-semibold text-foreground">
                       {selectedDelivery.subscriberId}
@@ -670,7 +754,7 @@ export function MessageQueueAdminView() {
 
                   <div>
                     <span className="block text-[11px] font-medium text-muted-foreground">
-                      Attempts
+                      {t("admin.messages.attempts")}
                     </span>
                     <span className="mt-0.5 block font-mono font-semibold text-foreground">
                       {selectedDelivery.attempts} /{" "}
@@ -680,7 +764,7 @@ export function MessageQueueAdminView() {
 
                   <div>
                     <span className="block text-[11px] font-medium text-muted-foreground">
-                      Created Time
+                      {t("admin.messages.createdTime")}
                     </span>
                     <span className="mt-0.5 block truncate font-medium text-foreground">
                       {selectedDelivery.createTime
@@ -691,7 +775,7 @@ export function MessageQueueAdminView() {
 
                   <div>
                     <span className="block text-[11px] font-medium text-muted-foreground">
-                      Schedule Time
+                      {t("admin.messages.scheduleTime")}
                     </span>
                     <span className="mt-0.5 block truncate font-medium text-foreground">
                       {selectedDelivery.scheduleTime
@@ -702,7 +786,7 @@ export function MessageQueueAdminView() {
 
                   <div>
                     <span className="block text-[11px] font-medium text-muted-foreground">
-                      Last Update
+                      {t("admin.messages.lastUpdate")}
                     </span>
                     <span className="mt-0.5 block truncate font-medium text-foreground">
                       {selectedDelivery.updateTime
@@ -718,7 +802,7 @@ export function MessageQueueAdminView() {
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1.5 text-xs font-semibold text-destructive">
                         <AlertOctagonIcon className="h-4 w-4 shrink-0" />
-                        Execution Error Trace
+                        {t("admin.messages.errorTrace")}
                       </span>
                       <Button
                         variant="ghost"
@@ -731,12 +815,12 @@ export function MessageQueueAdminView() {
                         {copiedKey === "error" ? (
                           <>
                             <CheckIcon className="h-3 w-3 text-emerald-500" />
-                            Copied
+                            {t("admin.shared.copied")}
                           </>
                         ) : (
                           <>
                             <CopyIcon className="h-3 w-3" />
-                            Copy Error
+                            {t("admin.messages.copyError")}
                           </>
                         )}
                       </Button>
@@ -748,7 +832,7 @@ export function MessageQueueAdminView() {
                 ) : (
                   <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs text-emerald-600 dark:text-emerald-400">
                     <CheckCircle2Icon className="h-4 w-4 shrink-0" />
-                    <span>No errors recorded for this delivery event.</span>
+                    <span>{t("admin.messages.noErrors")}</span>
                   </div>
                 )}
               </div>
@@ -773,7 +857,7 @@ export function MessageQueueAdminView() {
                   <RotateCwIcon
                     className={`h-3.5 w-3.5 ${retryMutation.isPending ? "animate-spin" : ""}`}
                   />
-                  Retry Delivery Now
+                  {t("admin.messages.retryNow")}
                 </Button>
               )}
             </DialogFooter>

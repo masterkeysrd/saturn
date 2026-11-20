@@ -1,4 +1,35 @@
 {
+  "admin": {
+    "jobStatus": {
+      "COMPLETED": "Completado",
+      "FAILED": "Fallido",
+      "PENDING": "Pendiente",
+      "PROCESSING": "Procesando"
+    },
+    "scheduleStatus": {
+      "ACTIVE": "Activa",
+      "PAUSED": "En pausa"
+    },
+    "securityEventType": {
+      "LOGIN_SUCCESS": "Inicio de sesión correcto",
+      "LOGIN_FAILED": "Fallo de inicio de sesión",
+      "ACCOUNT_LOCKED": "Cuenta bloqueada",
+      "ACCOUNT_UNLOCKED": "Cuenta desbloqueada",
+      "PASSWORD_RESET": "Restablecimiento de contraseña",
+      "PASSWORD_CHANGE": "Cambio de contraseña",
+      "EMAIL_CHANGE": "Cambio de correo",
+      "ACCOUNT_DELETED": "Cuenta eliminada",
+      "API_KEY_CREATED": "Clave de API creada",
+      "API_KEY_UPDATED": "Clave de API actualizada",
+      "API_KEY_REVOKED": "Clave de API revocada"
+    },
+    "userStatus": {
+      "ACTIVE": "Activo",
+      "INACTIVE": "Inactivo",
+      "PENDING_APPROVAL": "Pendiente de aprobación",
+      "SUSPENDED": "Suspendido"
+    }
+  },
   "ai": {
     "approvalPolicy": {
       "CONFIRM_WRITES": "Confirmar escrituras",

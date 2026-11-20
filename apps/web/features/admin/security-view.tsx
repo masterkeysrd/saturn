@@ -1,9 +1,10 @@
 import { useState } from "react"
-import { useTimezone } from "@saturn/hooks"
 import {
   useListSecurityEventsQuery,
   type SecurityEvent,
 } from "@saturn/api/gen/saturn/identity/admin/v1/admin_identity"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
+import { useTimezone, useI18n } from "@saturn/hooks"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -34,6 +35,7 @@ import { PageLayout } from "@/components/ui/page-layout"
 
 export function AdminSecurityView() {
   const tz = useTimezone()
+  const { t, language } = useI18n()
   const [emailFilter, setEmailFilter] = useState("")
   const [eventTypeFilter, setEventTypeFilter] = useState("")
   const [pageToken, setPageToken] = useState("")
@@ -75,36 +77,45 @@ export function AdminSecurityView() {
   })
 
   const getEventMeta = (type: string) => {
+    const known = [
+      "login_success",
+      "login_failed",
+      "account_locked",
+      "account_unlocked",
+    ].includes(type)
+    const label = known
+      ? getLocalizedEnumLabel("admin", "securityEventType", type, language)
+      : t("admin.security.securityEvent")
     switch (type) {
       case "login_success":
         return {
-          label: "Login Success",
+          label,
           icon: ShieldCheckIcon,
           colorClass:
             "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
         }
       case "login_failed":
         return {
-          label: "Login Failure",
+          label,
           icon: ShieldAlertIcon,
           colorClass:
             "text-destructive bg-destructive/10 border-destructive/20",
         }
       case "account_locked":
         return {
-          label: "Account Locked",
+          label,
           icon: LockIcon,
           colorClass: "text-amber-500 bg-amber-500/10 border-amber-500/20",
         }
       case "account_unlocked":
         return {
-          label: "Account Unlocked",
+          label,
           icon: UnlockIcon,
           colorClass: "text-blue-500 bg-blue-500/10 border-blue-500/20",
         }
       default:
         return {
-          label: "Security Event",
+          label,
           icon: ShieldIcon,
           colorClass: "text-muted-foreground bg-muted/10 border-muted/20",
         }
@@ -120,15 +131,15 @@ export function AdminSecurityView() {
       className="cursor-pointer gap-2"
     >
       <RefreshCwIcon className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-      Refresh
+      {t("admin.shared.refresh")}
     </Button>
   )
 
   return (
     <TooltipProvider>
       <PageLayout
-        title="Security & Login Audits"
-        description="Monitor real-time workspace access attempts, failed logins, and system lockouts."
+        title={t("admin.security.title")}
+        description={t("admin.security.description")}
         icon={ShieldIcon}
         actions={refreshButton}
       >
@@ -141,7 +152,7 @@ export function AdminSecurityView() {
             </div>
             <input
               type="text"
-              placeholder="Search by user email..."
+              placeholder={t("admin.security.search")}
               value={emailFilter}
               onChange={(e) => handleEmailSearch(e.target.value)}
               className="w-full rounded-2xl border border-border/60 bg-input/20 py-2 pr-4 pl-10 text-xs text-foreground placeholder-muted-foreground/60 transition-all outline-none focus:border-primary/80 focus:ring-4 focus:ring-primary/15 dark:bg-input/10"
@@ -158,7 +169,7 @@ export function AdminSecurityView() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              All Events
+              {t("admin.security.allEvents")}
             </button>
             <button
               onClick={() => handleEventTypeFilter("login_failed")}
@@ -168,7 +179,7 @@ export function AdminSecurityView() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Failures Only
+              {t("admin.security.failuresOnly")}
             </button>
             <button
               onClick={() => handleEventTypeFilter("account_locked")}
@@ -178,7 +189,7 @@ export function AdminSecurityView() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Lockouts Only
+              {t("admin.security.lockoutsOnly")}
             </button>
           </div>
         </div>
@@ -190,11 +201,17 @@ export function AdminSecurityView() {
               <table className="w-full table-fixed border-collapse text-left text-xs">
                 <thead>
                   <tr className="border-b border-border/40 bg-muted/20 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase select-none">
-                    <th className="w-40 py-3 pr-4 pl-6">Event</th>
-                    <th className="w-48 px-4 py-3">User Email</th>
-                    <th className="w-32 px-4 py-3">IP Address</th>
-                    <th className="px-4 py-3">Device & Browser</th>
-                    <th className="w-56 py-3 pr-6 pl-4 text-right">Time</th>
+                    <th className="w-40 py-3 pr-4 pl-6">
+                      {t("admin.security.event")}
+                    </th>
+                    <th className="w-48 px-4 py-3">
+                      {t("admin.security.userEmail")}
+                    </th>
+                    <th className="w-32 px-4 py-3">{t("admin.security.ip")}</th>
+                    <th className="px-4 py-3">{t("admin.security.device")}</th>
+                    <th className="w-56 py-3 pr-6 pl-4 text-right">
+                      {t("admin.security.time")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/20">
@@ -227,10 +244,10 @@ export function AdminSecurityView() {
                         <div className="flex flex-col items-center justify-center space-y-2">
                           <ShieldAlertIcon className="h-8 w-8" />
                           <span className="text-sm font-semibold">
-                            Failed to load security logs
+                            {t("admin.security.loadError")}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            Check API gateway connectivity.
+                            {t("admin.shared.errorBodyGeneric")}
                           </span>
                         </div>
                       </td>
@@ -244,10 +261,10 @@ export function AdminSecurityView() {
                         <div className="flex flex-col items-center justify-center space-y-2">
                           <ShieldIcon className="h-8 w-8 text-muted-foreground/40" />
                           <span className="text-sm font-semibold text-foreground">
-                            No security logs found
+                            {t("admin.security.emptyTitle")}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            Try clearing your filters or refreshing the log.
+                            {t("admin.security.empty")}
                           </span>
                         </div>
                       </td>
@@ -258,7 +275,7 @@ export function AdminSecurityView() {
                       const parsedDevice = parseUserAgent(ev.userAgent)
                       const dateStr = ev.createdAt
                         ? tz.formatDateTime(ev.createdAt)
-                        : "Unknown"
+                        : t("admin.shared.unknown")
 
                       return (
                         <tr
@@ -316,10 +333,12 @@ export function AdminSecurityView() {
             {/* Shared Pagination Controls */}
             <div className="flex items-center justify-between border-t border-border/40 bg-muted/10 p-4">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Page {tokenHistory.length + 1}</span>
+                <span>
+                  {t("admin.shared.pageN", { n: tokenHistory.length + 1 })}
+                </span>
                 {data?.events && (
                   <span className="rounded border border-border/40 bg-muted/50 px-2 py-0.5 font-mono text-[11px]">
-                    {data.events.length} events
+                    {t("admin.shared.eventsN", { n: data.events.length })}
                   </span>
                 )}
               </div>
@@ -335,7 +354,7 @@ export function AdminSecurityView() {
                       className="h-8 gap-1 text-xs"
                     >
                       <ChevronLeftIcon className="h-3.5 w-3.5" />
-                      Previous
+                      {t("admin.shared.previous")}
                     </Button>
                   </PaginationItem>
                   <PaginationItem>
@@ -346,7 +365,7 @@ export function AdminSecurityView() {
                       disabled={!data?.nextPageToken}
                       className="h-8 gap-1 text-xs"
                     >
-                      Next
+                      {t("admin.shared.next")}
                       <ChevronRightIcon className="h-3.5 w-3.5" />
                     </Button>
                   </PaginationItem>

@@ -1,4 +1,35 @@
 {
+  "admin": {
+    "jobStatus": {
+      "COMPLETED": "Completed",
+      "FAILED": "Failed",
+      "PENDING": "Pending",
+      "PROCESSING": "Processing"
+    },
+    "scheduleStatus": {
+      "ACTIVE": "Active",
+      "PAUSED": "Paused"
+    },
+    "securityEventType": {
+      "LOGIN_SUCCESS": "Login Success",
+      "LOGIN_FAILED": "Login Failure",
+      "ACCOUNT_LOCKED": "Account Locked",
+      "ACCOUNT_UNLOCKED": "Account Unlocked",
+      "PASSWORD_RESET": "Password Reset",
+      "PASSWORD_CHANGE": "Password Change",
+      "EMAIL_CHANGE": "Email Change",
+      "ACCOUNT_DELETED": "Account Deleted",
+      "API_KEY_CREATED": "API Key Created",
+      "API_KEY_UPDATED": "API Key Updated",
+      "API_KEY_REVOKED": "API Key Revoked"
+    },
+    "userStatus": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "PENDING_APPROVAL": "Pending approval",
+      "SUSPENDED": "Suspended"
+    }
+  },
   "ai": {
     "approvalPolicy": {
       "CONFIRM_WRITES": "Confirm writes",

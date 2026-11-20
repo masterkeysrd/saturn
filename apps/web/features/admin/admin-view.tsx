@@ -9,6 +9,8 @@ import {
   type ListUsersRequest_StatusFilter,
   type User,
 } from "@saturn/api/gen/saturn/identity/admin/v1/admin_identity"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
+import { useI18n } from "@saturn/hooks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/toast"
@@ -36,6 +38,7 @@ import { PageLayout } from "@/components/ui/page-layout"
 
 export function AdminView() {
   const queryClient = useQueryClient()
+  const { t, language } = useI18n()
   const [statusFilter, setStatusFilter] =
     useState<ListUsersRequest_StatusFilter>("PENDING_APPROVAL")
   const [searchQuery, setSearchQuery] = useState("")
@@ -82,16 +85,18 @@ export function AdminView() {
       })
       toast.add({
         type: "success",
-        title: "Account Unlocked",
-        description: "The user account has been unlocked successfully.",
+        title: t("admin.users.unlockOk"),
+        description: t("admin.users.unlockOkBody"),
       })
     },
     onError: (err) => {
       toast.add({
         type: "error",
-        title: "Unlock Failed",
+        title: t("admin.users.unlockFailed"),
         description:
-          err instanceof Error ? err.message : "Failed to unlock user account",
+          err instanceof Error
+            ? err.message
+            : t("admin.users.unlockFailedBody"),
       })
     },
   })
@@ -165,14 +170,14 @@ export function AdminView() {
       <RefreshCwIcon
         className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
       />
-      Refresh
+      {t("admin.shared.refresh")}
     </Button>
   )
 
   return (
     <PageLayout
-      title="User Administration"
-      description="Approve, deny, and manage Saturn user accounts."
+      title={t("admin.users.title")}
+      description={t("admin.users.description")}
       icon={UserIcon}
       actions={refreshButton}
     >
@@ -187,7 +192,7 @@ export function AdminView() {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Pending Approval
+            {t("admin.users.pending")}
           </button>
           <button
             onClick={() => setStatusFilter("ACTIVE")}
@@ -197,7 +202,7 @@ export function AdminView() {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Active Users
+            {t("admin.users.activeUsers")}
           </button>
           <button
             onClick={() => setStatusFilter("SUSPENDED")}
@@ -207,7 +212,7 @@ export function AdminView() {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Suspended
+            {t("admin.users.suspended")}
           </button>
         </div>
 
@@ -215,7 +220,7 @@ export function AdminView() {
         <div className="relative max-w-sm flex-1">
           <input
             type="text"
-            placeholder="Search name, username, or email..."
+            placeholder={t("admin.users.search")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full rounded-2xl border border-border/60 bg-input/20 px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground/60 transition-all outline-none focus:border-primary/80 focus:ring-4 focus:ring-primary/15 dark:bg-input/10"
@@ -232,7 +237,7 @@ export function AdminView() {
               <div className="h-4 w-4 animate-pulse rounded-full bg-primary" />
             </div>
             <span className="text-sm text-muted-foreground">
-              Loading accounts list...
+              {t("admin.users.loading")}
             </span>
           </div>
         ) : isError ? (
@@ -241,11 +246,10 @@ export function AdminView() {
               <ShieldAlertIcon className="h-6 w-6" />
             </div>
             <h3 className="text-sm font-bold text-foreground">
-              Failed to load users
+              {t("admin.users.errorTitle")}
             </h3>
             <p className="max-w-xs text-xs text-muted-foreground">
-              An error occurred while fetching users from the identity gateway
-              service.
+              {t("admin.users.errorBody")}
             </p>
           </div>
         ) : !data?.users || data.users.length === 0 ? (
@@ -254,11 +258,10 @@ export function AdminView() {
               <UserIcon className="h-6 w-6" />
             </div>
             <h3 className="text-sm font-bold text-foreground">
-              No accounts found
+              {t("admin.users.emptyTitle")}
             </h3>
             <p className="max-w-xs text-xs text-muted-foreground">
-              There are currently no users matching the selected status or
-              search filter.
+              {t("admin.users.empty")}
             </p>
           </div>
         ) : (
@@ -266,11 +269,13 @@ export function AdminView() {
             <table className="w-full border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-border/40 bg-muted/10 text-xs font-semibold text-muted-foreground select-none">
-                  <th className="px-6 py-4">User Details</th>
-                  <th className="px-6 py-4">Username</th>
-                  <th className="px-6 py-4">Access Level</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-6 py-4">{t("admin.users.account")}</th>
+                  <th className="px-6 py-4">{t("admin.users.username")}</th>
+                  <th className="px-6 py-4">{t("admin.users.accessLevel")}</th>
+                  <th className="px-6 py-4">{t("admin.users.status")}</th>
+                  <th className="px-6 py-4 text-right">
+                    {t("admin.users.actions")}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
@@ -321,8 +326,8 @@ export function AdminView() {
                           }`}
                         >
                           {account.accessLevel === "ACCESS_LEVEL_ADMIN"
-                            ? "Admin"
-                            : "User"}
+                            ? t("admin.users.admin")
+                            : t("admin.users.user")}
                         </span>
                       </td>
 
@@ -332,7 +337,7 @@ export function AdminView() {
                           {isLocked ? (
                             <span className="inline-flex w-fit items-center gap-1 rounded-md border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-500">
                               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
-                              Locked
+                              {t("admin.users.locked")}
                             </span>
                           ) : (
                             <span
@@ -344,7 +349,12 @@ export function AdminView() {
                                     : "border-destructive/20 bg-destructive/10 text-destructive"
                               }`}
                             >
-                              {(account.status || "").replace("_", " ")}
+                              {getLocalizedEnumLabel(
+                                "admin",
+                                "userStatus",
+                                account.status,
+                                language
+                              )}
                             </span>
                           )}
                         </div>
@@ -364,7 +374,7 @@ export function AdminView() {
                               className="h-8 cursor-pointer rounded-xl px-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
                             >
                               <XCircleIcon className="mr-1.5 h-4 w-4" />
-                              Deny
+                              {t("admin.users.deny")}
                             </Button>
                             <Button
                               onClick={() =>
@@ -374,7 +384,7 @@ export function AdminView() {
                               className="h-8 cursor-pointer rounded-xl bg-green-600 px-3.5 text-white shadow-sm shadow-green-600/10 hover:bg-green-700"
                             >
                               <BadgeCheckIcon className="mr-1.5 h-4 w-4" />
-                              Approve
+                              {t("common.approve")}
                             </Button>
                           </div>
                         ) : account.status === "active" ? (
@@ -390,7 +400,7 @@ export function AdminView() {
                                 className="h-8 cursor-pointer rounded-xl border-amber-500/30 px-3 text-amber-500 hover:bg-amber-500/10 hover:text-amber-400"
                               >
                                 <UnlockIcon className="mr-1.5 h-3.5 w-3.5" />
-                                Unlock Account
+                                {t("admin.users.unlock")}
                               </Button>
                             )}
                             <Button
@@ -400,7 +410,7 @@ export function AdminView() {
                               className="h-8 cursor-pointer rounded-xl px-3 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                             >
                               <KeyRoundIcon className="mr-1.5 h-3.5 w-3.5" />
-                              Reset Password
+                              {t("admin.users.resetPassword")}
                             </Button>
                           </div>
                         ) : isLocked ? (
@@ -415,12 +425,12 @@ export function AdminView() {
                               className="h-8 cursor-pointer rounded-xl border-amber-500/30 px-3 text-amber-500 hover:bg-amber-500/10 hover:text-amber-400"
                             >
                               <UnlockIcon className="mr-1.5 h-3.5 w-3.5" />
-                              Unlock Account
+                              {t("admin.users.unlock")}
                             </Button>
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground/60 select-none">
-                            No actions
+                            {t("admin.users.noActions")}
                           </span>
                         )}
                       </td>
@@ -437,9 +447,9 @@ export function AdminView() {
       <Dialog open={resetModalOpen} onOpenChange={setResetModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Reset Password</DialogTitle>
+            <DialogTitle>{t("admin.users.resetPassword")}</DialogTitle>
             <DialogDescription>
-              Generate a single-use password reset link for{" "}
+              {t("admin.users.resetLinkFor")}{" "}
               <span className="font-semibold text-foreground">
                 @{selectedUser?.username}
               </span>
@@ -450,14 +460,12 @@ export function AdminView() {
           {!generatedUrl ? (
             <div className="space-y-4 py-2">
               <p className="text-xs leading-relaxed text-muted-foreground">
-                This link will expire after the selected duration and can only
-                be used once. Consuming the link will immediately sign out all
-                active sessions for this user.
+                {t("admin.users.linkExpiresOnce")}
               </p>
 
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-foreground">
-                  Link Validity Window
+                  {t("admin.users.linkValidity")}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[15, 30, 60].map((mins) => (
@@ -471,7 +479,7 @@ export function AdminView() {
                           : "border-border/50 bg-muted/20 text-muted-foreground hover:border-border hover:text-foreground"
                       }`}
                     >
-                      {mins} minutes
+                      {t("admin.users.minutesN", { n: mins })}
                     </button>
                   ))}
                 </div>
@@ -486,10 +494,10 @@ export function AdminView() {
                   {resetPasswordMutation.isPending ? (
                     <div className="flex items-center justify-center gap-2">
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                      <span>Generating link...</span>
+                      <span>{t("admin.users.generating")}</span>
                     </div>
                   ) : (
-                    "Generate Reset Link"
+                    t("admin.users.generateLink")
                   )}
                 </Button>
               </DialogFooter>
@@ -498,12 +506,12 @@ export function AdminView() {
             <div className="space-y-4 py-2">
               <div className="flex items-center gap-2 rounded-xl border border-green-500/20 bg-green-500/10 p-3 text-xs text-green-500">
                 <ClockIcon className="h-4 w-4 shrink-0" />
-                <span>Link generated! Valid for {ttlMinutes} minutes.</span>
+                <span>{t("admin.users.linkGenerated", { n: ttlMinutes })}</span>
               </div>
 
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-foreground">
-                  Reset URL
+                  {t("admin.users.resetUrl")}
                 </label>
                 <div className="flex items-center gap-2">
                   <Input
@@ -519,12 +527,12 @@ export function AdminView() {
                     {copied ? (
                       <>
                         <CheckIcon className="h-4 w-4 text-green-400" />
-                        <span>Copied</span>
+                        <span>{t("admin.shared.copied")}</span>
                       </>
                     ) : (
                       <>
                         <CopyIcon className="h-4 w-4" />
-                        <span>Copy</span>
+                        <span>{t("admin.shared.copy")}</span>
                       </>
                     )}
                   </Button>
@@ -537,7 +545,7 @@ export function AdminView() {
                   onClick={() => setResetModalOpen(false)}
                   className="w-full cursor-pointer rounded-xl"
                 >
-                  Done
+                  {t("admin.shared.done")}
                 </Button>
               </DialogFooter>
             </div>
