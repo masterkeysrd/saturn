@@ -43,6 +43,7 @@ import {
 } from "lucide-react"
 import { AccountSelect } from "./account-select"
 import { formatAmount } from "../utils"
+import { useI18n } from "@saturn/hooks"
 import { checkPdfEncryption, verifyPdfPassword } from "../utils/pdf-security"
 import { cn } from "@/lib/utils"
 
@@ -177,6 +178,7 @@ export function ImportStatementModal({
   preselectedAccountId,
   onImportSuccess,
 }: ImportStatementModalProps) {
+  const { t } = useI18n()
   const [step, setStep] = useState<1 | 2>(1)
   const [importAccountId, setImportAccountId] = useState<string>(
     preselectedAccountId || accounts[0]?.id || ""
@@ -282,7 +284,9 @@ export function ImportStatementModal({
         .catch((err) => {
           setIsCheckingPdf(false)
           setPdfError(
-            err instanceof Error ? err.message : "Failed to read PDF file"
+            err instanceof Error
+              ? err.message
+              : t("finance.reconcile.import.pdfReadFailed")
           )
         })
       return
@@ -422,7 +426,9 @@ export function ImportStatementModal({
     try {
       const res = await verifyPdfPassword(pdfArrayBuffer, pw)
       if (!res.valid) {
-        setPdfError(res.error || "Incorrect password. Please try again.")
+        setPdfError(
+          res.error || t("finance.reconcile.import.incorrectPassword")
+        )
         setIsValidatingPassword(false)
         return
       }
@@ -433,7 +439,9 @@ export function ImportStatementModal({
     } catch (err) {
       setIsValidatingPassword(false)
       setPdfError(
-        err instanceof Error ? err.message : "Failed to verify password"
+        err instanceof Error
+          ? err.message
+          : t("finance.reconcile.import.passwordVerifyFailed")
       )
     }
   }
@@ -470,7 +478,7 @@ export function ImportStatementModal({
 
       if (run.status === "failed" || run.error?.message) {
         setPdfError(
-          run.error?.message || "Statement ingestion workflow failed."
+          run.error?.message || t("finance.reconcile.import.ingestionFailed")
         )
         return
       }
@@ -499,13 +507,13 @@ export function ImportStatementModal({
           setMultiCurrencyResult(res)
         }
       } else {
-        setPdfError("No statements could be extracted from this document.")
+        setPdfError(t("finance.reconcile.import.noStatementsExtracted"))
       }
     } catch (err) {
       setPdfError(
         err instanceof Error
           ? err.message
-          : "Failed to ingest statement document"
+          : t("finance.reconcile.import.ingestFailed")
       )
     }
   }
@@ -575,11 +583,10 @@ export function ImportStatementModal({
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <FileSpreadsheet className="h-5 w-5" />
                 </div>
-                Import Bank Statement
+                {t("finance.reconcile.import.title")}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Upload your CSV statement, verify starting & ending balances,
-                and map columns.
+                {t("finance.reconcile.import.description")}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -599,7 +606,7 @@ export function ImportStatementModal({
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/20 text-[10px]">
                 1
               </span>
-              File & Balances
+              {t("finance.reconcile.import.stepFile")}
             </button>
             <button
               type="button"
@@ -617,7 +624,7 @@ export function ImportStatementModal({
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/20 text-[10px]">
                 2
               </span>
-              Column Mapping & Preview
+              {t("finance.reconcile.import.stepMapping")}
             </button>
           </div>
         </div>
@@ -634,12 +641,12 @@ export function ImportStatementModal({
                   </div>
                   <div>
                     <h4 className="text-sm font-black tracking-tight text-foreground">
-                      Multi-Currency Statement Ingested
+                      {t("finance.reconcile.import.multiTitle")}
                     </h4>
                     <p className="text-xs text-muted-foreground">
-                      This statement contains{" "}
-                      {multiCurrencyResult.createdStatements.length} independent
-                      currency ledgers. Select a ledger to begin reconciliation:
+                      {t("finance.reconcile.import.multiDescription", {
+                        count: multiCurrencyResult.createdStatements.length,
+                      })}
                     </p>
                   </div>
                 </div>
@@ -658,29 +665,39 @@ export function ImportStatementModal({
                         <div className="space-y-2.5">
                           <div className="flex items-center justify-between">
                             <span className="inline-flex items-center rounded-md border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
-                              {acc?.currency || "Currency"}
+                              {acc?.currency ||
+                                t(
+                                  "finance.reconcile.import.multiCurrencyFallback"
+                                )}
                             </span>
                             {report?.isBalanced ? (
                               <span className="flex items-center text-[11px] font-bold text-emerald-500">
                                 <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                                Balanced (Δ = 0)
+                                {t("finance.reconcile.import.multiBalanced")}
                               </span>
                             ) : (
                               <span className="flex items-center text-[11px] font-bold text-rose-500">
                                 <AlertTriangle className="mr-1 h-3.5 w-3.5" />
-                                Discrepancy:{" "}
-                                {formatAmount(
-                                  report?.discrepancy || 0,
-                                  acc?.currency
+                                {t(
+                                  "finance.reconcile.import.multiDiscrepancy",
+                                  {
+                                    amount: formatAmount(
+                                      report?.discrepancy || 0,
+                                      acc?.currency
+                                    ),
+                                  }
                                 )}
                               </span>
                             )}
                           </div>
                           <h5 className="text-sm font-bold text-foreground">
-                            {acc?.name || "Target Account"}
+                            {acc?.name ||
+                              t("finance.reconcile.import.multiTargetAccount")}
                           </h5>
                           <div className="flex items-center justify-between border-t border-border/40 pt-2 text-xs text-muted-foreground">
-                            <span>Ending Balance:</span>
+                            <span>
+                              {t("finance.reconcile.import.multiEndingBalance")}
+                            </span>
                             <span className="font-mono font-bold text-foreground">
                               {formatAmount(
                                 stmt.statementEndingBalance,
@@ -698,7 +715,9 @@ export function ImportStatementModal({
                           }}
                           className="w-full rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
                         >
-                          Reconcile {acc?.currency} Statement
+                          {t("finance.reconcile.import.multiReconcileButton", {
+                            currency: acc?.currency ?? "",
+                          })}
                           <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -712,7 +731,7 @@ export function ImportStatementModal({
                 {/* Left Column: Dropzone & File Info */}
                 <div className="space-y-4 lg:col-span-6">
                   <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                    Statement File (PDF or CSV)
+                    {t("finance.reconcile.import.fileLabel")}
                   </Label>
 
                   <input
@@ -742,15 +761,19 @@ export function ImportStatementModal({
                               {isCheckingPdf ? (
                                 <span className="inline-flex items-center gap-1 font-semibold text-amber-500">
                                   <Loader2 className="h-3 w-3 animate-spin" />{" "}
-                                  Checking encryption...
+                                  {t(
+                                    "finance.reconcile.import.checkingEncryption"
+                                  )}
                                 </span>
                               ) : needsPassword ? (
                                 <span className="font-semibold text-amber-500">
-                                  Password-Protected
+                                  {t(
+                                    "finance.reconcile.import.passwordProtected"
+                                  )}
                                 </span>
                               ) : (
                                 <span className="font-semibold text-primary">
-                                  AI Statement Extraction
+                                  {t("finance.reconcile.import.aiExtraction")}
                                 </span>
                               )}
                             </p>
@@ -773,7 +796,7 @@ export function ImportStatementModal({
                           className="h-8 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground"
                         >
                           <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                          Change
+                          {t("finance.reconcile.import.change")}
                         </Button>
                       </div>
 
@@ -782,23 +805,26 @@ export function ImportStatementModal({
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 text-xs font-bold text-amber-500">
                               <Lock className="h-4 w-4" />
-                              Password-Protected Statement
+                              {t(
+                                "finance.reconcile.import.passwordProtectedHeading"
+                              )}
                             </div>
                             {isPasswordVerified && (
                               <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-500">
                                 <CheckCircle2 className="h-3.5 w-3.5" />
-                                Password Verified
+                                {t("finance.reconcile.import.passwordVerified")}
                               </span>
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            This statement PDF is encrypted. Enter the
-                            decryption password:
+                            {t("finance.reconcile.import.passwordPrompt")}
                           </p>
                           <div className="flex gap-2">
                             <Input
                               type="password"
-                              placeholder="PDF password"
+                              placeholder={t(
+                                "finance.reconcile.import.pdfPasswordPlaceholder"
+                              )}
                               value={pdfPassword}
                               onChange={(e) => {
                                 setPdfPassword(e.target.value)
@@ -842,12 +868,12 @@ export function ImportStatementModal({
                                 <Lock className="mr-1.5 h-3.5 w-3.5" />
                               )}
                               {isValidatingPassword
-                                ? "Verifying..."
+                                ? t("finance.reconcile.import.verifying")
                                 : executeFlowMutation.isPending
-                                  ? "Extracting..."
+                                  ? t("finance.reconcile.import.extracting")
                                   : isPasswordVerified
-                                    ? "Verified"
-                                    : "Unlock"}
+                                    ? t("finance.reconcile.import.verified")
+                                    : t("finance.reconcile.import.unlock")}
                             </Button>
                           </div>
                         </div>
@@ -864,12 +890,10 @@ export function ImportStatementModal({
                         <div className="space-y-2 rounded-xl border border-border/40 bg-muted/20 p-3 text-xs text-muted-foreground">
                           <div className="flex items-center gap-1.5 font-bold text-foreground">
                             <Sparkles className="h-3.5 w-3.5 text-primary" />
-                            AI Statement Parser
+                            {t("finance.reconcile.import.aiParser")}
                           </div>
                           <p className="text-[11px] leading-relaxed">
-                            Saturn AI will extract all currency ledgers (DOP,
-                            USD, etc.), verify double-entry balance mathematics,
-                            and generate ready-to-reconcile statement drafts.
+                            {t("finance.reconcile.import.aiParserDescription")}
                           </p>
                         </div>
                       )}
@@ -899,11 +923,10 @@ export function ImportStatementModal({
                         <UploadCloud className="h-6 w-6" />
                       </div>
                       <p className="mt-3 text-sm font-bold text-foreground">
-                        Click to browse or drag & drop Statement
+                        {t("finance.reconcile.import.dropzoneTitle")}
                       </p>
                       <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                        Supports PDF statements (single & multi-currency) or CSV
-                        exports.
+                        {t("finance.reconcile.import.dropzoneDescription")}
                       </p>
                       <div className="mt-4 flex gap-1.5">
                         <span className="rounded-md border border-border/50 bg-background/50 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
@@ -931,7 +954,9 @@ export function ImportStatementModal({
                             <p className="text-xs text-muted-foreground">
                               {(csvFile.size / 1024).toFixed(1)} KB •{" "}
                               <span className="font-semibold text-foreground">
-                                {parsedRows.length} total rows parsed
+                                {t("finance.reconcile.import.rowsParsed", {
+                                  count: parsedRows.length,
+                                })}
                               </span>
                             </p>
                           </div>
@@ -943,7 +968,7 @@ export function ImportStatementModal({
                           className="h-8 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground"
                         >
                           <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                          Change
+                          {t("finance.reconcile.import.change")}
                         </Button>
                       </div>
 
@@ -952,7 +977,7 @@ export function ImportStatementModal({
                         <div className="space-y-2 rounded-xl border border-border/40 bg-muted/20 p-3 text-xs">
                           <div className="flex items-center justify-between">
                             <span className="font-medium text-muted-foreground">
-                              Detected Net Flow in File:
+                              {t("finance.reconcile.import.netFlowLabel")}
                             </span>
                             <span
                               className={cn(
@@ -976,7 +1001,7 @@ export function ImportStatementModal({
                             className="h-7 w-full rounded-lg border-border/60 text-[11px] font-bold transition-colors hover:bg-primary/10 hover:text-primary"
                           >
                             <Calculator className="mr-1.5 h-3 w-3" />
-                            Set Ending Balance = Start + Net Flow
+                            {t("finance.reconcile.import.setEndingBalance")}
                           </Button>
                         </div>
                       )}
@@ -988,7 +1013,7 @@ export function ImportStatementModal({
                 <div className="space-y-4 lg:col-span-6">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                      Target Ledger Account
+                      {t("finance.reconcile.import.targetAccountLabel")}
                     </Label>
                     <AccountSelect
                       value={importAccountId}
@@ -999,7 +1024,7 @@ export function ImportStatementModal({
 
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                      Statement Closing Date
+                      {t("finance.reconcile.import.closingDateLabel")}
                     </Label>
                     <div className="relative">
                       <Input
@@ -1015,7 +1040,7 @@ export function ImportStatementModal({
                   <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                        Starting Balance
+                        {t("finance.reconcile.import.startingBalanceLabel")}
                       </Label>
                       <AmountInput
                         currency={targetAccount?.currency}
@@ -1028,7 +1053,7 @@ export function ImportStatementModal({
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                        Target Ending Balance
+                        {t("finance.reconcile.import.targetEndingBalanceLabel")}
                       </Label>
                       <AmountInput
                         currency={targetAccount?.currency}
@@ -1044,12 +1069,10 @@ export function ImportStatementModal({
                   <div className="space-y-1.5 rounded-2xl border border-border/40 bg-muted/10 p-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1.5 font-bold text-foreground">
                       <Sparkles className="h-3.5 w-3.5 text-primary" />
-                      Reconciliation Tip
+                      {t("finance.reconcile.import.tipTitle")}
                     </div>
                     <p className="text-[11px] leading-relaxed">
-                      The reconciliation engine verifies that the net sum of all
-                      statement lines equals your ending balance minus starting
-                      balance.
+                      {t("finance.reconcile.import.tipDescription")}
                     </p>
                   </div>
                 </div>
@@ -1072,7 +1095,7 @@ export function ImportStatementModal({
                           : "text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      Single Amount Column (+/-)
+                      {t("finance.reconcile.import.singleAmountColumn")}
                     </button>
                     <button
                       type="button"
@@ -1084,7 +1107,7 @@ export function ImportStatementModal({
                           : "text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      Separate Debit / Credit Columns
+                      {t("finance.reconcile.import.separateColumns")}
                     </button>
                   </div>
                 </div>
@@ -1096,7 +1119,7 @@ export function ImportStatementModal({
                     onChange={(e) => setHasHeader(e.target.checked)}
                     className="h-4 w-4 rounded border-border/60 text-primary focus:ring-primary"
                   />
-                  <span>First row contains column headers</span>
+                  <span>{t("finance.reconcile.import.firstRowHeaders")}</span>
                 </label>
               </div>
 
@@ -1104,7 +1127,8 @@ export function ImportStatementModal({
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div className="space-y-1.5 rounded-2xl border border-blue-500/30 bg-blue-500/5 p-3">
                   <span className="flex items-center gap-1.5 text-[10px] font-black tracking-wider text-blue-500 uppercase">
-                    <Calendar className="h-3 w-3" /> Date Column
+                    <Calendar className="h-3 w-3" />{" "}
+                    {t("finance.reconcile.import.dateColumn")}
                   </span>
                   <Select
                     value={String(dateColIndex)}
@@ -1116,7 +1140,9 @@ export function ImportStatementModal({
                     <SelectContent>
                       {Array.from({ length: maxColumns }, (_, i) => (
                         <SelectItem key={i} value={String(i)}>
-                          Col {i + 1}{" "}
+                          {t("finance.reconcile.import.colOption", {
+                            index: i + 1,
+                          })}{" "}
                           {hasHeader && parsedRows[0]?.[i]
                             ? `("${parsedRows[0][i]}")`
                             : ""}
@@ -1128,7 +1154,8 @@ export function ImportStatementModal({
 
                 <div className="space-y-1.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3">
                   <span className="flex items-center gap-1.5 text-[10px] font-black tracking-wider text-amber-500 uppercase">
-                    <FileText className="h-3 w-3" /> Description
+                    <FileText className="h-3 w-3" />{" "}
+                    {t("finance.reconcile.import.descriptionColumn")}
                   </span>
                   <Select
                     value={String(descColIndex)}
@@ -1140,7 +1167,9 @@ export function ImportStatementModal({
                     <SelectContent>
                       {Array.from({ length: maxColumns }, (_, i) => (
                         <SelectItem key={i} value={String(i)}>
-                          Col {i + 1}{" "}
+                          {t("finance.reconcile.import.colOption", {
+                            index: i + 1,
+                          })}{" "}
                           {hasHeader && parsedRows[0]?.[i]
                             ? `("${parsedRows[0][i]}")`
                             : ""}
@@ -1153,7 +1182,8 @@ export function ImportStatementModal({
                 {!isSeparateDebitCredit ? (
                   <div className="space-y-1.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3">
                     <span className="flex items-center gap-1.5 text-[10px] font-black tracking-wider text-emerald-500 uppercase">
-                      <DollarSign className="h-3 w-3" /> Net Amount (+/-)
+                      <DollarSign className="h-3 w-3" />{" "}
+                      {t("finance.reconcile.import.netAmountColumn")}
                     </span>
                     <Select
                       value={String(amountColIndex)}
@@ -1165,7 +1195,9 @@ export function ImportStatementModal({
                       <SelectContent>
                         {Array.from({ length: maxColumns }, (_, i) => (
                           <SelectItem key={i} value={String(i)}>
-                            Col {i + 1}{" "}
+                            {t("finance.reconcile.import.colOption", {
+                              index: i + 1,
+                            })}{" "}
                             {hasHeader && parsedRows[0]?.[i]
                               ? `("${parsedRows[0][i]}")`
                               : ""}
@@ -1178,7 +1210,8 @@ export function ImportStatementModal({
                   <>
                     <div className="space-y-1.5 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-3">
                       <span className="flex items-center gap-1.5 text-[10px] font-black tracking-wider text-rose-500 uppercase">
-                        <DollarSign className="h-3 w-3" /> Debit Column
+                        <DollarSign className="h-3 w-3" />{" "}
+                        {t("finance.reconcile.import.debitColumn")}
                       </span>
                       <Select
                         value={String(debitColIndex)}
@@ -1190,7 +1223,9 @@ export function ImportStatementModal({
                         <SelectContent>
                           {Array.from({ length: maxColumns }, (_, i) => (
                             <SelectItem key={i} value={String(i)}>
-                              Col {i + 1}{" "}
+                              {t("finance.reconcile.import.colOption", {
+                                index: i + 1,
+                              })}{" "}
                               {hasHeader && parsedRows[0]?.[i]
                                 ? `("${parsedRows[0][i]}")`
                                 : ""}
@@ -1201,7 +1236,8 @@ export function ImportStatementModal({
                     </div>
                     <div className="space-y-1.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3">
                       <span className="flex items-center gap-1.5 text-[10px] font-black tracking-wider text-emerald-500 uppercase">
-                        <DollarSign className="h-3 w-3" /> Credit Column
+                        <DollarSign className="h-3 w-3" />{" "}
+                        {t("finance.reconcile.import.creditColumn")}
                       </span>
                       <Select
                         value={String(creditColIndex)}
@@ -1213,7 +1249,9 @@ export function ImportStatementModal({
                         <SelectContent>
                           {Array.from({ length: maxColumns }, (_, i) => (
                             <SelectItem key={i} value={String(i)}>
-                              Col {i + 1}{" "}
+                              {t("finance.reconcile.import.colOption", {
+                                index: i + 1,
+                              })}{" "}
                               {hasHeader && parsedRows[0]?.[i]
                                 ? `("${parsedRows[0][i]}")`
                                 : ""}
@@ -1227,20 +1265,27 @@ export function ImportStatementModal({
 
                 <div className="space-y-1.5 rounded-2xl border border-purple-500/30 bg-purple-500/5 p-3">
                   <span className="flex items-center gap-1.5 text-[10px] font-black tracking-wider text-purple-500 uppercase">
-                    <Hash className="h-3 w-3" /> Reference (Optional)
+                    <Hash className="h-3 w-3" />{" "}
+                    {t("finance.reconcile.import.referenceColumn")}
                   </span>
                   <Select
                     value={String(refColIndex)}
                     onValueChange={(v) => setRefColIndex(Number(v))}
                   >
                     <SelectTrigger className="h-8 rounded-xl bg-background/80 text-xs font-medium">
-                      <SelectValue placeholder="None" />
+                      <SelectValue
+                        placeholder={t("finance.reconcile.import.noneOption")}
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="-1">None</SelectItem>
+                      <SelectItem value="-1">
+                        {t("finance.reconcile.import.noneOption")}
+                      </SelectItem>
                       {Array.from({ length: maxColumns }, (_, i) => (
                         <SelectItem key={i} value={String(i)}>
-                          Col {i + 1}{" "}
+                          {t("finance.reconcile.import.colOption", {
+                            index: i + 1,
+                          })}{" "}
                           {hasHeader && parsedRows[0]?.[i]
                             ? `("${parsedRows[0][i]}")`
                             : ""}
@@ -1255,10 +1300,14 @@ export function ImportStatementModal({
               <div className="space-y-2">
                 <div className="flex items-center justify-between px-1 text-xs font-semibold text-muted-foreground">
                   <span>
-                    Live Spreadsheet Preview ({dataRowsCount} lines detected)
+                    {t("finance.reconcile.import.previewTitle", {
+                      count: dataRowsCount,
+                    })}
                   </span>
                   <span>
-                    Showing first {Math.min(8, parsedRows.length)} rows
+                    {t("finance.reconcile.import.previewRows", {
+                      count: Math.min(8, parsedRows.length),
+                    })}
                   </span>
                 </div>
 
@@ -1304,19 +1353,27 @@ export function ImportStatementModal({
                                       "bg-muted/40 text-muted-foreground"
                                   )}
                                 >
-                                  {isDate && "Date"}
-                                  {isDesc && "Description"}
-                                  {isAmt && "Amount"}
-                                  {isDebit && "Debit"}
-                                  {isCredit && "Credit"}
-                                  {isRef && "Reference"}
+                                  {isDate &&
+                                    t("finance.reconcile.import.thDate")}
+                                  {isDesc &&
+                                    t("finance.reconcile.import.thDescription")}
+                                  {isAmt &&
+                                    t("finance.reconcile.import.thAmount")}
+                                  {isDebit &&
+                                    t("finance.reconcile.import.thDebit")}
+                                  {isCredit &&
+                                    t("finance.reconcile.import.thCredit")}
+                                  {isRef &&
+                                    t("finance.reconcile.import.thReference")}
                                   {!isDate &&
                                     !isDesc &&
                                     !isAmt &&
                                     !isDebit &&
                                     !isCredit &&
                                     !isRef &&
-                                    `Col ${i + 1}`}
+                                    t("finance.reconcile.import.colOption", {
+                                      index: i + 1,
+                                    })}
                                 </span>
                               </div>
                             </th>
@@ -1367,14 +1424,14 @@ export function ImportStatementModal({
                   onClick={() => handleModalOpenChange(false)}
                   className="rounded-xl text-xs font-bold text-muted-foreground"
                 >
-                  Dismiss
+                  {t("finance.reconcile.import.dismiss")}
                 </Button>
                 <Button
                   type="button"
                   onClick={() => handleModalOpenChange(false)}
                   className="rounded-xl bg-primary px-5 text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
                 >
-                  Done
+                  {t("common.done")}
                 </Button>
               </>
             ) : pdfFile ? (
@@ -1385,7 +1442,7 @@ export function ImportStatementModal({
                   onClick={() => handleModalOpenChange(false)}
                   className="rounded-xl text-xs font-bold text-muted-foreground"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="button"
@@ -1413,12 +1470,14 @@ export function ImportStatementModal({
                     <Sparkles className="mr-2 h-4 w-4" />
                   )}
                   {isCheckingPdf
-                    ? "Checking Encryption..."
+                    ? t("finance.reconcile.import.checkingEncryptionButton")
                     : isValidatingPassword
-                      ? "Verifying Password..."
+                      ? t("finance.reconcile.import.verifyingPasswordButton")
                       : executeFlowMutation.isPending
-                        ? "Extracting Statement..."
-                        : "Extract & Reconcile with AI"}
+                        ? t(
+                            "finance.reconcile.import.extractingStatementButton"
+                          )
+                        : t("finance.reconcile.import.extractWithAi")}
                 </Button>
               </>
             ) : (
@@ -1429,7 +1488,7 @@ export function ImportStatementModal({
                   onClick={() => handleModalOpenChange(false)}
                   className="rounded-xl text-xs font-bold text-muted-foreground"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="button"
@@ -1437,7 +1496,7 @@ export function ImportStatementModal({
                   onClick={() => setStep(2)}
                   className="rounded-xl bg-primary px-5 text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
                 >
-                  Continue to Column Mapping
+                  {t("finance.reconcile.import.continueToMapping")}
                   <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                 </Button>
               </>
@@ -1451,7 +1510,7 @@ export function ImportStatementModal({
                 className="rounded-xl text-xs font-bold text-muted-foreground"
               >
                 <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-                Back to Details
+                {t("finance.reconcile.import.backToDetails")}
               </Button>
               <Button
                 type="button"
@@ -1464,7 +1523,9 @@ export function ImportStatementModal({
                 {importMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Start Statement Reconciliation ({dataRowsCount} lines)
+                {t("finance.reconcile.import.startReconciliation", {
+                  count: dataRowsCount,
+                })}
               </Button>
             </>
           )}

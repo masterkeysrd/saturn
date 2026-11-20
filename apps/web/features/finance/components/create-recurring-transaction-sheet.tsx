@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { cn } from "@/lib/utils"
@@ -46,11 +47,7 @@ interface CreateRecurringTransactionSheetProps {
   refetchTransactions?: () => void
 }
 
-const STATUS_ITEMS = [
-  { value: "ACTIVE", label: "Active" },
-  { value: "PAUSED", label: "Paused" },
-  { value: "ENDED", label: "Ended" },
-]
+const RECURRING_STATUS_VALUES = ["ACTIVE", "PAUSED", "ENDED"] as const
 
 const RECURRING_FIELD_PATH_MAP: Record<string, string> = {
   type: "type",
@@ -75,9 +72,33 @@ export function CreateRecurringTransactionSheet({
   editTransaction,
   refetchTransactions,
 }: CreateRecurringTransactionSheetProps) {
+  const { t, language } = useI18n()
   const queryClient = useQueryClient()
   const createMutation = useCreateRecurringTransactionMutation()
   const updateMutation = useUpdateRecurringTransactionMutation()
+
+  const statusItems = useMemo(
+    () =>
+      RECURRING_STATUS_VALUES.map((value) => ({
+        value,
+        label: getLocalizedEnumLabel("finance", "status", value, language),
+      })),
+    [language]
+  )
+
+  const intervalItems = useMemo(
+    () =>
+      INTERVAL_ITEMS.map((item) => ({
+        value: item.value,
+        label: getLocalizedEnumLabel(
+          "finance",
+          "interval",
+          item.value,
+          language
+        ),
+      })),
+    [language]
+  )
 
   const patchMutation = usePatch<
     RecurringTransaction,
@@ -87,7 +108,7 @@ export function CreateRecurringTransactionSheet({
     mutationFn: (vars) => updateMutation.mutateAsync(vars),
     onErrorToast: (error) => {
       toast.add({
-        title: "Failed to update recurring transaction",
+        title: t("finance.recurring.sheet.updateFailed"),
         description: error.message,
         type: "error",
       })
@@ -297,8 +318,11 @@ export function CreateRecurringTransactionSheet({
     } catch (err: unknown) {
       if (!editTransaction) {
         toast.add({
-          title: "Failed to create recurring transaction",
-          description: err instanceof Error ? err.message : "Operation failed.",
+          title: t("finance.recurring.sheet.createFailed"),
+          description:
+            err instanceof Error
+              ? err.message
+              : t("finance.recurring.sheet.operationFailed"),
           type: "error",
         })
       }
@@ -311,20 +335,24 @@ export function CreateRecurringTransactionSheet({
       onOpenChange={onOpenChange}
       title={
         editTransaction
-          ? "Edit Recurring Transaction"
-          : "Create Recurring Transaction"
+          ? t("finance.recurring.sheet.editTitle")
+          : t("finance.recurring.sheet.createTitle")
       }
       description={
         editTransaction
-          ? "Modify the rules for this recurring transaction template."
-          : "Configure a recurring transaction template (e.g. rent, salaries, or subscriptions)."
+          ? t("finance.recurring.sheet.editDescription")
+          : t("finance.recurring.sheet.createDescription")
       }
-      submitLabel={editTransaction ? "Save Changes" : "Create Template"}
+      submitLabel={
+        editTransaction
+          ? t("finance.recurring.sheet.saveSubmit")
+          : t("finance.recurring.sheet.createSubmit")
+      }
       isPending={isPending}
       disabled={!!(conversion && "error" in conversion)}
       onSubmit={handleSubmit(onSubmit)}
     >
-      <FormFieldItem label="Transaction Type">
+      <FormFieldItem label={t("finance.recurring.sheet.typeLabel")}>
         <div className="flex rounded-xl border border-border/30 bg-muted/60 p-1">
           <button
             type="button"
@@ -341,7 +369,12 @@ export function CreateRecurringTransactionSheet({
                 : "text-muted-foreground hover:bg-background/20 hover:text-foreground"
             )}
           >
-            Expense
+            {getLocalizedEnumLabel(
+              "finance",
+              "transactionType",
+              "EXPENSE",
+              language
+            )}
           </button>
           <button
             type="button"
@@ -356,35 +389,49 @@ export function CreateRecurringTransactionSheet({
                 : "text-muted-foreground hover:bg-background/20 hover:text-foreground"
             )}
           >
-            Income
+            {getLocalizedEnumLabel(
+              "finance",
+              "transactionType",
+              "INCOME",
+              language
+            )}
           </button>
         </div>
       </FormFieldItem>
 
       {typeValue === "EXPENSE" && (
-        <FormFieldItem label="Budget" error={errors.budgetId?.message}>
+        <FormFieldItem
+          label={t("finance.recurring.sheet.budgetLabel")}
+          error={errors.budgetId?.message}
+        >
           <BudgetSelect
             control={control}
             name="budgetId"
             budgets={budgets}
             onBudgetChange={handleBudgetChange}
-            placeholder="Select a budget..."
+            placeholder={t("finance.recurring.sheet.budgetPlaceholder")}
           />
         </FormFieldItem>
       )}
 
-      <FormFieldItem label="Template Name" error={errors.name?.message}>
+      <FormFieldItem
+        label={t("finance.recurring.sheet.nameLabel")}
+        error={errors.name?.message}
+      >
         <Input
           placeholder={
             typeValue === "EXPENSE"
-              ? "e.g. Office Rent, Netflix"
-              : "e.g. Salary, Retainer"
+              ? t("finance.recurring.sheet.namePlaceholderExpense")
+              : t("finance.recurring.sheet.namePlaceholderIncome")
           }
           {...register("name")}
         />
       </FormFieldItem>
 
-      <FormFieldItem label="Expected Amount" error={errors.amount?.message}>
+      <FormFieldItem
+        label={t("finance.recurring.sheet.amountLabel")}
+        error={errors.amount?.message}
+      >
         <div className="flex h-10 items-center overflow-hidden rounded-lg border border-border bg-control shadow-2xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
           <AmountInput
             control={control}
@@ -410,24 +457,24 @@ export function CreateRecurringTransactionSheet({
         fromCurrency={currencyValue}
       />
 
-      <FormFieldItem label="Target Account (Optional)">
+      <FormFieldItem label={t("finance.recurring.sheet.targetAccountLabel")}>
         <AccountSelect
           control={control}
           name="accountId"
           accounts={accounts}
           allowNone
-          placeholder="Select default account..."
+          placeholder={t("finance.recurring.sheet.targetAccountPlaceholder")}
         />
       </FormFieldItem>
 
       <FormSelect
         control={control}
         name="interval"
-        label="Interval"
-        items={INTERVAL_ITEMS}
+        label={t("finance.recurring.sheet.intervalLabel")}
+        items={intervalItems}
       />
 
-      <FormFieldItem label="Next Due Date">
+      <FormFieldItem label={t("finance.recurring.sheet.nextDueDateLabel")}>
         <Controller
           control={control}
           name="nextDueDate"
@@ -441,13 +488,13 @@ export function CreateRecurringTransactionSheet({
       </FormFieldItem>
 
       <FormFieldItem
-        label="Grace Period (in days)"
+        label={t("finance.recurring.sheet.graceLabel")}
         error={errors.gracePeriodDays?.message}
       >
         <Input
           type="number"
           min="0"
-          placeholder="e.g. 3"
+          placeholder={t("finance.recurring.sheet.gracePlaceholder")}
           {...register("gracePeriodDays", { valueAsNumber: true })}
           className="font-mono tabular-nums"
         />
@@ -466,10 +513,10 @@ export function CreateRecurringTransactionSheet({
             htmlFor="isVariable"
             className="cursor-pointer text-xs leading-none font-semibold text-foreground/80"
           >
-            Variable Amount Transaction
+            {t("finance.recurring.sheet.variableLabel")}
           </Label>
           <span className="text-[10px] text-muted-foreground">
-            Check if the amount changes execution-to-execution.
+            {t("finance.recurring.sheet.variableHint")}
           </span>
         </div>
       </div>
@@ -478,8 +525,8 @@ export function CreateRecurringTransactionSheet({
         <FormSelect
           control={control}
           name="status"
-          label="Status"
-          items={STATUS_ITEMS}
+          label={t("finance.recurring.sheet.statusLabel")}
+          items={statusItems}
         />
       )}
     </FormDrawer>

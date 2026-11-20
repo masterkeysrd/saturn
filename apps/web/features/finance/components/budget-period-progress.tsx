@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { type Budget } from "@saturn/api/gen/saturn/finance/v1/finance"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { MoneyAmount } from "@/components/ui/money-amount"
 import { AlertTriangle } from "lucide-react"
 import {
@@ -20,6 +20,7 @@ export function BudgetPeriodProgress({
   onPeriodLoaded,
 }: BudgetPeriodProgressProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
   const period = budget.currentPeriod
   const themeColors = getBudgetColors(budget.color)
 
@@ -51,7 +52,7 @@ export function BudgetPeriodProgress({
     ? tz.format(period.endDate, { month: "short", day: "numeric" })
     : ""
   const dateRangeStr = isOneTime
-    ? "Lifetime"
+    ? t("finance.budgets.progress.lifetime")
     : startStr && endStr
       ? `${startStr} – ${endStr}`
       : startStr || endStr || ""
@@ -89,7 +90,7 @@ export function BudgetPeriodProgress({
     return (
       <div className="mt-4 space-y-1.5">
         <span className="block text-xs font-medium text-muted-foreground">
-          Template limit
+          {t("finance.budgets.progress.templateLimit")}
         </span>
         <MoneyAmount
           cents={limitCents}
@@ -98,7 +99,7 @@ export function BudgetPeriodProgress({
           className="block text-foreground"
         />
         <p className="text-xs text-muted-foreground">
-          No activity recorded for this period yet.
+          {t("finance.budgets.progress.noActivity")}
         </p>
       </div>
     )
@@ -109,18 +110,15 @@ export function BudgetPeriodProgress({
       <div className="mt-4 flex flex-col gap-1.5 rounded-lg border border-warning/25 bg-warning/10 p-3 text-xs">
         <div className="flex items-center gap-1.5 font-medium text-warning">
           <AlertTriangle className="size-4 shrink-0" />
-          <span>Exchange rate required</span>
+          <span>{t("finance.budgets.progress.rateRequired")}</span>
         </div>
         <p className="leading-relaxed text-muted-foreground">
-          No conversion rate configured from{" "}
-          <span className="font-mono font-medium text-foreground">
-            {budget.currency}
-          </span>{" "}
-          to{" "}
-          <span className="font-mono font-medium text-foreground">
-            {period?.baseCurrency}
-          </span>
-          . Configure a rate to track this budget.
+          {t("finance.budgets.progress.rateMissingDescription", {
+            from: budget.currency || t("finance.budgets.helperMissingCurrency"),
+            to:
+              period?.baseCurrency ||
+              t("finance.budgets.helperMissingCurrency"),
+          })}
         </p>
       </div>
     )
@@ -132,7 +130,9 @@ export function BudgetPeriodProgress({
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0 flex-1">
           <span className="block text-xs font-medium text-muted-foreground">
-            {isOverBudget ? "Over budget" : "Remaining"}
+            {isOverBudget
+              ? t("finance.budgets.progress.overBudget")
+              : t("finance.budgets.progress.remaining")}
           </span>
           <div className="mt-0.5 flex min-w-0 items-baseline gap-1.5">
             <MoneyAmount
@@ -172,8 +172,12 @@ export function BudgetPeriodProgress({
         {pacePercent !== null && (
           <div
             data-testid="budget-pace-tick"
-            title={`Today · ${Math.round(pacePercent)}% elapsed`}
-            aria-label={`Today pace marker at ${Math.round(pacePercent)}% elapsed`}
+            title={t("finance.budgets.progress.paceTick", {
+              pct: Math.round(pacePercent),
+            })}
+            aria-label={t("finance.budgets.progress.paceTickAria", {
+              pct: Math.round(pacePercent),
+            })}
             className="pointer-events-none absolute top-0 h-3.5 w-0.5 -translate-x-1/2 rounded-full bg-foreground/70 ring-1 ring-card"
             style={{ left: `${pacePercent}%` }}
           />
@@ -188,15 +192,28 @@ export function BudgetPeriodProgress({
         </span>
         <span className="shrink-0 font-medium">
           {isOverBudget ? (
-            <span className="text-destructive">Exceeded</span>
+            <span className="text-destructive">
+              {t("finance.budgets.progress.exceeded")}
+            </span>
           ) : paceDelta !== null && paceDelta > 5 ? (
-            <span className="text-warning">Ahead of pace (+{paceDelta}%)</span>
+            <span className="text-warning">
+              {t("finance.budgets.progress.aheadOfPace", { pct: paceDelta })}
+            </span>
           ) : pacePercent !== null ? (
             <span>
-              On pace · {daysLeft > 0 ? `${daysLeft}d left` : dateRangeStr}
+              {t("finance.budgets.progress.onPace", {
+                detail:
+                  daysLeft > 0
+                    ? t("finance.budgets.progress.daysLeft", { days: daysLeft })
+                    : dateRangeStr,
+              })}
             </span>
           ) : (
-            <span>{daysLeft > 0 ? `${daysLeft}d left` : dateRangeStr}</span>
+            <span>
+              {daysLeft > 0
+                ? t("finance.budgets.progress.daysLeft", { days: daysLeft })
+                : dateRangeStr}
+            </span>
           )}
         </span>
       </div>
@@ -208,7 +225,9 @@ export function BudgetPeriodProgress({
             1 {budget.currency} = {rateToBase.toFixed(4)} {period?.baseCurrency}
           </span>
           <span className="font-mono text-[11px] tabular-nums">
-            Limit: {tz.formatMoney(baseLimitCents, period?.baseCurrency)}
+            {t("finance.budgets.progress.limitValue", {
+              value: tz.formatMoney(baseLimitCents, period?.baseCurrency),
+            })}
           </span>
         </div>
       )}

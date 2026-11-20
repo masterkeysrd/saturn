@@ -2,6 +2,7 @@ import { useMemo } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQueryClient } from "@tanstack/react-query"
+import { useI18n } from "@saturn/hooks"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import { BorrowingSchema, type BorrowingFormValues } from "@saturn/schemas"
@@ -30,10 +31,7 @@ interface CreateBorrowingSheetProps {
   refetchBorrowings?: () => void
 }
 
-const DIRECTION_ITEMS = [
-  { value: "LENT", label: "Lent (Someone owes me)" },
-  { value: "BORROWED", label: "Borrowed (I owe someone)" },
-]
+const DIRECTION_VALUES = ["LENT", "BORROWED"] as const
 
 export function CreateBorrowingSheet({
   open,
@@ -43,9 +41,22 @@ export function CreateBorrowingSheet({
   editBorrowing,
   refetchBorrowings,
 }: CreateBorrowingSheetProps) {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const createBorrowingMutation = useCreateBorrowingMutation()
   const updateBorrowingMutation = useUpdateBorrowingMutation()
+
+  const directionItems = useMemo(
+    () =>
+      DIRECTION_VALUES.map((value) => ({
+        value,
+        label:
+          value === "LENT"
+            ? t("finance.borrowing.sheet.directionLent")
+            : t("finance.borrowing.sheet.directionBorrowed"),
+      })),
+    [t]
+  )
 
   const { getConversionPreview } = useCurrencyConversionPreview({
     spaceId,
@@ -185,13 +196,21 @@ export function CreateBorrowingSheet({
     <FormDrawer
       open={open}
       onOpenChange={onOpenChange}
-      title={editBorrowing ? "Edit Debt Agreement" : "Log Debt Agreement"}
+      title={
+        editBorrowing
+          ? t("finance.borrowing.sheet.editTitle")
+          : t("finance.borrowing.sheet.createTitle")
+      }
       description={
         editBorrowing
-          ? "Modify logged lending or borrowing agreement details. Saturn will recompute general ledger entries automatically."
-          : "Track personal money lent to or borrowed from contacts. Optionally post initial balance movement to a payment account."
+          ? t("finance.borrowing.sheet.editDescription")
+          : t("finance.borrowing.sheet.createDescription")
       }
-      submitLabel={editBorrowing ? "Save Changes" : "Create Record"}
+      submitLabel={
+        editBorrowing
+          ? t("finance.borrowing.sheet.saveSubmit")
+          : t("finance.borrowing.sheet.createSubmit")
+      }
       isPending={isPending}
       disabled={!!(conversion && "error" in conversion)}
       onSubmit={handleSubmit(onSubmit)}
@@ -199,25 +218,31 @@ export function CreateBorrowingSheet({
       <FormSelect
         control={control}
         name="direction"
-        label="Type"
-        items={DIRECTION_ITEMS}
+        label={t("finance.borrowing.sheet.typeLabel")}
+        items={directionItems}
       />
 
-      <FormFieldItem label="Name" error={errors.counterparty?.message}>
+      <FormFieldItem
+        label={t("finance.borrowing.sheet.nameLabel")}
+        error={errors.counterparty?.message}
+      >
         <Input
-          placeholder="e.g. Uncle Bob, John Doe"
+          placeholder={t("finance.borrowing.sheet.namePlaceholder")}
           {...register("counterparty")}
         />
       </FormFieldItem>
 
-      <FormFieldItem label="Contact Info (Optional)">
+      <FormFieldItem label={t("finance.borrowing.sheet.contactLabel")}>
         <Input
-          placeholder="e.g. bob@email.com, +1 234..."
+          placeholder={t("finance.borrowing.sheet.contactPlaceholder")}
           {...register("contactInfo")}
         />
       </FormFieldItem>
 
-      <FormFieldItem label="Amount" error={errors.amount?.message}>
+      <FormFieldItem
+        label={t("finance.borrowing.sheet.amountLabel")}
+        error={errors.amount?.message}
+      >
         <div className="flex h-10 items-center overflow-hidden rounded-lg border border-border bg-control shadow-2xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
           <AmountInput
             control={control}
@@ -238,7 +263,7 @@ export function CreateBorrowingSheet({
         </div>
       </FormFieldItem>
 
-      <FormFieldItem label="Date Established">
+      <FormFieldItem label={t("finance.borrowing.sheet.establishedLabel")}>
         <Controller
           control={control}
           name="establishedAt"
@@ -264,12 +289,12 @@ export function CreateBorrowingSheet({
             htmlFor="hasDueDate"
             className="cursor-pointer text-xs font-semibold text-foreground/80"
           >
-            Set a target due date
+            {t("finance.borrowing.sheet.setDueDate")}
           </Label>
         </div>
         {hasDueDateValue && (
           <FormFieldItem
-            label="Due Date"
+            label={t("finance.borrowing.sheet.dueDateLabel")}
             className="slide-in-from-top-1.5 animate-in duration-200"
           >
             <Controller
@@ -299,14 +324,14 @@ export function CreateBorrowingSheet({
           className="cursor-pointer text-xs font-semibold text-foreground/80"
         >
           {editBorrowing
-            ? "Sync change to linked bank transaction"
-            : "Register as bank transaction"}
+            ? t("finance.borrowing.sheet.syncChange")
+            : t("finance.borrowing.sheet.registerAsTx")}
         </Label>
       </div>
 
-      <FormFieldItem label="Notes">
+      <FormFieldItem label={t("finance.borrowing.sheet.notesLabel")}>
         <Textarea
-          placeholder="Add extra context..."
+          placeholder={t("finance.borrowing.sheet.notesPlaceholder")}
           {...register("notes")}
           rows={3}
         />

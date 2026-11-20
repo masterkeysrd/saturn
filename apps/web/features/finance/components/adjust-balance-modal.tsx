@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useI18n } from "@saturn/hooks"
 import {
   type Account,
   useAdjustAccountBalanceMutation,
@@ -39,6 +40,7 @@ export function AdjustBalanceModal({
   refetchAccounts,
   refetchTransfers,
 }: AdjustBalanceModalProps) {
+  const { t } = useI18n()
   const [adjustError, setAdjustError] = useState<string | null>(null)
 
   const currentBalance = account?.currentBalance
@@ -79,7 +81,7 @@ export function AdjustBalanceModal({
     },
     onError: (err: unknown) => {
       setAdjustError(
-        err instanceof Error ? err.message : "Failed to adjust balance"
+        err instanceof Error ? err.message : t("finance.accounts.adjust.failed")
       )
     },
   })
@@ -89,7 +91,7 @@ export function AdjustBalanceModal({
 
     const parsedNum = parseFloat(data.targetBalance)
     if (isNaN(parsedNum)) {
-      setAdjustError("Please enter a valid numeric target balance")
+      setAdjustError(t("finance.accounts.adjust.invalidTarget"))
       return
     }
 
@@ -124,12 +126,12 @@ export function AdjustBalanceModal({
         <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
           <DialogTitle className="flex items-center gap-2 pr-8 text-lg font-semibold tracking-tight text-foreground">
             <Scale className="h-4.5 w-4.5 text-primary" />
-            <span>Adjust Account Balance</span>
+            <span>{t("finance.accounts.adjust.title")}</span>
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            Enter the current real-world balance for{" "}
-            <span className="font-medium text-foreground">{account.name}</span>.
-            Saturn will log a system reconciliation transaction to match.
+            {t("finance.accounts.adjust.description", {
+              name: account.name || "",
+            })}
           </DialogDescription>
         </DialogHeader>
 
@@ -142,7 +144,7 @@ export function AdjustBalanceModal({
             <div className="grid grid-cols-2 gap-3 rounded-xl border border-border/60 bg-muted/30 p-3.5">
               <div>
                 <span className="block text-xs text-muted-foreground">
-                  Current Balance
+                  {t("finance.accounts.adjust.currentBalance")}
                 </span>
                 <span className="mt-0.5 block font-mono text-sm font-semibold text-foreground tabular-nums">
                   {currentBalFormatted}{" "}
@@ -153,7 +155,7 @@ export function AdjustBalanceModal({
               </div>
               <div>
                 <span className="block text-xs text-muted-foreground">
-                  Target Balance
+                  {t("finance.accounts.adjust.targetBalance")}
                 </span>
                 <span className="mt-0.5 block font-mono text-sm font-semibold text-foreground tabular-nums">
                   {targetBalFormatted}{" "}
@@ -175,13 +177,21 @@ export function AdjustBalanceModal({
                     : "border-border/60 bg-muted/20 text-muted-foreground"
               )}
             >
-              <span>Adjustment Type</span>
+              <span>{t("finance.accounts.adjust.adjustmentType")}</span>
               <span className="font-mono font-semibold tabular-nums">
                 {deltaCents > 0
-                  ? `+${deltaFormatted} ${account.currency} (Income)`
+                  ? t("finance.accounts.adjust.adjustmentIncome", {
+                      amount: deltaFormatted,
+                      currency: account.currency,
+                    })
                   : deltaCents < 0
-                    ? `-${deltaFormatted} ${account.currency} (Expense)`
-                    : `0.00 ${account.currency} (No Change)`}
+                    ? t("finance.accounts.adjust.adjustmentExpense", {
+                        amount: deltaFormatted,
+                        currency: account.currency,
+                      })
+                    : t("finance.accounts.adjust.adjustmentNone", {
+                        currency: account.currency,
+                      })}
               </span>
             </div>
 
@@ -233,7 +243,7 @@ export function AdjustBalanceModal({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               type="submit"
@@ -242,7 +252,7 @@ export function AdjustBalanceModal({
               {adjustMutation.isPending && (
                 <Loader2 className="h-4 w-4 animate-spin" />
               )}
-              <span>Confirm & Adjust Balance</span>
+              <span>{t("finance.accounts.adjust.submit")}</span>
             </Button>
           </div>
         </form>

@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react"
 import type { Budget } from "@saturn/api/gen/saturn/finance/v1/finance"
+import { useI18n } from "@saturn/hooks"
+import { getLocalizedIntervalLabel } from "@saturn/i18n"
 import {
   Popover,
   PopoverContent,
@@ -11,7 +13,6 @@ import {
   getBudgetIcon,
   getBudgetColors,
   formatCents,
-  formatInterval,
   isStatusActive,
 } from "../utils"
 import { Check, ChevronsUpDown, PauseCircle, Search } from "lucide-react"
@@ -113,7 +114,7 @@ function BudgetSelectInner({
   value,
   onValueChange,
   budgets,
-  placeholder = "Select budget",
+  placeholder,
   disabled = false,
   className,
   allowNone = false,
@@ -121,6 +122,9 @@ function BudgetSelectInner({
   value: string
   onValueChange: (value: string) => void
 }) {
+  const { t, language } = useI18n()
+  const resolvedPlaceholder =
+    placeholder ?? t("finance.pickers.budget.placeholder")
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
 
@@ -214,12 +218,12 @@ function BudgetSelectInner({
                     getIntervalColorClass(selectedBudget.interval)
                   )}
                 >
-                  {formatInterval(selectedBudget.interval)}
+                  {getLocalizedIntervalLabel(selectedBudget.interval, language)}
                 </span>
                 {!isStatusActive(selectedBudget.status) && (
                   <span className="flex shrink-0 items-center gap-0.5 rounded-md border border-border/40 bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                     <PauseCircle className="h-2.5 w-2.5" />
-                    Paused
+                    {t("finance.pickers.budget.paused")}
                   </span>
                 )}
               </div>
@@ -236,7 +240,9 @@ function BudgetSelectInner({
             </span>
           </div>
         ) : (
-          <span className="text-sm text-muted-foreground">{placeholder}</span>
+          <span className="text-sm text-muted-foreground">
+            {resolvedPlaceholder}
+          </span>
         )}
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground opacity-50" />
       </PopoverTrigger>
@@ -248,7 +254,7 @@ function BudgetSelectInner({
         <div className="relative">
           <Search className="pointer-events-none absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search budgets by name, currency, cycle..."
+            placeholder={t("finance.pickers.budget.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 rounded-xl bg-muted/40 pl-8 text-xs"
@@ -268,14 +274,14 @@ function BudgetSelectInner({
                   : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
               )}
             >
-              <span>None / Uncategorized</span>
+              <span>{t("finance.pickers.budget.none")}</span>
               {!value && <Check className="h-3.5 w-3.5 text-primary" />}
             </button>
           )}
 
           {filteredBudgets.length === 0 ? (
             <div className="py-6 text-center text-xs text-muted-foreground">
-              No budgets found
+              {t("finance.pickers.budget.noBudgetsFound")}
             </div>
           ) : (
             filteredBudgets.map((b) => {
@@ -322,13 +328,13 @@ function BudgetSelectInner({
                             getIntervalColorClass(b.interval)
                           )}
                         >
-                          {b.interval.replace("INTERVAL_", "").toLowerCase()}
+                          {getLocalizedIntervalLabel(b.interval, language)}
                         </span>
                       </div>
                       {!isStatusActive(b.status) && (
                         <span className="mt-0.5 flex w-max items-center gap-0.5 rounded-full border border-border/40 bg-muted px-1.5 py-0.5 text-[8px] font-bold text-muted-foreground uppercase">
                           <PauseCircle className="h-2 w-2" />
-                          Paused
+                          {t("finance.pickers.budget.paused")}
                         </span>
                       )}
                     </div>

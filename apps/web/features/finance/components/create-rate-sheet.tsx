@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { DatePicker } from "@/components/ui/date-picker"
+import { useI18n } from "@saturn/hooks"
 
 interface CreateRateSheetProps {
   open: boolean
@@ -33,6 +34,7 @@ export function CreateRateSheet({
   settings,
   refetchRates,
 }: CreateRateSheetProps) {
+  const { t } = useI18n()
   const baseCurr = initialBaseCurr || settings?.baseCurrency || "USD"
   const createRateMutation = useCreateExchangeRateMutation()
 
@@ -111,30 +113,30 @@ export function CreateRateSheet({
     <FormDrawer
       open={open}
       onOpenChange={onOpenChange}
-      title="Add Exchange Rate"
-      description="Configure a specific daily rate conversion rule to your reporting currency."
-      submitLabel="Add Rate"
+      title={t("finance.exchangeRates.sheet.title")}
+      description={t("finance.exchangeRates.sheet.description")}
+      submitLabel={t("finance.exchangeRates.sheet.submit")}
       isPending={createRateMutation.isPending}
       onSubmit={handleSubmit(onSubmit)}
     >
       <FormSelect
         control={control}
         name="fromCurrency"
-        label="From Currency"
+        label={t("finance.exchangeRates.sheet.fromLabel")}
         items={currencyItems}
       />
 
       <FormSelect
         control={control}
         name="toCurrency"
-        label="To Base Currency"
+        label={t("finance.exchangeRates.sheet.toLabel")}
         items={[{ value: baseCurr, label: baseCurr }]}
         disabled
       />
 
       <div className="space-y-2">
         <Label className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase">
-          Rate Orientation
+          {t("finance.exchangeRates.sheet.orientationLabel")}
         </Label>
         <div className="grid grid-cols-2 gap-2 rounded-xl bg-secondary/40 p-1">
           <button
@@ -146,7 +148,10 @@ export function CreateRateSheet({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            1 {rateFrom} = ? {rateTo} (Direct)
+            {t("finance.exchangeRates.sheet.directOption", {
+              from: rateFrom,
+              to: rateTo,
+            })}
           </button>
           <button
             type="button"
@@ -157,7 +162,10 @@ export function CreateRateSheet({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            1 {rateTo} = ? {rateFrom} (Inverse)
+            {t("finance.exchangeRates.sheet.inverseOption", {
+              from: rateFrom,
+              to: rateTo,
+            })}
           </button>
         </div>
       </div>
@@ -165,8 +173,14 @@ export function CreateRateSheet({
       <FormFieldItem
         label={
           rateDirection === "direct"
-            ? `Rate (Value of 1 ${rateFrom} in ${rateTo})`
-            : `Rate (Value of 1 ${rateTo} in ${rateFrom})`
+            ? t("finance.exchangeRates.sheet.rateDirect", {
+                from: rateFrom,
+                to: rateTo,
+              })
+            : t("finance.exchangeRates.sheet.rateInverse", {
+                from: rateFrom,
+                to: rateTo,
+              })
         }
         error={errors.rateValue?.message}
       >
@@ -176,7 +190,9 @@ export function CreateRateSheet({
           min="0.000001"
           {...register("rateValue")}
           placeholder={
-            rateDirection === "direct" ? "e.g. 1.0900" : "e.g. 58.0000"
+            rateDirection === "direct"
+              ? t("finance.exchangeRates.sheet.placeholderDirect")
+              : t("finance.exchangeRates.sheet.placeholderInverse")
           }
           className="font-mono tabular-nums"
         />
@@ -184,10 +200,10 @@ export function CreateRateSheet({
         {!isNaN(parsedVal) && parsedVal > 0 && (
           <div className="mt-2 space-y-1 rounded-xl border border-border/20 bg-secondary/30 p-3 text-xs text-muted-foreground select-none">
             <div className="font-semibold text-foreground">
-              Live Conversion Preview:
+              {t("finance.exchangeRates.sheet.previewTitle")}
             </div>
             <div>
-              Direct:{" "}
+              {t("finance.exchangeRates.sheet.previewDirect")}{" "}
               <span className="font-mono font-bold text-foreground">
                 1 {rateFrom} ={" "}
                 {rateDirection === "direct"
@@ -197,7 +213,7 @@ export function CreateRateSheet({
               </span>
             </div>
             <div>
-              Inverse:{" "}
+              {t("finance.exchangeRates.sheet.previewInverse")}{" "}
               <span className="font-mono font-bold text-foreground">
                 1 {rateTo} ={" "}
                 {rateDirection === "direct"
@@ -210,7 +226,10 @@ export function CreateRateSheet({
         )}
       </FormFieldItem>
 
-      <FormFieldItem label="Rate Date" error={errors.rateDate?.message}>
+      <FormFieldItem
+        label={t("finance.exchangeRates.sheet.dateLabel")}
+        error={errors.rateDate?.message}
+      >
         <Controller
           control={control}
           name="rateDate"

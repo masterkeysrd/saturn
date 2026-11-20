@@ -18,7 +18,7 @@ import {
   useListRecurringTransactionsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { getScheduledDisplayName } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { formatCents } from "../utils"
 
 interface ScheduledTransactionSelectorProps {
@@ -45,6 +45,7 @@ export function ScheduledTransactionSelector({
 }: ScheduledTransactionSelectorProps) {
   const navigate = useNavigate()
   const tz = useTimezone()
+  const { t } = useI18n()
   const [searchText, setSearchText] = useState("")
 
   // Fetch pending scheduled transactions
@@ -95,10 +96,10 @@ export function ScheduledTransactionSelector({
     <FormDrawer
       open={open}
       onOpenChange={onOpenChange}
-      title="Confirm Scheduled Bill/Income"
-      description="Select a pending scheduled transaction to confirm and record to the ledger."
+      title={t("finance.transactions.scheduled.title")}
+      description={t("finance.transactions.scheduled.description")}
       headerExtra={headerExtra}
-      submitLabel="Select a transaction above"
+      submitLabel={t("finance.transactions.scheduled.submitLabel")}
       disabled
       hideSubmitButton
       onSubmit={(e) => e.preventDefault()}
@@ -112,11 +113,11 @@ export function ScheduledTransactionSelector({
               onClick={onBack}
               className="-ml-2 h-8 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
             >
-              ← Back to types
+              ← {t("finance.transactions.scheduled.backToTypes")}
             </Button>
           ) : (
             <span className="text-xs font-medium text-muted-foreground">
-              Pending scheduled items
+              {t("finance.transactions.scheduled.pendingItems")}
             </span>
           )}
 
@@ -129,7 +130,7 @@ export function ScheduledTransactionSelector({
             }}
             className="h-8 cursor-pointer px-0 text-xs font-medium text-primary hover:underline"
           >
-            Manage Templates
+            {t("finance.transactions.scheduled.manageTemplates")}
           </Button>
         </div>
 
@@ -137,7 +138,7 @@ export function ScheduledTransactionSelector({
         <div className="relative">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search scheduled items..."
+            placeholder={t("finance.transactions.scheduled.searchPlaceholder")}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             className="h-10 rounded-xl border-border/60 bg-background/40 pr-4 pl-9 text-xs focus-visible:ring-primary"
@@ -150,11 +151,10 @@ export function ScheduledTransactionSelector({
             <div className="py-12 text-center">
               <CalendarClock className="mx-auto h-12 w-12 text-muted-foreground/20" />
               <p className="mt-2 text-xs font-semibold text-muted-foreground">
-                No pending scheduled items found.
+                {t("finance.transactions.scheduled.noPendingTitle")}
               </p>
               <p className="mx-auto mt-1 max-w-xs text-[11px] text-muted-foreground/80">
-                Create recurring templates or schedule upcoming SaaS
-                subscriptions in the Calendar tab.
+                {t("finance.transactions.scheduled.noPendingDescription")}
               </p>
             </div>
           ) : (
@@ -168,7 +168,7 @@ export function ScheduledTransactionSelector({
                     month: "short",
                     day: "numeric",
                   })
-                : "N/A"
+                : t("finance.transactions.scheduled.notAvailable")
 
               return (
                 <button
@@ -196,7 +196,11 @@ export function ScheduledTransactionSelector({
                         {name}
                       </h4>
                       <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                        <span>Due {dateStr}</span>
+                        <span>
+                          {t("finance.transactions.scheduled.dueOn", {
+                            date: dateStr,
+                          })}
+                        </span>
                         {isExpense && budgetName && (
                           <>
                             <span>•</span>

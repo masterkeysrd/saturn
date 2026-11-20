@@ -5,7 +5,7 @@ import {
   useGetSettingsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useActiveSpaceContext } from "@/features/space/use-space"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { Loader2, Calendar, FileText, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatCents } from "../utils"
@@ -23,6 +23,7 @@ export function RecurringTransactionHistorySheet({
 }: RecurringTransactionHistorySheetProps) {
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { data: settings } = useGetSettingsQuery(
     {},
     { enabled: open && !!spaceId }
@@ -49,15 +50,10 @@ export function RecurringTransactionHistorySheet({
       open={open}
       onOpenChange={onOpenChange}
       icon={<FileText className="size-4" />}
-      title="Transaction History"
-      description={
-        <>
-          Past cleared instances for{" "}
-          <span className="font-medium text-foreground">
-            {transaction?.name || ""}
-          </span>
-        </>
-      }
+      title={t("finance.recurring.history.title")}
+      description={t("finance.recurring.history.description", {
+        name: transaction?.name || "",
+      })}
     >
       {isLoading ? (
         <div className="flex h-[250px] items-center justify-center">
@@ -67,11 +63,10 @@ export function RecurringTransactionHistorySheet({
         <div className="flex h-[200px] flex-col items-center justify-center p-4 text-center">
           <Calendar className="mb-3 h-9 w-9 text-muted-foreground/30" />
           <p className="text-xs font-semibold text-muted-foreground">
-            No transaction history found
+            {t("finance.recurring.history.emptyTitle")}
           </p>
           <p className="mt-1 max-w-[250px] text-xs text-muted-foreground/80">
-            Historical transaction logs will appear here once upcoming schedules
-            generated from this template are confirmed.
+            {t("finance.recurring.history.emptyDescription")}
           </p>
         </div>
       ) : (
@@ -96,7 +91,7 @@ export function RecurringTransactionHistorySheet({
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <span className="block text-[11px] font-medium text-muted-foreground">
-                      Cleared Date
+                      {t("finance.recurring.history.clearedDate")}
                     </span>
                     <span className="text-xs font-semibold text-foreground">
                       {tz.formatDate(txn.transactionDate, {
@@ -139,11 +134,11 @@ export function RecurringTransactionHistorySheet({
                   </span>
                   {isLate ? (
                     <span className="rounded-md bg-rose-500/10 px-2 py-0.5 text-[11px] font-medium text-rose-500">
-                      Late
+                      {t("finance.recurring.lateBadge")}
                     </span>
                   ) : (
                     <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-500">
-                      On Time
+                      {t("finance.recurring.onTimeBadge")}
                     </span>
                   )}
                 </div>

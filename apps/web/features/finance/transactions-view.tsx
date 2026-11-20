@@ -9,6 +9,7 @@ import {
   useTimezone,
 } from "@saturn/hooks"
 import { useRegisterCopilotView } from "@saturn/hooks/ai"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import {
   buildCopilotEntityKey,
   convertCentsToBase,
@@ -121,14 +122,6 @@ const TRANSACTIONS_FILTER_DEFAULTS = {
 
 type FacetDimension = "type" | "account" | "budget"
 
-const TYPE_OPTIONS: { value: Transaction_Type; label: string }[] = [
-  { value: "EXPENSE", label: "Expense" },
-  { value: "INCOME", label: "Income" },
-  { value: "TRANSFER_OUT", label: "Transfer Out" },
-  { value: "TRANSFER_IN", label: "Transfer In" },
-  { value: "BALANCE_ADJUSTMENT", label: "Balance Adjustment" },
-]
-
 function toYmdInTimezone(
   date: Date | string | number | null | undefined,
   timeZone: string
@@ -136,46 +129,6 @@ function toYmdInTimezone(
   const parts = getTimezoneParts(date, timeZone)
   if (!parts) return ""
   return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`
-}
-
-function getTypeLabel(type: string): string {
-  switch (type) {
-    case "EXPENSE":
-      return "Expense"
-    case "INCOME":
-      return "Income"
-    case "TRANSFER_OUT":
-      return "Transfer Out"
-    case "TRANSFER_IN":
-      return "Transfer In"
-    case "BALANCE_ADJUSTMENT":
-      return "Balance Adjustment"
-    case "TYPE_UNSPECIFIED":
-      return "All Types"
-    default:
-      return type.replaceAll("_", " ")
-  }
-}
-
-function getSortLabel(sort: string): string {
-  switch (sort) {
-    case "transaction_date:asc":
-      return "Oldest"
-    case "amount:desc":
-      return "Highest"
-    case "amount:asc":
-      return "Lowest"
-    case "effective_date:desc":
-      return "Effective: Newest"
-    case "effective_date:asc":
-      return "Effective: Oldest"
-    case "description:asc":
-      return "Description: A-Z"
-    case "description:desc":
-      return "Description: Z-A"
-    default:
-      return "Newest"
-  }
 }
 
 function FacetValueCommand({
@@ -199,21 +152,35 @@ function FacetValueCommand({
   onSelectAccount: (value: string) => void
   onSelectBudget: (value: string) => void
 }) {
+  const { t, language } = useI18n()
   const placeholder =
     dimension === "type"
-      ? "Search type…"
+      ? t("finance.transactions.searchType")
       : dimension === "account"
-        ? "Search account…"
-        : "Search budget…"
+        ? t("finance.transactions.searchAccount")
+        : t("finance.transactions.searchBudget")
+
+  const typeOptions: { value: Transaction_Type; label: string }[] = (
+    [
+      "EXPENSE",
+      "INCOME",
+      "TRANSFER_OUT",
+      "TRANSFER_IN",
+      "BALANCE_ADJUSTMENT",
+    ] as Transaction_Type[]
+  ).map((value) => ({
+    value,
+    label: getLocalizedEnumLabel("finance", "transactionType", value, language),
+  }))
 
   return (
     <Command>
       <CommandInput placeholder={placeholder} />
       <CommandList>
-        <CommandEmpty>No matches found.</CommandEmpty>
+        <CommandEmpty>{t("finance.transactions.noMatches")}</CommandEmpty>
         <CommandGroup>
           {dimension === "type" &&
-            TYPE_OPTIONS.map((opt) => {
+            typeOptions.map((opt) => {
               const checked = selectedType === opt.value
               return (
                 <CommandItem
@@ -277,6 +244,34 @@ export function TransactionsView() {
   const tz = useTimezone()
   const { t, language } = useI18n()
   const navigate = useNavigate()
+
+  const getTypeLabel = (type: string): string => {
+    if (type === "TYPE_UNSPECIFIED") {
+      return t("finance.transactions.type.allTypes")
+    }
+    return getLocalizedEnumLabel("finance", "transactionType", type, language)
+  }
+
+  const getSortLabel = (sort: string): string => {
+    switch (sort) {
+      case "transaction_date:asc":
+        return t("finance.transactions.sort.oldest")
+      case "amount:desc":
+        return t("finance.transactions.sort.highest")
+      case "amount:asc":
+        return t("finance.transactions.sort.lowest")
+      case "effective_date:desc":
+        return t("finance.transactions.sort.effectiveNewest")
+      case "effective_date:asc":
+        return t("finance.transactions.sort.effectiveOldest")
+      case "description:asc":
+        return t("finance.transactions.sort.descAZ")
+      case "description:desc":
+        return t("finance.transactions.sort.descZA")
+      default:
+        return t("finance.transactions.sort.newest")
+    }
+  }
   const [searchParams] = useSearchParams()
 
   const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
@@ -396,14 +391,16 @@ export function TransactionsView() {
 
   useRegisterCopilotView({
     viewId: "finance.transactions",
-    title: "Transactions",
+    title: t("finance.transactions.copilotTitle"),
     activeEntity:
       inspectorOpen && selectedTransaction?.id
         ? {
             key: buildCopilotEntityKey("transaction", selectedTransaction.id),
             kind: "transaction",
             id: selectedTransaction.id,
-            label: selectedTransaction.description || "Transaction",
+            label:
+              selectedTransaction.description ||
+              t("finance.transactions.transaction"),
             summary: {
               amount: Number(selectedTransaction.amount || 0),
               currency: selectedTransaction.currency,
@@ -413,9 +410,9 @@ export function TransactionsView() {
           }
         : undefined,
     suggestions: [
-      "Summarize my spending trends in these transactions",
-      "Find any unusual or duplicate charges",
-      "Which categories account for most of my expenses?",
+      t("finance.transactions.suggestion.spendingTrends"),
+      t("finance.transactions.suggestion.unusualCharges"),
+      t("finance.transactions.suggestion.categories"),
     ],
   })
 
@@ -469,9 +466,8 @@ export function TransactionsView() {
       })
       toast.add({
         type: "success",
-        title: "Transaction Deleted",
-        description:
-          "The transaction has been removed and budget capacity restored.",
+        title: t("finance.transactions.deletedSuccessTitle"),
+        description: t("finance.transactions.deletedSuccessDescription"),
       })
       if (selectedTransaction?.id === deleteTargetId) {
         setInspectorOpen(false)
@@ -484,9 +480,11 @@ export function TransactionsView() {
     } catch (err) {
       toast.add({
         type: "error",
-        title: "Delete Failed",
+        title: t("finance.transactions.deleteFailedTitle"),
         description:
-          err instanceof Error ? err.message : "Failed to delete transaction.",
+          err instanceof Error
+            ? err.message
+            : t("finance.transactions.deleteFailedDescription"),
       })
     }
   }
@@ -500,7 +498,7 @@ export function TransactionsView() {
           color: b.color || "indigo",
         }
       : {
-          name: "General",
+          name: t("finance.transactions.general"),
           icon: "coins",
           color: "indigo",
         }
@@ -521,19 +519,19 @@ export function TransactionsView() {
     }[] = []
     const groupMap = new Map<string, (typeof groups)[number]>()
 
-    for (const t of transactions) {
-      const rawDate = t.transactionDate || t.effectiveDate
+    for (const txn of transactions) {
+      const rawDate = txn.transactionDate || txn.effectiveDate
       const ymd = rawDate ? toYmdInTimezone(rawDate, tz.timezone) : "unknown"
       const key = ymd || "unknown"
 
       let group = groupMap.get(key)
       if (!group) {
-        let title = "Undated"
+        let title = t("finance.transactions.undated")
         if (rawDate && key !== "unknown") {
           if (tz.isToday(rawDate)) {
-            title = "Today"
+            title = t("common.today")
           } else if (tz.isYesterday(rawDate)) {
-            title = "Yesterday"
+            title = t("common.yesterday")
           } else {
             title = tz.format(rawDate, {
               weekday: "short",
@@ -548,21 +546,21 @@ export function TransactionsView() {
         groups.push(group)
       }
 
-      group.items.push(t)
+      group.items.push(txn)
 
       const baseCents =
-        t.amountInBase !== undefined && t.amountInBase !== ""
-          ? Number(t.amountInBase)
+        txn.amountInBase !== undefined && txn.amountInBase !== ""
+          ? Number(txn.amountInBase)
           : convertCentsToBase(
-              t.amount,
-              t.currency,
+              txn.amount,
+              txn.currency,
               baseCurrency,
               exchangeRates
             )
 
-      if (t.type === "INCOME" || t.type === "TRANSFER_IN") {
+      if (txn.type === "INCOME" || txn.type === "TRANSFER_IN") {
         group.dailyNetBaseCents += Math.abs(baseCents)
-      } else if (t.type === "EXPENSE" || t.type === "TRANSFER_OUT") {
+      } else if (txn.type === "EXPENSE" || txn.type === "TRANSFER_OUT") {
         group.dailyNetBaseCents -= Math.abs(baseCents)
       } else {
         group.dailyNetBaseCents += baseCents
@@ -570,7 +568,7 @@ export function TransactionsView() {
     }
 
     return groups
-  }, [transactions, tz, baseCurrency, exchangeRates])
+  }, [transactions, tz, baseCurrency, exchangeRates, t])
 
   // Calculate KPI stats from visible (filtered) transactions
   const expenseTransactions = transactions.filter((t) => t.type === "EXPENSE")
@@ -660,8 +658,8 @@ export function TransactionsView() {
     <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
       <div className="min-w-0 flex-1">
         <FinancePageLayout
-          title="Transactions"
-          description="View your ledger history, check exchange conversions, and manage expenses."
+          title={t("finance.transactions.title")}
+          description={t("finance.transactions.description")}
           icon={Receipt}
           actions={
             <div className="flex flex-wrap items-center gap-2">
@@ -676,7 +674,11 @@ export function TransactionsView() {
                   className="h-10 cursor-pointer gap-2 rounded-lg"
                 >
                   <Inbox className="size-4 text-primary" />
-                  <span>{pendingCount} staged for review</span>
+                  <span>
+                    {t("finance.transactions.stagedForReview", {
+                      count: pendingCount,
+                    })}
+                  </span>
                 </Button>
               )}
               {isWritable && (
@@ -685,7 +687,7 @@ export function TransactionsView() {
                   className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 font-medium sm:w-auto"
                 >
                   <Plus className="h-4 w-4" />
-                  Record Transaction
+                  {t("finance.transactions.recordTransaction")}
                 </Button>
               )}
             </div>
@@ -700,7 +702,7 @@ export function TransactionsView() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Total Inflow
+                    {t("finance.transactions.totalInflow")}
                   </p>
                   <MoneyAmount
                     cents={totalInflowCents}
@@ -717,7 +719,7 @@ export function TransactionsView() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Total Outflow
+                    {t("finance.transactions.totalOutflow")}
                   </p>
                   <MoneyAmount
                     cents={totalOutflowCents}
@@ -734,7 +736,7 @@ export function TransactionsView() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Avg. per Expense
+                    {t("finance.transactions.avgPerExpense")}
                   </p>
                   <MoneyAmount
                     cents={avgSpentCents}
@@ -751,7 +753,7 @@ export function TransactionsView() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Transactions
+                    {t("finance.transactions.transactions")}
                   </p>
                   <span className="mt-0.5 block font-mono text-lg font-semibold text-foreground tabular-nums">
                     {txCount}
@@ -769,16 +771,16 @@ export function TransactionsView() {
                     <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       type="text"
-                      aria-label="Search transactions"
+                      aria-label={t("finance.transactions.searchAria")}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search description…"
+                      placeholder={t("finance.transactions.searchPlaceholder")}
                       className="h-9 rounded-lg border-border bg-control pr-8 pl-8.5 text-xs shadow-2xs"
                     />
                     {searchQuery && (
                       <button
                         type="button"
-                        aria-label="Clear search"
+                        aria-label={t("finance.transactions.clearSearchAria")}
                         onClick={() => {
                           setSearchQuery("")
                           setUrlState({ q: "" })
@@ -802,14 +804,14 @@ export function TransactionsView() {
                   >
                     <PopoverTrigger
                       type="button"
-                      aria-label="Filter transactions"
+                      aria-label={t("finance.transactions.filterAria")}
                       className={cn(
                         buttonVariants({ variant: "outline", size: "sm" }),
                         "h-9 cursor-pointer gap-1.5 rounded-lg border-border bg-control px-3 text-xs font-medium shadow-2xs"
                       )}
                     >
                       <ListFilter className="size-3.5" />
-                      <span>Filter</span>
+                      <span>{t("finance.transactions.filter")}</span>
                       {activeAttributeFilterCount > 0 && (
                         <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 font-mono text-[10px] font-semibold text-primary tabular-nums">
                           {activeAttributeFilterCount}
@@ -828,7 +830,9 @@ export function TransactionsView() {
                                 onSelect={() => setFilterStep("type")}
                               >
                                 <Tag className="size-3.5 text-muted-foreground" />
-                                <span>Type</span>
+                                <span>
+                                  {t("finance.transactions.facetType")}
+                                </span>
                                 {hasTypeFilter && (
                                   <span className="ml-auto truncate text-xs text-muted-foreground">
                                     {getTypeLabel(urlState.type)}
@@ -840,7 +844,9 @@ export function TransactionsView() {
                                 onSelect={() => setFilterStep("account")}
                               >
                                 <Wallet className="size-3.5 text-muted-foreground" />
-                                <span>Account</span>
+                                <span>
+                                  {t("finance.transactions.facetAccount")}
+                                </span>
                                 {hasAccountFilter && (
                                   <span className="ml-auto max-w-[90px] truncate text-xs text-muted-foreground">
                                     {accounts.find(
@@ -854,7 +860,9 @@ export function TransactionsView() {
                                 onSelect={() => setFilterStep("budget")}
                               >
                                 <PiggyBank className="size-3.5 text-muted-foreground" />
-                                <span>Budget</span>
+                                <span>
+                                  {t("finance.transactions.facetBudget")}
+                                </span>
                                 {hasBudgetFilter && (
                                   <span className="ml-auto max-w-[90px] truncate text-xs text-muted-foreground">
                                     {budgets.find(
@@ -872,14 +880,20 @@ export function TransactionsView() {
                           <div className="flex items-center gap-1.5 border-b border-border/60 px-2.5 py-2">
                             <button
                               type="button"
-                              aria-label="Back to filter dimensions"
+                              aria-label={t(
+                                "finance.transactions.backToDimensions"
+                              )}
                               onClick={() => setFilterStep(null)}
                               className="flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                             >
                               <ArrowLeft className="size-3.5" />
                             </button>
                             <span className="text-xs font-semibold text-foreground capitalize">
-                              {filterStep}
+                              {filterStep === "type"
+                                ? t("finance.transactions.facetType")
+                                : filterStep === "account"
+                                  ? t("finance.transactions.facetAccount")
+                                  : t("finance.transactions.facetBudget")}
                             </span>
                           </div>
                           <FacetValueCommand
@@ -930,21 +944,29 @@ export function TransactionsView() {
                     }
                   >
                     <SelectTrigger
-                      aria-label="Sort transactions"
+                      aria-label={t("finance.transactions.sortAria")}
                       className="h-9 w-auto min-w-[116px] gap-1.5 rounded-lg border-border bg-control px-3 text-xs font-medium shadow-2xs"
                     >
                       <ArrowUpDown className="size-3.5 shrink-0 text-muted-foreground" />
-                      <SelectValue placeholder="Newest">
+                      <SelectValue
+                        placeholder={t("finance.transactions.sort.newest")}
+                      >
                         {getSortLabel(urlState.sort)}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border border-border bg-popover p-1 shadow-xl">
-                      <SelectItem value="_default">Newest</SelectItem>
-                      <SelectItem value="transaction_date:asc">
-                        Oldest
+                      <SelectItem value="_default">
+                        {t("finance.transactions.sort.newest")}
                       </SelectItem>
-                      <SelectItem value="amount:desc">Highest</SelectItem>
-                      <SelectItem value="amount:asc">Lowest</SelectItem>
+                      <SelectItem value="transaction_date:asc">
+                        {t("finance.transactions.sort.oldest")}
+                      </SelectItem>
+                      <SelectItem value="amount:desc">
+                        {t("finance.transactions.sort.highest")}
+                      </SelectItem>
+                      <SelectItem value="amount:asc">
+                        {t("finance.transactions.sort.lowest")}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -963,7 +985,9 @@ export function TransactionsView() {
                           type="button"
                           className="flex h-full cursor-pointer items-center gap-1 px-2 text-foreground transition-colors hover:bg-muted/50"
                         >
-                          <span className="text-muted-foreground">Type:</span>
+                          <span className="text-muted-foreground">
+                            {t("finance.transactions.typeLabel")}
+                          </span>
                           <span className="font-medium">
                             {getTypeLabel(urlState.type)}
                           </span>
@@ -990,7 +1014,7 @@ export function TransactionsView() {
                       </Popover>
                       <button
                         type="button"
-                        aria-label="Remove type filter"
+                        aria-label={t("finance.transactions.removeTypeFilter")}
                         onClick={() =>
                           setUrlState({ type: "TYPE_UNSPECIFIED" })
                         }
@@ -1014,7 +1038,7 @@ export function TransactionsView() {
                           className="flex h-full cursor-pointer items-center gap-1 px-2 text-foreground transition-colors hover:bg-muted/50"
                         >
                           <span className="text-muted-foreground">
-                            Account:
+                            {t("finance.transactions.accountLabel")}
                           </span>
                           <span className="font-medium">
                             {accounts.find((a) => a.id === urlState.accountId)
@@ -1043,7 +1067,9 @@ export function TransactionsView() {
                       </Popover>
                       <button
                         type="button"
-                        aria-label="Remove account filter"
+                        aria-label={t(
+                          "finance.transactions.removeAccountFilter"
+                        )}
                         onClick={() => setUrlState({ accountId: "_all" })}
                         className="flex h-full cursor-pointer items-center border-l border-border px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                       >
@@ -1064,7 +1090,9 @@ export function TransactionsView() {
                           type="button"
                           className="flex h-full cursor-pointer items-center gap-1 px-2 text-foreground transition-colors hover:bg-muted/50"
                         >
-                          <span className="text-muted-foreground">Budget:</span>
+                          <span className="text-muted-foreground">
+                            {t("finance.transactions.budgetLabel")}
+                          </span>
                           <span className="font-medium">
                             {budgets.find((b) => b.id === urlState.budgetId)
                               ?.name || urlState.budgetId}
@@ -1092,7 +1120,9 @@ export function TransactionsView() {
                       </Popover>
                       <button
                         type="button"
-                        aria-label="Remove budget filter"
+                        aria-label={t(
+                          "finance.transactions.removeBudgetFilter"
+                        )}
                         onClick={() => setUrlState({ budgetId: "_all" })}
                         className="flex h-full cursor-pointer items-center border-l border-border px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                       >
@@ -1104,14 +1134,18 @@ export function TransactionsView() {
                   {hasTransferFilter && (
                     <div className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border bg-card text-xs">
                       <span className="flex h-full items-center gap-1 px-2 text-foreground">
-                        <span className="text-muted-foreground">Transfer:</span>
+                        <span className="text-muted-foreground">
+                          {t("finance.transactions.transferLabel")}
+                        </span>
                         <span className="font-mono font-medium">
                           {urlState.transferId}
                         </span>
                       </span>
                       <button
                         type="button"
-                        aria-label="Remove transfer filter"
+                        aria-label={t(
+                          "finance.transactions.removeTransferFilter"
+                        )}
                         onClick={() => setUrlState({ transferId: "" })}
                         className="flex h-full cursor-pointer items-center border-l border-border px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                       >
@@ -1124,7 +1158,7 @@ export function TransactionsView() {
                     <div className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border bg-card text-xs">
                       <span className="flex h-full items-center gap-1 px-2 text-foreground">
                         <span className="text-muted-foreground">
-                          Scheduled:
+                          {t("finance.transactions.scheduledLabel")}
                         </span>
                         <span className="font-mono font-medium">
                           {urlState.scheduledTransactionId}
@@ -1132,7 +1166,9 @@ export function TransactionsView() {
                       </span>
                       <button
                         type="button"
-                        aria-label="Remove scheduled transaction filter"
+                        aria-label={t(
+                          "finance.transactions.removeScheduledFilter"
+                        )}
                         onClick={() =>
                           setUrlState({ scheduledTransactionId: "" })
                         }
@@ -1147,7 +1183,7 @@ export function TransactionsView() {
                     <div className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border bg-card text-xs">
                       <span className="flex h-full items-center gap-1 px-2 text-foreground">
                         <span className="text-muted-foreground">
-                          Borrowing:
+                          {t("finance.transactions.borrowingLabel")}
                         </span>
                         <span className="font-mono font-medium">
                           {urlState.borrowingId}
@@ -1155,7 +1191,9 @@ export function TransactionsView() {
                       </span>
                       <button
                         type="button"
-                        aria-label="Remove borrowing filter"
+                        aria-label={t(
+                          "finance.transactions.removeBorrowingFilter"
+                        )}
                         onClick={() => setUrlState({ borrowingId: "" })}
                         className="flex h-full cursor-pointer items-center border-l border-border px-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                       >
@@ -1171,7 +1209,7 @@ export function TransactionsView() {
                     onClick={handleClearAttributeFilters}
                     className="h-7 cursor-pointer px-2 text-xs text-muted-foreground hover:text-foreground"
                   >
-                    Reset
+                    {t("finance.transactions.reset")}
                   </Button>
                 </div>
               )}
@@ -1189,16 +1227,12 @@ export function TransactionsView() {
                 </div>
                 <h4 className="text-sm font-semibold text-foreground">
                   {hasActiveFilters
-                    ? language === "es"
-                      ? "Sin transacciones coincidentes"
-                      : "No matching transactions"
+                    ? t("finance.transactions.noMatchingTitle")
                     : t("empty.transactionsTitle")}
                 </h4>
                 <p className="mt-1 max-w-xs px-4 text-xs leading-relaxed text-muted-foreground">
                   {hasActiveFilters
-                    ? language === "es"
-                      ? "Intenta ajustar o restablecer tus criterios de búsqueda y filtros."
-                      : "Try adjusting or resetting your active search and filter criteria."
+                    ? t("finance.transactions.noMatchingDescription")
                     : t("empty.transactionsDescription")}
                 </p>
                 {hasActiveFilters && (
@@ -1209,7 +1243,7 @@ export function TransactionsView() {
                     onClick={handleResetFilters}
                     className="mt-4 cursor-pointer"
                   >
-                    Reset filters
+                    {t("finance.transactions.resetFilters")}
                   </Button>
                 )}
               </div>
@@ -1232,7 +1266,7 @@ export function TransactionsView() {
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span>Net</span>
+                        <span>{t("finance.transactions.net")}</span>
                         <MoneyAmount
                           cents={group.dailyNetBaseCents}
                           currency={baseCurrency}
@@ -1245,48 +1279,51 @@ export function TransactionsView() {
 
                     {/* Grouped Ledger Rows */}
                     <div className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border bg-card shadow-2xs">
-                      {group.items.map((t) => {
-                        const amtLocalCents = Number(t.amount || 0)
+                      {group.items.map((txn) => {
+                        const amtLocalCents = Number(txn.amount || 0)
                         const amtBaseCents =
-                          t.amountInBase !== undefined && t.amountInBase !== ""
-                            ? Number(t.amountInBase)
+                          txn.amountInBase !== undefined &&
+                          txn.amountInBase !== ""
+                            ? Number(txn.amountInBase)
                             : convertCentsToBase(
-                                t.amount,
-                                t.currency,
+                                txn.amount,
+                                txn.currency,
                                 baseCurrency,
                                 exchangeRates
                               )
                         const signedLocalCents =
-                          t.type === "EXPENSE" || t.type === "TRANSFER_OUT"
+                          txn.type === "EXPENSE" || txn.type === "TRANSFER_OUT"
                             ? -Math.abs(amtLocalCents)
-                            : t.type === "INCOME" || t.type === "TRANSFER_IN"
+                            : txn.type === "INCOME" ||
+                                txn.type === "TRANSFER_IN"
                               ? Math.abs(amtLocalCents)
                               : amtLocalCents
                         const signedBaseCents =
-                          t.type === "EXPENSE" || t.type === "TRANSFER_OUT"
+                          txn.type === "EXPENSE" || txn.type === "TRANSFER_OUT"
                             ? -Math.abs(amtBaseCents)
-                            : t.type === "INCOME" || t.type === "TRANSFER_IN"
+                            : txn.type === "INCOME" ||
+                                txn.type === "TRANSFER_IN"
                               ? Math.abs(amtBaseCents)
                               : amtBaseCents
 
-                        const isCrossCurrency = t.currency !== baseCurrency
-                        const details = getBudgetDetails(t.budgetId)
+                        const isCrossCurrency = txn.currency !== baseCurrency
+                        const details = getBudgetDetails(txn.budgetId)
                         const colors = getBudgetColors(details.color)
                         const iconComp = getBudgetIcon(details.icon)
-                        const acc = accounts.find((a) => a.id === t.accountId)
+                        const acc = accounts.find((a) => a.id === txn.accountId)
                         const isSelected =
-                          inspectorOpen && selectedTransaction?.id === t.id
+                          inspectorOpen && selectedTransaction?.id === txn.id
 
                         return (
                           <div
-                            key={t.id}
+                            key={txn.id}
                             role="button"
                             tabIndex={0}
-                            onClick={() => handleInspectTransaction(t)}
+                            onClick={() => handleInspectTransaction(txn)}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault()
-                                handleInspectTransaction(t)
+                                handleInspectTransaction(txn)
                               }
                             }}
                             className={cn(
@@ -1300,18 +1337,18 @@ export function TransactionsView() {
                               <div
                                 className={cn(
                                   "flex size-9 shrink-0 items-center justify-center rounded-lg border",
-                                  t.type === "INCOME"
+                                  txn.type === "INCOME"
                                     ? "border-success/20 bg-success/10 text-success"
-                                    : t.type === "TRANSFER_IN" ||
-                                        t.type === "TRANSFER_OUT"
+                                    : txn.type === "TRANSFER_IN" ||
+                                        txn.type === "TRANSFER_OUT"
                                       ? "border-info/20 bg-info/10 text-info"
                                       : `${colors.bg} ${colors.text} ${colors.border}`
                                 )}
                               >
-                                {t.type === "INCOME" ? (
+                                {txn.type === "INCOME" ? (
                                   <ArrowUpRight className="size-4" />
-                                ) : t.type === "TRANSFER_IN" ||
-                                  t.type === "TRANSFER_OUT" ? (
+                                ) : txn.type === "TRANSFER_IN" ||
+                                  txn.type === "TRANSFER_OUT" ? (
                                   <ArrowRightLeft className="size-4" />
                                 ) : (
                                   createElement(iconComp, {
@@ -1323,38 +1360,40 @@ export function TransactionsView() {
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <span className="truncate text-sm font-medium text-foreground">
-                                    {t.description || (
+                                    {txn.description || (
                                       <span className="text-muted-foreground italic">
-                                        No description
+                                        {t(
+                                          "finance.transactions.noDescription"
+                                        )}
                                       </span>
                                     )}
                                   </span>
 
                                   {Boolean(
-                                    t.metadata?.recurring_transaction_id
+                                    txn.metadata?.recurring_transaction_id
                                   ) && (
                                     <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                                       <Repeat className="size-3 text-primary" />
-                                      Recurring
+                                      {t("finance.transactions.recurring")}
                                     </span>
                                   )}
 
-                                  {Boolean(t.metadata?.transfer_id) && (
+                                  {Boolean(txn.metadata?.transfer_id) && (
                                     <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                                       <ArrowRightLeft className="size-3 text-info" />
-                                      Transfer
+                                      {t("finance.transactions.transfer")}
                                     </span>
                                   )}
 
-                                  {Boolean(t.metadata?.borrowing_id) && (
+                                  {Boolean(txn.metadata?.borrowing_id) && (
                                     <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                                       <Coins className="size-3 text-warning" />
-                                      {t.metadata?.borrowing_role ===
+                                      {txn.metadata?.borrowing_role ===
                                       "REPAYMENT"
-                                        ? "Repayment"
-                                        : t.type === "EXPENSE"
-                                          ? "Lend"
-                                          : "Borrow"}
+                                        ? t("finance.transactions.repayment")
+                                        : txn.type === "EXPENSE"
+                                          ? t("finance.transactions.lend")
+                                          : t("finance.transactions.borrow")}
                                     </span>
                                   )}
                                 </div>
@@ -1365,7 +1404,7 @@ export function TransactionsView() {
                                       {acc.name}
                                     </span>
                                   )}
-                                  {t.budgetId && (
+                                  {txn.budgetId && (
                                     <span
                                       className={cn(
                                         "inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium",
@@ -1377,7 +1416,7 @@ export function TransactionsView() {
                                     </span>
                                   )}
                                   <span className="text-[11px] text-muted-foreground">
-                                    {getTypeLabel(t.type)}
+                                    {getTypeLabel(txn.type)}
                                   </span>
                                 </div>
                               </div>
@@ -1388,22 +1427,24 @@ export function TransactionsView() {
                               className="flex shrink-0 items-center gap-2"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              {t.id && (
+                              {txn.id && (
                                 <div className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                                   <CopilotAttachButton
                                     item={{
                                       key: buildCopilotEntityKey(
                                         "transaction",
-                                        t.id
+                                        txn.id
                                       ),
                                       kind: "transaction",
-                                      id: t.id,
-                                      label: t.description || "Transaction",
+                                      id: txn.id,
+                                      label:
+                                        txn.description ||
+                                        t("finance.transactions.transaction"),
                                       summary: {
-                                        amount: Number(t.amount || 0),
-                                        currency: t.currency,
-                                        type: t.type,
-                                        transactionDate: t.transactionDate,
+                                        amount: Number(txn.amount || 0),
+                                        currency: txn.currency,
+                                        type: txn.type,
+                                        transactionDate: txn.transactionDate,
                                       },
                                     }}
                                   />
@@ -1413,9 +1454,9 @@ export function TransactionsView() {
                               <div className="min-w-0 text-right">
                                 <MoneyAmount
                                   cents={signedLocalCents}
-                                  currency={t.currency}
+                                  currency={txn.currency}
                                   showSign
-                                  colored={t.type === "INCOME"}
+                                  colored={txn.type === "INCOME"}
                                   size="md"
                                   className="block font-medium"
                                 />
@@ -1436,7 +1477,9 @@ export function TransactionsView() {
                                     <Button
                                       variant="ghost"
                                       size="icon-sm"
-                                      aria-label="Transaction actions"
+                                      aria-label={t(
+                                        "finance.transactions.actionsAria"
+                                      )}
                                       className="cursor-pointer text-muted-foreground hover:text-foreground"
                                     >
                                       <MoreVertical className="size-4" />
@@ -1448,34 +1491,38 @@ export function TransactionsView() {
                                   className="w-40 rounded-xl border border-border bg-popover p-1 shadow-xl"
                                 >
                                   <DropdownMenuItem
-                                    onClick={() => handleInspectTransaction(t)}
+                                    onClick={() =>
+                                      handleInspectTransaction(txn)
+                                    }
                                     className="flex cursor-pointer items-center gap-2"
                                   >
                                     <History className="size-4" />
-                                    <span>View History</span>
+                                    <span>
+                                      {t("finance.transactions.viewHistory")}
+                                    </span>
                                   </DropdownMenuItem>
                                   {isWritable &&
-                                    t.type !== "BALANCE_ADJUSTMENT" &&
-                                    t.type !== "TYPE_UNSPECIFIED" &&
-                                    (t.metadata?.source_type ??
-                                      t.metadata?.sourceType) !==
+                                    txn.type !== "BALANCE_ADJUSTMENT" &&
+                                    txn.type !== "TYPE_UNSPECIFIED" &&
+                                    (txn.metadata?.source_type ??
+                                      txn.metadata?.sourceType) !==
                                       "SYSTEM_BALANCE_ADJUSTMENT" && (
                                       <DropdownMenuItem
-                                        onClick={() => handleEditTrigger(t)}
+                                        onClick={() => handleEditTrigger(txn)}
                                         className="flex cursor-pointer items-center gap-2"
                                       >
                                         <Edit2 className="size-4" />
-                                        <span>Edit</span>
+                                        <span>{t("common.edit")}</span>
                                       </DropdownMenuItem>
                                     )}
                                   {isWritable && (
                                     <DropdownMenuItem
-                                      onClick={() => handleDelete(t.id || "")}
+                                      onClick={() => handleDelete(txn.id || "")}
                                       disabled={deleteMutation.isPending}
                                       className="flex cursor-pointer items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
                                     >
                                       <Trash2 className="size-4" />
-                                      <span>Delete</span>
+                                      <span>{t("common.delete")}</span>
                                     </DropdownMenuItem>
                                   )}
                                 </DropdownMenuContent>
@@ -1508,15 +1555,16 @@ export function TransactionsView() {
             >
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {t("finance.transactions.deleteTitle")}
+                  </AlertDialogTitle>
                   <AlertDialogDescription>
-                    Are you sure you want to delete this transaction? This will
-                    restore the budget limit capacity.
+                    {t("finance.transactions.deleteDescription")}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel disabled={deleteMutation.isPending}>
-                    Cancel
+                    {t("common.cancel")}
                   </AlertDialogCancel>
                   <AlertDialogAction
                     variant="destructive"
@@ -1524,8 +1572,8 @@ export function TransactionsView() {
                     onClick={handleConfirmDelete}
                   >
                     {deleteMutation.isPending
-                      ? "Deleting..."
-                      : "Delete Transaction"}
+                      ? t("finance.transactions.deleting")
+                      : t("finance.transactions.deleteConfirm")}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

@@ -8,7 +8,8 @@ import {
   useGetSettingsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useActiveSpaceContext } from "@/features/space/use-space"
-import { useTimezone } from "@saturn/hooks"
+import { useTimezone, useI18n } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import {
   Loader2,
   Calendar,
@@ -35,6 +36,7 @@ export function AccountHistorySheet({
 }: AccountHistorySheetProps) {
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
+  const { t, language } = useI18n()
   const { data: settings } = useGetSettingsQuery(
     {},
     { enabled: open && !!spaceId }
@@ -69,13 +71,13 @@ export function AccountHistorySheet({
       open={open}
       onOpenChange={onOpenChange}
       icon={<History className="size-4" />}
-      title="Account Transaction Ledger"
+      title={t("finance.accounts.history.title")}
       description={
         <>
-          Ledger for{" "}
-          <span className="font-medium text-foreground">
-            {account?.name || "selected account"}
-          </span>
+          {t("finance.accounts.history.description", {
+            name:
+              account?.name || t("finance.accounts.history.selectedAccount"),
+          })}
         </>
       }
       headerActions={
@@ -85,7 +87,7 @@ export function AccountHistorySheet({
               key: buildCopilotEntityKey("account", account.id),
               kind: "account",
               id: account.id,
-              label: account.name || "Account",
+              label: account.name || t("nav.accounts"),
               summary: {
                 type: account.type,
                 currency: account.currency,
@@ -104,11 +106,10 @@ export function AccountHistorySheet({
         <div className="flex h-[250px] flex-col items-center justify-center p-4 text-center">
           <Calendar className="mb-3 h-9 w-9 text-muted-foreground/30" />
           <p className="text-xs font-semibold text-muted-foreground">
-            No transactions logged
+            {t("finance.accounts.history.noTransactions")}
           </p>
           <p className="mt-1 max-w-[250px] text-xs text-muted-foreground/80">
-            Transactions using this account will appear here once they are
-            added.
+            {t("finance.accounts.history.noTransactionsDescription")}
           </p>
         </div>
       ) : (
@@ -145,7 +146,8 @@ export function AccountHistorySheet({
 
                     <div className="min-w-0">
                       <span className="block truncate text-xs font-semibold text-foreground">
-                        {txn.description || "Unspecified Transaction"}
+                        {txn.description ||
+                          t("finance.accounts.history.unspecified")}
                       </span>
                       <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
                         <span>
@@ -213,10 +215,13 @@ export function AccountHistorySheet({
                   >
                     {txn.type === "BALANCE_ADJUSTMENT" ||
                     txn.type === "TYPE_UNSPECIFIED"
-                      ? "ADJUSTMENT"
-                      : txn.type
-                          .replace("TRANSACTION_TYPE_", "")
-                          .replaceAll("_", " ")}
+                      ? t("finance.accounts.history.adjustment")
+                      : getLocalizedEnumLabel(
+                          "finance",
+                          "transactionType",
+                          txn.type,
+                          language
+                        ).toUpperCase()}
                   </span>
                 </div>
               </div>

@@ -43,8 +43,15 @@ const ENUM_NORMALIZATION_RULES: Partial<
     stripPrefix: /^(?:RECURRING_(?:EXPENSE|TRANSACTION)_)?STATUS_/,
     defaultValue: "ACTIVE",
   },
+  "finance.sourceType": {
+    stripPrefix: /^SOURCE_TYPE_/,
+  },
   "finance.transactionType": {
     stripPrefix: /^TRANSACTION_TYPE_/,
+  },
+  "finance.limitPropagation": {
+    stripPrefix: /^LIMIT_PROPAGATION_/,
+    defaultValue: "NEXT_PERIODS_ONLY",
   },
   "finance.accountType": {
     stripPrefix: /^ACCOUNT_TYPE_/,

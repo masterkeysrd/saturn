@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useI18n } from "@saturn/hooks"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import { TransferSchema, type TransferFormValues } from "@saturn/schemas"
 import {
@@ -31,7 +32,11 @@ export function CreateTransferSheet({
   refetchAccounts,
   refetchTransfers,
 }: CreateTransferSheetProps) {
-  const activeAccounts = accounts.filter((a) => a.isActive)
+  const { t } = useI18n()
+  const activeAccounts = useMemo(
+    () => accounts.filter((a) => a.isActive),
+    [accounts]
+  )
 
   const { data: ratesData } = useListExchangeRatesQuery(
     { pageSize: 100, pageToken: "" },
@@ -124,8 +129,11 @@ export function CreateTransferSheet({
     } catch (err: unknown) {
       toast.add({
         type: "error",
-        title: "Transfer Failed",
-        description: err instanceof Error ? err.message : "Transfer failed.",
+        title: t("finance.accounts.transfer.failedTitle"),
+        description:
+          err instanceof Error
+            ? err.message
+            : t("finance.accounts.transfer.failedDescription"),
       })
     }
   }
@@ -137,15 +145,15 @@ export function CreateTransferSheet({
         if (!next) reset()
         onOpenChange(next)
       }}
-      title="Perform Fund Transfer"
+      title={t("finance.transactions.transferForm.title")}
       icon={<ArrowRightLeft className="h-5 w-5 text-primary" />}
-      description="Double-entry ledger entry: deducts from source and credits target."
-      submitLabel="Perform Transfer"
+      description={t("finance.transactions.transferForm.description")}
+      submitLabel={t("finance.transactions.transferForm.submit")}
       isPending={createMutation.isPending}
       onSubmit={handleSubmit(onSubmit)}
     >
       <FormFieldItem
-        label="Source Account (Withdraw From)"
+        label={t("finance.transactions.transferForm.sourceAccount")}
         error={errors.sourceAccountId?.message}
       >
         <Controller
@@ -159,14 +167,14 @@ export function CreateTransferSheet({
                 updateTargetAmount(srcAmount, val, dstId)
               }}
               accounts={activeAccounts.filter((a) => a.id !== dstId)}
-              placeholder="Choose source account"
+              placeholder={t("finance.accounts.transfer.sourcePlaceholder")}
             />
           )}
         />
       </FormFieldItem>
 
       <FormFieldItem
-        label="Destination Account (Deposit To)"
+        label={t("finance.transactions.transferForm.destinationAccount")}
         error={errors.destinationAccountId?.message}
       >
         <Controller
@@ -180,14 +188,16 @@ export function CreateTransferSheet({
                 updateTargetAmount(srcAmount, srcId, val)
               }}
               accounts={activeAccounts.filter((a) => a.id !== srcId)}
-              placeholder="Choose target account"
+              placeholder={t("finance.accounts.transfer.targetPlaceholder")}
             />
           )}
         />
       </FormFieldItem>
 
       <FormFieldItem
-        label={`Source Amount (${srcAcc?.currency || ""})`}
+        label={t("finance.transactions.transferForm.sourceAmount", {
+          currency: srcAcc?.currency || "",
+        })}
         error={errors.sourceAmount?.message}
       >
         <AmountInput
@@ -202,7 +212,9 @@ export function CreateTransferSheet({
       </FormFieldItem>
 
       <FormFieldItem
-        label={`Target Amount (${dstAcc?.currency || ""})`}
+        label={t("finance.transactions.transferForm.destinationAmount", {
+          currency: dstAcc?.currency || "",
+        })}
         error={errors.destinationAmount?.message}
       >
         <AmountInput
@@ -217,16 +229,22 @@ export function CreateTransferSheet({
         <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 text-xs text-amber-500">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            <p className="font-semibold">Multi-Currency Transfer</p>
+            <p className="font-semibold">
+              {t("finance.accounts.transfer.multiCurrencyTitle")}
+            </p>
             <p className="mt-0.5 leading-relaxed">
-              Funds will be converted from {srcAcc.currency} to{" "}
-              {dstAcc.currency} using your rates configuration.
+              {t("finance.accounts.transfer.multiCurrencyDescription", {
+                source: srcAcc.currency,
+                destination: dstAcc.currency,
+              })}
             </p>
           </div>
         </div>
       )}
 
-      <FormFieldItem label="Transfer Date">
+      <FormFieldItem
+        label={t("finance.transactions.transferForm.transferDate")}
+      >
         <Controller
           control={control}
           name="transferDate"
@@ -239,9 +257,9 @@ export function CreateTransferSheet({
         />
       </FormFieldItem>
 
-      <FormFieldItem label="Transfer Notes">
+      <FormFieldItem label={t("finance.transactions.transferForm.notesLabel")}>
         <Input
-          placeholder="e.g. Monthly savings allocation"
+          placeholder={t("finance.transactions.transferForm.notesPlaceholder")}
           {...register("notes")}
         />
       </FormFieldItem>

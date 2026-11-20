@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useSpacePermissions } from "@/features/space/use-space"
-import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n, useTimezone } from "@saturn/hooks"
+import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import {
   type ExchangeRate,
   useDeleteExchangeRateMutation,
@@ -25,9 +26,20 @@ import { Globe, ArrowRight, Trash2 } from "lucide-react"
 import { CreateRateSheet } from "./components/create-rate-sheet"
 
 export function RatesView() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const { spaceId, isWritable } = useSpacePermissions()
   const tz = useTimezone()
+
+  useRegisterCopilotView({
+    viewId: "finance.rates",
+    title: t("finance.exchangeRates.copilotTitle"),
+    suggestions: [
+      t("finance.exchangeRates.suggestion.missingRates"),
+      t("finance.exchangeRates.suggestion.rateImpact"),
+      t("finance.exchangeRates.suggestion.howItWorks"),
+    ],
+  })
 
   const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
   const { data: ratesData, refetch: refetchRates } = useListExchangeRatesQuery(
@@ -55,8 +67,11 @@ export function RatesView() {
       })
       toast.add({
         type: "success",
-        title: "Exchange Rate Deleted",
-        description: `Removed ${deleteTarget.fromCurrency} to ${deleteTarget.toCurrency} conversion rate.`,
+        title: t("finance.exchangeRates.deletedTitle"),
+        description: t("finance.exchangeRates.deletedDescription", {
+          from: deleteTarget.fromCurrency,
+          to: deleteTarget.toCurrency,
+        }),
       })
       setDeleteTarget(null)
       await invalidateFinanceQueries(queryClient)
@@ -64,19 +79,19 @@ export function RatesView() {
     } catch (err) {
       toast.add({
         type: "error",
-        title: "Delete Failed",
+        title: t("finance.exchangeRates.deleteFailedTitle"),
         description:
           err instanceof Error
             ? err.message
-            : "Failed to delete exchange rate.",
+            : t("finance.exchangeRates.deleteFailedDescription"),
       })
     }
   }
 
   return (
     <FinancePageLayout
-      title="Exchange Rates"
-      description="Configure daily conversions to Reporting Currency."
+      title={t("finance.exchangeRates.title")}
+      description={t("finance.exchangeRates.description")}
       icon={Globe}
       actions={
         isWritable && (
@@ -84,7 +99,7 @@ export function RatesView() {
             onClick={() => setRateCreateOpen(true)}
             className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary pt-0.5 font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90 sm:w-auto"
           >
-            Add Conversion Rate
+            {t("finance.exchangeRates.addRate")}
           </Button>
         )
       }
@@ -96,22 +111,19 @@ export function RatesView() {
             <Globe className="h-6 w-6" />
           </div>
           <h3 className="text-lg font-bold text-foreground">
-            Currency Configuration
+            {t("finance.exchangeRates.currencyConfig")}
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Workspace Base Reporting Currency:{" "}
-            <span className="font-bold text-foreground">
-              {settings?.baseCurrency}
-            </span>
-            . To record expenses or set budget limits in foreign currencies, you
-            must first specify the conversion rate for that day below.
+            {t("finance.exchangeRates.reportingIntro", {
+              currency: settings?.baseCurrency ?? "",
+            })}
           </p>
         </div>
 
         <div className="overflow-hidden rounded-3xl border border-border/40 bg-card/45 shadow-lg backdrop-blur-xl">
           <div className="border-b border-border/40 bg-muted/20 px-6 py-4">
             <h3 className="text-md font-bold text-foreground">
-              Conversion Rules
+              {t("finance.exchangeRates.conversionRules")}
             </h3>
           </div>
 
@@ -121,11 +133,10 @@ export function RatesView() {
                 <Globe className="h-6 w-6" />
               </div>
               <h4 className="text-sm font-bold text-foreground">
-                No Rates Registered
+                {t("finance.exchangeRates.emptyTitle")}
               </h4>
               <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                Add conversion rates to start allocating budgets in other
-                currencies.
+                {t("finance.exchangeRates.emptyDescription")}
               </p>
             </div>
           ) : (
@@ -161,7 +172,9 @@ export function RatesView() {
                       {Number(r.rate.toFixed(6))}
                     </span>
                     <span className="block text-[8px] font-black tracking-wider text-muted-foreground/75 uppercase">
-                      Per 1 {r.fromCurrency}
+                      {t("finance.exchangeRates.perCurrency", {
+                        currency: r.fromCurrency,
+                      })}
                     </span>
                   </div>
 
@@ -197,28 +210,39 @@ export function RatesView() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Exchange Rate</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("finance.exchangeRates.delete.title")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the exchange rate for{" "}
+              {t("finance.exchangeRates.delete.start")}{" "}
               <span className="font-semibold text-foreground">
-                {deleteTarget?.fromCurrency} to {deleteTarget?.toCurrency}
+                {deleteTarget?.fromCurrency} {t("common.to")}{" "}
+                {deleteTarget?.toCurrency}
               </span>
               {deleteTarget?.rateDate
-                ? ` on ${tz.format(deleteTarget.rateDate, { month: "short", day: "numeric", year: "numeric" })}`
+                ? t("finance.exchangeRates.delete.dateSuffix", {
+                    date: tz.format(deleteTarget.rateDate, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    }),
+                  })
                 : ""}
-              ?
+              {t("finance.exchangeRates.delete.end")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteRateMutation.isPending}>
-              Cancel
+              {t("common.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               disabled={deleteRateMutation.isPending}
               onClick={handleConfirmDeleteRate}
             >
-              {deleteRateMutation.isPending ? "Deleting..." : "Delete Rate"}
+              {deleteRateMutation.isPending
+                ? t("finance.exchangeRates.delete.deleting")
+                : t("finance.exchangeRates.delete.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

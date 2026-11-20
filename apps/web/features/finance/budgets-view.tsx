@@ -3,7 +3,8 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useUrlState } from "@/lib/use-url-state"
 import { useSpacePermissions } from "@/features/space/use-space"
 import { buildCopilotEntityKey, convertCentsToBase } from "@saturn/core"
-import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
+import { invalidateFinanceQueries, useI18n, useTimezone } from "@saturn/hooks"
 import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import { CopilotAttachButton } from "@/features/ai/components/copilot-attach-button"
 import {
@@ -50,7 +51,6 @@ import { CreateTransactionSheet } from "./components/create-transaction-sheet"
 import { BudgetHistorySheet } from "./components/budget-history-sheet"
 import {
   computeBudgetPacePercent,
-  formatInterval,
   getBudgetColors,
   getBudgetIcon,
   isStatusActive,
@@ -73,10 +73,34 @@ const BUDGETS_URL_DEFAULTS = {
   layout: "grid" as string,
 }
 
+const STATUS_ACTION_KEYS = {
+  PAUSED: {
+    action: "finance.budgets.actionPaused",
+    fail: "finance.budgets.actionFailPaused",
+    status: "finance.budgets.status.paused",
+  },
+  ACTIVE_RESUME: {
+    action: "finance.budgets.actionResumed",
+    fail: "finance.budgets.actionFailResumed",
+    status: "finance.budgets.status.active",
+  },
+  CLOSED: {
+    action: "finance.budgets.actionClosed",
+    fail: "finance.budgets.actionFailClosed",
+    status: "finance.budgets.status.closed",
+  },
+  ACTIVE_REOPEN: {
+    action: "finance.budgets.actionReopened",
+    fail: "finance.budgets.actionFailReopened",
+    status: "finance.budgets.status.active",
+  },
+} as const
+
 export function BudgetsView() {
   const queryClient = useQueryClient()
   const { spaceId, isWritable } = useSpacePermissions()
   const tz = useTimezone()
+  const { t, language } = useI18n()
   const [urlState, setUrlState] = useUrlState(BUDGETS_URL_DEFAULTS)
   const layoutMode: "grid" | "table" =
     urlState.layout === "table" ? "table" : "grid"
@@ -231,17 +255,21 @@ export function BudgetsView() {
       })
       toast.add({
         type: "success",
-        title: "Budget deleted",
-        description: `Budget template "${deleteTarget.name}" has been deleted.`,
+        title: t("finance.budgets.deletedTitle"),
+        description: t("finance.budgets.deletedDescription", {
+          name: deleteTarget.name || "",
+        }),
       })
       setDeleteTarget(null)
       await invalidateFinanceQueries(queryClient)
     } catch (err) {
       toast.add({
         type: "error",
-        title: "Delete Failed",
+        title: t("finance.budgets.deleteFailedTitle"),
         description:
-          err instanceof Error ? err.message : "Failed to delete budget.",
+          err instanceof Error
+            ? err.message
+            : t("finance.budgets.deleteFailedDescription"),
       })
     } finally {
       setIsDeleting(false)
@@ -253,7 +281,7 @@ export function BudgetsView() {
   const handleUpdateStatus = async (
     budget: Budget,
     newStatus: "ACTIVE" | "PAUSED" | "CLOSED",
-    actionLabel: string
+    actionKeys: (typeof STATUS_ACTION_KEYS)[keyof typeof STATUS_ACTION_KEYS]
   ) => {
     if (!budget.id) return
     try {
@@ -272,28 +300,37 @@ export function BudgetsView() {
       })
       toast.add({
         type: "success",
-        title: `Budget ${actionLabel}`,
-        description: `Budget "${budget.name}" is now ${newStatus.toLowerCase()}.`,
+        title: t("finance.budgets.statusChangedTitle", {
+          action: t(actionKeys.action),
+        }),
+        description: t("finance.budgets.statusChangedDescription", {
+          name: budget.name || "",
+          status: t(actionKeys.status),
+        }),
       })
       await invalidateFinanceQueries(queryClient)
     } catch (err) {
       toast.add({
         type: "error",
-        title: `Failed to ${actionLabel.toLowerCase()} budget`,
+        title: t("finance.budgets.statusFailedTitle", {
+          action: t(actionKeys.fail),
+        }),
         description:
-          err instanceof Error ? err.message : "An unexpected error occurred.",
+          err instanceof Error
+            ? err.message
+            : t("finance.budgets.unexpectedError"),
       })
     }
   }
 
   const handlePause = (budget: Budget) =>
-    handleUpdateStatus(budget, "PAUSED", "Paused")
+    handleUpdateStatus(budget, "PAUSED", STATUS_ACTION_KEYS.PAUSED)
   const handleResume = (budget: Budget) =>
-    handleUpdateStatus(budget, "ACTIVE", "Resumed")
+    handleUpdateStatus(budget, "ACTIVE", STATUS_ACTION_KEYS.ACTIVE_RESUME)
   const handleClose = (budget: Budget) =>
-    handleUpdateStatus(budget, "CLOSED", "Closed")
+    handleUpdateStatus(budget, "CLOSED", STATUS_ACTION_KEYS.CLOSED)
   const handleReopen = (budget: Budget) =>
-    handleUpdateStatus(budget, "ACTIVE", "Reopened")
+    handleUpdateStatus(budget, "ACTIVE", STATUS_ACTION_KEYS.ACTIVE_REOPEN)
 
   const handleEditTrigger = (budget: Budget) => {
     setActiveBudget(budget)
@@ -302,11 +339,11 @@ export function BudgetsView() {
 
   useRegisterCopilotView({
     viewId: "finance.budgets",
-    title: "Budgets",
+    title: t("finance.budgets.copilotTitle"),
     suggestions: [
-      "Which budgets are pacing ahead of limit this month?",
-      "Summarize my active budget limits and remaining room",
-      "Suggest budget adjustments based on recent spending",
+      t("finance.budgets.suggestion.pacingAhead"),
+      t("finance.budgets.suggestion.activeLimits"),
+      t("finance.budgets.suggestion.adjustments"),
     ],
   })
 
@@ -316,15 +353,15 @@ export function BudgetsView() {
     <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
       <div className="min-w-0 flex-1">
         <FinancePageLayout
-          title="Budgeting"
-          description="Manage your template limits, recurrence tracking, and cross-currency allocation."
+          title={t("finance.budgets.title")}
+          description={t("finance.budgets.description")}
           actions={
             isWritable && (
               <Button
                 onClick={() => setCreateOpen(true)}
                 className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 font-medium sm:w-auto"
               >
-                Create Budget Template
+                {t("finance.budgets.createTemplate")}
               </Button>
             )
           }
@@ -338,7 +375,7 @@ export function BudgetsView() {
                 </div>
                 <div className="min-w-0">
                   <span className="block text-xs font-medium text-muted-foreground">
-                    Total Budgeted
+                    {t("finance.budgets.totalBudgeted")}
                   </span>
                   <MoneyAmount
                     cents={summaryStats.totalBudgetedCents}
@@ -347,8 +384,11 @@ export function BudgetsView() {
                     className="mt-0.5 block truncate text-foreground"
                   />
                   <span className="mt-0.5 block text-xs text-muted-foreground">
-                    {summaryStats.activeCount} active template
-                    {summaryStats.activeCount === 1 ? "" : "s"}
+                    {summaryStats.activeCount === 1
+                      ? t("finance.budgets.activeTemplatesCountOne")
+                      : t("finance.budgets.activeTemplatesCount", {
+                          count: summaryStats.activeCount,
+                        })}
                   </span>
                 </div>
               </div>
@@ -359,7 +399,7 @@ export function BudgetsView() {
                 </div>
                 <div className="min-w-0">
                   <span className="block text-xs font-medium text-muted-foreground">
-                    Total Spent
+                    {t("finance.budgets.totalSpent")}
                   </span>
                   <MoneyAmount
                     cents={summaryStats.totalSpentCents}
@@ -368,7 +408,9 @@ export function BudgetsView() {
                     className="mt-0.5 block truncate text-foreground"
                   />
                   <span className="mt-0.5 block font-mono text-xs text-muted-foreground tabular-nums">
-                    {summaryStats.spentPct}% of total limit
+                    {t("finance.budgets.pctOfTotalLimit", {
+                      pct: summaryStats.spentPct,
+                    })}
                   </span>
                 </div>
               </div>
@@ -386,7 +428,7 @@ export function BudgetsView() {
                 </div>
                 <div className="min-w-0">
                   <span className="block text-xs font-medium text-muted-foreground">
-                    Remaining &amp; Pace
+                    {t("finance.budgets.remainingAndPace")}
                   </span>
                   <MoneyAmount
                     cents={summaryStats.remainingCents}
@@ -397,8 +439,10 @@ export function BudgetsView() {
                   />
                   <span className="mt-0.5 block text-xs text-muted-foreground">
                     {summaryStats.aheadOfPaceCount > 0
-                      ? `${summaryStats.aheadOfPaceCount} ahead of pace`
-                      : "All budgets on pace"}
+                      ? t("finance.budgets.aheadOfPace", {
+                          count: summaryStats.aheadOfPaceCount,
+                        })
+                      : t("finance.budgets.allOnPace")}
                   </span>
                 </div>
               </div>
@@ -421,8 +465,13 @@ export function BudgetsView() {
                         className="cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium data-active:bg-card data-active:text-foreground data-active:shadow-2xs"
                       >
                         {st === "ALL"
-                          ? "All Budgets"
-                          : st.charAt(0) + st.slice(1).toLowerCase()}
+                          ? t("finance.budgets.allBudgets")
+                          : getLocalizedEnumLabel(
+                              "finance",
+                              "status",
+                              st,
+                              language
+                            )}
                       </TabsTrigger>
                     )
                   )}
@@ -432,12 +481,12 @@ export function BudgetsView() {
               {/* Grid / Table View Toggle */}
               <div
                 role="group"
-                aria-label="Layout view"
+                aria-label={t("finance.budgets.layoutView")}
                 className="flex items-center rounded-lg bg-muted/60 p-1"
               >
                 <button
                   type="button"
-                  aria-label="Grid view"
+                  aria-label={t("finance.budgets.gridView")}
                   aria-pressed={layoutMode === "grid"}
                   onClick={() => setUrlState({ layout: "grid" })}
                   className={cn(
@@ -448,11 +497,11 @@ export function BudgetsView() {
                   )}
                 >
                   <LayoutGrid className="size-3.5" />
-                  <span>Grid</span>
+                  <span>{t("finance.budgets.grid")}</span>
                 </button>
                 <button
                   type="button"
-                  aria-label="Table view"
+                  aria-label={t("finance.budgets.tableView")}
                   aria-pressed={layoutMode === "table"}
                   onClick={() => setUrlState({ layout: "table" })}
                   className={cn(
@@ -463,7 +512,7 @@ export function BudgetsView() {
                   )}
                 >
                   <List className="size-3.5" />
-                  <span>Table</span>
+                  <span>{t("finance.budgets.table")}</span>
                 </button>
               </div>
             </div>
@@ -475,11 +524,10 @@ export function BudgetsView() {
                   <Globe className="size-6" />
                 </div>
                 <h4 className="text-sm font-semibold text-foreground">
-                  No budget templates configured
+                  {t("finance.budgets.emptyTitle")}
                 </h4>
                 <p className="mt-1 max-w-xs px-4 text-xs leading-relaxed text-muted-foreground">
-                  Define a budget limit template to track recurrent expenditures
-                  and manage conversions in your space.
+                  {t("finance.budgets.emptyDescription")}
                 </p>
               </div>
             ) : layoutMode === "table" ? (
@@ -487,14 +535,30 @@ export function BudgetsView() {
                 <table className="w-full border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground">
-                      <th className="px-4 py-3">Budget</th>
-                      <th className="px-4 py-3">Interval</th>
-                      <th className="px-4 py-3">Account</th>
-                      <th className="px-4 py-3 text-right">Spent</th>
-                      <th className="px-4 py-3 text-right">Limit</th>
-                      <th className="px-4 py-3 text-right">Remaining</th>
-                      <th className="min-w-[160px] px-4 py-3">Pace</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
+                      <th className="px-4 py-3">
+                        {t("finance.budgets.thBudget")}
+                      </th>
+                      <th className="px-4 py-3">
+                        {t("finance.budgets.thInterval")}
+                      </th>
+                      <th className="px-4 py-3">
+                        {t("finance.budgets.thAccount")}
+                      </th>
+                      <th className="px-4 py-3 text-right">
+                        {t("finance.budgets.thSpent")}
+                      </th>
+                      <th className="px-4 py-3 text-right">
+                        {t("finance.budgets.thLimit")}
+                      </th>
+                      <th className="px-4 py-3 text-right">
+                        {t("finance.budgets.thRemaining")}
+                      </th>
+                      <th className="min-w-[160px] px-4 py-3">
+                        {t("finance.budgets.thPace")}
+                      </th>
+                      <th className="px-4 py-3 text-right">
+                        {t("finance.budgets.thActions")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
@@ -557,7 +621,12 @@ export function BudgetsView() {
                                 </span>
                                 {(isClosed || isPaused) && (
                                   <span className="text-xs text-muted-foreground">
-                                    {isClosed ? "Closed" : "Paused"}
+                                    {getLocalizedEnumLabel(
+                                      "finance",
+                                      "status",
+                                      b.status,
+                                      language
+                                    )}
                                   </span>
                                 )}
                               </div>
@@ -565,7 +634,12 @@ export function BudgetsView() {
                           </td>
                           <td className="px-4 py-3">
                             <span className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground/80">
-                              {formatInterval(b.interval)}
+                              {getLocalizedEnumLabel(
+                                "finance",
+                                "interval",
+                                b.interval,
+                                language
+                              )}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-xs text-muted-foreground">
@@ -618,7 +692,9 @@ export function BudgetsView() {
                                 </div>
                                 {pacePercent !== null && (
                                   <div
-                                    title={`Today · ${Math.round(pacePercent)}% elapsed`}
+                                    title={t("finance.budgets.paceTick", {
+                                      pct: Math.round(pacePercent),
+                                    })}
                                     className="pointer-events-none absolute top-0 h-3.5 w-0.5 -translate-x-1/2 rounded-full bg-foreground/70 ring-1 ring-card"
                                     style={{ left: `${pacePercent}%` }}
                                   />
@@ -640,7 +716,9 @@ export function BudgetsView() {
                                     key: buildCopilotEntityKey("budget", b.id),
                                     kind: "budget",
                                     id: b.id,
-                                    label: b.name || "Budget",
+                                    label:
+                                      b.name ||
+                                      t("finance.budgets.copilotFallback"),
                                     summary: {
                                       currency: b.currency,
                                       limitAmount: Number(b.limitAmount || 0),
@@ -656,7 +734,12 @@ export function BudgetsView() {
                                     <Button
                                       variant="ghost"
                                       size="icon-sm"
-                                      aria-label={`Actions for ${b.name}`}
+                                      aria-label={t(
+                                        "finance.budgets.budgetActionsAria",
+                                        {
+                                          name: b.name || "",
+                                        }
+                                      )}
                                       className="cursor-pointer rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
                                     >
                                       <MoreVertical className="size-4" />
@@ -672,7 +755,7 @@ export function BudgetsView() {
                                     className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm"
                                   >
                                     <History className="size-3.5" />
-                                    View Activity
+                                    {t("finance.budgets.viewActivity")}
                                   </DropdownMenuItem>
                                   {isWritable && (
                                     <>
@@ -684,7 +767,7 @@ export function BudgetsView() {
                                           className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm"
                                         >
                                           <Plus className="size-3.5" />
-                                          Record Expense
+                                          {t("finance.budgets.recordExpense")}
                                         </DropdownMenuItem>
                                       )}
                                       {isActive && (
@@ -693,7 +776,7 @@ export function BudgetsView() {
                                           className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-warning"
                                         >
                                           <PauseCircle className="size-3.5" />
-                                          Pause Budget
+                                          {t("finance.budgets.pauseBudget")}
                                         </DropdownMenuItem>
                                       )}
                                       {isPaused && (
@@ -702,7 +785,7 @@ export function BudgetsView() {
                                           className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-success"
                                         >
                                           <PlayCircle className="size-3.5" />
-                                          Resume Budget
+                                          {t("finance.budgets.resumeBudget")}
                                         </DropdownMenuItem>
                                       )}
                                       {!isClosed && (
@@ -711,7 +794,7 @@ export function BudgetsView() {
                                           className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-warning"
                                         >
                                           <Lock className="size-3.5" />
-                                          Close Budget
+                                          {t("finance.budgets.closeBudget")}
                                         </DropdownMenuItem>
                                       )}
                                       {isClosed && (
@@ -720,7 +803,7 @@ export function BudgetsView() {
                                           className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-success"
                                         >
                                           <Unlock className="size-3.5" />
-                                          Reopen Budget
+                                          {t("finance.budgets.reopenBudget")}
                                         </DropdownMenuItem>
                                       )}
                                       <DropdownMenuSeparator className="my-1 border-border/60" />
@@ -729,14 +812,14 @@ export function BudgetsView() {
                                         className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm"
                                       >
                                         <Edit2 className="size-3.5" />
-                                        Edit Template
+                                        {t("finance.budgets.editTemplate")}
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
                                         onClick={() => handleDelete(b)}
                                         className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-destructive focus:bg-destructive/10 focus:text-destructive"
                                       >
                                         <Trash2 className="size-3.5" />
-                                        Delete
+                                        {t("finance.budgets.delete")}
                                       </DropdownMenuItem>
                                     </>
                                   )}
@@ -809,25 +892,27 @@ export function BudgetsView() {
             >
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Budget Template</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {t("finance.budgets.deleteTitle")}
+                  </AlertDialogTitle>
                   <AlertDialogDescription>
-                    Are you sure you want to delete{" "}
-                    <span className="font-semibold text-foreground">
-                      {deleteTarget?.name}
-                    </span>
-                    ? This action cannot be undone.
+                    {t("finance.budgets.deleteDescription", {
+                      name: deleteTarget?.name || "",
+                    })}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel disabled={isDeleting}>
-                    Cancel
+                    {t("common.cancel")}
                   </AlertDialogCancel>
                   <AlertDialogAction
                     variant="destructive"
                     disabled={isDeleting}
                     onClick={handleConfirmDelete}
                   >
-                    {isDeleting ? "Deleting..." : "Delete Budget"}
+                    {isDeleting
+                      ? t("finance.budgets.deleting")
+                      : t("finance.budgets.deleteConfirm")}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

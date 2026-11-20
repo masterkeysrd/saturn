@@ -2,7 +2,7 @@ import { useMemo, useState } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQueryClient } from "@tanstack/react-query"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import {
   useListTransactionsQuery,
   useLogBorrowingTransactionMutation,
@@ -42,6 +42,7 @@ export function BorrowingDetailSheet({
 }: BorrowingDetailSheetProps) {
   const queryClient = useQueryClient()
   const tz = useTimezone()
+  const { t } = useI18n()
   const [openAdjustModal, setOpenAdjustModal] = useState<boolean>(false)
   const { data: settings } = useGetSettingsQuery(
     {},
@@ -183,7 +184,9 @@ export function BorrowingDetailSheet({
 
   const currency = borrowing?.currency || "USD"
   const directionLabel =
-    borrowing?.direction === "LENT" ? "Lent to" : "Borrowed from"
+    borrowing?.direction === "LENT"
+      ? t("finance.borrowing.detail.lentTo")
+      : t("finance.borrowing.detail.borrowedFrom")
 
   return (
     <>
@@ -191,15 +194,10 @@ export function BorrowingDetailSheet({
         open={open}
         onOpenChange={onOpenChange}
         icon={<HandCoins className="size-4" />}
-        title="Borrowing Details"
-        description={
-          <>
-            Balance &amp; installments with{" "}
-            <span className="font-medium text-foreground">
-              {borrowing?.counterparty || ""}
-            </span>
-          </>
-        }
+        title={t("finance.borrowing.detail.title")}
+        description={t("finance.borrowing.detail.description", {
+          name: borrowing?.counterparty || "",
+        })}
       >
         {borrowing && (
           <div className="space-y-5">
@@ -228,7 +226,7 @@ export function BorrowingDetailSheet({
                     className="h-8 cursor-pointer gap-1.5 text-xs"
                   >
                     <Scale className="h-3.5 w-3.5 text-emerald-500" />
-                    Adjust
+                    {t("finance.borrowing.detail.adjust")}
                   </Button>
                   <span
                     className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
@@ -237,7 +235,9 @@ export function BorrowingDetailSheet({
                         : "bg-muted text-muted-foreground"
                     }`}
                   >
-                    {borrowing.status === "ACTIVE" ? "Active" : "Settled"}
+                    {borrowing.status === "ACTIVE"
+                      ? t("finance.borrowing.detail.statusActive")
+                      : t("finance.borrowing.detail.statusSettled")}
                   </span>
                 </div>
               </div>
@@ -245,7 +245,7 @@ export function BorrowingDetailSheet({
               <div className="grid grid-cols-2 gap-4 border-t border-border/40 pt-3.5 tabular-nums">
                 <div>
                   <span className="block text-xs text-muted-foreground">
-                    Remaining Balance
+                    {t("finance.borrowing.detail.remainingBalance")}
                   </span>
                   <span className="font-mono text-xl font-bold text-primary">
                     {formatCents(borrowing.remainingAmount).toLocaleString(
@@ -262,7 +262,7 @@ export function BorrowingDetailSheet({
                 </div>
                 <div className="text-right">
                   <span className="block text-xs text-muted-foreground">
-                    Total Agreement
+                    {t("finance.borrowing.detail.totalAgreement")}
                   </span>
                   <span className="font-mono text-base font-semibold text-foreground/80">
                     {formatCents(borrowing.totalAmount).toLocaleString(
@@ -282,7 +282,7 @@ export function BorrowingDetailSheet({
               <div className="flex flex-wrap justify-between gap-3 border-t border-border/40 pt-3 text-xs text-muted-foreground">
                 <div className="whitespace-nowrap">
                   <span className="font-medium text-foreground">
-                    Established:
+                    {t("finance.borrowing.detail.establishedLabel")}
                   </span>{" "}
                   {tz.format(borrowing.establishedAt, {
                     year: "numeric",
@@ -292,7 +292,9 @@ export function BorrowingDetailSheet({
                 </div>
                 {borrowing.dueAt && (
                   <div className="text-right whitespace-nowrap">
-                    <span className="font-medium text-foreground">Due:</span>{" "}
+                    <span className="font-medium text-foreground">
+                      {t("finance.borrowing.detail.dueLabel")}
+                    </span>{" "}
                     {tz.format(borrowing.dueAt, {
                       year: "numeric",
                       month: "short",
@@ -311,7 +313,9 @@ export function BorrowingDetailSheet({
             {/* Repayments History */}
             <section className="space-y-3 border-t border-border/40 pt-4">
               <h4 className="text-[13px] font-medium text-foreground">
-                Repayment History ({repayments.length})
+                {t("finance.borrowing.detail.repaymentHistory", {
+                  count: repayments.length,
+                })}
               </h4>
 
               {listLoading ? (
@@ -322,10 +326,10 @@ export function BorrowingDetailSheet({
                 <div className="flex flex-col items-center justify-center py-6 text-center">
                   <Calendar className="mb-2 h-6 w-6 text-muted-foreground/30" />
                   <p className="text-xs font-medium text-muted-foreground">
-                    No payments recorded yet
+                    {t("finance.borrowing.detail.paymentsEmptyTitle")}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground/80">
-                    Use the form below to register installments.
+                    {t("finance.borrowing.detail.paymentsEmptyDescription")}
                   </p>
                 </div>
               ) : (
@@ -388,11 +392,13 @@ export function BorrowingDetailSheet({
                 className="space-y-4 border-t border-border/40 pt-4"
               >
                 <h5 className="text-[13px] font-medium text-foreground">
-                  Log Installment Payment
+                  {t("finance.borrowing.detail.logInstallment")}
                 </h5>
                 <div className="space-y-3.5">
                   <div className="space-y-1.5">
-                    <Label htmlFor="paymentAmount">Amount</Label>
+                    <Label htmlFor="paymentAmount">
+                      {t("finance.borrowing.detail.amountLabel")}
+                    </Label>
                     <div className="relative flex h-10 items-center overflow-hidden rounded-lg border border-border bg-control shadow-2xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
                       <input
                         id="paymentAmount"
@@ -414,7 +420,7 @@ export function BorrowingDetailSheet({
                     )}
                   </div>
                   <div className="flex flex-col space-y-1.5">
-                    <Label>Payment Date</Label>
+                    <Label>{t("finance.borrowing.detail.paymentDate")}</Label>
                     <Controller
                       control={control}
                       name="paymentDate"
@@ -427,12 +433,16 @@ export function BorrowingDetailSheet({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Payment Account</Label>
+                    <Label>
+                      {t("finance.borrowing.detail.paymentAccount")}
+                    </Label>
                     <AccountSelect
                       control={control}
                       name="accountId"
                       accounts={activeAccounts}
-                      placeholder="Choose account for transaction"
+                      placeholder={t(
+                        "finance.borrowing.detail.accountPlaceholder"
+                      )}
                       allowNone
                     />
                   </div>
@@ -448,10 +458,12 @@ export function BorrowingDetailSheet({
                 )}
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="paymentNotes">Payment Notes (Optional)</Label>
+                  <Label htmlFor="paymentNotes">
+                    {t("finance.borrowing.detail.paymentNotes")}
+                  </Label>
                   <Input
                     id="paymentNotes"
-                    placeholder="e.g. Installment #1, bank transfer..."
+                    placeholder={t("finance.borrowing.detail.notesPlaceholder")}
                     {...register("notes")}
                   />
                 </div>
@@ -467,7 +479,7 @@ export function BorrowingDetailSheet({
                   {logTransactionMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    "Add Payment"
+                    t("finance.borrowing.detail.addPayment")
                   )}
                 </Button>
               </form>

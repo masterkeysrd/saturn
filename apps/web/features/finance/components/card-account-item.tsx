@@ -3,6 +3,8 @@ import {
   type Institution,
   type Account_Type,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
+import { useI18n } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import {
   Landmark,
   CreditCard,
@@ -26,12 +28,7 @@ import {
 import { buildCopilotEntityKey } from "@saturn/core"
 import { CopilotAttachButton } from "@/features/ai/components/copilot-attach-button"
 import { cn } from "@/lib/utils"
-import {
-  formatAmount,
-  getInstitutionLogoUrl,
-  getCardGradient,
-  getAccountTypeLabel,
-} from "../utils"
+import { formatAmount, getInstitutionLogoUrl, getCardGradient } from "../utils"
 
 function TypeIcon({
   type,
@@ -77,6 +74,7 @@ export function CardAccountItem({
   onDelete,
   onReconcile,
 }: CardAccountItemProps) {
+  const { t, language } = useI18n()
   const theme = getCardGradient(acc.color)
   const isCredit = acc.type === "CREDIT_CARD"
   const logoUrl = getInstitutionLogoUrl(
@@ -134,7 +132,12 @@ export function CardAccountItem({
               {institution?.name || acc.name}
             </span>
             <span className="text-[10px] font-medium tracking-wider text-white/50 uppercase">
-              {getAccountTypeLabel(acc.type)}
+              {getLocalizedEnumLabel(
+                "finance",
+                "accountType",
+                acc.type,
+                language
+              )}
             </span>
           </div>
         </div>
@@ -149,7 +152,7 @@ export function CardAccountItem({
                 key: buildCopilotEntityKey("account", acc.id),
                 kind: "account",
                 id: acc.id,
-                label: acc.name || institution?.name || "Account",
+                label: acc.name || institution?.name || t("nav.accounts"),
                 summary: {
                   type: acc.type,
                   currency: acc.currency,
@@ -162,7 +165,7 @@ export function CardAccountItem({
           )}
           {acc.isDefault && (
             <span className="rounded-full border border-amber-400/40 bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 px-2.5 py-0.5 text-[9px] font-black tracking-widest text-amber-300 uppercase shadow-sm backdrop-blur-md">
-              Default
+              {t("finance.accounts.card.defaultBadge")}
             </span>
           )}
           <DropdownMenu>
@@ -188,7 +191,7 @@ export function CardAccountItem({
                     className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-blue-400 focus:bg-blue-500/10"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
-                    Reconcile Account
+                    {t("finance.accounts.card.reconcile")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={(e) => {
@@ -198,7 +201,7 @@ export function CardAccountItem({
                     className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-emerald-400 focus:bg-emerald-500/10"
                   >
                     <Scale className="h-3.5 w-3.5" />
-                    Adjust Balance
+                    {t("finance.accounts.card.adjust")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={(e) => {
@@ -208,7 +211,7 @@ export function CardAccountItem({
                     className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
                   >
                     <Edit2 className="h-3.5 w-3.5" />
-                    Edit Account
+                    {t("finance.accounts.card.edit")}
                   </DropdownMenuItem>
                   {!acc.isDefault && onSetDefault && (
                     <DropdownMenuItem
@@ -219,7 +222,7 @@ export function CardAccountItem({
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-amber-400 focus:bg-amber-500/10"
                     >
                       <Check className="h-3.5 w-3.5" />
-                      Set as Default
+                      {t("finance.accounts.card.setDefault")}
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator className="my-1 bg-border/40" />
@@ -231,7 +234,7 @@ export function CardAccountItem({
                     className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-rose-500 hover:bg-rose-500/10"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    Delete Account
+                    {t("finance.accounts.card.delete")}
                   </DropdownMenuItem>
                 </>
               )}
@@ -258,7 +261,7 @@ export function CardAccountItem({
         <div className="flex items-end justify-between">
           <div className="min-w-0 flex-1 pr-3">
             <span className="block truncate text-[10px] font-semibold tracking-wider text-white/40 uppercase">
-              Name
+              {t("finance.accounts.card.nameLabel")}
             </span>
             <span className="block truncate text-xs font-bold text-white/90">
               {acc.name}
@@ -269,9 +272,9 @@ export function CardAccountItem({
             <span className="block text-[10px] font-semibold tracking-wider text-white/40 uppercase">
               {isCredit
                 ? rawBal > 0
-                  ? "Balance Owed"
-                  : "Current Credit"
-                : "Balance"}
+                  ? t("finance.accounts.card.balanceOwed")
+                  : t("finance.accounts.card.currentCredit")
+                : t("finance.accounts.card.balance")}
             </span>
             <div className="flex items-baseline justify-end gap-1">
               <span
@@ -314,13 +317,13 @@ export function CardAccountItem({
             {/* Subtext Row: Available & Limit */}
             <div className="flex items-center justify-between text-[10px] font-medium text-white/60">
               <span>
-                Available:{" "}
+                {t("finance.accounts.card.available")}{" "}
                 <span className="font-bold text-white">
                   {formatAmount(availableCents, acc.currency)}
                 </span>
               </span>
               <span>
-                Limit:{" "}
+                {t("finance.accounts.card.limit")}{" "}
                 <span className="font-bold text-white/90">
                   {formatAmount(limit, acc.currency)}
                 </span>

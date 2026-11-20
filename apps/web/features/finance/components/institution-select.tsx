@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react"
+import { useI18n } from "@saturn/hooks"
 import {
   useListInstitutionsQuery,
   type Institution,
@@ -54,6 +55,7 @@ function InstitutionLogo({
 }
 
 export function InstitutionSelect({ value, onChange }: InstitutionSelectProps) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [createModalOpen, setCreateModalOpen] = useState(false)
@@ -130,7 +132,7 @@ export function InstitutionSelect({ value, onChange }: InstitutionSelectProps) {
           ) : (
             <span className="flex items-center gap-2 text-sm text-muted-foreground">
               <Building2 className="h-4 w-4 text-muted-foreground/70" />
-              Select or type institution...
+              {t("finance.accounts.institution.selectPlaceholder")}
             </span>
           )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -142,7 +144,7 @@ export function InstitutionSelect({ value, onChange }: InstitutionSelectProps) {
         >
           <div className="space-y-2">
             <Input
-              placeholder="Search or type new bank..."
+              placeholder={t("finance.accounts.institution.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="h-9 bg-muted/40 text-xs"
@@ -195,13 +197,17 @@ export function InstitutionSelect({ value, onChange }: InstitutionSelectProps) {
                   className="mt-1 flex w-full items-center gap-2 rounded-lg border border-dashed border-indigo-500/30 px-2.5 py-2 text-xs font-semibold text-indigo-500 transition-colors hover:bg-indigo-500/10"
                 >
                   <Plus className="h-4 w-4 shrink-0" />
-                  <span className="truncate">Create "{search.trim()}"</span>
+                  <span className="truncate">
+                    {t("finance.accounts.institution.createOption", {
+                      name: search.trim(),
+                    })}
+                  </span>
                 </button>
               )}
 
               {filteredItems.length === 0 && !showCreateOption && (
                 <div className="py-4 text-center text-xs text-muted-foreground">
-                  No institutions found
+                  {t("finance.accounts.institution.noneFound")}
                 </div>
               )}
             </div>

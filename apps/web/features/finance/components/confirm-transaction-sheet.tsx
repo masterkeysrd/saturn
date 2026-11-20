@@ -2,7 +2,8 @@ import { useState, useMemo } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
-import { useTimezone } from "@saturn/hooks"
+import { useTimezone, useI18n } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import {
   ConfirmTransactionSchema,
   type ConfirmTransactionFormValues,
@@ -54,10 +55,8 @@ import { cn } from "@/lib/utils"
 import {
   toCentsString,
   formatCents,
-  formatSourceType,
   getBudgetColors,
   getBudgetIcon,
-  formatInterval,
 } from "../utils"
 
 interface ConfirmTransactionSheetProps {
@@ -83,6 +82,7 @@ export function ConfirmTransactionSheet({
 }: ConfirmTransactionSheetProps) {
   const navigate = useNavigate()
   const tz = useTimezone()
+  const { t, language } = useI18n()
 
   const [confirmedTxn, setConfirmedTxn] = useState<Transaction | null>(null)
   const [selectedTxnId, setSelectedTxnId] = useState<string>("")
@@ -209,7 +209,7 @@ export function ConfirmTransactionSheet({
     const name =
       matchedTemplate?.name ||
       transaction.recurringTransaction?.name ||
-      "Scheduled Transaction"
+      t("finance.recurring.confirm.scheduledFallback")
     const defaultDesc = metaDesc || `${name} (${dueFormatted})`
 
     return {
@@ -221,7 +221,7 @@ export function ConfirmTransactionSheet({
       accountId: transaction.accountId || "",
       description: defaultDesc,
     }
-  }, [transaction, recurringTemplates])
+  }, [transaction, recurringTemplates, t])
 
   const {
     register,
@@ -308,18 +308,17 @@ export function ConfirmTransactionSheet({
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-xl font-bold tracking-tight text-foreground">
-                    Transaction Cleared!
+                    {t("finance.recurring.confirm.clearedTitle")}
                   </h3>
                   <p className="text-xs leading-relaxed text-muted-foreground">
-                    The scheduled transaction was successfully cleared and
-                    registered in the ledger.
+                    {t("finance.recurring.confirm.clearedDescription")}
                   </p>
                 </div>
 
                 <div className="space-y-3 rounded-xl border border-border/60 bg-background/50 p-4 text-left text-xs">
                   <div className="flex justify-between border-b border-border/40 pb-2">
                     <span className="text-muted-foreground">
-                      Transaction ID:
+                      {t("finance.recurring.confirm.transactionId")}
                     </span>
                     <span className="ml-4 text-right font-mono font-semibold break-all text-foreground select-all">
                       {confirmedTxn.id}
@@ -327,7 +326,7 @@ export function ConfirmTransactionSheet({
                   </div>
                   <div className="flex justify-between border-b border-border/40 pb-2">
                     <span className="text-muted-foreground">
-                      Cleared Amount:
+                      {t("finance.recurring.confirm.clearedAmount")}
                     </span>
                     <span
                       className={cn(
@@ -349,7 +348,7 @@ export function ConfirmTransactionSheet({
                     confirmedTxn.amountInBase && (
                       <div className="flex justify-between border-b border-border/40 pb-2">
                         <span className="text-muted-foreground">
-                          Amount in Base:
+                          {t("finance.recurring.confirm.amountInBase")}
                         </span>
                         <span className="font-bold text-foreground tabular-nums">
                           {formatCents(confirmedTxn.amountInBase).toFixed(2)}{" "}
@@ -360,9 +359,12 @@ export function ConfirmTransactionSheet({
                       </div>
                     )}
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Description:</span>
+                    <span className="text-muted-foreground">
+                      {t("finance.recurring.confirm.descriptionLabel")}
+                    </span>
                     <span className="max-w-[200px] truncate font-semibold text-foreground">
-                      {confirmedTxn.description || "Scheduled Transaction"}
+                      {confirmedTxn.description ||
+                        t("finance.recurring.confirm.scheduledFallback")}
                     </span>
                   </div>
                 </div>
@@ -377,13 +379,13 @@ export function ConfirmTransactionSheet({
                   }}
                   className="cursor-pointer"
                 >
-                  View Transactions
+                  {t("finance.recurring.confirm.viewTransactions")}
                 </Button>
                 <Button
                   onClick={() => onOpenChange(false)}
                   className="cursor-pointer"
                 >
-                  Done
+                  {t("common.done")}
                 </Button>
               </DialogFooter>
             </div>
@@ -393,12 +395,13 @@ export function ConfirmTransactionSheet({
               <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
                 <DialogTitle className="pr-8 text-lg font-semibold tracking-tight">
                   {transaction?.type === "INCOME"
-                    ? "Confirm Income Receipt"
-                    : "Confirm Payment"}
+                    ? t("finance.recurring.confirm.confirmIncome")
+                    : t("finance.recurring.confirm.confirmPayment")}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground">
-                  Verify the details for clearing this scheduled{" "}
-                  {transaction?.type === "INCOME" ? "inflow" : "outflow"}.
+                  {transaction?.type === "INCOME"
+                    ? t("finance.recurring.confirm.verifyInflow")
+                    : t("finance.recurring.confirm.verifyOutflow")}
                 </DialogDescription>
               </DialogHeader>
 
@@ -420,7 +423,7 @@ export function ConfirmTransactionSheet({
                       matchedTemplate?.name ||
                       transaction.recurringTransaction?.name ||
                       vendorFromMeta ||
-                      "Scheduled Transaction"
+                      t("finance.recurring.confirm.scheduledFallback")
 
                     const budget =
                       transaction.budget ||
@@ -434,7 +437,12 @@ export function ConfirmTransactionSheet({
                       matchedTemplate?.interval ||
                       transaction.recurringTransaction?.interval
                     const intervalLabel = intervalVal
-                      ? formatInterval(intervalVal)
+                      ? getLocalizedEnumLabel(
+                          "finance",
+                          "interval",
+                          intervalVal,
+                          language
+                        )
                       : null
 
                     return (
@@ -476,18 +484,20 @@ export function ConfirmTransactionSheet({
                                 {transaction.type === "EXPENSE" &&
                                 budget?.name ? (
                                   <span className="truncate text-[11px] font-medium text-muted-foreground">
-                                    Budget:{" "}
+                                    {t("finance.recurring.confirm.budgetLabel")}{" "}
                                     <span className="font-semibold text-foreground">
                                       {budget.name}
                                     </span>
                                   </span>
                                 ) : (
                                   <span className="text-[11px] font-semibold tracking-wide text-emerald-500 uppercase">
-                                    Income Inflow
+                                    {t(
+                                      "finance.recurring.confirm.incomeInflow"
+                                    )}
                                   </span>
                                 )}
                                 <span className="shrink-0 font-semibold text-foreground">
-                                  Target:{" "}
+                                  {t("finance.recurring.confirm.targetLabel")}{" "}
                                   {formatCents(transaction.amount).toFixed(2)}{" "}
                                   <span className="text-[10px] font-medium text-muted-foreground uppercase">
                                     {transaction.currency}
@@ -500,16 +510,24 @@ export function ConfirmTransactionSheet({
                           <div className="mt-3.5 grid grid-cols-2 gap-2 border-t border-border/20 pt-3 text-xs">
                             <div className="flex flex-col gap-0.5">
                               <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                                Source
+                                {t("finance.recurring.confirm.sourceLabel")}
                               </span>
                               <span className="font-bold text-foreground">
-                                {formatSourceType(transaction.sourceType)}
+                                {getLocalizedEnumLabel(
+                                  "finance",
+                                  "sourceType",
+                                  transaction.sourceType,
+                                  language
+                                ) ||
+                                  t(
+                                    "finance.recurring.confirm.scheduledPayment"
+                                  )}
                               </span>
                             </div>
 
                             <div className="flex flex-col gap-0.5">
                               <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                                Due Date
+                                {t("finance.recurring.confirm.dueDate")}
                               </span>
                               <span className="font-mono font-bold text-foreground">
                                 {tz.formatDate(transaction.dueDate, {
@@ -531,14 +549,17 @@ export function ConfirmTransactionSheet({
                           >
                             <div className="flex items-center gap-2">
                               <Link2 className="h-4 w-4 text-primary" />
-                              <span>Link Existing Bank Record</span>
+                              <span>
+                                {t("finance.recurring.confirm.linkExisting")}
+                              </span>
                               {candidateMatch ? (
                                 <span className="flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-500">
-                                  <Sparkles className="h-3 w-3" />1 Smart Match
+                                  <Sparkles className="h-3 w-3" />
+                                  {t("finance.recurring.confirm.smartMatch")}
                                 </span>
                               ) : (
                                 <span className="text-[10px] font-normal text-muted-foreground">
-                                  (Optional)
+                                  ({t("common.optional")})
                                 </span>
                               )}
                             </div>
@@ -558,7 +579,9 @@ export function ConfirmTransactionSheet({
                                   <div className="flex items-center justify-between">
                                     <span className="flex items-center gap-1.5 text-[11px] font-bold text-amber-500">
                                       <Sparkles className="h-3.5 w-3.5" />
-                                      Suggested Match Found
+                                      {t(
+                                        "finance.recurring.confirm.suggestedMatch"
+                                      )}
                                     </span>
                                     <Button
                                       type="button"
@@ -578,14 +601,20 @@ export function ConfirmTransactionSheet({
                                       className="h-7 cursor-pointer rounded-lg px-2.5 text-[10px] font-bold"
                                     >
                                       {selectedTxnId === candidateMatch.id
-                                        ? "Selected"
-                                        : "Use Suggestion"}
+                                        ? t(
+                                            "finance.recurring.confirm.selected"
+                                          )
+                                        : t(
+                                            "finance.recurring.confirm.useSuggestion"
+                                          )}
                                     </Button>
                                   </div>
                                   <div className="flex items-center justify-between pt-0.5 font-medium text-foreground">
                                     <span className="max-w-[200px] truncate">
                                       {candidateMatch.description ||
-                                        "Bank Outflow"}
+                                        t(
+                                          "finance.recurring.confirm.bankOutflow"
+                                        )}
                                     </span>
                                     <span
                                       className={cn(
@@ -632,8 +661,10 @@ export function ConfirmTransactionSheet({
                               <div className="space-y-1.5">
                                 <Label className="text-[11px] font-semibold text-muted-foreground">
                                   {candidateMatch
-                                    ? "Or search and pick another record:"
-                                    : "Search transaction record to pair with:"}
+                                    ? t("finance.recurring.confirm.orSearch")
+                                    : t(
+                                        "finance.recurring.confirm.searchRecord"
+                                      )}
                                 </Label>
                                 <Popover
                                   open={popoverOpen}
@@ -647,7 +678,9 @@ export function ConfirmTransactionSheet({
                                           (t) => t.id === selectedTxnId
                                         )
                                         if (!matched)
-                                          return "Selected Transaction"
+                                          return t(
+                                            "finance.recurring.confirm.selectedTransaction"
+                                          )
                                         const dateStr = matched.transactionDate
                                           ? tz.formatDate(
                                               matched.transactionDate,
@@ -673,7 +706,9 @@ export function ConfirmTransactionSheet({
                                               />
                                               <span className="max-w-[190px] truncate font-semibold text-foreground">
                                                 {matched.description ||
-                                                  "Transaction"}
+                                                  t(
+                                                    "finance.recurring.confirm.transactionFallback"
+                                                  )}
                                               </span>
                                               <span className="shrink-0 text-[10px] text-muted-foreground">
                                                 ({dateStr})
@@ -687,8 +722,9 @@ export function ConfirmTransactionSheet({
                                       })()
                                     ) : (
                                       <span className="text-xs text-muted-foreground">
-                                        Search by description, amount, or
-                                        account...
+                                        {t(
+                                          "finance.recurring.confirm.searchPlaceholder"
+                                        )}
                                       </span>
                                     )}
                                     <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
@@ -701,7 +737,9 @@ export function ConfirmTransactionSheet({
                                     <div className="relative">
                                       <Search className="absolute top-2.5 left-2.5 h-3.5 w-3.5 text-muted-foreground" />
                                       <Input
-                                        placeholder="Type to search (description, amount...)"
+                                        placeholder={t(
+                                          "finance.recurring.confirm.searchHint"
+                                        )}
                                         className="h-9 rounded-xl border-border/50 bg-background/50 pl-8 text-xs focus-visible:ring-ring"
                                         value={txSearch}
                                         onChange={(e) =>
@@ -721,19 +759,23 @@ export function ConfirmTransactionSheet({
                                           }}
                                         >
                                           <span>
-                                            Don't link (Create new transaction)
+                                            {t(
+                                              "finance.recurring.confirm.dontLink"
+                                            )}
                                           </span>
                                         </button>
                                         <Separator className="my-1 bg-border/10" />
                                         {filteredTransactions.length === 0 ? (
                                           <div className="p-4 text-center text-xs text-muted-foreground">
-                                            No unlinked transactions found.
+                                            {t(
+                                              "finance.recurring.confirm.noUnlinked"
+                                            )}
                                           </div>
                                         ) : (
-                                          filteredTransactions.map((t) => {
-                                            const dateStr = t.transactionDate
+                                          filteredTransactions.map((txn) => {
+                                            const dateStr = txn.transactionDate
                                               ? tz.formatDate(
-                                                  t.transactionDate,
+                                                  txn.transactionDate,
                                                   {
                                                     month: "short",
                                                     day: "numeric",
@@ -741,20 +783,20 @@ export function ConfirmTransactionSheet({
                                                 )
                                               : ""
                                             const amtStr = formatCents(
-                                              t.amount || "0"
+                                              txn.amount || "0"
                                             ).toFixed(2)
                                             const budgetName = budgets.find(
-                                              (b) => b.id === t.budgetId
+                                              (b) => b.id === txn.budgetId
                                             )?.name
                                             const accountName = accounts.find(
-                                              (a) => a.id === t.accountId
+                                              (a) => a.id === txn.accountId
                                             )?.name
                                             const isSelected =
-                                              selectedTxnId === t.id
+                                              selectedTxnId === txn.id
 
                                             return (
                                               <button
-                                                key={t.id}
+                                                key={txn.id}
                                                 type="button"
                                                 className={cn(
                                                   "flex w-full cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs transition-colors",
@@ -763,7 +805,7 @@ export function ConfirmTransactionSheet({
                                                     : "text-foreground hover:bg-muted/10"
                                                 )}
                                                 onClick={() => {
-                                                  setSelectedTxnId(t.id || "")
+                                                  setSelectedTxnId(txn.id || "")
                                                   setPopoverOpen(false)
                                                 }}
                                               >
@@ -772,14 +814,16 @@ export function ConfirmTransactionSheet({
                                                     <span
                                                       className={cn(
                                                         "h-1.5 w-1.5 shrink-0 rounded-full",
-                                                        t.type === "EXPENSE"
+                                                        txn.type === "EXPENSE"
                                                           ? "bg-rose-500"
                                                           : "bg-emerald-500"
                                                       )}
                                                     />
                                                     <span className="truncate font-bold text-foreground">
-                                                      {t.description ||
-                                                        "Transaction"}
+                                                      {txn.description ||
+                                                        t(
+                                                          "finance.recurring.confirm.transactionFallback"
+                                                        )}
                                                     </span>
                                                   </div>
                                                   <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
@@ -792,7 +836,7 @@ export function ConfirmTransactionSheet({
                                                         </span>
                                                       </>
                                                     )}
-                                                    {t.type === "EXPENSE" &&
+                                                    {txn.type === "EXPENSE" &&
                                                       budgetName && (
                                                         <>
                                                           <span>•</span>
@@ -805,7 +849,7 @@ export function ConfirmTransactionSheet({
                                                 </div>
 
                                                 <span className="shrink-0 font-mono font-bold text-foreground">
-                                                  {amtStr} {t.currency}
+                                                  {amtStr} {txn.currency}
                                                 </span>
                                               </button>
                                             )
@@ -827,7 +871,7 @@ export function ConfirmTransactionSheet({
                                 htmlFor="actualAmount"
                                 className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
                               >
-                                Amount Cleared
+                                {t("finance.recurring.confirm.amountCleared")}
                               </Label>
                               <div className="flex h-10 items-center overflow-hidden rounded-lg border border-border bg-control shadow-2xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
                                 <input
@@ -860,27 +904,35 @@ export function ConfirmTransactionSheet({
 
                             <div className="space-y-2">
                               <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                                Financial Account
+                                {t(
+                                  "finance.recurring.confirm.financialAccount"
+                                )}
                               </Label>
                               <AccountSelect
                                 control={control}
                                 name="accountId"
                                 accounts={accounts}
                                 allowNone
-                                placeholder="Select account used for settlement..."
+                                placeholder={t(
+                                  "finance.recurring.confirm.accountPlaceholder"
+                                )}
                               />
                             </div>
 
                             {typeValue === "EXPENSE" && (
                               <div className="space-y-2">
                                 <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                                  Budget Category
+                                  {t(
+                                    "finance.recurring.confirm.budgetCategory"
+                                  )}
                                 </Label>
                                 <BudgetSelect
                                   control={control}
                                   name="budgetId"
                                   budgets={budgets}
-                                  placeholder="Select budget category..."
+                                  placeholder={t(
+                                    "finance.recurring.confirm.budgetPlaceholder"
+                                  )}
                                 />
                                 {errors.budgetId && (
                                   <p className="text-[11px] font-semibold text-destructive">
@@ -895,12 +947,16 @@ export function ConfirmTransactionSheet({
                                 htmlFor="confirm-description"
                                 className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
                               >
-                                Description / Notes
+                                {t(
+                                  "finance.recurring.confirm.descriptionNotes"
+                                )}
                               </Label>
                               <Input
                                 id="confirm-description"
                                 type="text"
-                                placeholder="Optional notes or narration..."
+                                placeholder={t(
+                                  "finance.recurring.confirm.notesPlaceholder"
+                                )}
                                 {...register("description")}
                               />
                               {errors.description && (
@@ -913,7 +969,7 @@ export function ConfirmTransactionSheet({
                             <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-2">
                                 <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                                  Date Cleared
+                                  {t("finance.recurring.confirm.dateCleared")}
                                 </Label>
                                 <Controller
                                   control={control}
@@ -929,7 +985,7 @@ export function ConfirmTransactionSheet({
 
                               <div className="space-y-2">
                                 <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                                  Effective Date
+                                  {t("finance.recurring.confirm.effectiveDate")}
                                 </Label>
                                 <Controller
                                   control={control}
@@ -967,7 +1023,7 @@ export function ConfirmTransactionSheet({
                   ) : (
                     <>
                       <FastForward className="mr-1.5 h-4 w-4" />
-                      Skip Cycle
+                      {t("finance.recurring.skipCycle")}
                     </>
                   )}
                 </Button>
@@ -984,14 +1040,16 @@ export function ConfirmTransactionSheet({
                   {isPending || matchMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {selectedTxnId ? "Linking..." : "Clearing..."}
+                      {selectedTxnId
+                        ? t("finance.recurring.confirm.linking")
+                        : t("finance.recurring.confirm.clearing")}
                     </>
                   ) : selectedTxnId ? (
-                    "Link & Clear"
+                    t("finance.recurring.confirm.linkAndClear")
                   ) : transaction?.type === "INCOME" ? (
-                    "Clear Income Inflow"
+                    t("finance.recurring.confirm.clearIncomeInflow")
                   ) : (
-                    "Clear Payment"
+                    t("finance.recurring.confirm.clearPayment")
                   )}
                 </Button>
               </DialogFooter>
@@ -1007,7 +1065,8 @@ export function ConfirmTransactionSheet({
         isPending={skipMutation.isPending}
         paymentName={
           transaction
-            ? transaction.recurringTransaction?.name || "Scheduled Transaction"
+            ? transaction.recurringTransaction?.name ||
+              t("finance.recurring.confirm.scheduledFallback")
             : ""
         }
         amountFormatted={

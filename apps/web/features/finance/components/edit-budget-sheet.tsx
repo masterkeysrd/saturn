@@ -1,6 +1,7 @@
 import { useState, useMemo, createElement } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
@@ -40,6 +41,7 @@ import {
   BUDGET_COLORS,
   BUDGET_ICONS,
   getBudgetIcon,
+  getBudgetIconLabelKey,
   toCentsString,
   formatCents,
   BUDGET_INTERVAL_OPTIONS as INTERVAL_ITEMS,
@@ -56,11 +58,7 @@ interface EditBudgetSheetProps {
   refetchBudgets?: () => void
 }
 
-const STATUS_ITEMS = [
-  { value: "ACTIVE", label: "Active" },
-  { value: "PAUSED", label: "Paused (Temporarily Suspended)" },
-  { value: "CLOSED", label: "Closed" },
-]
+const STATUS_VALUES = ["ACTIVE", "PAUSED", "CLOSED"] as const
 
 export function EditBudgetSheet({
   open,
@@ -72,13 +70,19 @@ export function EditBudgetSheet({
   refetchBudgets,
 }: EditBudgetSheetProps) {
   const queryClient = useQueryClient()
+  const { t, language } = useI18n()
   const { data: accountsData } = useListAccountsQuery(
     {},
     { enabled: open && !!spaceId && accounts.length === 0 }
   )
-  const resolvedAccounts =
-    accounts.length > 0 ? accounts : accountsData?.accounts || []
-  const activeAccounts = resolvedAccounts.filter((a) => a.isActive)
+  const resolvedAccounts = useMemo(
+    () => (accounts.length > 0 ? accounts : accountsData?.accounts || []),
+    [accounts, accountsData?.accounts]
+  )
+  const activeAccounts = useMemo(
+    () => resolvedAccounts.filter((a) => a.isActive),
+    [resolvedAccounts]
+  )
   const updateMutation = useUpdateBudgetMutation()
   const [propagation, setPropagation] = useState<LimitPropagation>(
     "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
@@ -98,7 +102,7 @@ export function EditBudgetSheet({
     mutationFn: (vars) => updateMutation.mutateAsync(vars),
     onErrorToast: (error) => {
       toast.add({
-        title: "Failed to update budget",
+        title: t("finance.budgets.sheet.updateFailedTitle"),
         description: error.message,
         type: "error",
       })
@@ -238,17 +242,41 @@ export function EditBudgetSheet({
 
   const preview = getConversionPreview(limitValue, currencyValue)
 
+  const intervalItems = INTERVAL_ITEMS.map((item) => ({
+    value: item.value,
+    label: getLocalizedEnumLabel("finance", "interval", item.value, language),
+  }))
+  const statusItems = STATUS_VALUES.map((value) => ({
+    value,
+    label:
+      value === "PAUSED"
+        ? t("finance.budgets.sheet.pausedLong")
+        : getLocalizedEnumLabel("finance", "status", value, language),
+  }))
+  const propagationItems = PROPAGATION_ITEMS.map((item) => ({
+    value: item.value,
+    label: getLocalizedEnumLabel(
+      "finance",
+      "limitPropagation",
+      item.value,
+      language
+    ),
+  }))
+
   return (
     <FormDrawer
       open={open}
       onOpenChange={onOpenChange}
-      title="Edit Budget Template"
-      description="Modify budget category properties, visual parameters, or limit propagation."
-      submitLabel="Save Changes"
+      title={t("finance.budgets.sheet.editTitle")}
+      description={t("finance.budgets.sheet.editDescription")}
+      submitLabel={t("finance.budgets.sheet.editSubmit")}
       isPending={updateMutation.isPending || patchMutation.isPending}
       onSubmit={handleSubmit(onSubmit)}
     >
-      <FormFieldItem label="Budget Name & Icon" error={errors.name?.message}>
+      <FormFieldItem
+        label={t("finance.budgets.sheet.nameLabelIcon")}
+        error={errors.name?.message}
+      >
         <div className="flex gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -257,7 +285,7 @@ export function EditBudgetSheet({
                   type="button"
                   variant="ghost"
                   className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-border bg-control p-0 text-primary shadow-2xs transition-colors hover:bg-muted/40"
-                  title="Choose category icon"
+                  title={t("finance.budgets.sheet.chooseIcon")}
                 >
                   {createElement(getBudgetIcon(iconValue), {
                     className: "h-5 w-5",
@@ -275,7 +303,7 @@ export function EditBudgetSheet({
                   onClick={() =>
                     setValue("icon", i.value, { shouldDirty: true })
                   }
-                  title={i.label}
+                  title={t(getBudgetIconLabelKey(i.value))}
                   className={`flex cursor-pointer items-center justify-center rounded-lg p-2.5 transition-all hover:bg-muted/60 ${
                     iconValue === i.value
                       ? "bg-primary font-bold text-primary-foreground hover:bg-primary/90"
@@ -290,7 +318,7 @@ export function EditBudgetSheet({
 
           <div className="w-full">
             <Input
-              placeholder="e.g. Groceries, Dining Out"
+              placeholder={t("finance.budgets.sheet.namePlaceholderEdit")}
               {...register("name")}
             />
           </div>
@@ -298,7 +326,9 @@ export function EditBudgetSheet({
       </FormFieldItem>
 
       <FormFieldItem
-        label={`Limit Amount (${currencyValue})`}
+        label={t("finance.budgets.sheet.limitAmountCurrency", {
+          currency: currencyValue,
+        })}
         error={errors.limit?.message}
         subtext={
           preview ? (
@@ -317,7 +347,11 @@ export function EditBudgetSheet({
                   {preview.currency}
                 </span>{" "}
                 <span className="opacity-70">
-                  (at 1 {currencyValue} = {preview.rate} {preview.currency})
+                  {t("finance.budgets.sheet.ratePreview", {
+                    from: currencyValue,
+                    rate: preview.rate,
+                    to: preview.currency,
+                  })}
                 </span>
               </span>
             )
@@ -330,26 +364,26 @@ export function EditBudgetSheet({
       <FormSelect
         control={control}
         name="currency"
-        label="Currency"
+        label={t("finance.budgets.sheet.currencyLabel")}
         disabled
         items={currencyItems}
-        helperText="Currency cannot be modified after creation to protect historical calculations."
+        helperText={t("finance.budgets.sheet.currencyLockedHelper")}
       />
 
       <FormSelect
         control={control}
         name="interval"
-        label="Interval"
+        label={t("finance.budgets.sheet.intervalLabel")}
         disabled
-        items={INTERVAL_ITEMS}
-        helperText="Interval cannot be modified after creation to protect historical reports."
+        items={intervalItems}
+        helperText={t("finance.budgets.sheet.intervalLockedHelper")}
       />
 
       <FormSelect
         control={control}
         name="status"
-        label="Budget Status"
-        items={STATUS_ITEMS}
+        label={t("finance.budgets.sheet.statusLabel")}
+        items={statusItems}
       />
 
       <div className="mt-3 space-y-1.5 border-t border-border/40 pt-5">
@@ -357,7 +391,7 @@ export function EditBudgetSheet({
           htmlFor="propagation"
           className="text-[13px] font-medium text-foreground/90"
         >
-          Limit Propagation Rule
+          {t("finance.budgets.sheet.propagationLabel")}
         </Label>
         <Select
           value={propagation}
@@ -366,13 +400,15 @@ export function EditBudgetSheet({
           }
         >
           <SelectTrigger id="propagation" className="w-full text-left">
-            <SelectValue placeholder="Select propagation rule...">
-              {PROPAGATION_ITEMS.find((i) => i.value === propagation)?.label ||
+            <SelectValue
+              placeholder={t("finance.budgets.sheet.propagationPlaceholder")}
+            >
+              {propagationItems.find((i) => i.value === propagation)?.label ||
                 propagation}
             </SelectValue>
           </SelectTrigger>
           <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-            {PROPAGATION_ITEMS.map((item) => (
+            {propagationItems.map((item) => (
               <SelectItem key={item.value} value={item.value}>
                 {item.label}
               </SelectItem>
@@ -381,19 +417,19 @@ export function EditBudgetSheet({
         </Select>
       </div>
 
-      <FormFieldItem label="Default Account (Optional)">
+      <FormFieldItem label={t("finance.budgets.sheet.defaultAccountLabel")}>
         <AccountSelect
           control={control}
           name="defaultAccountId"
           accounts={activeAccounts}
-          placeholder="Pre-fills forms with this account"
+          placeholder={t("finance.budgets.sheet.defaultAccountPlaceholder")}
           allowNone
         />
       </FormFieldItem>
 
       <div className="space-y-1.5">
         <label className="block text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase">
-          Theme Color
+          {t("finance.budgets.sheet.themeColor")}
         </label>
         <div className="flex flex-wrap gap-2.5 pt-1">
           {BUDGET_COLORS.map((c) => (

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import { ArrowLeft } from "lucide-react"
@@ -90,6 +90,7 @@ export function CreateExpenseForm({
   headerExtra,
 }: CreateExpenseFormProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
   const [initialDate] = useState(() => new Date())
   const amountInputRef = useRef<HTMLInputElement | null>(null)
   const [recordedExpense, setRecordedExpense] =
@@ -329,13 +330,24 @@ export function CreateExpenseForm({
     const matchedBudget = budgets.find((b) => b.id === data.budgetId)
     const matchedAccount = activeAccounts.find((a) => a.id === data.accountId)
     const details: RecordedDetailRow[] = [
-      { label: "Budget", value: matchedBudget?.name || "—" },
-      { label: "Account", value: matchedAccount?.name || "Unlinked" },
-      { label: "Transaction date", value: tz.format(data.transactionDate) },
+      {
+        label: t("finance.transactions.facetBudget"),
+        value: matchedBudget?.name || "—",
+      },
+      {
+        label: t("finance.transactions.facetAccount"),
+        value:
+          matchedAccount?.name ||
+          t("finance.transactions.expenseForm.unlinked"),
+      },
+      {
+        label: t("finance.transactions.inspector.transactionDate"),
+        value: tz.format(data.transactionDate),
+      },
     ]
     if (data.hasCustomEffectiveDate) {
       details.push({
-        label: "Effective date",
+        label: t("finance.transactions.inspector.effectiveDate"),
         value: tz.format(data.effectiveDate),
       })
     }
@@ -371,7 +383,7 @@ export function CreateExpenseForm({
       <TransactionRecordedSummary
         open={open}
         onOpenChange={onOpenChange}
-        title="Expense Recorded"
+        title={t("finance.transactions.expenseForm.recordedTitle")}
         amountCents={recordedExpense.amountCents}
         currency={recordedExpense.currency}
         colored
@@ -380,7 +392,7 @@ export function CreateExpenseForm({
         summaryTitle={recordedExpense.summaryTitle}
         details={recordedExpense.details}
         sessionCount={sessionCount}
-        addAnotherLabel="Add another expense"
+        addAnotherLabel={t("finance.transactions.expenseForm.addAnother")}
         onAddAnother={handleAddAnother}
         onChooseAnotherType={
           onBack
@@ -412,8 +424,8 @@ export function CreateExpenseForm({
       )}
       <span>
         {editTransaction
-          ? "Edit Standalone Expense"
-          : "Record Standalone Expense"}
+          ? t("finance.transactions.expenseForm.titleEdit")
+          : t("finance.transactions.expenseForm.title")}
       </span>
     </div>
   )
@@ -425,20 +437,23 @@ export function CreateExpenseForm({
       title={customTitle}
       description={
         editTransaction
-          ? "Modify logged expense details. Saturn will recompute currency base aggregates automatically."
-          : "Record a new standalone expense. The amount will be deducted from the active period of the selected budget template."
+          ? t("finance.transactions.expenseForm.descriptionEdit")
+          : t("finance.transactions.expenseForm.description")
       }
       headerExtra={editTransaction ? undefined : headerExtra}
       submitLabel={
         editTransaction
-          ? "Update Standalone Expense"
-          : "Save Standalone Expense"
+          ? t("finance.transactions.expenseForm.submitUpdate")
+          : t("finance.transactions.expenseForm.submit")
       }
       isPending={isPending}
       disabled={isSubmitDisabled}
       onSubmit={handleSubmit(onSubmit)}
     >
-      <FormFieldItem label="Amount" error={errors.amount?.message}>
+      <FormFieldItem
+        label={t("finance.transactions.expenseForm.amountLabel")}
+        error={errors.amount?.message}
+      >
         <div className="flex h-10 items-center overflow-hidden rounded-lg border border-border bg-control shadow-2xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
           <AmountInput
             control={control}
@@ -466,35 +481,45 @@ export function CreateExpenseForm({
         fromCurrency={currencyValue}
       />
 
-      <FormFieldItem label="Budget" error={errors.budgetId?.message}>
+      <FormFieldItem
+        label={t("finance.transactions.expenseForm.budgetLabel")}
+        error={errors.budgetId?.message}
+      >
         <BudgetSelect
           control={control}
           name="budgetId"
           budgets={budgets}
           onBudgetChange={handleBudgetChange}
-          placeholder="Select a budget..."
+          placeholder={t("finance.transactions.expenseForm.budgetPlaceholder")}
         />
       </FormFieldItem>
 
-      <FormFieldItem label="Account / Payment Method (Optional)">
+      <FormFieldItem label={t("finance.transactions.expenseForm.accountLabel")}>
         <AccountSelect
           control={control}
           name="accountId"
           accounts={activeAccounts}
-          placeholder="Choose account to impact balance"
+          placeholder={t("finance.transactions.expenseForm.accountPlaceholder")}
           allowNone
         />
       </FormFieldItem>
 
-      <FormFieldItem label="Description" error={errors.description?.message}>
+      <FormFieldItem
+        label={t("finance.transactions.expenseForm.descriptionLabel")}
+        error={errors.description?.message}
+      >
         <Input
           {...register("description")}
-          placeholder="e.g. Amazon Web Services, Restaurant Dinner"
+          placeholder={t(
+            "finance.transactions.expenseForm.descriptionPlaceholder"
+          )}
         />
       </FormFieldItem>
 
       <div className="space-y-3.5">
-        <FormFieldItem label="Transaction Date">
+        <FormFieldItem
+          label={t("finance.transactions.expenseForm.transactionDateLabel")}
+        >
           <Controller
             control={control}
             name="transactionDate"
@@ -530,13 +555,13 @@ export function CreateExpenseForm({
             htmlFor="txCustomEffective"
             className="cursor-pointer text-xs font-medium text-foreground/80"
           >
-            Is this payment effective on a different date?
+            {t("finance.transactions.expenseForm.customEffectiveCheckbox")}
           </Label>
         </div>
 
         {hasCustomEffectiveDate && (
           <FormFieldItem
-            label="Effective Date"
+            label={t("finance.transactions.expenseForm.effectiveDateLabel")}
             className="slide-in-from-top-1.5 animate-in duration-200"
           >
             <Controller

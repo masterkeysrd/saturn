@@ -8,8 +8,10 @@ import {
 import {
   useDebounce,
   useTimezone,
+  useI18n,
   invalidateFinanceQueries,
 } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import { toast } from "@/components/ui/toast"
 import {
@@ -31,12 +33,7 @@ import { CreateAccountSheet } from "./components/create-account-sheet"
 import { CreateTransferSheet } from "./components/create-transfer-sheet"
 import { AdjustBalanceModal } from "./components/adjust-balance-modal"
 import { AccountHistorySheet } from "./components/account-history-sheet"
-import {
-  getInstitutionLogoUrl,
-  formatAmount,
-  formatCents,
-  getAccountTypeLabel,
-} from "./utils"
+import { getInstitutionLogoUrl, formatAmount, formatCents } from "./utils"
 import {
   Landmark,
   CreditCard,
@@ -77,11 +74,22 @@ const ACCOUNTS_FILTER_DEFAULTS = {
   sort: "_default",
 }
 
+const ACCOUNT_SORT_LABEL_KEYS = {
+  _default: "finance.accounts.sortDefault",
+  name_asc: "finance.accounts.sortNameAsc",
+  name_desc: "finance.accounts.sortNameDesc",
+  balance_desc: "finance.accounts.sortBalanceDesc",
+  balance_asc: "finance.accounts.sortBalanceAsc",
+  created_desc: "finance.accounts.sortNewest",
+  created_asc: "finance.accounts.sortOldest",
+} as const
+
 export function AccountsView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { spaceId, isWritable } = useSpacePermissions()
   const tz = useTimezone()
+  const { t, language } = useI18n()
   const [urlState, setUrlState] = useUrlState(ACCOUNTS_FILTER_DEFAULTS)
   const [searchQuery, setSearchQuery] = useState(urlState.q || "")
 
@@ -149,11 +157,11 @@ export function AccountsView() {
 
   useRegisterCopilotView({
     viewId: "finance.accounts",
-    title: "Accounts",
+    title: t("finance.accounts.copilotTitle"),
     suggestions: [
-      "Summarize my liquid cash vs credit card debt",
-      "Check credit utilization across my accounts",
-      "Review recent transfers between accounts",
+      t("finance.accounts.suggestion.liquidVsDebt"),
+      t("finance.accounts.suggestion.creditUtilization"),
+      t("finance.accounts.suggestion.recentTransfers"),
     ],
   })
 
@@ -179,7 +187,7 @@ export function AccountsView() {
         },
         onError: (err) => {
           toast.add({
-            title: "Failed to set default account",
+            title: t("finance.accounts.setDefaultFailedTitle"),
             description: err.message,
             type: "error",
           })
@@ -246,18 +254,23 @@ export function AccountsView() {
         if (acc.institutionId && instMap[acc.institutionId]) {
           const inst = instMap[acc.institutionId]
           groupKey = inst.id || "unassigned"
-          groupTitle = inst.name || "Unknown"
+          groupTitle = inst.name || t("finance.accounts.unknownInstitution")
           domain = inst.domain
           color = inst.color || "indigo"
         } else {
           groupKey = "unassigned"
-          groupTitle = "Uncategorized / Cash"
+          groupTitle = t("finance.accounts.uncategorized")
           domain = ""
           color = "sky"
         }
       } else if (groupBy === "TYPE") {
         groupKey = acc.type
-        groupTitle = getAccountTypeLabel(acc.type)
+        groupTitle = getLocalizedEnumLabel(
+          "finance",
+          "accountType",
+          acc.type,
+          language
+        )
         type = acc.type
         color =
           acc.type === "CREDIT_CARD"
@@ -299,7 +312,15 @@ export function AccountsView() {
         groupCurrency,
       }
     })
-  }, [accounts, groupBy, instMap, settings?.baseCurrency, getAccountBaseCents])
+  }, [
+    accounts,
+    groupBy,
+    instMap,
+    settings?.baseCurrency,
+    getAccountBaseCents,
+    t,
+    language,
+  ])
 
   // Convert accounts to base currency and calculate metrics
   const metrics = useMemo(() => {
@@ -349,9 +370,8 @@ export function AccountsView() {
     if (acc.isDefault) {
       toast.add({
         type: "warning",
-        title: "Cannot Delete Default Account",
-        description:
-          "Set another account as default before deleting this account.",
+        title: t("finance.accounts.cannotDeleteDefaultTitle"),
+        description: t("finance.accounts.cannotDeleteDefaultDescription"),
       })
       return
     }
@@ -368,8 +388,10 @@ export function AccountsView() {
       })
       toast.add({
         type: "success",
-        title: "Account Deleted",
-        description: `Account "${deleteTarget.name}" has been deleted.`,
+        title: t("finance.accounts.deleteSuccessTitle"),
+        description: t("finance.accounts.deleteSuccessDescription", {
+          name: deleteTarget.name || "",
+        }),
       })
       setDeleteTarget(null)
       await invalidateFinanceQueries(queryClient)
@@ -377,9 +399,11 @@ export function AccountsView() {
     } catch (e: unknown) {
       toast.add({
         type: "error",
-        title: "Delete Failed",
+        title: t("finance.accounts.deleteFailedTitle"),
         description:
-          e instanceof Error ? e.message : "Failed to delete account.",
+          e instanceof Error
+            ? e.message
+            : t("finance.accounts.deleteFailedDescription"),
       })
     }
   }
@@ -388,8 +412,8 @@ export function AccountsView() {
     <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
       <div className="min-w-0 flex-1">
         <FinancePageLayout
-          title="Accounts & Cash Flow"
-          description="Manage cash, credit, bank accounts, and perform double-entry fund transfers."
+          title={t("finance.accounts.title")}
+          description={t("finance.accounts.description")}
           actions={
             isWritable && (
               <div className="flex items-center gap-3">
@@ -399,7 +423,7 @@ export function AccountsView() {
                   className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border/80 bg-background/50 px-4 font-semibold text-foreground shadow-sm backdrop-blur-sm transition-all hover:bg-muted"
                 >
                   <ArrowRightLeft className="h-4.5 w-4.5" />
-                  Transfer Funds
+                  {t("finance.accounts.transferFunds")}
                 </Button>
                 <Button
                   onClick={() => {
@@ -409,7 +433,7 @@ export function AccountsView() {
                   className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
                 >
                   <Plus className="h-5 w-5" />
-                  Add Account
+                  {t("finance.accounts.addAccount")}
                 </Button>
               </div>
             )
@@ -424,7 +448,7 @@ export function AccountsView() {
                     <Wallet className="h-5 w-5" />
                   </div>
                   <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Net Liquidity
+                    {t("finance.accounts.netLiquidity")}
                   </span>
                 </div>
                 <div className="mt-4">
@@ -446,7 +470,7 @@ export function AccountsView() {
                     <Coins className="h-5 w-5" />
                   </div>
                   <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Cash & Bank Assets
+                    {t("finance.accounts.cashBankAssets")}
                   </span>
                 </div>
                 <div className="mt-4">
@@ -468,7 +492,7 @@ export function AccountsView() {
                     <CreditCard className="h-5 w-5" />
                   </div>
                   <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Credit Liabilities
+                    {t("finance.accounts.creditLiabilities")}
                   </span>
                 </div>
                 <div className="mt-4">
@@ -490,17 +514,17 @@ export function AccountsView() {
                     <Check className="h-5 w-5" />
                   </div>
                   <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Default Account
+                    {t("finance.accounts.defaultAccount")}
                   </span>
                 </div>
                 <div className="mt-4">
                   <span className="block truncate text-lg font-black tracking-tight text-foreground">
                     {metrics.defaultAccount
                       ? (metrics.defaultAccount as Account).name
-                      : "None Set"}
+                      : t("finance.accounts.noneSet")}
                   </span>
                   <span className="block text-[10px] font-bold text-muted-foreground uppercase">
-                    Used for form pre-fills
+                    {t("finance.accounts.usedForPrefills")}
                   </span>
                 </div>
               </div>
@@ -515,14 +539,22 @@ export function AccountsView() {
                     className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
                   >
                     <Wallet className="h-4 w-4" />
-                    <span>Accounts ({accounts.length})</span>
+                    <span>
+                      {t("finance.accounts.tabAccountsWithCount", {
+                        count: accounts.length,
+                      })}
+                    </span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="transfers"
                     className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
                   >
                     <ArrowRightLeft className="h-4 w-4" />
-                    <span>Transfers ({transfers.length})</span>
+                    <span>
+                      {t("finance.accounts.tabTransfersWithCount", {
+                        count: transfers.length,
+                      })}
+                    </span>
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -536,7 +568,7 @@ export function AccountsView() {
                   <div className="relative flex-1">
                     <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      placeholder="Search accounts by name..."
+                      placeholder={t("finance.accounts.searchPlaceholder")}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="h-10 rounded-xl border-border/50 bg-background/40 pl-9 placeholder:text-muted-foreground/60 focus-visible:ring-1"
@@ -554,7 +586,7 @@ export function AccountsView() {
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      By Bank
+                      {t("finance.accounts.groupByBank")}
                     </button>
                     <button
                       type="button"
@@ -565,7 +597,7 @@ export function AccountsView() {
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      By Type
+                      {t("finance.accounts.groupByType")}
                     </button>
                     <button
                       type="button"
@@ -576,7 +608,7 @@ export function AccountsView() {
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      Flat List
+                      {t("finance.accounts.groupFlat")}
                     </button>
                   </div>
 
@@ -593,7 +625,7 @@ export function AccountsView() {
                         htmlFor="view-active-only"
                         className="cursor-pointer text-xs font-semibold text-foreground"
                       >
-                        Active Only
+                        {t("finance.accounts.activeOnly")}
                       </Label>
                     </div>
 
@@ -604,31 +636,22 @@ export function AccountsView() {
                       }
                     >
                       <SelectTrigger className="h-10 w-[160px] rounded-xl border-border/50 bg-background/40 text-xs font-semibold">
-                        <SelectValue placeholder="Sort By">
-                          {urlState.sort === "name_asc" && "Name (A-Z)"}
-                          {urlState.sort === "name_desc" && "Name (Z-A)"}
-                          {urlState.sort === "balance_desc" &&
-                            "Balance (Highest)"}
-                          {urlState.sort === "balance_asc" &&
-                            "Balance (Lowest)"}
-                          {urlState.sort === "created_desc" && "Newest"}
-                          {urlState.sort === "created_asc" && "Oldest"}
-                          {(!urlState.sort || urlState.sort === "_default") &&
-                            "Default Sort"}
+                        <SelectValue placeholder={t("finance.accounts.sortBy")}>
+                          {t(
+                            ACCOUNT_SORT_LABEL_KEYS[
+                              urlState.sort as keyof typeof ACCOUNT_SORT_LABEL_KEYS
+                            ] ?? "finance.accounts.sortDefault"
+                          )}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
-                        <SelectItem value="_default">Default Sort</SelectItem>
-                        <SelectItem value="name_asc">Name (A-Z)</SelectItem>
-                        <SelectItem value="name_desc">Name (Z-A)</SelectItem>
-                        <SelectItem value="balance_desc">
-                          Balance (Highest)
-                        </SelectItem>
-                        <SelectItem value="balance_asc">
-                          Balance (Lowest)
-                        </SelectItem>
-                        <SelectItem value="created_desc">Newest</SelectItem>
-                        <SelectItem value="created_asc">Oldest</SelectItem>
+                        {Object.entries(ACCOUNT_SORT_LABEL_KEYS).map(
+                          ([value, key]) => (
+                            <SelectItem key={value} value={value}>
+                              {t(key)}
+                            </SelectItem>
+                          )
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -639,15 +662,15 @@ export function AccountsView() {
                     <Landmark className="mb-3 h-10 w-10 text-muted-foreground/60" />
                     <p className="text-sm font-semibold text-muted-foreground">
                       {urlState.q || urlState.active
-                        ? "No accounts match your active filters."
-                        : "No bank or cash accounts setup yet."}
+                        ? t("finance.accounts.noMatches")
+                        : t("finance.accounts.emptyState")}
                     </p>
                     {!urlState.q && !urlState.active && (
                       <Button
                         onClick={() => setCreateOpen(true)}
                         className="mt-4 flex items-center gap-2 rounded-xl bg-primary text-xs font-bold text-primary-foreground"
                       >
-                        Create Your First Account
+                        {t("finance.accounts.createFirstAccount")}
                       </Button>
                     )}
                   </div>
@@ -692,10 +715,13 @@ export function AccountsView() {
                                   {group.title}
                                 </h3>
                                 <p className="text-xs text-muted-foreground">
-                                  {group.accounts.length}{" "}
                                   {group.accounts.length === 1
-                                    ? "account"
-                                    : "accounts"}
+                                    ? t("finance.accounts.accountCount", {
+                                        count: group.accounts.length,
+                                      })
+                                    : t("finance.accounts.accountsCount", {
+                                        count: group.accounts.length,
+                                      })}
                                 </p>
                               </div>
                             </div>
@@ -704,9 +730,9 @@ export function AccountsView() {
                               <span className="block text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                 {group.type === "CREDIT_CARD"
                                   ? group.totalCents < 0
-                                    ? "Total Debt"
-                                    : "Net Credit"
-                                  : "Group Total"}
+                                    ? t("finance.accounts.totalDebt")
+                                    : t("finance.accounts.netCredit")
+                                  : t("finance.accounts.groupTotal")}
                               </span>
                               <span
                                 className={cn(
@@ -811,7 +837,7 @@ export function AccountsView() {
                       className="rounded-xl font-bold"
                     >
                       <ArrowRightLeft className="mr-2 h-4 w-4" />
-                      New Transfer
+                      {t("finance.accounts.newTransfer")}
                     </Button>
                   </div>
                 )}
@@ -819,27 +845,27 @@ export function AccountsView() {
                 {transfers.length === 0 ? (
                   <div className="rounded-3xl border border-border/40 bg-card/20 p-12 text-center text-sm text-muted-foreground">
                     <ArrowRightLeft className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
-                    No fund transfers recorded yet.
+                    {t("finance.accounts.noTransfers")}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    {transfers.map((t) => {
+                    {transfers.map((transfer) => {
                       const srcAcc = accounts.find(
-                        (a) => a.id === t.sourceAccountId
+                        (a) => a.id === transfer.sourceAccountId
                       )
                       const dstAcc = accounts.find(
-                        (a) => a.id === t.destinationAccountId
+                        (a) => a.id === transfer.destinationAccountId
                       )
 
                       return (
                         <div
-                          key={t.id}
+                          key={transfer.id}
                           className="relative rounded-3xl border border-border/30 bg-card/25 p-5 shadow-sm backdrop-blur-sm transition-colors hover:border-border/50"
                         >
                           <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{tz.format(t.transferDate)}</span>
+                            <span>{tz.format(transfer.transferDate)}</span>
                             <span className="font-semibold text-primary">
-                              Transfer Record
+                              {t("finance.accounts.transferRecord")}
                             </span>
                           </div>
 
@@ -847,15 +873,19 @@ export function AccountsView() {
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <span className="text-[11px] font-bold text-muted-foreground uppercase">
-                                  From
+                                  {t("finance.accounts.from")}
                                 </span>
                                 <span className="truncate text-xs font-bold text-foreground">
-                                  {srcAcc?.name || "Deleted"}
+                                  {srcAcc?.name ||
+                                    t("finance.accounts.deleted")}
                                 </span>
                               </div>
                               <span className="mt-1 block text-sm font-black text-rose-500">
                                 -
-                                {formatAmount(t.sourceAmount, srcAcc?.currency)}
+                                {formatAmount(
+                                  transfer.sourceAmount,
+                                  srcAcc?.currency
+                                )}
                               </span>
                             </div>
 
@@ -864,25 +894,28 @@ export function AccountsView() {
                             <div className="min-w-0 text-right">
                               <div className="flex items-center justify-end gap-1.5">
                                 <span className="text-[11px] font-bold text-muted-foreground uppercase">
-                                  To
+                                  {t("finance.accounts.to")}
                                 </span>
                                 <span className="truncate text-xs font-bold text-foreground">
-                                  {dstAcc?.name || "Deleted"}
+                                  {dstAcc?.name ||
+                                    t("finance.accounts.deleted")}
                                 </span>
                               </div>
                               <span className="mt-1 block text-sm font-black text-emerald-500">
                                 +
                                 {formatAmount(
-                                  t.destinationAmount,
+                                  transfer.destinationAmount,
                                   dstAcc?.currency
                                 )}
                               </span>
                             </div>
                           </div>
 
-                          {t.notes && (
+                          {transfer.notes && (
                             <p className="mt-3 truncate border-t border-border/20 pt-2.5 text-[10px] text-muted-foreground italic">
-                              Note: {t.notes}
+                              {t("finance.accounts.noteLabel", {
+                                note: transfer.notes,
+                              })}
                             </p>
                           )}
                         </div>
@@ -926,18 +959,16 @@ export function AccountsView() {
           >
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete Account</AlertDialogTitle>
+                <AlertDialogTitle>
+                  {t("finance.accounts.deleteTitle")}
+                </AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete account{" "}
-                  <span className="font-semibold text-foreground">
-                    {deleteTarget?.name}
-                  </span>
-                  ? This action cannot be undone.
+                  {t("finance.accounts.deleteDescription")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel disabled={deleteAccountMutation.isPending}>
-                  Cancel
+                  {t("common.cancel")}
                 </AlertDialogCancel>
                 <AlertDialogAction
                   variant="destructive"
@@ -945,8 +976,8 @@ export function AccountsView() {
                   onClick={handleConfirmDeleteAccount}
                 >
                   {deleteAccountMutation.isPending
-                    ? "Deleting..."
-                    : "Delete Account"}
+                    ? t("finance.accounts.deleting")
+                    : t("finance.accounts.deleteConfirm")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

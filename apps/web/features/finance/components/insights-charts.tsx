@@ -3,7 +3,7 @@ import type {
   IncomeInsights_AccountContribution,
   SpentInsights_BudgetContribution,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { AVAILABLE_COLORS, getColorHex } from "@saturn/core"
 import { cn } from "@/lib/utils"
 
@@ -67,12 +67,13 @@ export function CashFlowSvgChart({
   onSelectPeriod,
 }: CashFlowSvgChartProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
   const groupRefs = useRef<(SVGGElement | null)[]>([])
 
   if (points.length === 0) {
     return (
       <div className="flex h-[240px] items-center justify-center text-xs text-muted-foreground">
-        No cash flow transactions recorded for this date range.
+        {t("finance.insights.chart.noCashFlow")}
       </div>
     )
   }
@@ -110,7 +111,7 @@ export function CashFlowSvgChart({
     <svg
       viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
       role="img"
-      aria-label="Cash flow comparison chart showing inflows, outflows, and net cash flow trend"
+      aria-label={t("finance.insights.chart.cashFlowAria")}
       className="h-[240px] w-full overflow-visible select-none"
     >
       {/* Horizontal gridlines & Y-axis labels */}
@@ -163,7 +164,12 @@ export function CashFlowSvgChart({
             }}
             role="button"
             tabIndex={0}
-            aria-label={`${pt.label}: Inflow ${tz.formatMoney(pt.inflowTotal, baseCurrency)}, Outflow ${tz.formatMoney(pt.outflowTotal, baseCurrency)}, Net ${tz.formatMoney(net, baseCurrency, { showSign: true })}. Press Enter to inspect transactions.`}
+            aria-label={t("finance.insights.chart.cashFlowBarAria", {
+              label: pt.label,
+              inflow: tz.formatMoney(pt.inflowTotal, baseCurrency),
+              outflow: tz.formatMoney(pt.outflowTotal, baseCurrency),
+              net: tz.formatMoney(net, baseCurrency, { showSign: true }),
+            })}
             onMouseEnter={() => onInspectIndex(idx)}
             onMouseLeave={() => onInspectIndex(null)}
             onFocus={() => onInspectIndex(idx)}
@@ -291,13 +297,15 @@ export function StackedBreakdownSvgChart({
   onSelectPeriod,
 }: StackedBreakdownSvgChartProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
   const groupRefs = useRef<(SVGGElement | null)[]>([])
 
   if (points.length === 0) {
     return (
       <div className="flex h-[240px] items-center justify-center text-xs text-muted-foreground">
-        No {mode === "OUTFLOWS" ? "outflow" : "inflow"} transactions recorded
-        for this date range.
+        {mode === "OUTFLOWS"
+          ? t("finance.insights.chart.noOutflow")
+          : t("finance.insights.chart.noInflow")}
       </div>
     )
   }
@@ -324,8 +332,8 @@ export function StackedBreakdownSvgChart({
       role="img"
       aria-label={
         mode === "OUTFLOWS"
-          ? "Outflow trend stacked by budget category"
-          : "Inflow trend stacked by account"
+          ? t("finance.insights.chart.outflowAria")
+          : t("finance.insights.chart.inflowAria")
       }
       className="h-[240px] w-full overflow-visible select-none"
     >
@@ -400,7 +408,10 @@ export function StackedBreakdownSvgChart({
             }}
             role="button"
             tabIndex={0}
-            aria-label={`${pt.label}: Total ${tz.formatMoney(ptTotal, baseCurrency)}. Press Enter to inspect transactions.`}
+            aria-label={t("finance.insights.chart.stackedBarAria", {
+              label: pt.label,
+              total: tz.formatMoney(ptTotal, baseCurrency),
+            })}
             onMouseEnter={() => onInspectIndex(idx)}
             onMouseLeave={() => {
               onInspectIndex(null)

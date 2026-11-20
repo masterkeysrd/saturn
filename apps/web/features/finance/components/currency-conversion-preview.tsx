@@ -1,5 +1,5 @@
 import { Globe, Info } from "lucide-react"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 
 interface CurrencyConversionPreviewProps {
   conversion:
@@ -14,6 +14,7 @@ export function CurrencyConversionPreview({
   fromCurrency,
 }: CurrencyConversionPreviewProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
 
   if (!conversion) return null
 
@@ -23,12 +24,13 @@ export function CurrencyConversionPreview({
         <Info className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
         <div>
           <span className="block text-xs font-medium text-amber-700 dark:text-amber-400">
-            Exchange rate required
+            {t("finance.conversion.rateRequired")}
           </span>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            {conversion.error} Go to the{" "}
-            <span className="font-medium text-foreground">Exchange Rates</span>{" "}
-            tab to configure this conversion rate before saving.
+            {conversion.error}{" "}
+            {t("finance.conversion.configureRate", {
+              tab: t("nav.exchangeRates"),
+            })}
           </p>
         </div>
       </div>
@@ -40,7 +42,7 @@ export function CurrencyConversionPreview({
       <Globe className="mt-0.5 size-4 shrink-0 text-primary" />
       <div>
         <span className="block text-xs font-medium text-muted-foreground">
-          Reporting currency equivalent
+          {t("finance.conversion.reportingEquivalent")}
         </span>
         <span className="mt-0.5 block font-mono text-sm font-semibold text-foreground tabular-nums">
           {tz.formatMoney(

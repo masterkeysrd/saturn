@@ -425,4 +425,661 @@ describe("@saturn/i18n", () => {
       "+5 más"
     )
   })
+
+  it("translates finance insights keys and chart labels in English and Spanish", () => {
+    expect(translate("en-US", "finance.insights.title")).toBe("Insights")
+    expect(translate("es-ES", "finance.insights.title")).toBe("Análisis")
+    expect(translate("en-US", "finance.insights.cashFlow")).toBe("Cash Flow")
+    expect(translate("es-ES", "finance.insights.cashFlow")).toBe(
+      "Flujo de caja"
+    )
+    expect(translate("en-US", "finance.insights.outflows")).toBe("Outflows")
+    expect(translate("es-ES", "finance.insights.outflows")).toBe("Gastos")
+    expect(translate("en-US", "finance.insights.inflows")).toBe("Inflows")
+    expect(translate("es-ES", "finance.insights.inflows")).toBe("Ingresos")
+    expect(translate("en-US", "finance.insights.totalSpent")).toBe(
+      "Total Spent"
+    )
+    expect(translate("es-ES", "finance.insights.totalSpent")).toBe(
+      "Gasto total"
+    )
+    expect(translate("en-US", "finance.insights.netSavings")).toBe(
+      "Net Savings"
+    )
+    expect(translate("es-ES", "finance.insights.netSavings")).toBe(
+      "Ahorro neto"
+    )
+    expect(
+      translate("en-US", "finance.insights.chart.stackedBarAria", {
+        label: "Apr 2026",
+        total: "$1,200",
+      })
+    ).toBe("Apr 2026: Total $1,200. Press Enter to inspect transactions.")
+    expect(
+      translate("es-ES", "finance.insights.chart.stackedBarAria", {
+        label: "Abr 2026",
+        total: "1.200 €",
+      })
+    ).toBe(
+      "Abr 2026: Total 1.200 €. Presiona Enter para inspeccionar transacciones."
+    )
+  })
+
+  it("translates finance transactions keys in English and Spanish", () => {
+    expect(translate("en-US", "finance.transactions.title")).toBe(
+      "Transactions"
+    )
+    expect(translate("es-ES", "finance.transactions.title")).toBe(
+      "Transacciones"
+    )
+    expect(translate("en-US", "finance.transactions.recordTransaction")).toBe(
+      "Record Transaction"
+    )
+    expect(translate("es-ES", "finance.transactions.recordTransaction")).toBe(
+      "Registrar transacción"
+    )
+    expect(
+      getLocalizedEnumLabel("finance", "transactionType", "EXPENSE", "en-US")
+    ).toBe("Expense")
+    expect(
+      getLocalizedEnumLabel("finance", "transactionType", "EXPENSE", "es-ES")
+    ).toBe("Gasto")
+    expect(
+      translate("en-US", "finance.transactions.stagedForReview", { count: 3 })
+    ).toBe("3 staged for review")
+    expect(
+      translate("es-ES", "finance.transactions.stagedForReview", { count: 3 })
+    ).toBe("3 en espera de revisión")
+    expect(translate("en-US", "finance.transactions.inspector.title")).toBe(
+      "Transaction Details"
+    )
+    expect(translate("es-ES", "finance.transactions.inspector.title")).toBe(
+      "Detalles de la transacción"
+    )
+    expect(translate("en-US", "finance.transactions.scheduled.title")).toBe(
+      "Confirm Scheduled Bill/Income"
+    )
+    expect(translate("es-ES", "finance.transactions.scheduled.title")).toBe(
+      "Confirmar factura / ingreso programado"
+    )
+    expect(
+      translate("en-US", "finance.transactions.scheduled.dueOn", {
+        date: "Apr 20",
+      })
+    ).toBe("Due Apr 20")
+    expect(
+      translate("es-ES", "finance.transactions.scheduled.dueOn", {
+        date: "20 abr",
+      })
+    ).toBe("Vence 20 abr")
+    expect(translate("en-US", "finance.pickers.account.noAccount")).toBe(
+      "No Account (Off-ledger / Cash)"
+    )
+    expect(translate("es-ES", "finance.pickers.account.noAccount")).toBe(
+      "Sin cuenta (Fuera de balance / Efectivo)"
+    )
+    expect(translate("en-US", "finance.pickers.budget.none")).toBe(
+      "None / Uncategorized"
+    )
+    expect(translate("es-ES", "finance.pickers.budget.none")).toBe(
+      "Ninguno / Sin categorizar"
+    )
+    expect(
+      translate("en-US", "finance.transactions.borrowing.selectTitle")
+    ).toBe("Select Borrowing Agreement")
+    expect(
+      translate("es-ES", "finance.transactions.borrowing.selectTitle")
+    ).toBe("Seleccionar acuerdo de préstamo")
+    expect(
+      translate("en-US", "finance.transactions.borrowing.formDescription", {
+        counterparty: "Alice",
+      })
+    ).toBe("Record a payment or disbursement linked to Alice.")
+    expect(
+      translate("es-ES", "finance.transactions.borrowing.formDescription", {
+        counterparty: "Alice",
+      })
+    ).toBe("Registra un pago o desembolso vinculado a Alice.")
+    expect(translate("en-US", "finance.inbox.title")).toBe(
+      "Reconciliation Queue"
+    )
+    expect(translate("es-ES", "finance.inbox.title")).toBe(
+      "Bandeja de revisión"
+    )
+    expect(translate("en-US", "finance.inbox.noItemsPending")).toBe(
+      "No items pending review"
+    )
+    expect(translate("es-ES", "finance.inbox.noItemsPending")).toBe(
+      "No hay elementos pendientes de revisión"
+    )
+    expect(
+      translate("en-US", "finance.inbox.stagedItemsWithCount", { count: 5 })
+    ).toBe("Staged Items (5)")
+    expect(
+      translate("es-ES", "finance.inbox.stagedItemsWithCount", { count: 5 })
+    ).toBe("Elementos en cola (5)")
+  })
+
+  it("translates finance accounts keys in English and Spanish", () => {
+    expect(translate("en-US", "finance.accounts.title")).toBe(
+      "Accounts & Cash Flow"
+    )
+    expect(translate("es-ES", "finance.accounts.title")).toBe(
+      "Cuentas y flujo de caja"
+    )
+    expect(translate("en-US", "finance.accounts.addAccount")).toBe(
+      "Add Account"
+    )
+    expect(translate("es-ES", "finance.accounts.addAccount")).toBe(
+      "Añadir cuenta"
+    )
+    expect(
+      translate("en-US", "finance.accounts.tabAccountsWithCount", { count: 4 })
+    ).toBe("Accounts (4)")
+    expect(
+      translate("es-ES", "finance.accounts.tabTransfersWithCount", { count: 2 })
+    ).toBe("Transferencias (2)")
+    expect(
+      translate("en-US", "finance.accounts.deleteSuccessDescription", {
+        name: "Chase Checking",
+      })
+    ).toBe('Account "Chase Checking" has been deleted.')
+    expect(
+      translate("es-ES", "finance.accounts.deleteSuccessDescription", {
+        name: "Cuenta Popular",
+      })
+    ).toBe('La cuenta "Cuenta Popular" ha sido eliminada.')
+    expect(translate("en-US", "finance.accounts.sheet.createTitle")).toBe(
+      "Create Account"
+    )
+    expect(translate("es-ES", "finance.accounts.sheet.editTitle")).toBe(
+      "Editar cuenta"
+    )
+    expect(translate("en-US", "finance.accounts.card.balanceOwed")).toBe(
+      "Balance Owed"
+    )
+    expect(translate("es-ES", "finance.accounts.card.balanceOwed")).toBe(
+      "Saldo pendiente"
+    )
+    expect(
+      translate("en-US", "finance.accounts.adjust.adjustmentIncome", {
+        amount: "12.50",
+        currency: "USD",
+      })
+    ).toBe("+12.50 USD (Income)")
+    expect(
+      translate("es-ES", "finance.accounts.adjust.adjustmentExpense", {
+        amount: "3,75",
+        currency: "EUR",
+      })
+    ).toBe("-3,75 EUR (Gasto)")
+    expect(
+      translate("en-US", "finance.accounts.history.description", {
+        name: "N26",
+      })
+    ).toBe("Ledger for N26")
+    expect(
+      translate("es-ES", "finance.accounts.history.description", {
+        name: "N26",
+      })
+    ).toBe("Libro de N26")
+    expect(
+      translate("en-US", "finance.accounts.transfer.multiCurrencyDescription", {
+        source: "USD",
+        destination: "EUR",
+      })
+    ).toBe(
+      "Funds will be converted from USD to EUR using your rates configuration."
+    )
+    expect(
+      translate("es-ES", "finance.accounts.transfer.multiCurrencyDescription", {
+        source: "USD",
+        destination: "EUR",
+      })
+    ).toBe(
+      "Los fondos se convertirán de USD a EUR según tu configuración de tasas."
+    )
+    expect(
+      translate("en-US", "finance.accounts.institution.createOption", {
+        name: "Revolut",
+      })
+    ).toBe('Create "Revolut"')
+    expect(
+      translate("es-ES", "finance.accounts.institution.createOption", {
+        name: "Revolut",
+      })
+    ).toBe('Crear "Revolut"')
+
+    expect(
+      getLocalizedEnumLabel(
+        "finance",
+        "accountType",
+        "DIGITAL_ACCOUNT",
+        "en-US"
+      )
+    ).toBe("Digital Wallet")
+    expect(
+      getLocalizedEnumLabel(
+        "finance",
+        "accountType",
+        "DIGITAL_ACCOUNT",
+        "es-ES"
+      )
+    ).toBe("Monedero digital")
+    expect(
+      getLocalizedEnumLabel("finance", "accountType", "BANK", "en-US")
+    ).toBe("Bank / Checking")
+    expect(
+      getLocalizedEnumLabel("finance", "accountType", "BANK", "es-ES")
+    ).toBe("Banco / Cuenta corriente")
+    expect(
+      getLocalizedEnumLabel("finance", "accountType", "CREDIT_CARD", "es-419")
+    ).toBe("Tarjeta de crédito")
+  })
+
+  it("translates finance budgets keys in English and Spanish", () => {
+    expect(translate("en-US", "finance.budgets.title")).toBe("Budgeting")
+    expect(translate("es-ES", "finance.budgets.title")).toBe("Planificación")
+    expect(translate("es-ES", "finance.budgets.createTemplate")).toBe(
+      "Crear plantilla de presupuesto"
+    )
+
+    expect(
+      translate("en-US", "finance.budgets.deletedDescription", {
+        name: "Groceries",
+      })
+    ).toBe('Budget template "Groceries" has been deleted.')
+    expect(
+      translate("es-ES", "finance.budgets.deletedDescription", {
+        name: "Comida",
+      })
+    ).toBe('La plantilla de presupuesto "Comida" ha sido eliminada.')
+
+    expect(
+      translate("en-US", "finance.budgets.aheadOfPace", { count: 3 })
+    ).toBe("3 ahead of pace")
+    expect(translate("es-ES", "finance.budgets.activeTemplatesCountOne")).toBe(
+      "1 plantilla activa"
+    )
+
+    expect(
+      translate("en-US", "finance.budgets.statusChangedTitle", {
+        action: "Paused",
+      })
+    ).toBe("Budget Paused")
+    expect(
+      translate("es-ES", "finance.budgets.statusChangedDescription", {
+        name: "Viajes",
+        status: "pausado",
+      })
+    ).toBe('El presupuesto "Viajes" ahora está pausado.')
+
+    expect(translate("en-US", "finance.budgets.paceTick", { pct: 42 })).toBe(
+      "Today · 42% elapsed"
+    )
+    expect(translate("es-ES", "finance.budgets.paceTick", { pct: 42 })).toBe(
+      "Hoy · 42% transcurrido"
+    )
+
+    expect(translate("en-US", "finance.budgets.icons.piggyBank")).toBe(
+      "General"
+    )
+    expect(translate("es-ES", "finance.budgets.icons.shoppingCart")).toBe(
+      "Alimentación"
+    )
+
+    expect(
+      translate("en-US", "finance.budgets.progress.rateMissingDescription", {
+        from: "USD",
+        to: "EUR",
+      })
+    ).toBe(
+      "No conversion rate configured from USD to EUR. Configure a rate to track this budget."
+    )
+    expect(
+      translate("es-ES", "finance.budgets.progress.onPace", {
+        detail: "Quedan 5 d",
+      })
+    ).toBe("A buen ritmo · Quedan 5 d")
+
+    expect(translate("en-US", "finance.budgets.sheet.pausedLong")).toBe(
+      "Paused (Temporarily Suspended)"
+    )
+    expect(
+      getLocalizedEnumLabel(
+        "finance",
+        "limitPropagation",
+        "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY",
+        "es-ES"
+      )
+    ).toBe("Solo períodos futuros")
+    expect(
+      translate("en-US", "finance.budgets.sheet.ratePreview", {
+        from: "USD",
+        rate: 0.92,
+        to: "EUR",
+      })
+    ).toBe("(at 1 USD = 0.92 EUR)")
+
+    expect(
+      translate("es-ES", "finance.budgets.history.description", {
+        name: "Restaurantes",
+      })
+    ).toBe("Libro mayor de Restaurantes")
+
+    expect(getLocalizedIntervalLabel("WEEKLY", "es-ES")).toBe("Semanal")
+    expect(getLocalizedIntervalLabel("ONE_TIME", "en-US")).toBe("One-Time")
+    expect(
+      translate("es-ES", "finance.budgets.statusChangedTitle", {
+        action: translate("es-ES", "finance.budgets.actionReopened"),
+      })
+    ).toBe("Presupuesto Reabierta")
+  })
+
+  it("translates finance recurring keys in English and Spanish", () => {
+    expect(translate("en-US", "finance.recurring.title")).toBe(
+      "Recurring Transactions"
+    )
+    expect(translate("es-ES", "finance.recurring.title")).toBe(
+      "Transacciones recurrentes"
+    )
+    expect(translate("es-ES", "finance.recurring.createTemplate")).toBe(
+      "Crear plantilla"
+    )
+    expect(translate("en-US", "finance.recurring.tabTemplates")).toBe(
+      "Templates & Schedule"
+    )
+    expect(translate("es-ES", "finance.recurring.tabHistory")).toBe("Historial")
+
+    expect(translate("en-US", "finance.recurring.total", { count: 4 })).toBe(
+      "4 Total"
+    )
+    expect(
+      translate("es-ES", "finance.recurring.pendingCount", { count: 2 })
+    ).toBe("2 pendientes")
+    expect(
+      translate("en-US", "finance.recurring.graceBadge", { days: 3 })
+    ).toBe("Grace: 3d")
+
+    expect(
+      translate("es-ES", "finance.recurring.delete.descriptionExpense", {
+        name: "Alquiler",
+      })
+    ).toContain("Alquiler")
+    expect(
+      translate("en-US", "finance.recurring.delete.deletedIncomeDescription", {
+        name: "Salary",
+      })
+    ).toBe('Recurring income template "Salary" has been deleted.')
+
+    expect(translate("en-US", "finance.recurring.sheet.createTitle")).toBe(
+      "Create Recurring Transaction"
+    )
+    expect(translate("es-ES", "finance.recurring.sheet.editTitle")).toBe(
+      "Editar transacción recurrente"
+    )
+    expect(translate("es-ES", "finance.recurring.sheet.variableLabel")).toBe(
+      "Transacción de importe variable"
+    )
+
+    expect(
+      translate("en-US", "finance.recurring.history.description", {
+        name: "Netflix",
+      })
+    ).toBe("Past cleared instances for Netflix")
+    expect(translate("es-ES", "finance.recurring.history.clearedDate")).toBe(
+      "Fecha de pago"
+    )
+
+    expect(
+      translate("es-ES", "finance.recurring.skip.descriptionWithAmount", {
+        name: "Netflix",
+        amount: "15.49",
+        currency: "EUR",
+      })
+    ).toContain("15.49 EUR")
+
+    expect(translate("en-US", "finance.recurring.confirm.clearedTitle")).toBe(
+      "Transaction Cleared!"
+    )
+    expect(translate("es-ES", "finance.recurring.confirm.linkAndClear")).toBe(
+      "Vincular y registrar"
+    )
+
+    expect(translate("en-US", "finance.conversion.rateRequired")).toBe(
+      "Exchange rate required"
+    )
+    expect(translate("es-ES", "finance.conversion.reportingEquivalent")).toBe(
+      "Equivalente en la moneda de presentación"
+    )
+    expect(
+      translate("en-US", "finance.conversion.configureRate", {
+        tab: "Exchange Rates",
+      })
+    ).toBe(
+      "Go to the Exchange Rates tab to configure this conversion rate before saving."
+    )
+
+    expect(
+      getLocalizedEnumLabel(
+        "finance",
+        "sourceType",
+        "SOURCE_TYPE_UNSPECIFIED",
+        "es-ES"
+      )
+    ).toBe("Pago programado")
+    expect(
+      getLocalizedEnumLabel("finance", "sourceType", "LOAN", "en-US")
+    ).toBe("Loan")
+    expect(getLocalizedEnumLabel("finance", "sourceType", "TAX", "es-ES")).toBe(
+      "Impuesto"
+    )
+    expect(
+      getLocalizedEnumLabel("finance", "status", "STATUS_ENDED", "es-ES")
+    ).toBe("Finalizado")
+  })
+
+  it("translates finance borrowing keys in English and Spanish", () => {
+    expect(translate("en-US", "finance.borrowing.recordBorrowing")).toBe(
+      "Record Borrowing"
+    )
+    expect(translate("es-ES", "finance.borrowing.recordBorrowing")).toBe(
+      "Registrar préstamo"
+    )
+
+    expect(translate("es-ES", "finance.borrowing.sheet.directionLent")).toBe(
+      "Prestado (alguien me debe)"
+    )
+    expect(translate("en-US", "finance.borrowing.detail.logInstallment")).toBe(
+      "Log Installment Payment"
+    )
+
+    expect(
+      translate("en-US", "finance.borrowing.delete.description", {
+        name: "Ana",
+      })
+    ).toContain("with Ana?")
+    expect(
+      translate("es-ES", "finance.borrowing.delete.description", {
+        name: "Ana",
+      })
+    ).toContain("con Ana?")
+
+    expect(
+      translate("en-US", "finance.borrowing.detail.repaymentHistory", {
+        count: 3,
+      })
+    ).toBe("Repayment History (3)")
+    expect(
+      translate("es-ES", "finance.borrowing.detail.repaymentHistory", {
+        count: 3,
+      })
+    ).toBe("Historial de pagos (3)")
+
+    expect(
+      translate("en-US", "finance.borrowing.adjust.balanceIncrease", {
+        delta: "10.00",
+        currency: "USD",
+      })
+    ).toBe("+10.00 USD (Balance Increase)")
+    expect(
+      translate("es-ES", "finance.borrowing.adjust.noChange", {
+        currency: "EUR",
+      })
+    ).toBe("0.00 EUR (Sin cambio)")
+    expect(translate("es-ES", "finance.borrowing.adjust.invalidTarget")).toBe(
+      "Introduce un saldo objetivo válido no negativo"
+    )
+  })
+
+  it("translates finance reconcile keys in English and Spanish", () => {
+    expect(translate("en-US", "finance.reconcile.title")).toBe(
+      "Bank Statement Reconciliation"
+    )
+    expect(translate("es-ES", "finance.reconcile.title")).toBe(
+      "Conciliaci\u00f3n de extractos bancarios"
+    )
+    expect(translate("es-ES", "finance.reconcile.importStatement")).toBe(
+      "Importar extracto"
+    )
+
+    expect(
+      translate("en-US", "finance.reconcile.dashboard.tabInProgress", {
+        count: 2,
+      })
+    ).toBe("In Progress (2)")
+    expect(
+      translate("es-ES", "finance.reconcile.dashboard.tabInProgress", {
+        count: 2,
+      })
+    ).toBe("En curso (2)")
+
+    expect(
+      translate("es-ES", "finance.reconcile.workspace.progressCount", {
+        reviewed: 4,
+        total: 10,
+        percent: 40,
+      })
+    ).toBe("4 de 10 (40%)")
+
+    expect(
+      translate("en-US", "finance.reconcile.workspace.matchesApprovedOne", {
+        count: 1,
+      })
+    ).toBe("Approved 1 exact transaction match.")
+    expect(
+      translate("es-ES", "finance.reconcile.workspace.matchesApprovedOther", {
+        count: 3,
+      })
+    ).toBe("Se han aprobado 3 coincidencias exactas de transacci\u00f3n.")
+
+    expect(
+      translate("es-ES", "finance.reconcile.import.multiDescription", {
+        count: 2,
+      })
+    ).toContain("2 libros por divisa")
+    expect(
+      translate("en-US", "finance.reconcile.import.colOption", { index: 3 })
+    ).toBe("Col 3")
+    expect(
+      translate("es-ES", "finance.reconcile.import.rowsParsed", { count: 12 })
+    ).toBe("12 filas analizadas en total")
+  })
+
+  it("translates finance exchange rates keys in English and Spanish", () => {
+    expect(translate("en-US", "finance.exchangeRates.title")).toBe(
+      "Exchange Rates"
+    )
+    expect(translate("es-ES", "finance.exchangeRates.title")).toBe(
+      "Tasas de cambio"
+    )
+    expect(translate("es-ES", "finance.exchangeRates.addRate")).toBe(
+      "A\u00f1adir tasa de conversi\u00f3n"
+    )
+
+    expect(
+      translate("en-US", "finance.exchangeRates.reportingIntro", {
+        currency: "USD",
+      })
+    ).toContain("Workspace Base Reporting Currency: USD.")
+    expect(
+      translate("es-ES", "finance.exchangeRates.reportingIntro", {
+        currency: "EUR",
+      })
+    ).toContain("Moneda base de presentaci\u00f3n del espacio: EUR.")
+
+    expect(
+      translate("en-US", "finance.exchangeRates.deletedDescription", {
+        from: "EUR",
+        to: "USD",
+      })
+    ).toBe("Removed EUR to USD conversion rate.")
+    expect(
+      translate("es-ES", "finance.exchangeRates.perCurrency", {
+        currency: "DOP",
+      })
+    ).toBe("Por 1 DOP")
+
+    expect(
+      translate("en-US", "finance.exchangeRates.sheet.directOption", {
+        from: "EUR",
+        to: "USD",
+      })
+    ).toBe("1 EUR = ? USD (Direct)")
+    expect(
+      translate("es-ES", "finance.exchangeRates.sheet.rateInverse", {
+        from: "EUR",
+        to: "USD",
+      })
+    ).toBe("Tasa (valor de 1 USD en EUR)")
+    expect(translate("en-US", "common.to")).toBe("to")
+    expect(translate("es-ES", "common.to")).toBe("a")
+  })
+
+  it("localizes copilot prompts and attach labels in English and Spanish", () => {
+    expect(translate("en-US", "finance.recurring.copilotTitle")).toBe(
+      "Recurring Transactions"
+    )
+    expect(translate("es-ES", "finance.recurring.copilotTitle")).toBe(
+      "Transacciones recurrentes"
+    )
+    expect(translate("es-ES", "finance.recurring.suggestion.upcoming")).toBe(
+      "Resume los pagos programados de este mes"
+    )
+
+    expect(translate("en-US", "finance.borrowing.copilotTitle")).toBe(
+      "Personal Borrowing"
+    )
+    expect(
+      translate("en-US", "finance.borrowing.suggestion.balances")
+    ).toContain("what people owe me")
+    expect(translate("es-ES", "finance.borrowing.suggestion.priorities")).toBe(
+      "\u00bfQu\u00e9 deuda deber\u00eda priorizar al pagar?"
+    )
+
+    expect(translate("es-ES", "finance.reconcile.copilotTitle")).toBe(
+      "Conciliaci\u00f3n de extractos bancarios"
+    )
+    expect(
+      translate("en-US", "finance.reconcile.suggestion.discrepancies")
+    ).toBe("Explain the discrepancies in this statement")
+
+    expect(translate("en-US", "finance.exchangeRates.copilotTitle")).toBe(
+      "Exchange Rates"
+    )
+    expect(
+      translate("es-ES", "finance.exchangeRates.suggestion.missingRates")
+    ).toContain("tasa de cambio de hoy?")
+
+    expect(translate("es-ES", "finance.accounts.copilotTitle")).toBe("Cuentas")
+    expect(translate("es-ES", "finance.budgets.copilotTitle")).toBe(
+      "Presupuestos"
+    )
+
+    expect(translate("en-US", "copilot.addTo")).toBe("Add to Copilot")
+    expect(translate("es-ES", "copilot.attachTo", { name: "Groceries" })).toBe(
+      "A\u00f1adir Groceries a Copilot"
+    )
+    expect(translate("en-US", "copilot.pinnedTo")).toBe("Pinned to Copilot")
+  })
 })

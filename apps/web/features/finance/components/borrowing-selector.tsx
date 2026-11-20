@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
+import { useI18n } from "@saturn/hooks"
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -34,6 +35,7 @@ export function BorrowingSelector({
   headerExtra,
 }: BorrowingSelectorProps) {
   const navigate = useNavigate()
+  const { t } = useI18n()
   const [searchText, setSearchText] = useState("")
 
   // Fetch active borrowings
@@ -64,10 +66,10 @@ export function BorrowingSelector({
     <FormDrawer
       open={open}
       onOpenChange={onOpenChange}
-      title="Select Borrowing Agreement"
-      description="Choose an active borrowing or lending record to log a payment or disbursement."
+      title={t("finance.transactions.borrowing.selectTitle")}
+      description={t("finance.transactions.borrowing.selectDescription")}
       headerExtra={headerExtra}
-      submitLabel="Select a borrowing above"
+      submitLabel={t("finance.transactions.borrowing.selectSubmitLabel")}
       disabled
       hideSubmitButton
       onSubmit={(e) => e.preventDefault()}
@@ -81,11 +83,11 @@ export function BorrowingSelector({
               onClick={onBack}
               className="-ml-2 h-8 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
             >
-              ← Back to types
+              ← {t("finance.transactions.borrowing.backToTypes")}
             </Button>
           ) : (
             <span className="text-xs font-medium text-muted-foreground">
-              Active debt &amp; loan agreements
+              {t("finance.transactions.borrowing.activeAgreements")}
             </span>
           )}
 
@@ -98,7 +100,7 @@ export function BorrowingSelector({
             }}
             className="h-8 cursor-pointer px-0 text-xs font-medium text-primary hover:underline"
           >
-            Manage Borrowings
+            {t("finance.transactions.borrowing.manageBorrowings")}
           </Button>
         </div>
 
@@ -106,7 +108,7 @@ export function BorrowingSelector({
         <div className="relative">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search counterparties or description..."
+            placeholder={t("finance.transactions.borrowing.searchPlaceholder")}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             className="h-10 rounded-xl border-border/60 bg-background/40 pr-4 pl-9 text-xs focus-visible:ring-primary"
@@ -119,11 +121,10 @@ export function BorrowingSelector({
             <div className="py-12 text-center">
               <HandCoins className="mx-auto h-12 w-12 text-muted-foreground/20" />
               <p className="mt-2 text-xs font-semibold text-muted-foreground">
-                No active borrowing records found.
+                {t("finance.transactions.borrowing.noActiveTitle")}
               </p>
               <p className="mx-auto mt-1 max-w-xs text-[11px] text-muted-foreground/80">
-                Go to the Personal Borrowing tab to register a new lending or
-                borrowing agreement.
+                {t("finance.transactions.borrowing.noActiveDescription")}
               </p>
             </div>
           ) : (
@@ -157,7 +158,11 @@ export function BorrowingSelector({
                         {b.counterparty}
                       </h4>
                       <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                        <span>{isLent ? "You Lent" : "You Borrowed"}</span>
+                        <span>
+                          {isLent
+                            ? t("finance.transactions.borrowing.youLent")
+                            : t("finance.transactions.borrowing.youBorrowed")}
+                        </span>
                         {b.notes && (
                           <>
                             <span>•</span>
@@ -179,7 +184,7 @@ export function BorrowingSelector({
                         </span>
                       </span>
                       <span className="block text-[9px] font-bold text-muted-foreground uppercase">
-                        Remaining
+                        {t("finance.transactions.borrowing.remaining")}
                       </span>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5" />

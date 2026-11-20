@@ -1,6 +1,7 @@
 import { createElement, useMemo } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
@@ -27,6 +28,7 @@ import {
   BUDGET_ICONS,
   getBudgetColors,
   getBudgetIcon,
+  getBudgetIconLabelKey,
   toCentsString,
   BUDGET_INTERVAL_OPTIONS as INTERVAL_ITEMS,
 } from "../utils"
@@ -50,13 +52,19 @@ export function CreateBudgetSheet({
   refetchBudgets,
 }: CreateBudgetSheetProps) {
   const queryClient = useQueryClient()
+  const { t, language } = useI18n()
   const { data: accountsData } = useListAccountsQuery(
     {},
     { enabled: open && !!spaceId && accounts.length === 0 }
   )
-  const resolvedAccounts =
-    accounts.length > 0 ? accounts : accountsData?.accounts || []
-  const activeAccounts = resolvedAccounts.filter((a) => a.isActive)
+  const resolvedAccounts = useMemo(
+    () => (accounts.length > 0 ? accounts : accountsData?.accounts || []),
+    [accounts, accountsData?.accounts]
+  )
+  const activeAccounts = useMemo(
+    () => resolvedAccounts.filter((a) => a.isActive),
+    [resolvedAccounts]
+  )
   const createMutation = useCreateBudgetMutation()
 
   const { data: currenciesData } = useListCurrenciesQuery(
@@ -131,6 +139,11 @@ export function CreateBudgetSheet({
 
   const preview = getConversionPreview(limitValue, currencyValue)
 
+  const intervalItems = INTERVAL_ITEMS.map((item) => ({
+    value: item.value,
+    label: getLocalizedEnumLabel("finance", "interval", item.value, language),
+  }))
+
   return (
     <FormDrawer
       open={open}
@@ -138,18 +151,21 @@ export function CreateBudgetSheet({
         if (!next) reset()
         onOpenChange(next)
       }}
-      title="Create Budget Template"
-      description="Define a recurring budget template. Periods will spawn lazily when transactions occur."
-      submitLabel="Create Budget"
+      title={t("finance.budgets.sheet.createTitle")}
+      description={t("finance.budgets.sheet.createDescription")}
+      submitLabel={t("finance.budgets.sheet.createSubmit")}
       isPending={createMutation.isPending}
       onSubmit={handleSubmit(onSubmit)}
     >
-      <FormFieldItem label="Budget Name" error={errors.name?.message}>
+      <FormFieldItem
+        label={t("finance.budgets.sheet.nameLabel")}
+        error={errors.name?.message}
+      >
         <div className="flex h-10 items-center overflow-hidden rounded-lg border border-border bg-control shadow-2xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
           <input
             id="name"
             {...register("name")}
-            placeholder="e.g. Dining Out, Groceries"
+            placeholder={t("finance.budgets.sheet.namePlaceholder")}
             className="order-2 h-full w-full flex-1 bg-transparent px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
 
@@ -164,7 +180,7 @@ export function CreateBudgetSheet({
                     getBudgetColors(colorValue).text,
                     getBudgetColors(colorValue).bg
                   )}
-                  title="Choose category icon"
+                  title={t("finance.budgets.sheet.chooseIcon")}
                 >
                   {createElement(getBudgetIcon(iconValue), {
                     className:
@@ -181,7 +197,7 @@ export function CreateBudgetSheet({
                 <DropdownMenuItem
                   key={i.value}
                   onClick={() => setValue("icon", i.value)}
-                  title={i.label}
+                  title={t(getBudgetIconLabelKey(i.value))}
                   className={`flex cursor-pointer items-center justify-center rounded-lg p-2.5 transition-all hover:bg-muted/60 ${
                     iconValue === i.value
                       ? "bg-primary font-bold text-primary-foreground hover:bg-primary/90"
@@ -197,7 +213,7 @@ export function CreateBudgetSheet({
       </FormFieldItem>
 
       <FormFieldItem
-        label="Limit Amount"
+        label={t("finance.budgets.sheet.limitAmount")}
         error={errors.limit?.message}
         subtext={
           preview ? (
@@ -216,7 +232,11 @@ export function CreateBudgetSheet({
                   {preview.currency}
                 </span>{" "}
                 <span className="opacity-70">
-                  (at 1 {currencyValue} = {preview.rate} {preview.currency})
+                  {t("finance.budgets.sheet.ratePreview", {
+                    from: currencyValue,
+                    rate: preview.rate,
+                    to: preview.currency,
+                  })}
                 </span>
               </span>
             )
@@ -229,31 +249,31 @@ export function CreateBudgetSheet({
       <FormSelect
         control={control}
         name="currency"
-        label="Currency"
+        label={t("finance.budgets.sheet.currencyLabel")}
         items={currencyItems}
       />
 
       <FormSelect
         control={control}
         name="interval"
-        label="Interval"
-        placeholder="Select interval..."
-        items={INTERVAL_ITEMS}
+        label={t("finance.budgets.sheet.intervalLabel")}
+        placeholder={t("finance.budgets.sheet.intervalPlaceholder")}
+        items={intervalItems}
       />
 
-      <FormFieldItem label="Default Account (Optional)">
+      <FormFieldItem label={t("finance.budgets.sheet.defaultAccountLabel")}>
         <AccountSelect
           control={control}
           name="defaultAccountId"
           accounts={activeAccounts}
-          placeholder="Pre-fills forms with this account"
+          placeholder={t("finance.budgets.sheet.defaultAccountPlaceholder")}
           allowNone
         />
       </FormFieldItem>
 
       <div className="space-y-1.5">
         <label className="block text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase">
-          Theme Color
+          {t("finance.budgets.sheet.themeColor")}
         </label>
         <div className="flex flex-wrap gap-2.5 pt-1">
           {BUDGET_COLORS.map((c) => (

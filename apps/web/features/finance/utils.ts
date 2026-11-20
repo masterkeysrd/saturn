@@ -38,6 +38,7 @@ import {
   MS_PER_DAY,
   parseDate,
 } from "@saturn/core"
+import type { TranslationKey } from "@saturn/i18n"
 
 export * from "@saturn/core"
 
@@ -245,6 +246,11 @@ export const BUDGET_ICONS = [
 
 export function getBudgetIcon(iconName: string) {
   return BUDGET_ICONS.find((i) => i.value === iconName)?.icon || PiggyBank
+}
+
+export function getBudgetIconLabelKey(value: string): TranslationKey {
+  const camel = value.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase())
+  return `finance.budgets.icons.${camel}` as TranslationKey
 }
 
 export function getCardGradient(colorName: string) {

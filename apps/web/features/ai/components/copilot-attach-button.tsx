@@ -1,6 +1,7 @@
 import type { MouseEvent } from "react"
 import { buildCopilotEntityKey, type CopilotEntityRef } from "@saturn/core"
 import { useCopilotAttachment } from "@saturn/hooks/ai"
+import { useI18n } from "@saturn/hooks"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
@@ -23,6 +24,7 @@ export function CopilotAttachButton({
   size = "xs",
 }: CopilotAttachButtonProps) {
   const { isCopilotOpen, toggleItem, isPinned } = useCopilotAttachment()
+  const { t } = useI18n()
 
   if (!isCopilotOpen) {
     return null
@@ -46,7 +48,7 @@ export function CopilotAttachButton({
               type="button"
               variant="ghost"
               size="icon-xs"
-              aria-label={`Add ${item.label} to Copilot`}
+              aria-label={t("copilot.attachTo", { name: item.label })}
               aria-pressed={pinned}
               onClick={handleClick}
               onKeyDown={(e) => {
@@ -72,7 +74,7 @@ export function CopilotAttachButton({
           }
         />
         <TooltipContent side="top">
-          {pinned ? "Pinned to Copilot" : "Add to Copilot"}
+          {pinned ? t("copilot.pinnedTo") : t("copilot.addTo")}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

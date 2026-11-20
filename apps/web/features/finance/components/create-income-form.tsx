@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import { ArrowLeft } from "lucide-react"
@@ -82,6 +82,7 @@ export function CreateIncomeForm({
   headerExtra,
 }: CreateIncomeFormProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
   const [initialDate] = useState(() => new Date())
   const amountInputRef = useRef<HTMLInputElement | null>(null)
   const [recordedIncome, setRecordedIncome] =
@@ -276,12 +277,19 @@ export function CreateIncomeForm({
 
     const matchedAccount = activeAccounts.find((a) => a.id === data.accountId)
     const details: RecordedDetailRow[] = [
-      { label: "Deposit account", value: matchedAccount?.name || "Unlinked" },
-      { label: "Transaction date", value: tz.format(data.transactionDate) },
+      {
+        label: t("finance.transactions.incomeForm.depositAccount"),
+        value:
+          matchedAccount?.name || t("finance.transactions.incomeForm.unlinked"),
+      },
+      {
+        label: t("finance.transactions.inspector.transactionDate"),
+        value: tz.format(data.transactionDate),
+      },
     ]
     if (data.hasCustomEffectiveDate) {
       details.push({
-        label: "Effective date",
+        label: t("finance.transactions.inspector.effectiveDate"),
         value: tz.format(data.effectiveDate),
       })
     }
@@ -317,7 +325,7 @@ export function CreateIncomeForm({
       <TransactionRecordedSummary
         open={open}
         onOpenChange={onOpenChange}
-        title="Income Recorded"
+        title={t("finance.transactions.incomeForm.recordedTitle")}
         amountCents={recordedIncome.amountCents}
         currency={recordedIncome.currency}
         colored
@@ -326,7 +334,7 @@ export function CreateIncomeForm({
         summaryTitle={recordedIncome.summaryTitle}
         details={recordedIncome.details}
         sessionCount={sessionCount}
-        addAnotherLabel="Add another income"
+        addAnotherLabel={t("finance.transactions.incomeForm.addAnother")}
         onAddAnother={handleAddAnother}
         onChooseAnotherType={
           onBack
@@ -358,8 +366,8 @@ export function CreateIncomeForm({
       )}
       <span>
         {editTransaction
-          ? "Edit Standalone Income"
-          : "Record Standalone Income"}
+          ? t("finance.transactions.incomeForm.titleEdit")
+          : t("finance.transactions.incomeForm.title")}
       </span>
     </div>
   )
@@ -371,18 +379,23 @@ export function CreateIncomeForm({
       title={customTitle}
       description={
         editTransaction
-          ? "Modify logged income details. Saturn will recompute currency base aggregates automatically."
-          : "Record standalone manual income. The amount will be added to the target ledger account balance."
+          ? t("finance.transactions.incomeForm.descriptionEdit")
+          : t("finance.transactions.incomeForm.description")
       }
       headerExtra={editTransaction ? undefined : headerExtra}
       submitLabel={
-        editTransaction ? "Update Standalone Income" : "Save Standalone Income"
+        editTransaction
+          ? t("finance.transactions.incomeForm.submitUpdate")
+          : t("finance.transactions.incomeForm.submit")
       }
       isPending={isPending}
       disabled={isSubmitDisabled}
       onSubmit={handleSubmit(onSubmit)}
     >
-      <FormFieldItem label="Amount" error={errors.amount?.message}>
+      <FormFieldItem
+        label={t("finance.transactions.incomeForm.amountLabel")}
+        error={errors.amount?.message}
+      >
         <div className="flex h-10 items-center overflow-hidden rounded-lg border border-border bg-control shadow-2xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
           <AmountInput
             control={control}
@@ -410,25 +423,32 @@ export function CreateIncomeForm({
         fromCurrency={currencyValue}
       />
 
-      <FormFieldItem label="Deposit Account (Optional)">
+      <FormFieldItem label={t("finance.transactions.incomeForm.accountLabel")}>
         <AccountSelect
           control={control}
           name="accountId"
           accounts={activeAccounts}
-          placeholder="Choose account to impact balance"
+          placeholder={t("finance.transactions.incomeForm.accountPlaceholder")}
           allowNone
         />
       </FormFieldItem>
 
-      <FormFieldItem label="Description" error={errors.description?.message}>
+      <FormFieldItem
+        label={t("finance.transactions.incomeForm.descriptionLabel")}
+        error={errors.description?.message}
+      >
         <Input
           {...register("description")}
-          placeholder="e.g. Freelance Consulting, Salary Payout"
+          placeholder={t(
+            "finance.transactions.incomeForm.descriptionPlaceholder"
+          )}
         />
       </FormFieldItem>
 
       <div className="space-y-3.5">
-        <FormFieldItem label="Transaction Date">
+        <FormFieldItem
+          label={t("finance.transactions.incomeForm.transactionDateLabel")}
+        >
           <Controller
             control={control}
             name="transactionDate"
@@ -464,13 +484,13 @@ export function CreateIncomeForm({
             htmlFor="txCustomEffective"
             className="cursor-pointer text-xs font-medium text-foreground/80"
           >
-            Is this payment effective on a different date?
+            {t("finance.transactions.incomeForm.customEffectiveCheckbox")}
           </Label>
         </div>
 
         {hasCustomEffectiveDate && (
           <FormFieldItem
-            label="Effective Date"
+            label={t("finance.transactions.incomeForm.effectiveDateLabel")}
             className="slide-in-from-top-1.5 animate-in duration-200"
           >
             <Controller

@@ -16,6 +16,7 @@ import { BudgetPeriodProgress } from "./components/budget-period-progress"
 import { BudgetsView } from "./budgets-view"
 import { TransactionsView } from "./transactions-view"
 import { InsightsView } from "./insights-view"
+import { InboxView } from "./inbox-view"
 
 const mockNavigate = vi.fn()
 
@@ -51,6 +52,26 @@ vi.mock("@saturn/api/gen/saturn/finance/v1/finance", () => ({
   useCreateIncomeMutation: vi.fn(),
   useUpdateIncomeMutation: vi.fn(),
   useCreateTransferMutation: vi.fn(),
+  useApproveInboxItemMutation: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
+  useDiscardInboxItemMutation: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
+  useUpdateInboxItemMutation: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
+  useListScheduledTransactionsQuery: () => ({
+    data: { scheduledTransactions: [] },
+    isLoading: false,
+  }),
+  useListBorrowingsQuery: () => ({
+    data: { borrowings: [] },
+    isLoading: false,
+  }),
 }))
 
 vi.mock("@/features/space/use-space", () => ({
@@ -74,14 +95,15 @@ vi.mock("@saturn/hooks/ai", () => ({
 
 function wrapWithProviders(
   ui: React.ReactElement,
-  initialEntries: string[] = ["/space/spc_1/finance"]
+  initialEntries: string[] = ["/space/spc_1/finance"],
+  locale = "en-US"
 ) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   return render(
     <QueryClientProvider client={queryClient}>
-      <TimezoneProvider timezone="UTC" locale="en-US">
+      <TimezoneProvider timezone="UTC" locale={locale}>
         <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
       </TimezoneProvider>
     </QueryClientProvider>
@@ -614,5 +636,279 @@ describe("Phase 2 Web Finance Views", () => {
       expect(latestCall?.endDate).toBe("")
       expect(latestCall?.granularity).toBe("MONTHLY")
     })
+  })
+
+  it("InsightsView renders localized text in Spanish under locale='es-ES'", async () => {
+    vi.mocked(financeApi.useGetInsightsQuery).mockReturnValue({
+      data: {
+        spent: {
+          totalLimit: "100000",
+          totalSpent: "45000",
+          remainingBudget: "55000",
+          burnRate: 1500,
+          trend: [
+            {
+              label: "Abr 2026",
+              startDate: "2026-04-01T00:00:00Z",
+              amountInBase: "45000",
+              transactionCount: 3,
+              contributions: [
+                {
+                  budgetId: "bgt_1",
+                  budgetName: "Alimentos",
+                  budgetColor: "teal",
+                  amountInBase: "45000",
+                  amountInLocal: "45000",
+                  localCurrency: "USD",
+                  contributionPercentage: 100,
+                },
+              ],
+            },
+          ],
+          distributions: [
+            {
+              budgetId: "bgt_1",
+              budgetName: "Alimentos",
+              budgetColor: "teal",
+              budgetIcon: "shopping-cart",
+              limit: "100000",
+              spent: "45000",
+              spentInBase: "45000",
+              usagePercentage: 45,
+            },
+          ],
+          topExpenses: [
+            {
+              transactionId: "txn_1",
+              description: "Supermercado",
+              amount: "45000",
+              amountInBase: "45000",
+              currency: "USD",
+              budgetName: "Alimentos",
+              transactionDate: "2026-04-10T12:00:00Z",
+            },
+          ],
+        },
+        income: {
+          totalIncome: "120000",
+          trend: [
+            {
+              label: "Abr 2026",
+              startDate: "2026-04-01T00:00:00Z",
+              amountInBase: "120000",
+              transactionCount: 1,
+              contributions: [
+                {
+                  accountId: "acc_1",
+                  accountName: "Nómina",
+                  amountInBase: "120000",
+                  amountInLocal: "120000",
+                  localCurrency: "USD",
+                  contributionPercentage: 100,
+                },
+              ],
+            },
+          ],
+          distributions: [
+            {
+              name: "Nómina Principal",
+              amount: "120000",
+              percentage: 100,
+            },
+          ],
+          topIncomes: [
+            {
+              transactionId: "txn_inc_1",
+              description: "Salario mensual",
+              amount: "120000",
+              amountInBase: "120000",
+              currency: "USD",
+              transactionDate: "2026-04-01T12:00:00Z",
+            },
+          ],
+        },
+      },
+      isLoading: false,
+      isPending: false,
+      error: null,
+    } as never)
+
+    wrapWithProviders(<InsightsView />, ["/space/spc_1/finance"], "es-ES")
+
+    // Page title and layout
+    expect(screen.getAllByText("Análisis").length).toBeGreaterThan(0)
+    expect(
+      screen.getByText(
+        "Tendencias financieras, ritmo del flujo de caja y distribución de categorías."
+      )
+    ).toBeTruthy()
+
+    // Stream tabs in Spanish
+    expect(screen.getByRole("tab", { name: /Flujo de caja/i })).toBeTruthy()
+    expect(screen.getByRole("tab", { name: /Gastos/i })).toBeTruthy()
+    expect(screen.getByRole("tab", { name: /Ingresos/i })).toBeTruthy()
+
+    // Cash flow metrics in Spanish
+    expect(screen.getByText("Ahorro neto")).toBeTruthy()
+    expect(screen.getByText("Tasa de ahorro")).toBeTruthy()
+    expect(screen.getByText("Ingreso total")).toBeTruthy()
+    expect(screen.getByText("Gasto total")).toBeTruthy()
+
+    // Chart header & granularity buttons in Spanish
+    expect(screen.getByText("Comparación de flujo de caja")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Diario" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Semanal" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Mensual" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Anual" })).toBeTruthy()
+
+    // Native SVG chart in Spanish
+    expect(
+      screen.getByRole("img", {
+        name: /Gráfico comparativo de flujo de caja/i,
+      })
+    ).toBeTruthy()
+
+    // Switch to Gastos tab
+    fireEvent.click(screen.getByRole("tab", { name: /Gastos/i }))
+    expect(screen.getByText("Límite activo")).toBeTruthy()
+    expect(screen.getByText("Restante")).toBeTruthy()
+    expect(screen.getByText("Ritmo de gasto diario")).toBeTruthy()
+    expect(screen.getByText("Asignaciones de presupuesto")).toBeTruthy()
+    expect(screen.getByText("Mayores gastos")).toBeTruthy()
+    expect(screen.getByText("Supermercado")).toBeTruthy()
+
+    // Switch to Ingresos tab
+    fireEvent.click(screen.getByRole("tab", { name: /Ingresos/i }))
+    expect(screen.getByText("Principal fuente de ingresos")).toBeTruthy()
+    expect(screen.getByText("Desglose de fuentes de ingresos")).toBeTruthy()
+    expect(screen.getByText("Mayores ingresos")).toBeTruthy()
+    expect(screen.getByText("Salario mensual")).toBeTruthy()
+  })
+
+  it("TransactionsView renders localized text in Spanish under locale='es-ES'", async () => {
+    vi.mocked(financeApi.useListTransactionsQuery).mockReturnValue({
+      data: {
+        transactions: [
+          {
+            id: "txn_1",
+            description: "Supermercado El Sol",
+            amount: "4500",
+            currency: "USD",
+            type: "EXPENSE",
+            transactionDate: "2026-04-16T10:00:00Z",
+            budgetId: "bgt_1",
+            accountId: "acc_1",
+            metadata: { recurring_transaction_id: "rec_1" },
+          },
+        ],
+        nextPageToken: "",
+      },
+      isLoading: false,
+    } as never)
+
+    vi.mocked(financeApi.useListTransactionEventsQuery).mockReturnValue({
+      data: {
+        events: [
+          {
+            id: "evt_1",
+            eventType: "MANUAL_EDIT",
+            createTime: "2026-04-16T10:05:00Z",
+            metadata: JSON.stringify({ source: "web" }),
+          },
+        ],
+      },
+      isLoading: false,
+    } as never)
+
+    wrapWithProviders(
+      <TransactionsView />,
+      ["/space/spc_1/finance/transactions"],
+      "es-ES"
+    )
+
+    // Page layout and title in Spanish
+    expect(screen.getAllByText("Transacciones").length).toBeGreaterThan(0)
+    expect(
+      screen.getByText(
+        "Consulta el historial del libro mayor, revisa conversiones de cambio y gestiona gastos."
+      )
+    ).toBeTruthy()
+
+    // Top summary stats in Spanish
+    expect(screen.getByText("Ingreso total")).toBeTruthy()
+    expect(screen.getByText("Gasto total")).toBeTruthy()
+    expect(screen.getByText("Prom. por gasto")).toBeTruthy()
+
+    // Search and filter button in Spanish
+    expect(screen.getByPlaceholderText("Buscar descripción…")).toBeTruthy()
+    expect(
+      screen.getByRole("button", { name: "Filtrar transacciones" })
+    ).toBeTruthy()
+    expect(screen.getByText("Filtrar")).toBeTruthy()
+
+    // Transaction item badges in Spanish
+    expect(screen.getByText("Supermercado El Sol")).toBeTruthy()
+    expect(screen.getByText("Recurrente")).toBeTruthy()
+    expect(screen.getByText("Gasto")).toBeTruthy()
+    expect(screen.getByText("Neto")).toBeTruthy()
+
+    // Click row to open Inspector panel in Spanish
+    fireEvent.click(screen.getByText("Supermercado El Sol"))
+    const inspector = await screen.findByRole("complementary")
+    expect(inspector).toBeTruthy()
+    expect(screen.getByText("Registro de auditoría y eventos")).toBeTruthy()
+    expect(screen.getByText("Modificación manual")).toBeTruthy()
+    expect(screen.getByText("Fecha de transacción")).toBeTruthy()
+  })
+
+  it("InboxView renders localized text in Spanish under locale='es-ES'", async () => {
+    vi.mocked(financeApi.useListInboxItemsQuery).mockReturnValue({
+      data: {
+        inboxItems: [
+          {
+            id: "inb_1",
+            docType: "RECEIPT",
+            amount: "7500",
+            currency: "USD",
+            vendorName: "GitHub Enterprise",
+            status: "PENDING",
+            transactionDate: "2026-04-16T12:00:00Z",
+          },
+        ],
+        nextPageToken: "",
+      },
+      isLoading: false,
+      refetch: vi.fn(),
+    } as never)
+
+    wrapWithProviders(<InboxView />, ["/space/spc_1/finance/inbox"], "es-ES")
+
+    // Layout and page header in Spanish
+    expect(screen.getAllByText("Bandeja de revisión").length).toBeGreaterThan(0)
+    expect(
+      screen.getByText(
+        "Verifica extractos bancarios, recibos y facturas pendientes en paralelo para revisar y registrar en el libro mayor."
+      )
+    ).toBeTruthy()
+
+    // Left master panel in Spanish
+    expect(screen.getByText("Elementos en cola (1)")).toBeTruthy()
+    expect(
+      screen.getByPlaceholderText("Buscar elementos en cola...")
+    ).toBeTruthy()
+    expect(screen.getAllByText("GitHub Enterprise").length).toBeGreaterThan(0)
+
+    // Right detail panel in Spanish
+    expect(screen.getByText("Clasificación del documento")).toBeTruthy()
+    expect(
+      screen.getByText("Vincular a transacción existente (Opcional)")
+    ).toBeTruthy()
+    expect(screen.getByText("Proveedor / Descripción")).toBeTruthy()
+    expect(screen.getByText("Ajuste de importe")).toBeTruthy()
+    expect(
+      screen.getByRole("button", { name: "Descartar documento" })
+    ).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Omitir" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Registrar gasto" })).toBeTruthy()
   })
 })

@@ -5,6 +5,7 @@ import { InboxItemReviewPanel } from "./components/inbox-item-review-panel"
 import { useUrlState } from "@/lib/use-url-state"
 import {
   useDebounce,
+  useI18n,
   useTimezone,
   invalidateFinanceQueries,
 } from "@saturn/hooks"
@@ -49,6 +50,7 @@ import {
 export function InboxView() {
   const queryClient = useQueryClient()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { spaceId } = useActiveSpaceContext()
   const [urlState, setUrlState] = useUrlState({
     search: "",
@@ -216,22 +218,19 @@ export function InboxView() {
     if (!isLinking && !isVerificationItem) {
       if (txnType === "TRANSFER") {
         if (!accId || !destAccId) {
-          const errMsg =
-            "Both Source Account and Destination Account are required for Transfer transactions."
+          const errMsg = t("finance.inbox.validation.transferAccountsRequired")
           setError(errMsg)
           return
         }
       } else if (docType === "INVOICE") {
         if (!budId) {
-          const errMsg =
-            "Budget Category is required to schedule an unpaid Invoice."
+          const errMsg = t("finance.inbox.validation.budgetRequiredForInvoice")
           setError(errMsg)
           return
         }
       } else {
         if (!accId) {
-          const errMsg =
-            "Debit/Credit Account is required to record this transaction."
+          const errMsg = t("finance.inbox.validation.accountRequired")
           setError(errMsg)
           return
         }
@@ -319,8 +318,11 @@ export function InboxView() {
       await invalidateFinanceQueries(queryClient)
       refetchInbox()
       toast.add({
-        title: "Reconciliation Approved",
-        description: `Successfully reconciled ${desc || tx.vendorName || "transaction"}.`,
+        title: t("finance.inbox.approvedToastTitle"),
+        description: t("finance.inbox.approvedToastDescription", {
+          description:
+            desc || tx.vendorName || t("finance.transactions.transaction"),
+        }),
         type: "success",
       })
     } catch (err: unknown) {
@@ -353,15 +355,15 @@ export function InboxView() {
       await invalidateFinanceQueries(queryClient)
       refetchInbox()
       toast.add({
-        title: "Item Discarded",
-        description: "Successfully discarded the inbox item.",
+        title: t("finance.inbox.discardedToastTitle"),
+        description: t("finance.inbox.discardedToastDescription"),
         type: "success",
       })
     } catch (err: unknown) {
       console.error("Failed to discard inbox item", err)
       const errorVal = err as { message?: string }
       toast.add({
-        title: "Discard Failed",
+        title: t("finance.inbox.discardFailedTitle"),
         description: errorVal.message || "Failed to discard the item.",
         type: "error",
       })
@@ -370,26 +372,25 @@ export function InboxView() {
 
   return (
     <FinancePageLayout
-      title="Reconciliation Queue"
-      description="Verify parsed bank statements, receipts, and outstanding invoices side-by-side to review and commit entries to the general ledger."
+      title={t("finance.inbox.title")}
+      description={t("finance.inbox.description")}
       icon={Inbox}
     >
       {inboxLoading && !inboxData ? (
         <div className="flex flex-col items-center justify-center gap-3 py-32">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <span className="text-sm text-muted-foreground">
-            Opening your financial inbox...
+            {t("finance.inbox.loading")}
           </span>
         </div>
       ) : inboxItems.length === 0 && !search && docType === "ALL" ? (
         <div className="flex animate-in flex-col items-center justify-center rounded-3xl border border-dashed border-border/40 bg-card/10 px-6 py-24 text-center duration-300 fade-in">
           <Inbox className="mb-4 h-16 w-16 text-muted-foreground/20" />
           <h4 className="text-lg font-bold text-foreground">
-            No items pending review
+            {t("finance.inbox.noItemsPending")}
           </h4>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-            All your transaction receipts, bank swipes, and workflow runs have
-            been successfully reconciled. Clean ledger!
+            {t("finance.inbox.noItemsDescription")}
           </p>
         </div>
       ) : (
@@ -399,13 +400,15 @@ export function InboxView() {
             <div className="flex flex-col gap-2 px-1">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                  Staged Items ({inboxItems.length})
+                  {t("finance.inbox.stagedItemsWithCount", {
+                    count: inboxItems.length,
+                  })}
                 </span>
               </div>
               <div className="grid grid-cols-12 gap-2">
                 <div className="col-span-8">
                   <Input
-                    placeholder="Search staged items..."
+                    placeholder={t("finance.inbox.searchPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="h-9 rounded-2xl border-border/30 bg-card/40 text-xs"
@@ -419,48 +422,55 @@ export function InboxView() {
                     }
                   >
                     <SelectTrigger className="h-9 rounded-2xl border-border/30 bg-card/40 text-xs">
-                      <SelectValue placeholder="All">
-                        {docType === "ALL" && "All"}
-                        {docType === "RECEIPT" && "Receipt"}
-                        {docType === "INVOICE" && "Invoice"}
-                        {docType === "BANK_NOTIFICATION" && "Notification"}
-                        {docType === "SYSTEM_VERIFICATION" && "Verification"}
-                        {docType === "UNKNOWN" && "Unknown"}
+                      <SelectValue
+                        placeholder={t("finance.inbox.docTypes.all")}
+                      >
+                        {docType === "ALL" && t("finance.inbox.docTypes.all")}
+                        {docType === "RECEIPT" &&
+                          t("finance.inbox.docTypes.receipt")}
+                        {docType === "INVOICE" &&
+                          t("finance.inbox.docTypes.invoice")}
+                        {docType === "BANK_NOTIFICATION" &&
+                          t("finance.inbox.docTypes.notification")}
+                        {docType === "SYSTEM_VERIFICATION" &&
+                          t("finance.inbox.docTypes.systemVerification")}
+                        {docType === "UNKNOWN" &&
+                          t("finance.inbox.docTypes.unknown")}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl border-border/30 bg-card/90 backdrop-blur-xl">
                       <SelectItem value="ALL" className="rounded-xl text-xs">
-                        All
+                        {t("finance.inbox.docTypes.all")}
                       </SelectItem>
                       <SelectItem
                         value="RECEIPT"
                         className="rounded-xl text-xs"
                       >
-                        Receipt
+                        {t("finance.inbox.docTypes.receipt")}
                       </SelectItem>
                       <SelectItem
                         value="INVOICE"
                         className="rounded-xl text-xs"
                       >
-                        Invoice
+                        {t("finance.inbox.docTypes.invoice")}
                       </SelectItem>
                       <SelectItem
                         value="BANK_NOTIFICATION"
                         className="rounded-xl text-xs"
                       >
-                        Notification
+                        {t("finance.inbox.docTypes.notification")}
                       </SelectItem>
                       <SelectItem
                         value="SYSTEM_VERIFICATION"
                         className="rounded-xl text-xs"
                       >
-                        Verification
+                        {t("finance.inbox.docTypes.systemVerification")}
                       </SelectItem>
                       <SelectItem
                         value="UNKNOWN"
                         className="rounded-xl text-xs"
                       >
-                        Unknown
+                        {t("finance.inbox.docTypes.unknown")}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -471,7 +481,7 @@ export function InboxView() {
               <div className="space-y-2 p-1">
                 {inboxItems.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center text-xs text-muted-foreground/60">
-                    <span>No staged items match these criteria.</span>
+                    <span>{t("finance.inbox.noMatchingItems")}</span>
                   </div>
                 ) : (
                   inboxItems.map((tx) => {
@@ -516,7 +526,7 @@ export function InboxView() {
                         </div>
                         <div className="flex flex-col">
                           <span className="line-clamp-1 text-sm font-bold text-foreground">
-                            {tx.vendorName || "Unknown Vendor"}
+                            {tx.vendorName || t("finance.inbox.unknownVendor")}
                           </span>
                           <span className="mt-0.5 text-[10px] text-muted-foreground">
                             {tx.transactionDate
@@ -546,7 +556,7 @@ export function InboxView() {
                   {inboxLoading && (
                     <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                   )}
-                  Load More
+                  {t("finance.inbox.loadMore")}
                 </Button>
               </div>
             )}
@@ -583,11 +593,10 @@ export function InboxView() {
               <div className="flex h-full min-h-[450px] animate-in flex-col items-center justify-center rounded-3xl border border-dashed border-border/40 bg-card/10 text-center duration-300 fade-in">
                 <Inbox className="mb-4 h-12 w-12 text-muted-foreground/20" />
                 <h4 className="text-sm font-semibold text-foreground">
-                  Select an Inbox Item
+                  {t("finance.inbox.selectItemTitle")}
                 </h4>
                 <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
-                  Choose a pending notification from the list on the left to
-                  verify and link details.
+                  {t("finance.inbox.selectItemDescription")}
                 </p>
               </div>
             )}
@@ -601,22 +610,25 @@ export function InboxView() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Discard Inbox Item?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("finance.inbox.discardTitle")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to discard this inbox item? This action
-              cannot be undone.
+              {t("finance.inbox.discardDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={discardMutation.isPending}>
-              Cancel
+              {t("common.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={handleConfirmDiscard}
               disabled={discardMutation.isPending}
             >
-              {discardMutation.isPending ? "Discarding..." : "Discard"}
+              {discardMutation.isPending
+                ? t("finance.inbox.actions.discarding")
+                : t("finance.inbox.actions.discard")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

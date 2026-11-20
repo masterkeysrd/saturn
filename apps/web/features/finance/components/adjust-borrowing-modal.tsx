@@ -7,6 +7,7 @@ import {
   useAdjustBorrowingBalanceMutation,
   useListAccountsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
+import { useI18n } from "@saturn/hooks"
 import {
   AdjustBorrowingSchema,
   type AdjustBorrowingFormValues,
@@ -46,6 +47,7 @@ export function AdjustBorrowingModal({
   refetchBorrowings,
   refetchRepayments,
 }: AdjustBorrowingModalProps) {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [adjustError, setAdjustError] = useState<string | null>(null)
 
@@ -104,7 +106,9 @@ export function AdjustBorrowingModal({
     },
     onError: (err: unknown) => {
       setAdjustError(
-        err instanceof Error ? err.message : "Failed to adjust balance"
+        err instanceof Error
+          ? err.message
+          : t("finance.borrowing.adjust.failed")
       )
     },
   })
@@ -114,7 +118,7 @@ export function AdjustBorrowingModal({
 
     const parsedNum = parseFloat(data.targetBalance)
     if (isNaN(parsedNum) || parsedNum < 0) {
-      setAdjustError("Please enter a valid non-negative target balance")
+      setAdjustError(t("finance.borrowing.adjust.invalidTarget"))
       return
     }
 
@@ -153,15 +157,16 @@ export function AdjustBorrowingModal({
         <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
           <DialogTitle className="flex items-center gap-2 pr-8 text-lg font-semibold tracking-tight text-foreground">
             <Scale className="h-4.5 w-4.5 text-primary" />
-            <span>Adjust Borrowing Balance</span>
+            <span>{t("finance.borrowing.adjust.title")}</span>
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            Directly adjust the remaining balance for{" "}
-            <span className="font-medium text-foreground">
-              {borrowing.direction === "LENT" ? "Lent to" : "Borrowed from"}{" "}
-              {borrowing.counterparty}
-            </span>
-            . Saturn will record a balance adjustment in the borrowing timeline.
+            {t("finance.borrowing.adjust.description", {
+              who: `${
+                borrowing.direction === "LENT"
+                  ? t("finance.borrowing.detail.lentTo")
+                  : t("finance.borrowing.detail.borrowedFrom")
+              } ${borrowing.counterparty}`,
+            })}
           </DialogDescription>
         </DialogHeader>
 
@@ -174,7 +179,7 @@ export function AdjustBorrowingModal({
             <div className="grid grid-cols-2 gap-3 rounded-xl border border-border/60 bg-muted/30 p-3.5">
               <div>
                 <span className="block text-xs text-muted-foreground">
-                  Current Remaining
+                  {t("finance.borrowing.adjust.currentRemaining")}
                 </span>
                 <span className="mt-0.5 block font-mono text-sm font-semibold text-foreground tabular-nums">
                   {currentBalFormatted}{" "}
@@ -185,7 +190,7 @@ export function AdjustBorrowingModal({
               </div>
               <div>
                 <span className="block text-xs text-muted-foreground">
-                  Target Balance
+                  {t("finance.borrowing.adjust.targetBalance")}
                 </span>
                 <span className="mt-0.5 block font-mono text-sm font-semibold text-foreground tabular-nums">
                   {targetBalFormatted}{" "}
@@ -207,20 +212,26 @@ export function AdjustBorrowingModal({
                     : "border-border/60 bg-muted/20 text-muted-foreground"
               )}
             >
-              <span>Adjustment Type</span>
+              <span>{t("finance.borrowing.adjust.adjustmentType")}</span>
               <span className="font-mono font-semibold tabular-nums">
                 {deltaCents > 0
-                  ? `+${deltaFormatted} ${currency} (Balance Increase)`
+                  ? t("finance.borrowing.adjust.balanceIncrease", {
+                      delta: deltaFormatted,
+                      currency,
+                    })
                   : deltaCents < 0
-                    ? `-${deltaFormatted} ${currency} (Balance Reduction)`
-                    : `0.00 ${currency} (No Change)`}
+                    ? t("finance.borrowing.adjust.balanceReduction", {
+                        delta: deltaFormatted,
+                        currency,
+                      })
+                    : t("finance.borrowing.adjust.noChange", { currency })}
               </span>
             </div>
 
             {/* Inputs */}
             <div className="space-y-1.5">
               <Label className="text-[13px] font-medium text-foreground/90">
-                New Remaining Balance
+                {t("finance.borrowing.adjust.newBalanceLabel")}
               </Label>
               <AmountInput
                 control={control}
@@ -233,7 +244,7 @@ export function AdjustBorrowingModal({
 
             <div className="flex flex-col space-y-1.5">
               <Label className="text-[13px] font-medium text-foreground/90">
-                Adjustment Date
+                {t("finance.borrowing.adjust.adjustmentDate")}
               </Label>
               <Controller
                 control={control}
@@ -249,13 +260,13 @@ export function AdjustBorrowingModal({
 
             <div className="space-y-1.5">
               <Label className="text-[13px] font-medium text-foreground/90">
-                Account for Bank Transaction (Optional)
+                {t("finance.borrowing.adjust.accountLabel")}
               </Label>
               <AccountSelect
                 control={control}
                 name="accountId"
                 accounts={activeAccounts}
-                placeholder="None (Adjust borrowing balance only)"
+                placeholder={t("finance.borrowing.adjust.accountPlaceholder")}
                 allowNone
               />
             </div>
@@ -265,12 +276,12 @@ export function AdjustBorrowingModal({
                 htmlFor="adjust-borrowing-notes"
                 className="text-[13px] font-medium text-foreground/90"
               >
-                Adjustment Note / Reason
+                {t("finance.borrowing.adjust.noteLabel")}
               </Label>
               <Input
                 id="adjust-borrowing-notes"
                 {...register("notes")}
-                placeholder="e.g. Debt forgiveness, fee adjustment, reconciliation"
+                placeholder={t("finance.borrowing.adjust.notePlaceholder")}
               />
               {errors.notes && (
                 <p className="text-xs font-medium text-destructive">
@@ -293,7 +304,7 @@ export function AdjustBorrowingModal({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               type="submit"
@@ -302,7 +313,7 @@ export function AdjustBorrowingModal({
               {adjustMutation.isPending && (
                 <Loader2 className="h-4 w-4 animate-spin" />
               )}
-              Confirm Adjustment
+              {t("finance.borrowing.adjust.confirm")}
             </Button>
           </div>
         </form>

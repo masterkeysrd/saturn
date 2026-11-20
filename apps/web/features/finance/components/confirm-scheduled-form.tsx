@@ -3,6 +3,8 @@ import { useForm, Controller } from "react-hook-form"
 import { useQueryClient } from "@tanstack/react-query"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ArrowLeft } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
+import { getLocalizedIntervalLabel } from "@saturn/i18n"
 import { FormDrawer } from "@/components/ui/form-drawer"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -22,7 +24,7 @@ import {
   type Budget,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { getScheduledDisplayName } from "@saturn/core"
-import { toCentsString, formatCents, formatInterval } from "../utils"
+import { toCentsString, formatCents } from "../utils"
 
 interface ConfirmScheduledFormProps {
   open: boolean
@@ -48,6 +50,7 @@ export function ConfirmScheduledForm({
   headerExtra,
 }: ConfirmScheduledFormProps) {
   const queryClient = useQueryClient()
+  const { t, language } = useI18n()
   const confirmMutation = useConfirmScheduledTransactionMutation()
 
   const matchedTemplate = recurringTemplates.find(
@@ -61,7 +64,9 @@ export function ConfirmScheduledForm({
   const intervalVal =
     matchedTemplate?.interval ||
     scheduledTransaction.recurringTransaction?.interval
-  const intervalLabel = intervalVal ? formatInterval(intervalVal) : "One-Time"
+  const intervalLabel = intervalVal
+    ? getLocalizedIntervalLabel(intervalVal, language)
+    : t("finance.transactions.scheduled.oneTime")
 
   const confirmScheduledDefaultValues = useMemo<ConfirmTransactionFormValues>(
     () => ({
@@ -151,10 +156,22 @@ export function ConfirmScheduledForm({
     <FormDrawer
       open={open}
       onOpenChange={onOpenChange}
-      title={isExpense ? "Confirm Payment" : "Confirm Deposit"}
-      description={`Clear this scheduled ${isExpense ? "outflow" : "inflow"} from your calendar.`}
+      title={
+        isExpense
+          ? t("finance.transactions.scheduled.confirmPayment")
+          : t("finance.transactions.scheduled.confirmDeposit")
+      }
+      description={
+        isExpense
+          ? t("finance.transactions.scheduled.clearOutflowDescription")
+          : t("finance.transactions.scheduled.clearInflowDescription")
+      }
       headerExtra={headerExtra}
-      submitLabel={isExpense ? "Confirm Payment" : "Confirm Deposit"}
+      submitLabel={
+        isExpense
+          ? t("finance.transactions.scheduled.confirmPayment")
+          : t("finance.transactions.scheduled.confirmDeposit")
+      }
       onSubmit={handleSubmit(onSubmit)}
       isPending={confirmMutation.isPending}
     >
@@ -169,7 +186,7 @@ export function ConfirmScheduledForm({
             className="-ml-2 h-8 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           >
             <ArrowLeft className="mr-1 h-3.5 w-3.5" />
-            Back to scheduled items
+            {t("finance.transactions.scheduled.backToScheduled")}
           </Button>
         </div>
 
@@ -177,7 +194,7 @@ export function ConfirmScheduledForm({
         <div className="rounded-xl border border-border/40 bg-muted/20 p-4">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-              Scheduled Target
+              {t("finance.transactions.scheduled.target")}
             </span>
             <span className="text-[10px] font-bold text-indigo-400 uppercase">
               {intervalLabel}
@@ -199,7 +216,7 @@ export function ConfirmScheduledForm({
         {/* Amount field */}
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-foreground/90">
-            Actual Amount
+            {t("finance.transactions.scheduled.actualAmount")}
           </Label>
           <div className="relative">
             <Input
@@ -224,7 +241,9 @@ export function ConfirmScheduledForm({
         {/* Account Select */}
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-foreground/90">
-            {isExpense ? "Payment Account" : "Deposit Account"}
+            {isExpense
+              ? t("finance.transactions.scheduled.paymentAccount")
+              : t("finance.transactions.scheduled.depositAccount")}
           </Label>
           <AccountSelect
             control={control}
@@ -242,7 +261,7 @@ export function ConfirmScheduledForm({
         {isExpense && (
           <div className="space-y-1.5">
             <Label className="text-[13px] font-medium text-foreground/90">
-              Budget Category
+              {t("finance.transactions.scheduled.budgetCategory")}
             </Label>
             <BudgetSelect control={control} name="budgetId" budgets={budgets} />
             {errors.budgetId && (
@@ -256,7 +275,7 @@ export function ConfirmScheduledForm({
         {/* Description field */}
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-foreground/90">
-            Description
+            {t("finance.transactions.scheduled.descriptionLabel")}
           </Label>
           <Input {...register("description")} />
           {errors.description && (
@@ -270,7 +289,7 @@ export function ConfirmScheduledForm({
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-[13px] font-medium text-foreground/90">
-              Transaction Date
+              {t("finance.transactions.scheduled.transactionDate")}
             </Label>
             <Controller
               control={control}
@@ -283,7 +302,7 @@ export function ConfirmScheduledForm({
 
           <div className="space-y-1.5">
             <Label className="text-[13px] font-medium text-foreground/90">
-              Effective Date
+              {t("finance.transactions.scheduled.effectiveDate")}
             </Label>
             <Controller
               control={control}

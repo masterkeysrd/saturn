@@ -1,7 +1,9 @@
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useSpacePermissions } from "@/features/space/use-space"
-import { invalidateFinanceQueries, useTimezone } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n, useTimezone } from "@saturn/hooks"
+import { useRegisterCopilotView } from "@saturn/hooks/ai"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import {
   useListRecurringTransactionsQuery,
@@ -60,9 +62,7 @@ import {
   formatCents,
   getBudgetColors,
   getBudgetIcon,
-  formatInterval,
   formatNextDueDate,
-  formatStatus,
   isStatusActive,
 } from "./utils"
 import { cn } from "@/lib/utils"
@@ -78,6 +78,17 @@ export function RecurringView() {
   const queryClient = useQueryClient()
   const { spaceId, isWritable } = useSpacePermissions()
   const tz = useTimezone()
+  const { t, language } = useI18n()
+
+  useRegisterCopilotView({
+    viewId: "finance.recurring",
+    title: t("finance.recurring.copilotTitle"),
+    suggestions: [
+      t("finance.recurring.suggestion.upcoming"),
+      t("finance.recurring.suggestion.cashFlow"),
+      t("finance.recurring.suggestion.cutBills"),
+    ],
+  })
 
   const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
   const baseCurrency = settings?.baseCurrency || "USD"
@@ -184,8 +195,15 @@ export function RecurringView() {
       })
       toast.add({
         type: "success",
-        title: "Template Deleted",
-        description: `Recurring ${deleteTarget.type === "INCOME" ? "income" : "expense"} template "${deleteTarget.name}" has been deleted.`,
+        title: t("finance.recurring.delete.deletedTitle"),
+        description:
+          deleteTarget.type === "INCOME"
+            ? t("finance.recurring.delete.deletedIncomeDescription", {
+                name: deleteTarget.name || "",
+              })
+            : t("finance.recurring.delete.deletedExpenseDescription", {
+                name: deleteTarget.name || "",
+              }),
       })
       setDeleteTarget(null)
       await invalidateFinanceQueries(queryClient)
@@ -193,11 +211,11 @@ export function RecurringView() {
     } catch (err) {
       toast.add({
         type: "error",
-        title: "Delete Failed",
+        title: t("finance.recurring.delete.failedTitle"),
         description:
           err instanceof Error
             ? err.message
-            : "Failed to delete recurring template.",
+            : t("finance.recurring.delete.failedDescription"),
       })
     }
   }
@@ -277,8 +295,8 @@ export function RecurringView() {
     <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
       <div className="min-w-0 flex-1">
         <FinancePageLayout
-          title="Recurring Transactions"
-          description="Manage recurring SaaS subscriptions, utility bills, salaries, rent, and scheduled obligations."
+          title={t("finance.recurring.title")}
+          description={t("finance.recurring.description")}
           icon={LayersIcon}
           actions={
             <Button
@@ -289,7 +307,7 @@ export function RecurringView() {
               className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary pt-0.5 font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90 sm:w-auto"
             >
               <PlusIcon className="h-4 w-4" />
-              Create Template
+              {t("finance.recurring.createTemplate")}
             </Button>
           }
         >
@@ -303,7 +321,7 @@ export function RecurringView() {
                 </div>
                 <div>
                   <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Recurring Income (Monthly)
+                    {t("finance.recurring.monthlyIncome")}
                   </span>
                   <span className="mt-1 block text-2xl font-black tracking-tight text-emerald-500">
                     +
@@ -325,7 +343,7 @@ export function RecurringView() {
                 </div>
                 <div>
                   <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Recurring Overhead (Monthly)
+                    {t("finance.recurring.monthlyOverhead")}
                   </span>
                   <span className="mt-1 block text-2xl font-black tracking-tight text-rose-500">
                     -
@@ -347,7 +365,7 @@ export function RecurringView() {
                 </div>
                 <div>
                   <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Next 7 Days Outflows
+                    {t("finance.recurring.next7DaysOutflows")}
                   </span>
                   <span className="mt-1 block text-2xl font-black tracking-tight text-amber-500">
                     {upcomingOutflows.toLocaleString(undefined, {
@@ -376,14 +394,14 @@ export function RecurringView() {
                       className="flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm"
                     >
                       <LayersIcon className="h-3.5 w-3.5" />
-                      Templates & Schedule
+                      {t("finance.recurring.tabTemplates")}
                     </TabsTrigger>
                     <TabsTrigger
                       value="history"
                       className="flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm"
                     >
                       <History className="h-3.5 w-3.5" />
-                      History
+                      {t("finance.recurring.tabHistory")}
                       {historyTransactions.length > 0 && (
                         <span className="ml-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-black text-primary group-data-active:bg-primary-foreground/20 group-data-active:text-primary-foreground">
                           {historyTransactions.length}
@@ -401,10 +419,12 @@ export function RecurringView() {
                       <div className="flex items-center justify-between border-b border-border/20 bg-card/10 px-6 py-4">
                         <h2 className="flex items-center gap-2 text-xs font-black tracking-wider text-muted-foreground uppercase">
                           <LayersIcon className="h-4 w-4 text-primary" />
-                          Recurring Templates
+                          {t("finance.recurring.templatesHeading")}
                         </h2>
                         <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-black text-primary">
-                          {transactions.length} Total
+                          {t("finance.recurring.total", {
+                            count: transactions.length,
+                          })}
                         </span>
                       </div>
 
@@ -412,11 +432,10 @@ export function RecurringView() {
                         <div className="flex h-[200px] flex-col items-center justify-center p-4 text-center">
                           <LayersIcon className="mb-3 h-10 w-10 text-muted-foreground/30" />
                           <p className="text-xs font-semibold text-muted-foreground">
-                            No recurring templates configured.
+                            {t("finance.recurring.emptyTemplatesTitle")}
                           </p>
                           <p className="mt-1 max-w-[300px] text-[10px] text-muted-foreground/80">
-                            Add template rules for salary inflows or
-                            subscription outflows to automate future scheduling.
+                            {t("finance.recurring.emptyTemplatesDescription")}
                           </p>
                         </div>
                       ) : (
@@ -494,14 +513,19 @@ export function RecurringView() {
                                           •
                                         </span>
                                         <span className="font-medium text-foreground/80">
-                                          {formatInterval(exp.interval)}
+                                          {getLocalizedEnumLabel(
+                                            "finance",
+                                            "interval",
+                                            exp.interval,
+                                            language
+                                          )}
                                         </span>
                                         <span className="text-muted-foreground/40">
                                           •
                                         </span>
                                         <span className="flex items-center gap-1 font-medium text-muted-foreground">
                                           <CalendarIcon className="h-3 w-3 text-primary/70" />
-                                          Next:{" "}
+                                          {t("finance.recurring.nextLabel")}{" "}
                                           {formatNextDueDate(
                                             nextDueDateVal,
                                             tz.timezone
@@ -509,12 +533,16 @@ export function RecurringView() {
                                         </span>
                                         {exp.isVariable && (
                                           <span className="rounded bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-bold text-sky-500">
-                                            Variable
+                                            {t(
+                                              "finance.recurring.variableBadge"
+                                            )}
                                           </span>
                                         )}
                                         {exp.gracePeriodDays > 0 && (
                                           <span className="rounded bg-indigo-500/10 px-1.5 py-0.5 text-[9px] font-bold text-indigo-500">
-                                            Grace: {exp.gracePeriodDays}d
+                                            {t("finance.recurring.graceBadge", {
+                                              days: exp.gracePeriodDays,
+                                            })}
                                           </span>
                                         )}
                                       </div>
@@ -530,7 +558,12 @@ export function RecurringView() {
                                           : "bg-muted text-muted-foreground"
                                       )}
                                     >
-                                      {formatStatus(exp.status)}
+                                      {getLocalizedEnumLabel(
+                                        "finance",
+                                        "status",
+                                        exp.status,
+                                        language
+                                      )}
                                     </span>
 
                                     {isWritable && (
@@ -558,7 +591,11 @@ export function RecurringView() {
                                             className="flex cursor-pointer items-center gap-2"
                                           >
                                             <History className="h-4 w-4 text-muted-foreground" />
-                                            <span>History Logs</span>
+                                            <span>
+                                              {t(
+                                                "finance.recurring.historyLogs"
+                                              )}
+                                            </span>
                                           </DropdownMenuItem>
                                           <DropdownMenuItem
                                             onClick={() => {
@@ -568,7 +605,7 @@ export function RecurringView() {
                                             className="flex cursor-pointer items-center gap-2"
                                           >
                                             <Edit2Icon className="h-4 w-4 text-muted-foreground" />
-                                            <span>Edit</span>
+                                            <span>{t("common.edit")}</span>
                                           </DropdownMenuItem>
                                           <DropdownMenuItem
                                             onClick={() =>
@@ -577,7 +614,7 @@ export function RecurringView() {
                                             className="flex cursor-pointer items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
                                           >
                                             <Trash2Icon className="h-4 w-4" />
-                                            <span>Delete</span>
+                                            <span>{t("common.delete")}</span>
                                           </DropdownMenuItem>
                                         </DropdownMenuContent>
                                       </DropdownMenu>
@@ -596,10 +633,12 @@ export function RecurringView() {
                       <div className="flex items-center justify-between border-b border-border/20 bg-card/10 px-6 py-4">
                         <h2 className="flex items-center gap-2 text-xs font-black tracking-wider text-muted-foreground uppercase">
                           <CalendarIcon className="h-4 w-4 text-primary" />
-                          Pending Schedule
+                          {t("finance.recurring.pendingHeading")}
                         </h2>
                         <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-black text-primary">
-                          {scheduledTransactions.length} Pending
+                          {t("finance.recurring.pendingCount", {
+                            count: scheduledTransactions.length,
+                          })}
                         </span>
                       </div>
 
@@ -607,11 +646,10 @@ export function RecurringView() {
                         <div className="flex h-[200px] flex-col items-center justify-center p-4 text-center">
                           <CheckCircle2Icon className="mb-3 h-10 w-10 text-emerald-500/30" />
                           <p className="text-xs font-semibold text-muted-foreground">
-                            All clear! No pending schedules.
+                            {t("finance.recurring.pendingEmptyTitle")}
                           </p>
                           <p className="mt-1 max-w-[200px] text-[10px] text-muted-foreground/80">
-                            Upcoming templates will generate items
-                            automatically.
+                            {t("finance.recurring.pendingEmptyDescription")}
                           </p>
                         </div>
                       ) : (
@@ -681,7 +719,7 @@ export function RecurringView() {
                                             pay.type === "EXPENSE" && (
                                               <AlertCircleIcon className="h-2.5 w-2.5" />
                                             )}
-                                          Due:{" "}
+                                          {t("finance.recurring.dueLabel")}{" "}
                                           {tz.format(pay.dueDate, {
                                             month: "short",
                                             day: "numeric",
@@ -739,7 +777,11 @@ export function RecurringView() {
                                           className="flex cursor-pointer items-center gap-2"
                                         >
                                           <CheckCircle2Icon className="h-4 w-4 text-emerald-500" />
-                                          <span>Confirm Cleared</span>
+                                          <span>
+                                            {t(
+                                              "finance.recurring.confirmCleared"
+                                            )}
+                                          </span>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                           onClick={() =>
@@ -748,7 +790,9 @@ export function RecurringView() {
                                           className="flex cursor-pointer items-center gap-2 text-amber-600 focus:bg-amber-500/10 focus:text-amber-600 dark:text-amber-400"
                                         >
                                           <FastForward className="h-4 w-4" />
-                                          <span>Skip Cycle</span>
+                                          <span>
+                                            {t("finance.recurring.skipCycle")}
+                                          </span>
                                         </DropdownMenuItem>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
@@ -769,10 +813,12 @@ export function RecurringView() {
                     <div className="flex items-center justify-between border-b border-border/20 bg-card/10 px-6 py-4">
                       <h2 className="flex items-center gap-2 text-xs font-black tracking-wider text-muted-foreground uppercase">
                         <History className="h-4 w-4 text-primary" />
-                        Transaction Logs
+                        {t("finance.recurring.transactionLogs")}
                       </h2>
                       <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-black text-primary">
-                        {historyTransactions.length} Total
+                        {t("finance.recurring.total", {
+                          count: historyTransactions.length,
+                        })}
                       </span>
                     </div>
 
@@ -784,11 +830,10 @@ export function RecurringView() {
                       <div className="flex h-[250px] flex-col items-center justify-center p-4 text-center">
                         <History className="mb-3 h-10 w-10 text-muted-foreground/30" />
                         <p className="text-xs font-bold text-foreground">
-                          No transaction history yet
+                          {t("finance.recurring.historyEmptyTitle")}
                         </p>
                         <p className="mt-1 max-w-[280px] text-[10px] text-muted-foreground">
-                          Confirm pending scheduled items to build your
-                          recurrent transaction logs.
+                          {t("finance.recurring.historyEmptyDescription")}
                         </p>
                       </div>
                     ) : (
@@ -849,21 +894,23 @@ export function RecurringView() {
                                       <h4 className="text-xs font-bold text-foreground">
                                         {matchedTemplate?.name ||
                                           txn.description ||
-                                          "Recurring Transaction"}
+                                          t(
+                                            "finance.recurring.recurringFallback"
+                                          )}
                                       </h4>
                                       {isLate && txn.type === "EXPENSE" ? (
                                         <span className="rounded bg-rose-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-rose-500 uppercase select-none">
-                                          Late
+                                          {t("finance.recurring.lateBadge")}
                                         </span>
                                       ) : (
                                         <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-emerald-500 uppercase select-none">
-                                          On Time
+                                          {t("finance.recurring.onTimeBadge")}
                                         </span>
                                       )}
                                     </div>
                                     <div className="mt-0.5 flex items-center gap-1.5 text-[9px] text-muted-foreground">
                                       <span>
-                                        Cleared:{" "}
+                                        {t("finance.recurring.clearedLabel")}{" "}
                                         {tz.format(txn.transactionDate, {
                                           month: "short",
                                           day: "numeric",
@@ -959,8 +1006,8 @@ export function RecurringView() {
             paymentName={
               transactionToSkip?.sourceType === "RECURRENT_TRANSACTION"
                 ? transactions.find((e) => e.id === transactionToSkip.sourceId)
-                    ?.name || "Scheduled Transaction"
-                : "Scheduled Transaction"
+                    ?.name || t("finance.recurring.scheduledFallback")
+                : t("finance.recurring.scheduledFallback")
             }
             amountFormatted={
               transactionToSkip
@@ -976,27 +1023,31 @@ export function RecurringView() {
           >
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete Recurring Template</AlertDialogTitle>
+                <AlertDialogTitle>
+                  {t("finance.recurring.delete.title")}
+                </AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this recurring{" "}
-                  {deleteTarget?.type === "INCOME" ? "income" : "expense"}{" "}
-                  template{" "}
-                  <span className="font-semibold text-foreground">
-                    {deleteTarget?.name}
-                  </span>
-                  ? This will stop future scheduled instances from generating.
+                  {deleteTarget?.type === "INCOME"
+                    ? t("finance.recurring.delete.descriptionIncome", {
+                        name: deleteTarget?.name || "",
+                      })
+                    : t("finance.recurring.delete.descriptionExpense", {
+                        name: deleteTarget?.name || "",
+                      })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel disabled={deleteMutation.isPending}>
-                  Cancel
+                  {t("common.cancel")}
                 </AlertDialogCancel>
                 <AlertDialogAction
                   variant="destructive"
                   disabled={deleteMutation.isPending}
                   onClick={handleConfirmDeleteTransaction}
                 >
-                  {deleteMutation.isPending ? "Deleting..." : "Delete Template"}
+                  {deleteMutation.isPending
+                    ? t("finance.recurring.delete.deleting")
+                    : t("finance.recurring.delete.confirm")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

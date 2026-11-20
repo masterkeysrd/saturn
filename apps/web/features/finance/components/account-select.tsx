@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react"
+import { useI18n } from "@saturn/hooks"
 import {
   useListInstitutionsQuery,
   type Account,
@@ -62,8 +63,8 @@ function renderAccountTypeIcon(type: Account_Type, className?: string) {
   }
 }
 
-function getAccountColorClasses(colorName: string) {
-  const c = colorName.toLowerCase()
+function getAccountColorClasses(colorName?: string) {
+  const c = (colorName || "indigo").toLowerCase()
   switch (c) {
     case "rose":
     case "red":
@@ -221,7 +222,7 @@ function AccountSelectInner({
   value,
   onValueChange,
   accounts,
-  placeholder = "Select an account...",
+  placeholder,
   disabled = false,
   className,
   allowNone = false,
@@ -229,6 +230,9 @@ function AccountSelectInner({
   value: string
   onValueChange: (value: string) => void
 }) {
+  const { t } = useI18n()
+  const resolvedPlaceholder =
+    placeholder ?? t("finance.pickers.account.placeholder")
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
 
@@ -319,7 +323,9 @@ function AccountSelectInner({
             </span>
           </div>
         ) : (
-          <span className="text-sm text-muted-foreground">{placeholder}</span>
+          <span className="text-sm text-muted-foreground">
+            {resolvedPlaceholder}
+          </span>
         )}
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </PopoverTrigger>
@@ -329,7 +335,7 @@ function AccountSelectInner({
       >
         <div className="space-y-2">
           <Input
-            placeholder="Search account name, ending digits..."
+            placeholder={t("finance.pickers.account.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 bg-muted/40 text-xs"
@@ -348,14 +354,14 @@ function AccountSelectInner({
                     : "text-muted-foreground hover:bg-accent/60"
                 )}
               >
-                <span>No Account (Off-ledger / Cash)</span>
+                <span>{t("finance.pickers.account.noAccount")}</span>
                 {!value && <Check className="h-3.5 w-3.5 text-primary" />}
               </button>
             )}
 
             {filteredAccounts.length === 0 ? (
               <div className="py-4 text-center text-xs text-muted-foreground">
-                No accounts found
+                {t("finance.pickers.account.noAccountsFound")}
               </div>
             ) : (
               filteredAccounts.map((acc) => {
@@ -390,7 +396,9 @@ function AccountSelectInner({
                         </span>
                         {acc.lastFour && (
                           <span className="text-[9px] text-muted-foreground">
-                            Ending in {acc.lastFour}
+                            {t("finance.pickers.account.endingIn", {
+                              lastFour: acc.lastFour,
+                            })}
                           </span>
                         )}
                       </div>

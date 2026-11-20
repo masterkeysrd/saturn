@@ -20,6 +20,9 @@ import {
   useActiveSpaceContext,
   resolveSpacePath,
 } from "@/features/space/use-space"
+import { useI18n } from "@saturn/hooks"
+import { useRegisterCopilotView } from "@saturn/hooks/ai"
+import { buildCopilotEntityKey } from "@saturn/core"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { AmountInput } from "@/components/ui/amount-input"
@@ -62,6 +65,7 @@ export function ReconciliationWorkspaceView() {
   const { statementId } = useParams<{ statementId: string }>()
   const navigate = useNavigate()
   const { spaceId } = useActiveSpaceContext()
+  const { t } = useI18n()
   const queryClient = useQueryClient()
 
   // Dialog States
@@ -151,6 +155,32 @@ export function ReconciliationWorkspaceView() {
     [accounts, activeStmt]
   )
 
+  useRegisterCopilotView({
+    viewId: "finance.reconcile",
+    title: t("finance.reconcile.copilotTitle"),
+    activeEntity:
+      activeStmt?.id && statementId
+        ? {
+            key: buildCopilotEntityKey("statement", statementId),
+            kind: "statement",
+            id: statementId,
+            label:
+              activeStmt.filename || t("finance.reconcile.card.fileFallback"),
+            summary: {
+              accountId: activeStmt.accountId || "",
+              currency: targetAccount?.currency || "",
+              statementDate: activeStmt.statementDate || "",
+              status: activeStmt.status || "",
+            },
+          }
+        : undefined,
+    suggestions: [
+      t("finance.reconcile.suggestion.discrepancies"),
+      t("finance.reconcile.suggestion.hardLines"),
+      t("finance.reconcile.suggestion.progress"),
+    ],
+  })
+
   // Reconciliation Math
   const netFlowCents = useMemo(() => {
     return lines.reduce((acc, line) => {
@@ -220,18 +250,20 @@ export function ReconciliationWorkspaceView() {
       await refetchStatements()
       setIsEditingBalances(false)
       toast.add({
-        title: "Balances Updated",
-        description: "Statement starting and ending balances were updated.",
+        title: t("finance.reconcile.workspace.balancesUpdatedTitle"),
+        description: t(
+          "finance.reconcile.workspace.balancesUpdatedDescription"
+        ),
         type: "success",
       })
     } catch (err) {
       console.error("Failed to update statement balances:", err)
       toast.add({
-        title: "Update Failed",
+        title: t("finance.reconcile.workspace.updateFailedTitle"),
         description:
           err instanceof Error
             ? err.message
-            : "Failed to update statement balances.",
+            : t("finance.reconcile.workspace.balancesFailedDescription"),
         type: "error",
       })
     }
@@ -256,18 +288,20 @@ export function ReconciliationWorkspaceView() {
 
       setIsInvertAllDialogOpen(false)
       toast.add({
-        title: "Signs Inverted",
-        description: `Successfully inverted statement balances and all ${lines.length} transaction lines.`,
+        title: t("finance.reconcile.workspace.signsInvertedTitle"),
+        description: t("finance.reconcile.workspace.signsInvertedDescription", {
+          count: lines.length,
+        }),
         type: "success",
       })
     } catch (err) {
       console.error("Failed to invert statement signs:", err)
       toast.add({
-        title: "Inversion Failed",
+        title: t("finance.reconcile.workspace.inversionFailedTitle"),
         description:
           err instanceof Error
             ? err.message
-            : "Failed to invert statement signs.",
+            : t("finance.reconcile.workspace.inversionFailedDescription"),
         type: "error",
       })
     } finally {
@@ -298,8 +332,15 @@ export function ReconciliationWorkspaceView() {
           id: line.id || "",
           type: "sign_flip",
           line,
-          suggestedAction: `Inverting the sign (+/-) on "${line.description || "Line item"}" (${formatAmount(amt, targetAccount?.currency)}) will perfectly balance your reconciliation ($0.00 difference).`,
-          actionLabel: `Invert Sign (+/-) to ${formatAmount(-amt, targetAccount?.currency)}`,
+          suggestedAction: t("finance.reconcile.diagnostics.signFlipAction", {
+            name:
+              line.description ||
+              t("finance.reconcile.diagnostics.lineItemFallback"),
+            amount: formatAmount(amt, targetAccount?.currency),
+          }),
+          actionLabel: t("finance.reconcile.diagnostics.signFlipLabel", {
+            amount: formatAmount(-amt, targetAccount?.currency),
+          }),
         })
       }
 
@@ -309,14 +350,19 @@ export function ReconciliationWorkspaceView() {
           id: line.id || "",
           type: "exact_match",
           line,
-          suggestedAction: `"${line.description || "Line item"}" matches the exact remaining discrepancy of ${formatAmount(amt, targetAccount?.currency)}. If this transaction does not belong to this statement or was already recorded, skipping it will balance the statement.`,
-          actionLabel: "Skip / Ignore Line",
+          suggestedAction: t("finance.reconcile.diagnostics.exactMatchAction", {
+            name:
+              line.description ||
+              t("finance.reconcile.diagnostics.lineItemFallback"),
+            amount: formatAmount(amt, targetAccount?.currency),
+          }),
+          actionLabel: t("finance.reconcile.diagnostics.exactMatchLabel"),
         })
       }
     }
 
     return diagnostics
-  }, [discrepancyCents, lines, targetAccount])
+  }, [discrepancyCents, lines, targetAccount, t])
 
   const suspectLineIds = useMemo(() => {
     return new Set(discrepancyDiagnostics.map((d) => d.id))
@@ -399,11 +445,11 @@ export function ReconciliationWorkspaceView() {
     } catch (err) {
       console.error("Saving line draft failed:", err)
       toast.add({
-        title: "Action Failed",
+        title: t("finance.reconcile.workspace.actionFailedTitle"),
         description:
           err instanceof Error
             ? err.message
-            : "Failed to update statement line.",
+            : t("finance.reconcile.workspace.actionFailedDescription"),
         type: "error",
       })
     }
@@ -431,9 +477,11 @@ export function ReconciliationWorkspaceView() {
     } catch (err) {
       console.error("Undo line failed:", err)
       toast.add({
-        title: "Undo Failed",
+        title: t("finance.reconcile.workspace.undoFailedTitle"),
         description:
-          err instanceof Error ? err.message : "Failed to reset line item.",
+          err instanceof Error
+            ? err.message
+            : t("finance.reconcile.workspace.undoFailedDescription"),
         type: "error",
       })
     }
@@ -471,9 +519,11 @@ export function ReconciliationWorkspaceView() {
     } catch (err) {
       console.error("Updating line details failed:", err)
       toast.add({
-        title: "Update Failed",
+        title: t("finance.reconcile.workspace.updateFailedTitle"),
         description:
-          err instanceof Error ? err.message : "Failed to update line details.",
+          err instanceof Error
+            ? err.message
+            : t("finance.reconcile.workspace.lineDetailsFailedDescription"),
         type: "error",
       })
     }
@@ -517,18 +567,25 @@ export function ReconciliationWorkspaceView() {
       })
       refetchLines()
       toast.add({
-        title: "Matches Approved",
-        description: `Approved ${matchableLines.length} exact transaction ${
-          matchableLines.length === 1 ? "match" : "matches"
-        }.`,
+        title: t("finance.reconcile.workspace.matchesApprovedTitle"),
+        description:
+          matchableLines.length === 1
+            ? t("finance.reconcile.workspace.matchesApprovedOne", {
+                count: matchableLines.length,
+              })
+            : t("finance.reconcile.workspace.matchesApprovedOther", {
+                count: matchableLines.length,
+              }),
         type: "success",
       })
     } catch (err) {
       console.error("Batch match approval failed:", err)
       toast.add({
-        title: "Approval Failed",
+        title: t("finance.reconcile.workspace.approvalFailedTitle"),
         description:
-          err instanceof Error ? err.message : "Failed to approve matches.",
+          err instanceof Error
+            ? err.message
+            : t("finance.reconcile.workspace.approvalFailedDescription"),
         type: "error",
       })
     } finally {
@@ -568,21 +625,21 @@ export function ReconciliationWorkspaceView() {
       ])
       setIsCompleteDialogOpen(false)
       toast.add({
-        title: "Statement Reconciled",
-        description: `Successfully finalized reconciliation for ${
-          targetAccount?.name || "account"
-        }.`,
+        title: t("finance.reconcile.workspace.reconciledTitle"),
+        description: t("finance.reconcile.workspace.reconciledDescription", {
+          name: targetAccount?.name || t("finance.reconcile.accountFallback"),
+        }),
         type: "success",
       })
       navigate(resolveSpacePath("/finance/reconcile", spaceId, true))
     } catch (err) {
       console.error("Statement completion failed:", err)
       toast.add({
-        title: "Finalization Failed",
+        title: t("finance.reconcile.workspace.finalizationFailedTitle"),
         description:
           err instanceof Error
             ? err.message
-            : "Failed to complete statement reconciliation.",
+            : t("finance.reconcile.workspace.finalizationFailedDescription"),
         type: "error",
       })
     }
@@ -603,19 +660,19 @@ export function ReconciliationWorkspaceView() {
       })
       setIsDiscardDialogOpen(false)
       toast.add({
-        title: "Statement Discarded",
-        description: "The draft statement has been removed.",
+        title: t("finance.reconcile.discard.toastTitle"),
+        description: t("finance.reconcile.discard.toastDescription"),
         type: "info",
       })
       navigate(resolveSpacePath("/finance/reconcile", spaceId, true))
     } catch (err) {
       console.error("Statement discard failed:", err)
       toast.add({
-        title: "Discard Failed",
+        title: t("finance.reconcile.discard.failedTitle"),
         description:
           err instanceof Error
             ? err.message
-            : "Failed to discard draft statement.",
+            : t("finance.reconcile.discard.failedDescription"),
         type: "error",
       })
     }
@@ -633,16 +690,18 @@ export function ReconciliationWorkspaceView() {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center space-y-4 bg-background">
         <AlertTriangle className="h-10 w-10 text-amber-500" />
-        <h2 className="text-lg font-bold">Statement Not Found</h2>
+        <h2 className="text-lg font-bold">
+          {t("finance.reconcile.workspace.notFoundTitle")}
+        </h2>
         <p className="text-xs text-muted-foreground">
-          The statement you are looking for does not exist or has been removed.
+          {t("finance.reconcile.workspace.notFoundDescription")}
         </p>
         <Button
           onClick={() =>
             navigate(resolveSpacePath("/finance/reconcile", spaceId, true))
           }
         >
-          Back to Dashboard
+          {t("finance.reconcile.workspace.backToDashboard")}
         </Button>
       </div>
     )
@@ -678,28 +737,37 @@ export function ReconciliationWorkspaceView() {
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-black tracking-tight text-foreground">
                   {activeStmt?.status === "COMPLETED"
-                    ? `Reconciled: ${targetAccount?.name || "Account"}`
-                    : `Reconciling ${targetAccount?.name || "Account"}`}
+                    ? t("finance.reconcile.workspace.reconciledHeading", {
+                        name:
+                          targetAccount?.name ||
+                          t("finance.reconcile.accountFallback"),
+                      })
+                    : t("finance.reconcile.workspace.reconcilingHeading", {
+                        name:
+                          targetAccount?.name ||
+                          t("finance.reconcile.accountFallback"),
+                      })}
                 </h1>
                 <span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
                   {targetAccount?.currency}
                 </span>
                 {activeStmt?.status === "COMPLETED" && (
                   <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
-                    RECONCILED
+                    {t("finance.reconcile.workspace.badgeReconciled")}
                   </span>
                 )}
               </div>
               <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <span>
-                  Starting:{" "}
+                  {t("finance.reconcile.workspace.startingLabel")}{" "}
                   <span className="font-mono font-semibold text-foreground">
                     {formatAmount(
                       activeStmt.statementStartingBalance,
                       targetAccount?.currency
                     )}
                   </span>
-                  {" → "}Target Ending:{" "}
+                  {" → "}
+                  {t("finance.reconcile.workspace.targetEndingLabel")}{" "}
                   <span className="font-mono font-semibold text-foreground">
                     {formatAmount(
                       activeStmt.statementEndingBalance,
@@ -716,17 +784,17 @@ export function ReconciliationWorkspaceView() {
                       className="h-5 rounded-md px-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/10"
                     >
                       <Pencil className="mr-1 h-2.5 w-2.5" />
-                      Edit Balances
+                      {t("finance.reconcile.workspace.editBalances")}
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setIsInvertAllDialogOpen(true)}
                       className="h-5 rounded-md px-1.5 text-[11px] font-semibold text-amber-600 transition-colors hover:bg-amber-500/10 dark:text-amber-400"
-                      title="Invert all transaction amounts and balance signs (+/-)"
+                      title={t("finance.reconcile.workspace.invertAllTooltip")}
                     >
                       <ArrowUpDown className="mr-1 h-2.5 w-2.5" />
-                      Invert All Signs (+/-)
+                      {t("finance.reconcile.workspace.invertAllSigns")}
                     </Button>
                   </div>
                 )}
@@ -739,10 +807,14 @@ export function ReconciliationWorkspaceView() {
             <div className="flex flex-col space-y-1">
               <div className="flex items-center justify-between text-[11px]">
                 <span className="font-bold tracking-wider text-muted-foreground uppercase">
-                  Progress
+                  {t("finance.reconcile.workspace.progress")}
                 </span>
                 <span className="font-mono font-bold text-foreground">
-                  {reviewedCount} of {lines.length} ({progressPercent}%)
+                  {t("finance.reconcile.workspace.progressCount", {
+                    reviewed: reviewedCount,
+                    total: lines.length,
+                    percent: progressPercent,
+                  })}
                 </span>
               </div>
               <div className="h-2 w-44 overflow-hidden rounded-full bg-muted/60">
@@ -756,12 +828,12 @@ export function ReconciliationWorkspaceView() {
             {/* Discrepancy Status */}
             <div className="rounded-2xl border border-border/40 bg-background/50 p-2.5 px-4">
               <span className="block text-[9px] font-bold tracking-wider text-muted-foreground uppercase">
-                Reconciliation Balance
+                {t("finance.reconcile.workspace.reconciliationBalance")}
               </span>
               {discrepancyCents === 0 ? (
                 <div className="mt-0.5 flex items-center space-x-1.5 text-xs font-extrabold text-emerald-500">
                   <CheckCircle2 className="h-4 w-4" />
-                  <span>Balanced ($0.00 difference)</span>
+                  <span>{t("finance.reconcile.workspace.balanced")}</span>
                 </div>
               ) : (
                 <div className="mt-0.5 flex items-center space-x-1.5 text-xs font-extrabold text-rose-500">
@@ -772,7 +844,7 @@ export function ReconciliationWorkspaceView() {
                       Math.abs(discrepancyCents),
                       targetAccount?.currency
                     )}{" "}
-                    remaining
+                    {t("finance.reconcile.workspace.remaining")}
                   </span>
                 </div>
               )}
@@ -783,7 +855,9 @@ export function ReconciliationWorkspaceView() {
               {activeStmt?.status === "COMPLETED" ? (
                 <div className="flex items-center space-x-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-500 shadow-sm">
                   <CheckCircle2 className="h-4 w-4" />
-                  <span>Reconciliation Finalized</span>
+                  <span>
+                    {t("finance.reconcile.workspace.reconciliationFinalized")}
+                  </span>
                 </div>
               ) : (
                 <>
@@ -799,7 +873,9 @@ export function ReconciliationWorkspaceView() {
                       ) : (
                         <Sparkles className="mr-1.5 h-3.5 w-3.5" />
                       )}
-                      Approve All Exact Matches ({matchableCount})
+                      {t("finance.reconcile.workspace.approveAllMatches", {
+                        count: matchableCount,
+                      })}
                     </Button>
                   )}
 
@@ -811,7 +887,7 @@ export function ReconciliationWorkspaceView() {
                     className="rounded-xl text-xs text-destructive hover:bg-destructive/10"
                   >
                     <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                    Discard
+                    {t("common.discard")}
                   </Button>
 
                   <Button
@@ -822,7 +898,7 @@ export function ReconciliationWorkspaceView() {
                     {completeMutation.isPending && (
                       <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                     )}
-                    Finish & Reconcile
+                    {t("finance.reconcile.workspace.finishAndReconcile")}
                   </Button>
                 </>
               )}
@@ -843,7 +919,7 @@ export function ReconciliationWorkspaceView() {
                 </div>
                 <div className="space-y-0.5">
                   <h4 className="text-xs font-bold tracking-wider text-amber-600 uppercase dark:text-amber-400">
-                    Possible Discrepancy Cause Detected
+                    {t("finance.reconcile.diagnostics.heading")}
                   </h4>
                   <p className="text-xs leading-relaxed font-medium text-foreground/90">
                     {discrepancyDiagnostics[0].suggestedAction}
@@ -890,8 +966,12 @@ export function ReconciliationWorkspaceView() {
       {/* Main Content Stream: Side-by-Side Comparison Table */}
       <div className="mx-auto w-full max-w-7xl space-y-4 p-6">
         <div className="flex items-center justify-between px-1 text-xs font-bold tracking-wider text-muted-foreground uppercase">
-          <div className="w-5/12">Bank Statement Record</div>
-          <div className="w-7/12 pl-4">Your Ledger Action</div>
+          <div className="w-5/12">
+            {t("finance.reconcile.workspace.bankStatementRecord")}
+          </div>
+          <div className="w-7/12 pl-4">
+            {t("finance.reconcile.workspace.yourLedgerAction")}
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -923,17 +1003,18 @@ export function ReconciliationWorkspaceView() {
         <DialogContent className="rounded-3xl sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-base font-bold">
-              Edit Statement Starting & Ending Balances
+              {t("finance.reconcile.balances.title")}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Adjust the statement starting balance and target closing balance
-              to match your official bank statement.
+              {t("finance.reconcile.balances.description")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label className="text-xs font-bold text-muted-foreground uppercase">
-                Starting Balance ({targetAccount?.currency})
+                {t("finance.reconcile.balances.startingLabel", {
+                  currency: targetAccount?.currency ?? "",
+                })}
               </Label>
               <AmountInput
                 currency={targetAccount?.currency}
@@ -946,7 +1027,9 @@ export function ReconciliationWorkspaceView() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-bold text-muted-foreground uppercase">
-                Target Ending Balance ({targetAccount?.currency})
+                {t("finance.reconcile.balances.endingLabel", {
+                  currency: targetAccount?.currency ?? "",
+                })}
               </Label>
               <AmountInput
                 currency={targetAccount?.currency}
@@ -965,7 +1048,7 @@ export function ReconciliationWorkspaceView() {
               className="rounded-xl"
               onClick={() => setIsEditingBalances(false)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               size="sm"
@@ -976,7 +1059,7 @@ export function ReconciliationWorkspaceView() {
               {updateStatementMutation.isPending && (
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               )}
-              Save Balances
+              {t("finance.reconcile.balances.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -992,21 +1075,30 @@ export function ReconciliationWorkspaceView() {
             <AlertDialogMedia className="bg-destructive/10 text-destructive">
               <Trash2 className="h-6 w-6" />
             </AlertDialogMedia>
-            <AlertDialogTitle>Discard Draft Statement?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("finance.reconcile.discard.title")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to discard this draft statement for{" "}
+              {t("finance.reconcile.discard.descriptionStart")}
               <span className="font-bold text-foreground">
-                {targetAccount?.name || "Account"}
+                {targetAccount?.name || t("finance.reconcile.accountFallback")}
               </span>
-              {activeStmt?.statementDate && <> ({activeStmt.statementDate})</>}?
-              All {lines.length} statement line items and draft matching
-              progress will be permanently deleted. This action cannot be
-              undone.
+              {activeStmt?.statementDate && (
+                <>
+                  {" "}
+                  {t("finance.reconcile.discard.dateSuffix", {
+                    date: activeStmt.statementDate,
+                  })}
+                </>
+              )}
+              {t("finance.reconcile.workspace.discardEnd", {
+                count: lines.length,
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteMutation.isPending}>
-              Cancel
+              {t("common.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
@@ -1019,12 +1111,12 @@ export function ReconciliationWorkspaceView() {
               {deleteMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Discarding...
+                  {t("finance.reconcile.discard.discarding")}
                 </>
               ) : (
                 <>
                   <Trash2 className="mr-1.5 h-4 w-4" />
-                  Discard Statement
+                  {t("finance.reconcile.discard.confirm")}
                 </>
               )}
             </AlertDialogAction>
@@ -1043,21 +1135,19 @@ export function ReconciliationWorkspaceView() {
               <CheckCircle2 className="h-6 w-6 text-primary" />
             </AlertDialogMedia>
             <AlertDialogTitle>
-              Finalize Statement Reconciliation?
+              {t("finance.reconcile.complete.title")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              You are about to finalize reconciliation for{" "}
+              {t("finance.reconcile.complete.descriptionStart")}
               <span className="font-bold text-foreground">
-                {targetAccount?.name || "Account"}
+                {targetAccount?.name || t("finance.reconcile.accountFallback")}
               </span>
-              . This will create and link all imported transactions to your
-              ledger, update your account balance, and mark this statement as
-              completed.
+              {t("finance.reconcile.complete.descriptionEnd")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={completeMutation.isPending}>
-              Review Lines
+              {t("finance.reconcile.complete.reviewLines")}
             </AlertDialogCancel>
             <AlertDialogAction
               disabled={completeMutation.isPending}
@@ -1070,12 +1160,12 @@ export function ReconciliationWorkspaceView() {
               {completeMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Finalizing...
+                  {t("finance.reconcile.complete.finalizing")}
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="mr-1.5 h-4 w-4" />
-                  Confirm & Finalize
+                  {t("finance.reconcile.complete.confirm")}
                 </>
               )}
             </AlertDialogAction>
@@ -1094,22 +1184,20 @@ export function ReconciliationWorkspaceView() {
               <ArrowUpDown className="h-6 w-6" />
             </AlertDialogMedia>
             <AlertDialogTitle>
-              Invert All Statement Signs (+/-)?
+              {t("finance.reconcile.invert.title")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This will invert the sign (+/-) of all {lines.length} transaction
-              lines and negate the starting and ending balances.
+              {t("finance.reconcile.invert.description", {
+                count: lines.length,
+              })}
               <br />
               <br />
-              Use this if your bank reported purchases as positive numbers and
-              payments as negative numbers. Your reconciliation math will remain
-              balanced, and expenses will turn negative (red) while payments
-              turn positive (green).
+              {t("finance.reconcile.invert.guidance")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isInvertingAllSigns}>
-              Cancel
+              {t("common.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               disabled={isInvertingAllSigns}
@@ -1122,12 +1210,12 @@ export function ReconciliationWorkspaceView() {
               {isInvertingAllSigns ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Inverting Signs...
+                  {t("finance.reconcile.invert.inverting")}
                 </>
               ) : (
                 <>
                   <ArrowUpDown className="mr-1.5 h-4 w-4" />
-                  Invert All Signs
+                  {t("finance.reconcile.invert.confirm")}
                 </>
               )}
             </AlertDialogAction>

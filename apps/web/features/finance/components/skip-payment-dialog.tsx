@@ -10,6 +10,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog"
 import { Loader2, FastForward } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
 
 interface SkipPaymentDialogProps {
   open: boolean
@@ -26,10 +27,14 @@ export function SkipPaymentDialog({
   onOpenChange,
   onConfirm,
   isPending = false,
-  paymentName = "Scheduled Payment",
+  paymentName,
   amountFormatted,
   currency,
 }: SkipPaymentDialogProps) {
+  const { t } = useI18n()
+  const resolvedName =
+    paymentName || t("finance.recurring.skip.paymentFallback")
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -37,25 +42,26 @@ export function SkipPaymentDialog({
           <AlertDialogMedia className="bg-amber-500/10 text-amber-500">
             <FastForward className="h-6 w-6" />
           </AlertDialogMedia>
-          <AlertDialogTitle>Skip Scheduled Payment</AlertDialogTitle>
+          <AlertDialogTitle>
+            {t("finance.recurring.skip.title")}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to skip{" "}
-            <span className="font-bold text-foreground">{paymentName}</span>
-            {amountFormatted && (
-              <>
-                {" "}
-                for{" "}
-                <span className="font-bold text-foreground">
-                  {amountFormatted} {currency}
-                </span>
-              </>
-            )}{" "}
-            for this cycle? No ledger transaction will be logged.
+            {amountFormatted
+              ? t("finance.recurring.skip.descriptionWithAmount", {
+                  name: resolvedName,
+                  amount: amountFormatted,
+                  currency: currency || "",
+                })
+              : t("finance.recurring.skip.description", {
+                  name: resolvedName,
+                })}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>
+            {t("common.cancel")}
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault()
@@ -67,12 +73,12 @@ export function SkipPaymentDialog({
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Skipping...
+                {t("finance.recurring.skip.skipping")}
               </>
             ) : (
               <>
                 <FastForward className="mr-1.5 h-4 w-4" />
-                Skip Cycle
+                {t("finance.recurring.skip.confirm")}
               </>
             )}
           </AlertDialogAction>

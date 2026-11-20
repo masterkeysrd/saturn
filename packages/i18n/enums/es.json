@@ -1,9 +1,11 @@
 {
   "finance": {
     "accountType": {
+      "BANK": "Banco / Cuenta corriente",
       "CASH": "Efectivo",
       "CHECKING": "Cuenta corriente",
       "CREDIT_CARD": "Tarjeta de crédito",
+      "DIGITAL_ACCOUNT": "Monedero digital",
       "INVESTMENT": "Inversión",
       "LOAN": "Préstamo",
       "SAVINGS": "Ahorros"
@@ -16,6 +18,16 @@
       "QUARTERLY": "Trimestral",
       "WEEKLY": "Semanal",
       "YEARLY": "Anual"
+    },
+    "limitPropagation": {
+      "CURRENT_PERIOD": "Solo período actual",
+      "NEXT_PERIODS_ONLY": "Solo períodos futuros"
+    },
+    "sourceType": {
+      "LOAN": "Préstamo",
+      "RECURRENT_TRANSACTION": "Transacción recurrente",
+      "TAX": "Impuesto",
+      "UNSPECIFIED": "Pago programado"
     },
     "status": {
       "ACTIVE": "Activo",
@@ -30,9 +42,12 @@
       "SKIPPED": "Omitido"
     },
     "transactionType": {
+      "BALANCE_ADJUSTMENT": "Ajuste de saldo",
       "EXPENSE": "Gasto",
       "INCOME": "Ingreso",
-      "TRANSFER": "Transferencia"
+      "TRANSFER": "Transferencia",
+      "TRANSFER_IN": "Transferencia entrante",
+      "TRANSFER_OUT": "Transferencia saliente"
     }
   },
   "space": {

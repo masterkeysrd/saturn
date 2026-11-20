@@ -10,7 +10,8 @@ import {
   type Transaction,
   useListTransactionEventsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import {
   Loader2,
   Calendar,
@@ -44,24 +45,6 @@ interface TransactionEventsSheetProps {
   onDelete?: (txnId: string) => void
 }
 
-function getTypeDisplayLabel(type?: string): string {
-  switch (type) {
-    case "EXPENSE":
-      return "Expense"
-    case "INCOME":
-      return "Income"
-    case "TRANSFER_OUT":
-      return "Transfer Out"
-    case "TRANSFER_IN":
-      return "Transfer In"
-    case "BALANCE_ADJUSTMENT":
-    case "TYPE_UNSPECIFIED":
-      return "Adjustment"
-    default:
-      return "Transaction"
-  }
-}
-
 function getSignedCents(txn: Transaction, rawCents: number): number {
   if (txn.type === "EXPENSE" || txn.type === "TRANSFER_OUT") {
     return -Math.abs(rawCents)
@@ -86,9 +69,12 @@ export function TransactionEventsSheet({
   onDelete,
 }: TransactionEventsSheetProps) {
   const tz = useTimezone()
+  const { t, language } = useI18n()
   const resolvedTxnId = transaction?.id || txnId || null
   const resolvedDescription =
-    transaction?.description || txnDescription || "Transaction Details"
+    transaction?.description ||
+    txnDescription ||
+    t("finance.transactions.inspector.title")
 
   const { data, isLoading } = useListTransactionEventsQuery(
     { txnId: resolvedTxnId || "" },
@@ -97,35 +83,55 @@ export function TransactionEventsSheet({
 
   const events = data?.events || []
 
+  const getTypeDisplayLabel = (type?: string): string => {
+    switch (type) {
+      case "BALANCE_ADJUSTMENT":
+      case "TYPE_UNSPECIFIED":
+        return t("finance.transactions.adjustment")
+      case "EXPENSE":
+      case "INCOME":
+      case "TRANSFER_OUT":
+      case "TRANSFER_IN":
+        return getLocalizedEnumLabel(
+          "finance",
+          "transactionType",
+          type,
+          language
+        )
+      default:
+        return t("finance.transactions.transaction")
+    }
+  }
+
   const getEventConfig = (type: string) => {
     switch (type) {
       case "EXPENSE_SCHEDULED":
         return {
-          title: "Expense Scheduled",
+          title: t("finance.transactions.inspector.event.expenseScheduled"),
           icon: Calendar,
           color: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
         }
       case "BANK_CONFIRM_RECEIVED":
         return {
-          title: "Bank Payment Confirmed",
+          title: t("finance.transactions.inspector.event.bankConfirm"),
           icon: CreditCard,
           color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
         }
       case "INVOICE_RECEIVED":
         return {
-          title: "Invoice Generated",
+          title: t("finance.transactions.inspector.event.invoiceReceived"),
           icon: FileText,
           color: "bg-amber-500/10 text-amber-500 border-amber-500/20",
         }
       case "RECEIPT_RECEIVED":
         return {
-          title: "Provider Receipt Verified",
+          title: t("finance.transactions.inspector.event.receiptReceived"),
           icon: FileCheck,
           color: "bg-teal-500/10 text-teal-500 border-teal-500/20",
         }
       case "MANUAL_EDIT":
         return {
-          title: "Manual Modification",
+          title: t("finance.transactions.inspector.event.manualEdit"),
           icon: Settings,
           color: "bg-orange-500/10 text-orange-500 border-orange-500/20",
         }
@@ -201,7 +207,7 @@ export function TransactionEventsSheet({
             })}
           </span>
         ) : (
-          "Lifecycle events & audit trail"
+          t("finance.transactions.inspector.description")
         )
       }
       headerActions={
@@ -229,7 +235,7 @@ export function TransactionEventsSheet({
               type="button"
               variant="ghost"
               size="icon-xs"
-              aria-label="Edit transaction"
+              aria-label={t("finance.transactions.inspector.editAria")}
               onClick={() => onEdit(transaction)}
               className="cursor-pointer text-muted-foreground hover:text-foreground"
             >
@@ -241,7 +247,7 @@ export function TransactionEventsSheet({
               type="button"
               variant="ghost"
               size="icon-xs"
-              aria-label="Delete transaction"
+              aria-label={t("finance.transactions.inspector.deleteAria")}
               onClick={() => onDelete(resolvedTxnId)}
               className="cursor-pointer text-muted-foreground hover:text-destructive"
             >
@@ -283,7 +289,9 @@ export function TransactionEventsSheet({
 
               {isCrossCurrency && transaction.amountInBase && (
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <span>Base equivalent</span>
+                  <span>
+                    {t("finance.transactions.inspector.baseEquivalent")}
+                  </span>
                   <div className="flex items-center gap-2 font-mono tabular-nums">
                     <MoneyAmount
                       cents={getSignedCents(
@@ -313,21 +321,21 @@ export function TransactionEventsSheet({
                   {Boolean(transaction.metadata?.recurring_transaction_id) && (
                     <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-foreground/80">
                       <Repeat className="size-3 text-primary" />
-                      Recurring
+                      {t("finance.transactions.recurring")}
                     </span>
                   )}
                   {Boolean(transaction.metadata?.borrowing_id) && (
                     <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-foreground/80">
                       <Coins className="size-3 text-warning" />
                       {transaction.metadata?.borrowing_role === "REPAYMENT"
-                        ? "Debt repayment"
-                        : "Debt / Loan"}
+                        ? t("finance.transactions.debtRepayment")
+                        : t("finance.transactions.debtLoan")}
                     </span>
                   )}
                   {Boolean(transaction.metadata?.transfer_id) && (
                     <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-foreground/80">
                       <ArrowRightLeft className="size-3 text-info" />
-                      Account transfer
+                      {t("finance.transactions.accountTransfer")}
                     </span>
                   )}
                 </div>
@@ -337,28 +345,37 @@ export function TransactionEventsSheet({
             {/* Metadata Details (Hairline separated, zero nested cards) */}
             <dl className="space-y-2.5 border-t border-border/70 pt-4 text-xs">
               <div className="flex items-start justify-between gap-4">
-                <dt className="text-muted-foreground">Transaction date</dt>
+                <dt className="text-muted-foreground">
+                  {t("finance.transactions.inspector.transactionDate")}
+                </dt>
                 <dd className="text-right font-mono text-foreground tabular-nums">
                   {tz.formatDateTime(transaction.transactionDate)}
                 </dd>
               </div>
               {transaction.effectiveDate && (
                 <div className="flex items-start justify-between gap-4">
-                  <dt className="text-muted-foreground">Effective date</dt>
+                  <dt className="text-muted-foreground">
+                    {t("finance.transactions.inspector.effectiveDate")}
+                  </dt>
                   <dd className="text-right font-mono text-foreground tabular-nums">
                     {tz.formatDateTime(transaction.effectiveDate)}
                   </dd>
                 </div>
               )}
               <div className="flex items-start justify-between gap-4">
-                <dt className="text-muted-foreground">Account</dt>
+                <dt className="text-muted-foreground">
+                  {t("finance.transactions.inspector.account")}
+                </dt>
                 <dd className="text-right font-medium text-foreground">
-                  {resolvedAccountName || "Unassigned"}
+                  {resolvedAccountName ||
+                    t("finance.transactions.inspector.unassigned")}
                 </dd>
               </div>
               {resolvedBudgetName && (
                 <div className="flex items-start justify-between gap-4">
-                  <dt className="text-muted-foreground">Budget</dt>
+                  <dt className="text-muted-foreground">
+                    {t("finance.transactions.inspector.budget")}
+                  </dt>
                   <dd className="text-right font-medium text-foreground">
                     {resolvedBudgetName}
                   </dd>
@@ -366,7 +383,9 @@ export function TransactionEventsSheet({
               )}
               {(transaction.metadata?.notes || transaction.description) && (
                 <div className="space-y-1 border-t border-border/50 pt-2.5">
-                  <dt className="text-muted-foreground">Notes</dt>
+                  <dt className="text-muted-foreground">
+                    {t("finance.transactions.inspector.notes")}
+                  </dt>
                   <dd className="leading-relaxed text-foreground">
                     {transaction.metadata?.notes || transaction.description}
                   </dd>
@@ -374,7 +393,9 @@ export function TransactionEventsSheet({
               )}
               {transaction.id && (
                 <div className="flex items-center justify-between gap-4 border-t border-border/50 pt-2.5">
-                  <dt className="text-muted-foreground">Reference ID</dt>
+                  <dt className="text-muted-foreground">
+                    {t("finance.transactions.inspector.referenceId")}
+                  </dt>
                   <dd className="font-mono text-[11px] text-muted-foreground select-all">
                     {transaction.id}
                   </dd>
@@ -392,7 +413,7 @@ export function TransactionEventsSheet({
           )}
         >
           <h4 className="text-xs font-semibold text-foreground">
-            Audit trail &amp; events
+            {t("finance.transactions.inspector.auditTrail")}
           </h4>
 
           {isLoading ? (
@@ -403,11 +424,10 @@ export function TransactionEventsSheet({
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Activity className="mb-2.5 h-8 w-8 text-muted-foreground/35" />
               <p className="text-xs font-medium text-muted-foreground">
-                No lifecycle events recorded
+                {t("finance.transactions.inspector.noEventsTitle")}
               </p>
               <p className="mt-1 max-w-[240px] text-xs text-muted-foreground/80">
-                This transaction was logged directly without external
-                reconciliation or ingestion events.
+                {t("finance.transactions.inspector.noEventsDescription")}
               </p>
             </div>
           ) : (

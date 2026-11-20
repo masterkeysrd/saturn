@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useQueryClient } from "@tanstack/react-query"
+import { useI18n } from "@saturn/hooks"
 import {
   Dialog,
   DialogContent,
@@ -34,6 +35,7 @@ export function CreateInstitutionModal({
   onCreated,
 }: CreateInstitutionModalProps) {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   const createMutation = useCreateInstitutionMutation()
 
   const [name, setName] = useState(initialName)
@@ -115,11 +117,10 @@ export function CreateInstitutionModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight">
             <Building2 className="h-4.5 w-4.5 text-primary" />
-            <span>New Financial Institution</span>
+            <span>{t("finance.accounts.institution.modalTitle")}</span>
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            Review and confirm auto-resolved web logo & domain details before
-            saving.
+            {t("finance.accounts.institution.modalDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -143,11 +144,11 @@ export function CreateInstitutionModal({
 
             <div className="min-w-0 flex-1">
               <h4 className="truncate text-sm font-semibold">
-                {name || "Institution Name"}
+                {name || t("finance.accounts.institution.nameFallback")}
               </h4>
               <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
                 <Globe className="h-3.5 w-3.5 shrink-0" />
-                {domain || "No domain specified"}
+                {domain || t("finance.accounts.institution.noDomain")}
               </p>
             </div>
           </div>
@@ -158,11 +159,11 @@ export function CreateInstitutionModal({
               htmlFor="inst-name"
               className="text-[13px] font-medium text-foreground/90"
             >
-              Institution Name
+              {t("finance.accounts.institution.nameLabel")}
             </Label>
             <Input
               id="inst-name"
-              placeholder="e.g. Chase, Banco Popular, Revolut"
+              placeholder={t("finance.accounts.institution.namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -175,11 +176,11 @@ export function CreateInstitutionModal({
               htmlFor="inst-domain"
               className="text-[13px] font-medium text-foreground/90"
             >
-              Website Domain (Optional)
+              {t("finance.accounts.institution.domainLabel")}
             </Label>
             <Input
               id="inst-domain"
-              placeholder="e.g. chase.com"
+              placeholder={t("finance.accounts.institution.domainPlaceholder")}
               value={domain}
               onChange={(e) => {
                 setDomain(e.target.value)
@@ -187,14 +188,15 @@ export function CreateInstitutionModal({
               }}
             />
             <p className="text-xs text-muted-foreground">
-              Used to fetch the institution&apos;s official brand logo
-              automatically.
+              {t("finance.accounts.institution.domainHint")}
             </p>
           </div>
 
           {/* Color Selector */}
           <div className="space-y-2">
-            <Label className="text-xs font-semibold">Accent Color</Label>
+            <Label className="text-xs font-semibold">
+              {t("finance.accounts.institution.colorLabel")}
+            </Label>
             <div className="flex items-center gap-2">
               {BUDGET_COLORS.slice(0, 6).map((c) => (
                 <button
@@ -217,7 +219,7 @@ export function CreateInstitutionModal({
 
           <DialogFooter className="pt-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               type="submit"
@@ -225,7 +227,7 @@ export function CreateInstitutionModal({
               className="gap-2"
             >
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              Save & Link Institution
+              {t("finance.accounts.institution.saveSubmit")}
             </Button>
           </DialogFooter>
         </form>

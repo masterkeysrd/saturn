@@ -1,10 +1,11 @@
 import { useMemo } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import { AccountSchema, type AccountFormValues } from "@saturn/schemas"
 import {
   type Account,
@@ -38,7 +39,7 @@ interface CreateAccountSheetProps {
   refetchAccounts: () => void
 }
 
-const ACCOUNT_TYPE_ITEMS = ACCOUNT_TYPES
+const ACCOUNT_TYPE_VALUES = ACCOUNT_TYPES.map((t) => t.value)
 
 const ACCOUNT_FIELD_PATH_MAP: Record<string, string> = {
   name: "name",
@@ -60,6 +61,7 @@ export function CreateAccountSheet({
   refetchAccounts,
 }: CreateAccountSheetProps) {
   const queryClient = useQueryClient()
+  const { t, language } = useI18n()
   const { data: currenciesData } = useListCurrenciesQuery(
     {},
     { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
@@ -82,7 +84,7 @@ export function CreateAccountSheet({
     mutationFn: (vars) => updateMutation.mutateAsync(vars),
     onErrorToast: (error) => {
       toast.add({
-        title: "Failed to update account",
+        title: t("finance.accounts.sheet.updateFailedTitle"),
         description: error.message,
         type: "error",
       })
@@ -241,8 +243,11 @@ export function CreateAccountSheet({
     } catch (err: unknown) {
       if (!editAccount?.id) {
         toast.add({
-          title: "Failed to create account",
-          description: err instanceof Error ? err.message : "Operation failed.",
+          title: t("finance.accounts.sheet.createFailedTitle"),
+          description:
+            err instanceof Error
+              ? err.message
+              : t("finance.accounts.sheet.operationFailed"),
           type: "error",
         })
       }
@@ -253,27 +258,41 @@ export function CreateAccountSheet({
     <FormDrawer
       open={open}
       onOpenChange={onOpenChange}
-      title={editAccount ? "Edit Account" : "Create Account"}
-      description="Configure ledger entities for liquidity balance adjustments."
-      submitLabel={editAccount ? "Save Changes" : "Create Account"}
+      title={
+        editAccount
+          ? t("finance.accounts.sheet.editTitle")
+          : t("finance.accounts.sheet.createTitle")
+      }
+      description={t("finance.accounts.sheet.description")}
+      submitLabel={
+        editAccount
+          ? t("finance.accounts.sheet.saveSubmit")
+          : t("finance.accounts.sheet.createSubmit")
+      }
       isPending={isPending}
       onSubmit={handleSubmit(onSubmit)}
     >
-      <FormFieldItem label="Account Name" error={errors.name?.message}>
+      <FormFieldItem
+        label={t("finance.accounts.sheet.nameLabel")}
+        error={errors.name?.message}
+      >
         <Input
-          placeholder="e.g. Chase Operating, Petty Cash"
+          placeholder={t("finance.accounts.sheet.namePlaceholder")}
           {...register("name")}
         />
       </FormFieldItem>
 
       <FormFieldItem
-        label="Last 4 Digits (Optional)"
+        label={t("finance.accounts.sheet.lastFourLabel")}
         error={errors.lastFour?.message}
       >
-        <Input placeholder="e.g. 1234" {...register("lastFour")} />
+        <Input
+          placeholder={t("finance.accounts.sheet.lastFourPlaceholder")}
+          {...register("lastFour")}
+        />
       </FormFieldItem>
 
-      <FormFieldItem label="Financial Institution">
+      <FormFieldItem label={t("finance.accounts.sheet.institutionLabel")}>
         <Controller
           control={control}
           name="institutionId"
@@ -286,15 +305,23 @@ export function CreateAccountSheet({
       <FormSelect
         control={control}
         name="type"
-        label="Account Type"
+        label={t("finance.accounts.sheet.typeLabel")}
         disabled={!!editAccount}
-        items={ACCOUNT_TYPE_ITEMS}
+        items={ACCOUNT_TYPE_VALUES.map((value) => ({
+          value,
+          label: getLocalizedEnumLabel(
+            "finance",
+            "accountType",
+            value,
+            language
+          ),
+        }))}
       />
 
       <FormSelect
         control={control}
         name="currency"
-        label="Currency"
+        label={t("finance.accounts.sheet.currencyLabel")}
         disabled={!!editAccount}
         items={currencyItems}
       />
@@ -302,42 +329,48 @@ export function CreateAccountSheet({
       <FormFieldItem
         label={
           accountType === "CREDIT_CARD"
-            ? "Initial Balance Owed"
-            : "Initial Balance"
+            ? t("finance.accounts.sheet.initialBalanceOwedLabel")
+            : t("finance.accounts.sheet.initialBalanceLabel")
         }
         optionalText={
-          accountType === "CREDIT_CARD" ? "(Positive = Debt Owed)" : undefined
+          accountType === "CREDIT_CARD"
+            ? t("finance.accounts.sheet.initialBalancePositiveHint")
+            : undefined
         }
         subtext={
           accountType === "CREDIT_CARD"
-            ? "Enter the amount currently owed on the card. Saturn will automatically register it as debt."
-            : "Enter positive for cash/savings assets, or negative for overdraft."
+            ? t("finance.accounts.sheet.initialBalanceCreditSubtext")
+            : t("finance.accounts.sheet.initialBalanceSubtext")
         }
       >
         <AmountInput
           control={control}
           name="initialBalance"
-          placeholder={accountType === "CREDIT_CARD" ? "e.g. 450.00" : "0.00"}
+          placeholder={
+            accountType === "CREDIT_CARD"
+              ? t("finance.accounts.sheet.initialBalanceCreditPlaceholder")
+              : "0.00"
+          }
           disabled={!!editAccount}
         />
       </FormFieldItem>
 
       {accountType === "CREDIT_CARD" && (
         <FormFieldItem
-          label="Credit Limit"
+          label={t("finance.accounts.sheet.creditLimitLabel")}
           className="animate-in duration-200 slide-in-from-top-2"
         >
           <AmountInput
             control={control}
             name="creditLimit"
-            placeholder="e.g. 5000.00"
+            placeholder={t("finance.accounts.sheet.creditLimitPlaceholder")}
           />
         </FormFieldItem>
       )}
 
       <div className="space-y-2">
         <Label className="mb-2 block text-xs font-bold tracking-wider text-foreground uppercase">
-          Card Theme Color
+          {t("finance.accounts.sheet.cardColorLabel")}
         </Label>
         <div className="flex flex-wrap gap-2">
           {ACCOUNT_COLORS.map(
@@ -373,10 +406,10 @@ export function CreateAccountSheet({
               htmlFor="is-default-switch"
               className="block text-xs font-bold text-foreground"
             >
-              Set as Default Account
+              {t("finance.accounts.sheet.defaultSwitchLabel")}
             </Label>
             <span className="block text-[10px] text-muted-foreground">
-              Pre-populates new transaction forms
+              {t("finance.accounts.sheet.defaultSwitchSubtext")}
             </span>
           </div>
           <Switch
@@ -395,10 +428,10 @@ export function CreateAccountSheet({
                 htmlFor="is-active-switch"
                 className="block text-xs font-bold text-foreground"
               >
-                Account Active Status
+                {t("finance.accounts.sheet.activeSwitchLabel")}
               </Label>
               <span className="block text-[10px] text-muted-foreground">
-                Inactive accounts are hidden from transaction inputs
+                {t("finance.accounts.sheet.activeSwitchSubtext")}
               </span>
             </div>
             <Switch
@@ -412,9 +445,9 @@ export function CreateAccountSheet({
         )}
       </div>
 
-      <FormFieldItem label="Notes">
+      <FormFieldItem label={t("finance.accounts.sheet.notesLabel")}>
         <Input
-          placeholder="e.g. Swift codes, secondary card details"
+          placeholder={t("finance.accounts.sheet.notesPlaceholder")}
           {...register("notes")}
         />
       </FormFieldItem>

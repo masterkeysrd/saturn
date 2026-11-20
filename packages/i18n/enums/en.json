@@ -1,9 +1,11 @@
 {
   "finance": {
     "accountType": {
+      "BANK": "Bank / Checking",
       "CASH": "Cash",
       "CHECKING": "Checking",
       "CREDIT_CARD": "Credit Card",
+      "DIGITAL_ACCOUNT": "Digital Wallet",
       "INVESTMENT": "Investment",
       "LOAN": "Loan",
       "SAVINGS": "Savings"
@@ -16,6 +18,16 @@
       "QUARTERLY": "Quarterly",
       "WEEKLY": "Weekly",
       "YEARLY": "Yearly"
+    },
+    "limitPropagation": {
+      "CURRENT_PERIOD": "Current Period Only",
+      "NEXT_PERIODS_ONLY": "Future Periods Only"
+    },
+    "sourceType": {
+      "LOAN": "Loan",
+      "RECURRENT_TRANSACTION": "Recurring Transaction",
+      "TAX": "Tax",
+      "UNSPECIFIED": "Scheduled Payment"
     },
     "status": {
       "ACTIVE": "Active",
@@ -30,9 +42,12 @@
       "SKIPPED": "Skipped"
     },
     "transactionType": {
+      "BALANCE_ADJUSTMENT": "Balance Adjustment",
       "EXPENSE": "Expense",
       "INCOME": "Income",
-      "TRANSFER": "Transfer"
+      "TRANSFER": "Transfer",
+      "TRANSFER_IN": "Transfer In",
+      "TRANSFER_OUT": "Transfer Out"
     }
   },
   "space": {

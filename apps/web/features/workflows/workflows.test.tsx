@@ -43,12 +43,25 @@ vi.mock("@saturn/api/gen/saturn/identity/v1/identity", () => ({
   useCreateAPIKeyMutation: vi.fn(),
 }))
 
-vi.mock("@saturn/hooks", () => ({
-  useTimezone: () => ({
-    timezone: "America/Santo_Domingo",
-    format: (d: string | Date) => `TZ(${String(d)})`,
-  }),
-}))
+vi.mock("@saturn/hooks", async () => {
+  const i18n =
+    await vi.importActual<typeof import("@saturn/i18n")>("@saturn/i18n")
+  return {
+    useI18n: () => ({
+      locale: "en-US",
+      language: "en" as const,
+      supportedLocales: [],
+      t: (
+        key: Parameters<typeof i18n.translate>[1],
+        params?: Record<string, string | number>
+      ) => i18n.translate("en-US", key, params),
+    }),
+    useTimezone: () => ({
+      timezone: "America/Santo_Domingo",
+      format: (d: string | Date) => `TZ(${String(d)})`,
+    }),
+  }
+})
 
 vi.mock("@/features/space/use-space", () => ({
   useActiveSpaceContext: () => ({

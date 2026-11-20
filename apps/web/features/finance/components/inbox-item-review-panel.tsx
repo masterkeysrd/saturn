@@ -4,7 +4,7 @@ import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { InboxReviewSchema, type InboxReviewFormValues } from "@saturn/schemas"
 import { useActiveSpaceContext } from "@/features/space/use-space"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import type {
   InboxItem,
   Account,
@@ -46,21 +46,14 @@ import {
   CheckCircle2,
 } from "lucide-react"
 
-const DOC_TYPE_ITEMS = [
-  { value: "RECEIPT", label: "Receipt (Completed/Paid purchase)" },
-  { value: "INVOICE", label: "Invoice (Unpaid bill / Future payment)" },
-  { value: "BANK_NOTIFICATION", label: "Bank Notification (Bank alert, wire)" },
-  {
-    value: "SYSTEM_VERIFICATION",
-    label: "System Verification (Forwarding / Auth Code)",
-  },
+const VALID_DOC_TYPES = [
+  "RECEIPT",
+  "INVOICE",
+  "BANK_NOTIFICATION",
+  "SYSTEM_VERIFICATION",
 ]
 
-const TXN_TYPE_ITEMS = [
-  { value: "EXPENSE", label: "Expense (Outflow)" },
-  { value: "INCOME", label: "Income (Inflow)" },
-  { value: "TRANSFER", label: "Transfer (Between owned accounts)" },
-]
+const VALID_TXN_TYPES = ["EXPENSE", "INCOME", "TRANSFER"]
 
 interface InboxItemReviewPanelProps {
   selectedItem: InboxItem
@@ -95,6 +88,47 @@ export function InboxItemReviewPanel({
 }: InboxItemReviewPanelProps) {
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
+  const { t } = useI18n()
+
+  const docTypeItems = useMemo(
+    () => [
+      {
+        value: "RECEIPT",
+        label: t("finance.inbox.docTypes.receiptDetailed"),
+      },
+      {
+        value: "INVOICE",
+        label: t("finance.inbox.docTypes.invoiceDetailed"),
+      },
+      {
+        value: "BANK_NOTIFICATION",
+        label: t("finance.inbox.docTypes.notificationDetailed"),
+      },
+      {
+        value: "SYSTEM_VERIFICATION",
+        label: t("finance.inbox.docTypes.systemVerificationDetailed"),
+      },
+    ],
+    [t]
+  )
+
+  const txnTypeItems = useMemo(
+    () => [
+      {
+        value: "EXPENSE",
+        label: t("finance.inbox.transactionTypes.expense"),
+      },
+      {
+        value: "INCOME",
+        label: t("finance.inbox.transactionTypes.income"),
+      },
+      {
+        value: "TRANSFER",
+        label: t("finance.inbox.transactionTypes.transfer"),
+      },
+    ],
+    [t]
+  )
   const [nowTime] = useState(() => Date.now())
   const [rawOpen, setRawOpen] = useState(false)
   const [popoverOpen, setPopoverOpen] = useState(false)
@@ -261,10 +295,8 @@ export function InboxItemReviewPanel({
     return {
       selectedTxId: itemMeta.potential_duplicate_id || "",
       overwriteLinkedTx: false,
-      docType: DOC_TYPE_ITEMS.some((d) => d.value === docTypeVal)
-        ? docTypeVal
-        : "RECEIPT",
-      transactionType: TXN_TYPE_ITEMS.some((t) => t.value === txnTypeVal)
+      docType: VALID_DOC_TYPES.includes(docTypeVal) ? docTypeVal : "RECEIPT",
+      transactionType: VALID_TXN_TYPES.includes(txnTypeVal)
         ? txnTypeVal
         : "EXPENSE",
       description: selectedItem.vendorName || "",
@@ -495,12 +527,12 @@ export function InboxItemReviewPanel({
           </div>
           <div>
             <span className="block text-[10px] font-bold text-muted-foreground uppercase">
-              Extracted Amount
+              {t("finance.inbox.reviewPanel.extractedAmount")}
             </span>
             <span className="font-bold text-foreground">
               {isVerificationItem ? (
                 <span className="text-xs text-muted-foreground italic">
-                  N/A (System Email)
+                  {t("finance.inbox.reviewPanel.systemEmail")}
                 </span>
               ) : (
                 <>
@@ -514,7 +546,7 @@ export function InboxItemReviewPanel({
           </div>
           <div>
             <span className="block text-[10px] font-bold text-muted-foreground uppercase">
-              Document ID
+              {t("finance.inbox.reviewPanel.documentId")}
             </span>
             <span className="block truncate font-mono text-[11px] text-muted-foreground">
               {selectedItem.id}
@@ -522,10 +554,11 @@ export function InboxItemReviewPanel({
           </div>
           <div>
             <span className="block text-[10px] font-bold text-muted-foreground uppercase">
-              Confidence Score
+              {t("finance.inbox.reviewPanel.confidenceScore")}
             </span>
             <span className="flex items-center gap-1 font-semibold text-emerald-400">
-              <Sparkles className="h-3 w-3" /> High Match
+              <Sparkles className="h-3 w-3" />{" "}
+              {t("finance.inbox.reviewPanel.highMatch")}
             </span>
           </div>
         </div>
@@ -537,21 +570,21 @@ export function InboxItemReviewPanel({
             <div className="flex-grow space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-foreground">
-                  Email Forwarding Verification Notice
+                  {t("finance.inbox.reviewPanel.forwardingNotice")}
                 </span>
                 {systemVerificationInfo.autoVerified && (
                   <span className="flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-400">
-                    <CheckCircle2 className="h-3 w-3" /> Auto-Confirmed
+                    <CheckCircle2 className="h-3 w-3" />{" "}
+                    {t("finance.inbox.reviewPanel.autoConfirmed")}
                   </span>
                 )}
               </div>
               <p className="text-muted-foreground">
-                This item is a system email forwarding confirmation message from
-                your email provider.
+                {t("finance.inbox.reviewPanel.forwardingNoticeHelp")}
               </p>
               {systemVerificationInfo.code && (
                 <div className="mt-2 inline-flex items-center gap-2 rounded-xl border border-indigo-500/30 bg-background/60 px-3 py-1.5 font-mono text-xs text-indigo-300">
-                  <span>Confirmation Code:</span>
+                  <span>{t("finance.inbox.reviewPanel.confirmationCode")}</span>
                   <span className="font-bold tracking-wider text-foreground select-all">
                     {systemVerificationInfo.code}
                   </span>
@@ -571,7 +604,7 @@ export function InboxItemReviewPanel({
             >
               <span className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-indigo-400" />
-                View Original Email Contents
+                {t("finance.inbox.reviewPanel.viewOriginalEmail")}
               </span>
               {rawOpen ? (
                 <ChevronUp className="h-4 w-4" />
@@ -594,7 +627,7 @@ export function InboxItemReviewPanel({
             <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
             <div className="flex-grow">
               <span className="block font-bold">
-                Potential Duplicate Warning
+                {t("finance.inbox.reviewPanel.duplicateWarning")}
               </span>
               <span className="mt-0.5 block text-muted-foreground">
                 {meta.duplicate_reason}
@@ -602,23 +635,30 @@ export function InboxItemReviewPanel({
               {dupTx && (
                 <div className="mt-3 rounded-xl border border-amber-500/10 bg-amber-500/10 p-3 text-amber-600 dark:text-amber-400">
                   <span className="block font-semibold">
-                    Matched Transaction:
+                    {t("finance.inbox.reviewPanel.suggestedMatch")}
                   </span>
                   <div className="mt-1 grid grid-cols-2 gap-1 text-[11px]">
                     <div>
-                      <span className="text-muted-foreground">Date:</span>{" "}
+                      <span className="text-muted-foreground">
+                        {t("finance.transactions.inspector.transactionDate")}:
+                      </span>{" "}
                       {dupTx.transactionDate
                         ? tz.formatDate(dupTx.transactionDate)
-                        : "N/A"}
+                        : t("finance.transactions.scheduled.notAvailable")}
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Amount:</span>{" "}
+                      <span className="text-muted-foreground">
+                        {t("finance.transactions.expenseForm.amountLabel")}:
+                      </span>{" "}
                       {dupTx.currency}{" "}
                       {(Number(dupTx.amount || 0) / 100).toFixed(2)}
                     </div>
                     <div className="col-span-2">
-                      <span className="text-muted-foreground">Vendor:</span>{" "}
-                      {dupTx.description || "N/A"}
+                      <span className="text-muted-foreground">
+                        {t("finance.transactions.inspector.account")}:
+                      </span>{" "}
+                      {dupTx.description ||
+                        t("finance.transactions.noDescription")}
                     </div>
                   </div>
                 </div>
@@ -634,8 +674,8 @@ export function InboxItemReviewPanel({
           <FormSelect
             control={control}
             name="docType"
-            label="Document Classification"
-            items={DOC_TYPE_ITEMS}
+            label={t("finance.inbox.reviewPanel.documentClassification")}
+            items={docTypeItems}
           />
         </div>
 
@@ -646,7 +686,7 @@ export function InboxItemReviewPanel({
             <div className="space-y-2 md:col-span-2">
               <Label className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-muted-foreground uppercase">
                 <ArrowLeftRight className="h-3.5 w-3.5" />
-                Link to Existing Transaction (Optional)
+                {t("finance.inbox.reviewPanel.linkExistingTransaction")}
               </Label>
 
               <Popover
@@ -660,7 +700,10 @@ export function InboxItemReviewPanel({
                       const matched = transactions.find(
                         (t) => t.id === selectedTxId
                       )
-                      if (!matched) return "Selected Transaction"
+                      if (!matched)
+                        return t(
+                          "finance.inbox.reviewPanel.selectedTransaction"
+                        )
                       const dateStr = matched.transactionDate
                         ? tz.formatDate(matched.transactionDate)
                         : ""
@@ -677,7 +720,8 @@ export function InboxItemReviewPanel({
                               )}
                             />
                             <span className="max-w-[150px] truncate font-semibold text-foreground sm:max-w-[200px]">
-                              {matched.description || "No description"}
+                              {matched.description ||
+                                t("finance.transactions.noDescription")}
                             </span>
                             <span className="shrink-0 text-[10px] text-muted-foreground">
                               ({dateStr})
@@ -691,7 +735,9 @@ export function InboxItemReviewPanel({
                     })()
                   ) : (
                     <span className="text-xs text-muted-foreground">
-                      Search or select an existing transaction to link...
+                      {t(
+                        "finance.inbox.reviewPanel.selectTransactionPlaceholder"
+                      )}
                     </span>
                   )}
                   <ChevronDown className="h-4 w-4 shrink-0 pl-1 opacity-50" />
@@ -701,7 +747,9 @@ export function InboxItemReviewPanel({
                   className="flex w-[var(--anchor-width)] min-w-[320px] flex-col gap-2 rounded-2xl border border-border/50 bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
                 >
                   <Input
-                    placeholder="Type to search (vendor, amount, budget, account...)"
+                    placeholder={t(
+                      "finance.inbox.reviewPanel.searchTransactionsPlaceholder"
+                    )}
                     className="h-9 rounded-xl border-border/50 bg-background/50 text-xs focus-visible:ring-ring"
                     value={txSearch}
                     onChange={(e) => setTxSearch(e.target.value)}
@@ -719,30 +767,34 @@ export function InboxItemReviewPanel({
                           setPopoverOpen(false)
                         }}
                       >
-                        <span>None / Create New Transaction</span>
+                        <span>
+                          {t("finance.inbox.reviewPanel.noneCreateNew")}
+                        </span>
                       </button>
                       <Separator className="my-1 bg-border/10" />
                       {filteredTransactions.length === 0 ? (
                         <div className="p-4 text-center text-xs text-muted-foreground">
-                          No matching transactions found.
+                          {t(
+                            "finance.inbox.reviewPanel.noMatchingTransactions"
+                          )}
                         </div>
                       ) : (
-                        filteredTransactions.map((t) => {
-                          const isSelected = selectedTxId === t.id
-                          const isIncome = t.type === "INCOME"
-                          const formattedDate = t.transactionDate
-                            ? tz.formatDate(t.transactionDate)
+                        filteredTransactions.map((txItem) => {
+                          const isSelected = selectedTxId === txItem.id
+                          const isIncome = txItem.type === "INCOME"
+                          const formattedDate = txItem.transactionDate
+                            ? tz.formatDate(txItem.transactionDate)
                             : ""
                           const budgetName = budgets.find(
-                            (b) => b.id === t.budgetId
+                            (b) => b.id === txItem.budgetId
                           )?.name
                           const accountName = accounts.find(
-                            (a) => a.id === t.accountId
+                            (a) => a.id === txItem.accountId
                           )?.name
 
                           return (
                             <button
-                              key={t.id}
+                              key={txItem.id}
                               type="button"
                               className={cn(
                                 "flex w-full cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs transition-colors",
@@ -751,7 +803,7 @@ export function InboxItemReviewPanel({
                                   : "text-foreground hover:bg-muted/10"
                               )}
                               onClick={() => {
-                                setValue("selectedTxId", t.id || "", {
+                                setValue("selectedTxId", txItem.id || "", {
                                   shouldValidate: true,
                                 })
                                 setPopoverOpen(false)
@@ -768,7 +820,8 @@ export function InboxItemReviewPanel({
                                     )}
                                   />
                                   <span className="truncate">
-                                    {t.description || "No description"}
+                                    {txItem.description ||
+                                      t("finance.transactions.noDescription")}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
@@ -789,7 +842,8 @@ export function InboxItemReviewPanel({
                               </div>
                               <div className="flex shrink-0 flex-col items-end gap-0.5 pl-2 text-right">
                                 <span className="font-bold text-foreground">
-                                  {formatCents(t.amount || "0")} {t.currency}
+                                  {formatCents(txItem.amount || "0")}{" "}
+                                  {txItem.currency}
                                 </span>
                               </div>
                             </button>
@@ -806,10 +860,11 @@ export function InboxItemReviewPanel({
                   <div className="flex min-w-0 items-center gap-2 text-blue-300">
                     <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse text-blue-400" />
                     <span className="shrink-0 font-semibold">
-                      Suggested Match:
+                      {t("finance.inbox.reviewPanel.suggestedMatch")}
                     </span>
                     <span className="max-w-[150px] truncate font-bold">
-                      {candidateTxMatch.description || "Existing Transaction"}
+                      {candidateTxMatch.description ||
+                        t("finance.transactions.transaction")}
                     </span>
                     <span className="shrink-0 text-[11px]">
                       ({candidateTxMatch.currency}{" "}
@@ -835,11 +890,12 @@ export function InboxItemReviewPanel({
                         })
                       }
                     >
-                      Link Match
+                      {t("finance.inbox.actions.linkMatch")}
                     </Button>
                   ) : (
                     <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
-                      <Check className="h-3 w-3" /> Linked
+                      <Check className="h-3 w-3" />{" "}
+                      {t("finance.inbox.actions.linked")}
                     </span>
                   )}
                 </div>
@@ -868,11 +924,10 @@ export function InboxItemReviewPanel({
                       <AlertTriangle className="mt-0.5 h-4.5 w-4.5 shrink-0 text-amber-500" />
                       <div className="flex min-w-0 flex-col gap-0.5">
                         <span className="text-xs font-bold text-amber-400">
-                          Reconciliation Mismatch Detected
+                          {t("finance.inbox.reviewPanel.duplicateDetected")}
                         </span>
                         <p className="text-[11px] leading-normal text-muted-foreground">
-                          The details on the staging receipt do not match the
-                          existing ledger transaction.
+                          {t("finance.inbox.reviewPanel.duplicateMismatchHelp")}
                         </p>
                       </div>
                     </div>
@@ -880,7 +935,7 @@ export function InboxItemReviewPanel({
                     <div className="grid grid-cols-2 gap-3 rounded-xl border border-border/20 bg-background/30 p-2.5 text-xs">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-[9px] font-semibold tracking-wider text-muted-foreground uppercase">
-                          Staged Receipt
+                          {t("finance.inbox.reviewPanel.stagedReceipt")}
                         </span>
                         <span className="font-bold text-foreground">
                           {stagingAmt} {selectedItem.currency}
@@ -888,7 +943,7 @@ export function InboxItemReviewPanel({
                       </div>
                       <div className="flex flex-col gap-0.5 border-l border-border/10 pl-3">
                         <span className="text-[9px] font-semibold tracking-wider text-muted-foreground uppercase">
-                          Ledger Entry
+                          {t("finance.inbox.reviewPanel.ledgerEntry")}
                         </span>
                         <span className="font-bold text-foreground">
                           {ledgerAmt} {matched.currency}
@@ -898,7 +953,7 @@ export function InboxItemReviewPanel({
 
                     <div className="flex flex-col gap-2">
                       <span className="text-[9px] font-bold tracking-wider text-muted-foreground uppercase">
-                        Reconciliation Action
+                        {t("finance.inbox.reviewPanel.reconciliationAction")}
                       </span>
                       <RadioGroup
                         value={overwriteLinkedTx ? "overwrite" : "keep"}
@@ -938,7 +993,7 @@ export function InboxItemReviewPanel({
                           />
                           <div className="flex flex-col">
                             <span className="text-xs font-semibold text-foreground">
-                              Keep ledger transaction details (Recommended)
+                              {t("finance.inbox.reviewPanel.keepLedger")}
                             </span>
                           </div>
                         </label>
@@ -953,7 +1008,7 @@ export function InboxItemReviewPanel({
                           />
                           <div className="flex flex-col">
                             <span className="text-xs font-semibold text-foreground">
-                              Overwrite ledger transaction with receipt details
+                              {t("finance.inbox.reviewPanel.overwriteReceipt")}
                             </span>
                           </div>
                         </label>
@@ -967,14 +1022,14 @@ export function InboxItemReviewPanel({
             <FormSelect
               control={control}
               name="transactionType"
-              label="Transaction Type"
+              label={t("finance.inbox.reviewPanel.transactionType")}
               disabled={isLinking}
-              items={TXN_TYPE_ITEMS}
+              items={txnTypeItems}
             />
 
             <div className="space-y-2">
               <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                Vendor / Description
+                {t("finance.inbox.reviewPanel.vendorDescription")}
               </Label>
               <Input
                 className="h-10 w-full rounded-xl border-border/60 bg-background/40"
@@ -990,7 +1045,7 @@ export function InboxItemReviewPanel({
 
             <div className="space-y-2">
               <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                Amount Override
+                {t("finance.inbox.reviewPanel.amountOverride")}
               </Label>
               <div className="flex gap-2">
                 <Input
@@ -1024,7 +1079,7 @@ export function InboxItemReviewPanel({
               <>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                    Source Account (Debit) (Required)
+                    {t("finance.inbox.reviewPanel.debitAccount")}
                   </Label>
                   <AccountSelect
                     control={control}
@@ -1036,7 +1091,7 @@ export function InboxItemReviewPanel({
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                    Destination Account (Credit) (Required)
+                    {t("finance.inbox.reviewPanel.creditAccount")}
                   </Label>
                   <AccountSelect
                     control={control}
@@ -1048,7 +1103,7 @@ export function InboxItemReviewPanel({
                 </div>
                 <div className="mt-1.5 flex flex-col gap-1 space-y-2 rounded-2xl border border-border/10 bg-background/10 p-3 md:col-span-2">
                   <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Attach Document To
+                    {t("finance.inbox.reviewPanel.attachDocumentTo")}
                   </span>
                   <RadioGroup
                     value={transferLeg}
@@ -1062,7 +1117,7 @@ export function InboxItemReviewPanel({
                       className="flex cursor-pointer items-center gap-2 text-xs font-medium text-foreground select-none"
                     >
                       <RadioGroupItem value="SOURCE" id="leg-source" />
-                      <span>Source Account (Debit leg)</span>
+                      <span>{t("finance.inbox.reviewPanel.debitLeg")}</span>
                     </label>
                     <label
                       htmlFor="leg-destination"
@@ -1072,7 +1127,7 @@ export function InboxItemReviewPanel({
                         value="DESTINATION"
                         id="leg-destination"
                       />
-                      <span>Destination Account (Credit leg)</span>
+                      <span>{t("finance.inbox.reviewPanel.creditLeg")}</span>
                     </label>
                   </RadioGroup>
                 </div>
@@ -1083,8 +1138,8 @@ export function InboxItemReviewPanel({
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                       {currentTxnType === "INCOME"
-                        ? "Deposit Account (Required)"
-                        : "Payment Account (Required)"}
+                        ? t("finance.inbox.reviewPanel.depositAccountRequired")
+                        : t("finance.inbox.reviewPanel.paymentAccountRequired")}
                     </Label>
                     <AccountSelect
                       control={control}
@@ -1097,11 +1152,13 @@ export function InboxItemReviewPanel({
                 ) : (
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                      Account
+                      {t("finance.inbox.reviewPanel.account")}
                     </Label>
                     <div className="flex h-10 w-full items-center rounded-xl border border-dashed border-border/40 bg-muted/10 px-3">
                       <span className="line-clamp-1 text-[11px] text-muted-foreground">
-                        No bank account required for Invoice.
+                        {t(
+                          "finance.inbox.reviewPanel.noAccountRequiredInvoice"
+                        )}
                       </span>
                     </div>
                   </div>
@@ -1111,8 +1168,10 @@ export function InboxItemReviewPanel({
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                       {currentDocType === "INVOICE"
-                        ? "Budget Category (Required)"
-                        : "Budget Category"}
+                        ? t(
+                            "finance.inbox.reviewPanel.requiredBudgetForInvoice"
+                          )
+                        : t("finance.transactions.facetBudget")}
                     </Label>
                     <BudgetSelect
                       control={control}
@@ -1131,7 +1190,7 @@ export function InboxItemReviewPanel({
             {(showScheduledPaymentSection || showBorrowingSection) && (
               <div className="space-y-3 pt-1 md:col-span-2">
                 <span className="block text-[10px] font-black tracking-widest text-muted-foreground uppercase">
-                  Advanced Mappings
+                  {t("finance.inbox.reviewPanel.advancedMappings")}
                 </span>
 
                 <div className="grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-2">
@@ -1140,8 +1199,8 @@ export function InboxItemReviewPanel({
                       <Label className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase">
                         <Calendar className="h-3.5 w-3.5 text-indigo-400" />
                         {currentTxnType === "INCOME"
-                          ? "Link Scheduled Income"
-                          : "Link Scheduled Bill"}
+                          ? t("finance.inbox.reviewPanel.linkScheduledIncome")
+                          : t("finance.inbox.reviewPanel.linkScheduledBill")}
                       </Label>
 
                       {(() => {
@@ -1160,8 +1219,8 @@ export function InboxItemReviewPanel({
                           selectedPaymentObj?.metadata?.name ||
                           selectedPaymentBudget?.name ||
                           (selectedPaymentObj?.type === "INCOME"
-                            ? "Scheduled Income"
-                            : "Scheduled Bill")
+                            ? t("finance.inbox.reviewPanel.linkScheduledIncome")
+                            : t("finance.inbox.reviewPanel.linkScheduledBill"))
 
                         return (
                           <Popover
@@ -1178,9 +1237,14 @@ export function InboxItemReviewPanel({
                                       {selectedPaymentName}
                                     </span>
                                     <span className="shrink-0 text-[10px] text-muted-foreground">
-                                      (Due{" "}
-                                      {tz.formatDate(
-                                        selectedPaymentObj.dueDate
+                                      (
+                                      {t(
+                                        "finance.transactions.scheduled.dueOn",
+                                        {
+                                          date: tz.formatDate(
+                                            selectedPaymentObj.dueDate
+                                          ),
+                                        }
                                       )}
                                       )
                                     </span>
@@ -1197,7 +1261,9 @@ export function InboxItemReviewPanel({
                                 </div>
                               ) : (
                                 <span className="truncate text-xs text-muted-foreground">
-                                  Search or select a scheduled bill...
+                                  {t(
+                                    "finance.inbox.reviewPanel.searchScheduledPlaceholder"
+                                  )}
                                 </span>
                               )}
                               <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
@@ -1207,7 +1273,9 @@ export function InboxItemReviewPanel({
                               className="flex w-[var(--anchor-width)] min-w-[320px] flex-col gap-2 rounded-2xl border border-border/50 bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
                             >
                               <Input
-                                placeholder="Type to filter (vendor, category, amount, date...)"
+                                placeholder={t(
+                                  "finance.inbox.reviewPanel.searchBillsPlaceholder"
+                                )}
                                 className="h-9 rounded-xl border-border/50 bg-background/50 text-xs focus-visible:ring-ring"
                                 value={billSearch}
                                 onChange={(e) => setBillSearch(e.target.value)}
@@ -1226,20 +1294,25 @@ export function InboxItemReviewPanel({
                                     }}
                                   >
                                     <span>
-                                      None / Standalone{" "}
                                       {currentTxnType === "INCOME"
-                                        ? "Income"
-                                        : "Expense"}
+                                        ? t(
+                                            "finance.inbox.reviewPanel.noneStandaloneIncome"
+                                          )
+                                        : t(
+                                            "finance.inbox.reviewPanel.noneStandaloneExpense"
+                                          )}
                                     </span>
                                   </button>
                                   <Separator className="my-1 bg-border/10" />
                                   {filteredPayments.length === 0 ? (
                                     <div className="p-4 text-center text-xs text-muted-foreground">
-                                      No matching scheduled{" "}
                                       {currentTxnType === "INCOME"
-                                        ? "income items"
-                                        : "bills"}{" "}
-                                      found.
+                                        ? t(
+                                            "finance.inbox.reviewPanel.noMatchingIncome"
+                                          )
+                                        : t(
+                                            "finance.inbox.reviewPanel.noMatchingBills"
+                                          )}
                                     </div>
                                   ) : (
                                     filteredPayments.map((p) => {
@@ -1256,7 +1329,9 @@ export function InboxItemReviewPanel({
                                             month: "short",
                                             day: "numeric",
                                           })
-                                        : "N/A"
+                                        : t(
+                                            "finance.transactions.scheduled.notAvailable"
+                                          )
 
                                       const pName =
                                         p.recurringTransaction?.name ||
@@ -1264,8 +1339,12 @@ export function InboxItemReviewPanel({
                                         p.metadata?.name ||
                                         budget?.name ||
                                         (p.type === "INCOME"
-                                          ? "Scheduled Income"
-                                          : "Scheduled Bill")
+                                          ? t(
+                                              "finance.inbox.reviewPanel.linkScheduledIncome"
+                                            )
+                                          : t(
+                                              "finance.inbox.reviewPanel.linkScheduledBill"
+                                            ))
 
                                       return (
                                         <button
@@ -1294,10 +1373,19 @@ export function InboxItemReviewPanel({
                                               </span>
                                             </div>
                                             <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                                              <span>Due {formattedDate}</span>
+                                              <span>
+                                                {t(
+                                                  "finance.transactions.scheduled.dueOn",
+                                                  {
+                                                    date: formattedDate,
+                                                  }
+                                                )}
+                                              </span>
                                               {isOverdue && (
                                                 <span className="rounded border border-rose-500/20 bg-rose-500/10 px-1 text-[9px] font-bold text-rose-400">
-                                                  Overdue
+                                                  {t(
+                                                    "finance.inbox.reviewPanel.overdue"
+                                                  )}
                                                 </span>
                                               )}
                                               {p.sourceType && (
@@ -1340,7 +1428,7 @@ export function InboxItemReviewPanel({
                     <div className="space-y-2">
                       <Label className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase">
                         <ArrowLeftRight className="h-3.5 w-3.5 text-teal-400" />
-                        Link Debt / Borrowing
+                        {t("finance.inbox.reviewPanel.linkDebt")}
                       </Label>
 
                       {(() => {
@@ -1374,8 +1462,12 @@ export function InboxItemReviewPanel({
                                       >
                                         {selectedBorrowingObj.direction ===
                                         "LENT"
-                                          ? "Lent out"
-                                          : "Borrowed"}
+                                          ? t(
+                                              "finance.inbox.reviewPanel.lentOut"
+                                            )
+                                          : t(
+                                              "finance.inbox.reviewPanel.borrowed"
+                                            )}
                                       </span>
                                     </div>
                                     <span className="shrink-0 font-bold text-foreground">
@@ -1391,7 +1483,9 @@ export function InboxItemReviewPanel({
                                   </div>
                                 ) : (
                                   <span className="truncate text-xs text-muted-foreground">
-                                    Search or select debt / borrowing...
+                                    {t(
+                                      "finance.inbox.reviewPanel.searchDebtPlaceholder"
+                                    )}
                                   </span>
                                 )}
                                 <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
@@ -1401,7 +1495,9 @@ export function InboxItemReviewPanel({
                                 className="flex w-[var(--anchor-width)] min-w-[320px] flex-col gap-2 rounded-2xl border border-border/50 bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
                               >
                                 <Input
-                                  placeholder="Type to filter (counterparty, amount...)"
+                                  placeholder={t(
+                                    "finance.inbox.reviewPanel.searchBorrowingPlaceholder"
+                                  )}
                                   className="h-9 rounded-xl border-border/50 bg-background/50 text-xs focus-visible:ring-ring"
                                   value={borrowingSearch}
                                   onChange={(e) =>
@@ -1421,12 +1517,18 @@ export function InboxItemReviewPanel({
                                         setBorrowingPopoverOpen(false)
                                       }}
                                     >
-                                      <span>None / General ledger</span>
+                                      <span>
+                                        {t(
+                                          "finance.inbox.reviewPanel.noneGeneralLedger"
+                                        )}
+                                      </span>
                                     </button>
                                     <Separator className="my-1 bg-border/10" />
                                     {filteredBorrowings.length === 0 ? (
                                       <div className="p-4 text-center text-xs text-muted-foreground">
-                                        No active debt agreements found.
+                                        {t(
+                                          "finance.inbox.reviewPanel.noMatchingDebt"
+                                        )}
                                       </div>
                                     ) : (
                                       filteredBorrowings.map((b) => {
@@ -1472,8 +1574,12 @@ export function InboxItemReviewPanel({
                                                   )}
                                                 >
                                                   {isLent
-                                                    ? "Lent out (Receivable)"
-                                                    : "Borrowed (Payable)"}
+                                                    ? t(
+                                                        "finance.inbox.reviewPanel.lentOutReceivable"
+                                                      )
+                                                    : t(
+                                                        "finance.inbox.reviewPanel.borrowedPayable"
+                                                      )}
                                                 </span>
                                               </div>
                                             </div>
@@ -1510,7 +1616,9 @@ export function InboxItemReviewPanel({
                             {currentBorrowingId && (
                               <div className="mt-2.5 space-y-1.5 rounded-xl border border-teal-500/20 bg-teal-500/5 p-2.5">
                                 <Label className="text-[11px] font-semibold text-teal-400">
-                                  Borrowing Link Action
+                                  {t(
+                                    "finance.inbox.reviewPanel.borrowingLinkAction"
+                                  )}
                                 </Label>
                                 <RadioGroup
                                   value={
@@ -1537,7 +1645,9 @@ export function InboxItemReviewPanel({
                                       htmlFor="bt-initial"
                                       className="cursor-pointer text-[10px] leading-none font-medium"
                                     >
-                                      Original Receipt ($0)
+                                      {t(
+                                        "finance.inbox.reviewPanel.originalReceipt"
+                                      )}
                                     </label>
                                   </div>
                                   <div className="flex cursor-pointer items-center space-x-1.5 rounded-lg border border-border/40 bg-background/50 px-2 py-1.5 hover:bg-background/80">
@@ -1549,7 +1659,9 @@ export function InboxItemReviewPanel({
                                       htmlFor="bt-repay"
                                       className="cursor-pointer text-[10px] leading-none font-medium"
                                     >
-                                      Repayment (-bal)
+                                      {t(
+                                        "finance.inbox.reviewPanel.repaymentOption"
+                                      )}
                                     </label>
                                   </div>
                                   <div className="flex cursor-pointer items-center space-x-1.5 rounded-lg border border-border/40 bg-background/50 px-2 py-1.5 hover:bg-background/80">
@@ -1561,7 +1673,9 @@ export function InboxItemReviewPanel({
                                       htmlFor="bt-add"
                                       className="cursor-pointer text-[10px] leading-none font-medium"
                                     >
-                                      Top-Up (+bal)
+                                      {t(
+                                        "finance.inbox.reviewPanel.topUpOption"
+                                      )}
                                     </label>
                                   </div>
                                 </RadioGroup>
@@ -1580,12 +1694,15 @@ export function InboxItemReviewPanel({
                         <div className="flex min-w-0 items-center gap-2 text-indigo-300">
                           <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse text-indigo-400" />
                           <span className="shrink-0 font-semibold">
-                            Suggested Bill:
+                            {t("finance.inbox.reviewPanel.suggestedBill")}
                           </span>
                           <span className="max-w-[180px] truncate font-bold">
                             {budgets.find(
                               (b) => b.id === suggestedBill.budgetId
-                            )?.name || "Bill Payment"}
+                            )?.name ||
+                              t(
+                                "finance.transactions.scheduled.confirmPayment"
+                              )}
                           </span>
                           <span className="shrink-0 text-[11px]">
                             ({suggestedBill.currency}{" "}
@@ -1613,11 +1730,12 @@ export function InboxItemReviewPanel({
                               )
                             }
                           >
-                            Link Match
+                            {t("finance.inbox.actions.linkMatch")}
                           </Button>
                         ) : (
                           <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
-                            <Check className="h-3 w-3" /> Linked
+                            <Check className="h-3 w-3" />{" "}
+                            {t("finance.inbox.actions.linked")}
                           </span>
                         )}
                       </div>
@@ -1630,7 +1748,7 @@ export function InboxItemReviewPanel({
                         <div className="flex min-w-0 items-center gap-2 text-teal-300">
                           <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse text-teal-400" />
                           <span className="shrink-0 font-semibold">
-                            Suggested Debt:
+                            {t("finance.inbox.reviewPanel.suggestedDebt")}
                           </span>
                           <span className="max-w-[180px] truncate font-bold">
                             {suggestedBorrowing.counterparty}
@@ -1662,11 +1780,12 @@ export function InboxItemReviewPanel({
                               )
                             }
                           >
-                            Link Match
+                            {t("finance.inbox.actions.linkMatch")}
                           </Button>
                         ) : (
                           <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
-                            <Check className="h-3 w-3" /> Linked
+                            <Check className="h-3 w-3" />{" "}
+                            {t("finance.inbox.actions.linked")}
                           </span>
                         )}
                       </div>
@@ -1701,7 +1820,7 @@ export function InboxItemReviewPanel({
             ) : (
               <Trash2 className="mr-2 h-4 w-4" />
             )}
-            Discard Document
+            {t("finance.inbox.actions.discard")}
           </Button>
 
           <div className="flex items-center gap-3">
@@ -1712,7 +1831,7 @@ export function InboxItemReviewPanel({
               onClick={onSkip}
               disabled={!hasMore}
             >
-              Skip
+              {t("finance.inbox.actions.skip")}
             </Button>
             <Button
               type="submit"
@@ -1722,26 +1841,26 @@ export function InboxItemReviewPanel({
               {isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing...
+                  {t("finance.inbox.actions.processing")}
                 </>
               ) : (
                 <>
                   <Check className="h-4 w-4" />
                   {isVerificationItem
-                    ? "Archive Verification"
+                    ? t("finance.inbox.actions.archiveVerification")
                     : isLinking
-                      ? "Link Transaction"
+                      ? t("finance.inbox.actions.linkTransaction")
                       : currentTxnType === "TRANSFER"
-                        ? "Record Transfer"
+                        ? t("finance.inbox.actions.recordTransfer")
                         : currentDocType === "INVOICE"
                           ? hasScheduledBill
-                            ? "Link Scheduled Bill"
-                            : "Schedule Bill"
+                            ? t("finance.inbox.actions.linkBill")
+                            : t("finance.inbox.actions.scheduleBill")
                           : hasScheduledBill
-                            ? "Confirm Bill Payment"
+                            ? t("finance.inbox.actions.confirmBillPayment")
                             : currentTxnType === "INCOME"
-                              ? "Record Income"
-                              : "Record Expense"}
+                              ? t("finance.inbox.actions.recordIncome")
+                              : t("finance.inbox.actions.recordExpense")}
                 </>
               )}
             </Button>

@@ -5,8 +5,9 @@ import {
   resolveSpacePath,
   useActiveSpaceContext,
 } from "@/features/space/use-space"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { useRegisterCopilotView } from "@saturn/hooks/ai"
+import { getLocalizedIntervalLabel } from "@saturn/i18n"
 import { formatCents } from "@saturn/core"
 import {
   useGetInsightsQuery,
@@ -66,6 +67,7 @@ function getAccountColor(index: number) {
 export function InsightsView() {
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
+  const { t, language } = useI18n()
   const navigate = useNavigate()
   const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
 
@@ -128,11 +130,11 @@ export function InsightsView() {
 
   useRegisterCopilotView({
     viewId: "finance.insights",
-    title: "Financial Insights",
+    title: t("finance.insights.copilotTitle"),
     suggestions: [
-      "Summarize my cash flow and biggest spending drivers for this period",
-      "Where am I spending more compared to my budget limits?",
-      "How can I improve my savings rate based on these trends?",
+      t("finance.insights.suggestion.summarize"),
+      t("finance.insights.suggestion.limits"),
+      t("finance.insights.suggestion.savings"),
     ],
   })
 
@@ -214,15 +216,15 @@ export function InsightsView() {
   if (showLoadingSpinner) {
     return (
       <FinancePageLayout
-        title="Insights"
-        description="Financial trends, cash flow pacing, and category allocation."
+        title={t("finance.insights.title")}
+        description={t("finance.insights.description")}
         icon={TrendingUp}
       >
         <div className="flex h-[400px] items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-xs font-medium text-muted-foreground">
-              Generating your financial insights...
+              {t("finance.insights.loading")}
             </p>
           </div>
         </div>
@@ -233,8 +235,8 @@ export function InsightsView() {
   if (!settings) {
     return (
       <FinancePageLayout
-        title="Insights"
-        description="Configure finance to view insights"
+        title={t("finance.insights.title")}
+        description={t("finance.insights.configureFinance")}
         icon={TrendingUp}
       >
         <div className="flex min-h-[400px] items-center justify-center" />
@@ -245,16 +247,17 @@ export function InsightsView() {
   if (insightsError || (isQueryEnabled && !spentInsights && !insightsPending)) {
     return (
       <FinancePageLayout
-        title="Insights"
-        description="Unable to load insights"
+        title={t("finance.insights.title")}
+        description={t("finance.insights.unableToLoad")}
         icon={TrendingUp}
       >
         <div className="flex h-[300px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card p-8 text-center">
           <TrendingDownIcon className="h-10 w-10 text-muted-foreground/60" />
-          <h3 className="text-sm font-semibold">Could not load insights</h3>
+          <h3 className="text-sm font-semibold">
+            {t("finance.insights.couldNotLoad")}
+          </h3>
           <p className="max-w-sm text-xs text-muted-foreground">
-            Please make sure exchange rates are configured and transactions are
-            logged in the active workspace.
+            {t("finance.insights.checkRatesAndTransactions")}
           </p>
         </div>
       </FinancePageLayout>
@@ -274,8 +277,8 @@ export function InsightsView() {
 
   return (
     <FinancePageLayout
-      title="Insights"
-      description="Financial trends, cash flow pacing, and category allocation."
+      title={t("finance.insights.title")}
+      description={t("finance.insights.description")}
       icon={TrendingUp}
     >
       <div className="space-y-6 pb-6">
@@ -284,26 +287,26 @@ export function InsightsView() {
           {/* Stream Tabs */}
           <div
             role="tablist"
-            aria-label="Insights view"
+            aria-label={t("finance.insights.ariaView")}
             className="flex max-w-sm items-center gap-1 rounded-lg bg-muted/60 p-1"
           >
             {(
               [
                 {
                   id: "CASH_FLOW",
-                  label: "Cash Flow",
+                  label: t("finance.insights.cashFlow"),
                   icon: Scale,
                   iconColor: "text-primary",
                 },
                 {
                   id: "OUTFLOWS",
-                  label: "Outflows",
+                  label: t("finance.insights.outflows"),
                   icon: TrendingDownIcon,
                   iconColor: "text-destructive",
                 },
                 {
                   id: "INFLOWS",
-                  label: "Inflows",
+                  label: t("finance.insights.inflows"),
                   icon: TrendingUp,
                   iconColor: "text-success",
                 },
@@ -368,7 +371,7 @@ export function InsightsView() {
               <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">
-                    Total Spent
+                    {t("finance.insights.totalSpent")}
                   </span>
                   <TrendingDownIcon className="size-4 text-destructive" />
                 </div>
@@ -383,7 +386,7 @@ export function InsightsView() {
               <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">
-                    Active Limit
+                    {t("finance.insights.activeLimit")}
                   </span>
                   <LayersIcon className="size-4 text-info" />
                 </div>
@@ -398,7 +401,7 @@ export function InsightsView() {
               <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">
-                    Remaining
+                    {t("finance.insights.remaining")}
                   </span>
                   <PercentIcon className="size-4 text-success" />
                 </div>
@@ -413,7 +416,7 @@ export function InsightsView() {
               <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">
-                    Daily Burn Rate
+                    {t("finance.insights.dailyBurnRate")}
                   </span>
                   <FlameIcon className="size-4 text-warning" />
                 </div>
@@ -432,7 +435,7 @@ export function InsightsView() {
               <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">
-                    Total Inflow
+                    {t("finance.insights.totalInflow")}
                   </span>
                   <TrendingUp className="size-4 text-success" />
                 </div>
@@ -447,19 +450,20 @@ export function InsightsView() {
               <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">
-                    Top Inflow Source
+                    {t("finance.insights.topInflowSource")}
                   </span>
                   <CoinsIcon className="size-4 text-primary" />
                 </div>
                 <span className="mt-2 block truncate text-base font-semibold text-foreground">
-                  {incomeInsights?.distributions?.[0]?.name || "None"}
+                  {incomeInsights?.distributions?.[0]?.name ||
+                    t("finance.insights.none")}
                 </span>
               </div>
 
               <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">
-                    Inflow Events
+                    {t("finance.insights.inflowEvents")}
                   </span>
                   <LayersIcon className="size-4 text-info" />
                 </div>
@@ -471,7 +475,7 @@ export function InsightsView() {
               <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">
-                    Target Accounts
+                    {t("finance.insights.targetAccounts")}
                   </span>
                   <ArrowRightLeft className="size-4 text-primary" />
                 </div>
@@ -503,7 +507,7 @@ export function InsightsView() {
                     <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-muted-foreground">
-                          Net Savings
+                          {t("finance.insights.netSavings")}
                         </span>
                         <Scale
                           className={cn(
@@ -525,7 +529,7 @@ export function InsightsView() {
                     <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-muted-foreground">
-                          Savings Rate
+                          {t("finance.insights.savingsRate")}
                         </span>
                         <PercentIcon className="size-4 text-primary" />
                       </div>
@@ -542,7 +546,7 @@ export function InsightsView() {
                     <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-muted-foreground">
-                          Total Inflow
+                          {t("finance.insights.totalInflow")}
                         </span>
                         <ArrowUpRight className="size-4 text-success" />
                       </div>
@@ -557,7 +561,7 @@ export function InsightsView() {
                     <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-muted-foreground">
-                          Total Outflow
+                          {t("finance.insights.totalOutflow")}
                         </span>
                         <ArrowDownLeft className="size-4 text-destructive" />
                       </div>
@@ -582,19 +586,19 @@ export function InsightsView() {
                   {activeTab === "OUTFLOWS" && (
                     <>
                       <TrendingDownIcon className="size-4 text-destructive" />
-                      <span>Outflow Trend</span>
+                      <span>{t("finance.insights.outflowTrend")}</span>
                     </>
                   )}
                   {activeTab === "INFLOWS" && (
                     <>
                       <TrendingUp className="size-4 text-success" />
-                      <span>Inflow Trend</span>
+                      <span>{t("finance.insights.inflowTrend")}</span>
                     </>
                   )}
                   {activeTab === "CASH_FLOW" && (
                     <>
                       <Scale className="size-4 text-primary" />
-                      <span>Cash Flow Comparison</span>
+                      <span>{t("finance.insights.cashFlowComparison")}</span>
                     </>
                   )}
                 </h3>
@@ -603,7 +607,7 @@ export function InsightsView() {
               {/* Granularity Selector */}
               <div
                 role="group"
-                aria-label="Chart granularity"
+                aria-label={t("finance.insights.ariaGranularity")}
                 className="flex items-center self-start rounded-lg bg-muted/60 p-0.5 sm:self-auto"
               >
                 {(
@@ -626,7 +630,7 @@ export function InsightsView() {
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    {mode.charAt(0) + mode.slice(1).toLowerCase()}
+                    {getLocalizedIntervalLabel(mode, language)}
                   </button>
                 ))}
               </div>
@@ -645,20 +649,20 @@ export function InsightsView() {
                   <div className="flex flex-wrap items-center gap-4 font-mono tabular-nums">
                     <span className="flex items-center gap-1.5 text-muted-foreground">
                       <span className="size-2 rounded-full bg-success" />
-                      In:{" "}
+                      {t("finance.insights.inflowLabel")}{" "}
                       <strong className="font-medium text-foreground">
                         {tz.formatMoney(activePoint.inflowTotal, baseCurrency)}
                       </strong>
                     </span>
                     <span className="flex items-center gap-1.5 text-muted-foreground">
                       <span className="size-2 rounded-full bg-destructive" />
-                      Out:{" "}
+                      {t("finance.insights.outflowLabel")}{" "}
                       <strong className="font-medium text-foreground">
                         {tz.formatMoney(activePoint.outflowTotal, baseCurrency)}
                       </strong>
                     </span>
                     <span className="text-muted-foreground">
-                      Net:{" "}
+                      {t("finance.insights.netLabel")}{" "}
                       <strong
                         className={cn(
                           "font-medium",
@@ -725,13 +729,13 @@ export function InsightsView() {
                       )}
                     </span>
                     <span className="text-muted-foreground">
-                      Click or press Enter on a bar to filter ledger
+                      {t("finance.insights.clickToFilter")}
                     </span>
                   </div>
                 </>
               ) : (
                 <span className="text-muted-foreground">
-                  No period data available
+                  {t("finance.insights.noPeriodData")}
                 </span>
               )}
             </div>
@@ -768,12 +772,12 @@ export function InsightsView() {
             <div className="flex flex-col rounded-xl border border-border bg-card p-5 shadow-2xs">
               <h3 className="mb-3.5 flex items-center gap-2 text-sm font-semibold text-foreground">
                 <CoinsIcon className="size-4 text-primary" />
-                <span>Budget Allocations</span>
+                <span>{t("finance.insights.budgetAllocations")}</span>
               </h3>
 
               {spentInsights.distributions.length === 0 ? (
                 <div className="flex h-[200px] items-center justify-center text-xs text-muted-foreground">
-                  No active budget configurations found.
+                  {t("finance.insights.noBudgetsFound")}
                 </div>
               ) : (
                 <ScrollArea className="h-[260px]">
@@ -830,10 +834,10 @@ export function InsightsView() {
                                   {dist.budgetName}
                                 </span>
                                 <span className="block text-[11px] text-muted-foreground">
-                                  Limit:{" "}
+                                  {t("finance.insights.limit")}:{" "}
                                   {Number(dist.limit) > 0
                                     ? formatCents(dist.limit).toLocaleString()
-                                    : "No limit"}
+                                    : t("finance.insights.noLimit")}
                                 </span>
                               </div>
                             </div>
@@ -870,7 +874,7 @@ export function InsightsView() {
                           </div>
                           <div className="mt-1.5 flex items-center justify-between text-[11px]">
                             <span className="text-muted-foreground">
-                              Usage pacing
+                              {t("finance.insights.usagePacing")}
                             </span>
                             <span
                               className={cn(
@@ -893,12 +897,12 @@ export function InsightsView() {
             <div className="flex flex-col rounded-xl border border-border bg-card p-5 shadow-2xs">
               <h3 className="mb-3.5 flex items-center gap-2 text-sm font-semibold text-foreground">
                 <DollarSignIcon className="size-4 text-primary" />
-                <span>Top Outflows</span>
+                <span>{t("finance.insights.topOutflows")}</span>
               </h3>
 
               {spentInsights.topExpenses.length === 0 ? (
                 <div className="flex h-[200px] items-center justify-center text-xs text-muted-foreground">
-                  No purchases logged in this period.
+                  {t("finance.insights.noExpensesLogged")}
                 </div>
               ) : (
                 <ScrollArea className="h-[260px]">
@@ -923,7 +927,8 @@ export function InsightsView() {
                           </div>
                           <div className="min-w-0">
                             <span className="block truncate text-xs font-medium text-foreground">
-                              {exp.description || "Unspecified Expense"}
+                              {exp.description ||
+                                t("finance.insights.unspecifiedExpense")}
                             </span>
                             <span className="block text-[11px] text-muted-foreground">
                               {exp.budgetName} ·{" "}
@@ -968,12 +973,12 @@ export function InsightsView() {
             <div className="flex flex-col rounded-xl border border-border bg-card p-5 shadow-2xs">
               <h3 className="mb-3.5 flex items-center gap-2 text-sm font-semibold text-foreground">
                 <CoinsIcon className="size-4 text-success" />
-                <span>Income Sources Breakdown</span>
+                <span>{t("finance.insights.incomeSources")}</span>
               </h3>
 
               {!incomeInsights || incomeInsights.distributions.length === 0 ? (
                 <div className="flex h-[200px] items-center justify-center text-xs text-muted-foreground">
-                  No income distribution logged.
+                  {t("finance.insights.noIncomeDistribution")}
                 </div>
               ) : (
                 <ScrollArea className="h-[260px]">
@@ -1031,7 +1036,7 @@ export function InsightsView() {
                           </div>
                           <div className="mt-1.5 flex items-center justify-between text-[11px]">
                             <span className="text-muted-foreground">
-                              Contribution
+                              {t("finance.insights.contribution")}
                             </span>
                             <span
                               className={cn(
@@ -1054,12 +1059,12 @@ export function InsightsView() {
             <div className="flex flex-col rounded-xl border border-border bg-card p-5 shadow-2xs">
               <h3 className="mb-3.5 flex items-center gap-2 text-sm font-semibold text-foreground">
                 <DollarSignIcon className="size-4 text-success" />
-                <span>Top Inflows</span>
+                <span>{t("finance.insights.topInflows")}</span>
               </h3>
 
               {!incomeInsights || incomeInsights.topIncomes.length === 0 ? (
                 <div className="flex h-[200px] items-center justify-center text-xs text-muted-foreground">
-                  No income entries logged.
+                  {t("finance.insights.noIncomesLogged")}
                 </div>
               ) : (
                 <ScrollArea className="h-[260px]">
@@ -1084,7 +1089,8 @@ export function InsightsView() {
                           </div>
                           <div className="min-w-0">
                             <span className="block truncate text-xs font-medium text-foreground">
-                              {inc.description || "Unspecified Income"}
+                              {inc.description ||
+                                t("finance.insights.unspecifiedIncome")}
                             </span>
                             <span className="block text-[11px] text-muted-foreground">
                               {tz.format(inc.transactionDate, {
@@ -1128,11 +1134,11 @@ export function InsightsView() {
             <div className="flex flex-col rounded-xl border border-border bg-card p-5 shadow-2xs">
               <h3 className="mb-3.5 flex items-center gap-2 text-sm font-semibold text-foreground">
                 <ArrowUpRight className="size-4 text-success" />
-                <span>Recent Inflows</span>
+                <span>{t("finance.insights.recentInflows")}</span>
               </h3>
               {!incomeInsights || incomeInsights.topIncomes.length === 0 ? (
                 <div className="flex h-[200px] items-center justify-center text-xs text-muted-foreground">
-                  No inflow entries logged.
+                  {t("finance.insights.noInflowsLogged")}
                 </div>
               ) : (
                 <ScrollArea className="h-[260px]">
@@ -1153,7 +1159,8 @@ export function InsightsView() {
                       >
                         <div className="min-w-0">
                           <span className="block truncate text-xs font-medium text-foreground">
-                            {inc.description || "Unspecified Income"}
+                            {inc.description ||
+                              t("finance.insights.unspecifiedIncome")}
                           </span>
                           <span className="block text-[11px] text-muted-foreground">
                             {tz.format(inc.transactionDate, {
@@ -1181,11 +1188,11 @@ export function InsightsView() {
             <div className="flex flex-col rounded-xl border border-border bg-card p-5 shadow-2xs">
               <h3 className="mb-3.5 flex items-center gap-2 text-sm font-semibold text-foreground">
                 <ArrowDownLeft className="size-4 text-destructive" />
-                <span>Recent Outflows</span>
+                <span>{t("finance.insights.recentOutflows")}</span>
               </h3>
               {spentInsights.topExpenses.length === 0 ? (
                 <div className="flex h-[200px] items-center justify-center text-xs text-muted-foreground">
-                  No purchases logged in this period.
+                  {t("finance.insights.noExpensesLogged")}
                 </div>
               ) : (
                 <ScrollArea className="h-[260px]">
@@ -1206,7 +1213,8 @@ export function InsightsView() {
                       >
                         <div className="min-w-0">
                           <span className="block truncate text-xs font-medium text-foreground">
-                            {exp.description || "Unspecified Expense"}
+                            {exp.description ||
+                              t("finance.insights.unspecifiedExpense")}
                           </span>
                           <span className="block text-[11px] text-muted-foreground">
                             {exp.budgetName} ·{" "}

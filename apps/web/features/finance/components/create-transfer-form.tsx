@@ -2,7 +2,7 @@ import { useEffect, useMemo, useCallback, useRef, useState } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { useQueryClient } from "@tanstack/react-query"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { ArrowLeft, AlertTriangle } from "lucide-react"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import { TransferSchema, type TransferFormValues } from "@saturn/schemas"
@@ -50,8 +50,12 @@ export function CreateTransferForm({
 }: CreateTransferFormProps) {
   const queryClient = useQueryClient()
   const tz = useTimezone()
+  const { t } = useI18n()
   const sourceAmountRef = useRef<HTMLInputElement | null>(null)
-  const activeAccounts = accounts.filter((a) => a.isActive)
+  const activeAccounts = useMemo(
+    () => accounts.filter((a) => a.isActive),
+    [accounts]
+  )
   const [recordedTransfer, setRecordedTransfer] =
     useState<RecordedTransferSnapshot | null>(null)
   const [sessionCount, setSessionCount] = useState(0)
@@ -178,14 +182,25 @@ export function CreateTransferForm({
       const dstCurrency = matchedDst?.currency || srcCurrency
 
       const details: RecordedDetailRow[] = [
-        { label: "From account", value: matchedSrc?.name || "—" },
-        { label: "To account", value: matchedDst?.name || "—" },
-        { label: "Transfer date", value: tz.format(data.transferDate) },
+        {
+          label: t("finance.transactions.transferForm.fromAccount"),
+          value: matchedSrc?.name || "—",
+        },
+        {
+          label: t("finance.transactions.transferForm.toAccount"),
+          value: matchedDst?.name || "—",
+        },
+        {
+          label: t("finance.transactions.transferForm.transferDate"),
+          value: tz.format(data.transferDate),
+        },
       ]
 
       const secondaryAmountHint =
         srcCurrency !== dstCurrency
-          ? `→ ${tz.formatMoney(Number(destCentsStr), dstCurrency)} credited`
+          ? t("finance.accounts.transfer.creditedHint", {
+              amount: tz.formatMoney(Number(destCentsStr), dstCurrency),
+            })
           : undefined
 
       setSessionCount((c) => c + 1)
@@ -199,8 +214,11 @@ export function CreateTransferForm({
     } catch (err: unknown) {
       toast.add({
         type: "error",
-        title: "Transfer Failed",
-        description: err instanceof Error ? err.message : "Transfer failed.",
+        title: t("finance.accounts.transfer.failedTitle"),
+        description:
+          err instanceof Error
+            ? err.message
+            : t("finance.accounts.transfer.failedDescription"),
       })
     }
   }
@@ -226,14 +244,14 @@ export function CreateTransferForm({
           if (!next) reset()
           onOpenChange(next)
         }}
-        title="Transfer Recorded"
+        title={t("finance.transactions.transferForm.recordedTitle")}
         amountCents={recordedTransfer.amountCents}
         currency={recordedTransfer.currency}
         secondaryAmountHint={recordedTransfer.secondaryAmountHint}
         summaryTitle={recordedTransfer.summaryTitle}
         details={recordedTransfer.details}
         sessionCount={sessionCount}
-        addAnotherLabel="Add another transfer"
+        addAnotherLabel={t("finance.transactions.transferForm.addAnother")}
         onAddAnother={handleAddAnother}
         onChooseAnotherType={
           onBack
@@ -261,10 +279,10 @@ export function CreateTransferForm({
         if (!next) reset()
         onOpenChange(next)
       }}
-      title="Perform Fund Transfer"
-      description="Double-entry ledger entry: deducts from source and credits target."
+      title={t("finance.transactions.transferForm.title")}
+      description={t("finance.transactions.transferForm.description")}
       headerExtra={headerExtra}
-      submitLabel="Perform Transfer"
+      submitLabel={t("finance.transactions.transferForm.submit")}
       isPending={createMutation.isPending}
       onSubmit={handleSubmit(onSubmit)}
     >
@@ -279,13 +297,15 @@ export function CreateTransferForm({
               className="-ml-2 h-8 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
             >
               <ArrowLeft className="mr-1 h-3.5 w-3.5" />
-              Back to list
+              {t("finance.transactions.transferForm.backToList")}
             </Button>
           </div>
         )}
 
         <FormFieldItem
-          label={`Source Amount (${srcAcc?.currency || "Currency"})`}
+          label={t("finance.transactions.transferForm.sourceAmount", {
+            currency: srcAcc?.currency || "Currency",
+          })}
           error={errors.sourceAmount?.message}
         >
           <AmountInput
@@ -302,7 +322,9 @@ export function CreateTransferForm({
         </FormFieldItem>
 
         <FormFieldItem
-          label={`Target Amount (${dstAcc?.currency || "Currency"})`}
+          label={t("finance.transactions.transferForm.destinationAmount", {
+            currency: dstAcc?.currency || "Currency",
+          })}
           error={errors.destinationAmount?.message}
         >
           <AmountInput
@@ -314,7 +336,7 @@ export function CreateTransferForm({
         </FormFieldItem>
 
         <FormFieldItem
-          label="Source Account (Withdraw From)"
+          label={t("finance.transactions.transferForm.sourceAccount")}
           error={errors.sourceAccountId?.message}
         >
           <Controller
@@ -328,14 +350,14 @@ export function CreateTransferForm({
                   updateTargetAmount(srcAmount, val, dstId)
                 }}
                 accounts={activeAccounts.filter((a) => a.id !== dstId)}
-                placeholder="Choose source account"
+                placeholder={t("finance.accounts.transfer.sourcePlaceholder")}
               />
             )}
           />
         </FormFieldItem>
 
         <FormFieldItem
-          label="Destination Account (Deposit To)"
+          label={t("finance.transactions.transferForm.destinationAccount")}
           error={errors.destinationAccountId?.message}
         >
           <Controller
@@ -349,7 +371,7 @@ export function CreateTransferForm({
                   updateTargetAmount(srcAmount, srcId, val)
                 }}
                 accounts={activeAccounts.filter((a) => a.id !== srcId)}
-                placeholder="Choose target account"
+                placeholder={t("finance.accounts.transfer.targetPlaceholder")}
               />
             )}
           />
@@ -359,16 +381,22 @@ export function CreateTransferForm({
           <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 text-xs text-amber-600 dark:text-amber-400">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
-              <p className="font-medium">Multi-Currency Transfer</p>
+              <p className="font-medium">
+                {t("finance.accounts.transfer.multiCurrencyTitle")}
+              </p>
               <p className="mt-0.5 leading-relaxed">
-                Funds will be converted from {srcAcc.currency} to{" "}
-                {dstAcc.currency} using your rates configuration.
+                {t("finance.accounts.transfer.multiCurrencyDescription", {
+                  source: srcAcc.currency,
+                  destination: dstAcc.currency,
+                })}
               </p>
             </div>
           </div>
         )}
 
-        <FormFieldItem label="Transfer Date">
+        <FormFieldItem
+          label={t("finance.transactions.transferForm.transferDate")}
+        >
           <Controller
             control={control}
             name="transferDate"
@@ -381,9 +409,13 @@ export function CreateTransferForm({
           />
         </FormFieldItem>
 
-        <FormFieldItem label="Transfer Notes">
+        <FormFieldItem
+          label={t("finance.transactions.transferForm.notesLabel")}
+        >
           <Input
-            placeholder="e.g. Monthly savings allocation"
+            placeholder={t(
+              "finance.transactions.transferForm.notesPlaceholder"
+            )}
             {...register("notes")}
           />
         </FormFieldItem>

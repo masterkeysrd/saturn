@@ -4,8 +4,10 @@ import { useSpacePermissions } from "@/features/space/use-space"
 import {
   invalidateFinanceQueries,
   useDebounce,
+  useI18n,
   useTimezone,
 } from "@saturn/hooks"
+import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import { convertCentsToBase } from "@saturn/core"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -71,8 +73,19 @@ const BORROWING_FILTER_DEFAULTS = {
 export function BorrowingView() {
   const queryClient = useQueryClient()
   const tz = useTimezone()
+  const { t } = useI18n()
   const [now] = useState(() => Date.now())
   const { spaceId, isWritable } = useSpacePermissions()
+
+  useRegisterCopilotView({
+    viewId: "finance.borrowing",
+    title: t("finance.borrowing.copilotTitle"),
+    suggestions: [
+      t("finance.borrowing.suggestion.balances"),
+      t("finance.borrowing.suggestion.overdue"),
+      t("finance.borrowing.suggestion.priorities"),
+    ],
+  })
 
   const { data: settings } = useGetSettingsQuery({}, { enabled: !!spaceId })
   const baseCurrency = settings?.baseCurrency || "USD"
@@ -141,8 +154,10 @@ export function BorrowingView() {
       })
       toast.add({
         type: "success",
-        title: "Borrowing Deleted",
-        description: `Record with ${deleteTarget.counterparty} has been deleted.`,
+        title: t("finance.borrowing.delete.deletedTitle"),
+        description: t("finance.borrowing.delete.deletedDescription", {
+          name: deleteTarget.counterparty || "",
+        }),
       })
       setDeleteTarget(null)
       await invalidateFinanceQueries(queryClient)
@@ -150,11 +165,11 @@ export function BorrowingView() {
     } catch (err) {
       toast.add({
         type: "error",
-        title: "Delete Failed",
+        title: t("finance.borrowing.delete.failedTitle"),
         description:
           err instanceof Error
             ? err.message
-            : "Failed to delete borrowing record.",
+            : t("finance.borrowing.delete.failedDescription"),
       })
     }
   }
@@ -213,8 +228,8 @@ export function BorrowingView() {
     <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
       <div className="min-w-0 flex-1">
         <FinancePageLayout
-          title="Personal Borrowing"
-          description="Track informal lends and borrows with family, friends, and colleagues."
+          title={t("finance.borrowing.title")}
+          description={t("finance.borrowing.description")}
           icon={HandCoins}
           actions={
             isWritable && (
@@ -223,7 +238,7 @@ export function BorrowingView() {
                 className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-4 pt-0.5 font-semibold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90 sm:w-auto"
               >
                 <Plus className="h-4.5 w-4.5" />
-                Record Borrowing
+                {t("finance.borrowing.recordBorrowing")}
               </Button>
             )
           }
@@ -239,7 +254,7 @@ export function BorrowingView() {
                   </div>
                   <div>
                     <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                      Owed to Me (Lent)
+                      {t("finance.borrowing.owedToMe")}
                     </span>
                     <h3 className="mt-0.5 text-2xl font-black tracking-tight text-foreground">
                       {formatAmount(totalLent, baseCurrency)}
@@ -256,7 +271,7 @@ export function BorrowingView() {
                   </div>
                   <div>
                     <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                      I Owe to Others (Borrowed)
+                      {t("finance.borrowing.iOweOthers")}
                     </span>
                     <h3 className="mt-0.5 text-2xl font-black tracking-tight text-foreground">
                       {formatAmount(totalBorrowed, baseCurrency)}
@@ -270,7 +285,7 @@ export function BorrowingView() {
             <div className="flex flex-col gap-4 border-b border-border/10 pb-4 md:flex-row md:items-center md:justify-between">
               <InputGroup className="w-full max-w-sm">
                 <InputGroupInput
-                  placeholder="Search counterparty name..."
+                  placeholder={t("finance.borrowing.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -293,10 +308,10 @@ export function BorrowingView() {
                       }`}
                     >
                       {status === "ALL"
-                        ? "All"
+                        ? t("common.all")
                         : status === "ACTIVE"
-                          ? "Active"
-                          : "Paid Off"}
+                          ? t("common.active")
+                          : t("finance.borrowing.filterPaidOff")}
                     </button>
                   ))}
                 </div>
@@ -314,10 +329,10 @@ export function BorrowingView() {
                       }`}
                     >
                       {dir === "ALL"
-                        ? "All"
+                        ? t("common.all")
                         : dir === "LENT"
-                          ? "Lent"
-                          : "Borrowed"}
+                          ? t("finance.borrowing.filterLent")
+                          : t("finance.borrowing.filterBorrowed")}
                     </button>
                   ))}
                 </div>
@@ -329,11 +344,10 @@ export function BorrowingView() {
               <div className="flex min-h-[250px] flex-col items-center justify-center rounded-3xl border border-dashed border-border/60 bg-card/20 p-8 text-center backdrop-blur-sm">
                 <HandCoins className="mb-3 h-10 w-10 text-muted-foreground/30" />
                 <p className="text-sm font-semibold text-muted-foreground">
-                  No borrowings registered
+                  {t("finance.borrowing.emptyTitle")}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground/80">
-                  Log your first lending or borrowing agreement using the button
-                  in the top right.
+                  {t("finance.borrowing.emptyDescription")}
                 </p>
               </div>
             ) : (
@@ -387,21 +401,23 @@ export function BorrowingView() {
                                 : "border border-rose-500/20 bg-rose-500/10 text-rose-500"
                             }`}
                           >
-                            {isLent ? "LENT" : "BORROWED"}
+                            {isLent
+                              ? t("finance.borrowing.badgeLent")
+                              : t("finance.borrowing.badgeBorrowed")}
                           </span>
 
                           {/* Status badge */}
                           {isPaid ? (
                             <span className="rounded-lg bg-muted-foreground/10 px-2 py-0.5 text-[8px] font-bold text-muted-foreground">
-                              PAID
+                              {t("finance.borrowing.badgePaid")}
                             </span>
                           ) : isOverdue ? (
                             <span className="animate-pulse rounded-lg bg-destructive/10 px-2 py-0.5 text-[8px] font-extrabold text-destructive">
-                              OVERDUE
+                              {t("finance.borrowing.badgeOverdue")}
                             </span>
                           ) : (
                             <span className="rounded-lg bg-primary/10 px-2 py-0.5 text-[8px] font-bold text-primary">
-                              ACTIVE
+                              {t("finance.borrowing.badgeActive")}
                             </span>
                           )}
                         </div>
@@ -411,7 +427,7 @@ export function BorrowingView() {
                       <div className="mt-5 grid grid-cols-2 gap-2">
                         <div>
                           <span className="text-[9px] font-bold tracking-wider text-muted-foreground uppercase">
-                            Remaining Balance
+                            {t("finance.borrowing.remainingBalance")}
                           </span>
                           <p className="mt-0.5 truncate text-lg font-black text-foreground">
                             {formatAmount(b.remainingAmount, b.currency)}
@@ -419,7 +435,7 @@ export function BorrowingView() {
                         </div>
                         <div className="text-right">
                           <span className="text-[9px] font-bold tracking-wider text-muted-foreground uppercase">
-                            Original Total
+                            {t("finance.borrowing.originalTotal")}
                           </span>
                           <p className="mt-1 truncate text-sm font-semibold text-muted-foreground">
                             {formatAmount(b.totalAmount, b.currency)}
@@ -430,7 +446,7 @@ export function BorrowingView() {
                       {/* Progress bar */}
                       <div className="mt-4 space-y-1">
                         <div className="flex items-center justify-between text-[9px] text-muted-foreground">
-                          <span>Paid Off</span>
+                          <span>{t("finance.borrowing.paidOffLabel")}</span>
                           <span className="font-semibold">
                             {percentage.toFixed(0)}%
                           </span>
@@ -484,7 +500,7 @@ export function BorrowingView() {
                                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
                               >
                                 <Info className="h-3.5 w-3.5" />
-                                View Details
+                                {t("finance.borrowing.viewDetails")}
                               </DropdownMenuItem>
                               {isWritable && (
                                 <>
@@ -497,14 +513,14 @@ export function BorrowingView() {
                                     className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-emerald-400 focus:bg-emerald-500/10"
                                   >
                                     <Scale className="h-3.5 w-3.5" />
-                                    Adjust Balance
+                                    {t("finance.borrowing.adjustBalance")}
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={(e) => handleOpenEdit(b, e)}
                                     className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
                                   >
                                     <Edit className="h-3.5 w-3.5" />
-                                    Edit Agreement
+                                    {t("finance.borrowing.editAgreement")}
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator className="my-1 bg-border/40" />
                                   <DropdownMenuItem
@@ -515,7 +531,7 @@ export function BorrowingView() {
                                     className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-rose-500 focus:bg-rose-500/10"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
-                                    Delete Record
+                                    {t("finance.borrowing.deleteRecord")}
                                   </DropdownMenuItem>
                                 </>
                               )}
@@ -553,19 +569,18 @@ export function BorrowingView() {
           >
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete Borrowing Record</AlertDialogTitle>
+                <AlertDialogTitle>
+                  {t("finance.borrowing.delete.title")}
+                </AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this borrowing record with{" "}
-                  <span className="font-semibold text-foreground">
-                    {deleteTarget?.counterparty}
-                  </span>
-                  ? This will delete all logged repayments and associated ledger
-                  transactions.
+                  {t("finance.borrowing.delete.description", {
+                    name: deleteTarget?.counterparty || "",
+                  })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel disabled={deleteBorrowingMutation.isPending}>
-                  Cancel
+                  {t("common.cancel")}
                 </AlertDialogCancel>
                 <AlertDialogAction
                   variant="destructive"
@@ -573,8 +588,8 @@ export function BorrowingView() {
                   onClick={handleConfirmDelete}
                 >
                   {deleteBorrowingMutation.isPending
-                    ? "Deleting..."
-                    : "Delete Record"}
+                    ? t("finance.borrowing.delete.deleting")
+                    : t("finance.borrowing.delete.confirm")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

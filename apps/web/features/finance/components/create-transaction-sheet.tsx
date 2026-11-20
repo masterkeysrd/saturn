@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { invalidateFinanceQueries } from "@saturn/hooks"
+import { invalidateFinanceQueries, useI18n } from "@saturn/hooks"
 import { FormDialogShell, FormDrawer } from "@/components/ui/form-drawer"
 import {
   ArrowDownLeft,
@@ -58,6 +58,7 @@ export function CreateTransactionSheet({
   refetchData,
 }: CreateTransactionSheetProps) {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   const [prevOpen, setPrevOpen] = useState(open)
   const [prevEditTransaction, setPrevEditTransaction] =
     useState(editTransaction)
@@ -244,9 +245,9 @@ export function CreateTransactionSheet({
       <FormDrawer
         open={open}
         onOpenChange={onOpenChange}
-        title="Record Transaction"
-        description="Choose the type of transaction you want to record in your ledger."
-        submitLabel="Select an option above"
+        title={t("finance.transactions.create.title")}
+        description={t("finance.transactions.create.description")}
+        submitLabel={t("finance.transactions.create.submitLabel")}
         disabled
         hideSubmitButton
         onSubmit={(e) => e.preventDefault()}
@@ -262,10 +263,10 @@ export function CreateTransactionSheet({
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="text-sm font-medium text-foreground">
-                Standalone Expense
+                {t("finance.transactions.create.standaloneExpense.title")}
               </h3>
               <p className="truncate text-xs text-muted-foreground">
-                Outbound payment, fee, or purchase deducted from a budget.
+                {t("finance.transactions.create.standaloneExpense.description")}
               </p>
             </div>
             <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
@@ -281,10 +282,10 @@ export function CreateTransactionSheet({
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="text-sm font-medium text-foreground">
-                Standalone Income
+                {t("finance.transactions.create.standaloneIncome.title")}
               </h3>
               <p className="truncate text-xs text-muted-foreground">
-                Inbound salary deposit, client payment, or refund.
+                {t("finance.transactions.create.standaloneIncome.description")}
               </p>
             </div>
             <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
@@ -300,10 +301,10 @@ export function CreateTransactionSheet({
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="text-sm font-medium text-foreground">
-                Confirm Scheduled Bill / Income
+                {t("finance.transactions.create.confirmScheduled.title")}
               </h3>
               <p className="truncate text-xs text-muted-foreground">
-                Clear a pending recurring subscription, rent, or salary item.
+                {t("finance.transactions.create.confirmScheduled.description")}
               </p>
             </div>
             <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
@@ -319,10 +320,10 @@ export function CreateTransactionSheet({
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="text-sm font-medium text-foreground">
-                Personal Borrowing / Lending Payment
+                {t("finance.transactions.create.borrowingPayment.title")}
               </h3>
               <p className="truncate text-xs text-muted-foreground">
-                Log a repayment or drawdown on an active debt or loan.
+                {t("finance.transactions.create.borrowingPayment.description")}
               </p>
             </div>
             <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
@@ -338,10 +339,10 @@ export function CreateTransactionSheet({
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="text-sm font-medium text-foreground">
-                Perform Account Transfer
+                {t("finance.transactions.create.accountTransfer.title")}
               </h3>
               <p className="truncate text-xs text-muted-foreground">
-                Move funds between two accounts with double-entry ledger sync.
+                {t("finance.transactions.create.accountTransfer.description")}
               </p>
             </div>
             <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />

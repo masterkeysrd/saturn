@@ -24,8 +24,10 @@ import {
   CreditCard,
 } from "lucide-react"
 import { buildCopilotEntityKey } from "@saturn/core"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
+import { useI18n } from "@saturn/hooks"
 import { CopilotAttachButton } from "@/features/ai/components/copilot-attach-button"
-import { getBudgetColors, getBudgetIcon, formatInterval } from "../utils"
+import { getBudgetColors, getBudgetIcon } from "../utils"
 import { BudgetPeriodProgress } from "./budget-period-progress"
 import { cn } from "@/lib/utils"
 
@@ -58,12 +60,24 @@ export function BudgetCard({
   onAddExpense,
   onViewHistory,
 }: BudgetCardProps) {
+  const { t, language } = useI18n()
   const themeColors = getBudgetColors(budget.color)
   const isClosed = budget.status === "CLOSED"
   const isPaused = budget.status === "PAUSED"
   const isActive = budget.status === "ACTIVE" || !budget.status
 
-  const intervalLabel = formatInterval(budget.interval)
+  const intervalLabel = getLocalizedEnumLabel(
+    "finance",
+    "interval",
+    budget.interval,
+    language
+  )
+  const statusLabel = getLocalizedEnumLabel(
+    "finance",
+    "status",
+    budget.status,
+    language
+  )
 
   return (
     <div
@@ -114,7 +128,9 @@ export function BudgetCard({
 
                 {account && (
                   <span
-                    title={`Default Account: ${account.name}`}
+                    title={t("finance.budgets.progress.defaultAccountTitle", {
+                      name: account.name || "",
+                    })}
                     className="inline-flex max-w-[150px] items-center gap-1 truncate rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground"
                   >
                     <CreditCard className="size-3 shrink-0" />
@@ -125,12 +141,12 @@ export function BudgetCard({
                 {isClosed ? (
                   <span className="inline-flex items-center gap-1 rounded-md border border-destructive/20 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
                     <Lock className="size-3" />
-                    Closed
+                    {statusLabel}
                   </span>
                 ) : isPaused ? (
                   <span className="inline-flex items-center gap-1 rounded-md border border-warning/20 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
                     <PauseCircle className="size-3" />
-                    Paused
+                    {statusLabel}
                   </span>
                 ) : null}
               </div>
@@ -147,7 +163,7 @@ export function BudgetCard({
                   key: buildCopilotEntityKey("budget", budget.id),
                   kind: "budget",
                   id: budget.id,
-                  label: budget.name || "Budget",
+                  label: budget.name || t("finance.budgets.copilotFallback"),
                   summary: {
                     currency: budget.currency,
                     limitAmount: Number(budget.limitAmount || 0),
@@ -163,7 +179,7 @@ export function BudgetCard({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="Budget actions"
+                    aria-label={t("finance.budgets.actionsAria")}
                     className="cursor-pointer rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
                   >
                     <MoreVertical className="size-4" />
@@ -179,7 +195,7 @@ export function BudgetCard({
                   className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm"
                 >
                   <History className="size-3.5" />
-                  View Activity
+                  {t("finance.budgets.viewActivity")}
                 </DropdownMenuItem>
 
                 {isWritable && (
@@ -190,7 +206,7 @@ export function BudgetCard({
                         className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm"
                       >
                         <Plus className="size-3.5" />
-                        Record Expense
+                        {t("finance.budgets.recordExpense")}
                       </DropdownMenuItem>
                     )}
                     {isActive && onPause && (
@@ -199,7 +215,7 @@ export function BudgetCard({
                         className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-warning"
                       >
                         <PauseCircle className="size-3.5" />
-                        Pause Budget
+                        {t("finance.budgets.pauseBudget")}
                       </DropdownMenuItem>
                     )}
                     {isPaused && onResume && (
@@ -208,7 +224,7 @@ export function BudgetCard({
                         className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-success"
                       >
                         <PlayCircle className="size-3.5" />
-                        Resume Budget
+                        {t("finance.budgets.resumeBudget")}
                       </DropdownMenuItem>
                     )}
                     {!isClosed && onClose && (
@@ -217,7 +233,7 @@ export function BudgetCard({
                         className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-warning"
                       >
                         <Lock className="size-3.5" />
-                        Close Budget
+                        {t("finance.budgets.closeBudget")}
                       </DropdownMenuItem>
                     )}
                     {isClosed && onReopen && (
@@ -226,7 +242,7 @@ export function BudgetCard({
                         className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-success"
                       >
                         <Unlock className="size-3.5" />
-                        Reopen Budget
+                        {t("finance.budgets.reopenBudget")}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator className="my-1 border-border/60" />
@@ -235,14 +251,14 @@ export function BudgetCard({
                       className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm"
                     >
                       <Edit2 className="size-3.5" />
-                      Edit Template
+                      {t("finance.budgets.editTemplate")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => onDelete(budget)}
                       className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-destructive focus:bg-destructive/10 focus:text-destructive"
                     >
                       <Trash2 className="size-3.5" />
-                      Delete
+                      {t("finance.budgets.delete")}
                     </DropdownMenuItem>
                   </>
                 )}

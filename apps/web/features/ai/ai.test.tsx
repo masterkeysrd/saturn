@@ -85,16 +85,29 @@ vi.mock("@saturn/hooks/ai", async () => {
   }
 })
 
-vi.mock("@saturn/hooks", () => ({
-  useTimezone: () => ({
-    timezone: "UTC",
-    isToday: () => true,
-    isYesterday: () => false,
-    format: (d: string | Date) => `FMT(${String(d)})`,
-    formatTime: (d: string | Date) => `TIME(${String(d)})`,
-    formatDate: (d: string | Date) => `DATE(${String(d)})`,
-  }),
-}))
+vi.mock("@saturn/hooks", async () => {
+  const i18n =
+    await vi.importActual<typeof import("@saturn/i18n")>("@saturn/i18n")
+  return {
+    useI18n: () => ({
+      locale: "en-US",
+      language: "en" as const,
+      supportedLocales: [],
+      t: (
+        key: Parameters<typeof i18n.translate>[1],
+        params?: Record<string, string | number>
+      ) => i18n.translate("en-US", key, params),
+    }),
+    useTimezone: () => ({
+      timezone: "UTC",
+      isToday: () => true,
+      isYesterday: () => false,
+      format: (d: string | Date) => `FMT(${String(d)})`,
+      formatTime: (d: string | Date) => `TIME(${String(d)})`,
+      formatDate: (d: string | Date) => `DATE(${String(d)})`,
+    }),
+  }
+})
 
 vi.mock("@/features/space/use-space", () => ({
   useActiveSpaceContext: () => ({

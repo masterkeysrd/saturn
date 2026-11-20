@@ -3,6 +3,7 @@ import { useForm, Controller } from "react-hook-form"
 import { useQueryClient } from "@tanstack/react-query"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ArrowLeft } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
 import { FormDrawer } from "@/components/ui/form-drawer"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -41,6 +42,7 @@ export function CreateBorrowingTransactionForm({
   headerExtra,
 }: CreateBorrowingTransactionFormProps) {
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   const logTransactionMutation = useLogBorrowingTransactionMutation()
 
   const defaultAccount =
@@ -117,10 +119,16 @@ export function CreateBorrowingTransactionForm({
     <FormDrawer
       open={open}
       onOpenChange={onOpenChange}
-      title={isLent ? "Log Lending Transaction" : "Log Borrowing Transaction"}
-      description={`Record a payment or disbursement linked to ${borrowing.counterparty}.`}
+      title={
+        isLent
+          ? t("finance.transactions.borrowing.titleLending")
+          : t("finance.transactions.borrowing.titleBorrowing")
+      }
+      description={t("finance.transactions.borrowing.formDescription", {
+        counterparty: borrowing.counterparty,
+      })}
       headerExtra={headerExtra}
-      submitLabel="Record Transaction"
+      submitLabel={t("finance.transactions.recordTransaction")}
       onSubmit={handleSubmit(onSubmit)}
       isPending={logTransactionMutation.isPending}
     >
@@ -135,7 +143,7 @@ export function CreateBorrowingTransactionForm({
             className="-ml-2 h-8 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           >
             <ArrowLeft className="mr-1 h-3.5 w-3.5" />
-            Back to debt records
+            {t("finance.transactions.borrowing.backToDebtRecords")}
           </Button>
         </div>
 
@@ -143,10 +151,12 @@ export function CreateBorrowingTransactionForm({
         <div className="rounded-xl border border-border/40 bg-muted/20 p-4">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-              Borrowing Agreement
+              {t("finance.transactions.borrowing.agreement")}
             </span>
             <span className="text-[10px] font-bold text-indigo-400 uppercase">
-              {isLent ? "You Lent" : "You Borrowed"}
+              {isLent
+                ? t("finance.transactions.borrowing.youLent")
+                : t("finance.transactions.borrowing.youBorrowed")}
             </span>
           </div>
           <div className="mt-1.5 flex items-baseline justify-between">
@@ -165,7 +175,7 @@ export function CreateBorrowingTransactionForm({
         {/* Transaction Type Radio Options */}
         <div className="space-y-2">
           <Label className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
-            Transaction Action
+            {t("finance.transactions.borrowing.actionLabel")}
           </Label>
           <Controller
             control={control}
@@ -184,10 +194,12 @@ export function CreateBorrowingTransactionForm({
                   }`}
                 >
                   <span className="text-xs font-bold text-foreground">
-                    {isLent ? "Receive Repayment" : "Make Repayment"}
+                    {isLent
+                      ? t("finance.transactions.borrowing.repaymentReceive")
+                      : t("finance.transactions.borrowing.repaymentMake")}
                   </span>
                   <span className="text-[10px] leading-snug opacity-95">
-                    Reduces outstanding balance.
+                    {t("finance.transactions.borrowing.repaymentDescription")}
                   </span>
                 </button>
 
@@ -203,10 +215,16 @@ export function CreateBorrowingTransactionForm({
                   }`}
                 >
                   <span className="text-xs font-bold text-foreground">
-                    {isLent ? "Lend More Funds" : "Additional Loan Drawdown"}
+                    {isLent
+                      ? t("finance.transactions.borrowing.disbursementLend")
+                      : t(
+                          "finance.transactions.borrowing.disbursementDrawdown"
+                        )}
                   </span>
                   <span className="text-[10px] leading-snug opacity-95">
-                    Increases outstanding balance.
+                    {t(
+                      "finance.transactions.borrowing.disbursementDescription"
+                    )}
                   </span>
                 </button>
               </div>
@@ -217,7 +235,7 @@ export function CreateBorrowingTransactionForm({
         {/* Amount field */}
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-foreground/90">
-            Amount
+            {t("finance.transactions.borrowing.amountLabel")}
           </Label>
           <div className="relative">
             <Input
@@ -242,7 +260,7 @@ export function CreateBorrowingTransactionForm({
         {/* Account Select */}
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-foreground/90">
-            Bank Account
+            {t("finance.transactions.borrowing.bankAccount")}
           </Label>
           <AccountSelect
             control={control}
@@ -259,10 +277,10 @@ export function CreateBorrowingTransactionForm({
         {/* Notes/Description field */}
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-foreground/90">
-            Notes / Reference
+            {t("finance.transactions.borrowing.notesLabel")}
           </Label>
           <Input
-            placeholder="e.g. Monthly installment, bank transfer ID, cash repayment"
+            placeholder={t("finance.transactions.borrowing.notesPlaceholder")}
             {...register("notes")}
           />
           {errors.notes && (
@@ -275,7 +293,7 @@ export function CreateBorrowingTransactionForm({
         {/* Date Picker */}
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-foreground/90">
-            Transaction Date
+            {t("finance.transactions.borrowing.transactionDate")}
           </Label>
           <Controller
             control={control}

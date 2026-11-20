@@ -8,7 +8,8 @@ import {
   useGetSettingsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useActiveSpaceContext } from "@/features/space/use-space"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import {
   Loader2,
   Calendar,
@@ -34,6 +35,7 @@ export function BudgetHistorySheet({
 }: BudgetHistorySheetProps) {
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
+  const { t, language } = useI18n()
   const { data: settings } = useGetSettingsQuery(
     {},
     { enabled: open && !!spaceId }
@@ -64,15 +66,10 @@ export function BudgetHistorySheet({
       open={open}
       onOpenChange={onOpenChange}
       icon={<History className="size-4" />}
-      title="Budget Transaction History"
-      description={
-        <>
-          Ledger for{" "}
-          <span className="font-medium text-foreground">
-            {budget?.name || "selected budget"}
-          </span>
-        </>
-      }
+      title={t("finance.budgets.history.title")}
+      description={t("finance.budgets.history.description", {
+        name: budget?.name || t("finance.budgets.history.selectedBudget"),
+      })}
       headerActions={
         budget?.id ? (
           <CopilotAttachButton
@@ -80,7 +77,7 @@ export function BudgetHistorySheet({
               key: buildCopilotEntityKey("budget", budget.id),
               kind: "budget",
               id: budget.id,
-              label: budget.name || "Budget",
+              label: budget.name || t("finance.budgets.copilotFallback"),
               summary: {
                 currency: budget.currency,
                 limitAmount: Number(budget.limitAmount || 0),
@@ -100,11 +97,10 @@ export function BudgetHistorySheet({
         <div className="flex h-[250px] flex-col items-center justify-center p-4 text-center">
           <Calendar className="mb-3 h-9 w-9 text-muted-foreground/30" />
           <p className="text-xs font-semibold text-muted-foreground">
-            No transactions logged
+            {t("finance.budgets.history.noTransactions")}
           </p>
           <p className="mt-1 max-w-[250px] text-xs text-muted-foreground/80">
-            Transactions allocated to this budget category will appear here once
-            they are added.
+            {t("finance.budgets.history.noTransactionsDescription")}
           </p>
         </div>
       ) : (
@@ -140,7 +136,8 @@ export function BudgetHistorySheet({
 
                     <div className="min-w-0">
                       <span className="block truncate text-xs font-semibold text-foreground">
-                        {txn.description || "Unspecified Transaction"}
+                        {txn.description ||
+                          t("finance.budgets.history.unspecified")}
                       </span>
                       <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
                         <span>
@@ -210,9 +207,12 @@ export function BudgetHistorySheet({
                           : "bg-blue-500/10 text-blue-500"
                     )}
                   >
-                    {txn.type
-                      .replace("TRANSACTION_TYPE_", "")
-                      .replace("_", " ")}
+                    {getLocalizedEnumLabel(
+                      "finance",
+                      "transactionType",
+                      txn.type,
+                      language
+                    )}
                   </span>
                 </div>
               </div>

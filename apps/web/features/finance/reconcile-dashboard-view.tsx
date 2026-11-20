@@ -12,6 +12,8 @@ import {
   useActiveSpaceContext,
   resolveSpacePath,
 } from "@/features/space/use-space"
+import { useI18n } from "@saturn/hooks"
+import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -46,6 +48,17 @@ import { ImportStatementModal } from "./components/import-statement-modal"
 export function ReconciliationDashboardView() {
   const { spaceId } = useActiveSpaceContext()
   const navigate = useNavigate()
+  const { t } = useI18n()
+
+  useRegisterCopilotView({
+    viewId: "finance.reconcile",
+    title: t("finance.reconcile.copilotTitle"),
+    suggestions: [
+      t("finance.reconcile.suggestion.progress"),
+      t("finance.reconcile.suggestion.discrepancies"),
+      t("finance.reconcile.suggestion.hardLines"),
+    ],
+  })
   const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const deleteStatementMutation = useDeleteStatementMutation()
@@ -143,18 +156,18 @@ export function ReconciliationDashboardView() {
       refetch()
       setDiscardTarget(null)
       toast.add({
-        title: "Statement Discarded",
-        description: "The draft statement has been removed.",
+        title: t("finance.reconcile.discard.toastTitle"),
+        description: t("finance.reconcile.discard.toastDescription"),
         type: "info",
       })
     } catch (err) {
       console.error("Failed to discard statement:", err)
       toast.add({
-        title: "Discard Failed",
+        title: t("finance.reconcile.discard.failedTitle"),
         description:
           err instanceof Error
             ? err.message
-            : "Failed to discard draft statement.",
+            : t("finance.reconcile.discard.failedDescription"),
         type: "error",
       })
     }
@@ -168,15 +181,15 @@ export function ReconciliationDashboardView() {
 
   return (
     <FinancePageLayout
-      title="Bank Statement Reconciliation"
-      description="Upload and match your official bank statements against Saturn ledger records."
+      title={t("finance.reconcile.title")}
+      description={t("finance.reconcile.description")}
       actions={
         <Button
           onClick={handleOpenImport}
           className="rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm transition-colors hover:bg-primary/90"
         >
           <Plus className="mr-1.5 h-3.5 w-3.5" />
-          Import Statement
+          {t("finance.reconcile.importStatement")}
         </Button>
       }
     >
@@ -185,7 +198,7 @@ export function ReconciliationDashboardView() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Card className="rounded-2xl border border-border/40 bg-card/40 p-5 shadow-sm">
             <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-              Total Statements
+              {t("finance.reconcile.dashboard.totalStatements")}
             </span>
             <p className="mt-1 text-2xl font-black text-foreground">
               {statements.length}
@@ -193,7 +206,7 @@ export function ReconciliationDashboardView() {
           </Card>
           <Card className="rounded-2xl border border-border/40 bg-card/40 p-5 shadow-sm">
             <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-              In Progress
+              {t("finance.reconcile.dashboard.inProgress")}
             </span>
             <p className="mt-1 text-2xl font-black text-amber-500">
               {inProgressStatements.length}
@@ -201,7 +214,7 @@ export function ReconciliationDashboardView() {
           </Card>
           <Card className="rounded-2xl border border-border/40 bg-card/40 p-5 shadow-sm">
             <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-              Reconciled & Closed
+              {t("finance.reconcile.dashboard.reconciledClosed")}
             </span>
             <p className="mt-1 text-2xl font-black text-emerald-500">
               {completedStatements.length}
@@ -217,13 +230,17 @@ export function ReconciliationDashboardView() {
                 value="in_progress"
                 className="rounded-lg px-4 text-xs font-bold"
               >
-                In Progress ({inProgressStatements.length})
+                {t("finance.reconcile.dashboard.tabInProgress", {
+                  count: inProgressStatements.length,
+                })}
               </TabsTrigger>
               <TabsTrigger
                 value="completed"
                 className="rounded-lg px-4 text-xs font-bold"
               >
-                Completed History ({completedStatements.length})
+                {t("finance.reconcile.dashboard.tabCompleted", {
+                  count: completedStatements.length,
+                })}
               </TabsTrigger>
             </TabsList>
           </div>
@@ -238,18 +255,17 @@ export function ReconciliationDashboardView() {
               <Card className="flex flex-col items-center justify-center rounded-2xl border-dashed border-border/60 bg-card/20 p-12 text-center">
                 <CheckCircle2 className="mb-3 h-10 w-10 text-emerald-500 opacity-80" />
                 <h3 className="text-base font-bold text-foreground">
-                  All Statements Reconciled
+                  {t("finance.reconcile.dashboard.emptyInProgressTitle")}
                 </h3>
                 <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                  You have no pending draft reconciliations. Upload a new bank
-                  CSV statement to begin matching transactions.
+                  {t("finance.reconcile.dashboard.emptyInProgressDescription")}
                 </p>
                 <Button
                   onClick={handleOpenImport}
                   className="mt-5 rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] shadow-sm hover:bg-primary/90"
                 >
                   <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  Import Statement
+                  {t("finance.reconcile.importStatement")}
                 </Button>
               </Card>
             ) : (
@@ -273,11 +289,10 @@ export function ReconciliationDashboardView() {
               <Card className="flex flex-col items-center justify-center rounded-2xl border-dashed border-border/60 bg-card/20 p-12 text-center">
                 <FileSpreadsheet className="mb-3 h-10 w-10 text-muted-foreground/40" />
                 <h3 className="text-base font-bold text-foreground">
-                  No Past Statements
+                  {t("finance.reconcile.dashboard.emptyCompletedTitle")}
                 </h3>
                 <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                  Completed reconciliation periods and finalized statements will
-                  be archived here.
+                  {t("finance.reconcile.dashboard.emptyCompletedDescription")}
                 </p>
               </Card>
             ) : (
@@ -316,23 +331,29 @@ export function ReconciliationDashboardView() {
             <AlertDialogMedia className="bg-destructive/10 text-destructive">
               <Trash2 className="h-6 w-6" />
             </AlertDialogMedia>
-            <AlertDialogTitle>Discard Draft Statement?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("finance.reconcile.discard.title")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to discard this draft statement for{" "}
+              {t("finance.reconcile.discard.descriptionStart")}
               <span className="font-bold text-foreground">
                 {accounts.find((a) => a.id === discardTarget?.accountId)
-                  ?.name || "Account"}
+                  ?.name || t("finance.reconcile.accountFallback")}
               </span>
               {discardTarget?.statementDate && (
-                <> ({discardTarget.statementDate})</>
+                <>
+                  {" "}
+                  {t("finance.reconcile.discard.dateSuffix", {
+                    date: discardTarget.statementDate,
+                  })}
+                </>
               )}
-              ? All imported lines and reconciliation progress will be
-              permanently deleted. This action cannot be undone.
+              {t("finance.reconcile.discard.descriptionEnd")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteStatementMutation.isPending}>
-              Cancel
+              {t("common.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
@@ -345,12 +366,12 @@ export function ReconciliationDashboardView() {
               {deleteStatementMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Discarding...
+                  {t("finance.reconcile.discard.discarding")}
                 </>
               ) : (
                 <>
                   <Trash2 className="mr-1.5 h-4 w-4" />
-                  Discard Statement
+                  {t("finance.reconcile.discard.confirm")}
                 </>
               )}
             </AlertDialogAction>
@@ -376,6 +397,7 @@ function StatementDashboardCard({
   onDiscard,
   isCompleted: isCompletedProp,
 }: StatementDashboardCardProps) {
+  const { t } = useI18n()
   const isCompleted = isCompletedProp ?? statement.status === "COMPLETED"
   const account = accounts.find((a) => a.id === statement.accountId)
 
@@ -408,11 +430,11 @@ function StatementDashboardCard({
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate text-sm font-bold text-foreground">
-              {statement.filename || "Bank Statement"}
+              {statement.filename || t("finance.reconcile.card.fileFallback")}
             </h3>
             <span className="inline-flex items-center rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
               <Landmark className="mr-1 h-3 w-3" />
-              {account?.name || "Unknown Account"}
+              {account?.name || t("finance.reconcile.card.unknownAccount")}
             </span>
           </div>
 
@@ -423,7 +445,7 @@ function StatementDashboardCard({
             </span>
             <span>•</span>
             <span>
-              Ending Balance:{" "}
+              {t("finance.reconcile.card.endingBalance")}{" "}
               <span className="font-mono font-semibold text-foreground">
                 {formatAmount(
                   statement.statementEndingBalance,
@@ -444,7 +466,9 @@ function StatementDashboardCard({
               : "border border-amber-500/20 bg-amber-500/10 text-amber-500"
           )}
         >
-          {isCompleted ? "Reconciled" : "Draft In-Progress"}
+          {isCompleted
+            ? t("finance.reconcile.card.badgeReconciled")
+            : t("finance.reconcile.card.badgeDraft")}
         </span>
 
         <div className="flex items-center space-x-1.5">
@@ -457,7 +481,7 @@ function StatementDashboardCard({
                 onDiscard(statement)
               }}
               className="h-8 rounded-xl px-2 text-xs text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive"
-              title="Discard draft statement"
+              title={t("finance.reconcile.card.discardTooltip")}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -468,7 +492,9 @@ function StatementDashboardCard({
             size="sm"
             className="h-8 rounded-xl px-3 text-xs font-bold transition-all group-hover:bg-primary group-hover:text-primary-foreground"
           >
-            {isCompleted ? "Review" : "Resume"}
+            {isCompleted
+              ? t("finance.reconcile.card.review")
+              : t("finance.reconcile.card.resume")}
             <ArrowRight className="ml-1 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
           </Button>
         </div>

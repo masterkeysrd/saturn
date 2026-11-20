@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from "react"
 import { ArrowLeft, CheckCircle2, Plus } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
 import { FormDrawer } from "@/components/ui/form-drawer"
 import { Button } from "@/components/ui/button"
 import { MoneyAmount } from "@/components/ui/money-amount"
@@ -32,7 +33,7 @@ export function TransactionRecordedSummary({
   open,
   onOpenChange,
   title,
-  description = "Review your entry below before finishing or adding another.",
+  description,
   amountCents,
   currency,
   colored = false,
@@ -46,6 +47,9 @@ export function TransactionRecordedSummary({
   onChooseAnotherType,
   onDone,
 }: TransactionRecordedSummaryProps) {
+  const { t } = useI18n()
+  const resolvedDescription =
+    description ?? t("finance.transactions.summary.defaultDescription")
   const doneButtonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
@@ -61,7 +65,9 @@ export function TransactionRecordedSummary({
       <span>{title}</span>
       {sessionCount > 1 && (
         <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-          {sessionCount} recorded
+          {t("finance.transactions.summary.recordedCount", {
+            count: sessionCount,
+          })}
         </span>
       )}
     </span>
@@ -79,8 +85,8 @@ export function TransactionRecordedSummary({
       onOpenChange={onOpenChange}
       icon={headerIcon}
       title={headerTitle}
-      description={description}
-      submitLabel="Done"
+      description={resolvedDescription}
+      submitLabel={t("common.done")}
       onSubmit={(e) => {
         e.preventDefault()
         onDone()
@@ -96,7 +102,7 @@ export function TransactionRecordedSummary({
               className="-ml-2 text-xs text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="size-3.5" />
-              <span>All types</span>
+              <span>{t("finance.transactions.summary.allTypes")}</span>
             </Button>
           ) : (
             <span />
@@ -113,7 +119,7 @@ export function TransactionRecordedSummary({
               onClick={onDone}
               className="min-w-24"
             >
-              Done
+              {t("common.done")}
             </Button>
           </div>
         </>
@@ -122,7 +128,7 @@ export function TransactionRecordedSummary({
       <div className="space-y-4">
         <div>
           <span className="text-xs font-medium text-muted-foreground">
-            Recorded amount
+            {t("finance.transactions.summary.recordedAmount")}
           </span>
           <div className="mt-1">
             <MoneyAmount

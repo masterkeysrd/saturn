@@ -42,7 +42,8 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import { formatAmount, formatCents, toCents } from "../utils"
-import { useTimezone } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { cn } from "@/lib/utils"
 import { AccountSelect } from "./account-select"
 import { BudgetSelect } from "./budget-select"
@@ -91,6 +92,7 @@ export function ReconciliationRow({
   isReadOnly = false,
 }: ReconciliationRowProps) {
   const tz = useTimezone()
+  const { t, language } = useI18n()
   const lineAmount = Number(line.amount || 0)
   const isExpense = lineAmount < 0
   const hasExactMatches =
@@ -149,10 +151,12 @@ export function ReconciliationRow({
         s.metadata?.vendorName ||
         s.metadata?.name ||
         budget?.name ||
-        (s.type === "INCOME" ? "Scheduled Income" : "Scheduled Bill")
+        (s.type === "INCOME"
+          ? t("finance.reconcile.row.scheduledIncome")
+          : t("finance.reconcile.row.scheduledBill"))
       )
     },
-    [budgets]
+    [budgets, t]
   )
 
   const eligibleScheduledTxns = useMemo(() => {
@@ -223,10 +227,10 @@ export function ReconciliationRow({
   const filteredTxns = useMemo(() => {
     const q = searchMatchQuery.toLowerCase().trim()
     if (!q) return accountTransactions
-    return accountTransactions.filter((t) => {
-      const desc = (t.description || "").toLowerCase()
-      const amt = formatCents(t.amount).toFixed(2)
-      const date = t.transactionDate ? tz.formatDate(t.transactionDate) : ""
+    return accountTransactions.filter((txn) => {
+      const desc = (txn.description || "").toLowerCase()
+      const amt = formatCents(txn.amount).toFixed(2)
+      const date = txn.transactionDate ? tz.formatDate(txn.transactionDate) : ""
       return desc.includes(q) || amt.includes(q) || date.includes(q)
     })
   }, [accountTransactions, searchMatchQuery, tz])
@@ -234,7 +238,7 @@ export function ReconciliationRow({
   const selectedMatchObj = useMemo(() => {
     if (!selectedMatchId) return null
     return (
-      accountTransactions.find((t) => t.id === selectedMatchId) ||
+      accountTransactions.find((txn) => txn.id === selectedMatchId) ||
       line.suggestions?.matches?.find((m) => m.id === selectedMatchId) ||
       null
     )
@@ -247,6 +251,15 @@ export function ReconciliationRow({
 
   const isResolved = line.status !== "UNMATCHED"
 
+  const statusLabel =
+    line.status === "MATCHED"
+      ? t("finance.reconcile.row.statusMatched")
+      : line.status === "IMPORTED"
+        ? t("finance.reconcile.row.statusImported")
+        : line.status === "SKIPPED"
+          ? t("finance.reconcile.row.statusSkipped")
+          : t("finance.reconcile.row.statusUnmatched")
+
   const actionSummary = useMemo(() => {
     if (
       line.match?.transactionId ||
@@ -258,7 +271,9 @@ export function ReconciliationRow({
       )
       const isOverwritten = line.match?.overwriteTransaction
       return {
-        badge: isOverwritten ? "Matched & Overwritten" : "Matched",
+        badge: isOverwritten
+          ? t("finance.reconcile.row.badgeMatchedOverwritten")
+          : t("finance.reconcile.row.badgeMatched"),
         badgeColor: isOverwritten
           ? "border-amber-500/30 bg-amber-500/10 text-amber-500"
           : "border-blue-500/30 bg-blue-500/10 text-blue-500",
@@ -267,40 +282,69 @@ export function ReconciliationRow({
           ? "bg-amber-500/10 text-amber-500"
           : "bg-blue-500/10 text-blue-500",
         title: matchedTxn?.description
-          ? `Matched: ${matchedTxn.description}`
-          : "Matched to Ledger Transaction",
+          ? t("finance.reconcile.row.matchedTitle", {
+              description: matchedTxn.description,
+            })
+          : t("finance.reconcile.row.matchedToLedger"),
         subtitle: isOverwritten
-          ? `Overwrites ledger amount to ${formatAmount(Math.abs(lineAmount), targetAccount?.currency)} and adjusts balance delta`
+          ? t("finance.reconcile.row.overwriteSubtitle", {
+              amount: formatAmount(
+                Math.abs(lineAmount),
+                targetAccount?.currency
+              ),
+            })
           : matchedTxn
-            ? `${tz.formatDate(matchedTxn.effectiveDate || matchedTxn.transactionDate || "")} • ${formatAmount(matchedTxn.amount, targetAccount?.currency)}`
+            ? t("finance.reconcile.row.matchedSubtitle", {
+                date: tz.formatDate(
+                  matchedTxn.effectiveDate || matchedTxn.transactionDate || ""
+                ),
+                amount: formatAmount(
+                  matchedTxn.amount,
+                  targetAccount?.currency
+                ),
+              })
             : matchTxnId
-              ? `Linked Transaction ID: ${matchTxnId}`
-              : "Linked with existing ledger entry",
+              ? t("finance.reconcile.row.linkedTransactionId", {
+                  id: matchTxnId,
+                })
+              : t("finance.reconcile.row.linkedWithLedger"),
       }
     }
 
     if (line.createExpense) {
       const budget = budgets.find((b) => b.id === line.createExpense?.budgetId)
       return {
-        badge: "Expense",
+        badge: t("finance.reconcile.row.badgeExpense"),
         badgeColor: "border-rose-500/30 bg-rose-500/10 text-rose-500",
         icon: ArrowDownLeft,
         iconBg: "bg-rose-500/10 text-rose-500",
-        title: budget ? `Expense Category: ${budget.name}` : "Record Expense",
+        title: budget
+          ? t("finance.reconcile.row.expenseCategoryTitle", {
+              name: budget.name,
+            })
+          : t("finance.reconcile.row.recordExpense"),
         subtitle: budget
-          ? `Will create a new expense entry under ${budget.name}`
-          : `Will create a new expense entry in ${targetAccount?.name || "account"}`,
+          ? t("finance.reconcile.row.expenseSubtitleBudget", {
+              name: budget.name,
+            })
+          : t("finance.reconcile.row.expenseSubtitleAccount", {
+              account:
+                targetAccount?.name || t("finance.reconcile.accountFallback"),
+            }),
       }
     }
 
     if (line.createIncome) {
       return {
-        badge: "Income",
+        badge: t("finance.reconcile.row.badgeIncome"),
         badgeColor: "border-emerald-500/30 bg-emerald-500/10 text-emerald-500",
         icon: ArrowDownLeft,
         iconBg: "bg-emerald-500/10 text-emerald-500",
-        title: "Direct Income Deposit",
-        subtitle: `Will create an income entry credited to ${targetAccount?.name || "account"}`,
+        title: t("finance.reconcile.row.incomeTitle"),
+        subtitle: t("finance.reconcile.row.incomeSubtitle", {
+          account:
+            targetAccount?.name || t("finance.reconcile.accountFallback"),
+        }),
       }
     }
 
@@ -309,15 +353,22 @@ export function ReconciliationRow({
         (a) => a.id === line.createTransfer?.counterpartAccountId
       )
       const isOutflow = lineAmount < 0
+      const accountFallback = t("finance.reconcile.accountFallback")
+      const counterpartFallback = t("finance.reconcile.row.counterpartAccount")
       return {
-        badge: "Transfer",
+        badge: t("finance.reconcile.row.badgeTransfer"),
         badgeColor: "border-sky-500/30 bg-sky-500/10 text-sky-500",
         icon: ArrowRightLeft,
         iconBg: "bg-sky-500/10 text-sky-500",
-        title: isOutflow
-          ? `${targetAccount?.name || "Account"} → ${counterpart?.name || "Counterpart Account"}`
-          : `${counterpart?.name || "Counterpart Account"} → ${targetAccount?.name || "Account"}`,
-        subtitle: `Will record a linked transfer between accounts`,
+        title: t("finance.reconcile.row.transferTitle", {
+          from: isOutflow
+            ? targetAccount?.name || accountFallback
+            : counterpart?.name || counterpartFallback,
+          to: isOutflow
+            ? counterpart?.name || counterpartFallback
+            : targetAccount?.name || accountFallback,
+        }),
+        subtitle: t("finance.reconcile.row.transferSubtitle"),
       }
     }
 
@@ -327,19 +378,28 @@ export function ReconciliationRow({
       )
       const scheduledName = scheduled
         ? getScheduledName(scheduled)
-        : "Scheduled Payment"
+        : t("finance.reconcile.row.scheduledPayment")
       const budget = scheduled?.budgetId
         ? budgets.find((b) => b.id === scheduled.budgetId)
         : null
       return {
-        badge: "Scheduled",
+        badge: t("finance.reconcile.row.badgeScheduled"),
         badgeColor: "border-indigo-500/30 bg-indigo-500/10 text-indigo-500",
         icon: CalendarClock,
         iconBg: "bg-indigo-500/10 text-indigo-500",
-        title: `Scheduled: ${scheduledName}`,
+        title: t("finance.reconcile.row.scheduledTitle", {
+          name: scheduledName,
+        }),
         subtitle: scheduled?.dueDate
-          ? `Due ${tz.formatDate(scheduled.dueDate)}${budget ? ` • ${budget.name}` : ""} (Marks as Paid)`
-          : "Marks scheduled payment as Paid",
+          ? budget
+            ? t("finance.reconcile.row.scheduledSubtitleBudget", {
+                date: tz.formatDate(scheduled.dueDate),
+                budget: budget.name,
+              })
+            : t("finance.reconcile.row.scheduledSubtitleDate", {
+                date: tz.formatDate(scheduled.dueDate),
+              })
+          : t("finance.reconcile.row.scheduledSubtitleNoDate"),
       }
     }
 
@@ -349,43 +409,56 @@ export function ReconciliationRow({
       )
       const isLent = borrowing?.direction === "LENT"
       return {
-        badge: "Borrowing",
+        badge: t("finance.reconcile.row.badgeBorrowing"),
         badgeColor: "border-pink-500/30 bg-pink-500/10 text-pink-500",
         icon: HandCoins,
         iconBg: "bg-pink-500/10 text-pink-500",
         title: borrowing
-          ? `Repayment: Loan with ${borrowing.counterparty}`
-          : "Borrowing Repayment",
+          ? t("finance.reconcile.row.repaymentTitle", {
+              name: borrowing.counterparty,
+            })
+          : t("finance.reconcile.row.repaymentFallback"),
         subtitle: borrowing
-          ? `${isLent ? "Receivable payment" : "Payable reduction"} • Balance: ${formatAmount(borrowing.remainingAmount, borrowing.currency)}`
-          : "Reduces remaining borrowing agreement balance",
+          ? t("finance.reconcile.row.repaymentSubtitle", {
+              kind: isLent
+                ? t("finance.reconcile.row.receivablePayment")
+                : t("finance.reconcile.row.payableReduction"),
+              amount: formatAmount(
+                borrowing.remainingAmount,
+                borrowing.currency
+              ),
+            })
+          : t("finance.reconcile.row.repaymentSubtitleFallback"),
       }
     }
 
     if (line.skip || line.status === "SKIPPED") {
       return {
-        badge: "Skipped",
+        badge: t("finance.reconcile.row.badgeSkipped"),
         badgeColor: "border-amber-500/30 bg-amber-500/10 text-amber-500",
         icon: SkipForward,
         iconBg: "bg-amber-500/10 text-amber-500",
-        title: "Excluded from Ledger",
-        subtitle: "Ignored from reconciliation, no transaction will be created",
+        title: t("finance.reconcile.row.skippedTitle"),
+        subtitle: t("finance.reconcile.row.skippedSubtitle"),
       }
     }
 
     // Fallback for generic resolved state
     return {
-      badge: line.status === "MATCHED" ? "Matched" : "Imported",
+      badge:
+        line.status === "MATCHED"
+          ? t("finance.reconcile.row.badgeMatched")
+          : t("finance.reconcile.row.badgeImported"),
       badgeColor: "border-emerald-500/30 bg-emerald-500/10 text-emerald-500",
       icon: Check,
       iconBg: "bg-emerald-500/10 text-emerald-500",
       title:
         line.status === "MATCHED"
-          ? "Matched to Ledger Transaction"
-          : "Imported into Ledger",
+          ? t("finance.reconcile.row.matchedToLedger")
+          : t("finance.reconcile.row.importedTitle"),
       subtitle: isReadOnly
-        ? "Finalized and verified in ledger"
-        : "Ready to be committed with reconciliation batch",
+        ? t("finance.reconcile.row.finalizedSubtitle")
+        : t("finance.reconcile.row.readySubtitle"),
     }
   }, [
     line,
@@ -398,6 +471,7 @@ export function ReconciliationRow({
     isReadOnly,
     getScheduledName,
     tz,
+    t,
   ])
 
   const handleSaveDescription = () => {
@@ -440,7 +514,7 @@ export function ReconciliationRow({
             </span>
             {isSuspectDiscrepancy && (
               <span className="py-0.2 animate-pulse rounded-md border border-amber-500/30 bg-amber-500/15 px-1.5 text-[9px] font-extrabold text-amber-500">
-                Discrepancy Match
+                {t("finance.reconcile.row.discrepancyMatch")}
               </span>
             )}
           </div>
@@ -456,7 +530,7 @@ export function ReconciliationRow({
                 "border border-amber-500/20 bg-amber-500/10 text-amber-500"
             )}
           >
-            {line.status}
+            {statusLabel}
           </span>
         </div>
 
@@ -500,7 +574,7 @@ export function ReconciliationRow({
                     setEditedDesc(line.description)
                     setIsEditingDesc(true)
                   }}
-                  title="Edit description"
+                  title={t("finance.reconcile.row.editDescription")}
                 >
                   <Pencil className="h-3 w-3" />
                 </Button>
@@ -510,7 +584,8 @@ export function ReconciliationRow({
 
           {line.reference && (
             <p className="text-[11px] text-muted-foreground">
-              Ref: <span className="font-mono">{line.reference}</span>
+              {t("finance.reconcile.row.refLabel")}{" "}
+              <span className="font-mono">{line.reference}</span>
             </p>
           )}
         </div>
@@ -519,7 +594,7 @@ export function ReconciliationRow({
         <div className="flex items-center justify-between pt-1">
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-              Statement Amount
+              {t("finance.reconcile.row.statementAmount")}
             </span>
             {!isResolved && !isReadOnly && (
               <Button
@@ -527,7 +602,7 @@ export function ReconciliationRow({
                 size="sm"
                 onClick={() => onUpdateDetails(line, { amount: -lineAmount })}
                 disabled={isPending}
-                title="Invert sign (+/-)"
+                title={t("finance.reconcile.row.invertSignTooltip")}
                 className="h-5 rounded-md px-1.5 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
               >
                 <ArrowUpDown className="mr-1 h-2.5 w-2.5" />
@@ -570,7 +645,7 @@ export function ReconciliationRow({
                 disabled={isPending}
                 className="h-7 w-7 shrink-0 text-emerald-500 hover:bg-emerald-500/10"
                 onClick={handleSaveAmount}
-                title="Save amount"
+                title={t("finance.reconcile.row.saveAmount")}
               >
                 <Check className="h-3.5 w-3.5" />
               </Button>
@@ -595,7 +670,7 @@ export function ReconciliationRow({
                 }}
                 title={
                   !isResolved && !isReadOnly
-                    ? "Click to edit amount"
+                    ? t("finance.reconcile.row.clickToEditAmount")
                     : undefined
                 }
               >
@@ -613,7 +688,7 @@ export function ReconciliationRow({
                     )
                     setIsEditingAmount(true)
                   }}
-                  title="Edit amount"
+                  title={t("finance.reconcile.row.editAmount")}
                 >
                   <Pencil className="h-3 w-3" />
                 </Button>
@@ -669,13 +744,15 @@ export function ReconciliationRow({
                 className="h-8 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground"
               >
                 <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                Undo
+                {t("common.undo")}
               </Button>
             )}
           </div>
         ) : isReadOnly ? (
           <div className="flex flex-1 items-center space-x-3 py-2 text-xs text-muted-foreground">
-            <span className="font-semibold">Unmatched</span>
+            <span className="font-semibold">
+              {t("finance.reconcile.row.unmatched")}
+            </span>
           </div>
         ) : (
           /* State B: Unresolved Line */
@@ -686,7 +763,7 @@ export function ReconciliationRow({
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-xs font-bold text-primary">
                     <ArrowRightLeft className="h-3.5 w-3.5" />
-                    Record as Internal Transfer
+                    {t("finance.reconcile.row.recordAsTransfer")}
                   </span>
                   <Button
                     variant="ghost"
@@ -694,12 +771,12 @@ export function ReconciliationRow({
                     className="h-6 px-2 text-[11px]"
                     onClick={() => setCustomMode(null)}
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-bold text-muted-foreground uppercase">
-                    Counterpart Account
+                    {t("finance.reconcile.row.counterpartAccount")}
                   </Label>
                   <AccountSelect
                     value={counterpartId}
@@ -720,7 +797,7 @@ export function ReconciliationRow({
                   }}
                   className="h-8 w-full rounded-lg bg-primary text-xs font-bold"
                 >
-                  Confirm Transfer
+                  {t("finance.reconcile.row.confirmTransfer")}
                 </Button>
               </div>
             ) : customMode === "scheduled" ? (
@@ -729,7 +806,9 @@ export function ReconciliationRow({
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-xs font-bold text-indigo-500">
                     <CalendarClock className="h-3.5 w-3.5" />
-                    Link {isExpense ? "Scheduled Bill" : "Scheduled Income"}
+                    {isExpense
+                      ? t("finance.reconcile.row.linkScheduledBill")
+                      : t("finance.reconcile.row.linkScheduledIncome")}
                   </span>
                   <Button
                     variant="ghost"
@@ -740,12 +819,12 @@ export function ReconciliationRow({
                       setScheduledSearch("")
                     }}
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-bold text-muted-foreground uppercase">
-                    Scheduled Transaction
+                    {t("finance.reconcile.row.scheduledTransactionLabel")}
                   </Label>
                   <Popover
                     open={scheduledPopoverOpen}
@@ -760,11 +839,11 @@ export function ReconciliationRow({
                               {getScheduledName(selectedScheduledObj)}
                             </span>
                             <span className="shrink-0 text-[10px] text-muted-foreground">
-                              (Due{" "}
-                              {selectedScheduledObj.dueDate
-                                ? tz.formatDate(selectedScheduledObj.dueDate)
-                                : "N/A"}
-                              )
+                              {t("finance.reconcile.row.dueShort", {
+                                date: selectedScheduledObj.dueDate
+                                  ? tz.formatDate(selectedScheduledObj.dueDate)
+                                  : t("finance.reconcile.row.notAvailable"),
+                              })}
                             </span>
                           </div>
                           <span className="shrink-0 font-bold text-foreground">
@@ -776,8 +855,9 @@ export function ReconciliationRow({
                         </div>
                       ) : (
                         <span className="truncate text-xs text-muted-foreground">
-                          Search or select scheduled{" "}
-                          {isExpense ? "bill" : "income"}...
+                          {isExpense
+                            ? t("finance.reconcile.row.searchScheduledBill")
+                            : t("finance.reconcile.row.searchScheduledIncome")}
                         </span>
                       )}
                       <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
@@ -787,7 +867,9 @@ export function ReconciliationRow({
                       className="flex w-(--anchor-width) max-w-[var(--anchor-width)] min-w-[320px] flex-col gap-2 rounded-2xl border border-border/50 bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
                     >
                       <Input
-                        placeholder="Type to filter (vendor, category, amount...)"
+                        placeholder={t(
+                          "finance.reconcile.row.filterScheduledPlaceholder"
+                        )}
                         value={scheduledSearch}
                         onChange={(e) => setScheduledSearch(e.target.value)}
                         className="h-8 rounded-xl border-border/50 bg-background/50 text-xs"
@@ -797,7 +879,7 @@ export function ReconciliationRow({
                         <div className="flex flex-col gap-1 pr-1">
                           {filteredScheduledTxns.length === 0 ? (
                             <div className="p-4 text-center text-xs text-muted-foreground">
-                              No matching scheduled transactions found.
+                              {t("finance.reconcile.row.noScheduledFound")}
                             </div>
                           ) : (
                             filteredScheduledTxns.map((s) => {
@@ -810,7 +892,7 @@ export function ReconciliationRow({
                                     month: "short",
                                     day: "numeric",
                                   })
-                                : "N/A"
+                                : t("finance.reconcile.row.notAvailable")
                               const title = getScheduledName(s)
                               const budget = budgets.find(
                                 (b) => b.id === s.budgetId
@@ -837,10 +919,14 @@ export function ReconciliationRow({
                                       <span className="truncate">{title}</span>
                                     </div>
                                     <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                                      <span>Due {formattedDueDate}</span>
+                                      <span>
+                                        {t("finance.reconcile.row.dueDate", {
+                                          date: formattedDueDate,
+                                        })}
+                                      </span>
                                       {isOverdue && (
                                         <span className="shrink-0 rounded border border-rose-500/20 bg-rose-500/10 px-1 text-[9px] font-bold text-rose-400">
-                                          Overdue
+                                          {t("finance.reconcile.row.overdue")}
                                         </span>
                                       )}
                                       {budget && (
@@ -876,7 +962,7 @@ export function ReconciliationRow({
                   }}
                   className="h-8 w-full rounded-lg bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700"
                 >
-                  Confirm Scheduled Link
+                  {t("finance.reconcile.row.confirmScheduledLink")}
                 </Button>
               </div>
             ) : customMode === "repayment" ? (
@@ -885,7 +971,7 @@ export function ReconciliationRow({
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-xs font-bold text-pink-500">
                     <HandCoins className="h-3.5 w-3.5" />
-                    Link Borrowing Agreement
+                    {t("finance.reconcile.row.linkBorrowing")}
                   </span>
                   <Button
                     variant="ghost"
@@ -896,12 +982,12 @@ export function ReconciliationRow({
                       setBorrowingSearch("")
                     }}
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-bold text-muted-foreground uppercase">
-                    Borrowing / Lending Record
+                    {t("finance.reconcile.row.borrowingRecordLabel")}
                   </Label>
                   <Popover
                     open={borrowingPopoverOpen}
@@ -924,12 +1010,12 @@ export function ReconciliationRow({
                               )}
                             >
                               {selectedBorrowingObj.direction === "LENT"
-                                ? "Lent out (Receivable)"
-                                : "Borrowed (Payable)"}
+                                ? t("finance.reconcile.row.lentOut")
+                                : t("finance.reconcile.row.borrowed")}
                             </span>
                           </div>
                           <span className="shrink-0 font-bold text-foreground">
-                            Bal:{" "}
+                            {t("finance.reconcile.row.balLabel")}{" "}
                             {formatAmount(
                               selectedBorrowingObj.remainingAmount,
                               selectedBorrowingObj.currency
@@ -938,7 +1024,9 @@ export function ReconciliationRow({
                         </div>
                       ) : (
                         <span className="truncate text-xs text-muted-foreground">
-                          Search or select borrowing agreement...
+                          {t(
+                            "finance.reconcile.row.searchBorrowingPlaceholder"
+                          )}
                         </span>
                       )}
                       <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
@@ -948,7 +1036,9 @@ export function ReconciliationRow({
                       className="flex w-(--anchor-width) max-w-[var(--anchor-width)] min-w-[320px] flex-col gap-2 rounded-2xl border border-border/50 bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
                     >
                       <Input
-                        placeholder="Type to filter by counterparty, amount..."
+                        placeholder={t(
+                          "finance.reconcile.row.filterBorrowingPlaceholder"
+                        )}
                         value={borrowingSearch}
                         onChange={(e) => setBorrowingSearch(e.target.value)}
                         className="h-8 rounded-xl border-border/50 bg-background/50 text-xs"
@@ -958,7 +1048,7 @@ export function ReconciliationRow({
                         <div className="flex flex-col gap-1 pr-1">
                           {filteredBorrowings.length === 0 ? (
                             <div className="p-4 text-center text-xs text-muted-foreground">
-                              No active borrowing agreements found.
+                              {t("finance.reconcile.row.noBorrowingsFound")}
                             </div>
                           ) : (
                             filteredBorrowings.map((b) => {
@@ -997,12 +1087,12 @@ export function ReconciliationRow({
                                         )}
                                       >
                                         {isLent
-                                          ? "Lent out (Receivable)"
-                                          : "Borrowed (Payable)"}
+                                          ? t("finance.reconcile.row.lentOut")
+                                          : t("finance.reconcile.row.borrowed")}
                                       </span>
                                       <span>•</span>
                                       <span>
-                                        Total:{" "}
+                                        {t("finance.reconcile.row.totalLabel")}{" "}
                                         {formatAmount(
                                           b.totalAmount,
                                           b.currency
@@ -1018,7 +1108,9 @@ export function ReconciliationRow({
                                       )}
                                     </span>
                                     <span className="text-[9px] text-muted-foreground">
-                                      remaining
+                                      {t(
+                                        "finance.reconcile.row.remainingLabel"
+                                      )}
                                     </span>
                                   </div>
                                 </button>
@@ -1041,7 +1133,7 @@ export function ReconciliationRow({
                   }}
                   className="h-8 w-full rounded-lg bg-pink-600 text-xs font-bold text-white hover:bg-pink-700"
                 >
-                  Link Borrowing
+                  {t("finance.reconcile.row.linkBorrowingConfirm")}
                 </Button>
               </div>
             ) : customMode === "other_matches" && line.suggestions?.matches ? (
@@ -1050,7 +1142,7 @@ export function ReconciliationRow({
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-xs font-bold text-blue-500">
                     <Check className="h-3.5 w-3.5" />
-                    Select Matching Transaction
+                    {t("finance.reconcile.row.selectMatchingTransaction")}
                   </span>
                   <Button
                     variant="ghost"
@@ -1058,7 +1150,7 @@ export function ReconciliationRow({
                     className="h-6 px-2 text-[11px]"
                     onClick={() => setCustomMode(null)}
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                 </div>
                 <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
@@ -1093,19 +1185,19 @@ export function ReconciliationRow({
                     <div className="flex items-center justify-between font-bold text-amber-500">
                       <span className="flex items-center gap-1.5">
                         <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                        Amount Mismatch
+                        {t("finance.reconcile.row.amountMismatch")}
                       </span>
                       <span className="font-mono text-[11px]">
-                        Ledger:{" "}
-                        {formatAmount(
-                          selectedMatchObj.amount,
-                          selectedMatchObj.currency
-                        )}{" "}
-                        vs Stmt:{" "}
-                        {formatAmount(
-                          Math.abs(lineAmount),
-                          targetAccount?.currency
-                        )}
+                        {t("finance.reconcile.row.ledgerVsStatement", {
+                          ledger: formatAmount(
+                            selectedMatchObj.amount,
+                            selectedMatchObj.currency
+                          ),
+                          statement: formatAmount(
+                            Math.abs(lineAmount),
+                            targetAccount?.currency
+                          ),
+                        })}
                       </span>
                     </div>
                     <div className="flex flex-col gap-1.5 pt-1">
@@ -1119,15 +1211,15 @@ export function ReconciliationRow({
                         />
                         <div className="min-w-0">
                           <span className="font-semibold text-foreground">
-                            Keep ledger amount (
-                            {formatAmount(
-                              selectedMatchObj.amount,
-                              selectedMatchObj.currency
-                            )}
-                            )
+                            {t("finance.reconcile.row.keepLedgerAmount", {
+                              amount: formatAmount(
+                                selectedMatchObj.amount,
+                                selectedMatchObj.currency
+                              ),
+                            })}
                           </span>
                           <p className="text-[10px] text-muted-foreground">
-                            Keep existing transaction amount in ledger.
+                            {t("finance.reconcile.row.keepLedgerDescription")}
                           </p>
                         </div>
                       </label>
@@ -1141,16 +1233,15 @@ export function ReconciliationRow({
                         />
                         <div className="min-w-0">
                           <span className="font-semibold text-primary">
-                            Overwrite with statement amount (
-                            {formatAmount(
-                              Math.abs(lineAmount),
-                              targetAccount?.currency
-                            )}
-                            )
+                            {t("finance.reconcile.row.overwriteAmount", {
+                              amount: formatAmount(
+                                Math.abs(lineAmount),
+                                targetAccount?.currency
+                              ),
+                            })}
                           </span>
                           <p className="text-[10px] text-muted-foreground">
-                            Update ledger transaction amount and adjust account
-                            balance delta.
+                            {t("finance.reconcile.row.overwriteDescription")}
                           </p>
                         </div>
                       </label>
@@ -1172,7 +1263,7 @@ export function ReconciliationRow({
                   }}
                   className="h-8 w-full rounded-lg bg-blue-600 text-xs font-bold text-white hover:bg-blue-700"
                 >
-                  Confirm Selected Match
+                  {t("finance.reconcile.row.confirmSelectedMatch")}
                 </Button>
               </div>
             ) : customMode === "search_match" ? (
@@ -1182,10 +1273,9 @@ export function ReconciliationRow({
                   <div className="flex items-center gap-1.5">
                     <span className="flex items-center gap-1.5 text-xs font-bold text-blue-500">
                       <Search className="h-3.5 w-3.5" />
-                      Find{" "}
                       {isExpense
-                        ? "Outflow Entry (Expense / Transfer Out)"
-                        : "Inflow Entry (Income / Transfer In)"}
+                        ? t("finance.reconcile.row.findOutflow")
+                        : t("finance.reconcile.row.findInflow")}
                     </span>
                   </div>
                   <Button
@@ -1197,14 +1287,16 @@ export function ReconciliationRow({
                       setSearchMatchQuery("")
                     }}
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                 </div>
 
                 <div className="relative">
                   <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="Search payee, amount, or date..."
+                    placeholder={t(
+                      "finance.reconcile.row.searchLedgerPlaceholder"
+                    )}
                     value={searchMatchQuery}
                     onChange={(e) => setSearchMatchQuery(e.target.value)}
                     className="h-8 rounded-lg border-border/60 bg-background/50 pl-8 text-xs"
@@ -1215,11 +1307,11 @@ export function ReconciliationRow({
                   {isTxnsLoading ? (
                     <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Searching ledger records...
+                      {t("finance.reconcile.row.searchingLedger")}
                     </div>
                   ) : filteredTxns.length === 0 ? (
                     <div className="py-6 text-center text-xs text-muted-foreground">
-                      No matching account transactions found for this filter.
+                      {t("finance.reconcile.row.noLedgerMatches")}
                     </div>
                   ) : (
                     filteredTxns.map((m) => {
@@ -1258,22 +1350,24 @@ export function ReconciliationRow({
                                     "border border-purple-500/20 bg-purple-500/10 text-purple-500"
                                 )}
                               >
-                                {m.type === "EXPENSE" && "Expense"}
-                                {m.type === "TRANSFER_OUT" && "Transfer Out"}
-                                {m.type === "INCOME" && "Income"}
-                                {m.type === "TRANSFER_IN" && "Transfer In"}
-                                {m.type === "BALANCE_ADJUSTMENT" &&
-                                  "Adjustment"}
+                                {m.type &&
+                                  getLocalizedEnumLabel(
+                                    "finance",
+                                    "transactionType",
+                                    m.type,
+                                    language
+                                  )}
                               </span>
 
                               {isExactAmount && (
                                 <span className="py-0.2 rounded border border-emerald-500/20 bg-emerald-500/10 px-1.5 text-[9px] font-bold text-emerald-500">
-                                  Exact Amount
+                                  {t("finance.reconcile.row.exactAmount")}
                                 </span>
                               )}
 
                               <p className="truncate font-bold text-foreground">
-                                {m.description || "Uncategorized Transaction"}
+                                {m.description ||
+                                  t("finance.reconcile.row.uncategorized")}
                               </p>
                             </div>
 
@@ -1281,7 +1375,7 @@ export function ReconciliationRow({
                               <span>
                                 {m.transactionDate
                                   ? tz.formatDate(m.transactionDate)
-                                  : "No Date"}
+                                  : t("finance.reconcile.row.noDate")}
                               </span>
                               {budget && (
                                 <>
@@ -1314,19 +1408,19 @@ export function ReconciliationRow({
                     <div className="flex items-center justify-between font-bold text-amber-500">
                       <span className="flex items-center gap-1.5">
                         <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                        Amount Mismatch
+                        {t("finance.reconcile.row.amountMismatch")}
                       </span>
                       <span className="font-mono text-[11px]">
-                        Ledger:{" "}
-                        {formatAmount(
-                          selectedMatchObj.amount,
-                          selectedMatchObj.currency
-                        )}{" "}
-                        vs Stmt:{" "}
-                        {formatAmount(
-                          Math.abs(lineAmount),
-                          targetAccount?.currency
-                        )}
+                        {t("finance.reconcile.row.ledgerVsStatement", {
+                          ledger: formatAmount(
+                            selectedMatchObj.amount,
+                            selectedMatchObj.currency
+                          ),
+                          statement: formatAmount(
+                            Math.abs(lineAmount),
+                            targetAccount?.currency
+                          ),
+                        })}
                       </span>
                     </div>
                     <div className="flex flex-col gap-1.5 pt-1">
@@ -1340,15 +1434,15 @@ export function ReconciliationRow({
                         />
                         <div className="min-w-0">
                           <span className="font-semibold text-foreground">
-                            Keep ledger amount (
-                            {formatAmount(
-                              selectedMatchObj.amount,
-                              selectedMatchObj.currency
-                            )}
-                            )
+                            {t("finance.reconcile.row.keepLedgerAmount", {
+                              amount: formatAmount(
+                                selectedMatchObj.amount,
+                                selectedMatchObj.currency
+                              ),
+                            })}
                           </span>
                           <p className="text-[10px] text-muted-foreground">
-                            Keep existing transaction amount in ledger.
+                            {t("finance.reconcile.row.keepLedgerDescription")}
                           </p>
                         </div>
                       </label>
@@ -1362,16 +1456,15 @@ export function ReconciliationRow({
                         />
                         <div className="min-w-0">
                           <span className="font-semibold text-primary">
-                            Overwrite with statement amount (
-                            {formatAmount(
-                              Math.abs(lineAmount),
-                              targetAccount?.currency
-                            )}
-                            )
+                            {t("finance.reconcile.row.overwriteAmount", {
+                              amount: formatAmount(
+                                Math.abs(lineAmount),
+                                targetAccount?.currency
+                              ),
+                            })}
                           </span>
                           <p className="text-[10px] text-muted-foreground">
-                            Update ledger transaction amount and adjust account
-                            balance delta.
+                            {t("finance.reconcile.row.overwriteDescription")}
                           </p>
                         </div>
                       </label>
@@ -1394,7 +1487,7 @@ export function ReconciliationRow({
                   className="h-8 w-full rounded-lg bg-blue-600 text-xs font-bold text-white shadow-sm hover:bg-blue-700"
                 >
                   <Check className="mr-1.5 h-3.5 w-3.5" />
-                  Confirm Match with Selected Entry
+                  {t("finance.reconcile.row.confirmMatchWithEntry")}
                 </Button>
               </div>
             ) : (
@@ -1406,7 +1499,7 @@ export function ReconciliationRow({
                     <div className="flex items-center justify-between">
                       <span className="inline-flex items-center gap-1 rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-500">
                         <Sparkles className="h-3 w-3" />
-                        Exact Match Found
+                        {t("finance.reconcile.row.exactMatchFound")}
                       </span>
                       {line.suggestions!.matches!.length > 1 && (
                         <button
@@ -1414,7 +1507,9 @@ export function ReconciliationRow({
                           onClick={() => setCustomMode("other_matches")}
                           className="text-[11px] font-semibold text-primary hover:underline"
                         >
-                          +{line.suggestions!.matches!.length - 1} other matches
+                          {t("finance.reconcile.row.otherMatches", {
+                            count: line.suggestions!.matches!.length - 1,
+                          })}
                         </button>
                       )}
                     </div>
@@ -1424,7 +1519,9 @@ export function ReconciliationRow({
                           {firstMatch.description}
                         </p>
                         <p className="text-[10px] text-muted-foreground">
-                          Recorded on {tz.formatDate(firstMatch.effectiveDate)}
+                          {t("finance.reconcile.row.recordedOn", {
+                            date: tz.formatDate(firstMatch.effectiveDate),
+                          })}
                         </p>
                       </div>
                       <span className="shrink-0 font-mono text-xs font-black text-foreground">
@@ -1437,7 +1534,7 @@ export function ReconciliationRow({
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <Label className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                        Assign Budget Category
+                        {t("finance.reconcile.row.assignBudgetCategory")}
                       </Label>
                     </div>
                     <BudgetSelect
@@ -1451,7 +1548,7 @@ export function ReconciliationRow({
                   /* Scenario C: Inflow / Income -> Quick Record */
                   <div className="flex items-center space-x-2.5 rounded-xl border border-border/40 bg-emerald-500/5 p-2.5 text-xs text-emerald-600 dark:text-emerald-400">
                     <ArrowDownLeft className="h-4 w-4 shrink-0" />
-                    <span>Record inflow as new account revenue / deposit</span>
+                    <span>{t("finance.reconcile.row.inflowHint")}</span>
                   </div>
                 )}
 
@@ -1466,7 +1563,7 @@ export function ReconciliationRow({
                           size="sm"
                           className="h-8 rounded-lg px-2.5 text-xs text-muted-foreground hover:text-foreground"
                         >
-                          More
+                          {t("finance.reconcile.row.more")}
                           <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-60" />
                         </Button>
                       }
@@ -1480,7 +1577,7 @@ export function ReconciliationRow({
                         className="cursor-pointer text-xs font-semibold text-blue-500 focus:text-blue-500"
                       >
                         <Search className="mr-2 h-3.5 w-3.5" />
-                        Find & Match Ledger Entry...
+                        {t("finance.reconcile.row.findAndMatch")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {hasExactMatches && (
@@ -1490,7 +1587,7 @@ export function ReconciliationRow({
                           }}
                           className="cursor-pointer text-xs"
                         >
-                          Create as New Expense
+                          {t("finance.reconcile.row.createNewExpense")}
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
@@ -1498,14 +1595,14 @@ export function ReconciliationRow({
                         className="cursor-pointer text-xs"
                       >
                         <CalendarClock className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-                        Link Scheduled Payment
+                        {t("finance.reconcile.row.linkScheduledPayment")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => setCustomMode("repayment")}
                         className="cursor-pointer text-xs"
                       >
                         <HandCoins className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-                        Link Borrowing Record
+                        {t("finance.reconcile.row.linkBorrowingRecord")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -1513,7 +1610,7 @@ export function ReconciliationRow({
                         className="cursor-pointer text-xs text-amber-500 focus:text-amber-500"
                       >
                         <SkipForward className="mr-2 h-3.5 w-3.5" />
-                        Skip this line
+                        {t("finance.reconcile.row.skipThisLine")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -1527,7 +1624,7 @@ export function ReconciliationRow({
                       className="h-8 rounded-lg border-border/60 px-3 text-xs font-semibold transition-all hover:border-primary/50 hover:bg-primary/5"
                     >
                       <ArrowRightLeft className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
-                      Transfer
+                      {t("finance.reconcile.row.transfer")}
                     </Button>
 
                     {hasExactMatches && firstMatch ? (
@@ -1542,7 +1639,7 @@ export function ReconciliationRow({
                         className="h-8 rounded-lg bg-blue-600 px-4 text-xs font-bold text-white shadow-sm transition-all hover:bg-blue-700"
                       >
                         <Check className="mr-1.5 h-3.5 w-3.5" />
-                        Match
+                        {t("finance.reconcile.row.match")}
                       </Button>
                     ) : isExpense ? (
                       <Button
@@ -1555,7 +1652,7 @@ export function ReconciliationRow({
                         }
                         className="h-8 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
                       >
-                        Create Expense
+                        {t("finance.reconcile.row.createExpense")}
                       </Button>
                     ) : (
                       <Button
@@ -1564,7 +1661,7 @@ export function ReconciliationRow({
                         onClick={() => onSaveChoice(line, "income", {})}
                         className="h-8 rounded-lg bg-emerald-600 px-4 text-xs font-bold text-white shadow-sm transition-all hover:bg-emerald-700"
                       >
-                        Record Income
+                        {t("finance.reconcile.row.recordIncome")}
                       </Button>
                     )}
                   </div>
