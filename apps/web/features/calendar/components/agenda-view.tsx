@@ -1,5 +1,5 @@
 import { useContext, useMemo } from "react"
-import { useConnectedAccounts, useTimezone } from "@saturn/hooks"
+import { useConnectedAccounts, useI18n, useTimezone } from "@saturn/hooks"
 import { findSelfAttendee, parseDate } from "@saturn/core"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
 import type { ScheduledTransaction } from "@saturn/api/gen/saturn/finance/v1/finance"
@@ -41,6 +41,7 @@ export function AgendaView({
   onOpenCreateDialog,
 }: AgendaViewProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
   const auth = useContext(AuthContext)
   const { data: accountsData } = useConnectedAccounts()
   const selfEmails = useMemo(
@@ -133,14 +134,13 @@ export function AgendaView({
           <Calendar className="h-6 w-6 text-muted-foreground" />
         </div>
         <h3 className="mt-3 text-base font-semibold text-foreground">
-          No Scheduled Events
+          {t("calendar.noScheduledEvents")}
         </h3>
         <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-          There are no upcoming events in this time period. You can create a new
-          event or adjust your active calendars.
+          {t("calendar.noUpcomingEventsDescription")}
         </p>
         <Button onClick={onOpenCreateDialog} size="sm" className="mt-4 gap-1.5">
-          Schedule Event
+          {t("calendar.scheduleEvent")}
         </Button>
       </div>
     )
@@ -167,14 +167,22 @@ export function AgendaView({
                 {tz.parts(group.dateObj)?.day}
               </span>
               <div className="text-sm font-semibold text-foreground">
-                {tz.format(group.dateObj, {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                })}
+                {(() => {
+                  const nowParts = tz.parts(tz.now())
+                  const isCurrentYear = nowParts
+                    ? group.dateObj.getFullYear() === nowParts.year
+                    : true
+                  const raw = tz.format(group.dateObj, {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                    year: isCurrentYear ? undefined : "numeric",
+                  })
+                  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : ""
+                })()}
                 {group.isToday && (
                   <span className="ml-2 text-xs font-normal text-primary">
-                    Today
+                    {t("common.today")}
                   </span>
                 )}
               </div>
@@ -210,7 +218,9 @@ export function AgendaView({
                         )}
                       </span>
                       <div className="w-32 shrink-0 text-xs font-medium text-muted-foreground">
-                        {isIncome ? "Payday" : "Scheduled Bill"}
+                        {isIncome
+                          ? t("calendar.payday")
+                          : t("calendar.scheduledBill")}
                       </div>
                       <span className="min-w-0 truncate text-sm font-semibold text-foreground">
                         {fin.title}
@@ -259,7 +269,9 @@ export function AgendaView({
                       {/* Time Range */}
                       <div className="w-32 shrink-0 text-xs font-medium text-foreground tabular-nums">
                         {occ.isAllDay ? (
-                          <span className="text-muted-foreground">All day</span>
+                          <span className="text-muted-foreground">
+                            {t("calendar.allDay")}
+                          </span>
                         ) : (
                           <span>
                             {tz.formatTime(occ.startTime, {
@@ -278,7 +290,7 @@ export function AgendaView({
                       {/* Title & Metadata */}
                       <div className="flex min-w-0 flex-1 items-center gap-2">
                         <span className="truncate text-sm font-semibold text-foreground">
-                          {occ.title}
+                          {occ.title || t("calendar.noTitle")}
                         </span>
                         {occ.calendarName && (
                           <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -303,19 +315,22 @@ export function AgendaView({
                             {rsvpStatus ===
                               "ATTENDEE_RESPONSE_STATUS_ACCEPTED" && (
                               <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                                <Check className="h-3 w-3" /> Accepted
+                                <Check className="h-3 w-3" />{" "}
+                                {t("calendar.accepted")}
                               </span>
                             )}
                             {rsvpStatus ===
                               "ATTENDEE_RESPONSE_STATUS_TENTATIVE" && (
                               <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                                <HelpCircle className="h-3 w-3" /> Tentative
+                                <HelpCircle className="h-3 w-3" />{" "}
+                                {t("calendar.tentative")}
                               </span>
                             )}
                             {rsvpStatus ===
                               "ATTENDEE_RESPONSE_STATUS_DECLINED" && (
                               <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400">
-                                <X className="h-3 w-3" /> Declined
+                                <X className="h-3 w-3" />{" "}
+                                {t("calendar.declined")}
                               </span>
                             )}
                           </div>
@@ -336,7 +351,7 @@ export function AgendaView({
                           }}
                         >
                           <Video className="h-3 w-3 text-primary" />
-                          <span>Join</span>
+                          <span>{t("calendar.join")}</span>
                         </Button>
                       )}
                     </div>

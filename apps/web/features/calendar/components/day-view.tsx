@@ -1,5 +1,5 @@
 import { useMemo, useRef, useEffect } from "react"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import {
   getHourSlots,
   computeTimedEventLayout,
@@ -36,6 +36,7 @@ export function DayView({
   onSelectFinanceItem,
 }: DayViewProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   const dateStr = formatLocalDateString(currentDate, tz.timezone)
@@ -115,14 +116,24 @@ export function DayView({
             </span>
             <div>
               <div className="text-sm font-semibold text-foreground">
-                {tz.format(currentDate, { weekday: "long" })}
+                {(() => {
+                  const raw = tz.format(currentDate, { weekday: "long" })
+                  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : ""
+                })()}
               </div>
               <div className="text-xs text-muted-foreground">
-                {tz.format(currentDate, {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
+                {(() => {
+                  const nowParts = tz.parts(tz.now())
+                  const isCurrentYear = nowParts
+                    ? currentDate.getFullYear() === nowParts.year
+                    : true
+                  const raw = tz.format(currentDate, {
+                    month: "long",
+                    day: "numeric",
+                    year: isCurrentYear ? undefined : "numeric",
+                  })
+                  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : ""
+                })()}
               </div>
             </div>
           </div>
@@ -133,7 +144,7 @@ export function DayView({
           financeItems.some((f) => f.dateKey === dateStr)) && (
           <div className="grid grid-cols-[72px_1fr] border-t border-border/30">
             <div className="flex items-center justify-center border-r border-border/30 text-[10px] font-medium text-muted-foreground">
-              all-day
+              {t("calendar.allDay")}
             </div>
             <div className="flex flex-col">
               {bannerLayout.totalRows > 0 && (
@@ -163,7 +174,9 @@ export function DayView({
                         }}
                         className="absolute right-2 left-2 z-10 flex h-5 items-center truncate rounded-md px-2 text-[11px] font-semibold text-white shadow-2xs transition hover:brightness-110"
                       >
-                        <span className="truncate">{occ.title}</span>
+                        <span className="truncate">
+                          {occ.title || t("calendar.noTitle")}
+                        </span>
                       </button>
                     )
                   })}
@@ -339,7 +352,7 @@ export function DayView({
                       {item.heightPct >= 5.5 && occ.meetUrl && (
                         <div className="mt-1 flex items-center gap-1 text-[10px] font-medium text-primary">
                           <Video className="h-2.5 w-2.5 shrink-0" />
-                          <span>Join</span>
+                          <span>{t("calendar.join")}</span>
                         </div>
                       )}
                     </>

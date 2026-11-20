@@ -1,4 +1,5 @@
 import {
+  formatMonthYear,
   getEndOfDay,
   getStartOfDay,
   getTimezoneParts,
@@ -121,11 +122,12 @@ function formatMonthYearLabel(
   month: number,
   locale: string
 ): string {
-  return new Intl.DateTimeFormat(locale, {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(year, month - 1, 15, 12, 0, 0)))
+  return formatMonthYear(
+    new Date(Date.UTC(year, month - 1, 15, 12, 0, 0)),
+    "UTC",
+    locale,
+    "long"
+  )
 }
 
 export function toYmdInTimezone(date: Date, timeZone: string): string {

@@ -15,7 +15,7 @@ import {
   X,
   HelpCircle,
 } from "lucide-react-native"
-import { useConnectedAccounts } from "@saturn/hooks"
+import { useConnectedAccounts, useI18n, useTimezone } from "@saturn/hooks"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
 import { useAuth } from "@/lib/auth-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
@@ -47,6 +47,8 @@ export function AgendaList({
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
   const { user } = useAuth()
+  const { t } = useI18n()
+  const tz = useTimezone()
   const { data: accountsData } = useConnectedAccounts()
   const selfEmails = useMemo(() => {
     const emails: string[] = []
@@ -58,8 +60,8 @@ export function AgendaList({
   }, [user, accountsData?.accounts])
 
   const sections = useMemo<CalendarDateSection[]>(() => {
-    return groupEventsByDate(occurrences, timeZone)
-  }, [occurrences, timeZone])
+    return groupEventsByDate(occurrences, timeZone, tz.locale)
+  }, [occurrences, timeZone, tz.locale])
 
   if (sections.length === 0) {
     return (
@@ -72,9 +74,9 @@ export function AgendaList({
         <View style={styles.emptyIconCircle}>
           <CalendarIcon size={28} color={colors.textMuted} />
         </View>
-        <Text style={styles.emptyTitle}>No Scheduled Events</Text>
+        <Text style={styles.emptyTitle}>{t("calendar.noScheduledEvents")}</Text>
         <Text style={styles.emptySubtitle}>
-          There are no events found for the active calendars in this period.
+          {t("calendar.noScheduledEventsDescription")}
         </Text>
         {canCreate && onOpenCreate && (
           <TouchableOpacity
@@ -86,7 +88,9 @@ export function AgendaList({
             style={styles.emptyActionButton}
             testID="agenda-empty-create-btn"
           >
-            <Text style={styles.emptyActionText}>Schedule Event</Text>
+            <Text style={styles.emptyActionText}>
+              {t("calendar.scheduleEvent")}
+            </Text>
           </TouchableOpacity>
         )}
       </ScrollView>
@@ -125,7 +129,7 @@ export function AgendaList({
             <Text style={styles.sectionTitle}>{section.title}</Text>
             {section.isToday && (
               <View style={styles.todayPill}>
-                <Text style={styles.todayPillText}>Today</Text>
+                <Text style={styles.todayPillText}>{t("common.today")}</Text>
               </View>
             )}
           </View>
@@ -155,7 +159,7 @@ export function AgendaList({
               {/* Row Header: Title & Calendar Badge */}
               <View style={styles.itemHeader}>
                 <Text numberOfLines={1} style={styles.itemTitle}>
-                  {occ.title || "(No title)"}
+                  {occ.title || t("calendar.noTitle")}
                 </Text>
                 {occ.calendarName ? (
                   <View style={styles.calendarTag}>
@@ -169,7 +173,12 @@ export function AgendaList({
               {/* Time & Location */}
               <View style={styles.itemMetaRow}>
                 <Text style={styles.itemTime}>
-                  {formatEventTime(occ, timeZone)}
+                  {formatEventTime(
+                    occ,
+                    timeZone,
+                    tz.locale,
+                    t("calendar.allDay")
+                  )}
                 </Text>
 
                 {occ.location ? (
@@ -184,7 +193,9 @@ export function AgendaList({
                 {occ.meetUrl ? (
                   <View style={styles.metaBadge}>
                     <Video size={12} color={colors.primary} />
-                    <Text style={styles.metaBadgeTextPrimary}>Video</Text>
+                    <Text style={styles.metaBadgeTextPrimary}>
+                      {t("calendar.video")}
+                    </Text>
                   </View>
                 ) : null}
 

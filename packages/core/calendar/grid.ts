@@ -4,6 +4,7 @@ import {
   getTimezoneParts,
   getStartOfDay,
   sanitizeTimezone,
+  formatShortWeekday,
 } from "../timezone"
 
 export interface DayBoundaries {
@@ -210,11 +211,6 @@ export function getWeekDays(
     ? `${String(nowParts.year).padStart(4, "0")}-${String(nowParts.month).padStart(2, "0")}-${String(nowParts.day).padStart(2, "0")}`
     : ""
 
-  const dayFormatter = new Intl.DateTimeFormat(locale, {
-    weekday: "short",
-    timeZone: tz,
-  })
-
   const days: WeekDayHeader[] = []
   for (let i = 0; i < 7; i++) {
     const dayIndex = i - offsetToStart
@@ -229,7 +225,7 @@ export function getWeekDays(
       date: cellDate,
       dateString,
       dayOfWeek: dNoon.getUTCDay(),
-      dayName: dayFormatter.format(dNoon),
+      dayName: formatShortWeekday(dNoon, tz, locale),
       dayNumber: dParts.day,
       isToday: dateString === todayString,
     })

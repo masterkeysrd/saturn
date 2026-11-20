@@ -16,6 +16,7 @@ import {
 } from "@saturn/core"
 import type { EventOccurrence } from "@saturn/api/saturn/calendar/v1/calendar"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { haptics } from "@/lib/haptics"
 import { formatEventTime } from "./calendar-utils"
 
@@ -42,6 +43,8 @@ export function TimelineGrid({
 }: TimelineGridProps) {
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
+  const tz = useTimezone()
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null)
   const hourSlots = useMemo<HourSlot[]>(() => getHourSlots(), [])
   const todayStr = useMemo(
@@ -129,7 +132,7 @@ export function TimelineGrid({
           {days.map((dayStr) => {
             const [y, m, d] = dayStr.split("-").map(Number)
             const noonUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
-            const weekday = new Intl.DateTimeFormat("en-US", {
+            const weekday = new Intl.DateTimeFormat(tz.locale || "en-US", {
               weekday: "short",
               timeZone,
             }).format(noonUtc)
@@ -170,7 +173,7 @@ export function TimelineGrid({
       {hasAnyAllDay && (
         <View style={styles.allDaySection}>
           <View style={styles.allDayLabelCol}>
-            <Text style={styles.allDayLabelText}>all-day</Text>
+            <Text style={styles.allDayLabelText}>{t("calendar.allDay")}</Text>
           </View>
           <View style={styles.allDayColumnsContainer}>
             {days.map((dayStr) => {
@@ -196,7 +199,7 @@ export function TimelineGrid({
                         testID={`allday-pill-${occ.instanceId || occ.eventId}`}
                       >
                         <Text numberOfLines={1} style={styles.allDayPillText}>
-                          {occ.title || "(No title)"}
+                          {occ.title || t("calendar.noTitle")}
                         </Text>
                       </TouchableOpacity>
                     )
@@ -316,11 +319,16 @@ export function TimelineGrid({
                             { color: colors.textPrimary },
                           ]}
                         >
-                          {occ.title || "(No title)"}
+                          {occ.title || t("calendar.noTitle")}
                         </Text>
                         {height >= 36 && (
                           <Text numberOfLines={1} style={styles.eventTime}>
-                            {formatEventTime(occ, timeZone)}
+                            {formatEventTime(
+                              occ,
+                              timeZone,
+                              tz.locale,
+                              t("calendar.allDay")
+                            )}
                           </Text>
                         )}
                         {height >= 56 && occ.location ? (

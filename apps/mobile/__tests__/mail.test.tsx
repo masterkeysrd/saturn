@@ -830,13 +830,21 @@ describe("Mobile Mail Feature Logic & Component Unit Tests", () => {
       expect(doc).not.toContain('loading="lazy"')
 
       const unblockedDoc = buildMobileMessageDocumentHtml({
-        html: amazonHtml,
+        html: `${amazonHtml}<script>window.__pwned = true;</script>`,
         loadImages: true,
       })
       expect(unblockedDoc).toContain(
         'src="https://m.media-amazon.com/hero.jpg"'
       )
       expect(unblockedDoc).toContain('loading="eager"')
+      expect(unblockedDoc).not.toContain("__pwned")
+
+      // Per-document CSP nonce authorizes only Saturn's synchronous parse-time layout script
+      const cspNonceMatch = unblockedDoc.match(
+        /script-src 'nonce-([A-Za-z0-9]{24})'/
+      )
+      expect(cspNonceMatch).not.toBeNull()
+      expect(unblockedDoc).toContain(`<script nonce="${cspNonceMatch![1]}">`)
     })
   })
 

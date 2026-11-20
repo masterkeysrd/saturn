@@ -25,6 +25,7 @@ import {
 } from "lucide-react-native"
 import {
   useTimezone,
+  useI18n,
   useCalendars,
   useGetEvent,
   useCreateEvent,
@@ -175,6 +176,7 @@ function toInclusiveEndDate(dateStr: string, startDateStr: string): string {
 export default function ManageEventModal() {
   const router = useRouter()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
   const params = useLocalSearchParams<ManageEventParams>()
@@ -444,24 +446,21 @@ export default function ManageEventModal() {
 
   const handleSaveAttempt = () => {
     if (!title.trim()) {
-      Alert.alert("Title Required", "Please enter an event title.")
+      Alert.alert(
+        t("calendar.titleRequired"),
+        t("calendar.titleRequiredMessage")
+      )
       return
     }
     if (!isValidDateString(startDate) || !isValidDateString(endDate)) {
-      Alert.alert(
-        "Invalid Date",
-        "Please enter valid start and end dates in YYYY-MM-DD format."
-      )
+      Alert.alert(t("calendar.invalidDate"), t("calendar.invalidDateMessage"))
       return
     }
     if (
       !isAllDay &&
       (!isValidTimeString(startTime) || !isValidTimeString(endTime))
     ) {
-      Alert.alert(
-        "Invalid Time",
-        "Please enter valid start and end times in HH:mm format."
-      )
+      Alert.alert(t("calendar.invalidTime"), t("calendar.invalidTimeMessage"))
       return
     }
     if (isEditMode && isRecurring) {
@@ -599,8 +598,8 @@ export default function ManageEventModal() {
     } catch (err: unknown) {
       haptics.error()
       const message =
-        err instanceof Error ? err.message : "Could not save event."
-      Alert.alert("Save Failed", message)
+        err instanceof Error ? err.message : t("calendar.couldNotSaveEvent")
+      Alert.alert(t("calendar.saveFailed"), message)
     }
   }
 
@@ -611,14 +610,18 @@ export default function ManageEventModal() {
       recurrenceScopeSheetRef.current?.expand()
       return
     }
-    Alert.alert("Delete Event", "Are you sure you want to delete this event?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => performDelete("RECURRENCE_SCOPE_ALL_EVENTS"),
-      },
-    ])
+    Alert.alert(
+      t("calendar.deleteEvent"),
+      t("calendar.deleteEventSimpleConfirm"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: () => performDelete("RECURRENCE_SCOPE_ALL_EVENTS"),
+        },
+      ]
+    )
   }
 
   const performDelete = async (scope: RecurrenceScope) => {
@@ -652,8 +655,8 @@ export default function ManageEventModal() {
     } catch (err: unknown) {
       haptics.error()
       const message =
-        err instanceof Error ? err.message : "Could not delete event."
-      Alert.alert("Delete Failed", message)
+        err instanceof Error ? err.message : t("calendar.couldNotDeleteEvent")
+      Alert.alert(t("calendar.deleteFailed"), message)
     }
   }
 
@@ -663,13 +666,15 @@ export default function ManageEventModal() {
     <>
       <Stack.Screen
         options={{
-          headerTitle: isEditMode ? "Edit Event" : "New Event",
+          headerTitle: isEditMode
+            ? t("calendar.editEvent")
+            : t("calendar.newEvent"),
           ...(Platform.OS === "ios"
             ? {
                 unstable_headerLeftItems: () => [
                   {
                     type: "button",
-                    label: "Close",
+                    label: t("common.close"),
                     icon: { type: "sfSymbol", name: "xmark" },
                     onPress: () => {
                       haptics.light()
@@ -691,7 +696,7 @@ export default function ManageEventModal() {
                       }
                     : {
                         type: "button",
-                        label: "Save",
+                        label: t("common.save"),
                         variant: "done",
                         onPress: handleSaveAttempt,
                       },
@@ -720,7 +725,9 @@ export default function ManageEventModal() {
                     {isSaving ? (
                       <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
-                      <Text style={styles.headerSaveBtnText}>Save</Text>
+                      <Text style={styles.headerSaveBtnText}>
+                        {t("common.save")}
+                      </Text>
                     )}
                   </TouchableOpacity>
                 ),
@@ -740,7 +747,7 @@ export default function ManageEventModal() {
         >
           {/* Calendar Picker Strip */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Calendar</Text>
+            <Text style={styles.label}>{t("calendar.calendar")}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -785,11 +792,11 @@ export default function ManageEventModal() {
 
           {/* Title Input */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Title</Text>
+            <Text style={styles.label}>{t("calendar.eventTitle")}</Text>
             <RNTextInput
               value={title}
               onChangeText={setTitle}
-              placeholder="Add event title"
+              placeholder={t("calendar.addEventTitle")}
               placeholderTextColor={colors.textMuted}
               keyboardAppearance={isDark ? "dark" : "light"}
               style={styles.textInput}
@@ -799,7 +806,7 @@ export default function ManageEventModal() {
 
           {/* All-Day Switch */}
           <View style={styles.switchRow}>
-            <Text style={styles.switchLabel}>All-day event</Text>
+            <Text style={styles.switchLabel}>{t("calendar.allDayEvent")}</Text>
             <Switch
               value={isAllDay}
               onValueChange={(val) => {
@@ -819,7 +826,7 @@ export default function ManageEventModal() {
           <View style={styles.dateTimeCard}>
             {/* Start Date & Time */}
             <View style={styles.dateTimeRow}>
-              <Text style={styles.dateTimeLabel}>Starts</Text>
+              <Text style={styles.dateTimeLabel}>{t("calendar.starts")}</Text>
               <View style={styles.dateTimeInputsRow}>
                 <RNTextInput
                   value={startDate}
@@ -846,7 +853,7 @@ export default function ManageEventModal() {
 
             {/* End Date & Time */}
             <View style={styles.dateTimeRow}>
-              <Text style={styles.dateTimeLabel}>Ends</Text>
+              <Text style={styles.dateTimeLabel}>{t("calendar.ends")}</Text>
               <View style={styles.dateTimeInputsRow}>
                 <RNTextInput
                   value={endDate}
@@ -892,15 +899,15 @@ export default function ManageEventModal() {
 
           {/* Recurrence Preset Selector */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Repeat</Text>
+            <Text style={styles.label}>{t("calendar.repeat")}</Text>
             <View style={styles.recurrencePillsRow}>
               {(
                 [
-                  { id: "none", label: "Never" },
-                  { id: "daily", label: "Daily" },
-                  { id: "weekly", label: "Weekly" },
-                  { id: "monthly", label: "Monthly" },
-                  { id: "yearly", label: "Yearly" },
+                  { id: "none", label: t("calendar.never") },
+                  { id: "daily", label: t("calendar.daily") },
+                  { id: "weekly", label: t("calendar.weekly") },
+                  { id: "monthly", label: t("calendar.monthly") },
+                  { id: "yearly", label: t("calendar.yearly") },
                 ] as const
               ).map((preset) => {
                 const isSelected = recurrencePreset === preset.id
@@ -934,11 +941,11 @@ export default function ManageEventModal() {
 
           {/* Location */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Location</Text>
+            <Text style={styles.label}>{t("calendar.location")}</Text>
             <RNTextInput
               value={location}
               onChangeText={setLocation}
-              placeholder="Add physical or virtual location"
+              placeholder={t("calendar.addLocationMobile")}
               placeholderTextColor={colors.textMuted}
               keyboardAppearance={isDark ? "dark" : "light"}
               style={styles.textInput}
@@ -948,11 +955,13 @@ export default function ManageEventModal() {
 
           {/* Video Conference URL */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Video Call Link</Text>
+            <Text style={styles.label}>
+              {t("calendar.videoCallLinkMobile")}
+            </Text>
             <RNTextInput
               value={meetUrl}
               onChangeText={setMeetUrl}
-              placeholder="e.g. https://meet.google.com/..."
+              placeholder={t("calendar.videoCallPlaceholderMobile")}
               placeholderTextColor={colors.textMuted}
               keyboardAppearance={isDark ? "dark" : "light"}
               style={styles.textInput}
@@ -969,7 +978,9 @@ export default function ManageEventModal() {
                 style={styles.meetPreviewBtn}
               >
                 <Video size={14} color={colors.primary} />
-                <Text style={styles.meetPreviewBtnText}>Open Video Link</Text>
+                <Text style={styles.meetPreviewBtnText}>
+                  {t("calendar.openVideoLink")}
+                </Text>
                 <ExternalLink size={12} color={colors.primary} />
               </TouchableOpacity>
             )}
@@ -977,12 +988,12 @@ export default function ManageEventModal() {
 
           {/* Attendees / Suggest Contacts */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Attendees</Text>
+            <Text style={styles.label}>{t("calendar.attendees")}</Text>
             <View style={styles.attendeeInputRow}>
               <RNTextInput
                 value={attendeeSearchQuery}
                 onChangeText={setAttendeeSearchQuery}
-                placeholder="Add contact by name or email"
+                placeholder={t("calendar.addAttendeeMobile")}
                 placeholderTextColor={colors.textMuted}
                 keyboardAppearance={isDark ? "dark" : "light"}
                 style={[styles.textInput, { flex: 1 }]}
@@ -1061,11 +1072,11 @@ export default function ManageEventModal() {
 
           {/* Description */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Description</Text>
+            <Text style={styles.label}>{t("calendar.descriptionMobile")}</Text>
             <RNTextInput
               value={description}
               onChangeText={setDescription}
-              placeholder="Notes or agenda"
+              placeholder={t("calendar.descriptionPlaceholderMobile")}
               placeholderTextColor={colors.textMuted}
               keyboardAppearance={isDark ? "dark" : "light"}
               style={[styles.textInput, styles.textArea]}
@@ -1084,7 +1095,9 @@ export default function ManageEventModal() {
               testID="manage-event-delete-btn"
             >
               <Trash2 size={16} color={colors.destructive} />
-              <Text style={styles.deleteButtonText}>Delete Event</Text>
+              <Text style={styles.deleteButtonText}>
+                {t("calendar.deleteEvent")}
+              </Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -1093,7 +1106,7 @@ export default function ManageEventModal() {
       {/* Timezone Picker Bottom Sheet */}
       <AppBottomSheet
         ref={timezoneSheetRef}
-        title="Select Timezone"
+        title={t("calendar.selectTimezone")}
         snapPoints={["65%"]}
       >
         <ScrollView style={styles.tzList} showsVerticalScrollIndicator={false}>
@@ -1125,15 +1138,15 @@ export default function ManageEventModal() {
       {/* Recurrence Scope Action Sheet */}
       <AppBottomSheet
         ref={recurrenceScopeSheetRef}
-        title="Recurring Event"
+        title={t("calendar.recurringEvent")}
         snapPoints={["40%"]}
         onClose={() => setPendingAction(null)}
       >
         <View style={styles.scopeContainer}>
           <Text style={styles.scopePromptText}>
             {pendingAction === "delete"
-              ? "Which occurrences would you like to delete?"
-              : "Which occurrences would you like to update?"}
+              ? t("calendar.recurringDeletePrompt")
+              : t("calendar.recurringUpdatePrompt")}
           </Text>
 
           <TouchableOpacity
@@ -1148,7 +1161,9 @@ export default function ManageEventModal() {
             style={styles.scopeButton}
             testID="manage-event-scope-this"
           >
-            <Text style={styles.scopeButtonText}>This event only</Text>
+            <Text style={styles.scopeButtonText}>
+              {t("calendar.thisEventOnly")}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1164,7 +1179,7 @@ export default function ManageEventModal() {
             testID="manage-event-scope-following"
           >
             <Text style={styles.scopeButtonText}>
-              This and following events
+              {t("calendar.thisAndFollowingEvents")}
             </Text>
           </TouchableOpacity>
 
@@ -1180,7 +1195,9 @@ export default function ManageEventModal() {
             style={styles.scopeButton}
             testID="manage-event-scope-all"
           >
-            <Text style={styles.scopeButtonText}>All events in series</Text>
+            <Text style={styles.scopeButtonText}>
+              {t("calendar.allEventsInSeries")}
+            </Text>
           </TouchableOpacity>
         </View>
       </AppBottomSheet>

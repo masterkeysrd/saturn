@@ -91,18 +91,8 @@ export function TodayScheduleWidget() {
         !isLoading ? (
           <Badge variant="neutral">
             {todayEvents.length === 0
-              ? isEs
-                ? "Libre"
-                : "Clear"
-              : `${todayEvents.length} ${
-                  isEs
-                    ? todayEvents.length === 1
-                      ? "evento"
-                      : "eventos"
-                    : todayEvents.length === 1
-                      ? "event"
-                      : "events"
-                }`}
+              ? t("calendar.clear")
+              : t("calendar.eventsCount", { count: todayEvents.length })}
           </Badge>
         ) : undefined
       }
@@ -154,13 +144,11 @@ export function TodayScheduleWidget() {
                     to={`/space/${spaceId}/calendar?date=${encodeURIComponent(todayStr)}&view=day`}
                     className="block truncate text-sm font-medium text-foreground hover:text-primary"
                   >
-                    {occ.title || (isEs ? "(Sin título)" : "(No title)")}
+                    {occ.title || t("calendar.noTitle")}
                   </Link>
                   <p className="truncate font-mono text-xs text-muted-foreground tabular-nums">
                     {occ.isAllDay
-                      ? isEs
-                        ? "Todo el día"
-                        : "All day"
+                      ? t("calendar.allDay")
                       : occ.startTime
                         ? `${tz.formatTime(occ.startTime)}${occ.endTime ? ` – ${tz.formatTime(occ.endTime)}` : ""}`
                         : ""}
@@ -177,7 +165,7 @@ export function TodayScheduleWidget() {
                   className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-border/70 bg-background px-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   <Video className="size-3 text-primary" />
-                  <span>{isEs ? "Unirse" : "Join"}</span>
+                  <span>{t("calendar.join")}</span>
                 </a>
               )}
             </div>

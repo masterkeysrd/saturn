@@ -15,6 +15,8 @@ import {
 import {
   useRespondToEvent,
   useConnectedAccounts,
+  useI18n,
+  useTimezone,
   type EventOccurrence,
   type AttendeeResponseStatus,
 } from "@saturn/hooks"
@@ -41,6 +43,8 @@ export const EventPreviewSheet = forwardRef<
   const styles = useThemedStyles(createStyles)
   const respondMutation = useRespondToEvent()
   const { user } = useAuth()
+  const { t } = useI18n()
+  const tz = useTimezone()
   const { data: accountsData } = useConnectedAccounts()
   const toast = useToast()
 
@@ -72,9 +76,9 @@ export const EventPreviewSheet = forwardRef<
     } catch (err: unknown) {
       haptics.error()
       const message =
-        err instanceof Error ? err.message : "Could not update RSVP."
+        err instanceof Error ? err.message : t("calendar.rsvpFailedMessage")
       toast.show({
-        title: "RSVP failed",
+        title: t("calendar.rsvpFailed"),
         message,
         type: "error",
       })
@@ -91,19 +95,24 @@ export const EventPreviewSheet = forwardRef<
     return (
       <AppBottomSheet
         ref={ref}
-        title="Event Details"
+        title={t("calendar.eventDetails")}
         snapPoints={["45%"]}
         onClose={onClose}
       >
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No event selected.</Text>
+          <Text style={styles.emptyText}>{t("calendar.noEventSelected")}</Text>
         </View>
       </AppBottomSheet>
     )
   }
 
   const eventColor = occurrence.color || colors.primary
-  const timeFormatted = formatEventTime(occurrence, timeZone)
+  const timeFormatted = formatEventTime(
+    occurrence,
+    timeZone,
+    tz.locale,
+    t("calendar.allDay")
+  )
 
   return (
     <AppBottomSheet
@@ -124,16 +133,18 @@ export const EventPreviewSheet = forwardRef<
               style={[styles.calendarDot, { backgroundColor: eventColor }]}
             />
             <Text style={styles.calendarNameText}>
-              {occurrence.calendarName || "Calendar"}
+              {occurrence.calendarName || t("calendar.calendar")}
             </Text>
             {occurrence.isAllDay && (
               <View style={styles.allDayBadge}>
-                <Text style={styles.allDayBadgeText}>All day</Text>
+                <Text style={styles.allDayBadgeText}>
+                  {t("calendar.allDay")}
+                </Text>
               </View>
             )}
           </View>
           <Text style={styles.titleText}>
-            {occurrence.title || "(No title)"}
+            {occurrence.title || t("calendar.noTitle")}
           </Text>
         </View>
 
@@ -161,7 +172,7 @@ export const EventPreviewSheet = forwardRef<
           >
             <Video size={16} color={colors.primary} />
             <Text style={styles.meetButtonText} numberOfLines={1}>
-              Join Video Call
+              {t("calendar.joinVideoCall")}
             </Text>
             <ExternalLink size={14} color={colors.primary} />
           </TouchableOpacity>
@@ -170,7 +181,9 @@ export const EventPreviewSheet = forwardRef<
         {/* Description */}
         {occurrence.description ? (
           <View style={styles.descriptionSection}>
-            <Text style={styles.sectionLabel}>Description</Text>
+            <Text style={styles.sectionLabel}>
+              {t("calendar.descriptionMobile")}
+            </Text>
             <Text style={styles.descriptionText}>{occurrence.description}</Text>
           </View>
         ) : null}
@@ -181,7 +194,9 @@ export const EventPreviewSheet = forwardRef<
             <View style={styles.attendeesHeader}>
               <Users size={16} color={colors.textMuted} />
               <Text style={styles.sectionLabel}>
-                Attendees ({occurrence.attendees.length})
+                {t("calendar.attendeesWithCount", {
+                  count: occurrence.attendees.length,
+                })}
               </Text>
             </View>
             <View style={styles.attendeesList}>
@@ -206,7 +221,9 @@ export const EventPreviewSheet = forwardRef<
                     </View>
                     {att.isOrganizer && (
                       <View style={styles.organizerBadge}>
-                        <Text style={styles.organizerBadgeText}>Host</Text>
+                        <Text style={styles.organizerBadgeText}>
+                          {t("calendar.hostBadge")}
+                        </Text>
                       </View>
                     )}
                   </View>
@@ -219,7 +236,7 @@ export const EventPreviewSheet = forwardRef<
         {/* RSVP Action Bar */}
         {selfAttendee && (
           <View style={styles.rsvpSection} testID="event-rsvp-section">
-            <Text style={styles.sectionLabel}>Going?</Text>
+            <Text style={styles.sectionLabel}>{t("calendar.going")}</Text>
             <View style={styles.rsvpButtonsRow}>
               <TouchableOpacity
                 activeOpacity={0.7}
@@ -248,7 +265,7 @@ export const EventPreviewSheet = forwardRef<
                       styles.rsvpBtnTextAccepted,
                   ]}
                 >
-                  Yes
+                  {t("calendar.rsvpYes")}
                 </Text>
               </TouchableOpacity>
 
@@ -279,7 +296,7 @@ export const EventPreviewSheet = forwardRef<
                       styles.rsvpBtnTextTentative,
                   ]}
                 >
-                  Maybe
+                  {t("calendar.rsvpMaybe")}
                 </Text>
               </TouchableOpacity>
 
@@ -310,7 +327,7 @@ export const EventPreviewSheet = forwardRef<
                       styles.rsvpBtnTextDeclined,
                   ]}
                 >
-                  No
+                  {t("calendar.rsvpNo")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -329,7 +346,7 @@ export const EventPreviewSheet = forwardRef<
             testID="event-edit-button"
           >
             <Edit3 size={16} color={colors.textPrimary} />
-            <Text style={styles.editButtonText}>Edit Event</Text>
+            <Text style={styles.editButtonText}>{t("calendar.editEvent")}</Text>
           </TouchableOpacity>
         )}
       </ScrollView>

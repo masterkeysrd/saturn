@@ -161,6 +161,7 @@ import type { DateInput } from "@saturn/core"
 
 const mockTz = {
   timezone: "UTC",
+  locale: "en-US",
   now: () => new Date("2026-10-20T12:00:00Z"),
   format: (_d: DateInput, opts?: Intl.DateTimeFormatOptions) => {
     if (opts?.weekday === "long") return "Tuesday"
@@ -223,6 +224,8 @@ const mockTz = {
   },
 }
 
+let activeMockTz = mockTz
+
 vi.mock("@saturn/hooks", async () => {
   const actual = await vi.importActual<typeof hooks>("@saturn/hooks")
   return {
@@ -265,7 +268,7 @@ vi.mock("@saturn/hooks", async () => {
       data: { contacts: [] },
       isLoading: false,
     }),
-    useTimezone: () => mockTz,
+    useTimezone: () => activeMockTz,
   }
 })
 
@@ -275,6 +278,7 @@ describe("CalendarView Component", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    activeMockTz = mockTz
     mockUseCalendars.mockReturnValue({
       data: { calendars: mockCalendars },
       isLoading: false,
@@ -994,5 +998,57 @@ describe("CalendarView Component", () => {
         writable: true,
       })
     }
+  })
+
+  it("renders Spanish translations for calendar view when locale is es-ES", async () => {
+    activeMockTz = {
+      ...mockTz,
+      locale: "es-ES",
+      formatMonth: () => "Octubre 2026",
+    }
+
+    render(
+      <hooks.TimezoneProvider timezone="UTC" locale="es-ES">
+        <CalendarView />
+      </hooks.TimezoneProvider>,
+      { wrapper: createWrapper() }
+    )
+
+    // Check Spanish Today button
+    expect(screen.getByTestId("calendar-today-btn").textContent).toContain(
+      "Hoy"
+    )
+
+    // Check Spanish view tabs
+    expect(screen.getByTestId("view-tab-month").textContent).toContain("Mes")
+    expect(screen.getByTestId("view-tab-week").textContent).toContain("Semana")
+    expect(screen.getByTestId("view-tab-day").textContent).toContain("Día")
+    expect(screen.getByTestId("view-tab-agenda").textContent).toContain(
+      "Agenda"
+    )
+
+    // Check Spanish Bills button
+    expect(
+      screen.getByTestId("calendar-finance-overlay-btn").textContent
+    ).toContain("Facturas")
+
+    // Check Spanish Create Event button in sidebar
+    expect(screen.getByTestId("create-event-btn").textContent).toContain(
+      "Crear evento"
+    )
+
+    // Open an event preview popover and check Spanish actions
+    fireEvent.click(screen.getByTestId("event-pill-inst_standup"))
+    const preview = screen.getByTestId("event-preview-popover")
+    expect(preview).toBeDefined()
+    expect(screen.getByTestId("preview-edit-event-btn").textContent).toContain(
+      "Editar"
+    )
+    expect(
+      screen.getByTestId("preview-duplicate-event-btn").textContent
+    ).toContain("Duplicar")
+    expect(
+      screen.getByTestId("preview-delete-event-btn").textContent
+    ).toContain("Eliminar")
   })
 })

@@ -82,6 +82,23 @@ describe("getWeekDays", () => {
     expect(days[6].dateString).toBe("2026-10-24")
     expect(days[6].dayOfWeek).toBe(6)
   })
+
+  it("formats capitalized short weekday names for Spanish locale", () => {
+    const days = getWeekDays("2026-10-21", {
+      weekStartsOn: 1,
+      timeZone: "UTC",
+      locale: "es-ES",
+    })
+    expect(days.map((d) => d.dayName)).toEqual([
+      "Lun",
+      "Mar",
+      "Mié",
+      "Jue",
+      "Vie",
+      "Sáb",
+      "Dom",
+    ])
+  })
 })
 
 describe("getHourSlots", () => {

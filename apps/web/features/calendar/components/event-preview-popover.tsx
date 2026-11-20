@@ -14,7 +14,8 @@ import {
   X,
 } from "lucide-react"
 import { buildCopilotEntityKey } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
+import type { TranslationKey } from "@saturn/i18n"
 import type {
   AttendeeResponseStatus,
   EventOccurrence,
@@ -39,7 +40,10 @@ export interface EventPreviewPopoverProps {
   onDelete?: (occurrence: EventOccurrence) => void
 }
 
-function getRsvpMeta(status?: AttendeeResponseStatus): {
+function getRsvpMeta(
+  status: AttendeeResponseStatus | undefined,
+  t: (key: TranslationKey) => string
+): {
   label: string
   dotClass: string
   icon: typeof Check
@@ -47,25 +51,25 @@ function getRsvpMeta(status?: AttendeeResponseStatus): {
   switch (status) {
     case "ATTENDEE_RESPONSE_STATUS_ACCEPTED":
       return {
-        label: "Accepted",
+        label: t("calendar.accepted"),
         dotClass: "bg-emerald-500",
         icon: Check,
       }
     case "ATTENDEE_RESPONSE_STATUS_DECLINED":
       return {
-        label: "Declined",
+        label: t("calendar.declined"),
         dotClass: "bg-rose-500",
         icon: X,
       }
     case "ATTENDEE_RESPONSE_STATUS_TENTATIVE":
       return {
-        label: "Maybe",
+        label: t("calendar.rsvpMaybe"),
         dotClass: "bg-amber-500",
         icon: HelpCircle,
       }
     default:
       return {
-        label: "Pending",
+        label: t("calendar.pending"),
         dotClass: "bg-muted-foreground/50",
         icon: Clock,
       }
@@ -81,6 +85,7 @@ export function EventPreviewPopover({
   onDelete,
 }: EventPreviewPopoverProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
 
   const fallbackAnchor = useMemo(() => {
     if (anchorEl || typeof window === "undefined") return undefined
@@ -108,7 +113,7 @@ export function EventPreviewPopover({
       ? occurrence.meetUrl.trim()
       : ""
 
-  const dateLabel = occurrence.isAllDay
+  const rawDateLabel = occurrence.isAllDay
     ? occurrence.startDate
       ? tz.format(tz.startOfDay(occurrence.startDate), {
           weekday: "short",
@@ -125,9 +130,12 @@ export function EventPreviewPopover({
           year: "numeric",
         })
       : ""
+  const dateLabel = rawDateLabel
+    ? rawDateLabel.charAt(0).toUpperCase() + rawDateLabel.slice(1)
+    : ""
 
   const timeRangeLabel = occurrence.isAllDay
-    ? "All day"
+    ? t("calendar.allDay")
     : occurrence.startTime && occurrence.endTime
       ? `${tz.formatTime(occurrence.startTime, {
           hour: "numeric",
@@ -154,7 +162,7 @@ export function EventPreviewPopover({
         align="start"
         sideOffset={8}
         data-testid="event-preview-popover"
-        className="w-[min(22rem,calc(100vw-2rem))] gap-0 overflow-hidden rounded-xl border border-border bg-popover p-0 shadow-xl"
+        className="w-[min(26rem,calc(100vw-2rem))] gap-0 overflow-hidden rounded-xl border border-border bg-popover p-0 shadow-xl"
       >
         <PopoverHeader className="flex-row items-start justify-between gap-3 border-b border-border/60 px-4 py-3">
           <div className="flex min-w-0 flex-1 items-start gap-2.5">
@@ -165,7 +173,7 @@ export function EventPreviewPopover({
             />
             <div className="min-w-0 flex-1 space-y-0.5">
               <PopoverTitle className="truncate text-sm font-semibold text-foreground">
-                {occurrence.title || "(No title)"}
+                {occurrence.title || t("calendar.noTitle")}
               </PopoverTitle>
               {occurrence.calendarName && (
                 <PopoverDescription className="truncate text-xs text-muted-foreground">
@@ -202,7 +210,7 @@ export function EventPreviewPopover({
               variant="ghost"
               size="icon-xs"
               onClick={() => onOpenChange(false)}
-              aria-label="Close preview"
+              aria-label={t("calendar.closePreview")}
               className="cursor-pointer text-muted-foreground hover:text-foreground"
             >
               <X className="size-3.5" />
@@ -234,7 +242,7 @@ export function EventPreviewPopover({
                 className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.16)] transition-colors hover:bg-primary/90"
               >
                 <Video className="size-3.5 shrink-0" />
-                <span>Join Meeting</span>
+                <span>{t("calendar.joinMeeting")}</span>
                 <ExternalLink className="size-3 opacity-80" />
               </a>
             </div>
@@ -256,13 +264,12 @@ export function EventPreviewPopover({
               <div className="flex items-center gap-1.5 font-medium text-muted-foreground">
                 <Users className="size-3.5 shrink-0" />
                 <span>
-                  {attendees.length}{" "}
-                  {attendees.length === 1 ? "attendee" : "attendees"}
+                  {t("calendar.attendeeCount", { count: attendees.length })}
                 </span>
               </div>
               <div className="space-y-1 pl-5">
                 {visibleAttendees.map((att) => {
-                  const meta = getRsvpMeta(att.responseStatus)
+                  const meta = getRsvpMeta(att.responseStatus, t)
                   return (
                     <div
                       key={att.email}
@@ -285,7 +292,7 @@ export function EventPreviewPopover({
                 })}
                 {extraAttendeesCount > 0 && (
                   <p className="text-[11px] text-muted-foreground">
-                    +{extraAttendeesCount} more
+                    {t("calendar.moreEvents", { count: extraAttendeesCount })}
                   </p>
                 )}
               </div>
@@ -300,8 +307,8 @@ export function EventPreviewPopover({
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-border/60 bg-popover px-4 py-2.5">
-          <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 bg-popover px-4 py-2.5">
+          <div className="flex shrink-0 items-center gap-1">
             {onDuplicate && (
               <Button
                 type="button"
@@ -309,11 +316,11 @@ export function EventPreviewPopover({
                 size="sm"
                 data-testid="preview-duplicate-event-btn"
                 onClick={() => onDuplicate(occurrence)}
-                className="cursor-pointer gap-1 px-2 text-muted-foreground hover:text-foreground"
-                title="Duplicate event"
+                className="shrink-0 cursor-pointer gap-1 px-2 whitespace-nowrap text-muted-foreground hover:text-foreground"
+                title={t("calendar.duplicateEvent")}
               >
                 <Copy className="size-3.5" />
-                <span>Duplicate</span>
+                <span>{t("calendar.duplicate")}</span>
               </Button>
             )}
             {onDelete && (
@@ -323,33 +330,33 @@ export function EventPreviewPopover({
                 size="sm"
                 data-testid="preview-delete-event-btn"
                 onClick={() => onDelete(occurrence)}
-                className="cursor-pointer gap-1 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                title="Delete event"
+                className="shrink-0 cursor-pointer gap-1 px-2 whitespace-nowrap text-destructive hover:bg-destructive/10 hover:text-destructive"
+                title={t("calendar.deleteEvent")}
               >
                 <Trash2 className="size-3.5" />
-                <span>Delete</span>
+                <span>{t("common.delete")}</span>
               </Button>
             )}
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1.5">
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => onOpenChange(false)}
-              className="cursor-pointer"
+              className="shrink-0 cursor-pointer whitespace-nowrap"
             >
-              Close
+              {t("common.close")}
             </Button>
             <Button
               type="button"
               size="sm"
               data-testid="preview-edit-event-btn"
               onClick={() => onEdit(occurrence)}
-              className="cursor-pointer gap-1.5"
+              className="shrink-0 cursor-pointer gap-1.5 whitespace-nowrap"
             >
               <Pencil className="size-3.5" />
-              <span>Edit</span>
+              <span>{t("common.edit")}</span>
             </Button>
           </div>
         </div>

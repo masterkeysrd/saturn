@@ -372,4 +372,57 @@ describe("@saturn/i18n", () => {
       })
     ).toBe("Stripe en cola para revisión.")
   })
+
+  it("translates calendar keys and parameter interpolation in English and Spanish", () => {
+    expect(translate("en-US", "calendar.agenda")).toBe("Agenda")
+    expect(translate("es-ES", "calendar.agenda")).toBe("Agenda")
+    expect(translate("en-US", "calendar.day")).toBe("Day")
+    expect(translate("es-ES", "calendar.day")).toBe("Día")
+    expect(translate("en-US", "calendar.week")).toBe("Week")
+    expect(translate("es-ES", "calendar.week")).toBe("Semana")
+    expect(translate("en-US", "calendar.month")).toBe("Month")
+    expect(translate("es-ES", "calendar.month")).toBe("Mes")
+    expect(translate("en-US", "calendar.threeDay")).toBe("3-Day")
+    expect(translate("es-ES", "calendar.threeDay")).toBe("3 Días")
+    expect(translate("en-US", "calendar.createEvent")).toBe("Create Event")
+    expect(translate("es-ES", "calendar.createEvent")).toBe("Crear evento")
+    expect(translate("en-US", "calendar.createCalendarEvent")).toBe(
+      "Create Calendar Event"
+    )
+    expect(translate("es-ES", "calendar.createCalendarEvent")).toBe(
+      "Crear evento"
+    )
+    expect(translate("en-US", "calendar.allDay")).toBe("All day")
+    expect(translate("es-ES", "calendar.allDay")).toBe("Todo el día")
+    expect(translate("en-US", "calendar.allDayEvent")).toBe("All-day event")
+    expect(translate("es-ES", "calendar.allDayEvent")).toBe("Todo el día")
+    expect(translate("en-US", "calendar.deleteEvent")).toBe("Delete Event")
+    expect(translate("es-ES", "calendar.deleteEvent")).toBe("Eliminar evento")
+    expect(
+      translate("en-US", "calendar.deleteEventConfirm", {
+        title: "Product Review",
+      })
+    ).toBe(
+      "Are you sure you want to delete Product Review? This action cannot be undone."
+    )
+    expect(
+      translate("es-ES", "calendar.deleteEventConfirm", {
+        title: "Revisión de producto",
+      })
+    ).toBe(
+      "¿Estás seguro de que deseas eliminar Revisión de producto? Esta acción no se puede deshacer."
+    )
+    expect(translate("en-US", "calendar.moreBills", { count: 3 })).toBe(
+      "+3 bills"
+    )
+    expect(translate("es-ES", "calendar.moreBills", { count: 3 })).toBe(
+      "+3 facturas"
+    )
+    expect(translate("en-US", "calendar.moreEvents", { count: 5 })).toBe(
+      "+5 more"
+    )
+    expect(translate("es-ES", "calendar.moreEvents", { count: 5 })).toBe(
+      "+5 más"
+    )
+  })
 })

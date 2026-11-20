@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
 import { Globe, Check, ChevronsUpDown, Search } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
 import {
   Popover,
   PopoverContent,
@@ -22,6 +23,7 @@ export function TimezoneCombobox({
   disabled,
   className,
 }: TimezoneComboboxProps) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
 
@@ -35,7 +37,7 @@ export function TimezoneCombobox({
     })
   }, [search])
 
-  const displayLabel = value || "Select timezone"
+  const displayLabel = value || t("calendar.selectTimezone")
 
   return (
     <div className={cn("relative w-full", className)}>
@@ -69,7 +71,7 @@ export function TimezoneCombobox({
             <div className="relative">
               <Search className="absolute top-2.5 left-2.5 h-3.5 w-3.5 text-muted-foreground" />
               <Input
-                placeholder="Search timezones..."
+                placeholder={t("calendar.searchTimezones")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="h-8 pl-8 text-xs"
@@ -80,7 +82,7 @@ export function TimezoneCombobox({
             <div className="max-h-56 space-y-0.5 overflow-y-auto pr-1">
               {filteredTimezones.length === 0 ? (
                 <div className="py-4 text-center text-xs text-muted-foreground">
-                  No matching timezones found.
+                  {t("calendar.noMatchingTimezones")}
                 </div>
               ) : (
                 filteredTimezones.map((tz) => {

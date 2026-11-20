@@ -20,6 +20,7 @@ import {
   type ConnectedAccount,
 } from "@saturn/hooks"
 import {
+  formatShortWeekday,
   getMonthMatrix,
   isMailAccountReauthRequired,
   type MonthDayCell,
@@ -147,15 +148,11 @@ export function CalendarSidebar({
     if (!firstWeek) {
       return ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
     }
-    const fmt = new Intl.DateTimeFormat(tz.locale || "en-US", {
-      weekday: "short",
-      timeZone: tz.timezone,
-    })
     return firstWeek.map((cell) => {
       const noon = new Date(
         Date.UTC(cell.year, cell.month - 1, cell.day, 12, 0, 0)
       )
-      return fmt.format(noon).slice(0, 2)
+      return formatShortWeekday(noon, tz.timezone, tz.locale).slice(0, 2)
     })
   })()
 
@@ -202,7 +199,7 @@ export function CalendarSidebar({
         size="sm"
       >
         <Plus className="h-4 w-4" />
-        <span>Create Event</span>
+        <span>{t("calendar.createEvent")}</span>
       </Button>
 
       {/* Mini Month Jumper */}
@@ -217,7 +214,7 @@ export function CalendarSidebar({
               data-testid="mini-jumper-prev"
               onClick={handlePrevMonth}
               className="rounded p-1 text-foreground/80 transition hover:bg-muted hover:text-foreground"
-              aria-label="Previous month"
+              aria-label={t("calendar.prevMonth")}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -226,7 +223,7 @@ export function CalendarSidebar({
               data-testid="mini-jumper-next"
               onClick={handleNextMonth}
               className="rounded p-1 text-foreground/80 transition hover:bg-muted hover:text-foreground"
-              aria-label="Next month"
+              aria-label={t("calendar.nextMonth")}
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -278,13 +275,13 @@ export function CalendarSidebar({
         {/* Space Calendars (Native) */}
         <div>
           <div className="flex items-center justify-between pb-1.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-            <span>Space Calendars</span>
+            <span>{t("calendar.spaceCalendars")}</span>
           </div>
 
           <div className="space-y-1">
             {nativeCalendars.length === 0 ? (
               <div className="text-xs text-muted-foreground italic">
-                No space calendars
+                {t("calendar.noSpaceCalendars")}
               </div>
             ) : (
               nativeCalendars.map((cal) => (
@@ -318,12 +315,12 @@ export function CalendarSidebar({
         {/* Connected Accounts Sub-Calendars */}
         <div>
           <div className="flex items-center justify-between pb-1.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-            <span>Connected Accounts</span>
+            <span>{t("calendar.connectedAccounts")}</span>
           </div>
 
           {connectedAccounts.length === 0 && externalCalendars.length === 0 ? (
             <div className="text-xs text-muted-foreground italic">
-              No connected accounts
+              {t("calendar.noConnectedAccounts")}
             </div>
           ) : (
             <div className="space-y-3">
@@ -426,7 +423,7 @@ export function CalendarSidebar({
         {onToggleFinanceOverlay && (
           <div>
             <div className="flex items-center justify-between pb-1.5 text-xs font-medium text-muted-foreground">
-              <span>Overlays</span>
+              <span>{t("calendar.overlays")}</span>
             </div>
             <label
               data-testid="calendar-finance-overlay-sidebar-toggle"
@@ -435,7 +432,7 @@ export function CalendarSidebar({
               <div className="flex min-w-0 items-center gap-2">
                 <Receipt className="h-3.5 w-3.5 shrink-0 text-primary" />
                 <span className="truncate font-medium text-foreground">
-                  Scheduled Bills & Paydays
+                  {t("calendar.scheduledBillsAndPaydays")}
                 </span>
               </div>
               <Checkbox

@@ -292,17 +292,12 @@ export default function CalendarScreen() {
     if (!currentDate) return ""
 
     if (currentDate.getFullYear() !== tz.now().getFullYear()) {
-      return tz.format(currentDate, {
-        month: "long",
-        year: "numeric",
-        day: undefined,
-      })
+      return tz.formatMonth(currentDate)
     }
 
-    return tz.format(currentDate, {
+    return tz.formatMonth(currentDate, {
       month: "long",
       year: undefined,
-      day: undefined,
     })
   }, [currentDate, tz])
 
@@ -322,7 +317,15 @@ export default function CalendarScreen() {
               testID="calendar-strip-toggle"
               accessibilityRole="button"
               accessibilityState={{ expanded: isStripExpanded }}
-              accessibilityLabel={`${activeMonthTitle}, ${isStripExpanded ? "collapse" : "expand"} month calendar`}
+              accessibilityLabel={
+                isStripExpanded
+                  ? t("calendar.collapseMonthCalendar", {
+                      month: activeMonthTitle,
+                    })
+                  : t("calendar.expandMonthCalendar", {
+                      month: activeMonthTitle,
+                    })
+              }
             >
               <Text style={styles.monthTitle} numberOfLines={1}>
                 {activeMonthTitle}
@@ -351,7 +354,7 @@ export default function CalendarScreen() {
               onPress={handleOpenFilters}
               style={styles.filterButton}
               testID="calendar-filter-btn"
-              accessibilityLabel="Calendar filters"
+              accessibilityLabel={t("calendar.filters")}
             >
               <SlidersHorizontal size={16} color={colors.textSecondary} />
               {hasCalendarReauthWarning && (
@@ -385,7 +388,7 @@ export default function CalendarScreen() {
                   viewMode === "agenda" && styles.segmentBtnTextActive,
                 ]}
               >
-                Agenda
+                {t("calendar.agenda")}
               </Text>
             </TouchableOpacity>
 
@@ -404,7 +407,7 @@ export default function CalendarScreen() {
                   viewMode === "day" && styles.segmentBtnTextActive,
                 ]}
               >
-                Day
+                {t("calendar.day")}
               </Text>
             </TouchableOpacity>
 
@@ -423,7 +426,7 @@ export default function CalendarScreen() {
                   viewMode === "three_day" && styles.segmentBtnTextActive,
                 ]}
               >
-                3-Day
+                {t("calendar.threeDay")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -436,7 +439,9 @@ export default function CalendarScreen() {
               testID="calendar-strip-prev"
               accessibilityRole="button"
               accessibilityLabel={
-                isStripExpanded ? "Previous month" : "Previous week"
+                isStripExpanded
+                  ? t("calendar.prevMonth")
+                  : t("calendar.prevWeek")
               }
             >
               <ChevronLeft size={16} color={colors.textSecondary} />
@@ -447,7 +452,11 @@ export default function CalendarScreen() {
               style={styles.stepperButton}
               testID="calendar-strip-next"
               accessibilityRole="button"
-              accessibilityLabel={isStripExpanded ? "Next month" : "Next week"}
+              accessibilityLabel={
+                isStripExpanded
+                  ? t("calendar.nextMonth")
+                  : t("calendar.nextWeek")
+              }
             >
               <ChevronRight size={16} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -497,8 +506,8 @@ export default function CalendarScreen() {
       {!isViewer && (
         <QuickCaptureFab
           testID="calendar-fab-add"
-          accessibilityLabel="New calendar event"
-          accessibilityHint="Tap to create an event, or long press to jump to today"
+          accessibilityLabel={t("calendar.newEvent")}
+          accessibilityHint={t("calendar.newEventHint")}
           onPress={() => handleOpenCreateEvent()}
           onLongPress={handleJumpToToday}
         />

@@ -19,7 +19,8 @@ export interface CalendarDateSection {
  */
 export function groupEventsByDate(
   events: EventOccurrence[],
-  timeZone: string
+  timeZone: string,
+  locale = "en-US"
 ): CalendarDateSection[] {
   if (!events || events.length === 0) return []
 
@@ -62,13 +63,6 @@ export function groupEventsByDate(
 
   const sections: CalendarDateSection[] = []
 
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    timeZone,
-  })
-
   for (const dateKey of sortedKeys) {
     const dayEvents = dateMap.get(dateKey) || []
 
@@ -86,7 +80,18 @@ export function groupEventsByDate(
 
     const [y, m, d] = dateKey.split("-").map(Number)
     const noonUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
-    const title = formatter.format(noonUtc)
+    const nowParts = getTimezoneParts(new Date(), timeZone)
+    const isCurrentYear = nowParts ? y === nowParts.year : true
+    const rawTitle = new Intl.DateTimeFormat(locale, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: isCurrentYear ? undefined : "numeric",
+      timeZone,
+    }).format(noonUtc)
+    const title = rawTitle
+      ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1)
+      : ""
 
     sections.push({
       title,
@@ -131,14 +136,16 @@ export function getConsecutiveDays(
  */
 export function formatEventTime(
   occ: EventOccurrence,
-  timeZone: string
+  timeZone: string,
+  locale = "en-US",
+  allDayLabel = "All day"
 ): string {
   if (occ.isAllDay) {
-    return "All day"
+    return allDayLabel
   }
   if (!occ.startTime) return ""
 
-  const timeFormatter = new Intl.DateTimeFormat("en-US", {
+  const timeFormatter = new Intl.DateTimeFormat(locale, {
     hour: "numeric",
     minute: "2-digit",
     timeZone,

@@ -13,6 +13,18 @@ import {
   ChevronRightIcon,
   ChevronDownIcon,
 } from "lucide-react"
+import {
+  formatMonthYear,
+  formatShortMonth,
+  formatShortWeekday,
+} from "@saturn/core"
+import { useI18n, useTimezone } from "@saturn/hooks"
+
+function toCalendarUtcNoon(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0)
+  )
+}
 
 function Calendar({
   className,
@@ -21,13 +33,19 @@ function Calendar({
   captionLayout = "label",
   buttonVariant = "ghost",
   locale,
+  weekStartsOn,
   formatters,
+  labels,
   components,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
 }) {
   const defaultClassNames = getDefaultClassNames()
+  const tz = useTimezone()
+  const { t } = useI18n()
+  const resolvedLocaleCode = locale?.code || tz.locale || "en-US"
+  const resolvedWeekStartsOn = weekStartsOn ?? tz.weekStartsOn
 
   return (
     <DayPicker
@@ -40,10 +58,29 @@ function Calendar({
       )}
       captionLayout={captionLayout}
       locale={locale}
+      weekStartsOn={resolvedWeekStartsOn}
       formatters={{
+        formatCaption: (date) =>
+          formatMonthYear(
+            toCalendarUtcNoon(date),
+            "UTC",
+            resolvedLocaleCode,
+            "long"
+          ),
         formatMonthDropdown: (date) =>
-          date.toLocaleString(locale?.code, { month: "short" }),
+          formatShortMonth(toCalendarUtcNoon(date), "UTC", resolvedLocaleCode),
+        formatWeekdayName: (date) =>
+          formatShortWeekday(
+            toCalendarUtcNoon(date),
+            "UTC",
+            resolvedLocaleCode
+          ),
         ...formatters,
+      }}
+      labels={{
+        labelPrevious: () => t("datePicker.prevMonth"),
+        labelNext: () => t("datePicker.nextMonth"),
+        ...labels,
       }}
       classNames={{
         root: cn("w-fit", defaultClassNames.root),
@@ -166,8 +203,12 @@ function Calendar({
             <ChevronDownIcon className={cn("size-4", className)} {...props} />
           )
         },
-        DayButton: ({ ...props }) => (
-          <CalendarDayButton locale={locale} {...props} />
+        DayButton: ({ ...dayButtonProps }) => (
+          <CalendarDayButton
+            locale={locale}
+            localeCode={resolvedLocaleCode}
+            {...dayButtonProps}
+          />
         ),
         WeekNumber: ({ children, ...props }) => {
           return (
@@ -190,9 +231,14 @@ function CalendarDayButton({
   day,
   modifiers,
   locale,
+  localeCode,
   ...props
-}: React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale> }) {
+}: React.ComponentProps<typeof DayButton> & {
+  locale?: Partial<Locale>
+  localeCode?: string
+}) {
   const defaultClassNames = getDefaultClassNames()
+  const resolvedCode = locale?.code || localeCode || "en-US"
 
   const ref = React.useRef<HTMLButtonElement>(null)
   React.useEffect(() => {
@@ -203,7 +249,7 @@ function CalendarDayButton({
     <Button
       variant="ghost"
       size="icon"
-      data-day={day.date.toLocaleDateString(locale?.code)}
+      data-day={new Intl.DateTimeFormat(resolvedCode).format(day.date)}
       data-selected-single={
         modifiers.selected &&
         !modifiers.range_start &&

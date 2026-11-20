@@ -254,7 +254,7 @@ export function useTimezone(overrideTimezone?: string | null): TimezoneObject {
         )
       },
       formatMonth(date, options) {
-        return formatDateWithTimezone(
+        const formatted = formatDateWithTimezone(
           date,
           tz,
           {
@@ -264,6 +264,9 @@ export function useTimezone(overrideTimezone?: string | null): TimezoneObject {
           },
           locale
         )
+        if (!formatted) return ""
+        const cleaned = formatted.replace(/\s+de\s+/i, " ")
+        return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
       },
       formatRelative(date) {
         const d = parseDate(date, tz)

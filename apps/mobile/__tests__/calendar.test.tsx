@@ -725,3 +725,74 @@ describe("<DateStrip /> Component", () => {
     )
   })
 })
+
+describe("Mobile Calendar Spanish Formatting & Translations", () => {
+  it("formats section headers in Spanish without year for current year and capitalized weekday", () => {
+    const mockEvents: EventOccurrence[] = [
+      {
+        eventId: "ev_1",
+        calendarId: "cal_1",
+        masterId: "",
+        instanceId: "inst_1",
+        title: "Revisión de diseño",
+        description: "",
+        location: "",
+        isAllDay: false,
+        startTime: "2026-11-02T15:00:00Z",
+        endTime: "2026-11-02T16:00:00Z",
+        startDate: "",
+        endDate: "",
+        timezone: "UTC",
+        status: "EVENT_STATUS_CONFIRMED",
+        isException: false,
+        meetUrl: "",
+        color: "#38bdf8",
+        calendarName: "Trabajo",
+        organizer: { email: "", displayName: "", isSelf: true },
+        attendees: [],
+        reminders: [],
+        isVirtual: false,
+        sourceType: "",
+      },
+    ]
+
+    const sections = groupEventsByDate(mockEvents, "UTC", "es-ES")
+    expect(sections).toHaveLength(1)
+    expect(sections[0].title).toContain("noviembre")
+    expect(sections[0].title.charAt(0)).toBe(
+      sections[0].title.charAt(0).toUpperCase()
+    )
+  })
+
+  it("formats all-day event times using localized allDayLabel", () => {
+    const allDayOcc: EventOccurrence = {
+      eventId: "ev_all_day",
+      calendarId: "cal_1",
+      masterId: "",
+      instanceId: "inst_all_day",
+      title: "Vacaciones",
+      description: "",
+      location: "",
+      isAllDay: true,
+      startTime: "",
+      endTime: "",
+      startDate: "2026-10-20",
+      endDate: "2026-10-21",
+      timezone: "UTC",
+      status: "EVENT_STATUS_CONFIRMED",
+      isException: false,
+      meetUrl: "",
+      color: "#10b981",
+      calendarName: "Personal",
+      organizer: { email: "", displayName: "", isSelf: true },
+      attendees: [],
+      reminders: [],
+      isVirtual: false,
+      sourceType: "",
+    }
+
+    expect(formatEventTime(allDayOcc, "UTC", "es-ES", "Todo el día")).toBe(
+      "Todo el día"
+    )
+  })
+})

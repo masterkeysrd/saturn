@@ -128,7 +128,7 @@ export const CalendarFilterSheet = forwardRef<
   return (
     <AppBottomSheet
       ref={ref}
-      title="Calendars & Filters"
+      title={t("calendar.filterSheetTitle")}
       snapPoints={["55%", "85%"]}
       onClose={onClose}
     >
@@ -146,7 +146,9 @@ export const CalendarFilterSheet = forwardRef<
             {/* Space Native Calendars Section */}
             <View style={styles.section}>
               <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>Space Calendars</Text>
+                <Text style={styles.sectionTitle}>
+                  {t("calendar.spaceCalendars")}
+                </Text>
                 {canManage && !isCreating && (
                   <TouchableOpacity
                     activeOpacity={0.7}
@@ -158,7 +160,9 @@ export const CalendarFilterSheet = forwardRef<
                     testID="calendar-filter-add-btn"
                   >
                     <Plus size={14} color={colors.primary} />
-                    <Text style={styles.addButtonText}>New</Text>
+                    <Text style={styles.addButtonText}>
+                      {t("calendar.add")}
+                    </Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -167,12 +171,12 @@ export const CalendarFilterSheet = forwardRef<
               {isCreating && (
                 <View style={styles.createCard} testID="calendar-create-card">
                   <Text style={styles.createCardTitle}>
-                    Create Space Calendar
+                    {t("calendar.createSpaceCalendar")}
                   </Text>
                   <BottomSheetTextInput
                     value={newCalendarName}
                     onChangeText={setNewCalendarName}
-                    placeholder="Calendar Name"
+                    placeholder={t("calendar.calendarName")}
                     placeholderTextColor={colors.textMuted}
                     keyboardAppearance={isDark ? "dark" : "light"}
                     style={styles.createInput}
@@ -211,7 +215,9 @@ export const CalendarFilterSheet = forwardRef<
                       }}
                       style={styles.cancelBtn}
                     >
-                      <Text style={styles.cancelBtnText}>Cancel</Text>
+                      <Text style={styles.cancelBtnText}>
+                        {t("common.cancel")}
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       activeOpacity={0.7}
@@ -232,7 +238,9 @@ export const CalendarFilterSheet = forwardRef<
                           color={colors.primaryForeground}
                         />
                       ) : (
-                        <Text style={styles.submitBtnText}>Create</Text>
+                        <Text style={styles.submitBtnText}>
+                          {t("common.create")}
+                        </Text>
                       )}
                     </TouchableOpacity>
                   </View>
@@ -257,7 +265,9 @@ export const CalendarFilterSheet = forwardRef<
                       </Text>
                       {cal.isDefaultNative && (
                         <View style={styles.defaultBadge}>
-                          <Text style={styles.defaultBadgeText}>Default</Text>
+                          <Text style={styles.defaultBadgeText}>
+                            {t("calendar.defaultBadge")}
+                          </Text>
                         </View>
                       )}
                     </View>
@@ -279,7 +289,9 @@ export const CalendarFilterSheet = forwardRef<
             {/* Connected Account Sub-Calendars Section */}
             {connectedCalendars.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Connected Accounts</Text>
+                <Text style={styles.sectionTitle}>
+                  {t("calendar.connectedAccounts")}
+                </Text>
                 <View style={styles.calendarList}>
                   {connectedCalendars.map((cal) => {
                     const acc = cal.connectedAccountId
@@ -304,7 +316,7 @@ export const CalendarFilterSheet = forwardRef<
                           {cal.isPrimary && (
                             <View style={styles.defaultBadge}>
                               <Text style={styles.defaultBadgeText}>
-                                Primary
+                                {t("calendar.primaryBadge")}
                               </Text>
                             </View>
                           )}

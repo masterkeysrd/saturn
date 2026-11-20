@@ -13,6 +13,10 @@ import {
 } from "@saturn/schemas"
 import { SpaceAvatarButton } from "../components/app-header"
 import { CustomizeOverviewSheet } from "../components/widgets/customize-overview-sheet"
+import {
+  DatePickerSheet,
+  formatDisplayDate,
+} from "../components/ui/date-picker-sheet"
 
 const { mockSwitchSpace, mockToastShow, mockUseSpace } = vi.hoisted(() => {
   const mockSwitchSpace = vi.fn(async (_spaceId: string) => undefined)
@@ -82,6 +86,8 @@ vi.mock("lucide-react-native", async () => {
     ArrowUp: Stub("ArrowUp"),
     Calendar: Stub("Calendar"),
     CalendarClock: Stub("CalendarClock"),
+    ChevronLeft: Stub("ChevronLeft"),
+    ChevronRight: Stub("ChevronRight"),
     Landmark: Stub("Landmark"),
     Mail: Stub("Mail"),
     PiggyBank: Stub("PiggyBank"),
@@ -107,7 +113,18 @@ vi.mock("../components/ui/bottom-sheet", async () => {
       )
   )
   AppBottomSheet.displayName = "AppBottomSheet"
-  return { AppBottomSheet }
+  const BottomSheetHeader = ({
+    title,
+  }: {
+    title: string
+    onClose?: () => void
+  }) =>
+    ReactMod.createElement(
+      "div",
+      { "data-testid": "bottom-sheet-header" },
+      ReactMod.createElement("span", null, title)
+    )
+  return { AppBottomSheet, BottomSheetHeader }
 })
 
 vi.mock("../components/ui/button", async () => {
@@ -179,6 +196,16 @@ vi.mock("react-native", async () => {
     useColorScheme: () => "dark",
     Image: ({ style, ...props }: Record<string, unknown>) =>
       ReactMod.createElement("img", { ...props, style: flattenStyle(style) }),
+    Modal: ({
+      visible,
+      children,
+    }: {
+      visible?: boolean
+      children?: React.ReactNode
+    }) =>
+      visible
+        ? ReactMod.createElement("div", { "data-testid": "rn-modal" }, children)
+        : null,
     View: ({ children, style, ...props }: Record<string, unknown>) =>
       ReactMod.createElement(
         "div",
@@ -413,5 +440,66 @@ describe("Mobile i18n & User-Scoped Regional Preferences", () => {
         "La contraseña debe tener al menos 6 caracteres"
       )
     })
+  })
+
+  it("formats display dates in Spanish and English via formatDisplayDate", () => {
+    const now = new Date()
+    const yesterday = new Date(now.getTime() - 86_400_000)
+    const pastDate = new Date(Date.UTC(2025, 10, 10, 12, 0, 0))
+
+    expect(formatDisplayDate(now, "UTC", "es-ES")).toMatch(/^Hoy \(\d+, [A-Z]/)
+    expect(formatDisplayDate(yesterday, "UTC", "es-ES")).toMatch(
+      /^Ayer \(\d+, [A-Z]/
+    )
+    expect(formatDisplayDate(pastDate, "UTC", "es-ES")).toBe("10, Nov 2025")
+
+    expect(formatDisplayDate(now, "UTC", "en-US")).toMatch(/^Today \([A-Z]/)
+    expect(formatDisplayDate(yesterday, "UTC", "en-US")).toMatch(
+      /^Yesterday \([A-Z]/
+    )
+    expect(formatDisplayDate(pastDate, "UTC", "en-US")).toBe("Nov 10, 2025")
+  })
+
+  it("localizes DatePickerSheet presets, title, month header, and Monday-first grid in Spanish", () => {
+    // Nov 1, 2026 is a Sunday -> 6 leading blank cells when weekStartsOn=1
+    const nov2026 = new Date(Date.UTC(2026, 10, 5, 12, 0, 0))
+    const { container, getByText } = render(
+      <TimezoneProvider timezone="UTC" locale="es-ES" weekStartsOn={1}>
+        <DatePickerSheet
+          visible={true}
+          value={nov2026}
+          onChange={vi.fn()}
+          onClose={vi.fn()}
+        />
+      </TimezoneProvider>
+    )
+
+    expect(getByText("Seleccionar fecha")).toBeTruthy()
+    expect(getByText("Hoy")).toBeTruthy()
+    expect(getByText("Ayer")).toBeTruthy()
+    expect(getByText("Hace 2 días")).toBeTruthy()
+    expect(getByText("1.º del mes")).toBeTruthy()
+
+    expect(getByText("Noviembre 2026")).toBeTruthy()
+
+    const allSpans = Array.from(container.querySelectorAll("span")).map(
+      (el) => el.textContent
+    )
+    const monIndex = allSpans.indexOf("Lun")
+    const sunIndex = allSpans.indexOf("Dom")
+    expect(monIndex).toBeGreaterThan(-1)
+    expect(sunIndex).toBe(monIndex + 6)
+
+    // Verify grid has 6 leading blank cells before day 1 (Nov 1, 2026 is Sunday)
+    // After the 7 weekday header cells, the calendar grid starts with 6 empty divs before the button for "1"
+    const day1Button = getByText("1").closest("button")
+    const day1Cell = day1Button?.parentElement
+    const grid = day1Cell?.parentElement
+    expect(grid).toBeTruthy()
+    const cells = Array.from(grid?.children ?? [])
+    expect(cells.indexOf(day1Cell as Element)).toBe(6)
+    for (let i = 0; i < 6; i++) {
+      expect(cells[i].querySelector("button")).toBeNull()
+    }
   })
 })

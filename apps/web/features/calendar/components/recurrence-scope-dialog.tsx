@@ -8,6 +8,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { useI18n } from "@saturn/hooks"
 import type { RecurrenceScope } from "@saturn/api/saturn/calendar/v1/calendar"
 
 export interface RecurrenceScopeDialogProps {
@@ -23,6 +24,7 @@ export function RecurrenceScopeDialog({
   onClose,
   onConfirm,
 }: RecurrenceScopeDialogProps) {
+  const { t } = useI18n()
   const [selectedScope, setSelectedScope] = useState<RecurrenceScope>(
     "RECURRENCE_SCOPE_THIS_EVENT"
   )
@@ -39,11 +41,14 @@ export function RecurrenceScopeDialog({
       <DialogContent mobileFullscreen={false} className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isDelete ? "Delete Recurring Event" : "Edit Recurring Event"}
+            {isDelete
+              ? t("calendar.deleteRecurringEvent")
+              : t("calendar.editRecurringEvent")}
           </DialogTitle>
           <DialogDescription>
-            This event is part of a recurring series. How would you like to
-            apply your {isDelete ? "deletion" : "changes"}?
+            {t("calendar.recurringEventPrompt", {
+              action: isDelete ? t("calendar.deletion") : t("calendar.changes"),
+            })}
           </DialogDescription>
         </DialogHeader>
 
@@ -61,10 +66,11 @@ export function RecurrenceScopeDialog({
               className="mt-1"
             />
             <div>
-              <div className="text-sm font-medium">This event only</div>
+              <div className="text-sm font-medium">
+                {t("calendar.thisEventOnly")}
+              </div>
               <div className="text-xs text-muted-foreground">
-                Only this instance will be modified. Other occurrences remain
-                unchanged.
+                {t("calendar.thisEventOnlyDescription")}
               </div>
             </div>
           </label>
@@ -85,11 +91,10 @@ export function RecurrenceScopeDialog({
             />
             <div>
               <div className="text-sm font-medium">
-                This and following events
+                {t("calendar.thisAndFollowingEvents")}
               </div>
               <div className="text-xs text-muted-foreground">
-                Applies to this occurrence and all future occurrences in the
-                series.
+                {t("calendar.thisAndFollowingEventsDescription")}
               </div>
             </div>
           </label>
@@ -107,10 +112,11 @@ export function RecurrenceScopeDialog({
               className="mt-1"
             />
             <div>
-              <div className="text-sm font-medium">All events</div>
+              <div className="text-sm font-medium">
+                {t("calendar.allEvents")}
+              </div>
               <div className="text-xs text-muted-foreground">
-                Applies to all past and future occurrences in this recurring
-                series.
+                {t("calendar.allEventsDescription")}
               </div>
             </div>
           </label>
@@ -118,14 +124,14 @@ export function RecurrenceScopeDialog({
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             data-testid="confirm-scope-btn"
             variant={isDelete ? "destructive" : "default"}
             onClick={handleConfirm}
           >
-            {isDelete ? "Delete" : "Save Changes"}
+            {isDelete ? t("common.delete") : t("calendar.saveChanges")}
           </Button>
         </DialogFooter>
       </DialogContent>

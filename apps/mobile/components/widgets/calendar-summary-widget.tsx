@@ -117,8 +117,8 @@ export function CalendarSummaryWidget() {
           <View style={styles.headerRight}>
             <Text style={styles.subtitleText}>
               {todayEvents.length === 0
-                ? "No events"
-                : `${todayEvents.length} event${todayEvents.length === 1 ? "" : "s"}`}
+                ? t("calendar.noEvents")
+                : t("calendar.eventsCount", { count: todayEvents.length })}
             </Text>
             <ChevronRight size={16} color={colors.textMuted} />
           </View>
@@ -155,7 +155,12 @@ export function CalendarSummaryWidget() {
           <View style={styles.eventsList}>
             {visibleEvents.map((occ) => {
               const color = occ.color || colors.primary
-              const timeStr = formatEventTime(occ, tz.timezone)
+              const timeStr = formatEventTime(
+                occ,
+                tz.timezone,
+                tz.locale,
+                t("calendar.allDay")
+              )
 
               return (
                 <TouchableOpacity
@@ -167,7 +172,7 @@ export function CalendarSummaryWidget() {
                 >
                   <View style={styles.eventInfo}>
                     <Text numberOfLines={1} style={styles.eventTitle}>
-                      {occ.title || "(No title)"}
+                      {occ.title || t("calendar.noTitle")}
                     </Text>
                     <View style={styles.eventMetaRow}>
                       <Clock size={11} color={colors.textMuted} />
@@ -182,7 +187,9 @@ export function CalendarSummaryWidget() {
                       testID="calendar-widget-meet-btn"
                     >
                       <Video size={13} color={colors.primary} />
-                      <Text style={styles.meetBtnText}>Join</Text>
+                      <Text style={styles.meetBtnText}>
+                        {t("calendar.join")}
+                      </Text>
                     </TouchableOpacity>
                   ) : null}
                 </TouchableOpacity>
@@ -196,7 +203,7 @@ export function CalendarSummaryWidget() {
                 style={styles.moreFooter}
               >
                 <Text style={styles.moreFooterText}>
-                  +{remainingCount} more event{remainingCount === 1 ? "" : "s"}
+                  {t("calendar.moreEvents", { count: remainingCount })}
                 </Text>
               </TouchableOpacity>
             )}

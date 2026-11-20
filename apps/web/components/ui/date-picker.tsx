@@ -1,5 +1,6 @@
-import { format, isValid } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
+import { formatDateWithTimezone } from "@saturn/core"
+import { useI18n, useTimezone } from "@saturn/hooks"
 
 import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
@@ -19,10 +20,35 @@ interface DatePickerProps {
 export function DatePicker({
   date,
   setDate,
-  placeholder = "Pick a date",
+  placeholder,
   className,
 }: DatePickerProps) {
-  const isValidDate = date instanceof Date && isValid(date)
+  const tz = useTimezone()
+  const { t } = useI18n()
+  const resolvedPlaceholder = placeholder ?? t("datePicker.pickDate")
+  const isValidDate = date instanceof Date && !Number.isNaN(date.getTime())
+
+  const formattedDate = isValidDate
+    ? formatDateWithTimezone(
+        new Date(
+          Date.UTC(
+            date.getFullYear(),
+            date.getMonth(),
+            date.getDate(),
+            12,
+            0,
+            0
+          )
+        ),
+        "UTC",
+        {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        },
+        tz.locale
+      )
+    : null
 
   return (
     <Popover>
@@ -35,12 +61,10 @@ export function DatePicker({
         )}
       >
         <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-        {isValidDate ? (
-          <span className="font-mono tabular-nums">
-            {format(date, "yyyy/MM/dd")}
-          </span>
+        {formattedDate ? (
+          <span className="font-mono tabular-nums">{formattedDate}</span>
         ) : (
-          <span>{placeholder}</span>
+          <span>{resolvedPlaceholder}</span>
         )}
       </PopoverTrigger>
       <PopoverContent className="w-auto rounded-xl border border-border bg-popover p-0 shadow-xl">

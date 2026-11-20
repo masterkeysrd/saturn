@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   useTimezone,
+  useI18n,
   useCalendars,
   useCalendarEvents,
   useEnsureDefaultCalendar,
@@ -105,6 +106,7 @@ export function CalendarView() {
   const inRouter = useInRouterContext()
   const queryClient = useQueryClient()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { spaceId, isWritable } = useOptionalSpacePermissions()
   const { data: calendarsData } = useCalendars()
   const calendars = useMemo(
@@ -193,9 +195,9 @@ export function CalendarView() {
     viewId: "calendar.schedule",
     title: `Calendar (${activeView} · ${focalDateStr})`,
     suggestions: [
-      `What's on my schedule around ${focalDateStr}?`,
-      "Find open focus blocks on my calendar this week",
-      "Check for any overlapping meetings or busy days",
+      t("calendar.suggestion.whatsOn", { date: focalDateStr }),
+      t("calendar.suggestion.focusBlocks"),
+      t("calendar.suggestion.overlapping"),
     ],
   })
 
@@ -381,16 +383,58 @@ export function CalendarView() {
       })
       const first = days[0].date
       const last = days[6].date
-      return `${tz.format(first, { month: "short", day: "numeric" })} – ${tz.format(last, { month: "short", day: "numeric", year: "numeric" })}`
+      const p1 = tz.parts(first)
+      const p2 = tz.parts(last)
+      const nowParts = tz.parts(tz.now())
+      const isCurrentYear =
+        p1 &&
+        nowParts &&
+        p1.year === nowParts.year &&
+        p2?.year === nowParts.year
+
+      if (p1 && p2 && p1.year === p2.year && p1.month === p2.month) {
+        const isEs = (tz.locale || "").startsWith("es")
+        const monthName = tz.format(first, { month: "long" })
+        const monthCap = monthName
+          ? monthName.charAt(0).toUpperCase() + monthName.slice(1)
+          : ""
+        if (isEs) {
+          return isCurrentYear
+            ? `${p1.day} – ${p2.day} de ${monthName}`
+            : `${p1.day} – ${p2.day} de ${monthName} de ${p1.year}`
+        }
+        return isCurrentYear
+          ? `${monthCap} ${p1.day} – ${p2.day}`
+          : `${monthCap} ${p1.day} – ${p2.day}, ${p1.year}`
+      }
+
+      const isEs = (tz.locale || "").startsWith("es")
+      const m1 = tz.format(first, { month: "short" })
+      const m2 = tz.format(last, { month: "short" })
+      const m1Cap = m1 ? m1.charAt(0).toUpperCase() + m1.slice(1) : ""
+      const m2Cap = m2 ? m2.charAt(0).toUpperCase() + m2.slice(1) : ""
+      if (isEs) {
+        return isCurrentYear
+          ? `${p1?.day} ${m1Cap} – ${p2?.day} ${m2Cap}`
+          : `${p1?.day} ${m1Cap} ${p1?.year} – ${p2?.day} ${m2Cap} ${p2?.year}`
+      }
+      return isCurrentYear
+        ? `${m1Cap} ${p1?.day} – ${m2Cap} ${p2?.day}`
+        : `${m1Cap} ${p1?.day}, ${p1?.year} – ${m2Cap} ${p2?.day}, ${p2?.year}`
     }
 
     if (activeView === "day") {
-      return tz.format(currentDate, {
+      const nowParts = tz.parts(tz.now())
+      const isCurrentYear = nowParts
+        ? currentDate.getFullYear() === nowParts.year
+        : true
+      const dayStr = tz.format(currentDate, {
         weekday: "long",
         month: "long",
         day: "numeric",
-        year: "numeric",
+        year: isCurrentYear ? undefined : "numeric",
       })
+      return dayStr ? dayStr.charAt(0).toUpperCase() + dayStr.slice(1) : ""
     }
 
     return tz.formatMonth(currentDate)
@@ -491,11 +535,12 @@ export function CalendarView() {
         await queryClient.invalidateQueries({
           queryKey: calendarKeys.allEvents(),
         })
-        toast.add({ title: "Event deleted", type: "success" })
+        toast.add({ title: t("calendar.eventDeleted"), type: "success" })
       } catch (err) {
         toast.add({
-          title: "Failed to delete event",
-          description: err instanceof Error ? err.message : "An error occurred",
+          title: t("calendar.failedToDeleteEvent"),
+          description:
+            err instanceof Error ? err.message : t("mail.anErrorOccurred"),
           type: "error",
         })
       } finally {
@@ -504,7 +549,7 @@ export function CalendarView() {
         setDeleteTargetOccurrence(null)
       }
     },
-    [deleteEventMutation, queryClient]
+    [deleteEventMutation, queryClient, t]
   )
 
   const handleOpenNewEvent = useCallback(() => {
@@ -679,8 +724,16 @@ export function CalendarView() {
               size="icon-sm"
               onClick={() => setSidebarOpen((prev) => !prev)}
               className="h-8 w-8 shrink-0 text-foreground/80 hover:text-foreground"
-              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-              aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              title={
+                sidebarOpen
+                  ? t("calendar.collapseSidebar")
+                  : t("calendar.expandSidebar")
+              }
+              aria-label={
+                sidebarOpen
+                  ? t("calendar.collapseSidebar")
+                  : t("calendar.expandSidebar")
+              }
             >
               <PanelLeft className="h-4 w-4" />
             </Button>
@@ -691,7 +744,7 @@ export function CalendarView() {
               onClick={handleToday}
               className="h-8 shrink-0 px-2.5 text-xs font-medium"
             >
-              Today
+              {t("common.today")}
             </Button>
             <div className="flex shrink-0 items-center gap-0.5">
               <Button
@@ -700,7 +753,7 @@ export function CalendarView() {
                 data-testid="calendar-prev-btn"
                 onClick={handlePrev}
                 className="h-8 w-8 cursor-pointer rounded-full text-foreground hover:bg-muted"
-                aria-label="Previous"
+                aria-label={t("calendar.prevMonth")}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -710,7 +763,7 @@ export function CalendarView() {
                 data-testid="calendar-next-btn"
                 onClick={handleNext}
                 className="h-8 w-8 cursor-pointer rounded-full text-foreground hover:bg-muted"
-                aria-label="Next"
+                aria-label={t("calendar.nextMonth")}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -738,10 +791,10 @@ export function CalendarView() {
                 showFinanceOverlay &&
                   "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
               )}
-              title="Toggle Scheduled Bills & Paydays"
+              title={t("calendar.toggleScheduledBills")}
             >
               <Receipt className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Bills</span>
+              <span className="hidden sm:inline">{t("calendar.bills")}</span>
             </Button>
 
             <div
@@ -759,7 +812,7 @@ export function CalendarView() {
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                Month
+                {t("calendar.month")}
               </button>
               <button
                 type="button"
@@ -772,7 +825,7 @@ export function CalendarView() {
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                Week
+                {t("calendar.week")}
               </button>
               <button
                 type="button"
@@ -785,7 +838,7 @@ export function CalendarView() {
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                Day
+                {t("calendar.day")}
               </button>
               <button
                 type="button"
@@ -798,7 +851,7 @@ export function CalendarView() {
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                Agenda
+                {t("calendar.agenda")}
               </button>
             </div>
 
@@ -813,7 +866,7 @@ export function CalendarView() {
               )}
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>New Event</span>
+              <span>{t("calendar.newEvent")}</span>
             </Button>
           </div>
         </div>
@@ -925,17 +978,15 @@ export function CalendarView() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Event</AlertDialogTitle>
+            <AlertDialogTitle>{t("calendar.deleteEvent")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete{" "}
-              <span className="font-semibold text-foreground">
-                {deleteTargetOccurrence?.title || "this event"}
-              </span>
-              ? This action cannot be undone.
+              {t("calendar.deleteEventConfirm", {
+                title: deleteTargetOccurrence?.title || t("calendar.thisEvent"),
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               data-testid="confirm-delete-event-btn"
@@ -945,7 +996,7 @@ export function CalendarView() {
                 }
               }}
             >
-              Delete
+              {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

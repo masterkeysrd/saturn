@@ -5,7 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react"
-import { parseDate } from "@saturn/core"
+import { formatShortMonth, parseDate } from "@saturn/core"
 import { useTimezone } from "@saturn/hooks"
 import { DatePicker } from "@/components/ui/date-picker"
 import {
@@ -78,16 +78,18 @@ export function FinancePeriodPicker({
     bounds.period === "custom"
   )
 
-  const shortMonthNames = useMemo(() => {
-    const fmt = new Intl.DateTimeFormat(tz.locale, {
-      month: "short",
-      timeZone: "UTC",
-    })
-    return Array.from({ length: 12 }, (_, idx) => ({
-      month: idx + 1,
-      label: fmt.format(new Date(Date.UTC(2026, idx, 15, 12, 0, 0))),
-    }))
-  }, [tz.locale])
+  const shortMonthNames = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, idx) => ({
+        month: idx + 1,
+        label: formatShortMonth(
+          new Date(Date.UTC(2026, idx, 15, 12, 0, 0)),
+          "UTC",
+          tz.locale
+        ),
+      })),
+    [tz.locale]
+  )
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {

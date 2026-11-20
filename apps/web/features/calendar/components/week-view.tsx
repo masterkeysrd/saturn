@@ -1,5 +1,5 @@
 import { useMemo, useRef, useEffect } from "react"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import {
   getWeekDays,
   getHourSlots,
@@ -39,6 +39,7 @@ export function WeekView({
   onSelectFinanceItem,
 }: WeekViewProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   const weekDays = useMemo(() => {
@@ -120,7 +121,9 @@ export function WeekView({
                 onClick={() => onSelectDate(day.date)}
               >
                 <span className="text-[11px] font-medium text-muted-foreground">
-                  {day.dayName}
+                  {day.dayName
+                    ? day.dayName.charAt(0).toUpperCase() + day.dayName.slice(1)
+                    : ""}
                 </span>
                 <span
                   className={cn(
@@ -144,7 +147,7 @@ export function WeekView({
           )) && (
           <div className="grid grid-cols-[72px_1fr] border-t border-border/30">
             <div className="flex items-center justify-center border-r border-border/30 text-[10px] font-medium text-muted-foreground">
-              all-day
+              {t("calendar.allDay")}
             </div>
             <div className="flex flex-col">
               {bannerLayout.totalRows > 0 && (
@@ -186,7 +189,9 @@ export function WeekView({
                           item.isEnd ? "mr-1 rounded-r-md" : "rounded-r-none"
                         )}
                       >
-                        <span className="truncate">{occ.title}</span>
+                        <span className="truncate">
+                          {occ.title || t("calendar.noTitle")}
+                        </span>
                       </button>
                     )
                   })}
@@ -393,7 +398,7 @@ export function WeekView({
                             {item.heightPct >= 5.5 && occ.meetUrl && (
                               <div className="mt-1 flex items-center gap-1 text-[10px] font-medium text-primary">
                                 <Video className="h-2.5 w-2.5 shrink-0" />
-                                <span>Join</span>
+                                <span>{t("calendar.join")}</span>
                               </div>
                             )}
                           </>

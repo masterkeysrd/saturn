@@ -202,6 +202,89 @@ export function wallTimeToUtcIso(
   return result.toISOString()
 }
 
+export function capitalizeCalendarToken(
+  value: string,
+  locale = "en-US",
+  stripTrailingDot = true
+): string {
+  const trimmed = value.trim()
+  const cleaned = stripTrailingDot ? trimmed.replace(/\.$/, "") : trimmed
+  if (!cleaned) return ""
+  return cleaned.charAt(0).toLocaleUpperCase(locale) + cleaned.slice(1)
+}
+
+export function formatMonthYear(
+  date: DateInput,
+  timeZone: string,
+  locale = "en-US",
+  monthStyle: "long" | "short" = "long"
+): string {
+  const tz = sanitizeTimezone(timeZone)
+  const d = parseDate(date, tz)
+  if (!d) return ""
+
+  const resolvedLocale = locale || "en-US"
+  try {
+    const parts = getCachedFormatter(resolvedLocale, tz, {
+      month: monthStyle,
+      year: "numeric",
+    }).formatToParts(d)
+    const monthPart = parts.find((p) => p.type === "month")?.value ?? ""
+    const yearPart = parts.find((p) => p.type === "year")?.value ?? ""
+    const formattedMonth = capitalizeCalendarToken(
+      monthPart,
+      resolvedLocale,
+      monthStyle === "short"
+    )
+    if (formattedMonth && yearPart) {
+      return `${formattedMonth} ${yearPart}`
+    }
+    return formattedMonth || yearPart
+  } catch {
+    return ""
+  }
+}
+
+export function formatShortMonth(
+  date: DateInput,
+  timeZone: string,
+  locale = "en-US"
+): string {
+  const tz = sanitizeTimezone(timeZone)
+  const d = parseDate(date, tz)
+  if (!d) return ""
+
+  const resolvedLocale = locale || "en-US"
+  try {
+    const raw = getCachedFormatter(resolvedLocale, tz, {
+      month: "short",
+    }).format(d)
+    return capitalizeCalendarToken(raw, resolvedLocale, true)
+  } catch {
+    return ""
+  }
+}
+
+export function formatShortWeekday(
+  date: DateInput,
+  timeZone: string,
+  locale = "en-US"
+): string {
+  const tz = sanitizeTimezone(timeZone)
+  const d = parseDate(date, tz)
+  if (!d) return ""
+
+  const resolvedLocale = locale || "en-US"
+  try {
+    const raw = getCachedFormatter(resolvedLocale, tz, {
+      weekday: "short",
+    }).format(d)
+    return capitalizeCalendarToken(raw, resolvedLocale, true)
+  } catch {
+    return ""
+  }
+}
+
 export function formatDateWithTimezone(
   date: DateInput,
   timeZone: string,
@@ -217,12 +300,122 @@ export function formatDateWithTimezone(
     month: "short",
     day: "numeric",
   }
+  const opts = options || defaultOptions
+  const resolvedLocale = locale || "en-US"
+
   try {
-    return getCachedFormatter(
-      locale || "en-US",
-      tz,
-      options || defaultOptions
-    ).format(d)
+    if (
+      (opts.month === "long" || opts.month === "short") &&
+      opts.year &&
+      !opts.day &&
+      !opts.weekday &&
+      !opts.hour &&
+      !opts.minute &&
+      !opts.second &&
+      !opts.dateStyle &&
+      !opts.timeStyle
+    ) {
+      return formatMonthYear(d, tz, resolvedLocale, opts.month)
+    }
+
+    if (
+      (opts.month === "long" || opts.month === "short") &&
+      !opts.year &&
+      !opts.day &&
+      !opts.weekday &&
+      !opts.hour &&
+      !opts.minute &&
+      !opts.second &&
+      !opts.dateStyle &&
+      !opts.timeStyle
+    ) {
+      return opts.month === "short"
+        ? formatShortMonth(d, tz, resolvedLocale)
+        : capitalizeCalendarToken(
+            getCachedFormatter(resolvedLocale, tz, opts).format(d),
+            resolvedLocale,
+            false
+          )
+    }
+
+    if (
+      (opts.weekday === "short" ||
+        opts.weekday === "long" ||
+        opts.weekday === "narrow") &&
+      !opts.year &&
+      !opts.month &&
+      !opts.day &&
+      !opts.hour &&
+      !opts.minute &&
+      !opts.second &&
+      !opts.dateStyle &&
+      !opts.timeStyle
+    ) {
+      return capitalizeCalendarToken(
+        getCachedFormatter(resolvedLocale, tz, opts).format(d),
+        resolvedLocale,
+        opts.weekday === "short"
+      )
+    }
+
+    if (
+      opts.month === "short" &&
+      (opts.day === "numeric" || opts.day === "2-digit") &&
+      !opts.weekday &&
+      !opts.hour &&
+      !opts.minute &&
+      !opts.second &&
+      !opts.dateStyle &&
+      !opts.timeStyle
+    ) {
+      const parts = getCachedFormatter(resolvedLocale, tz, opts).formatToParts(
+        d
+      )
+      const dayIndex = parts.findIndex((p) => p.type === "day")
+      const monthIndex = parts.findIndex((p) => p.type === "month")
+      const dayPart = dayIndex !== -1 ? parts[dayIndex].value : ""
+      const rawMonth = monthIndex !== -1 ? parts[monthIndex].value : ""
+      const monthPart = capitalizeCalendarToken(rawMonth, resolvedLocale, true)
+      const yearPart = parts.find((p) => p.type === "year")?.value
+
+      if (dayIndex !== -1 && monthIndex !== -1 && dayIndex < monthIndex) {
+        return yearPart
+          ? `${dayPart}, ${monthPart} ${yearPart}`
+          : `${dayPart}, ${monthPart}`
+      }
+      return yearPart
+        ? `${monthPart} ${dayPart}, ${yearPart}`
+        : `${monthPart} ${dayPart}`
+    }
+
+    const parts = getCachedFormatter(resolvedLocale, tz, opts).formatToParts(d)
+    return parts
+      .map((part) => {
+        if (
+          part.type === "month" &&
+          (opts.month === "short" || opts.month === "long" || opts.dateStyle)
+        ) {
+          return capitalizeCalendarToken(
+            part.value,
+            resolvedLocale,
+            opts.month === "short" || opts.dateStyle === "medium"
+          )
+        }
+        if (
+          part.type === "weekday" &&
+          (opts.weekday === "short" ||
+            opts.weekday === "long" ||
+            opts.dateStyle)
+        ) {
+          return capitalizeCalendarToken(
+            part.value,
+            resolvedLocale,
+            opts.weekday === "short"
+          )
+        }
+        return part.value
+      })
+      .join("")
   } catch {
     return ""
   }

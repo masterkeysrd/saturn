@@ -32,6 +32,7 @@ import {
   type Budget,
 } from "@saturn/api/saturn/finance/v1/finance"
 import {
+  formatShortMonth,
   formatYm,
   groupTransactionsByDate,
   parseYm,
@@ -94,16 +95,18 @@ export default function TransactionsScreen() {
     [period, selectedMonth, now, tz.timezone, tz.locale]
   )
 
-  const shortMonthNames = useMemo(() => {
-    const fmt = new Intl.DateTimeFormat(tz.locale, {
-      month: "short",
-      timeZone: "UTC",
-    })
-    return Array.from({ length: 12 }, (_, idx) => ({
-      month: idx + 1,
-      label: fmt.format(new Date(Date.UTC(2026, idx, 15, 12, 0, 0))),
-    }))
-  }, [tz.locale])
+  const shortMonthNames = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, idx) => ({
+        month: idx + 1,
+        label: formatShortMonth(
+          new Date(Date.UTC(2026, idx, 15, 12, 0, 0)),
+          "UTC",
+          tz.locale
+        ),
+      })),
+    [tz.locale]
+  )
 
   const handleStepMonth = (delta: -1 | 1) => {
     haptics.selection()

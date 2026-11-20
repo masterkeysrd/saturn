@@ -5,6 +5,10 @@ import {
   sanitizeTimezone,
   getTimezoneParts,
   formatDateWithTimezone,
+  capitalizeCalendarToken,
+  formatMonthYear,
+  formatShortMonth,
+  formatShortWeekday,
   getStartOfDay,
   wallTimeToUtcIso,
   getDaysDiff,
@@ -99,5 +103,128 @@ describe("timezone utilities", () => {
         new Date("2026-04-15T01:00:00+14:00")
       )
     ).toBe(0)
+  })
+
+  it("capitalizes calendar tokens and strips trailing abbreviation dots", () => {
+    expect(capitalizeCalendarToken("noviembre", "es-ES", false)).toBe(
+      "Noviembre"
+    )
+    expect(capitalizeCalendarToken("  ene.  ", "es-ES", true)).toBe("Ene")
+    expect(capitalizeCalendarToken("mié.", "es-419", true)).toBe("Mié")
+    expect(capitalizeCalendarToken("", "en-US")).toBe("")
+  })
+
+  it("formats Month + Year headers without 'de' connector across Spanish and English locales", () => {
+    expect(formatMonthYear("2026-11-10", "UTC", "es-ES", "long")).toBe(
+      "Noviembre 2026"
+    )
+    expect(formatMonthYear("2026-11-10", "UTC", "es-419", "long")).toBe(
+      "Noviembre 2026"
+    )
+    expect(formatMonthYear("2026-11-10", "UTC", "es-ES", "short")).toBe(
+      "Nov 2026"
+    )
+    expect(formatMonthYear("2026-11-10", "UTC", "en-US", "long")).toBe(
+      "November 2026"
+    )
+
+    expect(
+      formatDateWithTimezone(
+        "2026-11-10",
+        "UTC",
+        { month: "long", year: "numeric" },
+        "es-ES"
+      )
+    ).toBe("Noviembre 2026")
+    expect(
+      formatDateWithTimezone(
+        "2026-11-10",
+        "UTC",
+        { month: "long", year: "numeric" },
+        "es-419"
+      )
+    ).toBe("Noviembre 2026")
+    expect(
+      formatDateWithTimezone(
+        "2026-11-10",
+        "UTC",
+        { month: "short", year: "numeric" },
+        "es-ES"
+      )
+    ).toBe("Nov 2026")
+  })
+
+  it("formats standalone short/long months and short weekdays with clean capitalization", () => {
+    expect(formatShortMonth("2026-01-15", "UTC", "es-ES")).toBe("Ene")
+    expect(formatShortMonth("2026-11-15", "UTC", "es-419")).toBe("Nov")
+    expect(formatShortMonth("2026-01-15", "UTC", "en-US")).toBe("Jan")
+
+    expect(
+      formatDateWithTimezone("2026-01-15", "UTC", { month: "short" }, "es-ES")
+    ).toBe("Ene")
+    expect(
+      formatDateWithTimezone("2026-11-15", "UTC", { month: "short" }, "es-419")
+    ).toBe("Nov")
+    expect(
+      formatDateWithTimezone("2026-11-15", "UTC", { month: "long" }, "es-ES")
+    ).toBe("Noviembre")
+
+    // 2026-01-05 is Monday, 2026-01-04 is Sunday
+    expect(formatShortWeekday("2026-01-05", "UTC", "es-ES")).toBe("Lun")
+    expect(formatShortWeekday("2026-01-07", "UTC", "es-ES")).toBe("Mié")
+    expect(formatShortWeekday("2026-01-04", "UTC", "es-ES")).toBe("Dom")
+    expect(formatShortWeekday("2026-01-05", "UTC", "en-US")).toBe("Mon")
+  })
+
+  it("formats day + short month (+ optional year) using clean locale ordering", () => {
+    expect(
+      formatDateWithTimezone(
+        "2026-11-10",
+        "UTC",
+        { day: "numeric", month: "short", year: "numeric" },
+        "es-ES"
+      )
+    ).toBe("10, Nov 2026")
+    expect(
+      formatDateWithTimezone(
+        "2026-11-10",
+        "UTC",
+        { day: "numeric", month: "short", year: "numeric" },
+        "es-419"
+      )
+    ).toBe("10, Nov 2026")
+    expect(
+      formatDateWithTimezone(
+        "2026-11-10",
+        "UTC",
+        { day: "numeric", month: "short", year: "numeric" },
+        "en-US"
+      )
+    ).toBe("Nov 10, 2026")
+
+    expect(
+      formatDateWithTimezone(
+        "2026-11-10",
+        "UTC",
+        { day: "numeric", month: "short" },
+        "es-ES"
+      )
+    ).toBe("10, Nov")
+    expect(
+      formatDateWithTimezone(
+        "2026-11-10",
+        "UTC",
+        { day: "numeric", month: "short" },
+        "es-419"
+      )
+    ).toBe("10, Nov")
+    expect(
+      formatDateWithTimezone(
+        "2026-11-10",
+        "UTC",
+        { day: "numeric", month: "short" },
+        "en-US"
+      )
+    ).toBe("Nov 10")
   })
 })

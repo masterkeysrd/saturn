@@ -1,7 +1,8 @@
 import { useMemo } from "react"
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import {
+  formatShortWeekday,
   getMonthMatrix,
   computeMultiDayBannerRows,
   type MonthDayCell,
@@ -37,6 +38,7 @@ export function MonthView({
   onSelectFinanceItem,
 }: MonthViewProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
 
   const currentParts = tz.parts(currentDate) || {
     year: 2026,
@@ -83,16 +85,12 @@ export function MonthView({
         { label: "Sat", isWeekend: true },
       ]
     }
-    const fmt = new Intl.DateTimeFormat(tz.locale || "en-US", {
-      weekday: "short",
-      timeZone: tz.timezone,
-    })
     return firstWeek.map((cell) => {
       const noon = new Date(
         Date.UTC(cell.year, cell.month - 1, cell.day, 12, 0, 0)
       )
       return {
-        label: fmt.format(noon),
+        label: formatShortWeekday(noon, tz.timezone, tz.locale),
         isWeekend: cell.isWeekend,
       }
     })
@@ -245,7 +243,9 @@ export function MonthView({
                             }}
                             className="pl-1 text-left text-[10px] font-medium text-muted-foreground hover:text-foreground"
                           >
-                            +{cellFinance.length - 2} bills
+                            {t("calendar.moreBills", {
+                              count: cellFinance.length - 2,
+                            })}
                           </button>
                         )}
                       </div>
@@ -273,7 +273,7 @@ export function MonthView({
                           }}
                         >
                           <span className="min-w-0 flex-1 truncate font-medium">
-                            {occ.title}
+                            {occ.title || t("calendar.noTitle")}
                           </span>
                           <span className="ml-auto shrink-0 pl-1 text-[10px] text-muted-foreground tabular-nums">
                             {tz.formatTime(occ.startTime, {
@@ -294,7 +294,9 @@ export function MonthView({
                           }}
                           className="pl-1 text-left text-[10px] font-semibold text-muted-foreground hover:text-foreground hover:underline"
                         >
-                          +{cellTimed.length - 3} more
+                          {t("calendar.moreEvents", {
+                            count: cellTimed.length - 3,
+                          })}
                         </button>
                       )}
                     </div>
@@ -334,7 +336,9 @@ export function MonthView({
                       item.isEnd ? "mr-1 rounded-r-md" : "rounded-r-none"
                     )}
                   >
-                    <span className="truncate">{occ.title}</span>
+                    <span className="truncate">
+                      {occ.title || t("calendar.noTitle")}
+                    </span>
                   </button>
                 )
               })}

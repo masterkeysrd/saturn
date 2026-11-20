@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select"
 import {
   useTimezone,
+  useI18n,
   useCalendars,
   useConnectedAccounts,
   useGetEvent,
@@ -99,6 +100,22 @@ interface FormState {
   sourceMailMessageId: string
 }
 
+function formatPickerDate(
+  ymd: string | undefined,
+  tz: { format: (d: string, opt: Intl.DateTimeFormatOptions) => string },
+  fallback: string
+): string {
+  if (!ymd) return fallback
+  const formatted = tz.format(ymd, {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  })
+  return formatted
+    ? formatted.charAt(0).toUpperCase() + formatted.slice(1)
+    : fallback
+}
+
 function parseYMD(ymd: string): { year: number; month: number; day: number } {
   const [year, month, day] = ymd.split("-").map(Number)
   return { year: year || 2026, month: month || 1, day: day || 1 }
@@ -140,15 +157,6 @@ function diffDaysYMD(start: string, end: string): number {
   return Math.round((e - s) / 86_400_000)
 }
 
-const RECURRENCE_LABELS: Record<RecurrenceFrequency, string> = {
-  none: "Does not repeat",
-  daily: "Daily",
-  weekly: "Weekly",
-  monthly: "Monthly",
-  yearly: "Yearly",
-  custom: "Custom",
-}
-
 interface EventDialogFormProps {
   initialForm: FormState
   occurrence?: EventOccurrence
@@ -165,6 +173,7 @@ function EventDialogForm({
   onClose,
 }: EventDialogFormProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
   const auth = useContext(AuthContext)
   const { data: accountsData } = useConnectedAccounts()
   const selfEmails = useMemo(
@@ -334,11 +343,11 @@ function EventDialogForm({
 
   const handleSave = async (scope?: RecurrenceScope) => {
     if (!title.trim()) {
-      toast.add({ title: "Title is required", type: "error" })
+      toast.add({ title: t("calendar.titleRequired"), type: "error" })
       return
     }
     if (!calendarId) {
-      toast.add({ title: "Please select a calendar", type: "error" })
+      toast.add({ title: t("calendar.pleaseSelectCalendar"), type: "error" })
       return
     }
 
@@ -355,7 +364,7 @@ function EventDialogForm({
     if (!isAllDay) {
       if (!startDate || !startTime || !endDate || !endTime) {
         toast.add({
-          title: "Please enter valid start and end times",
+          title: t("calendar.enterValidStartEndTimes"),
           type: "error",
         })
         return
@@ -365,14 +374,14 @@ function EventDialogForm({
       endIso = wallTimeToUtcIso(endDate, endTime, effectiveTz)
       if (!startIso || !endIso) {
         toast.add({
-          title: "Please enter valid start and end times",
+          title: t("calendar.enterValidStartEndTimes"),
           type: "error",
         })
         return
       }
       if (new Date(endIso).getTime() < new Date(startIso).getTime()) {
         toast.add({
-          title: "End time cannot be earlier than start time",
+          title: t("calendar.endTimeBeforeStartTime"),
           type: "error",
         })
         return
@@ -380,14 +389,14 @@ function EventDialogForm({
     } else {
       if (!startDate || !endDate) {
         toast.add({
-          title: "Please enter valid start and end dates",
+          title: t("calendar.enterValidStartEndDates"),
           type: "error",
         })
         return
       }
       if (endDate < startDate) {
         toast.add({
-          title: "End date must be on or after start date",
+          title: t("calendar.endDateBeforeStartDate"),
           type: "error",
         })
         return
@@ -473,7 +482,7 @@ function EventDialogForm({
             targetStartDate: occurrence.startDate || "",
           },
         })
-        toast.add({ title: "Event updated", type: "success" })
+        toast.add({ title: t("calendar.eventUpdated"), type: "success" })
       } else {
         await createEventMutation.mutateAsync({
           event: {
@@ -499,13 +508,14 @@ function EventDialogForm({
             sourceMailMessageId,
           },
         })
-        toast.add({ title: "Event created", type: "success" })
+        toast.add({ title: t("calendar.eventCreated"), type: "success" })
       }
       onClose()
     } catch (err) {
       toast.add({
-        title: "Failed to save event",
-        description: err instanceof Error ? err.message : "An error occurred",
+        title: t("calendar.failedToSaveEvent"),
+        description:
+          err instanceof Error ? err.message : t("mail.anErrorOccurred"),
         type: "error",
       })
     }
@@ -530,12 +540,13 @@ function EventDialogForm({
           targetStartDate: occurrence.startDate || "",
         },
       })
-      toast.add({ title: "Event deleted", type: "success" })
+      toast.add({ title: t("calendar.eventDeleted"), type: "success" })
       onClose()
     } catch (err) {
       toast.add({
-        title: "Failed to delete event",
-        description: err instanceof Error ? err.message : "An error occurred",
+        title: t("calendar.failedToDeleteEvent"),
+        description:
+          err instanceof Error ? err.message : t("mail.anErrorOccurred"),
         type: "error",
       })
     }
@@ -549,11 +560,12 @@ function EventDialogForm({
         response,
         selfEmails,
       })
-      toast.add({ title: "RSVP updated", type: "success" })
+      toast.add({ title: t("calendar.rsvpUpdated"), type: "success" })
     } catch (err) {
       toast.add({
-        title: "Failed to update RSVP",
-        description: err instanceof Error ? err.message : "An error occurred",
+        title: t("calendar.failedToUpdateRsvp"),
+        description:
+          err instanceof Error ? err.message : t("mail.anErrorOccurred"),
         type: "error",
       })
     }
@@ -565,12 +577,12 @@ function EventDialogForm({
         {/* Title */}
         <div>
           <Label htmlFor="event-title" className="text-xs font-medium">
-            Event Title *
+            {t("calendar.eventTitleRequired")}
           </Label>
           <Input
             id="event-title"
             data-testid="event-title-input"
-            placeholder="Add title"
+            placeholder={t("calendar.addTitle")}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="mt-1 h-9 rounded-4xl border-input bg-input/30 text-sm font-medium"
@@ -581,7 +593,7 @@ function EventDialogForm({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <Label htmlFor="calendar-select" className="text-xs font-medium">
-              Calendar
+              {t("calendar.calendar")}
             </Label>
             <div className="mt-1">
               <Select
@@ -592,7 +604,7 @@ function EventDialogForm({
                   id="calendar-select"
                   data-testid="calendar-select"
                 >
-                  <SelectValue placeholder="Select calendar">
+                  <SelectValue placeholder={t("calendar.selectCalendar")}>
                     {selectedCalendar ? (
                       <div className="flex items-center gap-2">
                         <span
@@ -605,7 +617,7 @@ function EventDialogForm({
                         <span>{selectedCalendar.name}</span>
                       </div>
                     ) : (
-                      "Select calendar"
+                      t("calendar.selectCalendar")
                     )}
                   </SelectValue>
                 </SelectTrigger>
@@ -629,7 +641,7 @@ function EventDialogForm({
           {/* Timezone Selector */}
           <div>
             <Label htmlFor="timezone-select" className="text-xs font-medium">
-              Timezone
+              {t("calendar.timezone")}
             </Label>
             <div className="mt-1">
               <TimezoneCombobox value={timezone} onChange={setTimezone} />
@@ -642,7 +654,7 @@ function EventDialogForm({
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <Label htmlFor="all-day-switch" className="cursor-pointer text-sm">
-              All-day event
+              {t("calendar.allDayEvent")}
             </Label>
           </div>
           <Switch
@@ -661,7 +673,7 @@ function EventDialogForm({
                 htmlFor="start-date"
                 className="text-xs text-muted-foreground"
               >
-                Start Date
+                {t("calendar.startDate")}
               </Label>
               <div className="mt-1">
                 <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
@@ -676,13 +688,11 @@ function EventDialogForm({
                         <div className="flex min-w-0 items-center gap-2 truncate">
                           <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <span className="truncate">
-                            {startDate
-                              ? tz.format(startDate, {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })
-                              : "Select date"}
+                            {formatPickerDate(
+                              startDate,
+                              tz,
+                              t("calendar.selectDate")
+                            )}
                           </span>
                         </div>
                         <ChevronDownIcon
@@ -725,7 +735,7 @@ function EventDialogForm({
                 htmlFor="end-date"
                 className="text-xs text-muted-foreground"
               >
-                End Date (Inclusive)
+                {t("calendar.endDateInclusive")}
               </Label>
               <div className="mt-1">
                 <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
@@ -740,13 +750,11 @@ function EventDialogForm({
                         <div className="flex min-w-0 items-center gap-2 truncate">
                           <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <span className="truncate">
-                            {endDate
-                              ? tz.format(endDate, {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })
-                              : "Select date"}
+                            {formatPickerDate(
+                              endDate,
+                              tz,
+                              t("calendar.selectDate")
+                            )}
                           </span>
                         </div>
                         <ChevronDownIcon
@@ -797,7 +805,7 @@ function EventDialogForm({
                 htmlFor="start-date"
                 className="text-xs text-muted-foreground"
               >
-                Starts
+                {t("calendar.starts")}
               </Label>
               <div className="flex items-center gap-2.5">
                 <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
@@ -812,13 +820,11 @@ function EventDialogForm({
                         <div className="flex min-w-0 items-center gap-2 truncate">
                           <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <span className="truncate">
-                            {startDate
-                              ? tz.format(startDate, {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })
-                              : "Select date"}
+                            {formatPickerDate(
+                              startDate,
+                              tz,
+                              t("calendar.selectDate")
+                            )}
                           </span>
                         </div>
                         <ChevronDownIcon
@@ -868,7 +874,7 @@ function EventDialogForm({
                 htmlFor="end-date"
                 className="text-xs text-muted-foreground"
               >
-                Ends
+                {t("calendar.ends")}
               </Label>
               <div className="flex items-center gap-2.5">
                 <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
@@ -883,13 +889,11 @@ function EventDialogForm({
                         <div className="flex min-w-0 items-center gap-2 truncate">
                           <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <span className="truncate">
-                            {endDate
-                              ? tz.format(endDate, {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })
-                              : "Select date"}
+                            {formatPickerDate(
+                              endDate,
+                              tz,
+                              t("calendar.selectDate")
+                            )}
                           </span>
                         </div>
                         <ChevronDownIcon
@@ -949,7 +953,7 @@ function EventDialogForm({
             className="flex items-center gap-1.5 text-xs font-medium"
           >
             <Repeat className="h-3.5 w-3.5 text-muted-foreground" />
-            Repeat
+            {t("calendar.repeat")}
           </Label>
           <div className="mt-1">
             <Select
@@ -965,18 +969,30 @@ function EventDialogForm({
                 id="recurrence-select"
                 data-testid="recurrence-select"
               >
-                <SelectValue placeholder="Does not repeat">
-                  {RECURRENCE_LABELS[recurrencePreset] || "Does not repeat"}
+                <SelectValue placeholder={t("calendar.doesNotRepeat")}>
+                  {recurrencePreset === "none"
+                    ? t("calendar.doesNotRepeat")
+                    : recurrencePreset === "daily"
+                      ? t("calendar.daily")
+                      : recurrencePreset === "weekly"
+                        ? t("calendar.weekly")
+                        : recurrencePreset === "monthly"
+                          ? t("calendar.monthly")
+                          : recurrencePreset === "yearly"
+                            ? t("calendar.yearly")
+                            : t("calendar.custom")}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="z-50">
-                <SelectItem value="none">Does not repeat</SelectItem>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-                <SelectItem value="yearly">Yearly</SelectItem>
+                <SelectItem value="none">
+                  {t("calendar.doesNotRepeat")}
+                </SelectItem>
+                <SelectItem value="daily">{t("calendar.daily")}</SelectItem>
+                <SelectItem value="weekly">{t("calendar.weekly")}</SelectItem>
+                <SelectItem value="monthly">{t("calendar.monthly")}</SelectItem>
+                <SelectItem value="yearly">{t("calendar.yearly")}</SelectItem>
                 {recurrencePreset === "custom" && (
-                  <SelectItem value="custom">Custom</SelectItem>
+                  <SelectItem value="custom">{t("calendar.custom")}</SelectItem>
                 )}
               </SelectContent>
             </Select>
@@ -990,13 +1006,13 @@ function EventDialogForm({
             className="flex items-center gap-1.5 text-xs font-medium"
           >
             <Video className="h-3.5 w-3.5 text-muted-foreground" />
-            Conference / Meeting Link
+            {t("calendar.videoCallLink")}
           </Label>
           <div className="mt-1 flex gap-2">
             <Input
               id="meet-url"
               data-testid="meet-url-input"
-              placeholder="https://meet.google.com/... or Zoom link"
+              placeholder={t("calendar.videoCallPlaceholder")}
               value={meetUrl}
               onChange={(e) => setMeetUrl(e.target.value)}
               className="h-9 rounded-4xl border-input bg-input/30 text-sm"
@@ -1012,7 +1028,7 @@ function EventDialogForm({
                 }
               >
                 <ExternalLink className="h-3.5 w-3.5" />
-                Join
+                {t("calendar.join")}
               </Button>
             )}
           </div>
@@ -1025,12 +1041,12 @@ function EventDialogForm({
             className="flex items-center gap-1.5 text-xs font-medium"
           >
             <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-            Location
+            {t("calendar.location")}
           </Label>
           <Input
             id="location-input"
             data-testid="location-input"
-            placeholder="Physical location or conference room"
+            placeholder={t("calendar.addLocation")}
             value={location}
             onChange={(e) => setLocation(e.target.value)}
             className="mt-1 h-9 rounded-4xl border-input bg-input/30 text-sm"
@@ -1044,13 +1060,13 @@ function EventDialogForm({
             className="flex items-center gap-1.5 text-xs font-medium"
           >
             <Users className="h-3.5 w-3.5 text-muted-foreground" />
-            Attendees
+            {t("calendar.attendees")}
           </Label>
           <div className="relative mt-1">
             <Input
               id="attendees-input"
               data-testid="attendees-input"
-              placeholder="Add attendee by email..."
+              placeholder={t("calendar.addAttendee")}
               value={attendeeInput}
               onChange={(e) => setAttendeeInput(e.target.value)}
               onKeyDown={(e) => {
@@ -1082,7 +1098,9 @@ function EventDialogForm({
                           {contact.email}
                         </div>
                       </div>
-                      <span className="text-[10px] text-primary">Add</span>
+                      <span className="text-[10px] text-primary">
+                        {t("calendar.add")}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -1115,12 +1133,12 @@ function EventDialogForm({
         {/* Description */}
         <div>
           <Label htmlFor="description-input" className="text-xs font-medium">
-            Description / Notes
+            {t("calendar.description")}
           </Label>
           <Textarea
             id="description-input"
             data-testid="description-input"
-            placeholder="Meeting agenda, notes, or details..."
+            placeholder={t("calendar.descriptionPlaceholder")}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
@@ -1132,7 +1150,7 @@ function EventDialogForm({
         {occurrence && selfAttendee && (
           <div className="rounded-xl border border-input/60 bg-input/20 p-3">
             <div className="text-xs font-medium text-muted-foreground">
-              Going?
+              {t("calendar.going")}
             </div>
             <div className="mt-2 flex gap-2">
               <Button
@@ -1143,7 +1161,7 @@ function EventDialogForm({
                 onClick={() => handleRSVP("ATTENDEE_RESPONSE_STATUS_ACCEPTED")}
               >
                 <Check className="h-3.5 w-3.5 text-emerald-500" />
-                Yes
+                {t("calendar.rsvpYes")}
               </Button>
               <Button
                 type="button"
@@ -1153,7 +1171,7 @@ function EventDialogForm({
                 onClick={() => handleRSVP("ATTENDEE_RESPONSE_STATUS_TENTATIVE")}
               >
                 <HelpCircle className="h-3.5 w-3.5 text-amber-500" />
-                Maybe
+                {t("calendar.rsvpMaybe")}
               </Button>
               <Button
                 type="button"
@@ -1163,7 +1181,7 @@ function EventDialogForm({
                 onClick={() => handleRSVP("ATTENDEE_RESPONSE_STATUS_DECLINED")}
               >
                 <X className="h-3.5 w-3.5 text-rose-500" />
-                No
+                {t("calendar.rsvpNo")}
               </Button>
             </div>
           </div>
@@ -1181,14 +1199,14 @@ function EventDialogForm({
             className="gap-1.5"
           >
             <Trash2 className="h-4 w-4" />
-            Delete
+            {t("common.delete")}
           </Button>
         ) : (
           <div />
         )}
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             type="button"
@@ -1198,7 +1216,7 @@ function EventDialogForm({
               createEventMutation.isPending || updateEventMutation.isPending
             }
           >
-            Save
+            {t("common.save")}
           </Button>
         </div>
       </DialogFooter>
@@ -1230,6 +1248,7 @@ export function EventDialog({
   initialValues,
 }: EventDialogProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
   const { data: calendarsData } = useCalendars()
   const calendars = useMemo(
     () => calendarsData?.calendars || [],
@@ -1352,7 +1371,9 @@ export function EventDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            {occurrence ? "Edit Event" : "Create Calendar Event"}
+            {occurrence
+              ? t("calendar.editEvent")
+              : t("calendar.createCalendarEvent")}
           </DialogTitle>
         </DialogHeader>
 

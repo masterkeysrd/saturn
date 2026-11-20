@@ -384,7 +384,7 @@ export function FormDateRow<TFieldValues extends FieldValues = FieldValues>({
               </View>
               <View style={styles.formRowValueGroup}>
                 <Text style={styles.formRowValueText}>
-                  {formatDisplayDate(dateVal, tz.timezone)}
+                  {formatDisplayDate(dateVal, tz.timezone, tz.locale)}
                 </Text>
                 <ChevronRight size={14} color={colors.textMuted} />
               </View>
@@ -397,7 +397,7 @@ export function FormDateRow<TFieldValues extends FieldValues = FieldValues>({
             ) : null}
             <DatePickerSheet
               visible={isOpen}
-              title={title ?? `Select ${label}`}
+              title={title ?? label}
               value={dateVal}
               onChange={(newDate) => {
                 field.onChange(newDate)
@@ -491,7 +491,11 @@ export function FormEffectiveDateSection<
                         </View>
                         <View style={styles.formRowValueGroup}>
                           <Text style={styles.formRowValueText}>
-                            {formatDisplayDate(parsedDate, tz.timezone)}
+                            {formatDisplayDate(
+                              parsedDate,
+                              tz.timezone,
+                              tz.locale
+                            )}
                           </Text>
                           <ChevronRight size={14} color={colors.textMuted} />
                         </View>
@@ -570,7 +574,11 @@ export function FormEffectiveDateSection<
                                 { color: colors.primary },
                               ]}
                             >
-                              {formatDisplayDate(parsedEffective, tz.timezone)}
+                              {formatDisplayDate(
+                                parsedEffective,
+                                tz.timezone,
+                                tz.locale
+                              )}
                             </Text>
                             <ChevronRight size={14} color={colors.primary} />
                           </View>
@@ -590,8 +598,8 @@ export function FormEffectiveDateSection<
                       visible={activeTarget !== null}
                       title={
                         activeTarget === "effective"
-                          ? `Select ${effectiveDateLabel}`
-                          : `Select ${dateLabel}`
+                          ? effectiveDateLabel
+                          : dateLabel
                       }
                       value={
                         activeTarget === "effective"

@@ -63,4 +63,14 @@ describe("resolveFinancePeriodBounds", () => {
     expect(allTime.endISO).toBe("")
     expect(allTime.label).toBe("All Time")
   })
+
+  it("formats Spanish month labels with capitalized month and no 'de' connector", () => {
+    const bounds = resolveFinancePeriodBounds(
+      { period: "month", month: "2026-11", dateFrom: "", dateTo: "" },
+      now,
+      "UTC",
+      "es-ES"
+    )
+    expect(bounds.label).toBe("Noviembre 2026")
+  })
 })

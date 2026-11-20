@@ -2,10 +2,21 @@ import React, { useState, useEffect } from "react"
 import { Modal, StyleSheet, Text, View, TouchableOpacity } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ChevronLeft, ChevronRight } from "lucide-react-native"
-import { formatLocalDateString, getTimezoneParts } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
-import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
-import { haptics } from "@/lib/haptics"
+import {
+  formatDateWithTimezone,
+  formatLocalDateString,
+  formatMonthYear,
+  formatShortWeekday,
+  getTimezoneParts,
+} from "@saturn/core"
+import { translate } from "@saturn/i18n"
+import { useI18n, useTimezone } from "@saturn/hooks"
+import {
+  useTheme,
+  useThemedStyles,
+  type SaturnMobileTheme,
+} from "../../lib/theme"
+import { haptics } from "../../lib/haptics"
 import { BottomSheetHeader } from "./bottom-sheet"
 
 function makeNoonInTimezone(
@@ -36,7 +47,11 @@ export function toLocalISODate(d: Date, timeZone?: string): string {
   return `${dateStr}T12:00:00Z`
 }
 
-export function formatDisplayDate(date: Date, timeZone?: string): string {
+export function formatDisplayDate(
+  date: Date,
+  timeZone?: string,
+  locale: string = "en-US"
+): string {
   const tzName =
     timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
   const dateParts = getTimezoneParts(date, tzName)
@@ -66,15 +81,21 @@ export function formatDisplayDate(date: Date, timeZone?: string): string {
     dateParts.day === yesterdayParts.day
   )
 
-  const formattedStr = new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: dateParts.year !== todayParts.year ? "numeric" : undefined,
-    timeZone: tzName,
-  }).format(date)
+  const formattedStr = formatDateWithTimezone(
+    date,
+    tzName,
+    {
+      month: "short",
+      day: "numeric",
+      year: dateParts.year !== todayParts.year ? "numeric" : undefined,
+    },
+    locale
+  )
 
-  if (isToday) return `Today (${formattedStr})`
-  if (isYesterday) return `Yesterday (${formattedStr})`
+  if (isToday)
+    return `${translate(locale, "datePicker.today")} (${formattedStr})`
+  if (isYesterday)
+    return `${translate(locale, "datePicker.yesterday")} (${formattedStr})`
   return formattedStr
 }
 
@@ -86,11 +107,9 @@ export interface DatePickerSheetProps {
   onClose: () => void
 }
 
-const WEEK_DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
-
 export function DatePickerSheet({
   visible,
-  title = "Select Date",
+  title,
   value,
   onChange,
   onClose,
@@ -99,6 +118,8 @@ export function DatePickerSheet({
   const styles = useThemedStyles(createStyles)
   const insets = useSafeAreaInsets()
   const tz = useTimezone()
+  const { t } = useI18n()
+  const resolvedTitle = title ?? t("datePicker.selectDate")
   const [calendarViewDate, setCalendarViewDate] = useState<Date>(value)
 
   useEffect(() => {
@@ -173,14 +194,22 @@ export function DatePickerSheet({
   const firstDayOfWeek = new Date(Date.UTC(year, month - 1, 1)).getUTCDay()
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
 
-  const monthName = new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    year: "numeric",
+  const monthName = formatMonthYear(
+    makeNoonInTimezone(year, month, 1, timeZone),
     timeZone,
-  }).format(makeNoonInTimezone(year, month, 1, timeZone))
+    tz.locale,
+    "long"
+  )
 
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const dayOffset = (tz.weekStartsOn + i) % 7
+    const refDate = new Date(Date.UTC(2026, 0, 4 + dayOffset, 12, 0, 0))
+    return formatShortWeekday(refDate, "UTC", tz.locale)
+  })
+
+  const leadingBlankDays = (firstDayOfWeek - tz.weekStartsOn + 7) % 7
   const days: (number | null)[] = []
-  for (let i = 0; i < firstDayOfWeek; i++) {
+  for (let i = 0; i < leadingBlankDays; i++) {
     days.push(null)
   }
   for (let d = 1; d <= daysInMonth; d++) {
@@ -215,7 +244,7 @@ export function DatePickerSheet({
         >
           <View style={styles.handleIndicator} />
           <View style={styles.headerWrapper}>
-            <BottomSheetHeader title={title} onClose={onClose} />
+            <BottomSheetHeader title={resolvedTitle} onClose={onClose} />
           </View>
           <View style={styles.calendarContainer}>
             {/* Quick Presets Row */}
@@ -225,28 +254,36 @@ export function DatePickerSheet({
                 activeOpacity={0.7}
                 onPress={() => handleSelectPreset("today")}
               >
-                <Text style={styles.calendarPresetChipText}>Today</Text>
+                <Text style={styles.calendarPresetChipText}>
+                  {t("datePicker.today")}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.calendarPresetChip}
                 activeOpacity={0.7}
                 onPress={() => handleSelectPreset("yesterday")}
               >
-                <Text style={styles.calendarPresetChipText}>Yesterday</Text>
+                <Text style={styles.calendarPresetChipText}>
+                  {t("datePicker.yesterday")}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.calendarPresetChip}
                 activeOpacity={0.7}
                 onPress={() => handleSelectPreset("2days")}
               >
-                <Text style={styles.calendarPresetChipText}>2 Days Ago</Text>
+                <Text style={styles.calendarPresetChipText}>
+                  {t("datePicker.twoDaysAgo")}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.calendarPresetChip}
                 activeOpacity={0.7}
                 onPress={() => handleSelectPreset("firstOfMonth")}
               >
-                <Text style={styles.calendarPresetChipText}>1st of Month</Text>
+                <Text style={styles.calendarPresetChipText}>
+                  {t("datePicker.firstOfMonth")}
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -256,6 +293,7 @@ export function DatePickerSheet({
                 style={styles.calendarNavBtn}
                 onPress={handlePrevMonth}
                 activeOpacity={0.6}
+                accessibilityLabel={t("datePicker.prevMonth")}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <ChevronLeft size={20} color={colors.textPrimary} />
@@ -269,6 +307,7 @@ export function DatePickerSheet({
                 style={styles.calendarNavBtn}
                 onPress={handleNextMonth}
                 activeOpacity={0.6}
+                accessibilityLabel={t("datePicker.nextMonth")}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <ChevronRight size={20} color={colors.textPrimary} />
@@ -277,8 +316,11 @@ export function DatePickerSheet({
 
             {/* Day of Week Headers */}
             <View style={styles.calendarWeekRow}>
-              {WEEK_DAYS.map((dayName) => (
-                <View key={dayName} style={styles.calendarDayHeaderCell}>
+              {weekDays.map((dayName, idx) => (
+                <View
+                  key={`${dayName}-${idx}`}
+                  style={styles.calendarDayHeaderCell}
+                >
                   <Text style={styles.calendarDayHeaderText}>{dayName}</Text>
                 </View>
               ))}
