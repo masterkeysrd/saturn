@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { ToolDomainIcon } from "@/components/ai-elements/tool"
 import { CheckCircleIcon, ChevronDownIcon } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
 import type { ReactNode } from "react"
 
 export interface ToolChainGroupItem {
@@ -33,6 +34,7 @@ export function ToolChainGroup({
   items,
   defaultOpen = false,
 }: ToolChainGroupProps) {
+  const { t } = useI18n()
   const uniqueDomains: ToolDomain[] = []
   for (const item of items) {
     if (!uniqueDomains.includes(item.descriptor.domain)) {
@@ -75,7 +77,7 @@ export function ToolChainGroup({
           </div>
 
           <span className="shrink-0 font-medium text-foreground">
-            Used {items.length} workspace tools
+            {t("ai.chain.usedTools", { n: items.length })}
           </span>
 
           <span className="hidden truncate text-[11px] text-muted-foreground sm:inline">
@@ -89,7 +91,7 @@ export function ToolChainGroup({
           )}
           <Badge variant="secondary" className="gap-1 rounded-full text-[10px]">
             <CheckCircleIcon className="size-3 text-emerald-500" />
-            {items.length} done
+            {t("ai.chain.done", { n: items.length })}
           </Badge>
           <ChevronDownIcon className="size-3.5 transition-transform group-data-[open]/chain:rotate-180" />
         </div>

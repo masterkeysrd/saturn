@@ -8,7 +8,7 @@ import {
 } from "react"
 import { useNavigate } from "react-router-dom"
 import { useListThreadsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { CopilotContextProvider, useCopilot } from "@saturn/hooks/ai"
 import {
   DropdownMenu,
@@ -69,6 +69,7 @@ function writeStoredCopilotWidth(width: number): void {
 }
 
 export function GlobalAITrigger() {
+  const { t } = useI18n()
   const { spaceId } = useActiveSpaceContext()
   const { isOpen, toggleOpen } = useCopilot()
 
@@ -79,7 +80,7 @@ export function GlobalAITrigger() {
 
   const recentThreads = threadsData?.threads ?? []
   const hasPendingApproval = recentThreads.some(
-    (t) => t.status === "awaiting_approval"
+    (th) => th.status === "awaiting_approval"
   )
 
   if (!spaceId) {
@@ -93,16 +94,16 @@ export function GlobalAITrigger() {
       size="sm"
       onClick={toggleOpen}
       className="relative h-8 cursor-pointer gap-2 rounded-lg border-border/70 px-2.5 text-xs"
-      aria-label="Open Saturn AI Copilot"
+      aria-label={t("ai.drawer.openCopilot")}
       aria-expanded={isOpen}
     >
       <SparklesIcon className="size-3.5 text-primary" />
-      <span className="hidden sm:inline">Ask AI</span>
+      <span className="hidden sm:inline">{t("ai.drawer.askAI")}</span>
       <Kbd className="hidden sm:inline-flex">⌘J</Kbd>
       {hasPendingApproval && (
         <span
           className="size-2 rounded-full bg-amber-500"
-          title="Tool approval awaiting confirmation"
+          title={t("ai.drawer.approvalPending")}
         />
       )}
     </Button>
@@ -110,6 +111,7 @@ export function GlobalAITrigger() {
 }
 
 export function DockedCopilotSidebar() {
+  const { t } = useI18n()
   const { spaceId } = useActiveSpaceContext()
   const tz = useTimezone()
   const navigate = useNavigate()
@@ -136,9 +138,9 @@ export function DockedCopilotSidebar() {
   )
 
   const recentThreads = threadsData?.threads ?? []
-  const activeThread = recentThreads.find((t) => t.id === threadId)
+  const activeThread = recentThreads.find((th) => th.id === threadId)
   const awaitingApprovalThread = recentThreads.find(
-    (t) => t.status === "awaiting_approval"
+    (th) => th.status === "awaiting_approval"
   )
 
   useEffect(() => {
@@ -239,12 +241,12 @@ export function DockedCopilotSidebar() {
   }
 
   const headerTitle = activeThread
-    ? activeThread.title || "New Chat"
-    : "Saturn Copilot"
+    ? activeThread.title || t("ai.chat.newChat")
+    : t("ai.drawer.copilot")
 
   return (
     <aside
-      aria-label="Saturn Copilot"
+      aria-label={t("ai.drawer.copilot")}
       style={{ "--copilot-width": `${width}px` } as CSSProperties}
       className="relative flex h-full w-full max-w-[420px] shrink-0 flex-col border-l border-border/60 bg-card max-md:fixed max-md:inset-y-0 max-md:right-0 max-md:z-40 max-md:shadow-2xl md:w-[var(--copilot-width)] md:max-w-none"
     >
@@ -252,7 +254,7 @@ export function DockedCopilotSidebar() {
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label="Resize Copilot sidebar"
+        aria-label={t("ai.drawer.resize")}
         aria-valuemin={MIN_COPILOT_WIDTH}
         aria-valuemax={MAX_COPILOT_WIDTH}
         aria-valuenow={width}
@@ -280,8 +282,8 @@ export function DockedCopilotSidebar() {
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    title="Recent threads"
-                    aria-label="Recent threads"
+                    title={t("ai.drawer.recentThreads")}
+                    aria-label={t("ai.drawer.recentThreads")}
                     className="size-7 cursor-pointer rounded-lg"
                   />
                 }
@@ -290,7 +292,7 @@ export function DockedCopilotSidebar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72">
                 <DropdownMenuLabel className="text-xs">
-                  Recent Conversations
+                  {t("ai.drawer.recentConversations")}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {recentThreads.map((th) => {
@@ -306,12 +308,12 @@ export function DockedCopilotSidebar() {
                         {isAwaiting && (
                           <span
                             className="size-2 shrink-0 rounded-full bg-amber-500"
-                            aria-label="Awaiting approval"
-                            title="Awaiting approval"
+                            aria-label={t("ai.drawer.awaitingApproval")}
+                            title={t("ai.drawer.awaitingApproval")}
                           />
                         )}
                         <span className="truncate">
-                          {th.title || "New Chat"}
+                          {th.title || t("ai.chat.newChat")}
                         </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
@@ -332,8 +334,8 @@ export function DockedCopilotSidebar() {
             variant="ghost"
             size="icon-sm"
             onClick={() => setThreadId(null)}
-            title="New thread"
-            aria-label="New thread"
+            title={t("ai.drawer.newThread")}
+            aria-label={t("ai.drawer.newThread")}
             className="size-7 cursor-pointer rounded-lg"
           >
             <PlusIcon className="size-3.5" />
@@ -343,8 +345,8 @@ export function DockedCopilotSidebar() {
             variant="ghost"
             size="icon-sm"
             onClick={handleExpandToFullChat}
-            title="Expand to full chat"
-            aria-label="Expand to full chat"
+            title={t("ai.drawer.expand")}
+            aria-label={t("ai.drawer.expand")}
             className="size-7 cursor-pointer rounded-lg"
           >
             <Maximize2Icon className="size-3.5" />
@@ -354,8 +356,8 @@ export function DockedCopilotSidebar() {
             variant="ghost"
             size="icon-sm"
             onClick={() => setOpen(false)}
-            title="Close Copilot"
-            aria-label="Close Copilot"
+            title={t("ai.drawer.close")}
+            aria-label={t("ai.drawer.close")}
             className="size-7 cursor-pointer rounded-lg"
           >
             <XIcon className="size-3.5" />
@@ -372,8 +374,9 @@ export function DockedCopilotSidebar() {
           <div className="flex min-w-0 items-center gap-2">
             <span className="size-2 shrink-0 rounded-full bg-amber-500" />
             <span className="truncate font-medium text-amber-800 dark:text-amber-300">
-              Approval needed in &apos;
-              {awaitingApprovalThread.title || "New Chat"}&apos;
+              {t("ai.drawer.approvalNeeded", {
+                title: awaitingApprovalThread.title || t("ai.chat.newChat"),
+              })}
             </span>
           </div>
           <Button
@@ -383,7 +386,7 @@ export function DockedCopilotSidebar() {
             onClick={() => setThreadId(awaitingApprovalThread.id ?? null)}
             className="h-6 shrink-0 cursor-pointer rounded-md border-amber-500/40 bg-background/80 px-2 text-[11px] font-medium text-amber-800 hover:bg-amber-500/15 dark:text-amber-300"
           >
-            Review →
+            {t("ai.drawer.review")}
           </Button>
         </div>
       )}

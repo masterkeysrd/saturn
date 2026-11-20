@@ -10,6 +10,7 @@ import {
   CodeBlockCopyButton,
   CodeBlockHeader,
 } from "@/components/ai-elements/code-block"
+import { useI18n } from "@saturn/hooks"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 
 interface MCPConnectDialogProps {
@@ -21,6 +22,7 @@ export function MCPConnectDialog({
   open,
   onOpenChange,
 }: MCPConnectDialogProps) {
+  const { t } = useI18n()
   const { spaceId } = useActiveSpaceContext()
   const origin =
     typeof window !== "undefined"
@@ -50,11 +52,11 @@ export function MCPConnectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Connect External AI Client (/mcp)</DialogTitle>
+          <DialogTitle>{t("ai.connect.title")}</DialogTitle>
           <DialogDescription>
-            Connect Claude Desktop, Cursor, or VS Code to your Saturn workspace
-            using an API key with the required scopes (e.g.{" "}
-            <code>finance:read</code>, <code>ai:execute</code>).
+            {t("ai.connect.descBefore")} <code>finance:read</code>,{" "}
+            <code>ai:execute</code>
+            {t("ai.connect.descAfter")}
           </DialogDescription>
         </DialogHeader>
 
@@ -66,7 +68,8 @@ export function MCPConnectDialog({
             </CodeBlockHeader>
           </CodeBlock>
           <p className="text-xs text-muted-foreground">
-            Endpoint: <code className="font-mono">{endpointUrl}</code>
+            {t("ai.connect.endpoint")}{" "}
+            <code className="font-mono">{endpointUrl}</code>
           </p>
         </div>
       </DialogContent>

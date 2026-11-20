@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ChevronDownIcon } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
 
 interface ModelSheetProps {
   open: boolean
@@ -48,6 +49,7 @@ function ModelSheetForm({
   providers: Provider[]
   onClose: () => void
 }) {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const isEditing = Boolean(model?.id)
 
@@ -192,16 +194,16 @@ function ModelSheetForm({
         )}
 
         <div className="space-y-1.5">
-          <Label>Provider *</Label>
+          <Label>{t("ai.modelSheet.provider")}</Label>
           <Select
             value={providerId}
             onValueChange={(v) => setProviderId(v ?? "")}
             disabled={isEditing}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Choose provider">
+              <SelectValue placeholder={t("ai.modelSheet.chooseProvider")}>
                 {providers.find((p) => p.id === providerId)?.name ||
-                  "Choose provider"}
+                  t("ai.modelSheet.chooseProvider")}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -215,32 +217,32 @@ function ModelSheetForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="mdl-id">Upstream Model ID *</Label>
+          <Label htmlFor="mdl-id">{t("ai.modelSheet.upstreamId")}</Label>
           <Input
             id="mdl-id"
             value={modelId}
             onChange={(e) => setModelId(e.target.value)}
             disabled={isEditing}
             required
-            placeholder="e.g. gpt-4.1, gemini-2.5-flash"
+            placeholder={t("ai.modelSheet.upstreamPlaceholder")}
             className="font-mono text-xs"
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="mdl-display">Display Name *</Label>
+          <Label htmlFor="mdl-display">{t("ai.modelSheet.displayName")}</Label>
           <Input
             id="mdl-display"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             required
-            placeholder="e.g. GPT-4.1"
+            placeholder={t("ai.modelSheet.displayPlaceholder")}
           />
         </div>
 
         <div className="space-y-3 border-t border-border/40 pt-4">
           <div className="flex items-center justify-between">
-            <Label htmlFor="mdl-enabled">Enabled</Label>
+            <Label htmlFor="mdl-enabled">{t("ai.shared.enabled")}</Label>
             <Switch
               id="mdl-enabled"
               checked={isEnabled}
@@ -248,7 +250,7 @@ function ModelSheetForm({
             />
           </div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="mdl-tools">Tool Calling</Label>
+            <Label htmlFor="mdl-tools">{t("ai.modelSheet.toolCalling")}</Label>
             <Switch
               id="mdl-tools"
               checked={toolCalling}
@@ -256,7 +258,7 @@ function ModelSheetForm({
             />
           </div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="mdl-vision">Vision (Images)</Label>
+            <Label htmlFor="mdl-vision">{t("ai.modelSheet.vision")}</Label>
             <Switch
               id="mdl-vision"
               checked={vision}
@@ -264,7 +266,9 @@ function ModelSheetForm({
             />
           </div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="mdl-reasoning">Reasoning & Thought Summaries</Label>
+            <Label htmlFor="mdl-reasoning">
+              {t("ai.modelSheet.reasoning")}
+            </Label>
             <Switch
               id="mdl-reasoning"
               checked={reasoning}
@@ -282,14 +286,14 @@ function ModelSheetForm({
           className="border-t border-border/40 pt-4"
         >
           <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-xs font-semibold text-muted-foreground hover:text-foreground">
-            <span>Advanced</span>
+            <span>{t("ai.shared.advanced")}</span>
             <ChevronDownIcon
               className={`size-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
             />
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-3 pt-3">
             <div className="space-y-1.5">
-              <Label htmlFor="mdl-temp">Default Temperature (0–2)</Label>
+              <Label htmlFor="mdl-temp">{t("ai.modelSheet.temperature")}</Label>
               <Input
                 id="mdl-temp"
                 type="number"
@@ -301,7 +305,9 @@ function ModelSheetForm({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="mdl-max-tokens">Max Output Tokens</Label>
+              <Label htmlFor="mdl-max-tokens">
+                {t("ai.modelSheet.maxTokens")}
+              </Label>
               <Input
                 id="mdl-max-tokens"
                 type="number"
@@ -314,7 +320,7 @@ function ModelSheetForm({
               <>
                 <div className="flex items-center justify-between pt-1">
                   <Label htmlFor="mdl-thinking-enabled">
-                    Stream Thinking Blocks
+                    {t("ai.modelSheet.streamThinking")}
                   </Label>
                   <Switch
                     id="mdl-thinking-enabled"
@@ -323,31 +329,41 @@ function ModelSheetForm({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Thinking Effort</Label>
+                  <Label>{t("ai.modelSheet.thinkingEffort")}</Label>
                   <Select
                     value={thinkingEffort}
                     onValueChange={(v) => setThinkingEffort(v ?? "default")}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Provider default" />
+                      <SelectValue
+                        placeholder={t("ai.modelSheet.providerDefault")}
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="default">Provider default</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="default">
+                        {t("ai.modelSheet.providerDefault")}
+                      </SelectItem>
+                      <SelectItem value="low">
+                        {t("ai.modelSheet.effortLow")}
+                      </SelectItem>
+                      <SelectItem value="medium">
+                        {t("ai.modelSheet.effortMedium")}
+                      </SelectItem>
+                      <SelectItem value="high">
+                        {t("ai.modelSheet.effortHigh")}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="mdl-thinking-budget">
-                    Thinking Budget Tokens (optional)
+                    {t("ai.modelSheet.thinkingBudget")}
                   </Label>
                   <Input
                     id="mdl-thinking-budget"
                     type="number"
                     min={0}
-                    placeholder="e.g. 2048"
+                    placeholder={t("ai.modelSheet.budgetPlaceholder")}
                     value={thinkingBudget}
                     onChange={(e) => setThinkingBudget(e.target.value)}
                   />
@@ -360,14 +376,14 @@ function ModelSheetForm({
 
       <DialogFooter className="shrink-0 border-t border-border/60 bg-card px-6 py-4">
         <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={isPending}>
           {isPending
-            ? "Saving..."
+            ? t("common.saving")
             : isEditing
-              ? "Save Changes"
-              : "Register Model"}
+              ? t("ai.shared.saveChanges")
+              : t("ai.modelSheet.registerModel")}
         </Button>
       </DialogFooter>
     </form>
@@ -375,6 +391,7 @@ function ModelSheetForm({
 }
 
 export function ModelSheet({ open, onOpenChange, model }: ModelSheetProps) {
+  const { t } = useI18n()
   const { data: providersData } = useListProvidersQuery({})
   const providers = providersData?.providers ?? []
 
@@ -383,10 +400,12 @@ export function ModelSheet({ open, onOpenChange, model }: ModelSheetProps) {
       <DialogContent className="flex max-h-[min(88svh,46rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
         <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
           <DialogTitle className="pr-8 text-base font-semibold">
-            {model?.id ? `Edit ${model.displayName}` : "Register Custom Model"}
+            {model?.id
+              ? t("ai.modelSheet.editTitle", { name: model.displayName ?? "" })
+              : t("ai.modelSheet.registerTitle")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Configure model identifier, capabilities, and generation defaults.
+            {t("ai.modelSheet.dialogDescription")}
           </DialogDescription>
         </DialogHeader>
         {open && (

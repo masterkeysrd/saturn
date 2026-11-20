@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import { useListRunsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { PageLayout } from "@/components/ui/page-layout"
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +23,7 @@ import { RunTraceSheet } from "./components/run-trace-sheet"
 import { HistoryIcon } from "lucide-react"
 
 export function RunsView() {
+  const { t, language } = useI18n()
   const tz = useTimezone()
   const [sourceFilter, setSourceFilter] = useState<string>("")
   const [kindFilter, setKindFilter] = useState<string>("")
@@ -42,8 +44,8 @@ export function RunsView() {
     <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
       <div className="min-w-0 flex-1">
         <PageLayout
-          title="Execution Runs"
-          description="Unified audit trail of chat turns, autonomous agent runs, workflows, and MCP invocations."
+          title={t("ai.runs.title")}
+          description={t("ai.runs.description")}
           actions={
             <div className="flex items-center gap-2">
               <Select
@@ -55,15 +57,43 @@ export function RunsView() {
                 }}
               >
                 <SelectTrigger className="h-8 w-36 text-xs">
-                  <SelectValue placeholder="All kinds">
-                    {kindFilter || "All kinds"}
+                  <SelectValue placeholder={t("ai.runs.allKinds")}>
+                    {kindFilter
+                      ? getLocalizedEnumLabel(
+                          "ai",
+                          "runKind",
+                          kindFilter,
+                          language
+                        )
+                      : t("ai.runs.allKinds")}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All kinds</SelectItem>
-                  <SelectItem value="chat_turn">chat_turn</SelectItem>
-                  <SelectItem value="agent_run">agent_run</SelectItem>
-                  <SelectItem value="generate">generate</SelectItem>
+                  <SelectItem value="">{t("ai.runs.allKinds")}</SelectItem>
+                  <SelectItem value="chat_turn">
+                    {getLocalizedEnumLabel(
+                      "ai",
+                      "runKind",
+                      "chat_turn",
+                      language
+                    )}
+                  </SelectItem>
+                  <SelectItem value="agent_run">
+                    {getLocalizedEnumLabel(
+                      "ai",
+                      "runKind",
+                      "agent_run",
+                      language
+                    )}
+                  </SelectItem>
+                  <SelectItem value="generate">
+                    {getLocalizedEnumLabel(
+                      "ai",
+                      "runKind",
+                      "generate",
+                      language
+                    )}
+                  </SelectItem>
                 </SelectContent>
               </Select>
 
@@ -76,16 +106,36 @@ export function RunsView() {
                 }}
               >
                 <SelectTrigger className="h-8 w-36 text-xs">
-                  <SelectValue placeholder="All sources">
-                    {sourceFilter || "All sources"}
+                  <SelectValue placeholder={t("ai.runs.allSources")}>
+                    {sourceFilter
+                      ? getLocalizedEnumLabel(
+                          "ai",
+                          "runSource",
+                          sourceFilter,
+                          language
+                        )
+                      : t("ai.runs.allSources")}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All sources</SelectItem>
-                  <SelectItem value="chat">chat</SelectItem>
-                  <SelectItem value="workflow">workflow</SelectItem>
-                  <SelectItem value="mcp">mcp</SelectItem>
-                  <SelectItem value="api">api</SelectItem>
+                  <SelectItem value="">{t("ai.runs.allSources")}</SelectItem>
+                  <SelectItem value="chat">
+                    {getLocalizedEnumLabel("ai", "runSource", "chat", language)}
+                  </SelectItem>
+                  <SelectItem value="workflow">
+                    {getLocalizedEnumLabel(
+                      "ai",
+                      "runSource",
+                      "workflow",
+                      language
+                    )}
+                  </SelectItem>
+                  <SelectItem value="mcp">
+                    {getLocalizedEnumLabel("ai", "runSource", "mcp", language)}
+                  </SelectItem>
+                  <SelectItem value="api">
+                    {getLocalizedEnumLabel("ai", "runSource", "api", language)}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -106,10 +156,9 @@ export function RunsView() {
                 <EmptyMedia variant="icon">
                   <HistoryIcon />
                 </EmptyMedia>
-                <EmptyTitle>No execution runs recorded</EmptyTitle>
+                <EmptyTitle>{t("empty.aiRunsTitle")}</EmptyTitle>
                 <EmptyDescription>
-                  Runs appear here automatically when you chat, run workflows,
-                  or invoke agents via /mcp.
+                  {t("empty.aiRunsDescription")}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -135,13 +184,28 @@ export function RunsView() {
                           }
                           className="text-[10px]"
                         >
-                          {r.status}
+                          {getLocalizedEnumLabel(
+                            "ai",
+                            "runStatus",
+                            r.status,
+                            language
+                          )}
                         </Badge>
                         <Badge variant="outline" className="text-[10px]">
-                          {r.kind}
+                          {getLocalizedEnumLabel(
+                            "ai",
+                            "runKind",
+                            r.kind,
+                            language
+                          )}
                         </Badge>
                         <Badge variant="outline" className="text-[10px]">
-                          {r.source}
+                          {getLocalizedEnumLabel(
+                            "ai",
+                            "runSource",
+                            r.source,
+                            language
+                          )}
                         </Badge>
                         {r.agentName && (
                           <span className="text-xs font-medium">
@@ -156,8 +220,10 @@ export function RunsView() {
 
                     <div className="flex shrink-0 flex-col items-end gap-0.5 text-right text-[11px] text-muted-foreground">
                       <span className="font-mono">
-                        {r.metrics?.tokens?.total ?? 0} tok ·{" "}
-                        {r.metrics?.latencyMs ?? 0}ms
+                        {t("ai.runs.tokensLatency", {
+                          tokens: r.metrics?.tokens?.total ?? 0,
+                          ms: r.metrics?.latencyMs ?? 0,
+                        })}
                       </span>
                       <span>
                         {r.createTime
@@ -186,7 +252,7 @@ export function RunsView() {
                       }}
                       className="cursor-pointer"
                     >
-                      Previous
+                      {t("ai.runs.previous")}
                     </Button>
                   )}
                   {data?.nextPageToken && (
@@ -199,7 +265,7 @@ export function RunsView() {
                       }}
                       className="cursor-pointer"
                     >
-                      Next
+                      {t("ai.runs.next")}
                     </Button>
                   )}
                 </div>

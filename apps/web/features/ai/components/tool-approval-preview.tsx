@@ -6,7 +6,7 @@ import {
   isPlainRecord,
   stripHtmlTags,
 } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useTimezone, useI18n, type UseI18nResult } from "@saturn/hooks"
 import type {
   ListAccountsResponse,
   ListBudgetsResponse,
@@ -135,15 +135,18 @@ function IdBadge({ label, id }: { label: string; id: string }) {
   )
 }
 
-function formatScopeLabel(scope?: string): string | undefined {
+function formatScopeLabel(
+  scope: string | undefined,
+  t: UseI18nResult["t"]
+): string | undefined {
   if (!scope) return undefined
   switch (scope.toUpperCase()) {
     case "THIS_EVENT":
-      return "This Event"
+      return t("ai.approval.scopeThis")
     case "THIS_AND_FOLLOWING":
-      return "This & Following"
+      return t("ai.approval.scopeFollowing")
     case "ALL_EVENTS":
-      return "All Events"
+      return t("ai.approval.scopeAll")
     default:
       return humanizeFieldLabel(scope)
   }
@@ -156,6 +159,7 @@ export function ToolApprovalPreview({
 }: ToolApprovalPreviewProps) {
   const [showRaw, setShowRaw] = useState(false)
   const tz = useTimezone()
+  const { t } = useI18n()
   const queryClient = useQueryClient()
 
   if (!args || Object.keys(args).length === 0) {
@@ -219,19 +223,25 @@ export function ToolApprovalPreview({
           {(txDate || budgetId || accountId) && (
             <div className="divide-y divide-border/40 border-t border-border/40 pt-1">
               {txDate && (
-                <MetaRow label="Date" value={formatToolDateValue(txDate, tz)} />
+                <MetaRow
+                  label={t("ai.preview.date")}
+                  value={formatToolDateValue(txDate, tz)}
+                />
               )}
               {budgetId &&
                 (budgetName ? (
-                  <MetaRow label="Budget" value={budgetName} />
+                  <MetaRow label={t("ai.preview.budget")} value={budgetName} />
                 ) : (
-                  <IdBadge label="Budget" id={budgetId} />
+                  <IdBadge label={t("ai.preview.budget")} id={budgetId} />
                 ))}
               {accountId &&
                 (accountInfo ? (
-                  <MetaRow label="Account" value={accountInfo.name} />
+                  <MetaRow
+                    label={t("ai.preview.account")}
+                    value={accountInfo.name}
+                  />
                 ) : (
-                  <IdBadge label="Account" id={accountId} />
+                  <IdBadge label={t("ai.preview.account")} id={accountId} />
                 ))}
             </div>
           )}
@@ -256,7 +266,7 @@ export function ToolApprovalPreview({
               variant="outline"
               className="rounded-full border-sky-500/40 bg-sky-500/10 px-2 py-0 text-[10px] font-semibold text-sky-600 dark:text-sky-400"
             >
-              TRANSFER
+              {t("ai.preview.transfer")}
             </Badge>
             {sourceCents !== undefined && (
               <div className="flex items-center gap-1.5 font-mono text-sm font-semibold text-foreground tabular-nums">
@@ -278,23 +288,29 @@ export function ToolApprovalPreview({
           <div className="divide-y divide-border/40 border-t border-border/40 pt-1">
             {sourceId &&
               (sourceInfo ? (
-                <MetaRow label="From Account" value={sourceInfo.name} />
+                <MetaRow
+                  label={t("ai.preview.fromAccount")}
+                  value={sourceInfo.name}
+                />
               ) : (
-                <IdBadge label="From Account" id={sourceId} />
+                <IdBadge label={t("ai.preview.fromAccount")} id={sourceId} />
               ))}
             {destId &&
               (destInfo ? (
-                <MetaRow label="To Account" value={destInfo.name} />
+                <MetaRow
+                  label={t("ai.preview.toAccount")}
+                  value={destInfo.name}
+                />
               ) : (
-                <IdBadge label="To Account" id={destId} />
+                <IdBadge label={t("ai.preview.toAccount")} id={destId} />
               ))}
             {transferDate && (
               <MetaRow
-                label="Date"
+                label={t("ai.preview.date")}
                 value={formatToolDateValue(transferDate, tz)}
               />
             )}
-            {notes && <MetaRow label="Notes" value={notes} />}
+            {notes && <MetaRow label={t("ai.preview.notes")} value={notes} />}
           </div>
         </div>
       )
@@ -344,19 +360,22 @@ export function ToolApprovalPreview({
             <div className="divide-y divide-border/40 border-t border-border/40 pt-1">
               {dateStr && (
                 <MetaRow
-                  label="Date"
+                  label={t("ai.preview.date")}
                   value={formatToolDateValue(dateStr, tz)}
                 />
               )}
               {accountId &&
                 (accountInfo ? (
-                  <MetaRow label="Account" value={accountInfo.name} />
+                  <MetaRow
+                    label={t("ai.preview.account")}
+                    value={accountInfo.name}
+                  />
                 ) : (
-                  <IdBadge label="Account" id={accountId} />
+                  <IdBadge label={t("ai.preview.account")} id={accountId} />
                 ))}
               {suggestedBudget && (
                 <MetaRow
-                  label="Suggested Budget"
+                  label={t("ai.preview.suggestedBudget")}
                   value={budgetName ?? suggestedBudget}
                 />
               )}
@@ -387,10 +406,12 @@ export function ToolApprovalPreview({
 
       return (
         <div className="space-y-2 text-xs">
-          {draftId && <IdBadge label="Draft ID" id={draftId} />}
+          {draftId && <IdBadge label={t("ai.preview.draftId")} id={draftId} />}
           {toList.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] text-muted-foreground">To:</span>
+              <span className="text-[11px] text-muted-foreground">
+                {t("ai.preview.to")}
+              </span>
               {toList.map((addr) => (
                 <Badge
                   key={addr}
@@ -404,7 +425,9 @@ export function ToolApprovalPreview({
           )}
           {ccList.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] text-muted-foreground">Cc:</span>
+              <span className="text-[11px] text-muted-foreground">
+                {t("ai.preview.cc")}
+              </span>
               {ccList.map((addr) => (
                 <Badge
                   key={addr}
@@ -418,7 +441,9 @@ export function ToolApprovalPreview({
           )}
           {bccList.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] text-muted-foreground">Bcc:</span>
+              <span className="text-[11px] text-muted-foreground">
+                {t("ai.preview.bcc")}
+              </span>
               {bccList.map((addr) => (
                 <Badge
                   key={addr}
@@ -458,9 +483,11 @@ export function ToolApprovalPreview({
       return (
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">
-            Remove email conversation from inbox.
+            {t("ai.preview.archiveThreadDesc")}
           </p>
-          {threadId && <IdBadge label="Thread ID" id={threadId} />}
+          {threadId && (
+            <IdBadge label={t("ai.preview.threadId")} id={threadId} />
+          )}
         </div>
       )
     }
@@ -500,18 +527,18 @@ export function ToolApprovalPreview({
                 variant="secondary"
                 className="rounded-full px-2 py-0 text-[10px]"
               >
-                All-day
+                {t("ai.preview.allDay")}
               </Badge>
             )}
           </div>
 
           <div className="divide-y divide-border/40 border-t border-border/40 pt-1">
-            {range && <MetaRow label="When" value={range} />}
+            {range && <MetaRow label={t("ai.preview.when")} value={range} />}
             {location && (
               <div className="flex items-baseline justify-between gap-3 py-1">
                 <span className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
                   <MapPinIcon className="size-3" />
-                  Location
+                  {t("ai.preview.location")}
                 </span>
                 <span className="min-w-0 truncate text-right font-medium text-foreground">
                   {location}
@@ -521,7 +548,7 @@ export function ToolApprovalPreview({
             {attendees.length > 0 && (
               <div className="flex flex-wrap items-center gap-1 py-1.5">
                 <span className="mr-1 text-[11px] text-muted-foreground">
-                  Attendees:
+                  {t("ai.preview.attendees")}
                 </span>
                 {attendees.map((att) => (
                   <Badge
@@ -534,8 +561,12 @@ export function ToolApprovalPreview({
                 ))}
               </div>
             )}
-            {eventId && <IdBadge label="Event ID" id={eventId} />}
-            {calendarId && <IdBadge label="Calendar" id={calendarId} />}
+            {eventId && (
+              <IdBadge label={t("ai.preview.eventId")} id={eventId} />
+            )}
+            {calendarId && (
+              <IdBadge label={t("ai.preview.calendar")} id={calendarId} />
+            )}
             {description && (
               <p className="pt-1.5 text-muted-foreground">{description}</p>
             )}
@@ -546,18 +577,20 @@ export function ToolApprovalPreview({
 
     if (toolName === "calendar_delete_event") {
       const eventId = asString(args.id)
-      const scope = formatScopeLabel(asString(args.scope))
+      const scope = formatScopeLabel(asString(args.scope), t)
       return (
         <div className="space-y-2 text-xs">
           <div className="flex items-center gap-1.5 text-destructive">
             <AlertTriangleIcon className="size-3.5 shrink-0" />
             <span className="font-medium">
-              This will permanently delete the calendar event.
+              {t("ai.approval.deleteEventWarning")}
             </span>
           </div>
           <div className="divide-y divide-border/40 border-t border-border/40 pt-1">
-            {eventId && <IdBadge label="Event ID" id={eventId} />}
-            {scope && <MetaRow label="Scope" value={scope} />}
+            {eventId && (
+              <IdBadge label={t("ai.preview.eventId")} id={eventId} />
+            )}
+            {scope && <MetaRow label={t("ai.preview.scope")} value={scope} />}
           </div>
         </div>
       )
@@ -568,7 +601,10 @@ export function ToolApprovalPreview({
       const isAsync = Boolean(args.async)
       const inputObj = isPlainRecord(args.input) ? args.input : undefined
       const inputEntries = inputObj
-        ? buildReadableFieldEntries(inputObj, tz)
+        ? buildReadableFieldEntries(inputObj, tz, new Set(), {
+            yes: t("ai.formatters.yes"),
+            no: t("ai.formatters.no"),
+          })
         : []
 
       return (
@@ -576,19 +612,19 @@ export function ToolApprovalPreview({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 font-medium text-foreground">
               <WorkflowIcon className="size-3.5 shrink-0 text-amber-500" />
-              <span>Execute Workflow</span>
+              <span>{t("ai.approval.executeWorkflow")}</span>
             </div>
             {isAsync && (
               <Badge
                 variant="secondary"
                 className="rounded-full px-2 py-0 text-[10px]"
               >
-                Async
+                {t("ai.preview.async")}
               </Badge>
             )}
           </div>
           <div className="divide-y divide-border/40 border-t border-border/40 pt-1">
-            {flowId && <IdBadge label="Workflow" id={flowId} />}
+            {flowId && <IdBadge label={t("ai.preview.workflow")} id={flowId} />}
             {inputEntries.map((entry) => (
               <MetaRow
                 key={entry.key}
@@ -601,7 +637,10 @@ export function ToolApprovalPreview({
       )
     }
 
-    const entries = buildReadableFieldEntries(args, tz)
+    const entries = buildReadableFieldEntries(args, tz, new Set(), {
+      yes: t("ai.formatters.yes"),
+      no: t("ai.formatters.no"),
+    })
     if (entries.length === 0) return null
 
     return (
@@ -637,19 +676,19 @@ export function ToolApprovalPreview({
     >
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-          Action Preview
+          {t("ai.preview.actionPreview")}
         </span>
         <Button
           type="button"
           variant="ghost"
           size="xs"
           onClick={() => setShowRaw((prev) => !prev)}
-          aria-label="Toggle raw JSON"
+          aria-label={t("ai.approval.toggleRaw")}
           aria-pressed={showRaw}
           className="h-5 cursor-pointer gap-1 rounded px-1.5 font-mono text-[10px] text-muted-foreground hover:text-foreground"
         >
           <Code2Icon className="size-3" />
-          {"{ } Raw"}
+          {t("ai.preview.raw")}
         </Button>
       </div>
 

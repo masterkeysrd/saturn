@@ -12,6 +12,8 @@ import {
   type Model,
   type Provider,
 } from "@saturn/api/saturn/platform/ai/v1/ai"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
+import { useI18n } from "@saturn/hooks"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { PageLayout } from "@/components/ui/page-layout"
 import { Badge } from "@/components/ui/badge"
@@ -58,6 +60,7 @@ function RoleModelPicker({
   disabled: boolean
   onSelect: (id: string) => void
 }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const active = models.find((m) => m.id === modelId)
 
@@ -77,7 +80,7 @@ function RoleModelPicker({
               <span className="flex min-w-0 items-center gap-2">
                 <ModelSelectorLogo driver={active?.providerDriver} />
                 <span className="truncate">
-                  {active?.displayName ?? "Not configured"}
+                  {active?.displayName ?? t("ai.models.notConfigured")}
                 </span>
               </span>
               <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -85,10 +88,12 @@ function RoleModelPicker({
           }
         />
         <ModelSelectorContent title={label}>
-          <ModelSelectorInput placeholder="Search registered models..." />
+          <ModelSelectorInput placeholder={t("ai.models.searchRegistered")} />
           <ModelSelectorList>
-            <ModelSelectorEmpty>No enabled models found.</ModelSelectorEmpty>
-            <ModelSelectorGroup heading="Registered Models">
+            <ModelSelectorEmpty>
+              {t("ai.models.noEnabledModels")}
+            </ModelSelectorEmpty>
+            <ModelSelectorGroup heading={t("ai.models.registeredModels")}>
               {models.map((m) => (
                 <ModelSelectorItem
                   key={m.id}
@@ -117,6 +122,7 @@ function RoleModelPicker({
 }
 
 export function ModelsView() {
+  const { t, language } = useI18n()
   const queryClient = useQueryClient()
   const { spaceRole } = useActiveSpaceContext()
   const canManageSettings = spaceRole === "owner" || spaceRole === "admin"
@@ -178,8 +184,8 @@ export function ModelsView() {
 
   return (
     <PageLayout
-      title="Models & Providers"
-      description="Connect LLM providers, manage workspace models, and configure role defaults."
+      title={t("nav.models")}
+      description={t("ai.models.description")}
       actions={
         canManageSettings ? (
           <div className="flex items-center gap-2">
@@ -193,7 +199,7 @@ export function ModelsView() {
               className="cursor-pointer gap-1.5"
             >
               <PlusIcon className="size-4" />
-              Add Model
+              {t("ai.models.addModel")}
             </Button>
             <Button
               onClick={() => {
@@ -203,7 +209,7 @@ export function ModelsView() {
               className="cursor-pointer gap-1.5"
             >
               <PlusIcon className="size-4" />
-              Connect Provider
+              {t("ai.models.connectProvider")}
             </Button>
           </div>
         ) : undefined
@@ -213,15 +219,17 @@ export function ModelsView() {
         <section className="space-y-3 rounded-2xl border border-border/60 bg-card p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h2 className="text-sm font-semibold">Workspace Role Defaults</h2>
+              <h2 className="text-sm font-semibold">
+                {t("ai.models.roleDefaults")}
+              </h2>
               <p className="text-xs text-muted-foreground">
-                Default semantic slots used by chat threads and workflow{" "}
-                <code>llm.generate</code> steps.
+                {t("ai.models.roleDefaultsHintBefore")}{" "}
+                <code>llm.generate</code> {t("ai.models.roleDefaultsHintAfter")}
               </p>
             </div>
             {settingsData && (
               <Badge variant="outline" className="font-mono text-xs">
-                Month Spend: $
+                {t("ai.models.monthSpendLabel")} $
                 {(settingsData.currentMonthSpendUsd ?? 0).toFixed(4)}
                 {settingsData.governance?.monthlyBudgetUsd
                   ? ` / $${settingsData.governance.monthlyBudgetUsd.toFixed(2)}`
@@ -232,8 +240,8 @@ export function ModelsView() {
 
           <div className="grid gap-3 md:grid-cols-3">
             <RoleModelPicker
-              label="Default"
-              description="General chat & everyday tasks"
+              label={t("ai.models.roleDefault")}
+              description={t("ai.models.roleDefaultDesc")}
               modelId={settingsData?.models?.defaultModelId}
               models={enabledModels}
               disabled={!canManageSettings}
@@ -246,8 +254,8 @@ export function ModelsView() {
               }
             />
             <RoleModelPicker
-              label="Fast"
-              description="Low-latency extraction & classification"
+              label={t("ai.models.roleFast")}
+              description={t("ai.models.roleFastDesc")}
               modelId={settingsData?.models?.fastModelId}
               models={enabledModels}
               disabled={!canManageSettings}
@@ -256,8 +264,8 @@ export function ModelsView() {
               }
             />
             <RoleModelPicker
-              label="Reasoning"
-              description="Complex analysis & planning"
+              label={t("ai.models.roleReasoning")}
+              description={t("ai.models.roleReasoningDesc")}
               modelId={settingsData?.models?.reasoningModelId}
               models={enabledModels}
               disabled={!canManageSettings}
@@ -273,7 +281,9 @@ export function ModelsView() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold">Connected Providers</h2>
+          <h2 className="text-sm font-semibold">
+            {t("ai.models.connectedProviders")}
+          </h2>
           <div className="grid gap-4 md:grid-cols-2">
             {providers.map((p) => (
               <div
@@ -299,11 +309,19 @@ export function ModelsView() {
                             }
                             className="text-[10px]"
                           >
-                            {p.status?.state || "unverified"}
+                            {getLocalizedEnumLabel(
+                              "ai",
+                              "providerState",
+                              p.status?.state || "unverified",
+                              language
+                            )}
                           </Badge>
                         </div>
                         <p className="text-[11px] text-muted-foreground">
-                          {p.driver} · {p.modelCount} model(s)
+                          {t("ai.models.modelCount", {
+                            driver: p.driver ?? "",
+                            n: p.modelCount ?? 0,
+                          })}
                         </p>
                       </div>
                     </div>
@@ -330,7 +348,7 @@ export function ModelsView() {
                       className="cursor-pointer gap-1 text-xs"
                     >
                       <ZapIcon className="size-3.5" />
-                      Test
+                      {t("ai.models.test")}
                     </Button>
                     <Button
                       variant="ghost"
@@ -345,7 +363,7 @@ export function ModelsView() {
                       className="cursor-pointer gap-1 text-xs"
                     >
                       <RefreshCwIcon className="size-3.5" />
-                      Sync Models
+                      {t("ai.models.syncModels")}
                     </Button>
                     <Button
                       variant="outline"
@@ -357,7 +375,7 @@ export function ModelsView() {
                       className="cursor-pointer gap-1 text-xs"
                     >
                       <PencilIcon className="size-3.5" />
-                      Edit
+                      {t("common.edit")}
                     </Button>
                     <Button
                       variant="ghost"
@@ -381,7 +399,9 @@ export function ModelsView() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold">Registered Models</h2>
+          <h2 className="text-sm font-semibold">
+            {t("ai.models.registeredModels")}
+          </h2>
           <div className="divide-y divide-border/50 rounded-2xl border border-border/60 bg-card">
             {models.map((m) => (
               <div
@@ -397,7 +417,7 @@ export function ModelsView() {
                       </span>
                       {!m.isEnabled && (
                         <Badge variant="outline" className="text-[10px]">
-                          Disabled
+                          {t("ai.shared.disabled")}
                         </Badge>
                       )}
                     </div>
@@ -417,17 +437,17 @@ export function ModelsView() {
                 <div className="flex flex-wrap items-center gap-1.5">
                   {m.profile?.capabilities?.toolCalling && (
                     <Badge variant="secondary" className="text-[10px]">
-                      Tools
+                      {t("ai.models.capTools")}
                     </Badge>
                   )}
                   {m.profile?.capabilities?.vision && (
                     <Badge variant="secondary" className="text-[10px]">
-                      Vision
+                      {t("ai.models.capVision")}
                     </Badge>
                   )}
                   {m.profile?.capabilities?.reasoning && (
                     <Badge variant="secondary" className="text-[10px]">
-                      Reasoning
+                      {t("ai.models.capReasoning")}
                     </Badge>
                   )}
                   {canManageSettings && (
@@ -439,7 +459,9 @@ export function ModelsView() {
                           setEditingModel(m)
                           setModelSheetOpen(true)
                         }}
-                        aria-label={`Edit ${m.displayName}`}
+                        aria-label={t("ai.models.editModel", {
+                          name: m.displayName ?? "",
+                        })}
                         className="cursor-pointer"
                       >
                         <PencilIcon className="size-3.5" />
@@ -453,7 +475,9 @@ export function ModelsView() {
                             req: { id: m.id ?? "" },
                           })
                         }
-                        aria-label={`Delete ${m.displayName}`}
+                        aria-label={t("ai.models.deleteModel", {
+                          name: m.displayName ?? "",
+                        })}
                         className="cursor-pointer text-destructive hover:text-destructive"
                       >
                         <Trash2Icon className="size-3.5" />
@@ -466,7 +490,7 @@ export function ModelsView() {
             {models.length === 0 && (
               <div className="flex items-center gap-2 p-6 text-xs text-muted-foreground">
                 <CpuIcon className="size-4" />
-                Connect a provider to auto-seed curated models.
+                {t("ai.models.connectToSeed")}
               </div>
             )}
           </div>

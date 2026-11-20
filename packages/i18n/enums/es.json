@@ -1,4 +1,42 @@
 {
+  "ai": {
+    "approvalPolicy": {
+      "CONFIRM_WRITES": "Confirmar escrituras",
+      "AUTO": "Aprobación automática",
+      "DENY_WRITES": "Denegar escrituras"
+    },
+    "mcpHealth": {
+      "HEALTHY": "Saludable",
+      "UNHEALTHY": "No saludable",
+      "UNKNOWN": "Desconocido"
+    },
+    "providerState": {
+      "HEALTHY": "Saludable",
+      "UNHEALTHY": "No saludable",
+      "UNVERIFIED": "Sin verificar"
+    },
+    "runKind": {
+      "CHAT_TURN": "Turno de chat",
+      "AGENT_RUN": "Ejecución de agente",
+      "GENERATE": "Generación"
+    },
+    "runSource": {
+      "CHAT": "Chat",
+      "WORKFLOW": "Flujo",
+      "MCP": "MCP",
+      "API": "API",
+      "PLAYGROUND": "Prototipo"
+    },
+    "runStatus": {
+      "RUNNING": "En ejecución",
+      "AWAITING_APPROVAL": "Esperando aprobación",
+      "COMPLETED": "Completada",
+      "FAILED": "Fallida",
+      "CANCELLED": "Cancelada",
+      "TIMED_OUT": "Tiempo de espera agotado",
+      "MAX_STEPS_EXCEEDED": "Máximo de pasos superado"
+    }
+  },
   "finance": {
     "accountType": {
       "BANK": "Banco / Cuenta corriente",

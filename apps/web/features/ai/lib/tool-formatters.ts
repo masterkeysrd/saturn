@@ -95,14 +95,21 @@ export interface FormattedFieldEntry {
   isMono?: boolean
 }
 
+export interface BooleanFieldLabels {
+  yes: string
+  no: string
+}
+
 export function formatFieldValue(
   key: string,
   value: unknown,
   tz: TzFormatter,
-  siblingRecord?: Record<string, unknown>
+  siblingRecord?: Record<string, unknown>,
+  booleanLabels?: BooleanFieldLabels
 ): string {
   if (value === null || value === undefined) return "—"
-  if (typeof value === "boolean") return value ? "Yes" : "No"
+  if (typeof value === "boolean")
+    return value ? (booleanLabels?.yes ?? "Yes") : (booleanLabels?.no ?? "No")
   if (typeof value === "number") {
     if (isCentsFieldKey(key)) {
       const currency =
@@ -133,7 +140,13 @@ export function formatFieldValue(
       .filter(([, v]) => !isEmptyToolParam(v))
       .map(
         ([k, v]) =>
-          `${humanizeFieldLabel(k)}: ${formatFieldValue(k, v, tz, value)}`
+          `${humanizeFieldLabel(k)}: ${formatFieldValue(
+            k,
+            v,
+            tz,
+            value,
+            booleanLabels
+          )}`
       )
       .join(" · ")
   }
@@ -143,14 +156,15 @@ export function formatFieldValue(
 export function buildReadableFieldEntries(
   record: Record<string, unknown>,
   tz: TzFormatter,
-  excludeKeys: Set<string> = new Set()
+  excludeKeys: Set<string> = new Set(),
+  booleanLabels?: BooleanFieldLabels
 ): FormattedFieldEntry[] {
   const entries: FormattedFieldEntry[] = []
   for (const [key, value] of Object.entries(record)) {
     if (excludeKeys.has(key) || isEmptyToolParam(value)) continue
     const labelKey = isCentsFieldKey(key) ? stripCentsSuffix(key) : key
     const label = humanizeFieldLabel(labelKey)
-    const displayValue = formatFieldValue(key, value, tz, record)
+    const displayValue = formatFieldValue(key, value, tz, record, booleanLabels)
     const isId = /(?:^|_)id$/i.test(key) || /Id$/.test(key)
     entries.push({
       key,

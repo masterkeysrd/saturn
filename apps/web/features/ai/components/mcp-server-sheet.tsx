@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ChevronDownIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
 
 interface MCPServerSheetProps {
   open: boolean
@@ -53,6 +54,7 @@ function MCPServerSheetForm({
   server?: MCPServer | null
   onClose: () => void
 }) {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const isEditing = Boolean(server?.id)
 
@@ -187,7 +189,7 @@ function MCPServerSheetForm({
         )}
 
         <div className="space-y-1.5">
-          <Label htmlFor="mcp-name">Name *</Label>
+          <Label htmlFor="mcp-name">{t("ai.mcpSheet.nameLabel")}</Label>
           <Input
             id="mcp-name"
             value={name}
@@ -198,12 +200,12 @@ function MCPServerSheetForm({
               }
             }}
             required
-            placeholder="e.g. GitHub MCP"
+            placeholder={t("ai.mcpSheet.namePlaceholder")}
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="mcp-slug">Slug *</Label>
+          <Label htmlFor="mcp-slug">{t("ai.mcpSheet.slugLabel")}</Label>
           <Input
             id="mcp-slug"
             value={slug}
@@ -218,7 +220,7 @@ function MCPServerSheetForm({
         {!server?.isSystem && (
           <>
             <div className="space-y-1.5">
-              <Label htmlFor="mcp-url">Endpoint URL *</Label>
+              <Label htmlFor="mcp-url">{t("ai.mcpSheet.endpoint")}</Label>
               <Input
                 id="mcp-url"
                 value={url}
@@ -230,7 +232,7 @@ function MCPServerSheetForm({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Authentication</Label>
+              <Label>{t("ai.mcpSheet.auth")}</Label>
               <Select
                 value={authType}
                 onValueChange={(v) => setAuthType(v ?? "none")}
@@ -239,9 +241,15 @@ function MCPServerSheetForm({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="bearer">Bearer Token</SelectItem>
-                  <SelectItem value="custom_headers">Custom Headers</SelectItem>
+                  <SelectItem value="none">
+                    {t("ai.mcpSheet.authNone")}
+                  </SelectItem>
+                  <SelectItem value="bearer">
+                    {t("ai.mcpSheet.authBearer")}
+                  </SelectItem>
+                  <SelectItem value="custom_headers">
+                    {t("ai.mcpSheet.authHeaders")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -249,7 +257,8 @@ function MCPServerSheetForm({
             {authType === "bearer" && (
               <div className="space-y-1.5">
                 <Label htmlFor="mcp-token">
-                  Bearer Token {!isEditing || !server?.hasAuthSecret ? "*" : ""}
+                  {t("ai.mcpSheet.authBearer")}{" "}
+                  {!isEditing || !server?.hasAuthSecret ? "*" : ""}
                 </Label>
                 <Input
                   id="mcp-token"
@@ -259,8 +268,8 @@ function MCPServerSheetForm({
                   required={!isEditing}
                   placeholder={
                     server?.hasAuthSecret
-                      ? "Leave blank to keep stored token"
-                      : "Bearer token"
+                      ? t("ai.mcpSheet.keepToken")
+                      : t("ai.mcpSheet.bearerPlaceholder")
                   }
                 />
               </div>
@@ -269,7 +278,7 @@ function MCPServerSheetForm({
             {authType === "custom_headers" && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Custom Headers</Label>
+                  <Label>{t("ai.mcpSheet.authHeaders")}</Label>
                   <Button
                     type="button"
                     variant="ghost"
@@ -283,21 +292,22 @@ function MCPServerSheetForm({
                     className="h-7 gap-1 px-2 text-xs text-primary"
                   >
                     <PlusIcon className="size-3.5" />
-                    Add Header
+                    {t("ai.mcpSheet.addHeader")}
                   </Button>
                 </div>
                 {isEditing && server?.hasAuthSecret && (
                   <p className="text-[11px] text-muted-foreground">
-                    Leave blank to keep stored headers, or enter headers to
-                    replace them.
+                    {t("ai.mcpSheet.keepHeaders")}
                   </p>
                 )}
                 <div className="space-y-2">
                   {customHeaders.map((header, idx) => (
                     <div key={idx} className="flex items-center gap-2">
                       <Input
-                        aria-label={`Header name ${idx + 1}`}
-                        placeholder="Header name (e.g. X-Api-Key)"
+                        aria-label={t("ai.mcpSheet.headerNameAria", {
+                          n: idx + 1,
+                        })}
+                        placeholder={t("ai.mcpSheet.headerNamePlaceholder")}
                         value={header.key}
                         onChange={(e) =>
                           setCustomHeaders((prev) =>
@@ -309,9 +319,11 @@ function MCPServerSheetForm({
                         className="font-mono text-xs"
                       />
                       <Input
-                        aria-label={`Header value ${idx + 1}`}
+                        aria-label={t("ai.mcpSheet.headerValueAria", {
+                          n: idx + 1,
+                        })}
                         type="password"
-                        placeholder="Header value"
+                        placeholder={t("ai.mcpSheet.headerValuePlaceholder")}
                         value={header.value}
                         onChange={(e) =>
                           setCustomHeaders((prev) =>
@@ -327,7 +339,9 @@ function MCPServerSheetForm({
                           type="button"
                           variant="ghost"
                           size="icon-sm"
-                          aria-label={`Remove header ${idx + 1}`}
+                          aria-label={t("ai.mcpSheet.removeHeaderAria", {
+                            n: idx + 1,
+                          })}
                           onClick={() =>
                             setCustomHeaders((prev) =>
                               prev.filter((_, i) => i !== idx)
@@ -348,9 +362,9 @@ function MCPServerSheetForm({
         <div className="space-y-3 border-t border-border/40 pt-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="mcp-enabled">Enabled</Label>
+              <Label htmlFor="mcp-enabled">{t("ai.shared.enabled")}</Label>
               <p className="text-[11px] text-muted-foreground">
-                Make this server&apos;s tools available to bound agents
+                {t("ai.mcpSheet.enabledHint")}
               </p>
             </div>
             <Switch
@@ -362,9 +376,9 @@ function MCPServerSheetForm({
 
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="mcp-trust">Trust Read-Only Hints</Label>
+              <Label htmlFor="mcp-trust">{t("ai.mcpSheet.trustHints")}</Label>
               <p className="text-[11px] text-muted-foreground">
-                Auto-run tools annotated ReadOnlyHint without approval
+                {t("ai.mcpSheet.trustHintsHint")}
               </p>
             </div>
             <Switch
@@ -381,14 +395,14 @@ function MCPServerSheetForm({
           className="border-t border-border/40 pt-4"
         >
           <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-xs font-semibold text-muted-foreground hover:text-foreground">
-            <span>Advanced</span>
+            <span>{t("ai.shared.advanced")}</span>
             <ChevronDownIcon
               className={`size-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
             />
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-3 pt-3">
             <div className="space-y-1.5">
-              <Label htmlFor="mcp-desc">Description</Label>
+              <Label htmlFor="mcp-desc">{t("ai.shared.description")}</Label>
               <Input
                 id="mcp-desc"
                 value={description}
@@ -396,7 +410,7 @@ function MCPServerSheetForm({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="mcp-timeout">Timeout Seconds (1–300)</Label>
+              <Label htmlFor="mcp-timeout">{t("ai.mcpSheet.timeout")}</Label>
               <Input
                 id="mcp-timeout"
                 type="number"
@@ -412,10 +426,14 @@ function MCPServerSheetForm({
 
       <DialogFooter className="shrink-0 border-t border-border/60 bg-card px-6 py-4">
         <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={isPending}>
-          {isPending ? "Saving..." : isEditing ? "Save Changes" : "Add Server"}
+          {isPending
+            ? t("common.saving")
+            : isEditing
+              ? t("ai.shared.saveChanges")
+              : t("ai.mcpSheet.addServer")}
         </Button>
       </DialogFooter>
     </form>
@@ -427,16 +445,18 @@ export function MCPServerSheet({
   onOpenChange,
   server,
 }: MCPServerSheetProps) {
+  const { t } = useI18n()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[min(88svh,46rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
         <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
           <DialogTitle className="pr-8 text-base font-semibold">
-            {server?.id ? `Edit ${server.name}` : "Add Remote HTTP MCP Server"}
+            {server?.id
+              ? t("ai.mcpSheet.editTitle", { name: server.name ?? "" })
+              : t("ai.mcpSheet.addTitle")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Connect external Streamable HTTP MCP tool servers to bind into your
-            workspace agents.
+            {t("ai.mcpSheet.dialogDescription")}
           </DialogDescription>
         </DialogHeader>
         {open && (

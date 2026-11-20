@@ -6,7 +6,7 @@ import {
   humanizeFieldLabel,
   isPlainRecord,
 } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useTimezone, useI18n } from "@saturn/hooks"
 import type { ListAccountsResponse } from "@saturn/api/saturn/finance/v1/finance"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -66,10 +66,11 @@ function DeepLinkFooter({
 }
 
 function OverflowNote({ total, shown }: { total: number; shown: number }) {
+  const { t } = useI18n()
   if (total <= shown) return null
   return (
     <div className="pt-1 text-[11px] text-muted-foreground">
-      +{total - shown} more
+      {t("ai.result.overflow", { n: total - shown })}
     </div>
   )
 }
@@ -108,6 +109,7 @@ export function DomainToolOutput({
   fallback = null,
 }: DomainResultViewProps) {
   const tz = useTimezone()
+  const { t } = useI18n()
   const queryClient = useQueryClient()
 
   // --- Finance: Accounts ---
@@ -116,11 +118,13 @@ export function DomainToolOutput({
     if (accounts.length === 0) {
       return (
         <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground">No accounts found.</p>
+          <p className="text-xs text-muted-foreground">
+            {t("ai.result.noAccounts")}
+          </p>
           <DeepLinkFooter
             spaceId={spaceId}
             to="/finance/accounts"
-            label="Open Accounts →"
+            label={t("ai.result.deepLinks.accounts")}
           />
         </div>
       )
@@ -130,7 +134,7 @@ export function DomainToolOutput({
       <div className="space-y-1.5">
         <div className="divide-y divide-border/40">
           {visible.map((acc, idx) => {
-            const name = asStr(acc.name) ?? "Account"
+            const name = asStr(acc.name) ?? t("ai.result.fallbacks.account")
             const type = asStr(acc.type)
             const lastFour = asStr(acc.last_four) ?? asStr(acc.lastFour)
             const curr = asStr(acc.currency)
@@ -195,7 +199,7 @@ export function DomainToolOutput({
         <DeepLinkFooter
           spaceId={spaceId}
           to="/finance/accounts"
-          label="Open Accounts →"
+          label={t("ai.result.deepLinks.accounts")}
         />
       </div>
     )
@@ -207,11 +211,13 @@ export function DomainToolOutput({
     if (budgets.length === 0) {
       return (
         <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground">No budgets found.</p>
+          <p className="text-xs text-muted-foreground">
+            {t("ai.result.noBudgets")}
+          </p>
           <DeepLinkFooter
             spaceId={spaceId}
             to="/finance/budgets"
-            label="Open Budgets →"
+            label={t("ai.result.deepLinks.budgets")}
           />
         </div>
       )
@@ -221,7 +227,7 @@ export function DomainToolOutput({
       <div className="space-y-1.5">
         <div className="divide-y divide-border/40">
           {visible.map((b, idx) => {
-            const name = asStr(b.name) ?? "Budget"
+            const name = asStr(b.name) ?? t("ai.result.fallbacks.budget")
             const curr = asStr(b.currency)
             const limitCents = asNum(b.limit_cents) ?? asNum(b.limitAmount) ?? 0
             const spentCents = asNum(b.spent_cents) ?? asNum(b.spentAmount) ?? 0
@@ -272,7 +278,7 @@ export function DomainToolOutput({
         <DeepLinkFooter
           spaceId={spaceId}
           to="/finance/budgets"
-          label="Open Budgets →"
+          label={t("ai.result.deepLinks.budgets")}
         />
       </div>
     )
@@ -294,12 +300,12 @@ export function DomainToolOutput({
       return (
         <div className="space-y-1.5">
           <p className="text-xs text-muted-foreground">
-            No transactions found.
+            {t("ai.result.noTransactions")}
           </p>
           <DeepLinkFooter
             spaceId={spaceId}
             to="/finance/transactions"
-            label="Open Transactions →"
+            label={t("ai.result.deepLinks.transactions")}
           />
         </div>
       )
@@ -311,7 +317,8 @@ export function DomainToolOutput({
           {visible.map((tx, idx) => {
             const txType = (asStr(tx.type) ?? "EXPENSE").toUpperCase()
             const isIncome = txType === "INCOME" || txType === "TRANSFER_IN"
-            const desc = asStr(tx.description) ?? "Transaction"
+            const desc =
+              asStr(tx.description) ?? t("ai.result.fallbacks.transaction")
             const curr = asStr(tx.currency)
             const cents = asNum(tx.amount_cents) ?? asNum(tx.amount)
             const formattedAmt =
@@ -365,7 +372,7 @@ export function DomainToolOutput({
         <DeepLinkFooter
           spaceId={spaceId}
           to="/finance/transactions"
-          label="Open Transactions →"
+          label={t("ai.result.deepLinks.transactions")}
         />
       </div>
     )
@@ -398,7 +405,7 @@ export function DomainToolOutput({
           {totalIncome && (
             <div className="rounded-lg bg-muted/40 px-2.5 py-1.5">
               <div className="text-[10px] text-muted-foreground">
-                Total Income
+                {t("ai.result.totalIncome")}
               </div>
               <div className="font-mono text-xs font-semibold text-emerald-600 tabular-nums dark:text-emerald-400">
                 {totalIncome}
@@ -408,7 +415,7 @@ export function DomainToolOutput({
           {totalSpent && (
             <div className="rounded-lg bg-muted/40 px-2.5 py-1.5">
               <div className="text-[10px] text-muted-foreground">
-                Total Expense
+                {t("ai.result.totalExpense")}
               </div>
               <div className="font-mono text-xs font-semibold text-rose-600 tabular-nums dark:text-rose-400">
                 {totalSpent}
@@ -418,7 +425,7 @@ export function DomainToolOutput({
           {remainingBudget && (
             <div className="rounded-lg bg-muted/40 px-2.5 py-1.5">
               <div className="text-[10px] text-muted-foreground">
-                Remaining Budget
+                {t("ai.result.remainingBudget")}
               </div>
               <div className="font-mono text-xs font-semibold text-foreground tabular-nums">
                 {remainingBudget}
@@ -428,7 +435,7 @@ export function DomainToolOutput({
           {burnRate !== undefined && (
             <div className="rounded-lg bg-muted/40 px-2.5 py-1.5">
               <div className="text-[10px] text-muted-foreground">
-                Daily Burn Rate
+                {t("ai.result.dailyBurnRate")}
               </div>
               <div className="font-mono text-xs font-semibold text-foreground tabular-nums">
                 {formatCurrencyCents(Math.round(burnRate), baseCurr)}/d
@@ -440,7 +447,8 @@ export function DomainToolOutput({
         {distributions.length > 0 && (
           <div className="divide-y divide-border/40 border-t border-border/40 pt-1">
             {distributions.map((d, idx) => {
-              const name = asStr(d.budget_name) ?? "Budget"
+              const name =
+                asStr(d.budget_name) ?? t("ai.result.fallbacks.budget")
               const spent = asStr(d.formatted_spent)
               const pct = Math.max(
                 0,
@@ -467,7 +475,7 @@ export function DomainToolOutput({
         <DeepLinkFooter
           spaceId={spaceId}
           to="/finance"
-          label="Open Insights →"
+          label={t("ai.result.deepLinks.insights")}
         />
       </div>
     )
@@ -487,12 +495,12 @@ export function DomainToolOutput({
       return (
         <div className="space-y-1.5">
           <p className="text-xs text-muted-foreground">
-            Finance inbox is empty.
+            {t("ai.result.financeInboxEmpty")}
           </p>
           <DeepLinkFooter
             spaceId={spaceId}
             to="/finance/inbox"
-            label="Open Finance Inbox →"
+            label={t("ai.result.deepLinks.inbox")}
           />
         </div>
       )
@@ -503,7 +511,9 @@ export function DomainToolOutput({
         <div className="divide-y divide-border/40">
           {visible.map((item, idx) => {
             const vendor =
-              asStr(item.vendor_name) ?? asStr(item.vendor) ?? "Inbox Item"
+              asStr(item.vendor_name) ??
+              asStr(item.vendor) ??
+              t("ai.result.fallbacks.inboxItem")
             const docType = asStr(item.doc_type)
             const status = asStr(item.status)
             const dateStr = asStr(item.transaction_date)
@@ -552,7 +562,7 @@ export function DomainToolOutput({
         <DeepLinkFooter
           spaceId={spaceId}
           to="/finance/inbox"
-          label="Open Finance Inbox →"
+          label={t("ai.result.deepLinks.inbox")}
         />
       </div>
     )
@@ -564,11 +574,13 @@ export function DomainToolOutput({
     if (borrowings.length === 0) {
       return (
         <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground">No borrowings found.</p>
+          <p className="text-xs text-muted-foreground">
+            {t("ai.result.noBorrowings")}
+          </p>
           <DeepLinkFooter
             spaceId={spaceId}
             to="/finance/borrowings"
-            label="Open Borrowings →"
+            label={t("ai.result.deepLinks.borrowings")}
           />
         </div>
       )
@@ -578,7 +590,8 @@ export function DomainToolOutput({
       <div className="space-y-1.5">
         <div className="divide-y divide-border/40">
           {visible.map((b, idx) => {
-            const counterparty = asStr(b.counterparty) ?? "Counterparty"
+            const counterparty =
+              asStr(b.counterparty) ?? t("ai.result.fallbacks.counterparty")
             const direction = asStr(b.direction)
             const status = asStr(b.status)
             const dueAt = asStr(b.due_at)
@@ -612,7 +625,9 @@ export function DomainToolOutput({
                   </div>
                   {dueAt && (
                     <div className="text-[11px] text-muted-foreground">
-                      Due {formatToolDateValue(dueAt, tz)}
+                      {t("ai.result.due", {
+                        date: formatToolDateValue(dueAt, tz),
+                      })}
                     </div>
                   )}
                 </div>
@@ -627,7 +642,7 @@ export function DomainToolOutput({
         <DeepLinkFooter
           spaceId={spaceId}
           to="/finance/borrowings"
-          label="Open Borrowings →"
+          label={t("ai.result.deepLinks.borrowings")}
         />
       </div>
     )
@@ -640,12 +655,12 @@ export function DomainToolOutput({
       return (
         <div className="space-y-1.5">
           <p className="text-xs text-muted-foreground">
-            No recurring transactions found.
+            {t("ai.result.noRecurring")}
           </p>
           <DeepLinkFooter
             spaceId={spaceId}
             to="/finance/recurring"
-            label="Open Recurring →"
+            label={t("ai.result.deepLinks.recurring")}
           />
         </div>
       )
@@ -655,7 +670,7 @@ export function DomainToolOutput({
       <div className="space-y-1.5">
         <div className="divide-y divide-border/40">
           {visible.map((r, idx) => {
-            const name = asStr(r.name) ?? "Recurring Item"
+            const name = asStr(r.name) ?? t("ai.result.fallbacks.recurringItem")
             const interval = asStr(r.interval)
             const nextDue = asStr(r.next_due_date)
             const amt =
@@ -684,7 +699,9 @@ export function DomainToolOutput({
                   </div>
                   {nextDue && (
                     <div className="text-[11px] text-muted-foreground">
-                      Next: {formatToolDateValue(nextDue, tz)}
+                      {t("ai.result.nextDue", {
+                        date: formatToolDateValue(nextDue, tz),
+                      })}
                     </div>
                   )}
                 </div>
@@ -699,7 +716,7 @@ export function DomainToolOutput({
         <DeepLinkFooter
           spaceId={spaceId}
           to="/finance/recurring"
-          label="Open Recurring →"
+          label={t("ai.result.deepLinks.recurring")}
         />
       </div>
     )
@@ -730,9 +747,13 @@ export function DomainToolOutput({
       <div className="space-y-1.5 text-xs">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 font-medium text-foreground">
-            <span>{srcAcc?.name ?? srcId ?? "Source"}</span>
+            <span>
+              {srcAcc?.name ?? srcId ?? t("ai.result.fallbacks.source")}
+            </span>
             <ArrowRightIcon className="size-3 text-muted-foreground" />
-            <span>{dstAcc?.name ?? dstId ?? "Destination"}</span>
+            <span>
+              {dstAcc?.name ?? dstId ?? t("ai.result.fallbacks.destination")}
+            </span>
           </div>
           {srcCents !== undefined && (
             <span className="font-mono font-semibold text-foreground tabular-nums">
@@ -751,7 +772,7 @@ export function DomainToolOutput({
         <DeepLinkFooter
           spaceId={spaceId}
           to="/finance/transactions"
-          label="Open Transactions →"
+          label={t("ai.result.deepLinks.transactions")}
         />
       </div>
     )
@@ -769,12 +790,12 @@ export function DomainToolOutput({
       return (
         <div className="space-y-1.5">
           <p className="text-xs text-muted-foreground">
-            No upcoming events in this range.
+            {t("ai.result.noEvents")}
           </p>
           <DeepLinkFooter
             spaceId={spaceId}
             to="/calendar"
-            label="Open Calendar →"
+            label={t("ai.result.deepLinks.calendar")}
           />
         </div>
       )
@@ -784,7 +805,8 @@ export function DomainToolOutput({
       <div className="space-y-1.5">
         <div className="divide-y divide-border/40">
           {visible.map((ev, idx) => {
-            const title = asStr(ev.title) ?? "Untitled Event"
+            const title =
+              asStr(ev.title) ?? t("ai.result.fallbacks.untitledEvent")
             const isAllDay = Boolean(ev.is_all_day)
             const range = formatToolTimeRange(tz, {
               isAllDay,
@@ -812,7 +834,7 @@ export function DomainToolOutput({
                         variant="secondary"
                         className="shrink-0 rounded-full px-1.5 py-0 text-[10px]"
                       >
-                        All-day
+                        {t("ai.preview.allDay")}
                       </Badge>
                     )}
                   </div>
@@ -842,7 +864,7 @@ export function DomainToolOutput({
         <DeepLinkFooter
           spaceId={spaceId}
           to="/calendar"
-          label="Open Calendar →"
+          label={t("ai.result.deepLinks.calendar")}
         />
       </div>
     )
@@ -853,7 +875,9 @@ export function DomainToolOutput({
     return (
       <div className="space-y-1.5 text-xs">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground">Event deleted</span>
+          <span className="text-muted-foreground">
+            {t("ai.result.eventDeleted")}
+          </span>
           {id && (
             <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
               {id}
@@ -863,7 +887,7 @@ export function DomainToolOutput({
         <DeepLinkFooter
           spaceId={spaceId}
           to="/calendar"
-          label="Open Calendar →"
+          label={t("ai.result.deepLinks.calendar")}
         />
       </div>
     )
@@ -875,11 +899,13 @@ export function DomainToolOutput({
     if (calendars.length === 0) {
       return (
         <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground">No calendars found.</p>
+          <p className="text-xs text-muted-foreground">
+            {t("ai.result.noCalendars")}
+          </p>
           <DeepLinkFooter
             spaceId={spaceId}
             to="/calendar"
-            label="Open Calendar →"
+            label={t("ai.result.deepLinks.calendar")}
           />
         </div>
       )
@@ -889,7 +915,7 @@ export function DomainToolOutput({
       <div className="space-y-1.5">
         <div className="divide-y divide-border/40">
           {visible.map((cal, idx) => {
-            const name = asStr(cal.name) ?? "Calendar"
+            const name = asStr(cal.name) ?? t("ai.result.fallbacks.calendar")
             const source = asStr(cal.source)
             const timezone = asStr(cal.timezone)
             const isPrimary = Boolean(cal.is_primary)
@@ -913,7 +939,7 @@ export function DomainToolOutput({
                       variant="secondary"
                       className="shrink-0 rounded-full px-1.5 py-0 text-[10px]"
                     >
-                      Primary
+                      {t("ai.result.primary")}
                     </Badge>
                   )}
                 </div>
@@ -936,7 +962,7 @@ export function DomainToolOutput({
         <DeepLinkFooter
           spaceId={spaceId}
           to="/calendar"
-          label="Open Calendar →"
+          label={t("ai.result.deepLinks.calendar")}
         />
       </div>
     )
@@ -949,9 +975,13 @@ export function DomainToolOutput({
       return (
         <div className="space-y-1.5">
           <p className="text-xs text-muted-foreground">
-            No matching email threads.
+            {t("ai.result.noThreads")}
           </p>
-          <DeepLinkFooter spaceId={spaceId} to="/mail" label="Open Mail →" />
+          <DeepLinkFooter
+            spaceId={spaceId}
+            to="/mail"
+            label={t("ai.result.deepLinks.mail")}
+          />
         </div>
       )
     }
@@ -960,7 +990,7 @@ export function DomainToolOutput({
       <div className="space-y-1.5">
         <div className="divide-y divide-border/40">
           {visible.map((th, idx) => {
-            const subject = asStr(th.subject) ?? "(No subject)"
+            const subject = asStr(th.subject) ?? t("ai.result.noSubject")
             const snippet = asStr(th.snippet)
             const isUnread = Boolean(th.is_unread)
             const participants = Array.isArray(th.participants)
@@ -980,7 +1010,7 @@ export function DomainToolOutput({
                     {isUnread && (
                       <span
                         className="size-1.5 shrink-0 rounded-full bg-primary"
-                        aria-label="Unread"
+                        aria-label={t("ai.result.unread")}
                       />
                     )}
                     <span
@@ -1013,14 +1043,18 @@ export function DomainToolOutput({
           })}
         </div>
         <OverflowNote total={threads.length} shown={visible.length} />
-        <DeepLinkFooter spaceId={spaceId} to="/mail" label="Open Mail →" />
+        <DeepLinkFooter
+          spaceId={spaceId}
+          to="/mail"
+          label={t("ai.result.deepLinks.mail")}
+        />
       </div>
     )
   }
 
   // --- Mail: Get Thread ---
   if (toolName === "mail_get_thread") {
-    const subject = asStr(output.subject) ?? "(No subject)"
+    const subject = asStr(output.subject) ?? t("ai.result.noSubject")
     const messages = asRecords(output.messages)
     const visible = messages.slice(0, 4)
 
@@ -1033,7 +1067,8 @@ export function DomainToolOutput({
         {visible.length > 0 && (
           <div className="divide-y divide-border/40 border-t border-border/40">
             {visible.map((m, idx) => {
-              const from = asStr(m.from) ?? "Unknown sender"
+              const from =
+                asStr(m.from) ?? t("ai.result.fallbacks.unknownSender")
               const timestamp = asStr(m.timestamp)
               const body = asStr(m.body_plain)
               const attachments = Array.isArray(m.attachments)
@@ -1071,7 +1106,11 @@ export function DomainToolOutput({
           </div>
         )}
         <OverflowNote total={messages.length} shown={visible.length} />
-        <DeepLinkFooter spaceId={spaceId} to="/mail" label="Open Mail →" />
+        <DeepLinkFooter
+          spaceId={spaceId}
+          to="/mail"
+          label={t("ai.result.deepLinks.mail")}
+        />
       </div>
     )
   }
@@ -1088,16 +1127,16 @@ export function DomainToolOutput({
     const subject = asStr(output.subject)
     const statusLabel =
       toolName === "mail_send_message"
-        ? "Sent"
+        ? t("ai.result.mailStatus.sent")
         : toolName === "mail_create_draft"
-          ? "Draft Created"
+          ? t("ai.result.mailStatus.draftCreated")
           : toolName === "mail_update_draft"
-            ? "Draft Updated"
+            ? t("ai.result.mailStatus.draftUpdated")
             : toolName === "mail_delete_draft"
-              ? "Draft Deleted"
+              ? t("ai.result.mailStatus.draftDeleted")
               : toolName === "mail_modify_thread"
-                ? "Updated"
-                : "Archived"
+                ? t("ai.result.mailStatus.updated")
+                : t("ai.result.mailStatus.archived")
     const recipients = Array.isArray(output.to)
       ? output.to.filter((r): r is string => typeof r === "string")
       : []
@@ -1110,8 +1149,8 @@ export function DomainToolOutput({
             <span className="truncate font-medium text-foreground">
               {subject ??
                 (asStr(output.id)
-                  ? `Thread ${asStr(output.id)}`
-                  : "Email updated")}
+                  ? t("ai.result.thread", { id: asStr(output.id)! })
+                  : t("ai.result.mailStatus.generic"))}
             </span>
           </div>
           <Badge
@@ -1123,10 +1162,14 @@ export function DomainToolOutput({
         </div>
         {recipients.length > 0 && (
           <div className="text-[11px] text-muted-foreground">
-            To: {recipients.join(", ")}
+            {t("ai.result.to", { list: recipients.join(", ") })}
           </div>
         )}
-        <DeepLinkFooter spaceId={spaceId} to="/mail" label="Open Mail →" />
+        <DeepLinkFooter
+          spaceId={spaceId}
+          to="/mail"
+          label={t("ai.result.deepLinks.mail")}
+        />
       </div>
     )
   }
@@ -1141,11 +1184,13 @@ export function DomainToolOutput({
     if (flows.length === 0) {
       return (
         <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground">No workflows found.</p>
+          <p className="text-xs text-muted-foreground">
+            {t("ai.result.noWorkflows")}
+          </p>
           <DeepLinkFooter
             spaceId={spaceId}
             to="/workflows"
-            label="Open Workflows →"
+            label={t("ai.result.deepLinks.workflows")}
           />
         </div>
       )
@@ -1155,7 +1200,7 @@ export function DomainToolOutput({
       <div className="space-y-1.5">
         <div className="divide-y divide-border/40">
           {visible.map((f, idx) => {
-            const name = asStr(f.name) ?? "Workflow"
+            const name = asStr(f.name) ?? t("ai.result.fallbacks.workflow")
             const isEnabled = Boolean(f.is_enabled)
             const isSystem = Boolean(f.is_system)
             const stepCount = asNum(f.step_count)
@@ -1173,20 +1218,26 @@ export function DomainToolOutput({
                     variant={isEnabled ? "secondary" : "outline"}
                     className="shrink-0 rounded-full px-1.5 py-0 text-[10px]"
                   >
-                    {isEnabled ? "Enabled" : "Disabled"}
+                    {isEnabled
+                      ? t("ai.shared.enabled")
+                      : t("ai.shared.disabled")}
                   </Badge>
                   {isSystem && (
                     <Badge
                       variant="outline"
                       className="shrink-0 rounded-full px-1.5 py-0 text-[10px]"
                     >
-                      System
+                      {t("ai.agents.system")}
                     </Badge>
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
-                  {stepCount !== undefined && <span>{stepCount} steps</span>}
-                  {runs7d !== undefined && <span>· {runs7d} runs</span>}
+                  {stepCount !== undefined && (
+                    <span>{t("ai.result.stepsCount", { n: stepCount })}</span>
+                  )}
+                  {runs7d !== undefined && (
+                    <span>· {t("ai.result.runsCount", { n: runs7d })}</span>
+                  )}
                 </div>
               </div>
             )
@@ -1196,7 +1247,7 @@ export function DomainToolOutput({
         <DeepLinkFooter
           spaceId={spaceId}
           to="/workflows"
-          label="Open Workflows →"
+          label={t("ai.result.deepLinks.workflows")}
         />
       </div>
     )
@@ -1208,7 +1259,10 @@ export function DomainToolOutput({
     toolName === "workflows_execute_flow"
   ) {
     const runId = asStr(output.id)
-    const flowName = asStr(output.flow_name) ?? asStr(output.flow_id) ?? "Run"
+    const flowName =
+      asStr(output.flow_name) ??
+      asStr(output.flow_id) ??
+      t("ai.result.fallbacks.run")
     const status = asStr(output.status)
     const createTime = asStr(output.create_time)
     const errMsg = asStr(output.error)
@@ -1224,7 +1278,9 @@ export function DomainToolOutput({
         </div>
         {createTime && (
           <div className="text-[11px] text-muted-foreground">
-            Started {formatToolDateValue(createTime, tz)}
+            {t("ai.result.started", {
+              date: formatToolDateValue(createTime, tz),
+            })}
           </div>
         )}
         {stepRuns.length > 0 && (
@@ -1246,7 +1302,9 @@ export function DomainToolOutput({
                   )}
                 />
                 <span>
-                  {asStr(sr.step_id) ?? asStr(sr.step_type) ?? "Step"}
+                  {asStr(sr.step_id) ??
+                    asStr(sr.step_type) ??
+                    t("ai.result.fallbacks.step")}
                 </span>
               </Badge>
             ))}
@@ -1260,7 +1318,11 @@ export function DomainToolOutput({
         <DeepLinkFooter
           spaceId={spaceId}
           to={runId ? `/workflows/runs/${runId}` : "/workflows/runs"}
-          label={runId ? "Open Run Trace →" : "Open Workflow Runs →"}
+          label={
+            runId
+              ? t("ai.result.deepLinks.runTrace")
+              : t("ai.result.deepLinks.workflowRuns")
+          }
         />
       </div>
     )
@@ -1278,14 +1340,16 @@ export function DomainToolOutput({
         <div className="grid grid-cols-1 gap-y-1 divide-y divide-border/40">
           {name && (
             <div className="flex items-center justify-between gap-2 py-1">
-              <span className="text-[11px] text-muted-foreground">Name</span>
+              <span className="text-[11px] text-muted-foreground">
+                {t("ai.result.nameLabel")}
+              </span>
               <span className="font-medium text-foreground">{name}</span>
             </div>
           )}
           {timezone && (
             <div className="flex items-center justify-between gap-2 py-1">
               <span className="text-[11px] text-muted-foreground">
-                Timezone
+                {t("ai.result.timezoneLabel")}
               </span>
               <span className="font-mono text-[11px] text-foreground">
                 {timezone}
@@ -1294,7 +1358,9 @@ export function DomainToolOutput({
           )}
           {role && (
             <div className="flex items-center justify-between gap-2 py-1">
-              <span className="text-[11px] text-muted-foreground">Role</span>
+              <span className="text-[11px] text-muted-foreground">
+                {t("ai.result.roleLabel")}
+              </span>
               <Badge
                 variant="outline"
                 className="rounded-full px-2 py-0 text-[10px] capitalize"

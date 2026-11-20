@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useI18n } from "@saturn/hooks"
 import { ChevronDownIcon, PlugIcon, SearchIcon, XIcon } from "lucide-react"
 
 interface AgentSheetProps {
@@ -79,6 +80,7 @@ function AgentSheetForm({
   mcpServers: MCPServer[]
   onClose: () => void
 }) {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const isEditing = Boolean(agent?.id)
 
@@ -157,7 +159,7 @@ function AgentSheetForm({
       const current = prev[serverId] ?? []
       let expanded = current.includes("*") ? [...allTools] : [...current]
       if (expanded.includes(toolName)) {
-        expanded = expanded.filter((t) => t !== toolName)
+        expanded = expanded.filter((name) => name !== toolName)
       } else {
         expanded.push(toolName)
       }
@@ -256,7 +258,7 @@ function AgentSheetForm({
         )}
 
         <div className="space-y-1.5">
-          <Label htmlFor="agent-name">Name *</Label>
+          <Label htmlFor="agent-name">{t("ai.agentSheet.nameLabel")}</Label>
           <Input
             id="agent-name"
             value={name}
@@ -267,12 +269,12 @@ function AgentSheetForm({
               }
             }}
             required
-            placeholder="e.g. Budget Coach"
+            placeholder={t("ai.agentSheet.namePlaceholder")}
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="agent-slug">Slug *</Label>
+          <Label htmlFor="agent-slug">{t("ai.agentSheet.slugLabel")}</Label>
           <Input
             id="agent-slug"
             value={slug}
@@ -283,31 +285,35 @@ function AgentSheetForm({
             className="font-mono text-xs"
           />
           <p className="text-[11px] text-muted-foreground">
-            Exposed externally on /mcp as <code>agent__{slug || "slug"}</code>
+            {t("ai.agentSheet.slugHint")} <code>agent__{slug || "slug"}</code>
           </p>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="agent-description">Description</Label>
+          <Label htmlFor="agent-description">
+            {t("ai.shared.description")}
+          </Label>
           <Input
             id="agent-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="What this agent specializes in"
+            placeholder={t("ai.agentSheet.descriptionPlaceholder")}
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label>Model</Label>
+          <Label>{t("ai.agentSheet.model")}</Label>
           <Select value={modelId} onValueChange={(v) => setModelId(v ?? "")}>
             <SelectTrigger>
               <SelectValue>
                 {models.find((m) => m.id === modelId)?.displayName ||
-                  "Workspace Default Model"}
+                  t("ai.agents.workspaceDefaultModel")}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Workspace Default Model</SelectItem>
+              <SelectItem value="">
+                {t("ai.agents.workspaceDefaultModel")}
+              </SelectItem>
               {models.map((m) => (
                 <SelectItem key={m.id} value={m.id ?? ""}>
                   {m.displayName} ({m.providerName})
@@ -318,19 +324,21 @@ function AgentSheetForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="agent-instruction">System Instruction</Label>
+          <Label htmlFor="agent-instruction">
+            {t("ai.agentSheet.instructionLabel")}
+          </Label>
           <Textarea
             id="agent-instruction"
             rows={4}
             value={systemInstruction}
             onChange={(e) => setSystemInstruction(e.target.value)}
-            placeholder="You are a careful workspace assistant..."
+            placeholder={t("ai.agentSheet.instructionPlaceholder")}
             className="text-xs"
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label>Tool Approval Policy</Label>
+          <Label>{t("ai.agentSheet.approvalPolicy")}</Label>
           <Select
             value={approvalPolicy}
             onValueChange={(v) => setApprovalPolicy(v ?? "confirm_writes")}
@@ -340,11 +348,13 @@ function AgentSheetForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="confirm_writes">
-                Confirm mutating tools (Recommended)
+                {t("ai.agentSheet.policyConfirm")}
               </SelectItem>
-              <SelectItem value="auto">Auto-approve all tools</SelectItem>
+              <SelectItem value="auto">
+                {t("ai.agentSheet.policyAuto")}
+              </SelectItem>
               <SelectItem value="deny_writes">
-                Deny mutating tools (Read-only)
+                {t("ai.agentSheet.policyDeny")}
               </SelectItem>
             </SelectContent>
           </Select>
@@ -352,9 +362,9 @@ function AgentSheetForm({
 
         <div className="flex items-center justify-between border-t border-border/40 pt-4">
           <div>
-            <Label htmlFor="agent-enabled">Enabled</Label>
+            <Label htmlFor="agent-enabled">{t("ai.shared.enabled")}</Label>
             <p className="text-[11px] text-muted-foreground">
-              Allow chat, workflows, and /mcp clients to invoke this agent
+              {t("ai.agentSheet.enabledHint")}
             </p>
           </div>
           <Switch
@@ -366,10 +376,9 @@ function AgentSheetForm({
 
         <div className="space-y-3 border-t border-border/40 pt-4">
           <div>
-            <Label>MCP Server & Tool Bindings</Label>
+            <Label>{t("ai.agentSheet.bindings")}</Label>
             <p className="text-xs text-muted-foreground">
-              Grant access to built-in Saturn workspace tools or external HTTP
-              MCP servers.
+              {t("ai.agentSheet.bindingsHint")}
             </p>
           </div>
 
@@ -377,10 +386,10 @@ function AgentSheetForm({
             const sid = srv.id ?? ""
             const allowed = bindings[sid]
             const isBound = allowed !== undefined
-            const rawTools = (srv.discovery?.tools ?? []).filter((t) =>
-              Boolean(t.name)
+            const rawTools = (srv.discovery?.tools ?? []).filter((td) =>
+              Boolean(td.name)
             )
-            const discoveredTools = rawTools.map((t) => t.name ?? "")
+            const discoveredTools = rawTools.map((td) => td.name ?? "")
             const isWildcard = Boolean(allowed?.includes("*"))
             const isExpanded =
               Boolean(expandedToolServers[sid]) || (isBound && !isWildcard)
@@ -389,9 +398,9 @@ function AgentSheetForm({
               .toLowerCase()
             const filteredTools = toolQuery
               ? rawTools.filter(
-                  (t) =>
-                    (t.name ?? "").toLowerCase().includes(toolQuery) ||
-                    (t.description ?? "").toLowerCase().includes(toolQuery)
+                  (td) =>
+                    (td.name ?? "").toLowerCase().includes(toolQuery) ||
+                    (td.description ?? "").toLowerCase().includes(toolQuery)
                 )
               : rawTools
             const activeCount = !isBound
@@ -422,7 +431,7 @@ function AgentSheetForm({
                       <span className="truncate">{srv.name}</span>
                       {srv.isSystem && (
                         <span className="shrink-0 text-[11px] text-muted-foreground">
-                          (Built-in)
+                          {t("ai.agentSheet.builtIn")}
                         </span>
                       )}
                     </label>
@@ -433,9 +442,14 @@ function AgentSheetForm({
                       <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
                         {isWildcard
                           ? discoveredTools.length > 0
-                            ? `All (${discoveredTools.length})`
-                            : "All tools (*)"
-                          : `${activeCount}/${discoveredTools.length} tools`}
+                            ? t("ai.agentSheet.allCount", {
+                                n: discoveredTools.length,
+                              })
+                            : t("ai.agentSheet.allTools")
+                          : t("ai.agentSheet.toolsCount", {
+                              a: activeCount,
+                              b: discoveredTools.length,
+                            })}
                       </span>
                       {discoveredTools.length > 0 && (
                         <Button
@@ -452,7 +466,9 @@ function AgentSheetForm({
                         >
                           <SearchIcon className="size-3" />
                           <span>
-                            {isExpanded ? "Hide tools" : "Find tools"}
+                            {isExpanded
+                              ? t("ai.agentSheet.hideTools")
+                              : t("ai.agentSheet.findTools")}
                           </span>
                         </Button>
                       )}
@@ -473,8 +489,12 @@ function AgentSheetForm({
                               [sid]: e.target.value,
                             }))
                           }
-                          placeholder={`Search ${discoveredTools.length} tools by name or description...`}
-                          aria-label={`Search tools for ${srv.name}`}
+                          placeholder={t("ai.agentSheet.searchTools", {
+                            n: discoveredTools.length,
+                          })}
+                          aria-label={t("ai.agentSheet.searchToolsAria", {
+                            name: srv.name ?? "",
+                          })}
                           className="h-8 pr-7 pl-8 text-xs"
                         />
                         {toolSearchByServer[sid] && (
@@ -486,7 +506,7 @@ function AgentSheetForm({
                                 [sid]: "",
                               }))
                             }
-                            aria-label="Clear tool search"
+                            aria-label={t("ai.agentSheet.clearSearch")}
                             className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
                           >
                             <XIcon className="size-3.5" />
@@ -503,15 +523,16 @@ function AgentSheetForm({
                         disabled={isWildcard}
                         className="shrink-0 cursor-pointer text-xs"
                       >
-                        Select all
+                        {t("ai.agentSheet.selectAll")}
                       </Button>
                     </div>
 
                     <div className="max-h-48 divide-y divide-border/40 overflow-y-auto rounded-md border border-border/60 bg-control px-2.5">
                       {filteredTools.length === 0 ? (
                         <p className="py-4 text-center text-xs text-muted-foreground">
-                          No tools matching &ldquo;{toolSearchByServer[sid]}
-                          &rdquo;
+                          {t("ai.agentSheet.noToolsMatching", {
+                            query: toolSearchByServer[sid] ?? "",
+                          })}
                         </p>
                       ) : (
                         filteredTools.map((tool) => {
@@ -557,14 +578,16 @@ function AgentSheetForm({
           className="border-t border-border/40 pt-4"
         >
           <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-xs font-semibold text-muted-foreground hover:text-foreground">
-            <span>Advanced</span>
+            <span>{t("ai.shared.advanced")}</span>
             <ChevronDownIcon
               className={`size-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
             />
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-3 pt-3">
             <div className="space-y-1.5">
-              <Label htmlFor="agent-max-steps">Max Steps (1–50)</Label>
+              <Label htmlFor="agent-max-steps">
+                {t("ai.agentSheet.maxSteps")}
+              </Label>
               <Input
                 id="agent-max-steps"
                 type="number"
@@ -575,7 +598,9 @@ function AgentSheetForm({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="agent-timeout">Timeout Seconds (1–1800)</Label>
+              <Label htmlFor="agent-timeout">
+                {t("ai.agentSheet.timeout")}
+              </Label>
               <Input
                 id="agent-timeout"
                 type="number"
@@ -586,14 +611,16 @@ function AgentSheetForm({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="agent-temp">Temperature Override (0–2)</Label>
+              <Label htmlFor="agent-temp">
+                {t("ai.agentSheet.temperature")}
+              </Label>
               <Input
                 id="agent-temp"
                 type="number"
                 step={0.1}
                 min={0}
                 max={2}
-                placeholder="Inherit model default"
+                placeholder={t("ai.agentSheet.inheritDefault")}
                 value={temperature}
                 onChange={(e) => setTemperature(e.target.value)}
               />
@@ -604,14 +631,14 @@ function AgentSheetForm({
 
       <DialogFooter className="shrink-0 border-t border-border/60 bg-card px-6 py-4">
         <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={isPending}>
           {isPending
-            ? "Saving..."
+            ? t("common.saving")
             : isEditing
-              ? "Save Changes"
-              : "Create Agent"}
+              ? t("ai.shared.saveChanges")
+              : t("ai.agentSheet.createAgent")}
         </Button>
       </DialogFooter>
     </form>
@@ -619,6 +646,7 @@ function AgentSheetForm({
 }
 
 export function AgentSheet({ open, onOpenChange, agent }: AgentSheetProps) {
+  const { t } = useI18n()
   const { data: modelsData } = useListModelsQuery({ isEnabled: true })
   const { data: mcpData } = useListMCPServersQuery({})
   const models = modelsData?.models ?? []
@@ -629,11 +657,12 @@ export function AgentSheet({ open, onOpenChange, agent }: AgentSheetProps) {
       <DialogContent className="flex max-h-[min(88svh,46rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
         <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
           <DialogTitle className="pr-8 text-base font-semibold">
-            {agent?.id ? `Edit ${agent.name}` : "Create AI Agent"}
+            {agent?.id
+              ? t("ai.agentSheet.editTitle", { name: agent.name ?? "" })
+              : t("ai.agentSheet.createTitle")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Configure instructions, model selection, and unified MCP tool
-            bindings.
+            {t("ai.agentSheet.dialogDescription")}
           </DialogDescription>
         </DialogHeader>
         {open && (

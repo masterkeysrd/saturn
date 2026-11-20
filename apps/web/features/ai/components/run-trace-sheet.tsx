@@ -1,4 +1,5 @@
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import { useGetRunQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { WorkspaceInspectorPanel } from "@/components/ui/inspector-panel"
 import { Badge } from "@/components/ui/badge"
@@ -35,6 +36,7 @@ function stepStatusToToolState(status?: string): ToolState {
 }
 
 export function RunTraceSheet({ runId, onOpenChange }: RunTraceSheetProps) {
+  const { t, language } = useI18n()
   const tz = useTimezone()
   const { data: run, isLoading } = useGetRunQuery(
     { id: runId ?? "" },
@@ -47,7 +49,7 @@ export function RunTraceSheet({ runId, onOpenChange }: RunTraceSheetProps) {
       onOpenChange={onOpenChange}
       title={
         <span className="flex items-center gap-2">
-          <span>Execution Trace</span>
+          <span>{t("ai.trace.title")}</span>
           {run?.status && (
             <Badge
               variant={
@@ -59,7 +61,7 @@ export function RunTraceSheet({ runId, onOpenChange }: RunTraceSheetProps) {
               }
               className="text-[11px]"
             >
-              {run.status}
+              {getLocalizedEnumLabel("ai", "runStatus", run.status, language)}
             </Badge>
           )}
         </span>
@@ -80,15 +82,24 @@ export function RunTraceSheet({ runId, onOpenChange }: RunTraceSheetProps) {
           <>
             <div className="space-y-2 text-xs">
               <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">{run.kind}</Badge>
-                <Badge variant="secondary">{run.source}</Badge>
+                <Badge variant="outline">
+                  {getLocalizedEnumLabel("ai", "runKind", run.kind, language)}
+                </Badge>
+                <Badge variant="secondary">
+                  {getLocalizedEnumLabel(
+                    "ai",
+                    "runSource",
+                    run.source,
+                    language
+                  )}
+                </Badge>
                 {run.agentName && (
                   <Badge variant="outline">{run.agentName}</Badge>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2 pt-1 text-muted-foreground tabular-nums">
                 <div>
-                  Started:{" "}
+                  {t("ai.trace.started")}{" "}
                   {run.startTime
                     ? tz.format(run.startTime, {
                         dateStyle: "short",
@@ -96,10 +107,15 @@ export function RunTraceSheet({ runId, onOpenChange }: RunTraceSheetProps) {
                       })
                     : "—"}
                 </div>
-                <div>Latency: {run.metrics?.latencyMs ?? "0"} ms</div>
-                <div>Tokens: {run.metrics?.tokens?.total ?? 0}</div>
                 <div>
-                  Est. Cost: ${(run.metrics?.estimatedCostUsd ?? 0).toFixed(5)}
+                  {t("ai.trace.latency")} {run.metrics?.latencyMs ?? "0"} ms
+                </div>
+                <div>
+                  {t("ai.trace.tokens")} {run.metrics?.tokens?.total ?? 0}
+                </div>
+                <div>
+                  {t("ai.trace.estCost")} $
+                  {(run.metrics?.estimatedCostUsd ?? 0).toFixed(5)}
                 </div>
               </div>
             </div>
@@ -107,7 +123,7 @@ export function RunTraceSheet({ runId, onOpenChange }: RunTraceSheetProps) {
             {run.input?.prompt && (
               <div className="space-y-1.5 border-t border-border/40 pt-4">
                 <div className="text-xs font-medium text-muted-foreground">
-                  Prompt
+                  {t("ai.trace.prompt")}
                 </div>
                 <p className="rounded-xl bg-muted/30 p-3 text-xs whitespace-pre-wrap">
                   {run.input.prompt}
@@ -118,7 +134,7 @@ export function RunTraceSheet({ runId, onOpenChange }: RunTraceSheetProps) {
             {(run.steps ?? []).length > 0 && (
               <div className="space-y-2 border-t border-border/40 pt-4">
                 <div className="text-xs font-medium text-muted-foreground">
-                  Steps ({run.steps?.length})
+                  {t("ai.trace.steps", { n: run.steps?.length ?? 0 })}
                 </div>
                 {run.steps?.map((step) => {
                   if (step.kind === "llm") {
@@ -163,7 +179,7 @@ export function RunTraceSheet({ runId, onOpenChange }: RunTraceSheetProps) {
             {run.output?.text && (
               <div className="space-y-1.5 border-t border-border/40 pt-4">
                 <div className="text-xs font-medium text-muted-foreground">
-                  Final Output
+                  {t("ai.trace.finalOutput")}
                 </div>
                 <p className="rounded-xl bg-muted/30 p-3 text-xs whitespace-pre-wrap">
                   {run.output.text}

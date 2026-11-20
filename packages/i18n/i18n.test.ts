@@ -1132,4 +1132,56 @@ describe("@saturn/i18n", () => {
     ).toBe("Every Monday at 09:00")
     expect(translate("es-ES", "workflows.cron.weekdays.monday")).toBe("lunes")
   })
+
+  it("translates ai keys and enums in English and Spanish", () => {
+    expect(translate("en-US", "ai.chat.newChat")).toBe("New Chat")
+    expect(translate("es-ES", "ai.chat.newChat")).toBe("Chat nuevo")
+    expect(translate("en-US", "ai.mcp.title")).toBe("MCP Servers")
+    expect(translate("es-ES", "ai.mcp.title")).toBe("Servidores MCP")
+
+    expect(
+      translate("en-US", "ai.conversation.submitDecisions", {
+        approved: 2,
+        total: 2,
+      })
+    ).toBe("Submit Decisions (2/2)")
+    expect(
+      translate("es-ES", "ai.conversation.submitDecisions", {
+        approved: 1,
+        total: 3,
+      })
+    ).toBe("Enviar decisiones (1/3)")
+
+    expect(
+      translate("en-US", "ai.runs.tokensLatency", { tokens: 120, ms: 340 })
+    ).toBe("120 tok · 340ms")
+    expect(
+      translate("en-US", "ai.drawer.approvalNeeded", { title: "Transfer" })
+    ).toBe("Approval needed in 'Transfer'")
+    expect(
+      translate("es-ES", "ai.agentSheet.noToolsMatching", { query: "mail" })
+    ).toContain("mail")
+    expect(translate("en-US", "ai.result.deepLinks.runTrace")).toBe(
+      "Open Run Trace →"
+    )
+    expect(translate("es-ES", "ai.result.deepLinks.runTrace")).toBe(
+      "Abrir rastro de ejecución →"
+    )
+    expect(
+      translate("en-US", "ai.models.modelCount", { driver: "gemini", n: 4 })
+    ).toBe("gemini · 4 model(s)")
+
+    expect(getLocalizedEnumLabel("ai", "runStatus", "running", "en")).toBe(
+      "Running"
+    )
+    expect(
+      getLocalizedEnumLabel("ai", "runStatus", "awaiting_approval", "es")
+    ).toBe("Esperando aprobación")
+    expect(
+      getLocalizedEnumLabel("ai", "approvalPolicy", "confirm_writes", "es")
+    ).toBe("Confirmar escrituras")
+    expect(getLocalizedEnumLabel("ai", "mcpHealth", "unknown", "en")).toBe(
+      "Unknown"
+    )
+  })
 })

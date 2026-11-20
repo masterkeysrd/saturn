@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ProviderLogo } from "./provider-logo"
+import { useI18n } from "@saturn/hooks"
 import { ChevronDownIcon } from "lucide-react"
 
 interface ProviderSheetProps {
@@ -49,6 +50,7 @@ function ProviderSheetForm({
   descriptors: ProviderDescriptor[]
   onClose: () => void
 }) {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const isEditing = Boolean(provider?.id)
   const defaultDesc = descriptors[0]
@@ -159,7 +161,7 @@ function ProviderSheetForm({
         )}
 
         <div className="space-y-1.5">
-          <Label>Provider Driver</Label>
+          <Label>{t("ai.providerSheet.driver")}</Label>
           <Select
             value={driver}
             onValueChange={handleDriverChange}
@@ -192,19 +194,19 @@ function ProviderSheetForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="prov-name">Display Name *</Label>
+          <Label htmlFor="prov-name">{t("ai.providerSheet.nameLabel")}</Label>
           <Input
             id="prov-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            placeholder="e.g. Production OpenAI"
+            placeholder={t("ai.providerSheet.namePlaceholder")}
           />
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="prov-key">
-            API Key{" "}
+            {t("ai.providerSheet.apiKey")}{" "}
             {!isEditing && activeDesc?.apiKeyRequired !== false ? "*" : ""}
           </Label>
           <Input
@@ -219,7 +221,7 @@ function ProviderSheetForm({
             }
             placeholder={
               isEditing && provider?.hasSecret
-                ? "Leave blank to keep stored secret"
+                ? t("ai.providerSheet.keepSecret")
                 : "sk-..."
             }
           />
@@ -227,9 +229,9 @@ function ProviderSheetForm({
 
         <div className="flex items-center justify-between border-t border-border/40 pt-4">
           <div>
-            <Label htmlFor="prov-enabled">Enabled</Label>
+            <Label htmlFor="prov-enabled">{t("ai.shared.enabled")}</Label>
             <p className="text-[11px] text-muted-foreground">
-              Allow models from this provider to be invoked
+              {t("ai.providerSheet.enabledHint")}
             </p>
           </div>
           <Switch
@@ -249,7 +251,7 @@ function ProviderSheetForm({
           className="border-t border-border/40 pt-4"
         >
           <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-xs font-semibold text-muted-foreground hover:text-foreground">
-            <span>Advanced</span>
+            <span>{t("ai.shared.advanced")}</span>
             <ChevronDownIcon
               className={`size-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
             />
@@ -257,8 +259,10 @@ function ProviderSheetForm({
           <CollapsibleContent className="space-y-3 pt-3">
             <div className="space-y-1.5">
               <Label htmlFor="prov-baseurl">
-                Base URL{" "}
-                {driver === "openai_compatible" ? "*" : "(Optional override)"}
+                {t("ai.providerSheet.baseUrl")}{" "}
+                {driver === "openai_compatible"
+                  ? "*"
+                  : t("ai.providerSheet.optionalOverride")}
               </Label>
               <Input
                 id="prov-baseurl"
@@ -277,14 +281,14 @@ function ProviderSheetForm({
 
       <DialogFooter className="shrink-0 border-t border-border/60 bg-card px-6 py-4">
         <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={isPending}>
           {isPending
-            ? "Saving..."
+            ? t("common.saving")
             : isEditing
-              ? "Save Changes"
-              : "Connect Provider"}
+              ? t("ai.shared.saveChanges")
+              : t("ai.providerSheet.connectSubmit")}
         </Button>
       </DialogFooter>
     </form>
@@ -296,6 +300,7 @@ export function ProviderSheet({
   onOpenChange,
   provider,
 }: ProviderSheetProps) {
+  const { t } = useI18n()
   const { data: descData } = useListProviderDescriptorsQuery({})
   const descriptors = descData?.providers ?? []
 
@@ -305,11 +310,12 @@ export function ProviderSheet({
         <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
           <DialogTitle className="flex items-center gap-2 pr-8 text-base font-semibold">
             <ProviderLogo driver={provider?.driver ?? "gemini"} />
-            {provider?.id ? `Edit ${provider.name}` : "Connect LLM Provider"}
+            {provider?.id
+              ? t("ai.providerSheet.editTitle", { name: provider.name ?? "" })
+              : t("ai.providerSheet.connectTitle")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Credentials are encrypted at rest and curated models are auto-seeded
-            on creation.
+            {t("ai.providerSheet.dialogDescription")}
           </DialogDescription>
         </DialogHeader>
         {open && (

@@ -7,6 +7,8 @@ import {
   useTestMCPServerMutation,
   type MCPServer,
 } from "@saturn/api/saturn/platform/ai/v1/ai"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
+import { useI18n } from "@saturn/hooks"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { PageLayout } from "@/components/ui/page-layout"
 import { Badge } from "@/components/ui/badge"
@@ -30,6 +32,7 @@ import {
 } from "lucide-react"
 
 export function MCPServersView() {
+  const { t, language } = useI18n()
   const queryClient = useQueryClient()
   const { spaceRole } = useActiveSpaceContext()
   const canManageSettings = spaceRole === "owner" || spaceRole === "admin"
@@ -52,8 +55,8 @@ export function MCPServersView() {
 
   return (
     <PageLayout
-      title="MCP Servers"
-      description="Manage built-in Saturn workspace tools and remote Streamable HTTP MCP servers."
+      title={t("ai.mcp.title")}
+      description={t("ai.mcp.description")}
       actions={
         <div className="flex items-center gap-2">
           <Button
@@ -62,7 +65,7 @@ export function MCPServersView() {
             className="cursor-pointer gap-1.5"
           >
             <ExternalLinkIcon className="size-4" />
-            Connect External Client
+            {t("ai.mcp.connectExternal")}
           </Button>
           {canManageSettings && (
             <Button
@@ -73,7 +76,7 @@ export function MCPServersView() {
               className="cursor-pointer gap-1.5"
             >
               <PlusIcon className="size-4" />
-              Add HTTP MCP
+              {t("ai.mcp.addHttp")}
             </Button>
           )}
         </div>
@@ -107,7 +110,7 @@ export function MCPServersView() {
                         <h3 className="text-sm font-semibold">{srv.name}</h3>
                         {srv.isSystem && (
                           <Badge variant="secondary" className="text-[10px]">
-                            Built-in
+                            {t("ai.mcp.builtIn")}
                           </Badge>
                         )}
                         <Badge
@@ -120,11 +123,16 @@ export function MCPServersView() {
                           }
                           className="text-[10px]"
                         >
-                          {srv.discovery?.healthStatus || "unknown"}
+                          {getLocalizedEnumLabel(
+                            "ai",
+                            "mcpHealth",
+                            srv.discovery?.healthStatus || "unknown",
+                            language
+                          )}
                         </Badge>
                         {!srv.isEnabled && (
                           <Badge variant="outline" className="text-[10px]">
-                            Disabled
+                            {t("ai.shared.disabled")}
                           </Badge>
                         )}
                       </div>
@@ -132,9 +140,13 @@ export function MCPServersView() {
                         {srv.description || srv.config?.url}
                       </p>
                       <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                        <span className="font-mono">slug: {srv.slug}</span>
+                        <span className="font-mono">
+                          {t("ai.mcp.slug", { slug: srv.slug ?? "" })}
+                        </span>
                         <span>· {srv.transport}</span>
-                        <span>· {tools.length} tool(s)</span>
+                        <span>
+                          {t("ai.mcp.toolCount", { n: tools.length })}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -156,7 +168,7 @@ export function MCPServersView() {
                             className="cursor-pointer gap-1 text-xs"
                           >
                             <ZapIcon className="size-3.5" />
-                            Test
+                            {t("ai.mcp.test")}
                           </Button>
                           <Button
                             variant="ghost"
@@ -171,7 +183,7 @@ export function MCPServersView() {
                             className="cursor-pointer gap-1 text-xs"
                           >
                             <RefreshCwIcon className="size-3.5" />
-                            Sync
+                            {t("ai.mcp.sync")}
                           </Button>
                         </>
                       )}
@@ -185,7 +197,7 @@ export function MCPServersView() {
                         className="cursor-pointer gap-1 text-xs"
                       >
                         <PencilIcon className="size-3.5" />
-                        Edit
+                        {t("common.edit")}
                       </Button>
                       {!srv.isSystem && (
                         <Button
@@ -216,31 +228,33 @@ export function MCPServersView() {
                 {tools.length > 0 && (
                   <Collapsible className="border-t border-border/40 pt-3">
                     <CollapsibleTrigger className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-                      <span>Inspect {tools.length} discovered tool(s)</span>
+                      <span>
+                        {t("ai.mcp.inspectTools", { n: tools.length })}
+                      </span>
                       <ChevronDownIcon className="size-3.5" />
                     </CollapsibleTrigger>
                     <CollapsibleContent className="grid gap-2 pt-3 md:grid-cols-2">
-                      {tools.map((t) => (
+                      {tools.map((tool) => (
                         <div
-                          key={t.name}
+                          key={tool.name}
                           className="rounded-xl border border-border/50 bg-muted/20 p-3 text-xs"
                         >
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-mono font-semibold">
-                              {t.name}
+                              {tool.name}
                             </span>
-                            {t.readOnlyHint && (
+                            {tool.readOnlyHint && (
                               <Badge
                                 variant="secondary"
                                 className="text-[10px]"
                               >
-                                Read-only
+                                {t("ai.mcp.readOnly")}
                               </Badge>
                             )}
                           </div>
-                          {t.description && (
+                          {tool.description && (
                             <p className="mt-1 text-[11px] text-muted-foreground">
-                              {t.description}
+                              {tool.description}
                             </p>
                           )}
                         </div>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import {
   useDeleteThreadMutation,
   useListThreadsQuery,
@@ -43,6 +43,7 @@ interface ThreadGroup {
 }
 
 export function ChatView() {
+  const { t } = useI18n()
   const { spaceId } = useActiveSpaceContext()
   const { threadId } = useParams<{ threadId?: string }>()
   const navigate = useNavigate()
@@ -100,12 +101,15 @@ export function ChatView() {
     }
 
     const out: ThreadGroup[] = []
-    if (pinned.length > 0) out.push({ label: "Pinned", items: pinned })
-    if (today.length > 0) out.push({ label: "Today", items: today })
-    if (yesterday.length > 0) out.push({ label: "Yesterday", items: yesterday })
-    if (earlier.length > 0) out.push({ label: "Earlier", items: earlier })
+    if (pinned.length > 0)
+      out.push({ label: t("ai.chat.pinned"), items: pinned })
+    if (today.length > 0) out.push({ label: t("common.today"), items: today })
+    if (yesterday.length > 0)
+      out.push({ label: t("common.yesterday"), items: yesterday })
+    if (earlier.length > 0)
+      out.push({ label: t("ai.chat.earlier"), items: earlier })
     return out
-  }, [data?.threads, tz])
+  }, [data?.threads, tz, t])
 
   const handleSelectThread = (id?: string) => {
     if (!spaceId) return
@@ -128,7 +132,7 @@ export function ChatView() {
       <div className="space-y-4 p-3">
         {groups.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-            Start a conversation to save your private chat history.
+            {t("ai.chat.emptyThreads")}
           </p>
         ) : (
           groups.map((grp) => (
@@ -154,7 +158,7 @@ export function ChatView() {
                       className="min-w-0 flex-1 cursor-pointer text-left"
                     >
                       <div className="truncate font-medium">
-                        {th.title || "New Chat"}
+                        {th.title || t("ai.chat.newChat")}
                       </div>
                       {th.agentName && (
                         <div className="truncate text-[10px] text-muted-foreground">
@@ -174,7 +178,11 @@ export function ChatView() {
                           },
                         })
                       }
-                      aria-label={th.isPinned ? "Unpin thread" : "Pin thread"}
+                      aria-label={
+                        th.isPinned
+                          ? t("ai.chat.unpinThread")
+                          : t("ai.chat.pinThread")
+                      }
                       className={cn(
                         "cursor-pointer rounded p-1 transition-opacity hover:bg-background focus-visible:opacity-100",
                         th.isPinned
@@ -192,7 +200,7 @@ export function ChatView() {
                     <button
                       type="button"
                       onClick={() => setDeleteTarget(th)}
-                      aria-label="Delete thread"
+                      aria-label={t("ai.chat.deleteThread")}
                       className="cursor-pointer rounded p-1 opacity-100 transition-opacity hover:bg-background hover:text-destructive focus-visible:opacity-100 md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
                     >
                       <Trash2Icon className="size-3" />
@@ -213,7 +221,7 @@ export function ChatView() {
         <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
           <div className="flex items-center gap-2">
             <MessageSquareIcon className="size-4 text-primary" />
-            <h1 className="text-sm font-semibold">Threads</h1>
+            <h1 className="text-sm font-semibold">{t("ai.chat.threads")}</h1>
           </div>
           <Button
             type="button"
@@ -223,7 +231,7 @@ export function ChatView() {
             className="h-7 cursor-pointer gap-1 rounded-full px-2.5 text-xs"
           >
             <PlusIcon className="size-3.5" />
-            New
+            {t("ai.chat.new")}
           </Button>
         </div>
 
@@ -240,7 +248,7 @@ export function ChatView() {
             className="h-8 cursor-pointer gap-1.5 rounded-lg px-2.5 text-xs"
           >
             <PanelLeftIcon className="size-3.5" />
-            Threads
+            {t("ai.chat.threads")}
           </Button>
           <Button
             type="button"
@@ -250,7 +258,7 @@ export function ChatView() {
             className="h-8 cursor-pointer gap-1 rounded-lg px-2.5 text-xs"
           >
             <PlusIcon className="size-3.5" />
-            New Chat
+            {t("ai.chat.newChat")}
           </Button>
         </div>
 
@@ -272,7 +280,7 @@ export function ChatView() {
           <SheetHeader className="flex-row items-center justify-between border-b border-border/40 px-4 py-3 pr-12">
             <SheetTitle className="flex items-center gap-2 text-sm font-semibold">
               <MessageSquareIcon className="size-4 text-primary" />
-              Threads
+              {t("ai.chat.threads")}
             </SheetTitle>
             <Button
               type="button"
@@ -282,7 +290,7 @@ export function ChatView() {
               className="h-7 cursor-pointer gap-1 rounded-full px-2.5 text-xs"
             >
               <PlusIcon className="size-3.5" />
-              New
+              {t("ai.chat.new")}
             </Button>
           </SheetHeader>
           {renderThreadList()}
@@ -295,25 +303,29 @@ export function ChatView() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Thread</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("ai.chat.deleteThreadTitle")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete{" "}
+              {t("ai.chat.deleteThreadPrefix")}{" "}
               <span className="font-semibold text-foreground">
-                {deleteTarget?.title || "New Chat"}
+                {deleteTarget?.title || t("ai.chat.newChat")}
               </span>
-              ? This action cannot be undone.
+              {t("ai.chat.deleteThreadSuffix")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteThread.isPending}>
-              Cancel
+              {t("common.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               disabled={deleteThread.isPending}
               onClick={handleConfirmDelete}
             >
-              {deleteThread.isPending ? "Deleting..." : "Delete Thread"}
+              {deleteThread.isPending
+                ? t("ai.chat.deleting")
+                : t("ai.chat.deleteThreadTitle")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

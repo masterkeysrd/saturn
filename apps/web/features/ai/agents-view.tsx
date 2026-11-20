@@ -6,6 +6,8 @@ import {
   useResetAgentMutation,
   type Agent,
 } from "@saturn/api/saturn/platform/ai/v1/ai"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
+import { useI18n } from "@saturn/hooks"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { PageLayout } from "@/components/ui/page-layout"
 import { Badge } from "@/components/ui/badge"
@@ -27,6 +29,7 @@ import {
 } from "lucide-react"
 
 export function AgentsView() {
+  const { t, language } = useI18n()
   const queryClient = useQueryClient()
   const { spaceRole } = useActiveSpaceContext()
   const canManageSettings = spaceRole === "owner" || spaceRole === "admin"
@@ -54,8 +57,8 @@ export function AgentsView() {
 
   return (
     <PageLayout
-      title="Agents"
-      description="Autonomous workspace assistants with MCP server tool bindings and approval policies."
+      title={t("nav.agents")}
+      description={t("ai.agents.description")}
       actions={
         canManageSettings ? (
           <Button
@@ -66,7 +69,7 @@ export function AgentsView() {
             className="cursor-pointer gap-1.5"
           >
             <PlusIcon className="size-4" />
-            New Agent
+            {t("ai.agents.newAgent")}
           </Button>
         ) : undefined
       }
@@ -86,11 +89,8 @@ export function AgentsView() {
             <EmptyMedia variant="icon">
               <BotIcon />
             </EmptyMedia>
-            <EmptyTitle>No agents found</EmptyTitle>
-            <EmptyDescription>
-              Create a custom agent with MCP bindings for chat, workflows, and
-              external MCP clients.
-            </EmptyDescription>
+            <EmptyTitle>{t("empty.agentsTitle")}</EmptyTitle>
+            <EmptyDescription>{t("empty.agentsDescription")}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
@@ -111,12 +111,12 @@ export function AgentsView() {
                         <h3 className="text-sm font-semibold">{ag.name}</h3>
                         {ag.isSystem && (
                           <Badge variant="secondary" className="text-[10px]">
-                            System
+                            {t("ai.agents.system")}
                           </Badge>
                         )}
                         {!ag.isEnabled && (
                           <Badge variant="outline" className="text-[10px]">
-                            Disabled
+                            {t("ai.shared.disabled")}
                           </Badge>
                         )}
                       </div>
@@ -135,17 +135,25 @@ export function AgentsView() {
 
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   <Badge variant="outline" className="text-[11px]">
-                    {ag.modelDisplayName || "Workspace Default Model"}
+                    {ag.modelDisplayName ||
+                      t("ai.agents.workspaceDefaultModel")}
                   </Badge>
                   <Badge variant="outline" className="text-[11px]">
-                    {ag.config?.execution?.approvalPolicy || "confirm_writes"}
+                    {getLocalizedEnumLabel(
+                      "ai",
+                      "approvalPolicy",
+                      ag.config?.execution?.approvalPolicy || "confirm_writes",
+                      language
+                    )}
                   </Badge>
                   <Badge variant="secondary" className="text-[11px]">
-                    {(ag.config?.mcpBindings ?? []).length} MCP binding(s)
+                    {t("ai.agents.mcpBindings", {
+                      n: (ag.config?.mcpBindings ?? []).length,
+                    })}
                   </Badge>
                   {ag.stats && (ag.stats.totalRuns7d ?? 0) > 0 && (
                     <Badge variant="secondary" className="text-[11px]">
-                      {ag.stats.totalRuns7d} runs (7d)
+                      {t("ai.agents.runs7d", { n: ag.stats.totalRuns7d ?? 0 })}
                     </Badge>
                   )}
                 </div>
@@ -167,7 +175,7 @@ export function AgentsView() {
                       className="cursor-pointer gap-1.5 text-xs"
                     >
                       <RotateCcwIcon className="size-3.5" />
-                      Reset
+                      {t("ai.agents.reset")}
                     </Button>
                   )}
                   <Button
@@ -180,7 +188,7 @@ export function AgentsView() {
                     className="cursor-pointer gap-1.5 text-xs"
                   >
                     <PencilIcon className="size-3.5" />
-                    Edit
+                    {t("common.edit")}
                   </Button>
                   {!ag.isSystem && (
                     <Button
@@ -196,7 +204,7 @@ export function AgentsView() {
                       className="cursor-pointer gap-1.5 text-xs text-destructive hover:text-destructive"
                     >
                       <Trash2Icon className="size-3.5" />
-                      Delete
+                      {t("common.delete")}
                     </Button>
                   )}
                 </div>

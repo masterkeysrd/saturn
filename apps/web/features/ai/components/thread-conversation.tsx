@@ -12,6 +12,7 @@ import {
   type ToolDescriptor,
 } from "@saturn/core"
 import { useCopilot, useThreadStream } from "@saturn/hooks/ai"
+import { useI18n, type UseI18nResult } from "@saturn/hooks"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import {
   useListAgentsQuery,
@@ -90,12 +91,12 @@ import {
   SparklesIcon,
 } from "lucide-react"
 
-const STARTER_PROMPTS = [
-  "Summarize my spending this month vs budget",
-  "What events are on my calendar this week?",
-  "Check my unread emails for action items",
-  "List active workflows and recent runs",
-]
+const STARTER_PROMPT_KEYS = [
+  "ai.conversation.starter1",
+  "ai.conversation.starter2",
+  "ai.conversation.starter3",
+  "ai.conversation.starter4",
+] as const
 
 export interface PendingDrawerPrompt {
   id: string
@@ -205,6 +206,7 @@ interface NormalizedToolItem {
 function renderSingleToolCard(
   item: NormalizedToolItem,
   spaceId: string | undefined,
+  t: UseI18nResult["t"],
   nested = false
 ) {
   const title =
@@ -242,7 +244,7 @@ function renderSingleToolCard(
             errorText={
               item.isError
                 ? (extractToolErrorMessage(item.result) ??
-                  "Tool execution failed")
+                  t("ai.conversation.toolFailed"))
                 : undefined
             }
             renderCustomOutput={(unwrapped, fallback) => (
@@ -262,7 +264,8 @@ function renderSingleToolCard(
 
 function renderGroupedTools(
   items: NormalizedToolItem[],
-  spaceId: string | undefined
+  spaceId: string | undefined,
+  t: UseI18nResult["t"]
 ) {
   const nodes: React.ReactNode[] = []
   let readRun: NormalizedToolItem[] = []
@@ -274,11 +277,11 @@ function renderGroupedTools(
         key: item.key,
         descriptor: item.descriptor,
         durationMs: item.durationMs,
-        renderTool: () => renderSingleToolCard(item, spaceId, true),
+        renderTool: () => renderSingleToolCard(item, spaceId, t, true),
       }))
       nodes.push(<ToolChainGroup key={groupKey} items={groupItems} />)
     } else if (readRun.length === 1) {
-      nodes.push(renderSingleToolCard(readRun[0], spaceId, false))
+      nodes.push(renderSingleToolCard(readRun[0], spaceId, t, false))
     }
     readRun = []
   }
@@ -288,7 +291,7 @@ function renderGroupedTools(
       readRun.push(item)
     } else {
       flushRun()
-      nodes.push(renderSingleToolCard(item, spaceId, false))
+      nodes.push(renderSingleToolCard(item, spaceId, t, false))
     }
   }
   flushRun()
@@ -305,6 +308,7 @@ export function ThreadConversation({
   onThreadUpdated,
 }: ThreadConversationProps) {
   const location = useLocation()
+  const { t } = useI18n()
   const { spaceId } = useActiveSpaceContext()
   const {
     activeView,
@@ -564,18 +568,19 @@ export function ThreadConversation({
   const groupedModels = useMemo(() => {
     const groups = new Map<string, typeof models>()
     for (const m of models) {
-      const key = m.providerName || m.providerDriver || "Models"
+      const key =
+        m.providerName || m.providerDriver || t("ai.conversation.modelsGroup")
       const list = groups.get(key) ?? []
       list.push(m)
       groups.set(key, list)
     }
     return Array.from(groups.entries())
-  }, [models])
+  }, [models, t])
 
   const starterPrompts =
     activeView?.suggestions && activeView.suggestions.length > 0
       ? activeView.suggestions
-      : STARTER_PROMPTS
+      : STARTER_PROMPT_KEYS.map((key) => t(key))
 
   const visibleAmbientEntity =
     activeView?.activeEntity &&
@@ -600,7 +605,9 @@ export function ThreadConversation({
           )}
         >
           <BotIcon className="mr-1 size-3.5 text-muted-foreground" />
-          <SelectValue>{activeAgent?.name ?? "Saturn Assistant"}</SelectValue>
+          <SelectValue>
+            {activeAgent?.name ?? t("ai.conversation.saturnAssistant")}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {agents.map((a) => (
@@ -624,7 +631,7 @@ export function ThreadConversation({
               variant="secondary"
               className="max-w-[170px] truncate rounded-md px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
             >
-              Context: {activeView.title}
+              {t("ai.conversation.context", { title: activeView.title })}
             </Badge>
           )}
         </div>
@@ -643,8 +650,8 @@ export function ThreadConversation({
           pendingApprovals.length === 0 ? (
             <ConversationEmptyState
               icon={<SparklesIcon className="size-8 text-primary/70" />}
-              title={activeAgent?.name || "Saturn Assistant"}
-              description="Ask about your finances, calendar, mail, or workflows — Saturn uses your workspace tools safely with confirmation before changes."
+              title={activeAgent?.name || t("ai.conversation.saturnAssistant")}
+              description={t("ai.conversation.emptyDesc")}
               className={compact ? "py-6" : "py-10"}
             >
               <div className="flex flex-col items-center gap-4">
@@ -653,11 +660,10 @@ export function ThreadConversation({
                 </div>
                 <div className="space-y-1 text-center">
                   <h3 className="text-sm font-semibold">
-                    {activeAgent?.name || "Saturn Assistant"}
+                    {activeAgent?.name || t("ai.conversation.saturnAssistant")}
                   </h3>
                   <p className="max-w-sm text-xs text-muted-foreground">
-                    Ask across Finance, Calendar, Mail, and Workflows. Mutating
-                    actions pause for your confirmation.
+                    {t("ai.conversation.emptyTagline")}
                   </p>
                   {activeView && (
                     <div className="pt-1">
@@ -665,7 +671,9 @@ export function ThreadConversation({
                         variant="outline"
                         className="rounded-md px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
                       >
-                        Context: {activeView.title}
+                        {t("ai.conversation.context", {
+                          title: activeView.title,
+                        })}
                       </Badge>
                     </div>
                   )}
@@ -743,7 +751,8 @@ export function ThreadConversation({
                             isError: res?.isError,
                           }
                         }),
-                        spaceId
+                        spaceId,
+                        t
                       )}
                     </MessageContent>
                   </Message>
@@ -796,7 +805,8 @@ export function ThreadConversation({
                               durationMs: tc.durationMs,
                               isStreamingRunning: true,
                             })),
-                            spaceId
+                            spaceId,
+                            t
                           )}
 
                         {cleanStreamText.trim() && (
@@ -817,7 +827,7 @@ export function ThreadConversation({
                                 activeToolName: activeToolCall?.toolName,
                                 hasCompletedTools:
                                   (streamingMessage?.toolCalls.length ?? 0) > 0,
-                              }) || "Thinking…"}
+                              }) || t("ai.conversation.thinking")}
                             </span>
                           </div>
                         )}
@@ -844,7 +854,11 @@ export function ThreadConversation({
                       >
                         <ConfirmationTitle destructive={isDestructive}>
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span>Confirm {desc.label}</span>
+                            <span>
+                              {t("ai.conversation.confirm", {
+                                label: desc.label,
+                              })}
+                            </span>
                             <Badge
                               variant="outline"
                               className="rounded-full px-1.5 py-0 text-[10px]"
@@ -856,7 +870,9 @@ export function ThreadConversation({
                             </code>
                             {pa.mcpServerName && (
                               <span className="text-muted-foreground">
-                                via {pa.mcpServerName}
+                                {t("ai.conversation.via", {
+                                  server: pa.mcpServerName,
+                                })}
                               </span>
                             )}
                           </div>
@@ -887,8 +903,8 @@ export function ThreadConversation({
                             >
                               {pendingApprovals.length > 1 &&
                               stagedDecisions[pa.toolCallId ?? ""] === false
-                                ? "Rejected"
-                                : "Reject"}
+                                ? t("ai.conversation.rejected")
+                                : t("ai.conversation.reject")}
                             </ConfirmationAction>
                             <ConfirmationAction
                               variant={
@@ -910,8 +926,8 @@ export function ThreadConversation({
                             >
                               {pendingApprovals.length > 1 &&
                               stagedDecisions[pa.toolCallId ?? ""] === true
-                                ? "Approved"
-                                : "Approve"}
+                                ? t("ai.conversation.approved")
+                                : t("ai.conversation.approve")}
                             </ConfirmationAction>
                           </ConfirmationActions>
                         </ConfirmationRequest>
@@ -925,27 +941,28 @@ export function ThreadConversation({
                         variant="outline"
                         onClick={() => handleApproveAll(false)}
                       >
-                        Reject All
+                        {t("ai.conversation.rejectAll")}
                       </ConfirmationAction>
                       <ConfirmationAction
                         variant="outline"
                         onClick={() => handleApproveAll(true)}
                       >
-                        Approve All ({pendingApprovals.length})
+                        {t("ai.conversation.approveAll", {
+                          n: pendingApprovals.length,
+                        })}
                       </ConfirmationAction>
                       <ConfirmationAction
                         disabled={!allStaged}
                         onClick={handleSubmitStagedDecisions}
                       >
-                        Submit Decisions (
-                        {
-                          pendingApprovals.filter(
+                        {t("ai.conversation.submitDecisions", {
+                          approved: pendingApprovals.filter(
                             (pa) =>
                               pa.toolCallId &&
                               stagedDecisions[pa.toolCallId] !== undefined
-                          ).length
-                        }
-                        /{pendingApprovals.length})
+                          ).length,
+                          total: pendingApprovals.length,
+                        })}
                       </ConfirmationAction>
                     </div>
                   )}
@@ -956,7 +973,7 @@ export function ThreadConversation({
 
           {error && (
             <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-3.5 py-2.5 text-xs text-destructive">
-              {error.message || "Failed to execute AI turn"}
+              {error.message || t("ai.conversation.turnFailed")}
             </div>
           )}
         </ConversationContent>
@@ -1015,20 +1032,29 @@ export function ThreadConversation({
               >
                 <ModelSelectorTrigger
                   render={
-                    <ModelSelectorButton aria-label="Select model">
+                    <ModelSelectorButton
+                      aria-label={t("ai.conversation.selectModel")}
+                    >
                       <ModelSelectorLogo driver={activeModel?.providerDriver} />
                       <span className="max-w-[140px] truncate">
-                        {activeModel?.displayName ?? "Workspace Default"}
+                        {activeModel?.displayName ??
+                          t("ai.conversation.workspaceDefault")}
                       </span>
                       <ChevronDownIcon className="size-3 text-muted-foreground" />
                     </ModelSelectorButton>
                   }
                 />
                 <ModelSelectorContent side="top" align="start" sideOffset={8}>
-                  <ModelSelectorInput placeholder="Search workspace models..." />
+                  <ModelSelectorInput
+                    placeholder={t("ai.conversation.searchModels")}
+                  />
                   <ModelSelectorList>
-                    <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
-                    <ModelSelectorGroup heading="Workspace Default">
+                    <ModelSelectorEmpty>
+                      {t("ai.conversation.noModels")}
+                    </ModelSelectorEmpty>
+                    <ModelSelectorGroup
+                      heading={t("ai.conversation.workspaceDefault")}
+                    >
                       <ModelSelectorItem
                         value="workspace-default"
                         onSelect={() => {
@@ -1037,7 +1063,9 @@ export function ThreadConversation({
                         }}
                       >
                         <SparklesIcon className="size-3.5 text-primary" />
-                        <ModelSelectorName>Workspace Default</ModelSelectorName>
+                        <ModelSelectorName>
+                          {t("ai.conversation.workspaceDefault")}
+                        </ModelSelectorName>
                         {!effectiveModelId && (
                           <CheckIcon className="size-3.5 text-primary" />
                         )}

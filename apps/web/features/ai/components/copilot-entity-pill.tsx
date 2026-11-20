@@ -1,4 +1,5 @@
 import type { CopilotEntityKind, CopilotEntityRef } from "@saturn/core"
+import { useI18n } from "@saturn/hooks"
 import { cn } from "@/lib/utils"
 import {
   CalendarIcon,
@@ -49,6 +50,7 @@ export function CopilotEntityBadge({
   onDismiss?: () => void
   className?: string
 }) {
+  const { t } = useI18n()
   return (
     <span
       className={cn(
@@ -70,7 +72,9 @@ export function CopilotEntityBadge({
           type="button"
           onClick={onDismiss}
           aria-label={
-            ambient ? `Dismiss ${item.label}` : `Remove ${item.label}`
+            ambient
+              ? t("copilot.dismissFrom", { name: item.label })
+              : t("copilot.removeFrom", { name: item.label })
           }
           className="cursor-pointer rounded text-muted-foreground transition-colors hover:text-foreground"
         >

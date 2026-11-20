@@ -1,4 +1,42 @@
 {
+  "ai": {
+    "approvalPolicy": {
+      "CONFIRM_WRITES": "Confirm writes",
+      "AUTO": "Auto-approve",
+      "DENY_WRITES": "Deny writes"
+    },
+    "mcpHealth": {
+      "HEALTHY": "Healthy",
+      "UNHEALTHY": "Unhealthy",
+      "UNKNOWN": "Unknown"
+    },
+    "providerState": {
+      "HEALTHY": "Healthy",
+      "UNHEALTHY": "Unhealthy",
+      "UNVERIFIED": "Unverified"
+    },
+    "runKind": {
+      "CHAT_TURN": "Chat turn",
+      "AGENT_RUN": "Agent run",
+      "GENERATE": "Generate"
+    },
+    "runSource": {
+      "CHAT": "Chat",
+      "WORKFLOW": "Workflow",
+      "MCP": "MCP",
+      "API": "API",
+      "PLAYGROUND": "Playground"
+    },
+    "runStatus": {
+      "RUNNING": "Running",
+      "AWAITING_APPROVAL": "Awaiting approval",
+      "COMPLETED": "Completed",
+      "FAILED": "Failed",
+      "CANCELLED": "Cancelled",
+      "TIMED_OUT": "Timed out",
+      "MAX_STEPS_EXCEEDED": "Max steps exceeded"
+    }
+  },
   "finance": {
     "accountType": {
       "BANK": "Bank / Checking",
