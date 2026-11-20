@@ -1246,4 +1246,74 @@ describe("@saturn/i18n", () => {
       )
     ).toBe("Cuenta desbloqueada")
   })
+
+  it("translates settings keys in English and Spanish", () => {
+    expect(translate("en-US", "settings.hub.title")).toBe("Settings")
+    expect(translate("es-ES", "settings.hub.title")).toBe("Configuración")
+    expect(translate("en-US", "settings.password.title")).toBe("Password")
+    expect(translate("es-ES", "settings.password.title")).toBe("Contraseña")
+    expect(translate("en-US", "settings.sessions.title")).toBe(
+      "Active Sign-in Sessions & Logins"
+    )
+    expect(translate("es-ES", "settings.devices.title")).toBe(
+      "Dispositivos biométricos de confianza"
+    )
+    expect(translate("es-ES", "settings.activity.title")).toBe(
+      "Registro de actividad de seguridad"
+    )
+    expect(translate("en-US", "settings.spacePrefs.title")).toBe(
+      "Regional & Localization"
+    )
+    expect(translate("en-US", "settings.finance.monthDescCustom")).toBe(
+      "Custom Fiscal Cycle"
+    )
+    expect(translate("es-ES", "settings.finance.monthDescCustom")).toBe(
+      "Ciclo fiscal personalizado"
+    )
+    expect(translate("en-US", "settings.apiKeys.preset90d")).toBe("90 days")
+    expect(translate("es-ES", "settings.apiKeys.preset90d")).toBe("90 días")
+    expect(translate("en-US", "settings.apiKeys.revealTitle")).toBe(
+      "Save Your API Key"
+    )
+    expect(translate("es-ES", "settings.spaceKeys.revokeTitle")).toBe(
+      "Revocar acceso al espacio"
+    )
+    expect(translate("en-US", "settings.connectors.statusActive")).toBe(
+      "Active"
+    )
+    expect(translate("es-ES", "settings.connectors.statusActive")).toBe(
+      "Activa"
+    )
+
+    expect(
+      translate("en-US", "settings.mfa.recoveryCodesRemaining", { count: 8 })
+    ).toBe("8 single-use backup recovery codes remaining.")
+    expect(
+      translate("es-ES", "settings.mfa.recoveryCodesRemaining", { count: 8 })
+    ).toBe("Quedan 8 códigos de recuperación de un solo uso.")
+    expect(
+      translate("en-US", "settings.spaces.createOkDesc", { name: "Family" })
+    ).toBe('Workspace "Family" created successfully.')
+    expect(
+      translate("es-ES", "settings.spaces.createOkDesc", { name: "Family" })
+    ).toBe('Espacio de trabajo "Family" creado correctamente.')
+    expect(
+      translate("en-US", "settings.apiKeys.ariaEditKey", { name: "CLI Key" })
+    ).toBe("Edit CLI Key")
+    expect(
+      translate("en-US", "settings.spaceKeys.activeBadge", { count: 3 })
+    ).toBe("3 Active")
+    expect(
+      translate("es-ES", "settings.connectors.connectionFailedToastDesc", {
+        error: "access_denied",
+      })
+    ).toBe("Error de autorización: access_denied")
+
+    expect(translate("en-US", "settings.profile.deleteAccountSentinel")).toBe(
+      "delete my account"
+    )
+    expect(translate("es-ES", "settings.profile.deleteAccountSentinel")).toBe(
+      "delete my account"
+    )
+  })
 })

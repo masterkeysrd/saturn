@@ -24,14 +24,27 @@ vi.mock("@saturn/api/gen/saturn/space/v1/space", () => ({
   useRevokeSpaceAPIKeyGrantMutation: vi.fn(),
 }))
 
-vi.mock("@saturn/hooks", () => ({
-  useTimezone: () => ({
-    timezone: "UTC",
-    now: () => new Date("2026-04-01T12:00:00.000Z"),
-    formatDate: () => "Jul 1, 2026",
-    formatDateTime: () => "Apr 1, 2026, 12:00 PM",
-  }),
-}))
+vi.mock("@saturn/hooks", async () => {
+  const i18n =
+    await vi.importActual<typeof import("@saturn/i18n")>("@saturn/i18n")
+  return {
+    useI18n: () => ({
+      locale: "en-US",
+      language: "en" as const,
+      supportedLocales: [],
+      t: (
+        key: Parameters<typeof i18n.translate>[1],
+        params?: Record<string, string | number>
+      ) => i18n.translate("en-US", key, params),
+    }),
+    useTimezone: () => ({
+      timezone: "UTC",
+      now: () => new Date("2026-04-01T12:00:00.000Z"),
+      formatDate: () => "Jul 1, 2026",
+      formatDateTime: () => "Apr 1, 2026, 12:00 PM",
+    }),
+  }
+})
 
 vi.mock("@/features/space/use-space", () => ({
   useMySpaces: () => ({

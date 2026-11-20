@@ -5,7 +5,7 @@ import {
   useRevokeSpaceAPIKeyGrantMutation,
   type APIKeyGrant,
 } from "@saturn/api/gen/saturn/space/v1/space"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { Button } from "@/components/ui/button"
 import {
@@ -22,6 +22,7 @@ import { KeyIcon, Loader2Icon, ShieldCheckIcon, Trash2Icon } from "lucide-react"
 export function SpaceAPIKeysSettings() {
   const queryClient = useQueryClient()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { spaceId, spaceName } = useActiveSpaceContext()
   const [grantToRevoke, setGrantToRevoke] = useState<APIKeyGrant | null>(null)
 
@@ -58,17 +59,19 @@ export function SpaceAPIKeysSettings() {
       setGrantToRevoke(null)
       toast.add({
         type: "success",
-        title: "Workspace Access Revoked",
-        description: `Access for "${grantToRevoke.keyName}" has been removed from this workspace.`,
+        title: t("settings.spaceKeys.revokeOk"),
+        description: t("settings.spaceKeys.revokeOkDesc", {
+          name: grantToRevoke.keyName ?? "",
+        }),
       })
     } catch (err: unknown) {
       toast.add({
         type: "error",
-        title: "Failed to Revoke Access",
+        title: t("settings.spaceKeys.revokeFailed"),
         description:
           err instanceof Error
             ? err.message
-            : "Could not revoke workspace API key access.",
+            : t("settings.spaceKeys.revokeFailedDesc"),
       })
     }
   }
@@ -76,7 +79,7 @@ export function SpaceAPIKeysSettings() {
   if (!spaceId) {
     return (
       <div className="rounded-2xl border border-border/50 bg-card/60 p-6 text-sm text-muted-foreground">
-        Select an active workspace to manage its API key access grants.
+        {t("settings.spaceKeys.noActiveWorkspace")}
       </div>
     )
   }
@@ -90,18 +93,18 @@ export function SpaceAPIKeysSettings() {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-base font-semibold text-foreground">
-              Workspace API Key Grants
+              {t("settings.spaceKeys.title")}
             </h2>
             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-              {grants.length} Active
+              {t("settings.spaceKeys.activeBadge", { count: grants.length })}
             </span>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Member-owned API keys authorized to access{" "}
+            {t("settings.spaceKeys.descPrefix")}{" "}
             <span className="font-medium text-foreground">
               {spaceName || spaceId}
             </span>
-            . Revoking access here only removes this workspace from the key.
+            {t("settings.spaceKeys.descSuffix")}
           </p>
         </div>
       </div>
@@ -114,11 +117,10 @@ export function SpaceAPIKeysSettings() {
         <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-8 text-center">
           <KeyIcon className="mx-auto h-8 w-8 text-muted-foreground/60" />
           <h3 className="mt-3 text-sm font-semibold text-foreground">
-            No API keys granted to this workspace
+            {t("settings.spaceKeys.emptyTitle")}
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            API keys created by workspace members with access to this space will
-            appear here.
+            {t("settings.spaceKeys.emptyDesc")}
           </p>
         </div>
       ) : (
@@ -146,7 +148,7 @@ export function SpaceAPIKeysSettings() {
                       </code>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      Owner:{" "}
+                      {t("settings.spaceKeys.ownerLabel")}{" "}
                       <span className="font-medium text-foreground">
                         {grant.userName || grant.userId}
                       </span>
@@ -164,16 +166,16 @@ export function SpaceAPIKeysSettings() {
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                       <span>
-                        Last used:{" "}
+                        {t("settings.apiKeys.lastUsed")}{" "}
                         {grant.lastUsedAt
                           ? tz.formatDateTime(grant.lastUsedAt)
-                          : "Never used"}
+                          : t("settings.apiKeys.neverUsed")}
                       </span>
                       <span>
-                        Expires:{" "}
+                        {t("settings.apiKeys.expiresLabel")}{" "}
                         {grant.expiresAt
                           ? tz.formatDate(grant.expiresAt)
-                          : "No expiration"}
+                          : t("settings.apiKeys.expiresNever")}
                       </span>
                     </div>
                   </div>
@@ -186,7 +188,7 @@ export function SpaceAPIKeysSettings() {
                   onClick={() => setGrantToRevoke(grant)}
                 >
                   <Trash2Icon className="mr-1.5 h-3.5 w-3.5" />
-                  Revoke Access
+                  {t("settings.spaceKeys.btnRevokeAccess")}
                 </Button>
               </div>
             )
@@ -200,19 +202,18 @@ export function SpaceAPIKeysSettings() {
       >
         <DialogContent mobileFullscreen={false}>
           <DialogHeader>
-            <DialogTitle>Revoke Workspace Access</DialogTitle>
+            <DialogTitle>{t("settings.spaceKeys.revokeTitle")}</DialogTitle>
             <DialogDescription>
-              Remove access for{" "}
+              {t("settings.spaceKeys.revokeDescQ1")}{" "}
               <span className="font-semibold text-foreground">
                 {grantToRevoke?.keyName}
               </span>{" "}
-              from this workspace? The owner&apos;s grants to other workspaces
-              will remain intact.
+              {t("settings.spaceKeys.revokeDescQ2")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setGrantToRevoke(null)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -222,7 +223,7 @@ export function SpaceAPIKeysSettings() {
               {revokeMutation.isPending && (
                 <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Revoke Access
+              {t("settings.spaceKeys.btnRevokeAccess")}
             </Button>
           </DialogFooter>
         </DialogContent>

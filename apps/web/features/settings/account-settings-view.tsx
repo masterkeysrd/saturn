@@ -157,15 +157,17 @@ export function AccountSettingsView() {
       setIsEditingProfile(false)
       toast.add({
         type: "success",
-        title: "Profile Updated",
-        description: "Your display name and profile details have been saved.",
+        title: t("settings.profile.profileOk"),
+        description: t("settings.profile.profileOkBody"),
       })
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Failed to update profile"
+        err instanceof Error
+          ? err.message
+          : t("settings.profile.profileFailedDefault")
       toast.add({
         type: "error",
-        title: "Profile Update Failed",
+        title: t("settings.profile.profileFailed"),
         description: msg,
       })
     }
@@ -186,7 +188,7 @@ export function AccountSettingsView() {
     setEmailError(null)
 
     if (!newEmail.trim() || !emailCurrentPassword) {
-      setEmailError("New email and current password are required.")
+      setEmailError(t("settings.profile.changeEmailErrorRequired"))
       return
     }
 
@@ -214,15 +216,18 @@ export function AccountSettingsView() {
       setEmailTotpCode("")
       toast.add({
         type: "success",
-        title: "Email Updated",
-        description: "Your primary account email address has been changed.",
+        title: t("settings.profile.emailUpdated"),
+        description: t("settings.profile.emailUpdatedBody"),
       })
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to change email"
+      const msg =
+        err instanceof Error
+          ? err.message
+          : t("settings.profile.changeEmailFailedDefault")
       setEmailError(msg)
       toast.add({
         type: "error",
-        title: "Change Email Failed",
+        title: t("settings.profile.changeEmailFailed"),
         description: msg,
       })
     }
@@ -242,12 +247,15 @@ export function AccountSettingsView() {
     e.preventDefault()
     setDeleteError(null)
 
-    if (deleteConfirmText.toLowerCase() !== "delete my account") {
-      setDeleteError('Please type "delete my account" to confirm.')
+    if (
+      deleteConfirmText.toLowerCase() !==
+      t("settings.profile.deleteAccountSentinel")
+    ) {
+      setDeleteError(t("settings.profile.deleteAccountErrorType"))
       return
     }
     if (!deletePassword) {
-      setDeleteError("Current password is required to delete your account.")
+      setDeleteError(t("settings.profile.deleteAccountErrorPassword"))
       return
     }
 
@@ -267,19 +275,21 @@ export function AccountSettingsView() {
       })
       toast.add({
         type: "success",
-        title: "Account Deleted",
-        description: "Your account credentials and sessions have been removed.",
+        title: t("settings.profile.deleteAccountOk"),
+        description: t("settings.profile.deleteAccountOkBody"),
       })
       setIsDeleteOpen(false)
       await logoutUser()
       navigate("/login")
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Failed to delete account"
+        err instanceof Error
+          ? err.message
+          : t("settings.profile.deleteAccountFailedDefault")
       setDeleteError(msg)
       toast.add({
         type: "error",
-        title: "Account Deletion Failed",
+        title: t("settings.profile.deleteAccountFailed"),
         description: msg,
       })
     }
@@ -342,7 +352,9 @@ export function AccountSettingsView() {
         })
       }
       const msg =
-        err instanceof Error ? err.message : "Failed to update preferences"
+        err instanceof Error
+          ? err.message
+          : t("settings.profile.prefFailedDefault")
       toast.add({
         type: "error",
         title: msg,
@@ -358,7 +370,7 @@ export function AccountSettingsView() {
           {user?.avatarUrl ? (
             <img
               src={user.avatarUrl}
-              alt={user.name || "Avatar"}
+              alt={user.name || t("settings.profile.avatarAlt")}
               referrerPolicy="no-referrer"
               className="h-16 w-16 rounded-2xl object-cover shadow-lg shadow-primary/20"
             />
@@ -384,10 +396,10 @@ export function AccountSettingsView() {
         <div className="flex items-center justify-between">
           <div className="text-left">
             <h3 className="text-base font-semibold text-foreground">
-              Profile Details
+              {t("settings.profile.profileDetails")}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Your personal information and account identity details.
+              {t("settings.profile.profileDesc")}
             </p>
           </div>
           {!isEditingProfile && (
@@ -398,7 +410,7 @@ export function AccountSettingsView() {
               className="h-8 cursor-pointer gap-1.5 text-xs"
             >
               <PencilIcon className="h-3.5 w-3.5" />
-              Edit Profile
+              {t("settings.profile.editProfile")}
             </Button>
           )}
         </div>
@@ -413,13 +425,13 @@ export function AccountSettingsView() {
                 htmlFor="edit-name"
                 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
               >
-                Display Name
+                {t("settings.profile.profileEditNameLabel")}
               </Label>
               <Input
                 id="edit-name"
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
-                placeholder="Enter your full name"
+                placeholder={t("settings.profile.profileEditNamePlaceholder")}
                 required
                 className="max-w-md text-sm"
               />
@@ -429,13 +441,13 @@ export function AccountSettingsView() {
                 htmlFor="edit-avatar"
                 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
               >
-                Avatar URL (Optional)
+                {t("settings.profile.profileEditAvatarLabel")}
               </Label>
               <Input
                 id="edit-avatar"
                 value={avatarUrlInput}
                 onChange={(e) => setAvatarUrlInput(e.target.value)}
-                placeholder="https://example.com/avatar.jpg"
+                placeholder={t("settings.profile.profileEditAvatarPlaceholder")}
                 className="max-w-md text-sm"
               />
             </div>
@@ -449,7 +461,7 @@ export function AccountSettingsView() {
                 {updateProfileMutation.isPending && (
                   <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
                 )}
-                Save Changes
+                {t("settings.profile.saveChanges")}
               </Button>
               <Button
                 type="button"
@@ -460,7 +472,7 @@ export function AccountSettingsView() {
                 className="h-8 cursor-pointer gap-1.5 text-xs"
               >
                 <XIcon className="h-3.5 w-3.5" />
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </form>
@@ -473,7 +485,7 @@ export function AccountSettingsView() {
                 </div>
                 <div className="flex flex-col text-left">
                   <span className="text-[10px] leading-none font-semibold tracking-wider text-muted-foreground uppercase">
-                    Full Name
+                    {t("settings.profile.fullName")}
                   </span>
                   <span className="mt-1 text-sm font-medium text-foreground">
                     {user?.name}
@@ -489,7 +501,7 @@ export function AccountSettingsView() {
                 </div>
                 <div className="flex flex-col text-left">
                   <span className="text-[10px] leading-none font-semibold tracking-wider text-muted-foreground uppercase">
-                    Email Address
+                    {t("settings.profile.emailAddress")}
                   </span>
                   <span className="mt-1 text-sm font-medium text-foreground">
                     {user?.email}
@@ -502,7 +514,7 @@ export function AccountSettingsView() {
                 onClick={handleOpenChangeEmail}
                 className="h-8 cursor-pointer text-xs"
               >
-                Change Email
+                {t("settings.profile.changeEmail")}
               </Button>
             </div>
 
@@ -513,7 +525,7 @@ export function AccountSettingsView() {
                 </div>
                 <div className="flex flex-col overflow-hidden text-left">
                   <span className="text-[10px] leading-none font-semibold tracking-wider text-muted-foreground uppercase">
-                    User Identifier
+                    {t("settings.profile.userIdentifier")}
                   </span>
                   <span className="mt-1 max-w-xs truncate font-mono text-xs text-foreground/80">
                     {user?.id}
@@ -525,17 +537,19 @@ export function AccountSettingsView() {
                 size="sm"
                 onClick={handleCopyId}
                 className="h-8 cursor-pointer gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                title="Copy User ID"
+                title={t("settings.profile.copyUserId")}
               >
                 {copiedId ? (
                   <>
                     <CheckIcon className="h-3.5 w-3.5 text-green-500" />
-                    <span className="text-green-500">Copied</span>
+                    <span className="text-green-500">
+                      {t("settings.profile.copied")}
+                    </span>
                   </>
                 ) : (
                   <>
                     <CopyIcon className="h-3.5 w-3.5" />
-                    <span>Copy</span>
+                    <span>{t("settings.profile.copy")}</span>
                   </>
                 )}
               </Button>
@@ -679,17 +693,16 @@ export function AccountSettingsView() {
           </div>
           <div>
             <h4 className="text-sm font-semibold text-foreground">
-              Security, Credentials & Logins
+              {t("settings.profile.securityShortcutTitle")}
             </h4>
             <p className="text-xs text-muted-foreground">
-              Manage your active sign-in sessions, master password, 2FA
-              authenticator apps, and trusted devices.
+              {t("settings.profile.securityShortcutDesc")}
             </p>
           </div>
         </div>
         <Link to="/settings/security/credentials" className="shrink-0">
           <Button variant="outline" size="sm" className="cursor-pointer">
-            Manage Security & Logins
+            {t("settings.profile.manageSecurity")}
             <ArrowRightIcon className="ml-1.5 h-3.5 w-3.5" />
           </Button>
         </Link>
@@ -704,12 +717,10 @@ export function AccountSettingsView() {
             </div>
             <div>
               <h4 className="text-sm font-semibold text-foreground">
-                Danger Zone
+                {t("settings.profile.dangerZone")}
               </h4>
               <p className="mt-1 text-xs text-muted-foreground">
-                Permanently deactivate your account. Your credentials and active
-                sessions will be deleted, and all profile identifiers will be
-                anonymized.
+                {t("settings.profile.dangerZoneDesc")}
               </p>
             </div>
           </div>
@@ -720,7 +731,7 @@ export function AccountSettingsView() {
             className="shrink-0 cursor-pointer"
           >
             <Trash2Icon className="mr-1.5 h-3.5 w-3.5" />
-            Delete Account
+            {t("settings.profile.deleteAccount")}
           </Button>
         </div>
       </div>
@@ -731,13 +742,13 @@ export function AccountSettingsView() {
           <DialogHeader className="text-left">
             <DialogTitle>
               {emailStep === "form"
-                ? "Change Email Address"
-                : "Security Verification Required"}
+                ? t("settings.profile.changeEmailTitleForm")
+                : t("settings.profile.changeEmailTitleMfa")}
             </DialogTitle>
             <DialogDescription>
               {emailStep === "form"
-                ? "Enter your new email address and confirm your current password to update your login identity."
-                : "Enter the 6-digit code from your authenticator app to authorize updating your email."}
+                ? t("settings.profile.changeEmailDescForm")
+                : t("settings.profile.changeEmailDescMfa")}
             </DialogDescription>
           </DialogHeader>
 
@@ -754,7 +765,7 @@ export function AccountSettingsView() {
             >
               <div className="space-y-1.5">
                 <Label htmlFor="new-email" className="text-xs font-medium">
-                  New Email Address
+                  {t("settings.profile.newEmail")}
                 </Label>
                 <Input
                   id="new-email"
@@ -769,12 +780,12 @@ export function AccountSettingsView() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="email-password" className="text-xs font-medium">
-                  Current Password
+                  {t("settings.profile.passwordCurrent")}
                 </Label>
                 <Input
                   id="email-password"
                   type="password"
-                  placeholder="Enter your current password"
+                  placeholder={t("settings.profile.passwordPlaceholder")}
                   value={emailCurrentPassword}
                   onChange={(e) => setEmailCurrentPassword(e.target.value)}
                   required
@@ -790,7 +801,7 @@ export function AccountSettingsView() {
                   disabled={changeEmailMutation.isPending}
                   className="cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -800,7 +811,9 @@ export function AccountSettingsView() {
                   {changeEmailMutation.isPending && (
                     <Loader2Icon className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                   )}
-                  {hasActiveMFA ? "Continue to Verification" : "Update Email"}
+                  {hasActiveMFA
+                    ? t("settings.profile.changeEmailBtnContinue")
+                    : t("settings.profile.changeEmailBtnUpdate")}
                 </Button>
               </DialogFooter>
             </form>
@@ -811,7 +824,7 @@ export function AccountSettingsView() {
                   htmlFor="email-step-up-totp"
                   className="text-xs font-medium text-foreground"
                 >
-                  Two-Factor Authenticator Code
+                  {t("settings.profile.verifyTotpLabel")}
                 </Label>
                 <InputOTP
                   id="email-step-up-totp"
@@ -841,7 +854,7 @@ export function AccountSettingsView() {
                   className="cursor-pointer gap-1.5"
                 >
                   <ArrowLeftIcon className="h-3.5 w-3.5" />
-                  Back
+                  {t("settings.profile.verifyBack")}
                 </Button>
                 <Button
                   type="button"
@@ -855,7 +868,7 @@ export function AccountSettingsView() {
                   {changeEmailMutation.isPending && (
                     <Loader2Icon className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                   )}
-                  Verify & Update Email
+                  {t("settings.profile.verifyUpdateEmail")}
                 </Button>
               </DialogFooter>
             </div>
@@ -870,13 +883,13 @@ export function AccountSettingsView() {
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangleIcon className="h-5 w-5" />
               {deleteStep === "form"
-                ? "Delete Account"
-                : "Security Verification Required"}
+                ? t("settings.profile.deleteAccount")
+                : t("settings.profile.deleteAccountTitleMfa")}
             </DialogTitle>
             <DialogDescription>
               {deleteStep === "form"
-                ? "This action is permanent and cannot be undone. All active sessions, passwords, and 2FA credentials will be wiped, and your profile data will be permanently anonymized."
-                : "Enter the 6-digit code from your authenticator app to authorize permanent account deletion."}
+                ? t("settings.profile.deleteAccountDescForm")
+                : t("settings.profile.deleteAccountDescMfa")}
             </DialogDescription>
           </DialogHeader>
 
@@ -893,16 +906,16 @@ export function AccountSettingsView() {
             >
               <div className="space-y-1.5">
                 <Label htmlFor="confirm-text" className="text-xs font-medium">
-                  To confirm, type{" "}
+                  {t("settings.profile.deleteAccountConfirmPrefix")}{" "}
                   <span className="font-semibold text-destructive">
-                    delete my account
+                    {t("settings.profile.deleteAccountSentinel")}
                   </span>{" "}
-                  below:
+                  {t("settings.profile.deleteAccountConfirmSuffix")}
                 </Label>
                 <Input
                   id="confirm-text"
                   type="text"
-                  placeholder="delete my account"
+                  placeholder={t("settings.profile.deleteAccountSentinel")}
                   value={deleteConfirmText}
                   onChange={(e) => setDeleteConfirmText(e.target.value)}
                   required
@@ -912,12 +925,12 @@ export function AccountSettingsView() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="del-password" className="text-xs font-medium">
-                  Current Password
+                  {t("settings.profile.passwordCurrent")}
                 </Label>
                 <Input
                   id="del-password"
                   type="password"
-                  placeholder="Enter your current password"
+                  placeholder={t("settings.profile.passwordPlaceholder")}
                   value={deletePassword}
                   onChange={(e) => setDeletePassword(e.target.value)}
                   required
@@ -933,14 +946,15 @@ export function AccountSettingsView() {
                   disabled={deleteAccountMutation.isPending}
                   className="cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"
                   variant="destructive"
                   disabled={
                     deleteAccountMutation.isPending ||
-                    deleteConfirmText.toLowerCase() !== "delete my account"
+                    deleteConfirmText.toLowerCase() !==
+                      t("settings.profile.deleteAccountSentinel")
                   }
                   className="cursor-pointer"
                 >
@@ -948,8 +962,8 @@ export function AccountSettingsView() {
                     <Loader2Icon className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                   )}
                   {hasActiveMFA
-                    ? "Continue to Verification"
-                    : "Permanently Delete Account"}
+                    ? t("settings.profile.changeEmailBtnContinue")
+                    : t("settings.profile.deleteAccountBtnPermanent")}
                 </Button>
               </DialogFooter>
             </form>
@@ -960,7 +974,7 @@ export function AccountSettingsView() {
                   htmlFor="del-step-up-totp"
                   className="text-xs font-medium text-foreground"
                 >
-                  Two-Factor Authenticator Code
+                  {t("settings.profile.verifyTotpLabel")}
                 </Label>
                 <InputOTP
                   id="del-step-up-totp"
@@ -990,7 +1004,7 @@ export function AccountSettingsView() {
                   className="cursor-pointer gap-1.5"
                 >
                   <ArrowLeftIcon className="h-3.5 w-3.5" />
-                  Back
+                  {t("settings.profile.verifyBack")}
                 </Button>
                 <Button
                   type="button"
@@ -1005,7 +1019,7 @@ export function AccountSettingsView() {
                   {deleteAccountMutation.isPending && (
                     <Loader2Icon className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                   )}
-                  Permanently Delete Account
+                  {t("settings.profile.deleteAccountBtnPermanent")}
                 </Button>
               </DialogFooter>
             </div>

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import {
   useListDevicesQuery,
   useRevokeDeviceMutation,
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog"
 
 export function TrustedDevicesSettings() {
+  const { t } = useI18n()
   const tz = useTimezone()
   const { data, isLoading, refetch } = useListDevicesQuery({})
   const revokeMutation = useRevokeDeviceMutation()
@@ -46,20 +47,22 @@ export function TrustedDevicesSettings() {
       refetch()
     } catch (err: unknown) {
       setRevokeError(
-        err instanceof Error ? err.message : "Failed to revoke trusted device"
+        err instanceof Error
+          ? err.message
+          : t("settings.devices.revokeFailedDefault")
       )
     }
   }
 
   const formatDate = (ts?: { seconds?: number } | string | null) => {
-    if (!ts) return "Never"
+    if (!ts) return t("settings.devices.never")
     const secs =
       typeof ts === "object" && "seconds" in ts
         ? Number(ts.seconds)
         : typeof ts === "string"
           ? Math.floor(new Date(ts).getTime() / 1000)
           : 0
-    if (!secs) return "Never"
+    if (!secs) return t("settings.devices.never")
     return tz.formatDateTime(new Date(secs * 1000))
   }
 
@@ -76,16 +79,14 @@ export function TrustedDevicesSettings() {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-semibold text-foreground">
-                Trusted Biometric Devices
+                {t("settings.devices.title")}
               </h3>
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-                {devices.length}{" "}
-                {devices.length === 1 ? "Enrolled" : "Enrolled"}
+                {devices.length} {t("settings.devices.enrolledBadge")}
               </span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Mobile devices with hardware security keys (Secure Enclave /
-              StrongBox) authorized for passwordless biometric unlock.
+              {t("settings.devices.desc")}
             </p>
           </div>
         </div>
@@ -108,18 +109,17 @@ export function TrustedDevicesSettings() {
           <div className="flex h-32 items-center justify-center">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <RefreshCwIcon className="h-4 w-4 animate-spin text-primary" />
-              Loading trusted devices...
+              {t("settings.devices.loading")}
             </div>
           </div>
         ) : devices.length === 0 ? (
           <div className="flex h-32 flex-col items-center justify-center p-6 text-center select-none">
             <FingerprintIcon className="mb-2 h-7 w-7 text-muted-foreground/40" />
             <p className="text-sm font-medium text-foreground">
-              No trusted devices enrolled
+              {t("settings.devices.emptyTitle")}
             </p>
             <p className="text-xs text-muted-foreground">
-              You can enroll your mobile device using Face ID or Touch ID from
-              the Saturn mobile app.
+              {t("settings.devices.emptyDesc")}
             </p>
           </div>
         ) : (
@@ -136,20 +136,33 @@ export function TrustedDevicesSettings() {
                   <div className="space-y-0.5">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-medium text-foreground">
-                        {dev.deviceName || "Mobile Device"}
+                        {dev.deviceName || t("settings.devices.mobileDevice")}
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 font-mono text-[10px] text-green-600 dark:text-green-400">
                         <ShieldCheckIcon className="h-3 w-3" />
-                        {dev.algorithm || "ES256"} Key
+                        {dev.algorithm || "ES256"}{" "}
+                        {t("settings.devices.keySuffix")}
                       </span>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-x-2.5 text-xs text-muted-foreground">
-                      <span>Enrolled {formatDate(dev.createTime)}</span>
+                      <span>
+                        {t("settings.devices.enrolledOn", {
+                          date: formatDate(dev.createTime),
+                        })}
+                      </span>
                       <span>•</span>
-                      <span>Last active {formatDate(dev.lastUsedTime)}</span>
+                      <span>
+                        {t("settings.devices.lastActiveOn", {
+                          date: formatDate(dev.lastUsedTime),
+                        })}
+                      </span>
                       <span>•</span>
-                      <span>Expires {formatDate(dev.expireTime)}</span>
+                      <span>
+                        {t("settings.devices.expiresOn", {
+                          date: formatDate(dev.expireTime),
+                        })}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -166,7 +179,7 @@ export function TrustedDevicesSettings() {
                     className="h-8 cursor-pointer text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   >
                     <Trash2Icon className="mr-1.5 h-3.5 w-3.5" />
-                    Revoke
+                    {t("settings.devices.revoke")}
                   </Button>
                 </div>
               </div>
@@ -181,15 +194,14 @@ export function TrustedDevicesSettings() {
           <DialogHeader>
             <div className="flex items-center gap-2 text-destructive">
               <AlertTriangleIcon className="h-5 w-5" />
-              <DialogTitle>Revoke Trusted Device?</DialogTitle>
+              <DialogTitle>
+                {t("settings.devices.revokeConfirmTitle")}
+              </DialogTitle>
             </div>
             <DialogDescription>
-              Are you sure you want to revoke{" "}
-              <strong className="text-foreground">
-                {deviceToRevoke?.deviceName}
-              </strong>
-              ? This device will immediately lose biometric unlock access, and
-              all active sessions originated from it will be terminated.
+              {t("settings.devices.revokeConfirmDesc", {
+                name: deviceToRevoke?.deviceName ?? "",
+              })}
             </DialogDescription>
           </DialogHeader>
 
@@ -205,7 +217,7 @@ export function TrustedDevicesSettings() {
               onClick={() => setRevokeOpen(false)}
               className="cursor-pointer"
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -213,7 +225,9 @@ export function TrustedDevicesSettings() {
               disabled={revokeMutation.isPending}
               className="cursor-pointer"
             >
-              {revokeMutation.isPending ? "Revoking..." : "Revoke Device"}
+              {revokeMutation.isPending
+                ? t("settings.devices.revoking")
+                : t("settings.devices.revokeDevice")}
             </Button>
           </DialogFooter>
         </DialogContent>

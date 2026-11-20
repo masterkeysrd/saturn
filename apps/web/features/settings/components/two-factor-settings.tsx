@@ -9,6 +9,7 @@ import {
   type MfaFactorDescriptor,
 } from "@saturn/api/gen/saturn/identity/v1/identity"
 import { MfaStepUpSchema } from "@saturn/schemas"
+import { useI18n } from "@saturn/hooks"
 import {
   ShieldCheckIcon,
   ShieldAlertIcon,
@@ -35,6 +36,7 @@ import {
 import { toast } from "@/components/ui/toast"
 
 export function TwoFactorSettings() {
+  const { t } = useI18n()
   const { data, isLoading, refetch } = useListMFAFactorsQuery({})
   const deleteMutation = useDeleteMFAFactorMutation()
   const setPrimaryMutation = useSetPrimaryMFAFactorMutation()
@@ -47,7 +49,9 @@ export function TwoFactorSettings() {
   const [setupStep, setSetupStep] = useState<"name" | "scan" | "backup_codes">(
     "name"
   )
-  const [deviceName, setDeviceName] = useState("Authenticator App")
+  const [deviceName, setDeviceName] = useState(
+    t("settings.mfa.deviceNameDefault")
+  )
   const [stagedFactorId, setStagedFactorId] = useState("")
   const [stagedSecret, setStagedSecret] = useState("")
   const [stagedQrSvg, setStagedQrSvg] = useState("")
@@ -72,7 +76,7 @@ export function TwoFactorSettings() {
   const remainingCodes = data?.remainingBackupCodes ?? 0
 
   const handleStartSetup = () => {
-    setDeviceName("Authenticator App")
+    setDeviceName(t("settings.mfa.deviceNameDefault"))
     setSetupStep("name")
     setWizardError(null)
     setVerificationCode("")
@@ -84,7 +88,7 @@ export function TwoFactorSettings() {
     setWizardError(null)
     try {
       const res = await setupTOTPMutation.mutateAsync({
-        name: deviceName.trim() || "Authenticator App",
+        name: deviceName.trim() || t("settings.mfa.deviceNameDefault"),
       })
       setStagedFactorId(res.factorId || "")
       setStagedSecret(res.secret || "")
@@ -92,7 +96,9 @@ export function TwoFactorSettings() {
       setSetupStep("scan")
     } catch (err) {
       setWizardError(
-        err instanceof Error ? err.message : "Failed to initiate MFA setup"
+        err instanceof Error
+          ? err.message
+          : t("settings.mfa.setupFailedDefault")
       )
     }
   }
@@ -104,8 +110,7 @@ export function TwoFactorSettings() {
     })
     if (!validation.success) {
       setWizardError(
-        validation.error.issues[0]?.message ||
-          "Please enter a valid 6-digit verification code"
+        validation.error.issues[0]?.message || t("settings.mfa.invalidTotp")
       )
       return
     }
@@ -125,7 +130,9 @@ export function TwoFactorSettings() {
       }
     } catch (err) {
       setWizardError(
-        err instanceof Error ? err.message : "Invalid verification code"
+        err instanceof Error
+          ? err.message
+          : t("settings.mfa.confirmFailedDefault")
       )
     }
   }
@@ -166,9 +173,11 @@ export function TwoFactorSettings() {
     } catch (err) {
       toast.add({
         type: "error",
-        title: "Failed to Remove Authenticator",
+        title: t("settings.mfa.deleteFailedToast"),
         description:
-          err instanceof Error ? err.message : "Failed to delete factor",
+          err instanceof Error
+            ? err.message
+            : t("settings.mfa.deleteFailedDefault"),
       })
     }
   }
@@ -183,9 +192,11 @@ export function TwoFactorSettings() {
     } catch (err) {
       toast.add({
         type: "error",
-        title: "Failed to Update Primary Authenticator",
+        title: t("settings.mfa.setPrimaryFailedToast"),
         description:
-          err instanceof Error ? err.message : "Failed to set primary factor",
+          err instanceof Error
+            ? err.message
+            : t("settings.mfa.setPrimaryFailedDefault"),
       })
     }
   }
@@ -197,8 +208,7 @@ export function TwoFactorSettings() {
     })
     if (!validation.success) {
       setRegenError(
-        validation.error.issues[0]?.message ||
-          "Please enter a valid 6-digit verification code"
+        validation.error.issues[0]?.message || t("settings.mfa.invalidTotp")
       )
       return
     }
@@ -213,7 +223,7 @@ export function TwoFactorSettings() {
       setRegenError(
         err instanceof Error
           ? err.message
-          : "Failed to regenerate recovery codes"
+          : t("settings.mfa.regenFailedDefault")
       )
     }
   }
@@ -240,7 +250,7 @@ export function TwoFactorSettings() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-semibold text-foreground">
-                  Two-Factor Authentication (MFA)
+                  {t("settings.mfa.title")}
                 </h3>
                 <span
                   className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
@@ -249,12 +259,13 @@ export function TwoFactorSettings() {
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  {hasActiveMFA ? "Enabled" : "Disabled"}
+                  {hasActiveMFA
+                    ? t("settings.mfa.enabled")
+                    : t("settings.mfa.disabled")}
                 </span>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                Enhance your account security by requiring an authenticator app
-                code during sign-in.
+                {t("settings.mfa.desc")}
               </p>
             </div>
           </div>
@@ -265,7 +276,9 @@ export function TwoFactorSettings() {
             className="shrink-0 cursor-pointer rounded-xl"
           >
             <PlusIcon className="mr-1.5 h-4 w-4" />
-            {hasActiveMFA ? "Add Authenticator" : "Enable 2FA"}
+            {hasActiveMFA
+              ? t("settings.mfa.btnAdd")
+              : t("settings.mfa.btnEnable")}
           </Button>
         </div>
 
@@ -273,7 +286,7 @@ export function TwoFactorSettings() {
         {hasActiveMFA && (
           <div className="mt-6 border-t border-border/40 pt-5">
             <h4 className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-              Registered Devices & Factors
+              {t("settings.mfa.registeredDevices")}
             </h4>
             <div className="divide-y divide-border/30">
               {factors.map((f) => (
@@ -288,16 +301,16 @@ export function TwoFactorSettings() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-foreground">
-                          {f.name || "Authenticator App"}
+                          {f.name || t("settings.mfa.deviceNameDefault")}
                         </span>
                         {f.isPrimary && (
                           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                            Primary
+                            {t("settings.mfa.primaryBadge")}
                           </span>
                         )}
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        Time-based One-Time Password (TOTP)
+                        {t("settings.mfa.totpType")}
                       </span>
                     </div>
                   </div>
@@ -311,7 +324,7 @@ export function TwoFactorSettings() {
                         disabled={setPrimaryMutation.isPending}
                         className="h-8 cursor-pointer text-xs"
                       >
-                        Set as primary
+                        {t("settings.mfa.setAsPrimary")}
                       </Button>
                     )}
                     <Button
@@ -335,12 +348,14 @@ export function TwoFactorSettings() {
                 </div>
                 <div>
                   <h5 className="text-sm font-medium text-foreground">
-                    Emergency Recovery Codes
+                    {t("settings.mfa.emergencyCodes")}
                   </h5>
                   <p className="text-xs text-muted-foreground">
                     {remainingCodes > 0
-                      ? `${remainingCodes} single-use backup recovery codes remaining.`
-                      : "No backup codes remaining. Generate new codes to maintain recovery access."}
+                      ? t("settings.mfa.recoveryCodesRemaining", {
+                          count: remainingCodes,
+                        })
+                      : t("settings.mfa.recoveryCodesNone")}
                   </p>
                 </div>
               </div>
@@ -357,7 +372,7 @@ export function TwoFactorSettings() {
                 className="shrink-0 cursor-pointer self-start rounded-lg text-xs sm:self-center"
               >
                 <RefreshCwIcon className="mr-1.5 h-3.5 w-3.5" />
-                Regenerate Codes
+                {t("settings.mfa.btnRegenerate")}
               </Button>
             </div>
           </div>
@@ -370,10 +385,9 @@ export function TwoFactorSettings() {
           {setupStep === "name" && (
             <>
               <DialogHeader>
-                <DialogTitle>Add Authenticator App</DialogTitle>
+                <DialogTitle>{t("settings.mfa.setupNameTitle")}</DialogTitle>
                 <DialogDescription>
-                  Give this device or authenticator app a memorable name to
-                  recognize it later.
+                  {t("settings.mfa.setupNameDesc")}
                 </DialogDescription>
               </DialogHeader>
 
@@ -385,12 +399,12 @@ export function TwoFactorSettings() {
 
               <div className="space-y-3 py-2">
                 <label className="text-xs font-medium text-foreground">
-                  Device Name
+                  {t("settings.mfa.deviceNameLabel")}
                 </label>
                 <Input
                   value={deviceName}
                   onChange={(e) => setDeviceName(e.target.value)}
-                  placeholder="e.g. Personal Phone, Work Laptop"
+                  placeholder={t("settings.mfa.deviceNamePlaceholder")}
                   disabled={setupTOTPMutation.isPending}
                 />
               </div>
@@ -401,14 +415,16 @@ export function TwoFactorSettings() {
                   onClick={() => setSetupOpen(false)}
                   className="cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   onClick={handleGenerateSecret}
                   disabled={setupTOTPMutation.isPending || !deviceName.trim()}
                   className="cursor-pointer"
                 >
-                  {setupTOTPMutation.isPending ? "Setting up..." : "Continue"}
+                  {setupTOTPMutation.isPending
+                    ? t("settings.mfa.settingUp")
+                    : t("settings.mfa.btnContinue")}
                 </Button>
               </DialogFooter>
             </>
@@ -417,10 +433,9 @@ export function TwoFactorSettings() {
           {setupStep === "scan" && (
             <>
               <DialogHeader>
-                <DialogTitle>Scan Barcode</DialogTitle>
+                <DialogTitle>{t("settings.mfa.scanTitle")}</DialogTitle>
                 <DialogDescription>
-                  Scan this QR code in your authenticator app (e.g. Google
-                  Authenticator, 1Password, Apple Passwords).
+                  {t("settings.mfa.scanDesc")}
                 </DialogDescription>
               </DialogHeader>
 
@@ -435,19 +450,19 @@ export function TwoFactorSettings() {
                   <div className="flex h-44 w-44 items-center justify-center rounded-2xl bg-white p-3 shadow-md">
                     <img
                       src={`data:image/svg+xml;utf8,${encodeURIComponent(stagedQrSvg)}`}
-                      alt="Two-factor authentication QR code"
+                      alt={t("settings.mfa.qrAlt")}
                       className="h-full w-full object-contain"
                     />
                   </div>
                 ) : (
                   <div className="flex h-44 w-44 items-center justify-center rounded-2xl bg-muted/40 text-xs text-muted-foreground">
-                    Loading barcode...
+                    {t("settings.mfa.loadingBarcode")}
                   </div>
                 )}
 
                 <div className="w-full space-y-1.5 text-center">
                   <span className="text-[11px] text-muted-foreground">
-                    Or enter this key manually:
+                    {t("settings.mfa.manualKeyLabel")}
                   </span>
                   <div className="flex items-center justify-center gap-2">
                     <code className="rounded-md bg-muted px-2.5 py-1 font-mono text-xs font-semibold text-foreground select-all">
@@ -470,7 +485,7 @@ export function TwoFactorSettings() {
 
                 <div className="w-full space-y-3 pt-2 text-center">
                   <label className="text-xs font-medium text-foreground">
-                    Enter the 6-digit confirmation code from your app:
+                    {t("settings.mfa.enterCodeLabel")}
                   </label>
                   <InputOTP
                     value={verificationCode}
@@ -488,7 +503,7 @@ export function TwoFactorSettings() {
                   onClick={() => setSetupStep("name")}
                   className="cursor-pointer"
                 >
-                  Back
+                  {t("common.back")}
                 </Button>
                 <Button
                   onClick={handleConfirmCode}
@@ -499,8 +514,8 @@ export function TwoFactorSettings() {
                   className="cursor-pointer"
                 >
                   {confirmTOTPMutation.isPending
-                    ? "Verifying..."
-                    : "Verify & Activate"}
+                    ? t("settings.mfa.verifying")
+                    : t("settings.mfa.btnVerifyActivate")}
                 </Button>
               </DialogFooter>
             </>
@@ -509,11 +524,9 @@ export function TwoFactorSettings() {
           {setupStep === "backup_codes" && (
             <>
               <DialogHeader>
-                <DialogTitle>Save Recovery Codes</DialogTitle>
+                <DialogTitle>{t("settings.mfa.saveCodesTitle")}</DialogTitle>
                 <DialogDescription>
-                  Save these single-use recovery codes in a secure password
-                  manager. If you lose your phone, they are the only way to
-                  recover access.
+                  {t("settings.mfa.saveCodesDesc")}
                 </DialogDescription>
               </DialogHeader>
 
@@ -541,7 +554,9 @@ export function TwoFactorSettings() {
                     ) : (
                       <CopyIcon className="mr-1.5 h-3.5 w-3.5" />
                     )}
-                    {isCopiedCodes ? "Copied" : "Copy Codes"}
+                    {isCopiedCodes
+                      ? t("settings.mfa.copied")
+                      : t("settings.mfa.btnCopyCodes")}
                   </Button>
                   <Button
                     variant="outline"
@@ -550,7 +565,7 @@ export function TwoFactorSettings() {
                     className="flex-1 cursor-pointer text-xs"
                   >
                     <DownloadIcon className="mr-1.5 h-3.5 w-3.5" />
-                    Download (.txt)
+                    {t("settings.mfa.btnDownload")}
                   </Button>
                 </div>
               </div>
@@ -560,7 +575,7 @@ export function TwoFactorSettings() {
                   onClick={() => setSetupOpen(false)}
                   className="w-full cursor-pointer"
                 >
-                  I&apos;ve Saved My Codes
+                  {t("settings.mfa.savedCodes")}
                 </Button>
               </DialogFooter>
             </>
@@ -574,10 +589,9 @@ export function TwoFactorSettings() {
           {regenSuccessCodes.length === 0 ? (
             <>
               <DialogHeader>
-                <DialogTitle>Regenerate Recovery Codes</DialogTitle>
+                <DialogTitle>{t("settings.mfa.regenTitle")}</DialogTitle>
                 <DialogDescription>
-                  Enter a 6-digit verification code from your authenticator app.
-                  All previous recovery codes will be immediately invalidated.
+                  {t("settings.mfa.regenDesc")}
                 </DialogDescription>
               </DialogHeader>
 
@@ -589,7 +603,7 @@ export function TwoFactorSettings() {
 
               <div className="w-full space-y-3 py-2 text-center">
                 <label className="text-xs font-medium text-foreground">
-                  Authenticator Verification Code
+                  {t("settings.mfa.regenCodeLabel")}
                 </label>
                 <InputOTP
                   value={regenVerificationCode}
@@ -606,7 +620,7 @@ export function TwoFactorSettings() {
                   onClick={() => setRegenOpen(false)}
                   className="cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   onClick={handleRegenerateCodes}
@@ -617,18 +631,17 @@ export function TwoFactorSettings() {
                   className="cursor-pointer"
                 >
                   {regenerateMutation.isPending
-                    ? "Verifying..."
-                    : "Regenerate Codes"}
+                    ? t("settings.mfa.verifying")
+                    : t("settings.mfa.btnRegenerate")}
                 </Button>
               </DialogFooter>
             </>
           ) : (
             <>
               <DialogHeader>
-                <DialogTitle>New Recovery Codes</DialogTitle>
+                <DialogTitle>{t("settings.mfa.regenNewTitle")}</DialogTitle>
                 <DialogDescription>
-                  Your old codes are expired. Save these fresh single-use
-                  recovery codes in a safe place.
+                  {t("settings.mfa.regenNewDesc")}
                 </DialogDescription>
               </DialogHeader>
 
@@ -656,7 +669,9 @@ export function TwoFactorSettings() {
                     ) : (
                       <CopyIcon className="mr-1.5 h-3.5 w-3.5" />
                     )}
-                    {isCopiedCodes ? "Copied" : "Copy Codes"}
+                    {isCopiedCodes
+                      ? t("settings.mfa.copied")
+                      : t("settings.mfa.btnCopyCodes")}
                   </Button>
                   <Button
                     variant="outline"
@@ -665,7 +680,7 @@ export function TwoFactorSettings() {
                     className="flex-1 cursor-pointer text-xs"
                   >
                     <DownloadIcon className="mr-1.5 h-3.5 w-3.5" />
-                    Download (.txt)
+                    {t("settings.mfa.btnDownload")}
                   </Button>
                 </div>
               </div>
@@ -675,7 +690,7 @@ export function TwoFactorSettings() {
                   onClick={() => setRegenOpen(false)}
                   className="w-full cursor-pointer"
                 >
-                  Done
+                  {t("common.done")}
                 </Button>
               </DialogFooter>
             </>
@@ -690,10 +705,11 @@ export function TwoFactorSettings() {
       >
         <DialogContent mobileFullscreen={false} className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Remove Authenticator Device</DialogTitle>
+            <DialogTitle>{t("settings.mfa.deleteTitle")}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove &quot;{factorToDelete?.name}
-              &quot;? You will no longer be able to use this device to sign in.
+              {t("settings.mfa.deleteDesc", {
+                name: factorToDelete?.name ?? "",
+              })}
             </DialogDescription>
           </DialogHeader>
 
@@ -703,7 +719,7 @@ export function TwoFactorSettings() {
               onClick={() => setFactorToDelete(null)}
               className="cursor-pointer"
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -711,7 +727,9 @@ export function TwoFactorSettings() {
               disabled={deleteMutation.isPending}
               className="cursor-pointer"
             >
-              {deleteMutation.isPending ? "Removing..." : "Remove Device"}
+              {deleteMutation.isPending
+                ? t("settings.mfa.removing")
+                : t("settings.mfa.btnRemoveDevice")}
             </Button>
           </DialogFooter>
         </DialogContent>

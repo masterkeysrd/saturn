@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { useAuth } from "@/features/auth/use-auth"
-import { useTimezone, invalidateFinanceQueries } from "@saturn/hooks"
+import { useI18n, useTimezone, invalidateFinanceQueries } from "@saturn/hooks"
 import { FISCAL_YEAR_MONTHS, getFiscalYearBounds } from "@saturn/core"
 import {
   useGetSettingsQuery,
@@ -20,7 +20,32 @@ import {
 import { toast } from "@/components/ui/toast"
 import { Landmark, Loader2, Lock, RotateCcw } from "lucide-react"
 
+type MonthDescKey =
+  | "settings.finance.monthDescCalendar"
+  | "settings.finance.monthDescRetail"
+  | "settings.finance.monthDescCustom"
+  | "settings.finance.monthDescCommonwealth"
+  | "settings.finance.monthDescOceania"
+  | "settings.finance.monthDescUsFederal"
+
+const FISCAL_MONTH_DESCRIPTION_KEYS: Record<string, MonthDescKey> = {
+  "Calendar Year (Default)": "settings.finance.monthDescCalendar",
+  "Retail 4-5-4 Calendar": "settings.finance.monthDescRetail",
+  "Custom Fiscal Cycle": "settings.finance.monthDescCustom",
+  "United Kingdom, India, Japan, Canada":
+    "settings.finance.monthDescCommonwealth",
+  "Australia, New Zealand, Academic": "settings.finance.monthDescOceania",
+  "United States Federal": "settings.finance.monthDescUsFederal",
+}
+
+function formatMonthName(month: number, language: string): string {
+  const date = new Date(2000, month - 1, 1)
+  const name = new Intl.DateTimeFormat(language, { month: "long" }).format(date)
+  return name.charAt(0).toUpperCase() + name.slice(1)
+}
+
 export function FinanceSettings() {
+  const { t, language } = useI18n()
   const { spaceId, spaceRole } = useActiveSpaceContext()
   const { user } = useAuth()
   const tz = useTimezone()
@@ -55,16 +80,22 @@ export function FinanceSettings() {
       )
       toast.add({
         type: "success",
-        title: "Finance Settings Saved",
-        description: `Fiscal year start month updated to ${monthOption?.name || activeMonth}.`,
+        title: t("settings.finance.saveOk"),
+        description: t("settings.finance.saveOkDesc", {
+          month: monthOption
+            ? formatMonthName(monthOption.month, language)
+            : String(activeMonth),
+        }),
       })
     },
     onError: (err) => {
       toast.add({
         type: "error",
-        title: "Failed to Update Settings",
+        title: t("settings.finance.saveFailedToast"),
         description:
-          err instanceof Error ? err.message : "An unexpected error occurred",
+          err instanceof Error
+            ? err.message
+            : t("settings.finance.saveFailedDefault"),
       })
     },
   })
@@ -90,8 +121,7 @@ export function FinanceSettings() {
     return (
       <div className="rounded-3xl border border-border/40 bg-card/45 p-8 text-center">
         <p className="text-sm text-muted-foreground">
-          Please select or activate a workspace first to manage its finance
-          settings.
+          {t("settings.finance.noWorkspace")}
         </p>
       </div>
     )
@@ -111,10 +141,10 @@ export function FinanceSettings() {
         <p className="text-sm font-medium text-destructive">
           {error instanceof Error
             ? error.message
-            : "Failed to load finance settings."}
+            : t("settings.finance.loadFailed")}
         </p>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
-          Retry
+          {t("common.retry")}
         </Button>
       </div>
     )
@@ -131,11 +161,10 @@ export function FinanceSettings() {
             </div>
             <div>
               <h3 className="text-lg font-bold tracking-tight text-foreground">
-                Finance & Accounting
+                {t("settings.finance.title")}
               </h3>
               <p className="text-xs text-muted-foreground">
-                Configure base reporting currency and annual fiscal year
-                boundaries.
+                {t("settings.finance.desc")}
               </p>
             </div>
           </div>
@@ -147,16 +176,15 @@ export function FinanceSettings() {
           <div className="space-y-2 py-6">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                Base Reporting Currency
+                {t("settings.finance.baseCurrencyLabel")}
               </Label>
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Lock className="h-3 w-3" />
-                Locked at workspace setup
+                {t("settings.finance.lockedSetup")}
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Primary currency for all budgets, transactions, and financial
-              insights.
+              {t("settings.finance.baseCurrencyDesc")}
             </p>
             <div className="flex h-11 items-center rounded-2xl border border-border/60 bg-muted/20 px-4 font-mono text-sm font-medium text-foreground">
               {settings?.baseCurrency || "USD"}
@@ -166,11 +194,10 @@ export function FinanceSettings() {
           {/* Row 2: Fiscal Year Start Month */}
           <div className="space-y-3 py-6">
             <Label className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-              Fiscal Year Start Month
+              {t("settings.finance.fiscalStartLabel")}
             </Label>
             <p className="text-xs text-muted-foreground">
-              Starting month of your annual fiscal cycle. Annual budgets and
-              spending limits will align to this period.
+              {t("settings.finance.fiscalStartDesc")}
             </p>
             <Select
               value={String(activeMonth)}
@@ -181,10 +208,7 @@ export function FinanceSettings() {
             >
               <SelectTrigger className="!h-11 w-full rounded-2xl border-border/60 bg-background/50 text-left">
                 <SelectValue>
-                  {
-                    FISCAL_YEAR_MONTHS.find((m) => m.month === activeMonth)
-                      ?.name
-                  }
+                  {formatMonthName(activeMonth, language)}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="max-h-72 rounded-2xl border border-border/50 bg-card/95 p-1.5 shadow-xl backdrop-blur-xl">
@@ -192,10 +216,13 @@ export function FinanceSettings() {
                   <SelectItem key={option.month} value={String(option.month)}>
                     <div className="flex flex-col py-0.5">
                       <span className="font-medium text-foreground">
-                        {option.name}
+                        {formatMonthName(option.month, language)}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {option.description}
+                        {t(
+                          FISCAL_MONTH_DESCRIPTION_KEYS[option.description] ??
+                            "settings.finance.monthDescCustom"
+                        )}
                       </span>
                     </div>
                   </SelectItem>
@@ -204,11 +231,8 @@ export function FinanceSettings() {
             </Select>
 
             <div className="text-xs text-muted-foreground">
-              Active cycle:{" "}
-              <span className="font-semibold text-foreground">
-                {bounds.label}
-              </span>{" "}
-              ({tz.formatDate(bounds.startDate, { dateStyle: "medium" })} –{" "}
+              {t("settings.finance.activeCycle", { label: bounds.label })} (
+              {tz.formatDate(bounds.startDate, { dateStyle: "medium" })} –{" "}
               {tz.formatDate(bounds.endDate, { dateStyle: "medium" })})
             </div>
           </div>
@@ -224,14 +248,16 @@ export function FinanceSettings() {
               disabled={updateMutation.isPending}
             >
               <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-              Reset
+              {t("settings.spacePrefs.reset")}
             </Button>
             <Button
               size="sm"
               onClick={handleSave}
               disabled={updateMutation.isPending}
             >
-              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+              {updateMutation.isPending
+                ? t("common.saving")
+                : t("settings.finance.saveChanges")}
             </Button>
           </div>
         )}

@@ -19,6 +19,7 @@ import {
   Landmark,
   Link2,
 } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
 import { PageLayout } from "@/components/ui/page-layout"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/features/auth/use-auth"
@@ -48,6 +49,7 @@ interface NavSection {
 export function SettingsView() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const { t } = useI18n()
   const { user } = useAuth()
   const { spaceRole } = useActiveSpaceContext()
 
@@ -59,76 +61,76 @@ export function SettingsView() {
   const navSections: NavSection[] = useMemo(
     () => [
       {
-        title: "Personal Account",
+        title: t("settings.hub.navPersonalAccount"),
         items: [
           {
             to: "/settings/account",
-            label: "Profile & Identity",
+            label: t("settings.hub.navProfile"),
             icon: UserIcon,
           },
         ],
       },
       {
-        title: "Access & Security",
+        title: t("settings.hub.navAccessSecurity"),
         items: [
           {
             to: "/settings/security/credentials",
-            label: "Credentials & Auth",
+            label: t("settings.hub.navCredentials"),
             icon: KeyRoundIcon,
           },
           {
             to: "/settings/security/devices",
-            label: "Sessions & Devices",
+            label: t("settings.hub.navSessions"),
             icon: LaptopIcon,
           },
           {
             to: "/settings/security/activity",
-            label: "Security Activity Log",
+            label: t("settings.hub.navActivityLog"),
             icon: ActivityIcon,
           },
           {
             to: "/settings/security/api-keys",
-            label: "Personal API Keys",
+            label: t("settings.hub.navPersonalKeys"),
             icon: KeyIcon,
           },
         ],
       },
       {
-        title: "Workspace",
+        title: t("settings.hub.navWorkspace"),
         items: [
           {
             to: "/settings/spaces",
-            label: "Workspaces",
+            label: t("settings.hub.navWorkspaces"),
             icon: Building2Icon,
           },
           ...(isWorkspaceAdmin
             ? [
                 {
                   to: "/settings/preferences",
-                  label: "Preferences",
+                  label: t("settings.hub.navPreferences"),
                   icon: Sliders,
                 },
                 {
                   to: "/settings/finance",
-                  label: "Finance",
+                  label: t("settings.hub.navFinance"),
                   icon: Landmark,
                 },
                 {
                   to: "/settings/api-keys",
-                  label: "Workspace API Keys",
+                  label: t("settings.hub.navWorkspaceKeys"),
                   icon: KeyIcon,
                 },
               ]
             : []),
           {
             to: "/settings/connected-accounts",
-            label: "Connected Accounts",
+            label: t("settings.hub.navConnectedAccounts"),
             icon: Link2,
           },
         ],
       },
     ],
-    [isWorkspaceAdmin]
+    [isWorkspaceAdmin, t]
   )
 
   // Backward-compatibility: redirect old query param links (?tab=...) to slash paths
@@ -151,8 +153,8 @@ export function SettingsView() {
 
   return (
     <PageLayout
-      title="Settings"
-      description="Manage your account profile, security credentials, active sessions, and workspace."
+      title={t("settings.hub.title")}
+      description={t("settings.hub.description")}
       icon={Settings}
       className="max-w-6xl py-4"
     >

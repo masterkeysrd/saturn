@@ -45,7 +45,8 @@ import {
   type SpaceMember_Role,
   type UpdateSpaceRequest,
 } from "@saturn/api/gen/saturn/space/v1/space"
-import { SPACE_ROLE_LABELS, SPACE_ROLE_OPTIONS } from "@saturn/core"
+import { SPACE_ROLE_OPTIONS } from "@saturn/core"
+import { useI18n } from "@saturn/hooks"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { toast } from "@/components/ui/toast"
 
@@ -55,6 +56,7 @@ interface ManageSpaceSheetProps {
 }
 
 export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const {
     spaceId: activeSpaceId,
@@ -154,16 +156,18 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
       }
       toast.add({
         type: "success",
-        title: "Space Updated",
-        description: "Workspace details updated successfully.",
+        title: t("settings.spaces.updateOk"),
+        description: t("settings.spaces.updateOkDesc"),
       })
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Failed to update details"
+        err instanceof Error
+          ? err.message
+          : t("settings.spaces.updateDetailsFailed")
       setGeneralError(message)
       toast.add({
         type: "error",
-        title: "Update Failed",
+        title: t("settings.spaces.updateFailedToast"),
         description: message,
       })
     }
@@ -188,16 +192,18 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
       addMemberForm.reset()
       toast.add({
         type: "success",
-        title: "Member Added",
-        description: "Member has been added to the workspace.",
+        title: t("settings.spaces.addMemberOk"),
+        description: t("settings.spaces.addMemberOkDesc"),
       })
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Failed to add member"
+        err instanceof Error
+          ? err.message
+          : t("settings.spaces.addMemberFailed")
       setMemberError(message)
       toast.add({
         type: "error",
-        title: "Failed to Add Member",
+        title: t("settings.spaces.addMemberFailedToast"),
         description: message,
       })
     }
@@ -216,16 +222,18 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
       })
       toast.add({
         type: "success",
-        title: "Member Removed",
-        description: "Member has been removed from the workspace.",
+        title: t("settings.spaces.removeMemberOk"),
+        description: t("settings.spaces.removeMemberOkDesc"),
       })
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Failed to remove member"
+        err instanceof Error
+          ? err.message
+          : t("settings.spaces.removeMemberFailed")
       setMemberError(message)
       toast.add({
         type: "error",
-        title: "Failed to Remove Member",
+        title: t("settings.spaces.removeMemberFailedToast"),
         description: message,
       })
     }
@@ -251,22 +259,30 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
       })
       toast.add({
         type: "success",
-        title: "Role Updated",
-        description: "Member role updated successfully.",
+        title: t("settings.spaces.roleOk"),
+        description: t("settings.spaces.roleOkDesc"),
       })
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Failed to update role"
+        err instanceof Error
+          ? err.message
+          : t("settings.spaces.roleFailedDefault")
       setMemberError(message)
       toast.add({
         type: "error",
-        title: "Failed to Update Role",
+        title: t("settings.spaces.updateRoleFailedToast"),
         description: message,
       })
     }
   }
 
   const members = membersData?.members ?? []
+  const roleLabels: Record<string, string> = {
+    OWNER: t("settings.spaces.roleOwner"),
+    ADMIN: t("settings.spaces.roleAdmin"),
+    MEMBER: t("settings.spaces.roleMember"),
+    VIEWER: t("settings.spaces.roleViewer"),
+  }
 
   return (
     <Dialog open={!!space} onOpenChange={(open) => !open && onClose()}>
@@ -279,10 +295,10 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
             </div>
             <div className="flex flex-col text-left">
               <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
-                Manage Space
+                {t("settings.spaces.manageTitle")}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Settings and access control for this workspace.
+                {t("settings.spaces.manageDesc")}
               </DialogDescription>
             </div>
           </div>
@@ -294,7 +310,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
             <div className="flex items-center gap-2 select-none">
               <Settings2 className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-xs leading-none font-semibold tracking-wider text-muted-foreground uppercase">
-                General Settings
+                {t("settings.spaces.generalSettings")}
               </h3>
             </div>
             <form
@@ -306,7 +322,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                   htmlFor="manage-space-name"
                   className="text-xs font-medium text-muted-foreground"
                 >
-                  Space Name
+                  {t("settings.spaces.spaceName")}
                 </Label>
                 <Input
                   id="manage-space-name"
@@ -324,7 +340,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                   htmlFor="manage-space-desc"
                   className="text-xs font-medium text-muted-foreground"
                 >
-                  Description
+                  {t("settings.spaces.description")}
                 </Label>
                 <Input
                   id="manage-space-desc"
@@ -347,7 +363,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                 {patchMutation.isPending ? (
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                 ) : null}
-                Save Settings
+                {t("settings.spaces.saveSettings")}
               </Button>
             </form>
           </div>
@@ -360,11 +376,17 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <h3 className="text-xs leading-none font-semibold tracking-wider text-muted-foreground uppercase">
-                  Members Access
+                  {t("settings.spaces.membersAccess")}
                 </h3>
               </div>
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-                {members.length} Member{members.length !== 1 ? "s" : ""}
+                {members.length === 1
+                  ? t("settings.spaces.memberCountOne", {
+                      count: members.length,
+                    })
+                  : t("settings.spaces.memberCountOther", {
+                      count: members.length,
+                    })}
               </span>
             </div>
 
@@ -383,7 +405,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
               <div className="max-h-64 divide-y divide-border/40 overflow-y-auto border-t border-border/40 select-none">
                 {members.length === 0 ? (
                   <p className="p-4 text-center text-xs text-muted-foreground">
-                    No members found.
+                    {t("settings.spaces.noMembers")}
                   </p>
                 ) : (
                   members.map((member) => (
@@ -414,7 +436,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                             {member.profile?.username
                               ? `@${member.profile.username} • `
                               : ""}
-                            {SPACE_ROLE_LABELS[member.role] || member.role}
+                            {roleLabels[member.role] || member.role}
                           </span>
                         </div>
                       </div>
@@ -423,7 +445,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                         {member.role === "OWNER" ? (
                           <div className="flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold text-primary uppercase select-none">
                             <ShieldCheck className="h-3 w-3" />
-                            Owner
+                            {t("settings.spaces.roleOwner")}
                           </div>
                         ) : (
                           <>
@@ -444,7 +466,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
                                 {SPACE_ROLE_OPTIONS.map((opt) => (
                                   <SelectItem key={opt.value} value={opt.value}>
-                                    {opt.label}
+                                    {roleLabels[opt.value] || opt.label}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -475,12 +497,12 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
               className="space-y-3 pt-3"
             >
               <Label className="text-xs font-semibold text-muted-foreground select-none">
-                Add Workspace Member
+                {t("settings.spaces.addMemberBtn")}
               </Label>
               <div className="space-y-1.5">
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Enter User ID (usr_...)"
+                    placeholder={t("settings.spaces.addMemberPlaceholder")}
                     {...addMemberForm.register("userId")}
                     className="h-9 flex-1 rounded-xl border-border/40 bg-muted/10 text-xs focus:ring-2 focus:ring-primary/20"
                   />
@@ -498,7 +520,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                         <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
                           {SPACE_ROLE_OPTIONS.map((opt) => (
                             <SelectItem key={opt.value} value={opt.value}>
-                              {opt.label}
+                              {roleLabels[opt.value] || opt.label}
                             </SelectItem>
                           ))}
                         </SelectContent>

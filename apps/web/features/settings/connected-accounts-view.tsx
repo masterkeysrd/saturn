@@ -23,15 +23,15 @@ import {
   useSyncConnectedAccount,
   useCalendars,
   useUpdateCalendar,
+  useI18n,
+  useTimezone,
   type ConnectedAccount,
 } from "@saturn/hooks"
+import { type TranslationKey } from "@saturn/i18n"
 import {
   CONNECTOR_CAPABILITIES,
-  CONNECTOR_CAPABILITY_LABELS,
-  CONNECTOR_CAPABILITY_DESCRIPTIONS,
   type ConnectorCapability,
 } from "@saturn/schemas"
-import { useTimezone } from "@saturn/hooks"
 import { useSpacePermissions } from "@/features/space/use-space"
 import { Button } from "@/components/ui/button"
 import {
@@ -60,16 +60,28 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
-const ACCENT_COLORS = [
-  { name: "Blue", value: "#3b82f6" },
-  { name: "Purple", value: "#8b5cf6" },
-  { name: "Emerald", value: "#10b981" },
-  { name: "Amber", value: "#f59e0b" },
-  { name: "Rose", value: "#f43f5e" },
-  { name: "Indigo", value: "#6366f1" },
-  { name: "Cyan", value: "#06b6d4" },
-  { name: "Slate", value: "#64748b" },
-]
+const ACCENT_COLOR_KEYS = [
+  { key: "settings.connectors.colorBlue", value: "#3b82f6" },
+  { key: "settings.connectors.colorPurple", value: "#8b5cf6" },
+  { key: "settings.connectors.colorEmerald", value: "#10b981" },
+  { key: "settings.connectors.colorAmber", value: "#f59e0b" },
+  { key: "settings.connectors.colorRose", value: "#f43f5e" },
+  { key: "settings.connectors.colorIndigo", value: "#6366f1" },
+  { key: "settings.connectors.colorCyan", value: "#06b6d4" },
+  { key: "settings.connectors.colorSlate", value: "#64748b" },
+] as const
+
+const CAPABILITY_LABEL_KEYS: Record<ConnectorCapability, TranslationKey> = {
+  calendar: "settings.connectors.capCalendar",
+  mail: "settings.connectors.capMail",
+  contacts: "settings.connectors.capContacts",
+}
+
+const CAPABILITY_DESC_KEYS: Record<ConnectorCapability, TranslationKey> = {
+  calendar: "settings.connectors.capDescCalendar",
+  mail: "settings.connectors.capDescMail",
+  contacts: "settings.connectors.capDescContacts",
+}
 
 const CAPABILITY_ICONS: Record<ConnectorCapability, typeof Calendar> = {
   calendar: Calendar,
@@ -164,6 +176,7 @@ export function ConnectedAccountsView() {
   const navigate = useNavigate()
   const { spaceId, canManageSpace } = useSpacePermissions()
   const tz = useTimezone()
+  const { t } = useI18n()
 
   const { data: providersData, isLoading: providersLoading } =
     useConnectorProviders()
@@ -193,21 +206,23 @@ export function ConnectedAccountsView() {
 
     if (connectedAccountId) {
       toast.add({
-        title: "Account connected",
-        description: "External account connected and authorized successfully.",
+        title: t("settings.connectors.connectedToast"),
+        description: t("settings.connectors.connectedToastDesc"),
         type: "success",
       })
       refetchAccounts()
       navigate(window.location.pathname, { replace: true })
     } else if (oauthError) {
       toast.add({
-        title: "Connection failed",
-        description: `Authorization failed: ${oauthError}`,
+        title: t("settings.connectors.connectionFailedToast"),
+        description: t("settings.connectors.connectionFailedToastDesc", {
+          error: oauthError,
+        }),
         type: "error",
       })
       navigate(window.location.pathname, { replace: true })
     }
-  }, [searchParams, navigate, refetchAccounts])
+  }, [searchParams, navigate, refetchAccounts, t])
 
   const accounts = accountsData?.accounts || []
   const providers = providersData?.providers || []
@@ -231,9 +246,11 @@ export function ConnectedAccountsView() {
       }
     } catch (err) {
       toast.add({
-        title: "Failed to initiate connection",
+        title: t("settings.connectors.connectInitFailedToast"),
         description:
-          err instanceof Error ? err.message : "Unexpected connection error",
+          err instanceof Error
+            ? err.message
+            : t("settings.connectors.connectInitFailedToastDefault"),
         type: "error",
       })
     }
@@ -270,8 +287,14 @@ export function ConnectedAccountsView() {
         },
       })
       toast.add({
-        title: "Capabilities updated",
-        description: `${CONNECTOR_CAPABILITY_LABELS[capability]} ${isEnabling ? "enabled" : "disabled"}.`,
+        title: t("settings.connectors.capabilitiesUpdatedToast"),
+        description: isEnabling
+          ? t("settings.connectors.capabilitiesEnabledToast", {
+              capability: t(CAPABILITY_LABEL_KEYS[capability]),
+            })
+          : t("settings.connectors.capabilitiesDisabledToast", {
+              capability: t(CAPABILITY_LABEL_KEYS[capability]),
+            }),
         type: "success",
       })
     } catch (err) {
@@ -283,16 +306,16 @@ export function ConnectedAccountsView() {
 
       if (isScopeUpgradeRequired && isEnabling) {
         toast.add({
-          title: "Authorization required",
-          description:
-            "Additional provider permission required. Redirecting to authorize...",
+          title: t("settings.connectors.authRequiredToast"),
+          description: t("settings.connectors.authRequiredToastDesc"),
           type: "info",
         })
         await handleConnect(account.provider || "google", account.id, newCaps)
       } else {
         toast.add({
-          title: "Failed to update capabilities",
-          description: errMsg || "Could not update capability switch",
+          title: t("settings.connectors.capabilitiesFailedToast"),
+          description:
+            errMsg || t("settings.connectors.capabilitiesFailedToastDefault"),
           type: "error",
         })
       }
@@ -323,14 +346,17 @@ export function ConnectedAccountsView() {
         },
       })
       toast.add({
-        title: "Accent color updated",
-        description: "Account color tag saved successfully.",
+        title: t("settings.connectors.colorUpdatedToast"),
+        description: t("settings.connectors.colorUpdatedToastDesc"),
         type: "success",
       })
     } catch (err) {
       toast.add({
-        title: "Failed to update color",
-        description: err instanceof Error ? err.message : "Update failed",
+        title: t("settings.connectors.colorFailedToast"),
+        description:
+          err instanceof Error
+            ? err.message
+            : t("settings.connectors.colorFailedToastDefault"),
         type: "error",
       })
     }
@@ -345,14 +371,17 @@ export function ConnectedAccountsView() {
         spaceId,
       })
       toast.add({
-        title: "Sync triggered",
-        description: "Account synchronization in progress.",
+        title: t("settings.connectors.syncOkToast"),
+        description: t("settings.connectors.syncOkToastDesc"),
         type: "success",
       })
     } catch (err) {
       toast.add({
-        title: "Sync failed",
-        description: err instanceof Error ? err.message : "Sync request failed",
+        title: t("settings.connectors.syncFailedToast"),
+        description:
+          err instanceof Error
+            ? err.message
+            : t("settings.connectors.syncFailedToastDefault"),
         type: "error",
       })
     } finally {
@@ -368,17 +397,18 @@ export function ConnectedAccountsView() {
         spaceId,
       })
       toast.add({
-        title: "Account disconnected",
-        description:
-          "The account and its synced external mirrors have been removed from this Space.",
+        title: t("settings.connectors.disconnectedToast"),
+        description: t("settings.connectors.disconnectedToastDesc"),
         type: "success",
       })
       setAccountToDisconnect(null)
     } catch (err) {
       toast.add({
-        title: "Disconnect failed",
+        title: t("settings.connectors.disconnectFailedToast"),
         description:
-          err instanceof Error ? err.message : "Failed to disconnect account",
+          err instanceof Error
+            ? err.message
+            : t("settings.connectors.disconnectFailedToastDefault"),
         type: "error",
       })
     }
@@ -392,11 +422,7 @@ export function ConnectedAccountsView() {
       {!canManageSpace && (
         <div className="flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-600 dark:text-amber-400">
           <Lock className="h-4 w-4 shrink-0" />
-          <span>
-            You are viewing Connected Accounts in read-only mode. Workspace
-            Admin or Owner privileges are required to connect, update, or
-            disconnect external accounts.
-          </span>
+          <span>{t("settings.connectors.readOnlyBanner")}</span>
         </div>
       )}
 
@@ -404,11 +430,10 @@ export function ConnectedAccountsView() {
       <section className="space-y-4">
         <div>
           <h3 className="text-base font-semibold tracking-tight text-foreground">
-            Connect New Account
+            {t("settings.connectors.connectNewTitle")}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Synchronize external calendars, emails, and address books into this
-            workspace.
+            {t("settings.connectors.connectNewDesc")}
           </p>
         </div>
 
@@ -425,10 +450,10 @@ export function ConnectedAccountsView() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <CardTitle className="truncate text-sm font-semibold">
-                    Google
+                    {t("settings.connectors.google")}
                   </CardTitle>
                   <CardDescription className="truncate text-xs">
-                    Google Workspace & Personal Gmail
+                    {t("settings.connectors.descGoogle")}
                   </CardDescription>
                 </div>
               </div>
@@ -437,15 +462,15 @@ export function ConnectedAccountsView() {
               <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-muted/50 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-muted-foreground">
                   <Calendar className="h-2.5 w-2.5 shrink-0" />
-                  Calendars
+                  {t("settings.connectors.capCalendar")}
                 </span>
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-muted/50 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-muted-foreground">
                   <Mail className="h-2.5 w-2.5 shrink-0" />
-                  Mail
+                  {t("settings.connectors.capMail")}
                 </span>
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-muted/50 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-muted-foreground">
                   <Contact className="h-2.5 w-2.5 shrink-0" />
-                  Contacts
+                  {t("settings.connectors.capContacts")}
                 </span>
               </div>
               {canManageSpace ? (
@@ -465,7 +490,9 @@ export function ConnectedAccountsView() {
                   ) : (
                     <GoogleIcon className="mr-1.5 h-3.5 w-3.5 shrink-0" />
                   )}
-                  <span className="truncate">Connect Google</span>
+                  <span className="truncate">
+                    {t("settings.connectors.connectGoogle")}
+                  </span>
                 </Button>
               ) : (
                 <Button
@@ -475,7 +502,9 @@ export function ConnectedAccountsView() {
                   disabled
                 >
                   <Lock className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">Admin Only</span>
+                  <span className="truncate">
+                    {t("settings.connectors.adminOnly")}
+                  </span>
                 </Button>
               )}
             </CardContent>
@@ -491,15 +520,15 @@ export function ConnectedAccountsView() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <CardTitle className="truncate text-sm font-semibold">
-                      Microsoft
+                      {t("settings.connectors.microsoft")}
                     </CardTitle>
                     <CardDescription className="truncate text-xs">
-                      Microsoft 365 & Outlook.com
+                      {t("settings.connectors.descMicrosoft")}
                     </CardDescription>
                   </div>
                 </div>
                 <span className="shrink-0 rounded-full border border-border/50 bg-muted px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-muted-foreground">
-                  Coming Soon
+                  {t("settings.connectors.comingSoon")}
                 </span>
               </div>
             </CardHeader>
@@ -507,15 +536,15 @@ export function ConnectedAccountsView() {
               <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-muted/50 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-muted-foreground">
                   <Calendar className="h-2.5 w-2.5 shrink-0" />
-                  Calendars
+                  {t("settings.connectors.capCalendar")}
                 </span>
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-muted/50 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-muted-foreground">
                   <Mail className="h-2.5 w-2.5 shrink-0" />
-                  Mail
+                  {t("settings.connectors.capMail")}
                 </span>
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-muted/50 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-muted-foreground">
                   <Contact className="h-2.5 w-2.5 shrink-0" />
-                  Contacts
+                  {t("settings.connectors.capContacts")}
                 </span>
               </div>
               <Button
@@ -524,7 +553,9 @@ export function ConnectedAccountsView() {
                 className="w-full justify-center truncate text-xs"
                 disabled
               >
-                <span className="truncate">Coming Soon</span>
+                <span className="truncate">
+                  {t("settings.connectors.comingSoon")}
+                </span>
               </Button>
             </CardContent>
           </Card>
@@ -535,11 +566,10 @@ export function ConnectedAccountsView() {
       <section className="space-y-4">
         <div>
           <h3 className="text-base font-semibold tracking-tight text-foreground">
-            Connected Accounts
+            {t("settings.connectors.connectedAccountsTitle")}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Manage your synchronized provider accounts, active capabilities, and
-            accent tags.
+            {t("settings.connectors.connectedAccountsDesc")}
           </p>
         </div>
 
@@ -558,11 +588,10 @@ export function ConnectedAccountsView() {
               <Link2 className="h-6 w-6 text-muted-foreground" />
             </div>
             <h4 className="mt-3 text-sm font-semibold">
-              No Connected Accounts
+              {t("settings.connectors.emptyTitle")}
             </h4>
             <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-              Connect Google above to start synchronizing calendars, email, and
-              contacts into this Space.
+              {t("settings.connectors.emptyDesc")}
             </p>
           </Card>
         ) : (
@@ -621,7 +650,9 @@ export function ConnectedAccountsView() {
                               <Popover>
                                 <PopoverTrigger
                                   type="button"
-                                  aria-label="Change account accent color"
+                                  aria-label={t(
+                                    "settings.connectors.accentColorAria"
+                                  )}
                                   className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded-full border border-border shadow-xs transition-transform hover:scale-110"
                                   style={{
                                     backgroundColor: accountAccentColor,
@@ -632,11 +663,11 @@ export function ConnectedAccountsView() {
                                   align="start"
                                 >
                                   <div className="grid grid-cols-4 gap-1.5">
-                                    {ACCENT_COLORS.map((c) => (
+                                    {ACCENT_COLOR_KEYS.map((c) => (
                                       <button
                                         key={c.value}
                                         type="button"
-                                        title={c.name}
+                                        title={t(c.key)}
                                         className={cn(
                                           "h-6 w-6 rounded-full border transition-transform hover:scale-110",
                                           account.color === c.value
@@ -673,32 +704,36 @@ export function ConnectedAccountsView() {
                         {isHealthy && (
                           <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium whitespace-nowrap text-emerald-600 dark:text-emerald-400">
                             <CheckCircle2 className="h-3 w-3 shrink-0" />
-                            Active
+                            {t("settings.connectors.statusActive")}
                           </span>
                         )}
                         {isReauthRequired && (
                           <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium whitespace-nowrap text-amber-600 dark:text-amber-400">
                             <AlertTriangle className="h-3 w-3 shrink-0" />
-                            Reconnect Required
+                            {t("settings.connectors.reconnectRequired")}
                           </span>
                         )}
                         {isRateLimited && (
                           <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-yellow-500/20 bg-yellow-500/10 px-2.5 py-0.5 text-xs font-medium whitespace-nowrap text-yellow-600 dark:text-yellow-400">
                             <Clock className="h-3 w-3 shrink-0" />
-                            Rate Limited
+                            {t("settings.connectors.rateLimited")}
                           </span>
                         )}
                         {isError && (
                           <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium whitespace-nowrap text-red-600 dark:text-red-400">
                             <AlertCircle className="h-3 w-3 shrink-0" />
-                            Error
+                            {t("settings.connectors.error")}
                           </span>
                         )}
 
                         <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">
                           {account.lastSyncTime
-                            ? `Synced ${tz.formatRelative(account.lastSyncTime)}`
-                            : "Never synced"}
+                            ? t("settings.connectors.syncedLabel", {
+                                relative: tz.formatRelative(
+                                  account.lastSyncTime
+                                ),
+                              })
+                            : t("settings.connectors.neverSynced")}
                         </span>
                       </div>
                     </div>
@@ -709,8 +744,7 @@ export function ConnectedAccountsView() {
                         <div className="flex min-w-0 flex-1 items-center gap-2">
                           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
                           <span className="leading-tight">
-                            Tokens have expired or authorization was revoked.
-                            Please reconnect to resume synchronization.
+                            {t("settings.connectors.reconnectBanner")}
                           </span>
                         </div>
                         {canManageSpace && (
@@ -726,7 +760,7 @@ export function ConnectedAccountsView() {
                               )
                             }
                           >
-                            Reconnect
+                            {t("settings.connectors.reconnect")}
                           </Button>
                         )}
                       </div>
@@ -735,7 +769,7 @@ export function ConnectedAccountsView() {
                     {/* Capability Switches */}
                     <div className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-3">
                       <div className="text-xs font-medium text-muted-foreground">
-                        Active Platform Capabilities
+                        {t("settings.connectors.capabilitiesSection")}
                       </div>
                       <div className="divide-y divide-border/40 overflow-hidden rounded-lg border border-border/50 bg-card">
                         {CONNECTOR_CAPABILITIES.map((cap) => {
@@ -760,10 +794,10 @@ export function ConnectedAccountsView() {
                                     htmlFor={switchId}
                                     className="block cursor-pointer text-xs font-semibold text-foreground hover:underline"
                                   >
-                                    {CONNECTOR_CAPABILITY_LABELS[cap]}
+                                    {t(CAPABILITY_LABEL_KEYS[cap])}
                                   </label>
                                   <span className="block text-[11px] text-muted-foreground">
-                                    {CONNECTOR_CAPABILITY_DESCRIPTIONS[cap]}
+                                    {t(CAPABILITY_DESC_KEYS[cap])}
                                   </span>
                                 </div>
                               </div>
@@ -797,7 +831,7 @@ export function ConnectedAccountsView() {
                         return (
                           <div className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-3">
                             <div className="text-xs font-medium text-muted-foreground">
-                              Synchronized Calendars
+                              {t("settings.connectors.syncedCalendars")}
                             </div>
                             <div className="divide-y divide-border/40 overflow-hidden rounded-lg border border-border/50 bg-card">
                               {accountCalendars.map((cal) => (
@@ -850,7 +884,11 @@ export function ConnectedAccountsView() {
                             isSyncingThis && "animate-spin"
                           )}
                         />
-                        <span>{isSyncingThis ? "Syncing..." : "Sync Now"}</span>
+                        <span>
+                          {isSyncingThis
+                            ? t("settings.connectors.syncingBtn")
+                            : t("settings.connectors.syncBtn")}
+                        </span>
                       </Button>
 
                       {canManageSpace && (
@@ -861,7 +899,7 @@ export function ConnectedAccountsView() {
                           onClick={() => setAccountToDisconnect(account)}
                         >
                           <Trash2 className="h-3.5 w-3.5 shrink-0" />
-                          <span>Disconnect</span>
+                          <span>{t("settings.connectors.disconnect")}</span>
                         </Button>
                       )}
                     </div>
@@ -881,24 +919,25 @@ export function ConnectedAccountsView() {
         >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Disconnect Account</AlertDialogTitle>
+              <AlertDialogTitle>
+                {t("settings.connectors.disconnectConfirmTitle")}
+              </AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to disconnect{" "}
+                {t("settings.connectors.disconnectConfirmQ1")}{" "}
                 <strong>
                   {accountToDisconnect?.displayName ||
                     accountToDisconnect?.email}
                 </strong>
-                ? Synced external mirrors (calendars, mail, and contacts) in
-                this Space will be permanently deleted.
+                {t("settings.connectors.disconnectConfirmQ2")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
                 onClick={handleConfirmDisconnect}
               >
-                Disconnect
+                {t("settings.connectors.disconnectBtn")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

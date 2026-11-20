@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react"
 import { useParams, Link } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
+import { useI18n } from "@saturn/hooks"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { useAuth } from "@/features/auth/use-auth"
 import {
@@ -55,6 +56,7 @@ function formatTimezonePreview(tz: string): string {
 }
 
 export function SpacePreferences() {
+  const { t } = useI18n()
   const { spaceId: paramSpaceId } = useParams<{ spaceId: string }>()
   const {
     spaceId: contextSpaceId,
@@ -130,14 +132,16 @@ export function SpacePreferences() {
       setSelectedTimezone(null)
       toast.add({
         type: "success",
-        title: "Preferences Saved",
-        description: `Workspace timezone set to ${updated.timezone || currentTimezone}.`,
+        title: t("settings.spacePrefs.saveOk"),
+        description: t("settings.spacePrefs.saveOkDesc", {
+          timezone: updated.timezone || currentTimezone,
+        }),
       })
     } catch (err: unknown) {
       const message =
         err instanceof Error
           ? err.message
-          : "Failed to update workspace preferences"
+          : t("settings.spacePrefs.saveFailedDefault")
       const isConflict =
         message.toLowerCase().includes("conflict") ||
         message.toLowerCase().includes("version mismatch")
@@ -145,15 +149,14 @@ export function SpacePreferences() {
       if (isConflict) {
         toast.add({
           type: "error",
-          title: "Version Conflict",
-          description:
-            "The settings were modified concurrently by another user. Reloading latest configuration.",
+          title: t("settings.spacePrefs.conflictTitle"),
+          description: t("settings.spacePrefs.conflictDesc"),
         })
         refetch()
       } else {
         toast.add({
           type: "error",
-          title: "Failed to Save Preferences",
+          title: t("settings.spacePrefs.saveFailedToast"),
           description: message,
         })
       }
@@ -170,18 +173,17 @@ export function SpacePreferences() {
       <div className="space-y-4 rounded-3xl border border-border/40 bg-card/45 p-8 text-center">
         <Building2 className="mx-auto h-8 w-8 text-muted-foreground" />
         <h3 className="text-base font-semibold text-foreground">
-          No Active Workspace
+          {t("settings.spacePrefs.noWorkspaceTitle")}
         </h3>
         <p className="mx-auto max-w-sm text-xs text-muted-foreground">
-          Please select or activate a workspace first to manage its preferences
-          and configuration.
+          {t("settings.spacePrefs.noWorkspaceDesc")}
         </p>
         <Button
           variant="outline"
           size="sm"
           render={<Link to="/settings/spaces" />}
         >
-          Go to Workspaces
+          {t("settings.spacePrefs.goToWorkspaces")}
         </Button>
       </div>
     )
@@ -203,10 +205,10 @@ export function SpacePreferences() {
         <p className="text-sm font-medium text-destructive">
           {error instanceof Error
             ? error.message
-            : "Failed to load workspace preferences."}
+            : t("settings.spacePrefs.loadFailed")}
         </p>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
-          Retry
+          {t("common.retry")}
         </Button>
       </div>
     )
@@ -218,13 +220,17 @@ export function SpacePreferences() {
       <div className="flex items-center justify-between rounded-2xl border border-border/40 bg-card/30 px-5 py-3 text-xs">
         <div className="flex items-center gap-2">
           <Building2 className="h-4 w-4 text-primary" />
-          <span className="text-muted-foreground">Active Workspace:</span>
+          <span className="text-muted-foreground">
+            {t("settings.spacePrefs.activeWorkspace")}
+          </span>
           <span className="font-semibold text-foreground">
             {spaceName || spaceId}
           </span>
         </div>
         <span className="font-mono text-[11px] text-muted-foreground">
-          Config v{settings?.version ?? 1}
+          {t("settings.spacePrefs.configVersion", {
+            version: settings?.version ?? 1,
+          })}
         </span>
       </div>
 
@@ -240,11 +246,10 @@ export function SpacePreferences() {
             </div>
             <div>
               <h3 className="text-lg font-bold tracking-tight text-foreground">
-                Regional & Localization
+                {t("settings.spacePrefs.title")}
               </h3>
               <p className="text-xs text-muted-foreground">
-                Configure timezone rules, scheduling references, and regional
-                defaults for this workspace.
+                {t("settings.spacePrefs.desc")}
               </p>
             </div>
           </div>
@@ -255,18 +260,18 @@ export function SpacePreferences() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                Workspace Timezone
+                {t("settings.spacePrefs.timezoneLabel")}
               </Label>
               <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
                 <Clock className="h-3.5 w-3.5 text-primary" />
-                Live: {formatTimezonePreview(currentTimezone)}
+                {t("settings.spacePrefs.livePreview", {
+                  preview: formatTimezonePreview(currentTimezone),
+                })}
               </span>
             </div>
 
             <p className="text-xs text-muted-foreground">
-              All financial cycles, scheduled agent workflows, recurring
-              automations, and transaction dates will coordinate against this
-              primary timezone.
+              {t("settings.spacePrefs.timezoneDesc")}
             </p>
 
             <div className="pt-2">
@@ -295,7 +300,7 @@ export function SpacePreferences() {
                 >
                   <div className="space-y-2.5">
                     <Input
-                      placeholder="Search timezones (e.g. New_York, London, Santo_Domingo)..."
+                      placeholder={t("settings.spacePrefs.searchTzPlaceholder")}
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       className="h-9 rounded-xl bg-muted/40 text-xs"
@@ -305,7 +310,7 @@ export function SpacePreferences() {
                     <div className="max-h-[260px] space-y-0.5 overflow-y-auto pr-1">
                       {filteredTimezones.length === 0 ? (
                         <div className="py-6 text-center text-xs text-muted-foreground">
-                          No matching timezone found.
+                          {t("settings.spacePrefs.noTzMatch")}
                         </div>
                       ) : (
                         filteredTimezones.map((tz) => {
@@ -349,20 +354,14 @@ export function SpacePreferences() {
           {!canManage && (
             <div className="flex items-center gap-2 rounded-xl bg-muted/40 p-3 text-xs text-muted-foreground">
               <ShieldAlert className="h-4 w-4 shrink-0 text-amber-500" />
-              <span>
-                Only workspace owners and administrators can modify workspace
-                regional preferences.
-              </span>
+              <span>{t("settings.spacePrefs.manageOnlyDesc")}</span>
             </div>
           )}
 
           {isDirty && (
             <div className="flex animate-in items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 p-3 text-xs text-primary duration-200 fade-in">
               <Sparkles className="h-4 w-4 shrink-0" />
-              <span>
-                You have unsaved changes. Remember to click &ldquo;Save
-                Preferences&rdquo; below to apply them.
-              </span>
+              <span>{t("settings.spacePrefs.unsavedNote")}</span>
             </div>
           )}
         </div>
@@ -379,7 +378,7 @@ export function SpacePreferences() {
               className="rounded-xl"
             >
               <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-              Reset
+              {t("settings.spacePrefs.reset")}
             </Button>
           )}
 
@@ -393,7 +392,7 @@ export function SpacePreferences() {
             {updateMutation.isPending ? (
               <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
             ) : null}
-            Save Preferences
+            {t("settings.spacePrefs.savePrefs")}
           </Button>
         </div>
       </div>
@@ -402,9 +401,7 @@ export function SpacePreferences() {
       <div className="flex items-start gap-3 rounded-2xl border border-border/30 bg-muted/15 p-4">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
         <div className="text-xs leading-relaxed text-muted-foreground">
-          Workspace settings are persisted with optimistic concurrency control.
-          Additional workspace configurations (such as formatting conventions
-          and system rules) will automatically appear in this section.
+          {t("settings.spacePrefs.infoNote")}
         </div>
       </div>
     </div>

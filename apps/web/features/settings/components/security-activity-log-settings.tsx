@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { useTimezone } from "@saturn/hooks"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { useListMySecurityEventsQuery } from "@saturn/api/gen/saturn/identity/v1/identity"
 import {
   ShieldCheckIcon,
@@ -22,6 +23,7 @@ import { parseUserAgent } from "@/lib/utils"
 const PAGE_SIZE = 10
 
 export function SecurityActivityLogSettings() {
+  const { t, language } = useI18n()
   const tz = useTimezone()
   const [pageToken, setPageToken] = useState("")
   const [tokenHistory, setTokenHistory] = useState<string[]>([])
@@ -60,37 +62,62 @@ export function SecurityActivityLogSettings() {
     switch (type) {
       case "password_change":
         return {
-          label: "Password Changed",
+          label: getLocalizedEnumLabel(
+            "admin",
+            "securityEventType",
+            type,
+            language
+          ),
           icon: LockIcon,
           colorClass: "text-blue-500 bg-blue-500/10 border-blue-500/20",
         }
       case "login_success":
         return {
-          label: "Successful Login",
+          label: getLocalizedEnumLabel(
+            "admin",
+            "securityEventType",
+            type,
+            language
+          ),
           icon: ShieldCheckIcon,
           colorClass: "text-green-500 bg-green-500/10 border-green-500/20",
         }
       case "login_failed":
         return {
-          label: "Failed Login Attempt",
+          label: getLocalizedEnumLabel(
+            "admin",
+            "securityEventType",
+            type,
+            language
+          ),
           icon: ShieldAlertIcon,
           colorClass: "text-red-500 bg-red-500/10 border-red-500/20",
         }
       case "account_locked":
         return {
-          label: "Account Suspended/Locked",
+          label: getLocalizedEnumLabel(
+            "admin",
+            "securityEventType",
+            type,
+            language
+          ),
           icon: AlertTriangleIcon,
           colorClass: "text-amber-500 bg-amber-500/10 border-amber-500/20",
         }
       case "account_unlocked":
         return {
-          label: "Account Unlocked",
+          label: getLocalizedEnumLabel(
+            "admin",
+            "securityEventType",
+            type,
+            language
+          ),
           icon: UnlockIcon,
           colorClass: "text-blue-500 bg-blue-500/10 border-blue-500/20",
         }
       default:
         return {
-          label: "Security Event",
+          label: t("settings.activity.securityEvent"),
           icon: ShieldIcon,
           colorClass: "text-muted-foreground bg-muted/10 border-muted/20",
         }
@@ -110,15 +137,16 @@ export function SecurityActivityLogSettings() {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-semibold text-foreground">
-                Security Activity Log
+                {t("settings.activity.title")}
               </h3>
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-                Page {tokenHistory.length + 1}
+                {t("settings.activity.pageBadge", {
+                  page: tokenHistory.length + 1,
+                })}
               </span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Audit trail of recent logins, password updates, and account
-              security events.
+              {t("settings.activity.desc")}
             </p>
           </div>
         </div>
@@ -142,17 +170,17 @@ export function SecurityActivityLogSettings() {
           <div className="flex h-32 items-center justify-center">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <RefreshCwIcon className="h-4 w-4 animate-spin text-primary" />
-              Loading security logs...
+              {t("settings.activity.loading")}
             </div>
           </div>
         ) : events.length === 0 ? (
           <div className="flex h-32 flex-col items-center justify-center p-6 text-center select-none">
             <ShieldCheckIcon className="mb-2 h-7 w-7 text-muted-foreground/40" />
             <p className="text-sm font-medium text-foreground">
-              No recent security events
+              {t("settings.activity.emptyTitle")}
             </p>
             <p className="text-xs text-muted-foreground">
-              Your account security history is completely clean.
+              {t("settings.activity.emptyDesc")}
             </p>
           </div>
         ) : (
@@ -163,7 +191,7 @@ export function SecurityActivityLogSettings() {
                 const parsedDevice = parseUserAgent(ev.userAgent || "")
                 const dateStr = ev.createdAt
                   ? tz.formatDateTime(ev.createdAt)
-                  : "Unknown time"
+                  : t("settings.activity.unknownTime")
 
                 return (
                   <div
@@ -190,7 +218,8 @@ export function SecurityActivityLogSettings() {
                               <MonitorIcon className="h-3 w-3" />
                             )}
                             <span>
-                              {parsedDevice.device || "Unknown Device"}
+                              {parsedDevice.device ||
+                                t("settings.activity.unknownDevice")}
                             </span>
                           </span>
 
@@ -222,10 +251,20 @@ export function SecurityActivityLogSettings() {
             {events.length > 0 && (
               <div className="mt-4 flex items-center justify-between border-t border-border/30 pt-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5">
-                  <span>Page {tokenHistory.length + 1}</span>
+                  <span>
+                    {t("settings.activity.pageBadge", {
+                      page: tokenHistory.length + 1,
+                    })}
+                  </span>
                   <span>•</span>
                   <span>
-                    {events.length} {events.length === 1 ? "event" : "events"}
+                    {events.length === 1
+                      ? t("settings.activity.eventsCountOne", {
+                          count: events.length,
+                        })
+                      : t("settings.activity.eventsCount", {
+                          count: events.length,
+                        })}
                   </span>
                 </div>
 
@@ -238,7 +277,7 @@ export function SecurityActivityLogSettings() {
                     className="h-8 cursor-pointer text-xs"
                   >
                     <ChevronLeftIcon className="mr-1 h-3.5 w-3.5" />
-                    Previous
+                    {t("settings.activity.previous")}
                   </Button>
                   <Button
                     variant="outline"
@@ -247,7 +286,7 @@ export function SecurityActivityLogSettings() {
                     disabled={!eventsData?.nextPageToken || isLoadingEvents}
                     className="h-8 cursor-pointer text-xs"
                   >
-                    Next
+                    {t("settings.activity.next")}
                     <ChevronRightIcon className="ml-1 h-3.5 w-3.5" />
                   </Button>
                 </div>

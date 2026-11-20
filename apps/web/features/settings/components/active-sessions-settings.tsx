@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import {
   useListActiveSessionsQuery,
   useRevokeSessionMutation,
@@ -30,6 +30,7 @@ import {
 import { toast } from "@/components/ui/toast"
 
 export function ActiveSessionsSettings() {
+  const { t } = useI18n()
   const tz = useTimezone()
   const { data, isLoading, refetch } = useListActiveSessionsQuery({})
   const revokeSessionMutation = useRevokeSessionMutation({
@@ -37,16 +38,18 @@ export function ActiveSessionsSettings() {
       refetch()
       toast.add({
         type: "success",
-        title: "Session Terminated",
-        description: "The selected session has been signed out successfully.",
+        title: t("settings.sessions.revokeOkToast"),
+        description: t("settings.sessions.revokeOkDesc"),
       })
     },
     onError: (err) => {
       toast.add({
         type: "error",
-        title: "Revocation Failed",
+        title: t("settings.sessions.revokeFailedToast"),
         description:
-          err instanceof Error ? err.message : "Failed to revoke session",
+          err instanceof Error
+            ? err.message
+            : t("settings.sessions.revokeFailedDefault"),
       })
     },
   })
@@ -58,9 +61,11 @@ export function ActiveSessionsSettings() {
     onError: (err) => {
       toast.add({
         type: "error",
-        title: "Sign Out Failed",
+        title: t("settings.sessions.revokeAllFailedToast"),
         description:
-          err instanceof Error ? err.message : "Failed to sign out all devices",
+          err instanceof Error
+            ? err.message
+            : t("settings.sessions.revokeAllFailedDefault"),
       })
     },
   })
@@ -105,15 +110,14 @@ export function ActiveSessionsSettings() {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-semibold text-foreground">
-                Active Sign-in Sessions & Logins
+                {t("settings.sessions.title")}
               </h3>
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-                {sessions.length} {sessions.length === 1 ? "Active" : "Active"}
+                {sessions.length} {t("settings.sessions.activeBadge")}
               </span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Devices and web browsers currently authenticated to your Saturn
-              account.
+              {t("settings.sessions.desc")}
             </p>
           </div>
         </div>
@@ -128,7 +132,7 @@ export function ActiveSessionsSettings() {
               className="cursor-pointer text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
               <LogOutIcon className="mr-1.5 h-3.5 w-3.5" />
-              Sign Out All Devices
+              {t("settings.sessions.revokeAllBtn")}
             </Button>
           )}
 
@@ -152,17 +156,17 @@ export function ActiveSessionsSettings() {
           <div className="flex h-32 items-center justify-center">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <RefreshCwIcon className="h-4 w-4 animate-spin text-primary" />
-              Loading authenticated sessions...
+              {t("settings.sessions.loading")}
             </div>
           </div>
         ) : sessions.length === 0 ? (
           <div className="flex h-32 flex-col items-center justify-center p-6 text-center select-none">
             <MonitorIcon className="mb-2 h-7 w-7 text-muted-foreground/40" />
             <p className="text-sm font-medium text-foreground">
-              No active sessions found
+              {t("settings.sessions.emptyTitle")}
             </p>
             <p className="text-xs text-muted-foreground">
-              Your session list will appear here once authenticated.
+              {t("settings.sessions.emptyDesc")}
             </p>
           </div>
         ) : (
@@ -172,7 +176,7 @@ export function ActiveSessionsSettings() {
               const parsed = parseUserAgent(session.userAgent || "")
               const lastActive = session.lastUsedAt
                 ? tz.formatDateTime(session.lastUsedAt)
-                : "Active now"
+                : t("settings.sessions.activeNow")
 
               return (
                 <div
@@ -198,16 +202,16 @@ export function ActiveSessionsSettings() {
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-semibold text-foreground">
-                          {parsed.device || "Web Client"}
+                          {parsed.device || t("settings.sessions.webClient")}
                         </span>
                         {isCurrent ? (
                           <span className="inline-flex items-center gap-1 rounded-full border border-green-500/30 bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-500">
                             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
-                            Current Device
+                            {t("settings.sessions.currentDevice")}
                           </span>
                         ) : (
                           <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                            Other Session
+                            {t("settings.sessions.otherSession")}
                           </span>
                         )}
                       </div>
@@ -216,13 +220,18 @@ export function ActiveSessionsSettings() {
                         <span className="inline-flex items-center gap-1">
                           <GlobeIcon className="h-3 w-3" />
                           <span className="font-mono">
-                            {session.ipAddress || "Unknown IP"}
+                            {session.ipAddress ||
+                              t("settings.sessions.unknownIp")}
                           </span>
                         </span>
                         <span>•</span>
                         <span className="inline-flex items-center gap-1">
                           <ClockIcon className="h-3 w-3" />
-                          <span>{isCurrent ? "Active now" : lastActive}</span>
+                          <span>
+                            {isCurrent
+                              ? t("settings.sessions.activeNow")
+                              : lastActive}
+                          </span>
                         </span>
                       </div>
                     </div>
@@ -238,11 +247,11 @@ export function ActiveSessionsSettings() {
                         className="h-8 cursor-pointer text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       >
                         <Trash2Icon className="mr-1.5 h-3.5 w-3.5" />
-                        Revoke
+                        {t("settings.sessions.revoke")}
                       </Button>
                     ) : (
                       <span className="text-xs text-muted-foreground select-none">
-                        This session
+                        {t("settings.sessions.thisSession")}
                       </span>
                     )}
                   </div>
@@ -262,11 +271,10 @@ export function ActiveSessionsSettings() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangleIcon className="h-5 w-5" />
-              Revoke Session
+              {t("settings.sessions.revokeSessionTitle")}
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to revoke this session? The device will be
-              immediately signed out and forced to re-authenticate.
+              {t("settings.sessions.revokeSessionDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -276,7 +284,8 @@ export function ActiveSessionsSettings() {
                 {parseUserAgent(sessionToRevoke.userAgent || "").device}
               </div>
               <div className="mt-1 font-mono">
-                IP: {sessionToRevoke.ipAddress || "Unknown"}
+                {t("settings.sessions.ipLabel")}{" "}
+                {sessionToRevoke.ipAddress || t("common.unknown")}
               </div>
             </div>
           )}
@@ -287,7 +296,7 @@ export function ActiveSessionsSettings() {
               onClick={() => setSessionToRevoke(null)}
               disabled={revokeSessionMutation.isPending}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -295,8 +304,8 @@ export function ActiveSessionsSettings() {
               disabled={revokeSessionMutation.isPending}
             >
               {revokeSessionMutation.isPending
-                ? "Revoking..."
-                : "Revoke Session"}
+                ? t("settings.sessions.revoking")
+                : t("settings.sessions.revokeSessionTitle")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -308,11 +317,10 @@ export function ActiveSessionsSettings() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <LogOutIcon className="h-5 w-5" />
-              Sign Out All Devices
+              {t("settings.sessions.revokeAllBtn")}
             </DialogTitle>
             <DialogDescription>
-              This will immediately invalidate all active sessions across all
-              devices, including this browser. You will need to log back in.
+              {t("settings.sessions.revokeAllDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -322,7 +330,7 @@ export function ActiveSessionsSettings() {
               onClick={() => setRevokeAllOpen(false)}
               disabled={revokeAllSessionsMutation.isPending}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -330,8 +338,8 @@ export function ActiveSessionsSettings() {
               disabled={revokeAllSessionsMutation.isPending}
             >
               {revokeAllSessionsMutation.isPending
-                ? "Signing out..."
-                : "Sign Out Everything"}
+                ? t("settings.sessions.signingOut")
+                : t("settings.sessions.revokeAllSignOut")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -7,7 +7,8 @@ import {
   useUpdateAPIKeyMutation,
   type APIKey,
 } from "@saturn/api/gen/saturn/identity/v1/identity"
-import { useTimezone } from "@saturn/hooks"
+import { type TranslationKey } from "@saturn/i18n"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import {
   API_KEY_EXPIRATION_PRESETS,
   API_KEY_SCOPES,
@@ -51,6 +52,55 @@ import {
   Trash2Icon,
 } from "lucide-react"
 
+const PRESET_LABEL_KEYS: Record<APIKeyExpirationPreset, TranslationKey> = {
+  "30d": "settings.apiKeys.preset30d",
+  "90d": "settings.apiKeys.preset90d",
+  "1y": "settings.apiKeys.preset1y",
+  custom: "settings.apiKeys.presetCustom",
+  none: "settings.apiKeys.presetNone",
+}
+
+const SCOPE_GROUP_LABEL_KEYS: Record<string, TranslationKey> = {
+  spaces: "settings.apiKeys.groupSpaces",
+  finance: "settings.apiKeys.groupFinance",
+  calendar: "settings.apiKeys.groupCalendar",
+  mail: "settings.apiKeys.groupMail",
+  ai: "settings.apiKeys.groupAi",
+  workflows: "settings.apiKeys.groupWorkflows",
+}
+
+const SCOPE_LABEL_KEYS: Record<APIKeyScope, TranslationKey> = {
+  "spaces:read": "settings.apiKeys.scopeSpacesRead",
+  "finance:read": "settings.apiKeys.scopeFinanceRead",
+  "finance:write": "settings.apiKeys.scopeFinanceWrite",
+  "calendar:read": "settings.apiKeys.scopeCalendarRead",
+  "calendar:write": "settings.apiKeys.scopeCalendarWrite",
+  "mail:read": "settings.apiKeys.scopeMailRead",
+  "mail:write": "settings.apiKeys.scopeMailWrite",
+  "ai:read": "settings.apiKeys.scopeAiRead",
+  "ai:execute": "settings.apiKeys.scopeAiExecute",
+  "ai:write": "settings.apiKeys.scopeAiWrite",
+  "workflows:read": "settings.apiKeys.scopeWorkflowsRead",
+  "workflows:execute": "settings.apiKeys.scopeWorkflowsExecute",
+  "workflows:write": "settings.apiKeys.scopeWorkflowsWrite",
+}
+
+const SCOPE_DESC_KEYS: Record<APIKeyScope, TranslationKey> = {
+  "spaces:read": "settings.apiKeys.scopeDescSpacesRead",
+  "finance:read": "settings.apiKeys.scopeDescFinanceRead",
+  "finance:write": "settings.apiKeys.scopeDescFinanceWrite",
+  "calendar:read": "settings.apiKeys.scopeDescCalendarRead",
+  "calendar:write": "settings.apiKeys.scopeDescCalendarWrite",
+  "mail:read": "settings.apiKeys.scopeDescMailRead",
+  "mail:write": "settings.apiKeys.scopeDescMailWrite",
+  "ai:read": "settings.apiKeys.scopeDescAiRead",
+  "ai:execute": "settings.apiKeys.scopeDescAiExecute",
+  "ai:write": "settings.apiKeys.scopeDescAiWrite",
+  "workflows:read": "settings.apiKeys.scopeDescWorkflowsRead",
+  "workflows:execute": "settings.apiKeys.scopeDescWorkflowsExecute",
+  "workflows:write": "settings.apiKeys.scopeDescWorkflowsWrite",
+}
+
 function computeExpirationISO(
   preset: APIKeyExpirationPreset,
   customDate: string,
@@ -71,6 +121,7 @@ function computeExpirationISO(
 export function APIKeysSettings() {
   const queryClient = useQueryClient()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { spaces } = useMySpaces()
   const { data, isLoading } = useListAPIKeysQuery({})
   const createMutation = useCreateAPIKeyMutation()
@@ -192,7 +243,8 @@ export function APIKeysSettings() {
       })
       if (!parsed.success) {
         setFormError(
-          parsed.error.issues[0]?.message || "Please check the form inputs."
+          parsed.error.issues[0]?.message ||
+            t("settings.apiKeys.checkFormInputs")
         )
         return
       }
@@ -216,12 +268,16 @@ export function APIKeysSettings() {
         setSheetOpen(false)
         toast.add({
           type: "success",
-          title: "API Key Updated",
-          description: `"${parsed.data.name}" has been updated.`,
+          title: t("settings.apiKeys.editOk"),
+          description: t("settings.apiKeys.editOkDesc", {
+            name: parsed.data.name,
+          }),
         })
       } catch (err: unknown) {
         setFormError(
-          err instanceof Error ? err.message : "Failed to update API key."
+          err instanceof Error
+            ? err.message
+            : t("settings.apiKeys.editOkFailed")
         )
       }
       return
@@ -229,7 +285,7 @@ export function APIKeysSettings() {
 
     const expiresAt = computeExpirationISO(expirationPreset, customDate, tz)
     if (expirationPreset === "custom" && !expiresAt) {
-      setFormError("Please select a valid custom expiration date.")
+      setFormError(t("settings.apiKeys.customDateInvalid"))
       return
     }
 
@@ -242,7 +298,7 @@ export function APIKeysSettings() {
     })
     if (!parsed.success) {
       setFormError(
-        parsed.error.issues[0]?.message || "Please check the form inputs."
+        parsed.error.issues[0]?.message || t("settings.apiKeys.checkFormInputs")
       )
       return
     }
@@ -265,7 +321,7 @@ export function APIKeysSettings() {
       setRevealedKey(created)
     } catch (err: unknown) {
       setFormError(
-        err instanceof Error ? err.message : "Failed to create API key."
+        err instanceof Error ? err.message : t("settings.apiKeys.createFailed")
       )
     }
   }
@@ -281,15 +337,17 @@ export function APIKeysSettings() {
       setKeyToDelete(null)
       toast.add({
         type: "success",
-        title: "API Key Revoked",
-        description: "The API key has been permanently deleted.",
+        title: t("settings.apiKeys.revokeOk"),
+        description: t("settings.apiKeys.revokeOkDesc"),
       })
     } catch (err: unknown) {
       toast.add({
         type: "error",
-        title: "Failed to Revoke Key",
+        title: t("settings.apiKeys.revokeFailed"),
         description:
-          err instanceof Error ? err.message : "Could not revoke API key.",
+          err instanceof Error
+            ? err.message
+            : t("settings.apiKeys.revokeFailedDesc"),
       })
     }
   }
@@ -303,8 +361,8 @@ export function APIKeysSettings() {
     } catch {
       toast.add({
         type: "error",
-        title: "Copy Failed",
-        description: "Unable to write to clipboard.",
+        title: t("settings.apiKeys.copyFailed"),
+        description: t("settings.apiKeys.copyFailedDesc"),
       })
     }
   }
@@ -321,21 +379,23 @@ export function APIKeysSettings() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base font-semibold text-foreground">
-                Personal API Keys
+                {t("settings.apiKeys.title")}
               </h2>
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-                {apiKeys.length} {apiKeys.length === 1 ? "Key" : "Keys"}
+                {apiKeys.length}{" "}
+                {apiKeys.length === 1
+                  ? t("settings.apiKeys.badgeOneKey")
+                  : t("settings.apiKeys.badgeKeys")}
               </span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Fine-grained programmatic credentials scoped to explicit
-              workspaces and permissions.
+              {t("settings.apiKeys.desc")}
             </p>
           </div>
         </div>
         <Button onClick={openCreateSheet} size="sm">
           <PlusIcon className="mr-1.5 h-4 w-4" />
-          Create API Key
+          {t("settings.apiKeys.btnCreate")}
         </Button>
       </div>
 
@@ -347,11 +407,10 @@ export function APIKeysSettings() {
         <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-8 text-center">
           <KeyIcon className="mx-auto h-8 w-8 text-muted-foreground/60" />
           <h3 className="mt-3 text-sm font-semibold text-foreground">
-            No API keys yet
+            {t("settings.apiKeys.emptyTitle")}
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            Create a fine-grained API key for CLI scripts, webhooks, or external
-            integrations.
+            {t("settings.apiKeys.emptyDesc")}
           </p>
           <Button
             onClick={openCreateSheet}
@@ -360,7 +419,7 @@ export function APIKeysSettings() {
             className="mt-4"
           >
             <PlusIcon className="mr-1.5 h-4 w-4" />
-            Generate your first API key
+            {t("settings.apiKeys.btnCreateFirst")}
           </Button>
         </div>
       ) : (
@@ -383,7 +442,7 @@ export function APIKeysSettings() {
                     {grantedIds.length === 0 && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
                         <AlertTriangleIcon className="h-3 w-3" />
-                        No Active Spaces
+                        {t("settings.apiKeys.noActiveSpaces")}
                       </span>
                     )}
                   </div>
@@ -415,16 +474,16 @@ export function APIKeysSettings() {
 
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <span>
-                      Last used:{" "}
+                      {t("settings.apiKeys.lastUsed")}{" "}
                       {apiKey.lastUsedAt
                         ? tz.formatDateTime(apiKey.lastUsedAt)
-                        : "Never used"}
+                        : t("settings.apiKeys.neverUsed")}
                     </span>
                     <span>
-                      Expires:{" "}
+                      {t("settings.apiKeys.expiresLabel")}{" "}
                       {apiKey.expiresAt
                         ? tz.formatDate(apiKey.expiresAt)
-                        : "No expiration"}
+                        : t("settings.apiKeys.expiresNever")}
                     </span>
                   </div>
                 </div>
@@ -434,20 +493,24 @@ export function APIKeysSettings() {
                     variant="outline"
                     size="xs"
                     onClick={() => openEditSheet(apiKey)}
-                    aria-label={`Edit ${apiKey.name}`}
+                    aria-label={t("settings.apiKeys.ariaEditKey", {
+                      name: apiKey.name ?? "",
+                    })}
                   >
                     <PencilIcon className="mr-1 h-3 w-3" />
-                    Edit
+                    {t("common.edit")}
                   </Button>
                   <Button
                     variant="ghost"
                     size="xs"
                     className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => setKeyToDelete(apiKey)}
-                    aria-label={`Revoke ${apiKey.name}`}
+                    aria-label={t("settings.apiKeys.ariaRevokeKey", {
+                      name: apiKey.name ?? "",
+                    })}
                   >
                     <Trash2Icon className="mr-1 h-3 w-3" />
-                    Revoke
+                    {t("settings.apiKeys.revoke")}
                   </Button>
                 </div>
               </div>
@@ -465,12 +528,14 @@ export function APIKeysSettings() {
           >
             <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4 pr-12">
               <DialogTitle>
-                {editingKey ? "Edit API Key" : "Create Personal API Key"}
+                {editingKey
+                  ? t("settings.apiKeys.editDialogTitle")
+                  : t("settings.apiKeys.createTitle")}
               </DialogTitle>
               <DialogDescription>
                 {editingKey
-                  ? "Update the key name, granted workspaces, or permission scopes."
-                  : "Bind a fine-grained token to explicit workspaces and scopes."}
+                  ? t("settings.apiKeys.editDialogDesc")
+                  : t("settings.apiKeys.createDesc")}
               </DialogDescription>
             </DialogHeader>
 
@@ -483,21 +548,25 @@ export function APIKeysSettings() {
               )}
 
               <div className="space-y-1.5">
-                <Label htmlFor="api-key-name">Name</Label>
+                <Label htmlFor="api-key-name">
+                  {t("settings.apiKeys.name")}
+                </Label>
                 <Input
                   id="api-key-name"
-                  placeholder="e.g., Home Assistant Webhook"
+                  placeholder={t("settings.apiKeys.namePlaceholder")}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="api-key-desc">Description (optional)</Label>
+                <Label htmlFor="api-key-desc">
+                  {t("settings.apiKeys.descriptionOptional")}
+                </Label>
                 <Textarea
                   id="api-key-desc"
                   rows={2}
-                  placeholder="What is this API key used for?"
+                  placeholder={t("settings.apiKeys.descPlaceholder")}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
@@ -505,7 +574,9 @@ export function APIKeysSettings() {
 
               {!editingKey && (
                 <div className="space-y-2">
-                  <Label htmlFor="api-key-expiration">Expiration</Label>
+                  <Label htmlFor="api-key-expiration">
+                    {t("settings.apiKeys.expiration")}
+                  </Label>
                   <Select
                     value={expirationPreset}
                     onValueChange={(val) =>
@@ -514,9 +585,7 @@ export function APIKeysSettings() {
                   >
                     <SelectTrigger id="api-key-expiration">
                       <SelectValue>
-                        {API_KEY_EXPIRATION_PRESETS.find(
-                          (p) => p.id === expirationPreset
-                        )?.label ?? expirationPreset}
+                        {t(PRESET_LABEL_KEYS[expirationPreset])}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -524,9 +593,9 @@ export function APIKeysSettings() {
                         <SelectItem
                           key={preset.id}
                           value={preset.id}
-                          label={preset.label}
+                          label={t(PRESET_LABEL_KEYS[preset.id])}
                         >
-                          {preset.label}
+                          {t(PRESET_LABEL_KEYS[preset.id])}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -536,7 +605,7 @@ export function APIKeysSettings() {
                       type="date"
                       value={customDate}
                       onChange={(e) => setCustomDate(e.target.value)}
-                      aria-label="Custom expiration date"
+                      aria-label={t("settings.apiKeys.customAria")}
                     />
                   )}
                 </div>
@@ -544,7 +613,11 @@ export function APIKeysSettings() {
 
               <div className="space-y-2 border-t border-border/40 pt-4">
                 <div className="flex items-center justify-between">
-                  <Label>Workspace Grants ({selectedSpaceIds.length})</Label>
+                  <Label>
+                    {t("settings.apiKeys.workspaceGrants", {
+                      count: selectedSpaceIds.length,
+                    })}
+                  </Label>
                   {spaces.length > 1 && (
                     <Button
                       type="button"
@@ -561,15 +634,15 @@ export function APIKeysSettings() {
                       }
                     >
                       {selectedSpaceIds.length === spaces.length
-                        ? "Clear All"
-                        : "Select All"}
+                        ? t("settings.apiKeys.clearAll")
+                        : t("settings.apiKeys.selectAll")}
                     </Button>
                   )}
                 </div>
                 <div className="space-y-2 pt-1">
                   {spaces.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
-                      No workspaces available.
+                      {t("settings.apiKeys.noWorkspaces")}
                     </p>
                   ) : (
                     spaces.map((sp) => {
@@ -596,21 +669,29 @@ export function APIKeysSettings() {
 
               <div className="space-y-2 border-t border-border/40 pt-4">
                 <div className="flex items-center justify-between">
-                  <Label>Permission Scopes ({selectedScopes.length})</Label>
+                  <Label>
+                    {t("settings.apiKeys.permissionScopes", {
+                      count: selectedScopes.length,
+                    })}
+                  </Label>
                   <Button
                     type="button"
                     variant="ghost"
                     size="xs"
                     onClick={toggleAllScopes}
                   >
-                    {allScopesSelected ? "Deselect All" : "Select All"}
+                    {allScopesSelected
+                      ? t("settings.apiKeys.deselectAll")
+                      : t("settings.apiKeys.selectAll")}
                   </Button>
                 </div>
                 <div className="space-y-3 pt-1">
                   {API_KEY_SCOPE_GROUPS.map((group) => (
                     <div key={group.id} className="space-y-1.5">
                       <div className="text-xs font-semibold text-foreground">
-                        {group.label}
+                        {t(
+                          SCOPE_GROUP_LABEL_KEYS[group.id] ?? "common.unknown"
+                        )}
                       </div>
                       <div className="space-y-1.5 pl-1">
                         {group.scopes.map((meta) => {
@@ -628,14 +709,14 @@ export function APIKeysSettings() {
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2">
                                   <span className="text-xs font-medium text-foreground">
-                                    {meta.label}
+                                    {t(SCOPE_LABEL_KEYS[meta.scope])}
                                   </span>
                                   <code className="font-mono text-[10px] text-muted-foreground">
                                     {meta.scope}
                                   </code>
                                 </div>
                                 <p className="text-[11px] text-muted-foreground">
-                                  {meta.description}
+                                  {t(SCOPE_DESC_KEYS[meta.scope])}
                                 </p>
                               </div>
                             </label>
@@ -654,13 +735,15 @@ export function APIKeysSettings() {
                 variant="outline"
                 onClick={() => setSheetOpen(false)}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={isPending}>
                 {isPending && (
                   <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                {editingKey ? "Save Changes" : "Create API Key"}
+                {editingKey
+                  ? t("settings.apiKeys.btnSaveChanges")
+                  : t("settings.apiKeys.btnCreateKey")}
               </Button>
             </DialogFooter>
           </form>
@@ -674,20 +757,16 @@ export function APIKeysSettings() {
       >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader className="pr-8">
-            <DialogTitle>Save Your API Key</DialogTitle>
+            <DialogTitle>{t("settings.apiKeys.revealTitle")}</DialogTitle>
             <DialogDescription>
-              Make sure to copy your API key now. For your security, it will not
-              be displayed again.
+              {t("settings.apiKeys.revealDesc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="min-w-0 space-y-4 py-2">
             <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
               <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>
-                Store this secret in a password manager or environment variable.
-                Anyone with this token can access the granted workspaces.
-              </span>
+              <span>{t("settings.apiKeys.revealAmber")}</span>
             </div>
 
             <div className="flex min-w-0 items-center gap-2">
@@ -695,7 +774,7 @@ export function APIKeysSettings() {
                 readOnly
                 value={revealedKey?.rawKey || ""}
                 className="min-w-0 flex-1 font-mono text-xs"
-                aria-label="Generated API key secret"
+                aria-label={t("settings.apiKeys.ariaGeneratedSecret")}
               />
               <Button
                 type="button"
@@ -707,12 +786,12 @@ export function APIKeysSettings() {
                 {copied ? (
                   <>
                     <CheckIcon className="mr-1.5 h-3.5 w-3.5 text-emerald-500" />
-                    Copied
+                    {t("settings.apiKeys.btnCopied")}
                   </>
                 ) : (
                   <>
                     <CopyIcon className="mr-1.5 h-3.5 w-3.5" />
-                    Copy
+                    {t("settings.apiKeys.btnCopy")}
                   </>
                 )}
               </Button>
@@ -720,7 +799,7 @@ export function APIKeysSettings() {
 
             <div className="min-w-0 space-y-1.5">
               <Label className="text-xs text-muted-foreground">
-                Example usage
+                {t("settings.apiKeys.usageExample")}
               </Label>
               <pre className="max-w-full overflow-x-auto rounded-lg border border-border/50 bg-muted/40 p-3 font-mono text-[11px] break-all whitespace-pre-wrap text-foreground">
                 {`curl -H "Authorization: Bearer ${revealedKey?.rawKey || ""}" \\
@@ -730,7 +809,9 @@ export function APIKeysSettings() {
           </div>
 
           <DialogFooter>
-            <Button onClick={() => setRevealedKey(null)}>Done</Button>
+            <Button onClick={() => setRevealedKey(null)}>
+              {t("common.done")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -742,18 +823,18 @@ export function APIKeysSettings() {
       >
         <DialogContent mobileFullscreen={false}>
           <DialogHeader className="pr-8">
-            <DialogTitle>Revoke API Key</DialogTitle>
+            <DialogTitle>{t("settings.apiKeys.revokeDialogTitle")}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to permanently revoke{" "}
+              {t("settings.apiKeys.revokeDialogQ1")}{" "}
               <span className="font-semibold text-foreground">
                 {keyToDelete?.name}
               </span>
-              ? Any scripts or webhooks using this token will immediately fail.
+              {t("settings.apiKeys.revokeDialogQ2")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setKeyToDelete(null)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -763,7 +844,7 @@ export function APIKeysSettings() {
               {deleteMutation.isPending && (
                 <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Revoke Key
+              {t("settings.apiKeys.btnRevokeKey")}
             </Button>
           </DialogFooter>
         </DialogContent>
