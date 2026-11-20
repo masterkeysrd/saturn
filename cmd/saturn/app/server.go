@@ -272,12 +272,16 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	// Wire space interceptor
 	spaceInterceptor := interceptors.NewSpaceInterceptor(memberStore, spaceRules)
 
+	// Wire i18n interceptor (Accept-Language negotiation + Content-Language/Vary headers)
+	i18nInterceptor := interceptors.NewI18nInterceptor()
+
 	s.grpc = grpc.NewServer(
 		grpc.StatsHandler(requestid.NewStatsHandler()),
 		grpc.ChainUnaryInterceptor(
 			interceptors.PanicUnaryInterceptor(),
 			interceptors.LoggingUnaryServerInterceptor(),
 			interceptors.ErrorUnaryInterceptor(),
+			i18nInterceptor.UnaryServerInterceptor(),
 			authInterceptor.UnaryServerInterceptor(),
 			rateLimitInterceptor.UnaryServerInterceptor(),
 			spaceInterceptor.UnaryServerInterceptor(),
@@ -286,6 +290,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 			interceptors.PanicStreamInterceptor(),
 			interceptors.LoggingStreamServerInterceptor(),
 			interceptors.ErrorStreamInterceptor(),
+			i18nInterceptor.StreamServerInterceptor(),
 			authInterceptor.StreamServerInterceptor(),
 			spaceInterceptor.StreamServerInterceptor(),
 		),
@@ -773,7 +778,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		SpaceSettings: spaceCoordinator,
 	}).Register(mcpServer.Registry())
 
-	event.RegisterWorkflowSubscribers(eventBusEngine, workflowCoordinator, workflowService, workflowService.Catalog())
+	event.RegisterWorkflowSubscribers(eventBusEngine, workflowCoordinator, workflowService, workflowService.Registry().Catalog())
 	transportscheduler.RegisterWorkflowJobs(schedulerEngine, workflowCoordinator)
 
 	// Start background workers only after all job handlers and workflow subscribers are registered.
@@ -1170,6 +1175,10 @@ func customOutgoingHeaderMatcher(key string) (string, bool) {
 	switch strings.ToLower(key) {
 	case "x-request-id":
 		return "X-Request-ID", true
+	case "content-language":
+		return "Content-Language", true
+	case "vary":
+		return "Vary", true
 	default:
 		return runtime.DefaultHeaderMatcher(key)
 	}

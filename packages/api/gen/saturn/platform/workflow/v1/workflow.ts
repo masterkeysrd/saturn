@@ -750,12 +750,7 @@ export interface GetFlowRunRequest {
 /**
  * Request message for WorkflowService.GetCatalog.
  */
-export interface GetCatalogRequest {
-  /**
-   * Optional. BCP 47 locale tag (e.g. "en-US", "es-ES") used to localize catalog display names and descriptions.
-   */
-  locale?: string
-}
+export type GetCatalogRequest = Record<string, never>
 
 /**
  * Catalog returns all registered workflow capabilities for authoring and AI generation.
@@ -1259,12 +1254,10 @@ export function useGetFlowRunQuery(
 /**
  * Retrieves the catalog of registered trigger topics, steps, data loaders, and CEL helpers.
  */
-export async function getCatalog(req: GetCatalogRequest): Promise<Catalog> {
-  const params = { ...req }
+export async function getCatalog(_req?: GetCatalogRequest): Promise<Catalog> {
   return request<Catalog>({
     method: "GET",
     url: "/api/v1/platform/workflows/catalog",
-    params: params,
   })
 }
 

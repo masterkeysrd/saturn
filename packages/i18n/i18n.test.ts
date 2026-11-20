@@ -1082,4 +1082,54 @@ describe("@saturn/i18n", () => {
     )
     expect(translate("en-US", "copilot.pinnedTo")).toBe("Pinned to Copilot")
   })
+
+  it("translates workflows keys and enums in English and Spanish", () => {
+    expect(translate("en-US", "workflows.title")).toBe("Workflows Studio")
+    expect(translate("es-ES", "workflows.title")).toBe(
+      "Estudio de flujos de trabajo"
+    )
+
+    expect(translate("en-US", "workflows.canvas.endOfFlow")).toBe("End of Flow")
+    expect(translate("es-ES", "workflows.canvas.endOfFlow")).toBe(
+      "Fin del flujo"
+    )
+
+    expect(
+      translate("en-US", "workflows.runs.stepTimeline", { count: 1 })
+    ).toBe("Step Timeline (1)")
+    expect(translate("es-ES", "workflows.preset.weeklyMonday")).toBe(
+      "Semanal los lunes"
+    )
+    expect(translate("es-ES", "workflows.editor.guard.discard")).toBe(
+      "Descartar cambios"
+    )
+    expect(
+      translate("es-ES", "workflows.runs.explainPrompt", {
+        id: "wfr_1",
+        name: "Receipts",
+        error: "boom",
+      })
+    ).toContain("wfr_1")
+
+    expect(getLocalizedEnumLabel("workflow", "stepType", "filter", "en")).toBe(
+      "Filter"
+    )
+    expect(getLocalizedEnumLabel("workflow", "stepType", "filter", "es")).toBe(
+      "Filtro"
+    )
+    expect(
+      getLocalizedEnumLabel("workflow", "triggerType", "webhook", "es")
+    ).toBe("Webhook")
+    expect(
+      getLocalizedEnumLabel("workflow", "runStatus", "completed", "es")
+    ).toBe("Completado")
+
+    expect(
+      translate("en-US", "workflows.cron.everyWeekdayAt", {
+        weekday: "Monday",
+        time: "09:00",
+      })
+    ).toBe("Every Monday at 09:00")
+    expect(translate("es-ES", "workflows.cron.weekdays.monday")).toBe("lunes")
+  })
 })

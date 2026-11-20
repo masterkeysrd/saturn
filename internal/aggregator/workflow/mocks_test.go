@@ -18,7 +18,7 @@ var _ WorkflowReader = (*WorkflowReaderMock)(nil)
 // WorkflowReaderMock is a mock implementation of WorkflowReader.
 type WorkflowReaderMock struct {
 	// CatalogFunc mocks the Catalog method.
-	CatalogFunc func() workflow.Catalog
+	CatalogFunc func(ctx context.Context) workflow.Catalog
 
 	// GetFlowFunc mocks the GetFlow method.
 	GetFlowFunc func(ctx context.Context, spaceID string, idOrSystemKey string) (*workflow.Flow, error)
@@ -43,7 +43,9 @@ type WorkflowReaderMock struct {
 
 	// calls tracks calls to the methods.
 	calls struct {
-		Catalog []struct{}
+		Catalog []struct {
+			Ctx context.Context
+		}
 		GetFlow []struct {
 			Ctx           context.Context
 			SpaceID       string
@@ -90,18 +92,24 @@ type WorkflowReaderMock struct {
 }
 
 // Catalog calls CatalogFunc.
-func (mock *WorkflowReaderMock) Catalog() workflow.Catalog {
+func (mock *WorkflowReaderMock) Catalog(ctx context.Context) workflow.Catalog {
 	if mock.CatalogFunc == nil {
 		panic("WorkflowReaderMock.CatalogFunc: method is nil but WorkflowReader.Catalog was just called")
 	}
 	mock.lockCatalog.Lock()
-	mock.calls.Catalog = append(mock.calls.Catalog, struct{}{})
+	mock.calls.Catalog = append(mock.calls.Catalog, struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	})
 	mock.lockCatalog.Unlock()
-	return mock.CatalogFunc()
+	return mock.CatalogFunc(ctx)
 }
 
 // CatalogCalls returns all calls made to Catalog.
-func (mock *WorkflowReaderMock) CatalogCalls() []struct{} {
+func (mock *WorkflowReaderMock) CatalogCalls() []struct {
+	Ctx context.Context
+} {
 	mock.lockCatalog.RLock()
 	defer mock.lockCatalog.RUnlock()
 	return mock.calls.Catalog

@@ -1,7 +1,9 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { buildCopilotEntityKey } from "@saturn/core"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
+import { useI18n } from "@saturn/hooks"
 import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import {
   useListFlowsQuery,
@@ -74,12 +76,20 @@ const WORKFLOW_TAB_DEFAULTS = {
 
 type WorkflowListTab = "custom" | "system" | "templates"
 
-function RunSparkline({ counts }: { counts?: number[] }) {
+function RunSparkline({
+  counts,
+  activityAria,
+  runTitle,
+}: {
+  counts?: number[]
+  activityAria: string
+  runTitle: (count: number) => string
+}) {
   const nums = (counts ?? []).map((c) => Number(c) || 0)
   if (nums.length === 0) return null
   const max = Math.max(...nums, 1)
   return (
-    <div className="flex h-5 items-end gap-0.5" aria-label="7-day run activity">
+    <div className="flex h-5 items-end gap-0.5" aria-label={activityAria}>
       {nums.map((n, i) => (
         <div
           key={i}
@@ -87,7 +97,7 @@ function RunSparkline({ counts }: { counts?: number[] }) {
           style={{
             height: `${Math.max(15, Math.round((n / max) * 100))}%`,
           }}
-          title={`${n} runs`}
+          title={runTitle(n)}
         />
       ))}
     </div>
@@ -124,17 +134,29 @@ export function WorkflowsListView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { spaceId } = useActiveSpaceContext()
+  const { t, language } = useI18n()
+
+  const templates = useMemo(
+    () =>
+      WORKFLOW_TEMPLATES.map((tpl) => ({
+        ...tpl,
+        name: t(`workflows.templates.${tpl.id}.name`),
+        description: t(`workflows.templates.${tpl.id}.description`),
+        category: t(`workflows.templates.${tpl.categoryKey}`),
+      })),
+    [t]
+  )
 
   const { data: flowsData, isLoading } = useListFlowsQuery({})
   const flows = flowsData?.flows ?? []
 
   useRegisterCopilotView({
     viewId: "workflows.list",
-    title: "Workflows Studio",
+    title: t("workflows.copilotTitle"),
     suggestions: [
-      "Suggest a workflow to automate my receipts and bills",
-      "Which system workflows are currently active?",
-      "Help me design a daily morning briefing automation",
+      t("workflows.suggestions.receipts"),
+      t("workflows.suggestions.systemActive"),
+      t("workflows.suggestions.morningBriefing"),
     ],
   })
 
@@ -170,8 +192,9 @@ export function WorkflowsListView() {
       }
     } catch (err) {
       toast.add({
-        title: "Failed to update workflow status",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: t("workflows.toggleFailed"),
+        description:
+          err instanceof Error ? err.message : t("workflows.unknownError"),
         type: "error",
       })
     }
@@ -182,14 +205,17 @@ export function WorkflowsListView() {
     const prompt = aiPrompt.trim()
     if (!prompt || !spaceId) return
     try {
-      const draftFlow = await generateMutation.mutateAsync({ prompt })
+      const draftFlow = await generateMutation.mutateAsync({
+        prompt,
+      })
       navigate(`/space/${spaceId}/workflows/new`, {
         state: { draftFlow },
       })
     } catch (err) {
       toast.add({
-        title: "Failed to generate workflow",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: t("workflows.generateFailed"),
+        description:
+          err instanceof Error ? err.message : t("workflows.unknownError"),
         type: "error",
       })
     }
@@ -202,9 +228,9 @@ export function WorkflowsListView() {
       id: undefined,
       systemKey: undefined,
       isSystem: false,
-      name: `${flow.name} (Copy)`,
-      triggers: (flow.triggers ?? []).map((t) => ({
-        ...t,
+      name: `${flow.name} ${t("workflows.copySuffix")}`,
+      triggers: (flow.triggers ?? []).map((trig) => ({
+        ...trig,
         id: undefined,
         flowId: undefined,
       })),
@@ -222,15 +248,18 @@ export function WorkflowsListView() {
         req: { id: resetTarget.id },
       })
       toast.add({
-        title: "System Workflow Reset",
-        description: `${resetTarget.name} restored to factory defaults.`,
+        title: t("workflows.resetDoneTitle"),
+        description: t("workflows.resetDoneDescription", {
+          name: resetTarget.name ?? "",
+        }),
         type: "success",
       })
       setResetTarget(null)
     } catch (err) {
       toast.add({
-        title: "Reset failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: t("workflows.resetFailed"),
+        description:
+          err instanceof Error ? err.message : t("workflows.unknownError"),
         type: "error",
       })
     }
@@ -244,15 +273,18 @@ export function WorkflowsListView() {
         req: { id: deleteTarget.id },
       })
       toast.add({
-        title: "Workflow Deleted",
-        description: `${deleteTarget.name} has been deleted.`,
+        title: t("workflows.deletedTitle"),
+        description: t("workflows.deletedDescription", {
+          name: deleteTarget.name ?? "",
+        }),
         type: "success",
       })
       setDeleteTarget(null)
     } catch (err) {
       toast.add({
-        title: "Delete failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: t("workflows.deleteFailed"),
+        description:
+          err instanceof Error ? err.message : t("workflows.unknownError"),
         type: "error",
       })
     }
@@ -279,12 +311,12 @@ export function WorkflowsListView() {
                 {flow.isSystem && (
                   <Badge variant="info" className="shrink-0">
                     <ShieldCheck className="size-3" />
-                    Built-in
+                    {t("workflows.builtIn")}
                   </Badge>
                 )}
               </div>
               <CardDescription className="line-clamp-2 text-xs">
-                {flow.description || "No description provided."}
+                {flow.description || t("workflows.noDescription")}
               </CardDescription>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
@@ -306,7 +338,9 @@ export function WorkflowsListView() {
                 onCheckedChange={(checked) =>
                   handleToggleEnabled(flow, Boolean(checked))
                 }
-                aria-label={`Toggle ${flow.name}`}
+                aria-label={t("workflows.toggleAria", {
+                  name: flow.name ?? "",
+                })}
               />
             </div>
           </div>
@@ -315,9 +349,14 @@ export function WorkflowsListView() {
         <CardContent className="space-y-3 pb-3">
           {/* Mini Visual Pipeline Preview */}
           <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border/60 bg-muted/30 px-2.5 py-2">
-            <span className="inline-flex items-center gap-1 rounded-md border border-success/30 bg-success/10 px-1.5 py-0.5 text-[11px] font-medium text-success capitalize">
+            <span className="inline-flex items-center gap-1 rounded-md border border-success/30 bg-success/10 px-1.5 py-0.5 text-[11px] font-medium text-success">
               <Zap className="size-2.5" />
-              {flow.triggers?.[0]?.type || "manual"}
+              {getLocalizedEnumLabel(
+                "workflow",
+                "triggerType",
+                flow.triggers?.[0]?.type || "manual",
+                language
+              )}
             </span>
             {(flow.steps ?? []).slice(0, 4).map((step, sIdx) => {
               const vTheme = getStepVisualTheme(step.type)
@@ -341,19 +380,29 @@ export function WorkflowsListView() {
             })}
             {(flow.steps?.length ?? 0) > 4 && (
               <span className="text-[11px] font-medium text-muted-foreground">
-                +{(flow.steps?.length ?? 0) - 4} more
+                {t("workflows.moreSteps", {
+                  count: (flow.steps?.length ?? 0) - 4,
+                })}
               </span>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium tabular-nums">
-              {flow.triggers?.length ?? 0} trigger
-              {(flow.triggers?.length ?? 0) === 1 ? "" : "s"}
+              {t(
+                (flow.triggers?.length ?? 0) === 1
+                  ? "workflows.triggerCountOne"
+                  : "workflows.triggerCountOther",
+                { count: flow.triggers?.length ?? 0 }
+              )}
             </span>
             <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium tabular-nums">
-              {flow.steps?.length ?? 0} step
-              {(flow.steps?.length ?? 0) === 1 ? "" : "s"}
+              {t(
+                (flow.steps?.length ?? 0) === 1
+                  ? "workflows.stepCountOne"
+                  : "workflows.stepCountOther",
+                { count: flow.steps?.length ?? 0 }
+              )}
             </span>
             <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] tabular-nums">
               v{flow.version ?? 1}
@@ -366,16 +415,24 @@ export function WorkflowsListView() {
                 <strong className="font-semibold text-foreground">
                   {total7d}
                 </strong>{" "}
-                runs (7d)
+                {t("workflows.runs7d")}
               </span>
               {completed7d > 0 && (
-                <span className="text-success">{completed7d} ok</span>
+                <span className="text-success">
+                  {completed7d} {t("workflows.runsOk")}
+                </span>
               )}
               {failed7d > 0 && (
-                <span className="text-destructive">{failed7d} failed</span>
+                <span className="text-destructive">
+                  {failed7d} {t("workflows.runsFailed")}
+                </span>
               )}
             </div>
-            <RunSparkline counts={flow.stats?.dailyCounts7d} />
+            <RunSparkline
+              counts={flow.stats?.dailyCounts7d}
+              activityAria={t("workflows.sparklineAria")}
+              runTitle={(n) => t("workflows.sparklineTitle", { count: n })}
+            />
           </div>
         </CardContent>
 
@@ -390,7 +447,7 @@ export function WorkflowsListView() {
                 className="h-8 gap-1.5 rounded-lg text-xs"
               >
                 <Pencil className="size-3.5" />
-                Edit
+                {t("common.edit")}
               </Button>
             )}
             <Button
@@ -398,10 +455,10 @@ export function WorkflowsListView() {
               size="sm"
               onClick={() => handleDuplicate(flow)}
               className="h-8 gap-1.5 rounded-lg text-xs"
-              title="Duplicate workflow"
+              title={t("workflows.duplicateTitle")}
             >
               <Copy className="size-3.5" />
-              Duplicate
+              {t("workflows.duplicate")}
             </Button>
           </div>
 
@@ -411,10 +468,10 @@ export function WorkflowsListView() {
               size="sm"
               onClick={() => setResetTarget(flow)}
               className="h-8 gap-1.5 rounded-lg text-xs text-muted-foreground"
-              title="Reset to factory defaults"
+              title={t("workflows.resetButtonTitle")}
             >
               <RotateCcw className="size-3.5" />
-              Reset
+              {t("workflows.reset")}
             </Button>
           ) : (
             <Button
@@ -422,10 +479,10 @@ export function WorkflowsListView() {
               size="sm"
               onClick={() => setDeleteTarget(flow)}
               className="h-8 gap-1.5 rounded-lg text-xs text-muted-foreground hover:text-destructive"
-              title="Delete workflow"
+              title={t("workflows.deleteButtonTitle")}
             >
               <Trash2 className="size-3.5" />
-              Delete
+              {t("common.delete")}
             </Button>
           )}
         </CardFooter>
@@ -435,8 +492,8 @@ export function WorkflowsListView() {
 
   return (
     <DocumentPage
-      title="Workflows Studio"
-      description="Automate workspace events, webhooks, schedules, and AI pipelines."
+      title={t("workflows.title")}
+      description={t("workflows.description")}
       icon={Workflow}
       maxWidth="xl"
       actions={
@@ -451,7 +508,7 @@ export function WorkflowsListView() {
                 className="gap-1.5 rounded-lg text-xs"
               >
                 <History className="size-3.5" />
-                Run History
+                {t("workflows.runHistory")}
               </Button>
               <Button
                 size="sm"
@@ -460,7 +517,7 @@ export function WorkflowsListView() {
                 className="gap-1.5 rounded-lg text-xs"
               >
                 <Plus className="size-3.5" />
-                New Workflow
+                {t("workflows.newWorkflow")}
               </Button>
             </>
           )}
@@ -478,15 +535,15 @@ export function WorkflowsListView() {
           </div>
           <div className="sm:hidden">
             <p className="text-xs font-semibold text-foreground">
-              Build with AI
+              {t("workflows.buildWithAI")}
             </p>
           </div>
         </div>
         <Input
           value={aiPrompt}
           onChange={(e) => setAiPrompt(e.target.value)}
-          placeholder="Build with AI: e.g. When a scheduled bill is created, upsert a primary calendar reminder..."
-          aria-label="Build workflow with AI prompt"
+          placeholder={t("workflows.aiPlaceholder")}
+          aria-label={t("workflows.aiAriaLabel")}
           className="h-9 flex-1 rounded-lg bg-control text-xs"
         />
         <Button
@@ -500,7 +557,7 @@ export function WorkflowsListView() {
           ) : (
             <Sparkles className="size-3.5" />
           )}
-          Build with AI
+          {t("workflows.buildWithAI")}
         </Button>
       </form>
 
@@ -520,19 +577,19 @@ export function WorkflowsListView() {
         >
           <TabsList variant="line" className="w-full justify-start">
             <TabsTrigger value="custom" className="flex-none">
-              <span>Custom</span>
+              <span>{t("workflows.tabCustom")}</span>
               <Badge variant="neutral" className="tabular-nums">
                 {customFlows.length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="system" className="flex-none">
-              <span>System</span>
+              <span>{t("workflows.tabSystem")}</span>
               <Badge variant="neutral" className="tabular-nums">
                 {systemFlows.length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="templates" className="flex-none">
-              <span>Templates</span>
+              <span>{t("workflows.tabTemplates")}</span>
               <Badge variant="neutral" className="tabular-nums">
                 {WORKFLOW_TEMPLATES.length}
               </Badge>
@@ -546,11 +603,10 @@ export function WorkflowsListView() {
                   <Workflow className="size-5" />
                 </div>
                 <h3 className="mt-3 text-sm font-semibold text-foreground">
-                  No custom workflows yet
+                  {t("workflows.emptyCustomTitle")}
                 </h3>
                 <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                  Start from a ready-made template, build a blank automation, or
-                  describe what you need in the AI bar above.
+                  {t("workflows.emptyCustomDescription")}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                   <Button
@@ -561,7 +617,7 @@ export function WorkflowsListView() {
                     className="gap-1.5 rounded-lg text-xs"
                   >
                     <LayoutTemplate className="size-3.5" />
-                    Browse Templates
+                    {t("workflows.browseTemplates")}
                   </Button>
                   {spaceId && (
                     <Button
@@ -571,7 +627,7 @@ export function WorkflowsListView() {
                       className="gap-1.5 rounded-lg text-xs"
                     >
                       <Plus className="size-3.5" />
-                      New Blank Workflow
+                      {t("workflows.newBlankWorkflow")}
                     </Button>
                   )}
                 </div>
@@ -586,7 +642,7 @@ export function WorkflowsListView() {
           <TabsContent value="system">
             {systemFlows.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border/70 p-10 text-center text-xs text-muted-foreground">
-                No built-in system workflows available.
+                {t("workflows.emptySystem")}
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -597,7 +653,7 @@ export function WorkflowsListView() {
 
           <TabsContent value="templates">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {WORKFLOW_TEMPLATES.map((template) => {
+              {templates.map((template) => {
                 const previewSteps = flattenPipelinePreview(template.flow.steps)
                 const triggerType = template.flow.triggers[0]?.type || "manual"
                 return (
@@ -633,7 +689,7 @@ export function WorkflowsListView() {
                             }
                             className="h-8 shrink-0 gap-1 rounded-lg text-xs"
                           >
-                            Use Template
+                            {t("workflows.useTemplate")}
                           </Button>
                         )}
                       </div>
@@ -643,9 +699,14 @@ export function WorkflowsListView() {
                     </CardHeader>
                     <CardContent className="pt-0">
                       <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border/60 bg-muted/30 px-2.5 py-2">
-                        <span className="inline-flex items-center gap-1 rounded-md border border-success/30 bg-success/10 px-1.5 py-0.5 text-[11px] font-medium text-success capitalize">
+                        <span className="inline-flex items-center gap-1 rounded-md border border-success/30 bg-success/10 px-1.5 py-0.5 text-[11px] font-medium text-success">
                           <Zap className="size-2.5" />
-                          {triggerType}
+                          {getLocalizedEnumLabel(
+                            "workflow",
+                            "triggerType",
+                            triggerType,
+                            language
+                          )}
                         </span>
                         {previewSteps.slice(0, 4).map((step, idx) => {
                           const vTheme = getStepVisualTheme(step.type)
@@ -687,17 +748,19 @@ export function WorkflowsListView() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reset System Workflow?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("workflows.resetDialog.title")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Restores <strong>{resetTarget?.name}</strong> back to its factory
-              blueprint steps, triggers, and configuration. Your workflow ID and
-              historical runs are preserved.
+              {t("workflows.resetDialog.descriptionStart")}{" "}
+              <strong>{resetTarget?.name}</strong>{" "}
+              {t("workflows.resetDialog.descriptionEnd")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmReset}>
-              Reset Workflow
+              {t("workflows.resetDialog.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -710,16 +773,19 @@ export function WorkflowsListView() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Workflow?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("workflows.deleteDialog.title")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Permanently deletes <strong>{deleteTarget?.name}</strong> and its
-              triggers. This action cannot be undone.
+              {t("workflows.deleteDialog.descriptionStart")}{" "}
+              <strong>{deleteTarget?.name}</strong>{" "}
+              {t("workflows.deleteDialog.descriptionEnd")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDelete}>
-              Delete Workflow
+              {t("workflows.deleteDialog.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

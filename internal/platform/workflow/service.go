@@ -45,9 +45,10 @@ func (s *Service) Registry() *Registry {
 	return s.engine.Registry()
 }
 
-// Catalog returns all registered trigger topics, steps, loaders, and CEL helpers.
-func (s *Service) Catalog() Catalog {
-	return s.engine.Registry().Catalog()
+// Catalog returns all registered trigger topics, steps, loaders, and CEL
+// helpers translated for the language negotiated in ctx by the i18n middleware.
+func (s *Service) Catalog(ctx context.Context) Catalog {
+	return localizeCatalog(ctx, s.engine.Registry().Catalog())
 }
 
 // ValidateFlow validates flow structure, registered steps/loaders, CEL expressions, and schemas.

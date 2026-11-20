@@ -19,7 +19,7 @@ import (
 // WorkflowReader defines read-only query operations exposed by platform/workflow.Service.
 // @Mock
 type WorkflowReader interface {
-	Catalog() workflow.Catalog
+	Catalog(ctx context.Context) workflow.Catalog
 	GetFlow(ctx context.Context, spaceID string, idOrSystemKey string) (*workflow.Flow, error)
 	ListFlows(ctx context.Context, filter workflow.ListFlowsFilter) ([]*workflow.Flow, error)
 	ListTriggersByFlowIDs(ctx context.Context, spaceID string, flowIDs []string) (map[string][]workflow.Trigger, error)
@@ -314,7 +314,8 @@ func (s *Service) GetFlowRun(ctx context.Context, id string) (*FlowRunView, erro
 	return view, nil
 }
 
-// GetCatalog returns all registered trigger topics, steps, loaders, and CEL helpers localized for locale.
-func (s *Service) GetCatalog(locale string) workflow.Catalog {
-	return workflow.LocalizeCatalog(s.workflow.Catalog(), locale)
+// GetCatalog returns all registered trigger topics, steps, loaders, and CEL helpers
+// translated for the language negotiated in ctx by the i18n middleware.
+func (s *Service) GetCatalog(ctx context.Context) workflow.Catalog {
+	return s.workflow.Catalog(ctx)
 }

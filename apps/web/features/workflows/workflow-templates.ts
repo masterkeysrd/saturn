@@ -4,27 +4,28 @@ import type {
   Flow_Trigger,
 } from "@saturn/api/gen/saturn/platform/workflow/v1/workflow"
 
-export type WorkflowTemplateCategory =
-  "Finance & Mail" | "Finance & Calendar" | "Daily Pulse" | "Finance"
+export type WorkflowTemplateId =
+  "receiptEmail" | "scheduledBill" | "morningBriefing" | "anomalyAlert"
+
+export type WorkflowTemplateCategoryKey =
+  | "categoryFinanceMail"
+  | "categoryFinanceCalendar"
+  | "categoryDailyPulse"
+  | "categoryFinance"
 
 export type WorkflowTemplateIcon = "receipt" | "calendar" | "sunrise" | "alert"
 
 export interface WorkflowTemplate {
-  id: string
-  name: string
-  description: string
-  category: WorkflowTemplateCategory
+  id: WorkflowTemplateId
+  categoryKey: WorkflowTemplateCategoryKey
   icon: WorkflowTemplateIcon
   flow: Flow
 }
 
 export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
   {
-    id: "receipt-email-to-finance-inbox",
-    name: "Receipt Email to Finance Inbox",
-    description:
-      "Extracts vendor, amount, currency, and date from incoming emails and stages verified receipts in your Finance Inbox.",
-    category: "Finance & Mail",
+    id: "receiptEmail",
+    categoryKey: "categoryFinanceMail",
     icon: "receipt",
     flow: {
       name: "Receipt Email to Finance Inbox",
@@ -130,11 +131,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     },
   },
   {
-    id: "scheduled-bill-calendar-reminder",
-    name: "Scheduled Bill Calendar Reminder",
-    description:
-      "Automatically creates an all-day calendar reminder whenever a new scheduled bill or recurring payment is created.",
-    category: "Finance & Calendar",
+    id: "scheduledBill",
+    categoryKey: "categoryFinanceCalendar",
     icon: "calendar",
     flow: {
       name: "Scheduled Bill Calendar Reminder",
@@ -192,11 +190,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     },
   },
   {
-    id: "weekday-morning-briefing-draft",
-    name: "Weekday Morning Briefing Draft",
-    description:
-      "Runs at 7:00 AM every weekday, loads your active workspace accounts, and saves a concise daily cash briefing draft in Mail.",
-    category: "Daily Pulse",
+    id: "morningBriefing",
+    categoryKey: "categoryDailyPulse",
     icon: "sunrise",
     flow: {
       name: "Weekday Morning Briefing Draft",
@@ -255,11 +250,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     },
   },
   {
-    id: "large-expense-anomaly-alert",
-    name: "Large Expense Anomaly Alert",
-    description:
-      "Monitors newly recorded transactions for high-value expenses and drafts an unusual-charge alert memo for review.",
-    category: "Finance",
+    id: "anomalyAlert",
+    categoryKey: "categoryFinance",
     icon: "alert",
     flow: {
       name: "Large Expense Anomaly Alert",

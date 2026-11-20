@@ -69,6 +69,28 @@
       "STOPPED": "Detenido",
       "SUCCEEDED": "Exitoso",
       "WAITING": "En espera"
+    },
+    "stepType": {
+      "AI_AGENT_RUN": "Ejecución de agente IA",
+      "CALENDAR_UPSERT_EVENT": "Crear/actualizar evento de calendario",
+      "DOCUMENT_EXTRACT_TEXT": "Extracción de texto de documento",
+      "FILTER": "Filtro",
+      "FINANCE_CREATE_INBOX_ITEM": "Registrar elemento en bandeja de finanzas",
+      "FINANCE_IMPORT_STATEMENT_DRAFT": "Importar borrador de extracto",
+      "FOR_EACH": "Para cada uno",
+      "LLM_GENERATE": "Generar con IA",
+      "MAIL_CREATE_DRAFT": "Crear borrador de correo",
+      "MAIL_MODIFY_LABELS": "Modificar etiquetas de correo",
+      "OUTPUT": "Salida",
+      "STOP": "Detener",
+      "SWITCH": "Condición",
+      "TRANSFORM": "Transformar"
+    },
+    "triggerType": {
+      "EVENT": "Evento",
+      "MANUAL": "Manual",
+      "SCHEDULE": "Programada",
+      "WEBHOOK": "Webhook"
     }
   }
 }

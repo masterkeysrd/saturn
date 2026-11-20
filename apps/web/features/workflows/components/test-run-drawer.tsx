@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
 
 interface TestRunDrawerProps {
   open: boolean
@@ -37,6 +38,7 @@ export function TestRunDrawer({
   flow,
   onRunComplete,
 }: TestRunDrawerProps) {
+  const { t } = useI18n()
   const [inputJson, setInputJson] = useState("{}")
   const [triggerJson, setTriggerJson] = useState("{}")
   const [parseError, setParseError] = useState<string | null>(null)
@@ -53,13 +55,13 @@ export function TestRunDrawer({
     try {
       const parsed = JSON.parse(raw.trim() || "{}")
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        setParseError(`${label} must be a JSON object`)
+        setParseError(t("workflows.testRun.jsonObjectError", { label }))
         return null
       }
       return parsed as Record<string, unknown>
     } catch (err) {
       setParseError(
-        `${label}: ${err instanceof Error ? err.message : "Invalid JSON"}`
+        `${label}: ${err instanceof Error ? err.message : t("workflows.testRun.invalidJson")}`
       )
       return null
     }
@@ -67,9 +69,12 @@ export function TestRunDrawer({
 
   const handleTest = async () => {
     setParseError(null)
-    const input = parseRecord(inputJson, "Input JSON")
+    const input = parseRecord(inputJson, t("workflows.testRun.labelInputJson"))
     if (!input) return
-    const triggerData = parseRecord(triggerJson, "Trigger Data JSON")
+    const triggerData = parseRecord(
+      triggerJson,
+      t("workflows.testRun.labelTriggerJson")
+    )
     if (!triggerData) return
 
     try {
@@ -83,7 +88,7 @@ export function TestRunDrawer({
       onRunComplete?.(run)
     } catch (err) {
       setParseError(
-        err instanceof Error ? err.message : "Test execution failed"
+        err instanceof Error ? err.message : t("workflows.testRun.testFailed")
       )
     }
   }
@@ -91,7 +96,7 @@ export function TestRunDrawer({
   const handleExecuteLive = async () => {
     if (!flow.id) return
     setParseError(null)
-    const input = parseRecord(inputJson, "Input JSON")
+    const input = parseRecord(inputJson, t("workflows.testRun.labelInputJson"))
     if (!input) return
 
     try {
@@ -113,7 +118,7 @@ export function TestRunDrawer({
       })
     } catch (err) {
       setParseError(
-        err instanceof Error ? err.message : "Live execution failed"
+        err instanceof Error ? err.message : t("workflows.testRun.liveFailed")
       )
     }
   }
@@ -126,18 +131,18 @@ export function TestRunDrawer({
         <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
           <DialogTitle className="flex items-center gap-2 pr-8 text-base font-semibold">
             <FlaskConical className="h-4 w-4 text-primary" />
-            Test & Run Workflow
+            {t("workflows.testRun.title")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Dry-run unsaved edits in-memory via <code>:test</code> or run the
-            saved workflow live.
+            {t("workflows.testRun.descriptionStart")} <code>:test</code>{" "}
+            {t("workflows.testRun.descriptionEnd")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground">
-              Input Payload (JSON)
+              {t("workflows.testRun.inputPayload")}
             </Label>
             <Textarea
               value={inputJson}
@@ -149,7 +154,7 @@ export function TestRunDrawer({
 
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground">
-              Trigger Data Envelope (JSON, optional)
+              {t("workflows.testRun.triggerEnvelope")}
             </Label>
             <Textarea
               value={triggerJson}
@@ -177,7 +182,7 @@ export function TestRunDrawer({
               ) : (
                 <FlaskConical className="h-3.5 w-3.5" />
               )}
-              Run Dry Test (:test)
+              {t("workflows.testRun.runDryTest")}
             </Button>
             {flow.id && (
               <Button
@@ -192,7 +197,7 @@ export function TestRunDrawer({
                 ) : (
                   <Play className="h-3.5 w-3.5" />
                 )}
-                Execute Saved Flow
+                {t("workflows.testRun.executeSaved")}
               </Button>
             )}
           </div>
@@ -201,7 +206,7 @@ export function TestRunDrawer({
             <div className="space-y-3 border-t border-border/40 pt-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase">
-                  Result Status: {lastRun.status}
+                  {t("workflows.testRun.resultStatus")} {lastRun.status}
                 </span>
                 {lastRun.status === "completed" ? (
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -220,7 +225,7 @@ export function TestRunDrawer({
               {lastRun.stepRuns && lastRun.stepRuns.length > 0 && (
                 <div className="space-y-2 border-t border-border/40 pt-3">
                   <span className="text-xs font-semibold text-muted-foreground">
-                    Step Outputs
+                    {t("workflows.testRun.stepOutputs")}
                   </span>
                   <div className="divide-y divide-border/40">
                     {lastRun.stepRuns.map((sr) => (
@@ -255,7 +260,7 @@ export function TestRunDrawer({
               {lastRun.output && (
                 <div className="space-y-1">
                   <span className="text-xs font-semibold text-muted-foreground">
-                    Flow Terminal Output
+                    {t("workflows.testRun.terminalOutput")}
                   </span>
                   <pre className="overflow-x-auto rounded-xl bg-muted/50 p-3 font-mono text-[11px]">
                     {JSON.stringify(lastRun.output, null, 2)}

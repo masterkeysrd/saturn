@@ -8,6 +8,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/ai"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	platformi18n "github.com/masterkeysrd/saturn/internal/platform/i18n"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
 )
@@ -237,26 +238,35 @@ func TestService_FlowRunsAndCatalog(t *testing.T) {
 
 	t.Run("GetCatalog", func(t *testing.T) {
 		reg := workflow.NewRegistry()
+		var gotLang string
 		svc := NewService(Dependencies{
 			Workflow: &WorkflowReaderMock{
-				CatalogFunc: reg.Catalog,
+				CatalogFunc: func(ctx context.Context) workflow.Catalog {
+					gotLang = platformi18n.From(ctx)
+					return reg.Catalog()
+				},
 			},
 		})
 
 		tests := []struct {
-			name       string
-			locale     string
-			wantFilter string
+			name     string
+			language string
 		}{
-			{name: "English default", locale: "en-US", wantFilter: "Filter"},
-			{name: "Spanish es-ES", locale: "es-ES", wantFilter: "Filtrar"},
-			{name: "Spanish es-DO", locale: "es-DO", wantFilter: "Filtrar"},
-			{name: "Unknown locale falls back to English", locale: "fr-FR", wantFilter: "Filter"},
+			{name: "English", language: "en"},
+			{name: "Spanish", language: "es"},
+			{name: "No negotiated language", language: ""},
 		}
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				cat := svc.GetCatalog(tc.locale)
+				ctx := t.Context()
+				if tc.language != "" {
+					ctx = platformi18n.With(ctx, tc.language)
+				}
+				cat := svc.GetCatalog(ctx)
+				if gotLang != tc.language {
+					t.Errorf("negotiated language forwarded = %q, want %q", gotLang, tc.language)
+				}
 				if len(cat.Steps) == 0 || len(cat.CelHelpers) == 0 {
 					t.Fatalf("expected built-in steps and CEL helpers in catalog, got %+v", cat)
 				}
@@ -264,9 +274,6 @@ func TestService_FlowRunsAndCatalog(t *testing.T) {
 				for _, st := range cat.Steps {
 					if st.Type == workflow.StepFilter {
 						found = true
-						if st.DisplayName != tc.wantFilter {
-							t.Errorf("StepFilter DisplayName = %q, want %q", st.DisplayName, tc.wantFilter)
-						}
 					}
 				}
 				if !found {

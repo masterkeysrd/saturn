@@ -2,39 +2,15 @@ package workflow
 
 import (
 	"context"
+	"embed"
 	"encoding/json/v2"
 	"maps"
 	"slices"
 	"strings"
 	"testing"
+
+	platformi18n "github.com/masterkeysrd/saturn/internal/platform/i18n"
 )
-
-func TestResolveCatalogLanguage(t *testing.T) {
-	tests := []struct {
-		name   string
-		locale string
-		want   string
-	}{
-		{name: "empty defaults to en", locale: "", want: "en"},
-		{name: "en-US", locale: "en-US", want: "en"},
-		{name: "es", locale: "es", want: "es"},
-		{name: "es-ES", locale: "es-ES", want: "es"},
-		{name: "es-419", locale: "es-419", want: "es"},
-		{name: "Accept-Language es-DO primary", locale: "es-DO,es;q=0.9,en;q=0.8", want: "es"},
-		{name: "Accept-Language higher q wins", locale: "en-US;q=0.5,es-ES;q=0.9", want: "es"},
-		{name: "Accept-Language unsupported then es", locale: "fr-FR,es-MX;q=0.8,en;q=0.5", want: "es"},
-		{name: "Accept-Language q=0 ignored", locale: "es;q=0,en;q=0.8", want: "en"},
-		{name: "unknown locale falls back to en", locale: "ja-JP", want: "en"},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := ResolveCatalogLanguage(tc.locale); got != tc.want {
-				t.Fatalf("ResolveCatalogLanguage(%q) = %q, want %q", tc.locale, got, tc.want)
-			}
-		})
-	}
-}
 
 func TestLocalizeCatalog(t *testing.T) {
 	reg := NewRegistry()
@@ -113,8 +89,9 @@ func TestLocalizeCatalog(t *testing.T) {
 	}
 
 	base := reg.Catalog()
-	esCat := LocalizeCatalog(base, "es-DO,es;q=0.9")
-	enCat := LocalizeCatalog(base, "en-US")
+	esCat := localizeCatalog(platformi18n.With(t.Context(), "es"), base)
+	enCat := localizeCatalog(platformi18n.With(t.Context(), "en"), base)
+	noneCat := localizeCatalog(t.Context(), base)
 
 	// Verify registry snapshot was never mutated.
 	after := reg.Catalog()
@@ -122,8 +99,16 @@ func TestLocalizeCatalog(t *testing.T) {
 		if after.Steps[i].DisplayName != base.Steps[i].DisplayName {
 			t.Fatalf("registry step %q mutated: %q != %q", base.Steps[i].Type, after.Steps[i].DisplayName, base.Steps[i].DisplayName)
 		}
-		if enCat.Steps[i].DisplayName != base.Steps[i].DisplayName {
-			t.Fatalf("enCat step %q mismatch: %q != %q", base.Steps[i].Type, enCat.Steps[i].DisplayName, base.Steps[i].DisplayName)
+		// English and a missing negotiated language must produce the same catalog.
+		if enCat.Steps[i].DisplayName != noneCat.Steps[i].DisplayName || enCat.Steps[i].Description != noneCat.Steps[i].Description {
+			t.Fatalf("step %q english mismatch: (%q, %q) != (%q, %q)", base.Steps[i].Type,
+				enCat.Steps[i].DisplayName, enCat.Steps[i].Description,
+				noneCat.Steps[i].DisplayName, noneCat.Steps[i].Description)
+		}
+		// Descriptors absent from the bundles keep their registered strings.
+		if base.Steps[i].Type == "test.unknown_step" &&
+			(enCat.Steps[i].DisplayName != base.Steps[i].DisplayName || noneCat.Steps[i].DisplayName != base.Steps[i].DisplayName) {
+			t.Fatalf("unknown step %q should preserve registered strings", base.Steps[i].Type)
 		}
 	}
 
@@ -172,14 +157,33 @@ func TestLocalizeCatalog(t *testing.T) {
 	}
 }
 
+//go:embed locales/*.json
+var parityLocaleFS embed.FS
+
+type parityCatalogEntry struct {
+	DisplayName string `json:"display_name"`
+	Description string `json:"description"`
+}
+
+type parityCelHelper struct {
+	Description string `json:"description"`
+}
+
+type parityCatalogBundle struct {
+	TriggerTopics map[string]parityCatalogEntry `json:"trigger_topics"`
+	Steps         map[string]parityCatalogEntry `json:"steps"`
+	Loaders       map[string]parityCatalogEntry `json:"loaders"`
+	CelHelpers    map[string]parityCelHelper    `json:"cel_helpers"`
+}
+
 func TestEmbeddedLocaleParity(t *testing.T) {
-	bundles := make(map[string]catalogLocaleBundle, 2)
+	bundles := make(map[string]parityCatalogBundle, 2)
 	for _, lang := range []string{"en", "es"} {
-		data, err := localeFS.ReadFile("locales/" + lang + ".json")
+		data, err := parityLocaleFS.ReadFile("locales/" + lang + ".json")
 		if err != nil {
 			t.Fatalf("read embedded locale %q: %v", lang, err)
 		}
-		var bundle catalogLocaleBundle
+		var bundle parityCatalogBundle
 		if err := json.Unmarshal(data, &bundle); err != nil {
 			t.Fatalf("unmarshal embedded locale %q: %v", lang, err)
 		}
@@ -189,7 +193,7 @@ func TestEmbeddedLocaleParity(t *testing.T) {
 	en := bundles["en"]
 	es := bundles["es"]
 
-	assertEntryParity := func(section string, enMap, esMap map[string]catalogEntryTranslation) {
+	assertEntryParity := func(section string, enMap, esMap map[string]parityCatalogEntry) {
 		t.Helper()
 		enKeys := slices.Sorted(maps.Keys(enMap))
 		esKeys := slices.Sorted(maps.Keys(esMap))

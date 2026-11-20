@@ -2,10 +2,9 @@ import { useState } from "react"
 import {
   CRON_PRESETS,
   isValidCronExpression,
-  summarizeCron,
   discoverVariablesAtStep,
 } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { useCreateAPIKeyMutation } from "@saturn/api/gen/saturn/identity/v1/identity"
 import type {
   Catalog_TriggerTopic,
@@ -32,6 +31,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { VariablePickerInput } from "./variable-picker-input"
+import { CRON_PRESET_LABEL_KEYS, getLocalizedCronSummary } from "./cron-label"
 import { toast } from "@/components/ui/toast"
 import { Copy, Key, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react"
 
@@ -50,19 +50,20 @@ export function TriggerEditorCard({
   onChange,
   onRemove,
 }: TriggerEditorCardProps) {
+  const { t } = useI18n()
   const tz = useTimezone()
   const { spaceId } = useActiveSpaceContext()
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [keyDialogOpen, setKeyDialogOpen] = useState(false)
   const [createdRawKey, setCreatedRawKey] = useState<string | null>(null)
   const [newKeyName, setNewKeyName] = useState(
-    `${trigger.name || "Webhook"} Key`
+    trigger.name ? `${trigger.name} Key` : ""
   )
 
   const createAPIKeyMutation = useCreateAPIKeyMutation()
 
   const cfg = trigger.config ?? {}
-  const selectedTopic = topics.find((t) => t.topic === cfg.topic)
+  const selectedTopic = topics.find((topic) => topic.topic === cfg.topic)
   const triggerVars = discoverVariablesAtStep({
     steps: [],
     triggerPayloadSchema: selectedTopic?.payloadSchema,
@@ -70,7 +71,7 @@ export function TriggerEditorCard({
 
   const webhookUrl = trigger.id
     ? `${window.location.origin}/api/v1/platform/workflows/triggers/${trigger.id}:webhook`
-    : "(Save workflow to generate trigger webhook URL)"
+    : t("workflows.trigger.webhookUnsaved")
 
   const curlSnippet = trigger.id
     ? `curl -X POST "${webhookUrl}" \\\n  -H "Authorization: Bearer sat_YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"event": "sample"}'`
@@ -82,14 +83,14 @@ export function TriggerEditorCard({
     try {
       await navigator.clipboard.writeText(text)
       toast.add({
-        title: "Copied",
-        description: `${label} copied to clipboard.`,
+        title: t("workflows.trigger.copied"),
+        description: t("workflows.trigger.copiedDescription", { label }),
         type: "success",
       })
     } catch {
       toast.add({
-        title: "Copy failed",
-        description: "Clipboard access is unavailable.",
+        title: t("workflows.trigger.copyFailed"),
+        description: t("workflows.trigger.clipboardUnavailable"),
         type: "error",
       })
     }
@@ -100,8 +101,8 @@ export function TriggerEditorCard({
     try {
       const created = await createAPIKeyMutation.mutateAsync({
         apiKey: {
-          name: newKeyName.trim() || "Workflow Webhook Key",
-          description: "Workflow webhook trigger key",
+          name: newKeyName.trim() || t("workflows.trigger.keyDefaultName"),
+          description: t("workflows.trigger.keyDescription"),
           scopes: ["workflows:execute"],
           spaceIds: [spaceId],
         },
@@ -109,8 +110,9 @@ export function TriggerEditorCard({
       setCreatedRawKey(created.rawKey ?? null)
     } catch (err) {
       toast.add({
-        title: "Failed to create API key",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: t("workflows.trigger.keyCreateFailed"),
+        description:
+          err instanceof Error ? err.message : t("workflows.unknownError"),
         type: "error",
       })
     }
@@ -124,25 +126,29 @@ export function TriggerEditorCard({
       <div className="space-y-3">
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold text-muted-foreground">
-            Trigger Name
+            {t("workflows.trigger.name")}
           </Label>
           <Input
             value={trigger.name}
             onChange={(e) => onChange({ ...trigger, name: e.target.value })}
-            placeholder={`Trigger ${index + 1}`}
-            aria-label={`Trigger ${index + 1} name`}
+            placeholder={t("workflows.trigger.namePlaceholder", {
+              index: index + 1,
+            })}
+            aria-label={t("workflows.trigger.nameAria", { index: index + 1 })}
             className="h-9 rounded-xl text-xs font-semibold"
           />
         </div>
 
         <label className="flex cursor-pointer items-center justify-between py-1 text-xs font-medium text-foreground">
-          <span>Trigger Enabled</span>
+          <span>{t("workflows.trigger.enabled")}</span>
           <Switch
             checked={trigger.isEnabled}
             onCheckedChange={(checked) =>
               onChange({ ...trigger, isEnabled: Boolean(checked) })
             }
-            aria-label={`Toggle trigger ${trigger.name}`}
+            aria-label={t("workflows.trigger.toggleAria", {
+              name: trigger.name,
+            })}
           />
         </label>
       </div>
@@ -151,7 +157,7 @@ export function TriggerEditorCard({
         <div className="space-y-3 border-t border-border/40 pt-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground">
-              Domain Event Topic
+              {t("workflows.trigger.topic")}
             </Label>
             <Select
               value={cfg.topic ?? ""}
@@ -163,18 +169,18 @@ export function TriggerEditorCard({
               }
             >
               <SelectTrigger className="h-9 rounded-xl font-mono text-xs">
-                <SelectValue placeholder="Select domain event topic">
-                  {cfg.topic || "Select domain event topic"}
+                <SelectValue placeholder={t("workflows.trigger.selectTopic")}>
+                  {cfg.topic || t("workflows.trigger.selectTopic")}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="rounded-xl">
-                {topics.map((t) => (
+                {topics.map((topic) => (
                   <SelectItem
-                    key={t.topic ?? ""}
-                    value={t.topic ?? ""}
+                    key={topic.topic ?? ""}
+                    value={topic.topic ?? ""}
                     className="font-mono text-xs"
                   >
-                    {t.topic}
+                    {topic.topic}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -192,7 +198,7 @@ export function TriggerEditorCard({
         <div className="space-y-3 border-t border-border/40 pt-4">
           <div className="flex items-center justify-between gap-2">
             <Label className="text-xs font-semibold text-muted-foreground">
-              Webhook Endpoint
+              {t("workflows.trigger.webhookEndpoint")}
             </Label>
             <div className="flex items-center gap-1.5">
               {trigger.id && (
@@ -200,11 +206,16 @@ export function TriggerEditorCard({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleCopy(webhookUrl, "Webhook URL")}
+                  onClick={() =>
+                    handleCopy(
+                      webhookUrl,
+                      t("workflows.trigger.labelWebhookUrl")
+                    )
+                  }
                   className="h-7 gap-1 rounded-lg px-2 text-xs"
                 >
                   <Copy className="h-3 w-3" />
-                  Copy URL
+                  {t("workflows.trigger.copyUrl")}
                 </Button>
               )}
               <Button
@@ -218,7 +229,7 @@ export function TriggerEditorCard({
                 className="h-7 gap-1 rounded-lg px-2 text-xs"
               >
                 <Key className="h-3 w-3" />
-                Create API Key
+                {t("workflows.trigger.createApiKey")}
               </Button>
             </div>
           </div>
@@ -231,17 +242,19 @@ export function TriggerEditorCard({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-muted-foreground">
-                  cURL Example
+                  {t("workflows.trigger.curlExample")}
                 </span>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleCopy(curlSnippet, "cURL snippet")}
+                  onClick={() =>
+                    handleCopy(curlSnippet, t("workflows.trigger.labelCurl"))
+                  }
                   className="h-6 gap-1 rounded-md px-2 text-[11px]"
                 >
                   <Copy className="h-3 w-3" />
-                  Copy
+                  {t("workflows.trigger.copy")}
                 </Button>
               </div>
               <pre className="overflow-x-auto rounded-xl bg-muted/40 p-2.5 font-mono text-[11px] text-muted-foreground">
@@ -256,7 +269,7 @@ export function TriggerEditorCard({
         <div className="space-y-3 border-t border-border/40 pt-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground">
-              Schedule Preset
+              {t("workflows.trigger.schedulePreset")}
             </Label>
             <Select
               value={
@@ -273,18 +286,24 @@ export function TriggerEditorCard({
             >
               <SelectTrigger className="h-9 rounded-xl text-xs">
                 <SelectValue>
-                  {CRON_PRESETS.find((p) => p.cron === cronValue)?.label ??
-                    "Custom Cron Expression"}
+                  {(() => {
+                    const preset = CRON_PRESETS.find(
+                      (p) => p.cron === cronValue
+                    )
+                    return preset
+                      ? t(CRON_PRESET_LABEL_KEYS[preset.id])
+                      : t("workflows.trigger.customCron")
+                  })()}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 {CRON_PRESETS.map((p) => (
                   <SelectItem key={p.id} value={p.cron} className="text-xs">
-                    {p.label} ({p.cron})
+                    {t(CRON_PRESET_LABEL_KEYS[p.id])} ({p.cron})
                   </SelectItem>
                 ))}
                 <SelectItem value="custom" className="text-xs">
-                  Custom Expression
+                  {t("workflows.trigger.customExpression")}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -292,7 +311,9 @@ export function TriggerEditorCard({
 
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground">
-              Cron Expression ({tz.timezone})
+              {t("workflows.trigger.cronExpression", {
+                timezone: tz.timezone,
+              })}
             </Label>
             <Input
               value={cronValue}
@@ -310,9 +331,11 @@ export function TriggerEditorCard({
             >
               {cronValue
                 ? cronValid
-                  ? summarizeCron(cronValue, tz.timezone)
-                  : "Invalid 5-field cron expression"
-                : `Evaluated in workspace timezone (${tz.timezone})`}
+                  ? getLocalizedCronSummary(cronValue, tz.timezone, t)
+                  : t("workflows.trigger.cronInvalid")
+                : t("workflows.trigger.cronTimezoneNote", {
+                    timezone: tz.timezone,
+                  })}
             </p>
           </div>
         </div>
@@ -326,8 +349,11 @@ export function TriggerEditorCard({
           className="flex w-full cursor-pointer items-center justify-between py-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
         >
           <span>
-            Advanced (Filter &amp; Input Mapping
-            {mappingEntries.length > 0 ? ` • ${mappingEntries.length}` : ""})
+            {mappingEntries.length > 0
+              ? t("workflows.trigger.advancedCount", {
+                  count: mappingEntries.length,
+                })
+              : t("workflows.trigger.advanced")}
           </span>
           {advancedOpen ? (
             <ChevronUp className="h-3.5 w-3.5" />
@@ -341,7 +367,7 @@ export function TriggerEditorCard({
             {trigger.type === "event" && (
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-muted-foreground">
-                  CEL Pre-Filter
+                  {t("workflows.trigger.celFilter")}
                 </Label>
                 <VariablePickerInput
                   value={cfg.filter ?? ""}
@@ -354,7 +380,7 @@ export function TriggerEditorCard({
                   variables={triggerVars}
                   rawMode
                   placeholder="trigger.data.amount > 0"
-                  ariaLabel="Trigger CEL filter"
+                  ariaLabel={t("workflows.trigger.celFilterAria")}
                 />
               </div>
             )}
@@ -362,7 +388,7 @@ export function TriggerEditorCard({
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-semibold text-muted-foreground">
-                  Input Mapping
+                  {t("workflows.trigger.inputMapping")}
                 </Label>
                 <Button
                   type="button"
@@ -384,7 +410,7 @@ export function TriggerEditorCard({
                   className="h-7 gap-1 rounded-lg px-2 text-xs text-primary"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Add Mapping
+                  {t("workflows.trigger.addMapping")}
                 </Button>
               </div>
 
@@ -466,25 +492,25 @@ export function TriggerEditorCard({
           className="h-8 gap-1.5 rounded-lg px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
         >
           <Trash2 className="h-3.5 w-3.5" />
-          Remove Trigger
+          {t("workflows.trigger.removeTrigger")}
         </Button>
       </div>
 
       <Dialog open={keyDialogOpen} onOpenChange={setKeyDialogOpen}>
         <DialogContent className="rounded-3xl sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Create Webhook API Key</DialogTitle>
+            <DialogTitle>{t("workflows.trigger.keyDialogTitle")}</DialogTitle>
             <DialogDescription>
-              Mints a Space-scoped API key with the{" "}
-              <code>workflows:execute</code> scope for calling this webhook
-              externally.
+              {t("workflows.trigger.keyDialogDescriptionStart")}{" "}
+              <code>workflows:execute</code>{" "}
+              {t("workflows.trigger.keyDialogDescriptionEnd")}
             </DialogDescription>
           </DialogHeader>
 
           {createdRawKey ? (
             <div className="space-y-3">
               <p className="text-xs font-medium text-amber-500">
-                Copy this key now. It will not be shown again.
+                {t("workflows.trigger.keyWarning")}
               </p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 rounded-xl bg-muted px-3 py-2 font-mono text-xs break-all">
@@ -493,20 +519,27 @@ export function TriggerEditorCard({
                 <Button
                   type="button"
                   size="sm"
-                  onClick={() => handleCopy(createdRawKey, "API Key")}
+                  onClick={() =>
+                    handleCopy(
+                      createdRawKey,
+                      t("workflows.trigger.labelApiKey")
+                    )
+                  }
                 >
                   <Copy className="mr-1.5 h-3.5 w-3.5" />
-                  Copy
+                  {t("workflows.trigger.copy")}
                 </Button>
               </div>
             </div>
           ) : (
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">API Key Name</Label>
+              <Label className="text-xs font-semibold">
+                {t("workflows.trigger.keyName")}
+              </Label>
               <Input
                 value={newKeyName}
                 onChange={(e) => setNewKeyName(e.target.value)}
-                placeholder="Webhook Trigger Key"
+                placeholder={t("workflows.trigger.keyNamePlaceholder")}
                 className="rounded-xl"
               />
             </div>
@@ -519,7 +552,7 @@ export function TriggerEditorCard({
                 onClick={() => setKeyDialogOpen(false)}
                 className="rounded-xl"
               >
-                Done
+                {t("common.done")}
               </Button>
             ) : (
               <>
@@ -529,7 +562,7 @@ export function TriggerEditorCard({
                   onClick={() => setKeyDialogOpen(false)}
                   className="rounded-xl"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="button"
@@ -537,7 +570,7 @@ export function TriggerEditorCard({
                   disabled={createAPIKeyMutation.isPending}
                   className="rounded-xl"
                 >
-                  Create Key
+                  {t("workflows.trigger.createKey")}
                 </Button>
               </>
             )}

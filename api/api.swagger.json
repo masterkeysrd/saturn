@@ -7764,15 +7764,6 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "locale",
-            "description": "Optional. BCP 47 locale tag (e.g. \"en-US\", \"es-ES\") used to localize catalog display names and descriptions.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
         "tags": [
           "WorkflowService"
         ]

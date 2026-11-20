@@ -8,6 +8,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/platform/ai"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	platformi18n "github.com/masterkeysrd/saturn/internal/platform/i18n"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
 )
 
@@ -84,13 +85,13 @@ func (c *coordinator) GenerateFlow(ctx context.Context, req *GenerateFlowRequest
 		return nil, errors.E(op, errors.Invalid, "prompt is required")
 	}
 
-	catalog := c.workflow.Catalog()
+	catalog := c.workflow.Catalog(ctx)
 	catalogBytes, err := json.Marshal(catalog, json.Deterministic(true))
 	if err != nil {
 		return nil, errors.E(op, errors.Internal, fmt.Errorf("marshal workflow catalog: %w", err))
 	}
 
-	systemPrompt := buildGenerateSystemPrompt(string(catalogBytes))
+	systemPrompt := buildGenerateSystemPrompt(string(catalogBytes), platformi18n.Resolve(ctx))
 	userPrompt := strings.TrimSpace(req.Prompt)
 	modelID, role, genCfg := convertWorkflowModelConfig(req.Model)
 
@@ -160,7 +161,11 @@ func (c *coordinator) GenerateFlow(ctx context.Context, req *GenerateFlowRequest
 	return nil, errors.E(op, errors.Invalid, errors.Code("WORKFLOW_VALIDATION_FAILED"), lastValidationErr)
 }
 
-func buildGenerateSystemPrompt(catalogJSON string) string {
+func buildGenerateSystemPrompt(catalogJSON string, language string) string {
+	languageRule := "6. Write the flow name and description in English."
+	if language == "es" {
+		languageRule = "6. Write the flow name and description in Spanish."
+	}
 	return fmt.Sprintf(`You are Saturn's Workflow Architect. Generate a valid, flat-first Saturn Workflow JSON object matching the output schema.
 
 Rules:
@@ -169,9 +174,10 @@ Rules:
 3. Use "{{ ... }}" CEL templates for dynamic bindings. Only reference upstream steps.<id> and step-local sources.<alias> declared in that step's sources map.
 4. For llm.generate and ai.agent_run steps returning structured data, always provide standard JSON Schema in inputs.output_schema (never use custom x-saturn-* extensions).
 5. Trigger types are: "event" (requires config.topic), "schedule" (requires config.cron), "webhook", or "manual".
+%s
 
 Catalog:
-%s`, catalogJSON)
+%s`, languageRule, catalogJSON)
 }
 
 func parseGeneratedFlowDraft(raw string) (*generatedFlowDraft, error) {

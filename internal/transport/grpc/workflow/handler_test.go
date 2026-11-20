@@ -9,8 +9,8 @@ import (
 	workflowaggregator "github.com/masterkeysrd/saturn/internal/aggregator/workflow"
 	workflowapp "github.com/masterkeysrd/saturn/internal/application/workflow"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	platformi18n "github.com/masterkeysrd/saturn/internal/platform/i18n"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -79,7 +79,7 @@ type stubAggregator struct {
 	getFlowFn      func(ctx context.Context, id string) (*workflow.Flow, error)
 	listFlowRunsFn func(ctx context.Context, filter workflow.ListFlowRunsFilter) (*workflowaggregator.FlowRunListResult, error)
 	getFlowRunFn   func(ctx context.Context, id string) (*workflowaggregator.FlowRunView, error)
-	catalogFn      func(locale string) workflow.Catalog
+	catalogFn      func(ctx context.Context) workflow.Catalog
 }
 
 func (s *stubAggregator) ListFlows(ctx context.Context, filter workflow.ListFlowsFilter) ([]*workflow.Flow, error) {
@@ -98,8 +98,8 @@ func (s *stubAggregator) GetFlowRun(ctx context.Context, id string) (*workflowag
 	return s.getFlowRunFn(ctx, id)
 }
 
-func (s *stubAggregator) GetCatalog(locale string) workflow.Catalog {
-	return s.catalogFn(locale)
+func (s *stubAggregator) GetCatalog(ctx context.Context) workflow.Catalog {
+	return s.catalogFn(ctx)
 }
 
 func TestHandler_AllRPCs(t *testing.T) {
@@ -282,8 +282,8 @@ func TestHandler_AllRPCs(t *testing.T) {
 			getFlowRunFn: func(_ context.Context, id string) (*workflowaggregator.FlowRunView, error) {
 				return &workflowaggregator.FlowRunView{FlowRun: &workflow.FlowRun{ID: id}, FlowName: new("Flow A")}, nil
 			},
-			catalogFn: func(locale string) workflow.Catalog {
-				return workflow.LocalizeCatalog(workflow.Catalog{
+			catalogFn: func(_ context.Context) workflow.Catalog {
+				return workflow.Catalog{
 					TriggerTopics: []workflow.TriggerTopicDescriptor{
 						{
 							Topic:       "mail.message.received",
@@ -296,7 +296,7 @@ func TestHandler_AllRPCs(t *testing.T) {
 						},
 					},
 					CelHelpers: workflow.BuiltinCelHelpers(),
-				}, locale)
+				}
 			},
 		})
 
@@ -316,73 +316,91 @@ func TestHandler_AllRPCs(t *testing.T) {
 		}
 	})
 
-	t.Run("GetCatalog_Localization", func(t *testing.T) {
+	t.Run("GetCatalog_ForwardsContext", func(t *testing.T) {
 		reg := workflow.NewRegistry()
 		tests := []struct {
-			name             string
-			ctx              context.Context
-			req              *workflowv1.GetCatalogRequest
-			wantLocalePassed string
-			wantFilterName   string
+			name     string
+			ctx      context.Context
+			wantLang string
 		}{
 			{
-				name:             "explicit locale es-ES",
-				ctx:              t.Context(),
-				req:              &workflowv1.GetCatalogRequest{Locale: new("es-ES")},
-				wantLocalePassed: "es-ES",
-				wantFilterName:   "Filtrar",
+				name:     "context language injected by interceptor",
+				ctx:      platformi18n.With(t.Context(), "es"),
+				wantLang: "es",
 			},
 			{
-				name:             "accept-language metadata fallback",
-				ctx:              metadata.NewIncomingContext(t.Context(), metadata.Pairs("accept-language", "es-419,es;q=0.9")),
-				req:              &workflowv1.GetCatalogRequest{},
-				wantLocalePassed: "es-419,es;q=0.9",
-				wantFilterName:   "Filtrar",
-			},
-			{
-				name:             "grpcgateway-accept-language metadata fallback",
-				ctx:              metadata.NewIncomingContext(t.Context(), metadata.Pairs("grpcgateway-accept-language", "es-DO")),
-				req:              &workflowv1.GetCatalogRequest{},
-				wantLocalePassed: "es-DO",
-				wantFilterName:   "Filtrar",
-			},
-			{
-				name:             "default english",
-				ctx:              t.Context(),
-				req:              &workflowv1.GetCatalogRequest{},
-				wantLocalePassed: "",
-				wantFilterName:   "Filter",
+				name:     "no negotiated language forwarded as empty",
+				ctx:      t.Context(),
+				wantLang: "",
 			},
 		}
 
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				var gotLocale string
+				var gotLang string
 				h := NewHandler(&stubCoordinator{}, &stubAggregator{
-					catalogFn: func(locale string) workflow.Catalog {
-						gotLocale = locale
-						return workflow.LocalizeCatalog(reg.Catalog(), locale)
+					catalogFn: func(ctx context.Context) workflow.Catalog {
+						gotLang = platformi18n.From(ctx)
+						return reg.Catalog()
 					},
 				})
 
-				cat, err := h.GetCatalog(tc.ctx, tc.req)
+				cat, err := h.GetCatalog(tc.ctx, &workflowv1.GetCatalogRequest{})
 				if err != nil {
 					t.Fatalf("GetCatalog error = %v", err)
 				}
-				if gotLocale != tc.wantLocalePassed {
-					t.Errorf("passed locale = %q, want %q", gotLocale, tc.wantLocalePassed)
+				if gotLang != tc.wantLang {
+					t.Errorf("forwarded language = %q, want %q", gotLang, tc.wantLang)
 				}
 				found := false
 				for _, st := range cat.Steps {
 					if st.Type == workflow.StepFilter {
 						found = true
-						if st.DisplayName != tc.wantFilterName {
-							t.Errorf("StepFilter DisplayName = %q, want %q", st.DisplayName, tc.wantFilterName)
-						}
 					}
 				}
 				if !found {
 					t.Fatalf("StepFilter not found in response")
+				}
+			})
+		}
+	})
+
+	t.Run("GenerateFlow_ForwardsContext", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			ctx      context.Context
+			req      *workflowv1.GenerateFlowRequest
+			wantLang string
+		}{
+			{
+				name:     "context language forwarded",
+				ctx:      platformi18n.With(t.Context(), "es"),
+				req:      &workflowv1.GenerateFlowRequest{Prompt: "automatiza"},
+				wantLang: "es",
+			},
+			{
+				name:     "no negotiated language forwarded as empty",
+				ctx:      t.Context(),
+				req:      &workflowv1.GenerateFlowRequest{Prompt: "automate"},
+				wantLang: "",
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				var gotLang string
+				h := NewHandler(&stubCoordinator{
+					generateFn: func(ctx context.Context, req *workflowapp.GenerateFlowRequest) (*workflow.Flow, error) {
+						gotLang = platformi18n.From(ctx)
+						return &workflow.Flow{Name: "Generated"}, nil
+					},
+				}, &stubAggregator{})
+
+				if _, err := h.GenerateFlow(tc.ctx, tc.req); err != nil {
+					t.Fatalf("GenerateFlow error = %v", err)
+				}
+				if gotLang != tc.wantLang {
+					t.Errorf("forwarded language = %q, want %q", gotLang, tc.wantLang)
 				}
 			})
 		}

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react"
 import { insertVariableToken, type WorkflowVariable } from "@saturn/core"
+import { useI18n } from "@saturn/hooks"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
@@ -33,6 +34,7 @@ export function VariablePickerInput({
   className,
   ariaLabel,
 }: VariablePickerInputProps) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [focused, setFocused] = useState(false)
   const [search, setSearch] = useState("")
@@ -111,8 +113,8 @@ export function VariablePickerInput({
                 variant="outline"
                 size="icon-sm"
                 className="h-9 w-9 shrink-0 rounded-xl"
-                title="Insert variable"
-                aria-label="Insert variable"
+                title={t("workflows.variables.insert")}
+                aria-label={t("workflows.variables.insert")}
               />
             }
           >
@@ -123,13 +125,13 @@ export function VariablePickerInput({
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search variables..."
+                placeholder={t("workflows.variables.search")}
                 className="h-8 rounded-lg text-xs"
               />
               <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
                 {filtered.length === 0 ? (
                   <p className="px-2 py-3 text-center text-xs text-muted-foreground">
-                    No matching variables in scope
+                    {t("workflows.variables.empty")}
                   </p>
                 ) : (
                   filtered.map((v) => (

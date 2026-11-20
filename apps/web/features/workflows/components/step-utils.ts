@@ -1,4 +1,6 @@
 import type { Flow_StepNode } from "@saturn/api/gen/saturn/platform/workflow/v1/workflow"
+import type { TranslationKey } from "@saturn/i18n"
+import type { Translate } from "./cron-label"
 
 export function findStepById(
   steps: Flow_StepNode[],
@@ -147,7 +149,18 @@ export interface StepVisualTheme {
   badgeClass: string
   borderClass: string
   accentText: string
-  categoryLabel: string
+  categoryKey: string
+}
+
+export const STEP_CATEGORY_KEYS: Record<string, TranslationKey> = {
+  ai: "workflows.category.ai",
+  logic: "workflows.category.logic",
+  halt: "workflows.category.halt",
+  output: "workflows.category.output",
+  finance: "workflows.category.finance",
+  calendar: "workflows.category.calendar",
+  mail: "workflows.category.mail",
+  core: "workflows.category.core",
 }
 
 export function getStepVisualTheme(
@@ -159,7 +172,7 @@ export function getStepVisualTheme(
       badgeClass: "bg-violet-500/15 text-violet-500 border-violet-500/30",
       borderClass: "border-violet-500/30",
       accentText: "text-violet-400",
-      categoryLabel: "AI",
+      categoryKey: "ai",
     }
   }
   if (type === "filter" || type === "switch" || type === "for_each") {
@@ -167,7 +180,7 @@ export function getStepVisualTheme(
       badgeClass: "bg-amber-500/15 text-amber-500 border-amber-500/30",
       borderClass: "border-amber-500/30",
       accentText: "text-amber-400",
-      categoryLabel: "Logic",
+      categoryKey: "logic",
     }
   }
   if (type === "output" || type === "stop") {
@@ -175,7 +188,7 @@ export function getStepVisualTheme(
       badgeClass: "bg-rose-500/15 text-rose-500 border-rose-500/30",
       borderClass: "border-rose-500/30",
       accentText: "text-rose-400",
-      categoryLabel: type === "stop" ? "Halt" : "Output",
+      categoryKey: type === "stop" ? "halt" : "output",
     }
   }
   if (owner === "finance" || type.startsWith("finance.")) {
@@ -183,7 +196,7 @@ export function getStepVisualTheme(
       badgeClass: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30",
       borderClass: "border-emerald-500/30",
       accentText: "text-emerald-400",
-      categoryLabel: "Finance",
+      categoryKey: "finance",
     }
   }
   if (owner === "calendar" || type.startsWith("calendar.")) {
@@ -191,7 +204,7 @@ export function getStepVisualTheme(
       badgeClass: "bg-sky-500/15 text-sky-500 border-sky-500/30",
       borderClass: "border-sky-500/30",
       accentText: "text-sky-400",
-      categoryLabel: "Calendar",
+      categoryKey: "calendar",
     }
   }
   if (owner === "mail" || type.startsWith("mail.")) {
@@ -199,18 +212,18 @@ export function getStepVisualTheme(
       badgeClass: "bg-indigo-500/15 text-indigo-500 border-indigo-500/30",
       borderClass: "border-indigo-500/30",
       accentText: "text-indigo-400",
-      categoryLabel: "Mail",
+      categoryKey: "mail",
     }
   }
   return {
     badgeClass: "bg-primary/15 text-primary border-primary/30",
     borderClass: "border-primary/30",
     accentText: "text-primary",
-    categoryLabel: "Core",
+    categoryKey: "core",
   }
 }
 
-export function summarizeStep(step: Flow_StepNode): string {
+export function summarizeStep(step: Flow_StepNode, t: Translate): string {
   const inputs = step.inputs ?? {}
   switch (step.type) {
     case "llm.generate": {
@@ -223,7 +236,7 @@ export function summarizeStep(step: Flow_StepNode): string {
         typeof inputs.prompt === "string" ? inputs.prompt.trim() : ""
       if (model && prompt) return `${model} • ${prompt.slice(0, 48)}`
       if (prompt) return prompt.slice(0, 72)
-      return model || "Generate structured or freeform AI output"
+      return model || t("workflows.summarize.llmGenerate")
     }
     case "ai.agent_run": {
       const agent = inputs.agent_id ? `Agent: ${String(inputs.agent_id)}` : null
@@ -231,26 +244,30 @@ export function summarizeStep(step: Flow_StepNode): string {
         typeof inputs.prompt === "string" ? inputs.prompt.trim() : ""
       if (agent && prompt) return `${agent} • ${prompt.slice(0, 48)}`
       if (prompt) return prompt.slice(0, 72)
-      return agent || "Run autonomous MCP-backed AI agent"
+      return agent || t("workflows.summarize.agentRun")
     }
     case "filter":
       return typeof inputs.condition === "string" && inputs.condition.trim()
         ? `if (${inputs.condition.trim()})`
-        : "Evaluate CEL condition"
+        : t("workflows.summarize.filter")
     case "switch": {
       const count = step.cases?.length ?? 0
-      return `${count} branch${count === 1 ? "" : "es"}`
+      return count === 1
+        ? t("workflows.summarize.branchesOne", { count })
+        : t("workflows.summarize.branchesOther", { count })
     }
     case "for_each":
       return `for ${String(inputs.item_alias || "item")} in ${String(inputs.items || "...")}`
     case "document.extract_text":
-      return `Extract text from ${String(inputs.artifact_ref || "document")}`
+      return t("workflows.summarize.extractText", {
+        document: String(inputs.artifact_ref || "document"),
+      })
     case "output":
       return typeof inputs.value === "string"
         ? inputs.value.slice(0, 64)
-        : "Return structured JSON output"
+        : t("workflows.summarize.output")
     case "stop":
-      return String(inputs.reason || "Stop workflow early")
+      return String(inputs.reason || t("workflows.summarize.stop"))
     default: {
       const keys = Object.keys(inputs)
       if (keys.length === 0) return step.type

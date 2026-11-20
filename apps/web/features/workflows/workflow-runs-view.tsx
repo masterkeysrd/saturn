@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
+import { useRegisterCopilotView } from "@saturn/hooks/ai"
+import { getLocalizedEnumLabel } from "@saturn/i18n"
 import {
   useListFlowsQuery,
   useListFlowRunsQuery,
@@ -70,11 +72,22 @@ function statusBadge(status: string) {
 }
 
 export function WorkflowRunsView() {
+  const { t, language } = useI18n()
   const tz = useTimezone()
   const navigate = useNavigate()
   const { runId } = useParams<{ runId: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
   const { spaceId } = useActiveSpaceContext()
+
+  useRegisterCopilotView({
+    viewId: "workflows.runs",
+    title: t("workflows.runs.copilotTitle"),
+    suggestions: [
+      t("workflows.runs.suggestions.failures"),
+      t("workflows.runs.suggestions.slow"),
+      t("workflows.runs.suggestions.optimize"),
+    ],
+  })
 
   const flowIdParam = searchParams.get("flowId") ?? ""
   const statusParam = searchParams.get("status") ?? "all"
@@ -110,8 +123,8 @@ export function WorkflowRunsView() {
 
   return (
     <PageLayout
-      title="Workflow Run History"
-      description="Inspect execution timelines, step outputs, data loader hits, and errors."
+      title={t("workflows.runs.title")}
+      description={t("workflows.runs.description")}
       icon={History}
       actions={
         spaceId && (
@@ -123,7 +136,7 @@ export function WorkflowRunsView() {
             className="gap-1.5 rounded-xl text-xs"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Workflows Studio
+            {t("workflows.runs.backToStudio")}
           </Button>
         )
       }
@@ -145,17 +158,17 @@ export function WorkflowRunsView() {
           >
             <SelectTrigger
               className="h-9 rounded-xl text-xs"
-              aria-label="Filter by workflow"
+              aria-label={t("workflows.runs.filterByWorkflow")}
             >
-              <SelectValue placeholder="All Workflows">
+              <SelectValue placeholder={t("workflows.runs.allWorkflows")}>
                 {flowIdParam
                   ? flows.find((f) => f.id === flowIdParam)?.name || flowIdParam
-                  : "All Workflows"}
+                  : t("workflows.runs.allWorkflows")}
               </SelectValue>
             </SelectTrigger>
             <SelectContent className="rounded-xl">
               <SelectItem value="all" className="text-xs">
-                All Workflows
+                {t("workflows.runs.allWorkflows")}
               </SelectItem>
               {flows.map((f) => (
                 <SelectItem key={f.id} value={f.id ?? ""} className="text-xs">
@@ -181,18 +194,30 @@ export function WorkflowRunsView() {
           >
             <SelectTrigger
               className="h-9 rounded-xl text-xs"
-              aria-label="Filter by status"
+              aria-label={t("workflows.runs.filterByStatus")}
             >
               <SelectValue>
                 {statusParam === "all"
-                  ? "All Statuses"
-                  : statusParam.toUpperCase()}
+                  ? t("workflows.runs.allStatuses")
+                  : getLocalizedEnumLabel(
+                      "workflow",
+                      "runStatus",
+                      statusParam,
+                      language
+                    )}
               </SelectValue>
             </SelectTrigger>
             <SelectContent className="rounded-xl">
               {STATUS_OPTIONS.map((s) => (
-                <SelectItem key={s} value={s} className="text-xs uppercase">
-                  {s === "all" ? "All Statuses" : s}
+                <SelectItem key={s} value={s} className="text-xs">
+                  {s === "all"
+                    ? t("workflows.runs.allStatuses")
+                    : getLocalizedEnumLabel(
+                        "workflow",
+                        "runStatus",
+                        s,
+                        language
+                      )}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -209,7 +234,7 @@ export function WorkflowRunsView() {
             </div>
           ) : runs.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border/50 p-10 text-center text-xs text-muted-foreground">
-              No workflow runs match the selected filters.
+              {t("workflows.runs.emptyRuns")}
             </div>
           ) : (
             runs.map((run) => {
@@ -238,7 +263,12 @@ export function WorkflowRunsView() {
                       className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${badge.cls}`}
                     >
                       <BadgeIcon className="h-3 w-3" />
-                      {run.status}
+                      {getLocalizedEnumLabel(
+                        "workflow",
+                        "runStatus",
+                        run.status ?? "",
+                        language
+                      )}
                     </span>
                   </div>
 
@@ -262,7 +292,9 @@ export function WorkflowRunsView() {
                       <span>{String(durationMs)} ms</span>
                     )}
                     {tokensUsed !== undefined && Number(tokensUsed) > 0 && (
-                      <span>{String(tokensUsed)} tokens</span>
+                      <span>
+                        {String(tokensUsed)} {t("workflows.runs.tokens")}
+                      </span>
                     )}
                   </div>
                 </button>
@@ -275,8 +307,7 @@ export function WorkflowRunsView() {
         <div className="lg:col-span-7">
           {!activeRunId ? (
             <div className="rounded-2xl border border-dashed border-border/50 p-12 text-center text-xs text-muted-foreground">
-              Select a workflow run on the left to inspect its step timeline,
-              source loader metrics, and payload outputs.
+              {t("workflows.runs.selectRun")}
             </div>
           ) : detailLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -284,7 +315,7 @@ export function WorkflowRunsView() {
             </div>
           ) : !detailRun ? (
             <div className="rounded-2xl border border-destructive/30 p-8 text-center text-xs text-destructive">
-              Workflow run not found.
+              {t("workflows.runs.notFound")}
             </div>
           ) : (
             <div className="space-y-4 rounded-2xl border border-border/50 bg-card/60 p-5">
@@ -294,13 +325,13 @@ export function WorkflowRunsView() {
                     {detailRun.flowName || detailRun.flowId}
                   </h3>
                   <p className="font-mono text-xs text-muted-foreground">
-                    {detailRun.id} • v{detailRun.flowVersion} • Attempt{" "}
-                    {detailRun.attempts}
+                    {detailRun.id} • v{detailRun.flowVersion} •{" "}
+                    {t("workflows.runs.attempt")} {detailRun.attempts}
                   </p>
                 </div>
                 <div className="text-right text-xs text-muted-foreground">
                   <div>
-                    Started:{" "}
+                    {t("workflows.runs.started")}{" "}
                     {detailRun.startTime
                       ? tz.format(detailRun.startTime, {
                           month: "short",
@@ -313,7 +344,8 @@ export function WorkflowRunsView() {
                   </div>
                   {detailRun.metadata?.duration_ms !== undefined && (
                     <div>
-                      Duration: {String(detailRun.metadata.duration_ms)} ms
+                      {t("workflows.runs.duration")}{" "}
+                      {String(detailRun.metadata.duration_ms)} ms
                     </div>
                   )}
                 </div>
@@ -324,8 +356,10 @@ export function WorkflowRunsView() {
                   <div className="font-mono">
                     <strong>
                       {detailRun.error.stepId
-                        ? `Step "${detailRun.error.stepId}" failed: `
-                        : "Run failed: "}
+                        ? t("workflows.runs.stepFailed", {
+                            step: detailRun.error.stepId,
+                          }) + " "
+                        : t("workflows.runs.runFailed") + " "}
                     </strong>
                     {detailRun.error.message}
                   </div>
@@ -335,14 +369,18 @@ export function WorkflowRunsView() {
                     size="sm"
                     onClick={() =>
                       openAIDrawer({
-                        prompt: `Explain why workflow run ${detailRun.id} (${detailRun.flowName || detailRun.flowId}) failed and suggest how to fix it. Error: ${detailRun.error?.message ?? ""}`,
+                        prompt: t("workflows.runs.explainPrompt", {
+                          id: detailRun.id ?? "",
+                          name: detailRun.flowName || detailRun.flowId || "",
+                          error: detailRun.error?.message ?? "",
+                        }),
                         autoSend: true,
                       })
                     }
                     className="h-7 cursor-pointer gap-1.5 rounded-full border-destructive/40 bg-background/80 text-[11px] text-foreground hover:bg-background"
                   >
                     <Sparkles className="h-3 w-3 text-primary" />
-                    Explain with AI
+                    {t("workflows.runs.explainWithAI")}
                   </Button>
                 </div>
               )}
@@ -350,7 +388,9 @@ export function WorkflowRunsView() {
               {/* Step Timeline */}
               <div className="space-y-3">
                 <h4 className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                  Step Timeline ({detailRun.stepRuns?.length ?? 0})
+                  {t("workflows.runs.stepTimeline", {
+                    count: detailRun.stepRuns?.length ?? 0,
+                  })}
                 </h4>
                 {(detailRun.stepRuns ?? []).map((sr) => {
                   const sBadge = statusBadge(sr.status ?? "pending")
@@ -371,7 +411,12 @@ export function WorkflowRunsView() {
                             {sr.executionKey}
                           </span>
                           <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                            {sr.stepType}
+                            {getLocalizedEnumLabel(
+                              "workflow",
+                              "stepType",
+                              sr.stepType ?? "",
+                              language
+                            )}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -385,7 +430,12 @@ export function WorkflowRunsView() {
                             className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${sBadge.cls}`}
                           >
                             <SIcon className="h-3 w-3" />
-                            {sr.status}
+                            {getLocalizedEnumLabel(
+                              "workflow",
+                              "runStatus",
+                              sr.status ?? "pending",
+                              language
+                            )}
                           </span>
                         </div>
                       </div>
@@ -399,10 +449,16 @@ export function WorkflowRunsView() {
                             >
                               {alias}: {String(info.loader ?? "")} (
                               {info.count !== undefined
-                                ? `${info.count} rows`
+                                ? Number(info.count) === 1
+                                  ? t("workflows.runs.rowsOne", {
+                                      count: Number(info.count),
+                                    })
+                                  : t("workflows.runs.rowsOther", {
+                                      count: Number(info.count),
+                                    })
                                 : info.hit
-                                  ? "hit"
-                                  : "miss"}
+                                  ? t("workflows.runs.cacheHit")
+                                  : t("workflows.runs.cacheMiss")}
                               )
                             </span>
                           ))}
@@ -428,7 +484,7 @@ export function WorkflowRunsView() {
               {detailRun.output && (
                 <div className="space-y-1.5">
                   <h4 className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                    Terminal Output
+                    {t("workflows.runs.terminalOutput")}
                   </h4>
                   <pre className="max-h-64 overflow-auto rounded-xl bg-muted/40 p-3 font-mono text-[11px]">
                     {JSON.stringify(detailRun.output, null, 2)}
@@ -439,7 +495,7 @@ export function WorkflowRunsView() {
               {detailRun.input && (
                 <div className="space-y-1.5">
                   <h4 className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                    Normalized Input
+                    {t("workflows.runs.normalizedInput")}
                   </h4>
                   <pre className="max-h-48 overflow-auto rounded-xl bg-muted/40 p-3 font-mono text-[11px]">
                     {JSON.stringify(detailRun.input, null, 2)}

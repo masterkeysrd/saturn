@@ -12,6 +12,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/ai"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	platformi18n "github.com/masterkeysrd/saturn/internal/platform/i18n"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
 	"github.com/masterkeysrd/saturn/internal/platform/workflow"
 )
@@ -672,7 +673,7 @@ func TestCoordinator_GenerateFlow(t *testing.T) {
 		attempts := 0
 
 		ws := &WorkflowServiceMock{
-			CatalogFunc:      func() workflow.Catalog { return eng.Registry().Catalog() },
+			CatalogFunc:      func(ctx context.Context) workflow.Catalog { return eng.Registry().Catalog() },
 			ValidateFlowFunc: eng.ValidateFlow,
 		}
 		promptExec := &AIRunnerMock{
@@ -721,11 +722,61 @@ func TestCoordinator_GenerateFlow(t *testing.T) {
 		}
 	})
 
+	t.Run("LocalizesCatalogAndLanguageRule", func(t *testing.T) {
+		tests := []struct {
+			name         string
+			language     string
+			wantStepName string
+			wantRule     string
+		}{
+			{name: "english default", language: "", wantStepName: "Filter", wantRule: "Write the flow name and description in English."},
+			{name: "spanish language", language: "es", wantStepName: "Filtrar", wantRule: "Write the flow name and description in Spanish."},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				ctx := testSpaceCtx("spc_1", string(space.RoleOwner))
+				if tc.language != "" {
+					ctx = platformi18n.With(ctx, tc.language)
+				}
+				eng := newTestEngine(t, nil)
+				svc := workflow.NewService(workflow.ServiceDependencies{Engine: eng})
+
+				var systemPrompt string
+				coord := NewCoordinator(Dependencies{
+					Workflow: svc,
+					AIRunner: &AIRunnerMock{
+						GenerateFunc: func(_ context.Context, req ai.GenerateRequest) (*ai.Run, error) {
+							if req.SystemInstruction != nil {
+								systemPrompt = *req.SystemInstruction
+							}
+							good, _ := json.Marshal(generatedFlowDraft{
+								Name:  "Draft",
+								Steps: []workflow.StepNode{workflow.OutputStep(workflow.OutputStepConfig{ID: "out", Value: map[string]any{"ok": true}})},
+							})
+							return &ai.Run{Output: &ai.RunOutput{Text: new(string(good))}}, nil
+						},
+					},
+				})
+
+				if _, err := coord.GenerateFlow(ctx, &GenerateFlowRequest{Prompt: "make a flow"}); err != nil {
+					t.Fatalf("GenerateFlow error = %v", err)
+				}
+				if !strings.Contains(systemPrompt, tc.wantStepName) {
+					t.Errorf("system prompt missing localized step name %q", tc.wantStepName)
+				}
+				if !strings.Contains(systemPrompt, tc.wantRule) {
+					t.Errorf("system prompt missing language rule %q", tc.wantRule)
+				}
+			})
+		}
+	})
+
 	t.Run("ErrorCases", func(t *testing.T) {
 		eng := newTestEngine(t, nil)
 		coord := NewCoordinator(Dependencies{
 			Workflow: &WorkflowServiceMock{
-				CatalogFunc:      func() workflow.Catalog { return eng.Registry().Catalog() },
+				CatalogFunc:      func(ctx context.Context) workflow.Catalog { return eng.Registry().Catalog() },
 				ValidateFlowFunc: eng.ValidateFlow,
 			},
 			AIRunner: &AIRunnerMock{

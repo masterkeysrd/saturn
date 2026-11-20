@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useI18n } from "@saturn/hooks"
 import { useListAgentsQuery } from "@saturn/api/gen/saturn/platform/ai/v1/ai"
 import {
   discoverVariablesAtStep,
@@ -88,6 +89,7 @@ function SchemaFieldControl({
   variables: WorkflowVariable[]
   onChange: (next: unknown) => void
 }) {
+  const { t } = useI18n()
   const fieldType = typeof schema.type === "string" ? schema.type : "string"
   const description =
     typeof schema.description === "string" ? schema.description : undefined
@@ -121,7 +123,7 @@ function SchemaFieldControl({
             type="button"
             onClick={() => setExprMode(true)}
             className="cursor-pointer rounded px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground"
-            title="Switch to CEL expression"
+            title={t("workflows.inspector.switchToCel")}
           >
             fx
           </button>
@@ -145,7 +147,7 @@ function SchemaFieldControl({
             type="button"
             onClick={() => setExprMode(true)}
             className="cursor-pointer rounded px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground"
-            title="Switch to CEL expression"
+            title={t("workflows.inspector.switchToCel")}
           >
             fx
           </button>
@@ -155,8 +157,10 @@ function SchemaFieldControl({
           onValueChange={(val) => onChange(val ?? undefined)}
         >
           <SelectTrigger className="h-9 rounded-xl text-xs">
-            <SelectValue placeholder={`Select ${name}`}>
-              {strValue || `Select ${name}`}
+            <SelectValue
+              placeholder={t("workflows.inspector.selectField", { name })}
+            >
+              {strValue || t("workflows.inspector.selectField", { name })}
             </SelectValue>
           </SelectTrigger>
           <SelectContent className="rounded-xl">
@@ -185,7 +189,7 @@ function SchemaFieldControl({
             type="button"
             onClick={() => setExprMode(true)}
             className="cursor-pointer rounded px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground"
-            title="Switch to CEL expression"
+            title={t("workflows.inspector.switchToCel")}
           >
             fx
           </button>
@@ -223,7 +227,7 @@ function SchemaFieldControl({
             onClick={() => setExprMode(false)}
             className="cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-semibold text-primary hover:bg-muted"
           >
-            Typed input
+            {t("workflows.inspector.typedInput")}
           </button>
         )}
       </div>
@@ -252,6 +256,7 @@ export function NodeInspectorPanel({
   onUpdateStep,
   onRemoveStep,
 }: NodeInspectorPanelProps) {
+  const { t } = useI18n()
   const [stepAdvancedOpen, setStepAdvancedOpen] = useState(false)
   const [flowAdvancedOpen, setFlowAdvancedOpen] = useState(false)
   const { data: agentsData } = useListAgentsQuery({})
@@ -266,7 +271,7 @@ export function NodeInspectorPanel({
         <div className="mb-4 flex items-center justify-between border-b border-border/40 pb-3">
           <div>
             <span className="text-[10px] font-bold tracking-wider text-emerald-500 uppercase">
-              Trigger • {trig.type}
+              {t("workflows.inspector.triggerBadge", { type: trig.type })}
             </span>
             <h3 className="text-sm font-bold text-foreground">{trig.name}</h3>
           </div>
@@ -278,7 +283,7 @@ export function NodeInspectorPanel({
             className="h-7 gap-1 rounded-lg text-xs"
           >
             <Settings2 className="h-3.5 w-3.5" />
-            Flow Settings
+            {t("workflows.inspector.flowSettings")}
           </Button>
         </div>
 
@@ -372,7 +377,7 @@ export function NodeInspectorPanel({
             size="icon-sm"
             onClick={() => onRemoveStep(step.id)}
             className="text-muted-foreground hover:text-destructive"
-            title="Delete step"
+            title={t("workflows.inspector.deleteStep")}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -381,13 +386,15 @@ export function NodeInspectorPanel({
         <Tabs defaultValue="config" className="flex min-h-0 flex-1 flex-col">
           <TabsList className="grid w-full grid-cols-3 rounded-xl">
             <TabsTrigger value="config" className="rounded-lg text-xs">
-              Config
+              {t("workflows.inspector.tabConfig")}
             </TabsTrigger>
             <TabsTrigger value="sources" className="rounded-lg text-xs">
-              Sources ({sourceEntries.length})
+              {t("workflows.inspector.tabSources", {
+                count: sourceEntries.length,
+              })}
             </TabsTrigger>
             <TabsTrigger value="output" className="rounded-lg text-xs">
-              Output
+              {t("workflows.inspector.tabOutput")}
             </TabsTrigger>
           </TabsList>
 
@@ -397,7 +404,7 @@ export function NodeInspectorPanel({
           >
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-muted-foreground">
-                Step Name
+                {t("workflows.inspector.stepName")}
               </Label>
               <Input
                 value={step.name ?? ""}
@@ -413,7 +420,7 @@ export function NodeInspectorPanel({
                 {step.type === "ai.agent_run" && (
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-muted-foreground">
-                      Target Agent
+                      {t("workflows.inspector.targetAgent")}
                     </Label>
                     <Select
                       value={String(inputs.agent_id ?? "")}
@@ -422,9 +429,14 @@ export function NodeInspectorPanel({
                       }
                     >
                       <SelectTrigger className="h-9 rounded-xl text-xs">
-                        <SelectValue placeholder="Choose an agent">
+                        <SelectValue
+                          placeholder={t("workflows.inspector.chooseAgent")}
+                        >
                           {agents.find((a) => a.id === inputs.agent_id)?.name ||
-                            String(inputs.agent_id || "Choose an agent")}
+                            String(
+                              inputs.agent_id ||
+                                t("workflows.inspector.chooseAgent")
+                            )}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
@@ -444,7 +456,7 @@ export function NodeInspectorPanel({
 
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground">
-                    Prompt Template
+                    {t("workflows.inspector.promptTemplate")}
                   </Label>
                   <VariablePickerInput
                     value={String(inputs.prompt ?? "")}
@@ -458,12 +470,12 @@ export function NodeInspectorPanel({
                 <ModelConfigEditor
                   value={step.model}
                   onChange={(model) => onUpdateStep({ ...step, model })}
-                  defaultLabel="Inherit Flow Default"
+                  defaultLabel={t("workflows.model.inheritDefault")}
                 />
 
                 <div className="border-t border-border/40 pt-4">
                   <SchemaFieldsEditor
-                    label="Structured Output Schema"
+                    label={t("workflows.inspector.structuredSchema")}
                     value={
                       inputs.output_schema &&
                       typeof inputs.output_schema === "object"
@@ -480,7 +492,7 @@ export function NodeInspectorPanel({
               <div className="space-y-4 border-t border-border/40 pt-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground">
-                    CEL Condition
+                    {t("workflows.inspector.celCondition")}
                   </Label>
                   <VariablePickerInput
                     value={String(inputs.condition ?? "")}
@@ -491,7 +503,7 @@ export function NodeInspectorPanel({
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground">
-                    Skip Reason
+                    {t("workflows.inspector.skipReason")}
                   </Label>
                   <Input
                     value={String(inputs.reason ?? "")}
@@ -506,7 +518,7 @@ export function NodeInspectorPanel({
               <div className="space-y-3 border-t border-border/40 pt-4">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-semibold text-muted-foreground">
-                    Branch Cases
+                    {t("workflows.inspector.branchCases")}
                   </Label>
                   <Button
                     type="button"
@@ -528,7 +540,7 @@ export function NodeInspectorPanel({
                     className="h-7 gap-1 rounded-lg px-2 text-xs text-primary"
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    Add Case
+                    {t("workflows.inspector.addCase")}
                   </Button>
                 </div>
 
@@ -589,7 +601,7 @@ export function NodeInspectorPanel({
               <div className="space-y-4 border-t border-border/40 pt-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground">
-                    Items Collection Expression
+                    {t("workflows.inspector.itemsExpression")}
                   </Label>
                   <VariablePickerInput
                     value={String(inputs.items ?? "")}
@@ -599,7 +611,7 @@ export function NodeInspectorPanel({
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground">
-                    Item Alias
+                    {t("workflows.inspector.itemAlias")}
                   </Label>
                   <Input
                     value={String(inputs.item_alias ?? "item")}
@@ -613,7 +625,7 @@ export function NodeInspectorPanel({
             {step.type === "output" && (
               <div className="space-y-1.5 border-t border-border/40 pt-4">
                 <Label className="text-xs font-semibold text-muted-foreground">
-                  Output Expression / JSON
+                  {t("workflows.inspector.outputExpression")}
                 </Label>
                 <VariablePickerInput
                   value={
@@ -643,7 +655,7 @@ export function NodeInspectorPanel({
             {step.type === "stop" && (
               <div className="space-y-1.5 border-t border-border/40 pt-4">
                 <Label className="text-xs font-semibold text-muted-foreground">
-                  Stop Reason
+                  {t("workflows.inspector.stopReason")}
                 </Label>
                 <Input
                   value={String(inputs.reason ?? "")}
@@ -657,7 +669,7 @@ export function NodeInspectorPanel({
               <div className="space-y-4 border-t border-border/40 pt-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground">
-                    Artifact Ref
+                    {t("workflows.inspector.artifactRef")}
                   </Label>
                   <VariablePickerInput
                     value={String(inputs.artifact_ref ?? "")}
@@ -667,7 +679,7 @@ export function NodeInspectorPanel({
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground">
-                    Passwords Expression
+                    {t("workflows.inspector.passwordsExpression")}
                   </Label>
                   <VariablePickerInput
                     value={String(inputs.passwords ?? "")}
@@ -721,7 +733,7 @@ export function NodeInspectorPanel({
                     className="h-7 gap-1 rounded-lg px-2 text-xs text-primary"
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    Add Field
+                    {t("workflows.inspector.addField")}
                   </Button>
                 )}
               </div>
@@ -734,7 +746,7 @@ export function NodeInspectorPanel({
                 onClick={() => setStepAdvancedOpen(!stepAdvancedOpen)}
                 className="flex w-full cursor-pointer items-center justify-between py-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
               >
-                <span>Advanced</span>
+                <span>{t("workflows.inspector.advanced")}</span>
                 {stepAdvancedOpen ? (
                   <ChevronUp className="h-3.5 w-3.5" />
                 ) : (
@@ -746,7 +758,7 @@ export function NodeInspectorPanel({
                 <div className="mt-3 space-y-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-muted-foreground">
-                      Step ID (Referenced as steps.{step.id})
+                      {t("workflows.inspector.stepIdLabel", { id: step.id })}
                     </Label>
                     <Input
                       value={step.id}
@@ -761,7 +773,7 @@ export function NodeInspectorPanel({
                     <>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold text-muted-foreground">
-                          System Instruction
+                          {t("workflows.inspector.systemInstruction")}
                         </Label>
                         <VariablePickerInput
                           value={String(inputs.system ?? "")}
@@ -774,7 +786,7 @@ export function NodeInspectorPanel({
 
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold text-muted-foreground">
-                          Documents Expression
+                          {t("workflows.inspector.documentsExpression")}
                         </Label>
                         <VariablePickerInput
                           value={String(inputs.documents ?? "")}
@@ -787,7 +799,7 @@ export function NodeInspectorPanel({
                   )}
 
                   <label className="flex cursor-pointer items-center justify-between py-1 text-xs font-medium">
-                    <span>Continue workflow on step failure</span>
+                    <span>{t("workflows.inspector.continueOnFailure")}</span>
                     <Switch
                       size="sm"
                       checked={step.onError === "continue"}
@@ -810,7 +822,8 @@ export function NodeInspectorPanel({
           >
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
-                Hydrated into <code>sources.&lt;alias&gt;</code>
+                {t("workflows.inspector.hydratedInto")}{" "}
+                <code>sources.&lt;alias&gt;</code>
               </span>
               <Button
                 type="button"
@@ -820,13 +833,13 @@ export function NodeInspectorPanel({
                 className="h-7 gap-1 rounded-lg px-2 text-xs text-primary"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Add Source
+                {t("workflows.inspector.addSource")}
               </Button>
             </div>
 
             {sourceEntries.length === 0 ? (
               <p className="py-4 text-center text-xs text-muted-foreground">
-                No data sources attached to this step.
+                {t("workflows.inspector.noSources")}
               </p>
             ) : (
               <div className="divide-y divide-border/40">
@@ -926,7 +939,9 @@ export function NodeInspectorPanel({
           >
             {!stepRun ? (
               <p className="py-6 text-center text-xs text-muted-foreground">
-                Run <strong>Test &amp; Run</strong> to inspect live output for{" "}
+                {t("workflows.inspector.runToInspectStart")}{" "}
+                <strong>{t("workflows.inspector.testRunBold")}</strong>{" "}
+                {t("workflows.inspector.runToInspectEnd")}{" "}
                 <code>steps.{step.id}</code>.
               </p>
             ) : (
@@ -971,17 +986,17 @@ export function NodeInspectorPanel({
     <div className="flex h-full flex-col p-4">
       <div className="mb-4 border-b border-border/40 pb-3">
         <span className="text-[11px] font-medium text-primary">
-          Flow Settings
+          {t("workflows.inspector.flowSettings")}
         </span>
         <h3 className="text-sm font-semibold text-foreground">
-          {draft.name || "Untitled Workflow"}
+          {draft.name || t("workflows.inspector.untitled")}
         </h3>
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto pr-1">
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold text-muted-foreground">
-            Description
+            {t("workflows.inspector.description")}
           </Label>
           <Textarea
             value={draft.description ?? ""}
@@ -989,13 +1004,13 @@ export function NodeInspectorPanel({
               onUpdateFlow({ ...draft, description: e.target.value })
             }
             rows={2}
-            placeholder="What does this workflow automate?"
+            placeholder={t("workflows.inspector.whatAutomates")}
             className="rounded-xl text-xs"
           />
         </div>
 
         <label className="flex cursor-pointer items-center justify-between py-1 text-xs font-semibold">
-          <span>Workflow Enabled</span>
+          <span>{t("workflows.inspector.workflowEnabled")}</span>
           <Switch
             checked={draft.isEnabled}
             onCheckedChange={(checked) =>
@@ -1022,7 +1037,7 @@ export function NodeInspectorPanel({
             onClick={() => setFlowAdvancedOpen(!flowAdvancedOpen)}
             className="flex w-full cursor-pointer items-center justify-between py-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
           >
-            <span>Advanced (Execution &amp; Input Schema)</span>
+            <span>{t("workflows.inspector.advancedFlow")}</span>
             {flowAdvancedOpen ? (
               <ChevronUp className="h-3.5 w-3.5" />
             ) : (
@@ -1034,7 +1049,7 @@ export function NodeInspectorPanel({
             <div className="mt-3 space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-muted-foreground">
-                  Timeout (seconds)
+                  {t("workflows.inspector.timeoutSeconds")}
                 </Label>
                 <Input
                   type="number"
@@ -1055,7 +1070,7 @@ export function NodeInspectorPanel({
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-muted-foreground">
-                  Max Retries
+                  {t("workflows.inspector.maxRetries")}
                 </Label>
                 <Input
                   type="number"
@@ -1077,12 +1092,12 @@ export function NodeInspectorPanel({
 
               <div className="border-t border-border/40 pt-3">
                 <SchemaFieldsEditor
-                  label="Flow Input Schema (Optional)"
+                  label={t("workflows.inspector.flowInputSchema")}
                   value={draft.inputSchema}
                   onChange={(inputSchema) =>
                     onUpdateFlow({ ...draft, inputSchema })
                   }
-                  emptyText="Accepts arbitrary input JSON. Add fields for input.* autocomplete."
+                  emptyText={t("workflows.inspector.flowInputSchemaEmpty")}
                 />
               </div>
             </div>

@@ -17,7 +17,7 @@ var _ WorkflowService = (*WorkflowServiceMock)(nil)
 // WorkflowServiceMock is a mock implementation of WorkflowService.
 type WorkflowServiceMock struct {
 	// CatalogFunc mocks the Catalog method.
-	CatalogFunc func() workflow.Catalog
+	CatalogFunc func(ctx context.Context) workflow.Catalog
 
 	// ValidateFlowFunc mocks the ValidateFlow method.
 	ValidateFlowFunc func(flow *workflow.Flow) error
@@ -66,7 +66,9 @@ type WorkflowServiceMock struct {
 
 	// calls tracks calls to the methods.
 	calls struct {
-		Catalog      []struct{}
+		Catalog []struct {
+			Ctx context.Context
+		}
 		ValidateFlow []struct {
 			Flow *workflow.Flow
 		}
@@ -159,18 +161,24 @@ type WorkflowServiceMock struct {
 }
 
 // Catalog calls CatalogFunc.
-func (mock *WorkflowServiceMock) Catalog() workflow.Catalog {
+func (mock *WorkflowServiceMock) Catalog(ctx context.Context) workflow.Catalog {
 	if mock.CatalogFunc == nil {
 		panic("WorkflowServiceMock.CatalogFunc: method is nil but WorkflowService.Catalog was just called")
 	}
 	mock.lockCatalog.Lock()
-	mock.calls.Catalog = append(mock.calls.Catalog, struct{}{})
+	mock.calls.Catalog = append(mock.calls.Catalog, struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	})
 	mock.lockCatalog.Unlock()
-	return mock.CatalogFunc()
+	return mock.CatalogFunc(ctx)
 }
 
 // CatalogCalls returns all calls made to Catalog.
-func (mock *WorkflowServiceMock) CatalogCalls() []struct{} {
+func (mock *WorkflowServiceMock) CatalogCalls() []struct {
+	Ctx context.Context
+} {
 	mock.lockCatalog.RLock()
 	defer mock.lockCatalog.RUnlock()
 	return mock.calls.Catalog

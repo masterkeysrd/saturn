@@ -1,6 +1,5 @@
-import { useState } from "react"
-import { useTimezone } from "@saturn/hooks"
-import { summarizeCron } from "@saturn/core"
+import { useMemo, useState } from "react"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import type {
   Catalog_Step,
   FlowRun,
@@ -16,7 +15,12 @@ import {
 } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { StepIcon } from "./step-icon"
-import { getStepVisualTheme, summarizeStep } from "./step-utils"
+import { getLocalizedCronSummary } from "./cron-label"
+import {
+  getStepVisualTheme,
+  STEP_CATEGORY_KEYS,
+  summarizeStep,
+} from "./step-utils"
 import {
   Plus,
   Zap,
@@ -63,51 +67,6 @@ interface FlowCanvasProps {
   onAddSwitchCase: (switchId: string) => void
 }
 
-const FALLBACK_STEP_OPTIONS: Catalog_Step[] = [
-  {
-    type: "llm.generate",
-    owner: "platform",
-    category: "ai",
-    displayName: "LLM Generate",
-    description: "Run structured or freeform AI inference",
-  },
-  {
-    type: "filter",
-    owner: "platform",
-    category: "logic",
-    displayName: "Filter",
-    description: "Skip workflow if CEL condition is false",
-  },
-  {
-    type: "switch",
-    owner: "platform",
-    category: "logic",
-    displayName: "Switch Branch",
-    description: "Route execution down conditional branches",
-  },
-  {
-    type: "for_each",
-    owner: "platform",
-    category: "logic",
-    displayName: "For Each Loop",
-    description: "Iterate over an array expression",
-  },
-  {
-    type: "transform",
-    owner: "platform",
-    category: "flow",
-    displayName: "Transform",
-    description: "Map variables into a structured object",
-  },
-  {
-    type: "output",
-    owner: "platform",
-    category: "flow",
-    displayName: "Return Output",
-    description: "Terminate flow and return payload",
-  },
-]
-
 function StepInsertEdge({
   stepDescriptors,
   onInsert,
@@ -119,11 +78,60 @@ function StepInsertEdge({
   label?: string
   showEndArrow?: boolean
 }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
 
+  const fallbackStepOptions = useMemo<Catalog_Step[]>(
+    () => [
+      {
+        type: "llm.generate",
+        owner: "platform",
+        category: "ai",
+        displayName: t("workflows.step.llmGenerate"),
+        description: t("workflows.step.llmGenerateDescription"),
+      },
+      {
+        type: "filter",
+        owner: "platform",
+        category: "logic",
+        displayName: t("workflows.step.filter"),
+        description: t("workflows.step.filterDescription"),
+      },
+      {
+        type: "switch",
+        owner: "platform",
+        category: "logic",
+        displayName: t("workflows.step.switchBranch"),
+        description: t("workflows.step.switchDescription"),
+      },
+      {
+        type: "for_each",
+        owner: "platform",
+        category: "logic",
+        displayName: t("workflows.step.forEachLoop"),
+        description: t("workflows.step.forEachDescription"),
+      },
+      {
+        type: "transform",
+        owner: "platform",
+        category: "flow",
+        displayName: t("workflows.step.transform"),
+        description: t("workflows.step.transformDescription"),
+      },
+      {
+        type: "output",
+        owner: "platform",
+        category: "flow",
+        displayName: t("workflows.step.returnOutput"),
+        description: t("workflows.step.outputDescription"),
+      },
+    ],
+    [t]
+  )
+
   const options =
-    stepDescriptors.length > 0 ? stepDescriptors : FALLBACK_STEP_OPTIONS
+    stepDescriptors.length > 0 ? stepDescriptors : fallbackStepOptions
   const filtered = options.filter((d) => {
     const q = search.trim().toLowerCase()
     if (!q) return true
@@ -143,8 +151,8 @@ function StepInsertEdge({
             <button
               type="button"
               className="group flex h-6 cursor-pointer items-center gap-1 rounded-full border border-muted-foreground/40 bg-card px-2 text-[11px] font-semibold text-foreground/80 shadow-2xs transition-colors hover:border-primary hover:text-primary"
-              title="Insert step here"
-              aria-label={label || "Insert step"}
+              title={t("workflows.canvas.insertHere")}
+              aria-label={label || t("workflows.canvas.insertStep")}
             />
           }
         >
@@ -156,7 +164,7 @@ function StepInsertEdge({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search steps (AI, finance, mail...)"
+              placeholder={t("workflows.canvas.searchSteps")}
               className="h-8 rounded-lg text-xs"
             />
             <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
@@ -233,6 +241,7 @@ export function FlowCanvas({
   onRemoveStep,
   onAddSwitchCase,
 }: FlowCanvasProps) {
+  const { t } = useI18n()
   const tz = useTimezone()
   const [addTrigOpen, setAddTrigOpen] = useState(false)
 
@@ -267,7 +276,7 @@ export function FlowCanvas({
             })),
             {
               kind: "default" as const,
-              name: "Default",
+              name: t("workflows.canvas.defaultBranch"),
               condition: "else",
               steps: step.default ?? [],
               caseIndex: -1,
@@ -305,7 +314,7 @@ export function FlowCanvas({
                 disabled={index === 0}
                 onClick={() => onMoveStep(step.id, -1)}
                 className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
-                title="Move up"
+                title={t("workflows.canvas.moveUp")}
               >
                 <ArrowUp className="h-3 w-3" />
               </button>
@@ -314,7 +323,7 @@ export function FlowCanvas({
                 disabled={index === siblingCount - 1}
                 onClick={() => onMoveStep(step.id, 1)}
                 className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
-                title="Move down"
+                title={t("workflows.canvas.moveDown")}
               >
                 <ArrowDown className="h-3 w-3" />
               </button>
@@ -322,7 +331,7 @@ export function FlowCanvas({
                 type="button"
                 onClick={() => onDuplicateStep(step.id)}
                 className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground"
-                title="Duplicate step"
+                title={t("workflows.canvas.duplicateStep")}
               >
                 <Copy className="h-3 w-3" />
               </button>
@@ -330,7 +339,7 @@ export function FlowCanvas({
                 type="button"
                 onClick={() => onRemoveStep(step.id)}
                 className="cursor-pointer rounded p-1 text-muted-foreground hover:text-destructive"
-                title="Delete step"
+                title={t("workflows.canvas.deleteStep")}
               >
                 <Trash2 className="h-3 w-3" />
               </button>
@@ -350,7 +359,7 @@ export function FlowCanvas({
                   <span
                     className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${vTheme.badgeClass}`}
                   >
-                    {vTheme.categoryLabel}
+                    {t(STEP_CATEGORY_KEYS[vTheme.categoryKey])}
                   </span>
                 </div>
 
@@ -361,7 +370,7 @@ export function FlowCanvas({
                 </div>
 
                 <p className="truncate pt-0.5 text-[11px] text-muted-foreground">
-                  {summarizeStep(step)}
+                  {summarizeStep(step, t)}
                 </p>
 
                 {(sourceCount > 0 || sr) && (
@@ -418,7 +427,7 @@ export function FlowCanvas({
                 className="h-8 gap-1 rounded-lg border-dashed bg-card text-xs whitespace-nowrap shadow-2xs"
               >
                 <Plus className="size-3.5" />
-                Add Branch
+                {t("workflows.canvas.addBranch")}
               </Button>
             </div>
           )}
@@ -514,7 +523,7 @@ export function FlowCanvas({
                         >
                           {isCase
                             ? lane.condition
-                            : "Fallback when no branch matches"}
+                            : t("workflows.canvas.fallbackCondition")}
                         </code>
                       </button>
 
@@ -688,7 +697,11 @@ export function FlowCanvas({
           }`}
         >
           <Settings2 className="h-3.5 w-3.5" />
-          <span>{flowName || "Untitled Workflow"} — Flow Settings</span>
+          <span>
+            {t("workflows.canvas.flowSettingsPill", {
+              name: flowName || t("workflows.inspector.untitled"),
+            })}
+          </span>
         </button>
 
         {/* Triggers Stage (centered on main spine with fan-in merge bus into Step 1) */}
@@ -706,16 +719,20 @@ export function FlowCanvas({
                 const hasFanIn = triggers.length > 1
                 const subtitle =
                   trig.type === "event"
-                    ? trig.config?.topic || "Select topic"
+                    ? trig.config?.topic || t("workflows.canvas.selectTopic")
                     : trig.type === "schedule"
                       ? trig.config?.cron
-                        ? summarizeCron(trig.config.cron, tz.timezone)
-                        : "Schedule"
+                        ? getLocalizedCronSummary(
+                            trig.config.cron,
+                            tz.timezone,
+                            t
+                          )
+                        : t("workflows.canvas.schedule")
                       : trig.type === "webhook"
                         ? trig.id
                           ? `/${trig.id.slice(0, 12)}…:webhook`
-                          : "Webhook (unsaved)"
-                        : "Callable / Manual"
+                          : t("workflows.canvas.webhookUnsaved")
+                        : t("workflows.canvas.manual")
 
                 return (
                   <div
@@ -810,7 +827,7 @@ export function FlowCanvas({
                 }
               >
                 <Plus className="h-3.5 w-3.5" />
-                Add Trigger
+                {t("workflows.canvas.addTrigger")}
               </PopoverTrigger>
               <PopoverContent className="w-48 rounded-xl p-1.5" align="center">
                 {(["event", "webhook", "schedule", "manual"] as const).map(
@@ -825,7 +842,9 @@ export function FlowCanvas({
                       className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium capitalize hover:bg-muted"
                     >
                       <TriggerIcon type={type} />
-                      <span>{type} trigger</span>
+                      <span>
+                        {t("workflows.canvas.triggerOption", { type })}
+                      </span>
                     </button>
                   )
                 )}
@@ -838,7 +857,9 @@ export function FlowCanvas({
         <StepInsertEdge
           stepDescriptors={stepDescriptors}
           onInsert={(type) => onInsertStep(type, { kind: "root", index: 0 })}
-          label={steps.length === 0 ? "Add First Step" : undefined}
+          label={
+            steps.length === 0 ? t("workflows.canvas.addFirstStep") : undefined
+          }
         />
 
         {/* Vertical Step Sequence */}
@@ -856,7 +877,7 @@ export function FlowCanvas({
 
         {/* Terminal End Pill */}
         <div className="rounded-full border border-border/60 bg-background/80 px-3 py-1 text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-          End of Flow
+          {t("workflows.canvas.endOfFlow")}
         </div>
       </div>
     </div>

@@ -69,6 +69,28 @@
       "STOPPED": "Stopped",
       "SUCCEEDED": "Succeeded",
       "WAITING": "Waiting"
+    },
+    "stepType": {
+      "AI_AGENT_RUN": "AI Agent Run",
+      "CALENDAR_UPSERT_EVENT": "Calendar Upsert Event",
+      "DOCUMENT_EXTRACT_TEXT": "Document Text Extraction",
+      "FILTER": "Filter",
+      "FINANCE_CREATE_INBOX_ITEM": "Stage Finance Inbox Item",
+      "FINANCE_IMPORT_STATEMENT_DRAFT": "Import Statement Draft",
+      "FOR_EACH": "For Each",
+      "LLM_GENERATE": "Generate with AI",
+      "MAIL_CREATE_DRAFT": "Create Mail Draft",
+      "MAIL_MODIFY_LABELS": "Modify Mail Labels",
+      "OUTPUT": "Output",
+      "STOP": "Stop",
+      "SWITCH": "Switch",
+      "TRANSFORM": "Transform"
+    },
+    "triggerType": {
+      "EVENT": "Event",
+      "MANUAL": "Manual",
+      "SCHEDULE": "Schedule",
+      "WEBHOOK": "Webhook"
     }
   }
 }

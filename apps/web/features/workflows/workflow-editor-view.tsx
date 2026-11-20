@@ -7,7 +7,7 @@ import {
   createDefaultWorkflowStep,
   createEmptyWorkflowDraft,
 } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n } from "@saturn/hooks"
 import { useRegisterCopilotView } from "@saturn/hooks/ai"
 import { FlowSchema } from "@saturn/schemas"
 import {
@@ -71,7 +71,7 @@ export function WorkflowEditorView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { spaceId } = useActiveSpaceContext()
-  const tz = useTimezone()
+  const { t } = useI18n()
 
   const draftFromState = (location.state as { draftFlow?: Flow } | null)
     ?.draftFlow
@@ -80,7 +80,7 @@ export function WorkflowEditorView() {
     { id: flowId ?? "" },
     { enabled: !isNew }
   )
-  const { data: catalog } = useGetCatalogQuery({ locale: tz.locale })
+  const { data: catalog } = useGetCatalogQuery({})
 
   const [draftOverride, setDraftOverride] = useState<Flow | null>(() =>
     draftFromState ? draftFromState : null
@@ -130,12 +130,12 @@ export function WorkflowEditorView() {
 
   useRegisterCopilotView({
     viewId: "workflows.editor",
-    title: "Workflow Editor",
+    title: t("workflows.editor.copilotTitle"),
     activeEntity: {
       key: buildCopilotEntityKey("workflow", draft.id || "new"),
       kind: "workflow",
       id: draft.id || "new",
-      label: draft.name || "Untitled Workflow",
+      label: draft.name || t("workflows.editor.untitled"),
       summary: {
         isEnabled: Boolean(draft.isEnabled),
         stepCount: draft.steps?.length ?? 0,
@@ -143,9 +143,9 @@ export function WorkflowEditorView() {
       },
     },
     suggestions: [
-      "Review this workflow for potential edge cases",
-      "Explain what each step in this workflow does",
-      "Suggest error handling or improvements for this flow",
+      t("workflows.editor.suggestions.edgeCases"),
+      t("workflows.editor.suggestions.explainSteps"),
+      t("workflows.editor.suggestions.errorHandling"),
     ],
   })
 
@@ -237,7 +237,7 @@ export function WorkflowEditorView() {
     if (!parsed.success) {
       const firstIssue = parsed.error.issues[0]
       setValidationError(
-        `${firstIssue?.path.join(".") || "flow"}: ${firstIssue?.message || "Invalid workflow"}`
+        `${firstIssue?.path.join(".") || "flow"}: ${firstIssue?.message || t("workflows.editor.invalidWorkflow")}`
       )
       return false
     }
@@ -250,8 +250,10 @@ export function WorkflowEditorView() {
         setSavedBaselineOverride(created)
         setDraftOverride(null)
         toast.add({
-          title: "Workflow Created",
-          description: `${created.name} saved successfully.`,
+          title: t("workflows.editor.createdTitle"),
+          description: t("workflows.editor.createdDescription", {
+            name: created.name ?? "",
+          }),
           type: "success",
         })
         if (spaceId && created.id) {
@@ -282,8 +284,11 @@ export function WorkflowEditorView() {
         setSavedBaselineOverride(updated)
         setDraftOverride(null)
         toast.add({
-          title: "Workflow Saved",
-          description: `${updated.name} (v${updated.version ?? 1}) updated.`,
+          title: t("workflows.editor.savedTitle"),
+          description: t("workflows.editor.savedDescription", {
+            name: updated.name ?? "",
+            version: updated.version ?? 1,
+          }),
           type: "success",
         })
         return true
@@ -291,8 +296,9 @@ export function WorkflowEditorView() {
       return false
     } catch (err) {
       toast.add({
-        title: "Save failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: t("workflows.editor.saveFailed"),
+        description:
+          err instanceof Error ? err.message : t("workflows.unknownError"),
         type: "error",
       })
       return false
@@ -305,6 +311,7 @@ export function WorkflowEditorView() {
     spaceId,
     navigate,
     updateMutation,
+    t,
   ])
 
   const handleSaveRef = useRef(handleSave)
@@ -420,14 +427,15 @@ export function WorkflowEditorView() {
         req: { id: draft.id },
       })
       toast.add({
-        title: "Reset Complete",
-        description: "System workflow restored to factory defaults.",
+        title: t("workflows.editor.resetCompleteTitle"),
+        description: t("workflows.editor.resetCompleteDescription"),
         type: "success",
       })
     } catch (err) {
       toast.add({
-        title: "Reset failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: t("workflows.resetFailed"),
+        description:
+          err instanceof Error ? err.message : t("workflows.unknownError"),
         type: "error",
       })
     }
@@ -435,7 +443,9 @@ export function WorkflowEditorView() {
 
   const handleAddTrigger = (type: string) => {
     const newTrig: Flow_Trigger = {
-      name: `${type.charAt(0).toUpperCase() + type.slice(1)} Trigger`,
+      name: t("workflows.editor.triggerName", {
+        type: type.charAt(0).toUpperCase() + type.slice(1),
+      }),
       type,
       config:
         type === "event"
@@ -479,7 +489,9 @@ export function WorkflowEditorView() {
 
     return {
       ...fresh,
-      name: isRoot ? `${step.name || step.id} Copy` : step.name,
+      name: isRoot
+        ? `${step.name || step.id} ${t("workflows.editor.copySuffix")}`
+        : step.name,
       onError: step.onError,
       model: step.model ? { ...step.model } : undefined,
       inputs: clonedInputs,
@@ -542,7 +554,11 @@ export function WorkflowEditorView() {
   return (
     <>
       <StudioCanvasPage
-        title={isNew ? "New Workflow" : draft.name || "Workflow Editor"}
+        title={
+          isNew
+            ? t("workflows.newWorkflow")
+            : draft.name || t("workflows.editor.copilotTitle")
+        }
         mobilePane={mobilePane}
         onMobilePaneChange={setMobilePane}
         leading={
@@ -553,14 +569,14 @@ export function WorkflowEditorView() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  aria-label="Back to workflows"
+                  aria-label={t("workflows.editor.backAria")}
                   onClick={() =>
                     requestNavigation(`/space/${spaceId}/workflows`)
                   }
                   className="h-7 shrink-0 gap-1 rounded-lg px-2 text-xs text-muted-foreground hover:text-foreground"
                 >
                   <ArrowLeft className="size-3.5" />
-                  <span className="hidden sm:inline">Workflows</span>
+                  <span className="hidden sm:inline">{t("nav.workflows")}</span>
                 </Button>
                 <span
                   aria-hidden="true"
@@ -572,13 +588,13 @@ export function WorkflowEditorView() {
               type="text"
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-              placeholder="Untitled Workflow"
-              aria-label="Workflow name"
+              placeholder={t("workflows.editor.untitled")}
+              aria-label={t("workflows.editor.nameAria")}
               className="h-7 w-full max-w-[260px] min-w-[110px] truncate rounded-md border border-transparent bg-transparent px-2 text-sm font-semibold text-foreground transition-colors outline-none hover:border-border hover:bg-control focus:border-ring focus:bg-control focus:ring-2 focus:ring-ring/40"
             />
             {draft.isSystem && (
               <Badge variant="info" className="hidden shrink-0 sm:inline-flex">
-                System
+                {t("workflows.tabSystem")}
               </Badge>
             )}
           </div>
@@ -588,14 +604,16 @@ export function WorkflowEditorView() {
             <div className="flex items-center gap-1.5">
               <Switch
                 size="sm"
-                aria-label="Workflow active"
+                aria-label={t("workflows.editor.activeAria")}
                 checked={Boolean(draft.isEnabled)}
                 onCheckedChange={(checked) =>
                   setDraft({ ...draft, isEnabled: Boolean(checked) })
                 }
               />
               <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
-                {draft.isEnabled ? "Active" : "Paused"}
+                {draft.isEnabled
+                  ? t("common.active")
+                  : t("workflows.editor.paused")}
               </span>
             </div>
             {isDirty ? (
@@ -605,12 +623,14 @@ export function WorkflowEditorView() {
                 data-testid="workflow-unsaved-badge"
                 className="shrink-0"
               >
-                Unsaved
+                {t("common.unsaved")}
               </Badge>
             ) : (
               !isNew && (
                 <span className="hidden text-xs whitespace-nowrap text-muted-foreground md:inline">
-                  Saved · v{draft.version ?? 1}
+                  {t("workflows.editor.savedVersion", {
+                    version: draft.version ?? 1,
+                  })}
                 </span>
               )
             )}
@@ -629,7 +649,9 @@ export function WorkflowEditorView() {
               className="h-8 gap-1.5 rounded-lg text-xs"
             >
               <Settings2 className="size-3.5" />
-              <span className="hidden xl:inline">Flow Settings</span>
+              <span className="hidden xl:inline">
+                {t("workflows.editor.flowSettings")}
+              </span>
             </Button>
             {!isNew && spaceId && draft.id && (
               <Button
@@ -644,7 +666,9 @@ export function WorkflowEditorView() {
                 className="h-8 gap-1.5 rounded-lg text-xs"
               >
                 <History className="size-3.5" />
-                <span className="hidden lg:inline">Runs</span>
+                <span className="hidden lg:inline">
+                  {t("workflows.editor.runs")}
+                </span>
               </Button>
             )}
             {draft.isSystem && draft.id && (
@@ -657,7 +681,9 @@ export function WorkflowEditorView() {
                 className="h-8 gap-1.5 rounded-lg text-xs"
               >
                 <RotateCcw className="size-3.5" />
-                <span className="hidden xl:inline">Reset Default</span>
+                <span className="hidden xl:inline">
+                  {t("workflows.editor.resetDefault")}
+                </span>
               </Button>
             )}
             <Button
@@ -668,14 +694,16 @@ export function WorkflowEditorView() {
               className="h-8 gap-1.5 rounded-lg text-xs"
             >
               <FlaskConical className="size-3.5" />
-              <span className="hidden md:inline">Test &amp; Run</span>
+              <span className="hidden md:inline">
+                {t("workflows.editor.testRun")}
+              </span>
             </Button>
             <Button
               type="button"
               size="sm"
               onClick={() => void handleSave()}
               disabled={isSaving}
-              aria-label="Save workflow"
+              aria-label={t("workflows.editor.saveAria")}
               className="h-8 gap-1.5 rounded-lg text-xs"
             >
               {isSaving ? (
@@ -683,7 +711,7 @@ export function WorkflowEditorView() {
               ) : (
                 <Save className="size-3.5" />
               )}
-              <span>Save</span>
+              <span>{t("common.save")}</span>
               <Kbd className="hidden bg-primary-foreground/15 text-primary-foreground sm:inline-flex">
                 ⌘S
               </Kbd>
@@ -700,7 +728,7 @@ export function WorkflowEditorView() {
               <button
                 type="button"
                 onClick={() => setValidationError(null)}
-                aria-label="Dismiss validation error"
+                aria-label={t("workflows.editor.dismissValidation")}
                 className="shrink-0 cursor-pointer rounded-md p-0.5 text-destructive/80 hover:bg-destructive/15 hover:text-destructive"
               >
                 <X className="size-3.5" />
@@ -811,21 +839,27 @@ export function WorkflowEditorView() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved workflow changes</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("workflows.editor.guard.title")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              You have unsaved edits to{" "}
-              <strong>{draft.name || "this workflow"}</strong>. Save your
-              changes before leaving, or discard them.
+              {t("workflows.editor.guard.descriptionStart")}{" "}
+              <strong>
+                {draft.name || t("workflows.editor.guard.thisWorkflow")}
+              </strong>
+              {t("workflows.editor.guard.descriptionEnd")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogCancel>
+              {t("workflows.editor.guard.keepEditing")}
+            </AlertDialogCancel>
             <Button
               type="button"
               variant="outline"
               onClick={handleDiscardAndLeave}
             >
-              Discard changes
+              {t("workflows.editor.guard.discard")}
             </Button>
             <Button
               type="button"
@@ -833,7 +867,7 @@ export function WorkflowEditorView() {
               disabled={isSaving}
             >
               {isSaving && <Loader2 className="size-3.5 animate-spin" />}
-              Save &amp; leave
+              {t("workflows.editor.guard.saveAndLeave")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -843,20 +877,22 @@ export function WorkflowEditorView() {
       <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reset System Workflow?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("workflows.resetDialog.title")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Restores <strong>{draft.name}</strong> back to its factory
-              blueprint steps, triggers, and configuration. Your workflow ID and
-              historical runs are preserved.
+              {t("workflows.resetDialog.descriptionStart")}{" "}
+              <strong>{draft.name}</strong>{" "}
+              {t("workflows.resetDialog.descriptionEnd")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => void handleResetSystemFlow()}
               disabled={resetMutation.isPending}
             >
-              Reset Workflow
+              {t("workflows.resetDialog.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

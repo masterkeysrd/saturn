@@ -1626,9 +1626,7 @@ func (x *GetFlowRunRequest) GetId() string {
 
 // Request message for WorkflowService.GetCatalog.
 type GetCatalogRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Optional. BCP 47 locale tag (e.g. "en-US", "es-ES") used to localize catalog display names and descriptions.
-	Locale        *string `protobuf:"bytes,1,opt,name=locale,proto3,oneof" json:"locale,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1661,13 +1659,6 @@ func (x *GetCatalogRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use GetCatalogRequest.ProtoReflect.Descriptor instead.
 func (*GetCatalogRequest) Descriptor() ([]byte, []int) {
 	return file_saturn_platform_workflow_v1_workflow_proto_rawDescGZIP(), []int{23}
-}
-
-func (x *GetCatalogRequest) GetLocale() string {
-	if x != nil && x.Locale != nil {
-		return *x.Locale
-	}
-	return ""
 }
 
 // Catalog returns all registered workflow capabilities for authoring and AI generation.
@@ -3131,11 +3122,11 @@ const file_saturn_platform_workflow_v1_workflow_proto_rawDesc = "" +
 	"\x05input\x18\x03 \x01(\v2\x17.google.protobuf.StructB\x03\xe0A\x01H\x01R\x05input\x88\x01\x01\x12N\n" +
 	"\tartifacts\x18\x04 \x03(\v2+.saturn.platform.workflow.v1.InlineArtifactB\x03\xe0A\x01R\tartifactsB\x0f\n" +
 	"\r_trigger_dataB\b\n" +
-	"\x06_input\"\x86\x01\n" +
+	"\x06_input\"\x8c\x01\n" +
 	"\x13GenerateFlowRequest\x12\x1b\n" +
 	"\x06prompt\x18\x01 \x01(\tB\x03\xe0A\x02R\x06prompt\x12H\n" +
 	"\x05model\x18\x02 \x01(\v2(.saturn.platform.workflow.v1.ModelConfigB\x03\xe0A\x01H\x00R\x05model\x88\x01\x01B\b\n" +
-	"\x06_model\"\xb7\x01\n" +
+	"\x06_modelJ\x04\b\x03\x10\x04\"\xb7\x01\n" +
 	"\x13ListFlowRunsRequest\x12!\n" +
 	"\aflow_id\x18\x01 \x01(\tB\x03\xe0A\x01H\x00R\x06flowId\x88\x01\x01\x12 \n" +
 	"\x06status\x18\x02 \x01(\tB\x03\xe0A\x01H\x01R\x06status\x88\x01\x01\x12 \n" +
@@ -3149,10 +3140,8 @@ const file_saturn_platform_workflow_v1_workflow_proto_rawDesc = "" +
 	"\x04runs\x18\x01 \x03(\v2$.saturn.platform.workflow.v1.FlowRunB\x03\xe0A\x03R\x04runs\x12+\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x03R\rnextPageToken\"(\n" +
 	"\x11GetFlowRunRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"@\n" +
-	"\x11GetCatalogRequest\x12 \n" +
-	"\x06locale\x18\x01 \x01(\tB\x03\xe0A\x01H\x00R\x06locale\x88\x01\x01B\t\n" +
-	"\a_locale\"\xf8\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\x19\n" +
+	"\x11GetCatalogRequestJ\x04\b\x01\x10\x02\"\xf8\n" +
 	"\n" +
 	"\aCatalog\x12]\n" +
 	"\x0etrigger_topics\x18\x01 \x03(\v21.saturn.platform.workflow.v1.Catalog.TriggerTopicB\x03\xe0A\x03R\rtriggerTopics\x12D\n" +
@@ -3390,7 +3379,6 @@ func file_saturn_platform_workflow_v1_workflow_proto_init() {
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[18].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[19].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[20].OneofWrappers = []any{}
-	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[23].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[25].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[26].OneofWrappers = []any{}
 	file_saturn_platform_workflow_v1_workflow_proto_msgTypes[27].OneofWrappers = []any{}

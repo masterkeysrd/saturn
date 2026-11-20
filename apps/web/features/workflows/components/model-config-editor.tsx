@@ -25,6 +25,7 @@ import {
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector"
 import { CheckIcon, ChevronDownIcon } from "lucide-react"
+import { useI18n } from "@saturn/hooks"
 
 type ModelMode = "default" | "role" | "model"
 
@@ -37,8 +38,9 @@ interface ModelConfigEditorProps {
 export function ModelConfigEditor({
   value,
   onChange,
-  defaultLabel = "Workspace Default",
+  defaultLabel,
 }: ModelConfigEditorProps) {
+  const { t } = useI18n()
   const { data: modelsData } = useListModelsQuery({ isEnabled: true })
   const models = modelsData?.models ?? []
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -70,14 +72,17 @@ export function ModelConfigEditor({
     <div className="space-y-3">
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold text-muted-foreground">
-          Model Strategy
+          {t("workflows.model.strategy")}
         </Label>
         <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1">
           {(
             [
-              { id: "default", label: defaultLabel },
-              { id: "role", label: "Role Slot" },
-              { id: "model", label: "Specific Model" },
+              {
+                id: "default",
+                label: defaultLabel ?? t("workflows.model.workspaceDefault"),
+              },
+              { id: "role", label: t("workflows.model.roleSlot") },
+              { id: "model", label: t("workflows.model.specificModel") },
             ] as const
           ).map((opt) => (
             <button
@@ -99,7 +104,7 @@ export function ModelConfigEditor({
       {mode === "role" && (
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold text-muted-foreground">
-            Workspace Role
+            {t("workflows.model.workspaceRole")}
           </Label>
           <Select
             value={value?.role ?? "default"}
@@ -116,13 +121,13 @@ export function ModelConfigEditor({
             </SelectTrigger>
             <SelectContent className="rounded-xl">
               <SelectItem value="default" className="text-xs">
-                Default
+                {t("workflows.model.roleDefault")}
               </SelectItem>
               <SelectItem value="fast" className="text-xs">
-                Fast (Low-latency)
+                {t("workflows.model.roleFast")}
               </SelectItem>
               <SelectItem value="reasoning" className="text-xs">
-                Reasoning
+                {t("workflows.model.roleReasoning")}
               </SelectItem>
             </SelectContent>
           </Select>
@@ -132,7 +137,7 @@ export function ModelConfigEditor({
       {mode === "model" && (
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold text-muted-foreground">
-            Registered Model
+            {t("workflows.model.registeredModel")}
           </Label>
           <ModelSelector open={pickerOpen} onOpenChange={setPickerOpen}>
             <ModelSelectorTrigger
@@ -143,7 +148,7 @@ export function ModelConfigEditor({
                     <span className="truncate">
                       {selectedModel?.displayName ||
                         value?.modelId ||
-                        "Choose model"}
+                        t("workflows.model.chooseModel")}
                     </span>
                   </span>
                   <ChevronDownIcon className="size-3.5 text-muted-foreground" />
@@ -151,12 +156,14 @@ export function ModelConfigEditor({
               }
             />
             <ModelSelectorContent>
-              <ModelSelectorInput placeholder="Search workspace models..." />
+              <ModelSelectorInput
+                placeholder={t("workflows.model.searchModels")}
+              />
               <ModelSelectorList>
                 <ModelSelectorEmpty>
-                  No enabled models found.
+                  {t("workflows.model.noModels")}
                 </ModelSelectorEmpty>
-                <ModelSelectorGroup heading="Registered Models">
+                <ModelSelectorGroup heading={t("workflows.model.groupModels")}>
                   {models.map((m) => (
                     <ModelSelectorItem
                       key={m.id}
@@ -191,7 +198,7 @@ export function ModelConfigEditor({
         <div className="space-y-3 border-t border-border/40 pt-3">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground">
-              Temperature (0 – 2)
+              {t("workflows.model.temperature")}
             </Label>
             <Input
               type="number"
@@ -199,7 +206,7 @@ export function ModelConfigEditor({
               max={2}
               step={0.1}
               value={value?.generation?.temperature ?? ""}
-              placeholder="Model default"
+              placeholder={t("workflows.model.modelDefault")}
               onChange={(e) => {
                 const raw = e.target.value
                 const parsed = parseFloat(raw)
@@ -217,7 +224,7 @@ export function ModelConfigEditor({
           </div>
 
           <label className="flex cursor-pointer items-center justify-between text-xs font-medium">
-            <span>Enable Extended Thinking</span>
+            <span>{t("workflows.model.extendedThinking")}</span>
             <Switch
               checked={Boolean(value?.generation?.thinking?.enabled)}
               onCheckedChange={(enabled) =>

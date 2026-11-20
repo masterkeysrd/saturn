@@ -35,7 +35,7 @@ type ScheduleTriggerPayload struct {
 // WorkflowService defines the platform/workflow service contract orchestrated by Coordinator.
 // @Mock
 type WorkflowService interface {
-	Catalog() workflow.Catalog
+	Catalog(ctx context.Context) workflow.Catalog
 	ValidateFlow(flow *workflow.Flow) error
 	EvaluateTriggerFilter(trigger *workflow.Trigger, space workflow.SpaceContext, triggerData map[string]any) (bool, error)
 	MapTriggerInput(trigger *workflow.Trigger, space workflow.SpaceContext, triggerData map[string]any) (map[string]any, error)
