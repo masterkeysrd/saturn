@@ -38,11 +38,11 @@ import { MailSummaryWidget } from "@/components/widgets/mail-summary-widget"
 import { WorkflowRunsWidget } from "@/components/widgets/workflow-runs-widget"
 import { CustomizeOverviewSheet } from "@/components/widgets/customize-overview-sheet"
 
-const OVERVIEW_PROMPTS = [
-  "Today's schedule",
-  "This month's spend",
-  "Unread mail",
-]
+const OVERVIEW_PROMPT_KEYS = [
+  "dashboard.overview.promptSchedule",
+  "dashboard.overview.promptSpend",
+  "dashboard.overview.promptMail",
+] as const
 
 export default function OverviewScreen() {
   const router = useRouter()
@@ -108,8 +108,11 @@ export default function OverviewScreen() {
         )
         haptics.error()
         toast.show({
-          title: "Could not save overview layout",
-          message: err instanceof Error ? err.message : "Please try again.",
+          title: t("dashboard.overview.saveLayoutFailed"),
+          message:
+            err instanceof Error
+              ? err.message
+              : t("dashboard.overview.saveLayoutTryAgain"),
           type: "error",
         })
       },
@@ -139,15 +142,15 @@ export default function OverviewScreen() {
 
   const getGreeting = () => {
     const hour = tz.parts(tz.now())?.hour ?? 12
-    if (hour < 12) return "Good morning"
-    if (hour < 18) return "Good afternoon"
-    return "Good evening"
+    if (hour < 12) return t("dashboard.overview.greetingMorning")
+    if (hour < 18) return t("dashboard.overview.greetingAfternoon")
+    return t("dashboard.overview.greetingEvening")
   }
 
   const firstName =
     user?.name && user.name !== "User"
       ? user.name.split(" ")[0]
-      : user?.username || "there"
+      : user?.username || t("dashboard.overview.greetingFallback")
 
   const handleRefresh = async () => {
     haptics.light()
@@ -184,7 +187,7 @@ export default function OverviewScreen() {
                 style={styles.aiInput}
                 value={aiQuery}
                 onChangeText={setAiQuery}
-                placeholder="Ask Saturn AI anything..."
+                placeholder={t("dashboard.overview.aiPlaceholder")}
                 placeholderTextColor={colors.textMuted}
                 keyboardAppearance={isDark ? "dark" : "light"}
                 returnKeyType="send"
@@ -202,7 +205,7 @@ export default function OverviewScreen() {
                   setAiQuery("")
                   openAIWithPrompt(text)
                 }}
-                accessibilityLabel="Ask Saturn AI"
+                accessibilityLabel={t("dashboard.overview.aiSendAria")}
               >
                 <Send size={14} color={colors.primaryForeground} />
               </TouchableOpacity>
@@ -212,14 +215,14 @@ export default function OverviewScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.aiChipsRow}
             >
-              {OVERVIEW_PROMPTS.map((chip) => (
+              {OVERVIEW_PROMPT_KEYS.map((promptKey) => (
                 <TouchableOpacity
-                  key={chip}
+                  key={promptKey}
                   style={styles.aiChip}
                   activeOpacity={0.7}
-                  onPress={() => openAIWithPrompt(chip)}
+                  onPress={() => openAIWithPrompt(t(promptKey))}
                 >
-                  <Text style={styles.aiChipText}>{chip}</Text>
+                  <Text style={styles.aiChipText}>{t(promptKey)}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -274,7 +277,7 @@ export default function OverviewScreen() {
               }}
               testID="overview-customize-btn"
               accessibilityRole="button"
-              accessibilityLabel="Customize overview widgets"
+              accessibilityLabel={t("dashboard.overview.customizeAria")}
             >
               <SlidersHorizontal size={14} color={colors.textSecondary} />
               <Text style={styles.customizeBtnText}>
@@ -298,8 +301,8 @@ export default function OverviewScreen() {
 
       <QuickCaptureFab
         testID="overview-fab-quick-capture"
-        accessibilityLabel="Quick capture"
-        accessibilityHint="Opens quick actions to record transactions, events, emails, or ask AI"
+        accessibilityLabel={t("dashboard.overview.quickCaptureAria")}
+        accessibilityHint={t("dashboard.overview.quickCaptureHint")}
         onPress={() => quickCaptureRef.current?.expand()}
       />
       <QuickCaptureSheet

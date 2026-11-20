@@ -8,6 +8,7 @@ import {
 } from "react-native"
 import { useRouter } from "expo-router"
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet"
+import { useI18n } from "@saturn/hooks"
 import {
   Plus,
   ArrowDownLeft,
@@ -124,6 +125,7 @@ export const QuickCaptureSheet = forwardRef<
   QuickCaptureSheetProps
 >(({ title = "Quick Capture", actions, onSelectAction, onClose }, ref) => {
   const router = useRouter()
+  const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
 
@@ -181,15 +183,15 @@ export const QuickCaptureSheet = forwardRef<
                 onPress={() => handlePressAction(action)}
                 testID={`quick-capture-action-${action.id}`}
                 accessibilityRole="button"
-                accessibilityLabel={action.label}
+                accessibilityLabel={t(action.label)}
               >
                 <View style={[styles.iconBadge, { backgroundColor: bg }]}>
                   {renderActionIcon(action.iconKey, fg)}
                 </View>
                 <View style={styles.actionText}>
-                  <Text style={styles.actionLabel}>{action.label}</Text>
+                  <Text style={styles.actionLabel}>{t(action.label)}</Text>
                   <Text style={styles.actionDesc} numberOfLines={1}>
-                    {action.description}
+                    {t(action.description)}
                   </Text>
                 </View>
                 <ChevronRight size={16} color={colors.textMuted} />

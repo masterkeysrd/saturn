@@ -300,6 +300,18 @@ function I18nLabelsProbe() {
       <span data-testid="nav-menu">{t("nav.menu")}</span>
       <span data-testid="regional-title">{t("settings.regional.title")}</span>
       <span data-testid="regional-saved">{t("settings.regional.saved")}</span>
+      <span data-testid="greeting-morning">
+        {t("dashboard.overview.greetingMorning")}
+      </span>
+      <span data-testid="prompt-schedule">
+        {t("dashboard.overview.promptSchedule")}
+      </span>
+      <span data-testid="quick-action-expense">
+        {t("dashboard.quickAction.recordExpense")}
+      </span>
+      <span data-testid="quick-action-compose">
+        {t("dashboard.quickAction.composeEmail")}
+      </span>
     </div>
   )
 }
@@ -408,6 +420,14 @@ describe("Mobile i18n & User-Scoped Regional Preferences", () => {
     )
     expect(getByTestId("regional-saved").textContent).toBe(
       "Preferencias regionales actualizadas"
+    )
+    expect(getByTestId("greeting-morning").textContent).toBe("Buenos días")
+    expect(getByTestId("prompt-schedule").textContent).toBe("Agenda de hoy")
+    expect(getByTestId("quick-action-expense").textContent).toBe(
+      "Registrar gasto"
+    )
+    expect(getByTestId("quick-action-compose").textContent).toBe(
+      "Redactar correo"
     )
   })
 

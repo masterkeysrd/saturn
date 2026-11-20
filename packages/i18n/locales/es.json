@@ -760,6 +760,22 @@
   "dashboard": {
     "customizeDescription": "Elige un ajuste predefinido o activa widgets para tu pulso diario.",
     "customizeTitle": "Personalizar panel",
+    "overview": {
+      "aiPlaceholder": "Pregunta lo que sea a Saturn AI...",
+      "aiSendAria": "Pregunta a Saturn AI",
+      "customizeAria": "Personalizar widgets del resumen",
+      "greetingAfternoon": "Buenas tardes",
+      "greetingEvening": "Buenas noches",
+      "greetingFallback": "invitado",
+      "greetingMorning": "Buenos días",
+      "promptMail": "Correo sin leer",
+      "promptSchedule": "Agenda de hoy",
+      "promptSpend": "Gastos del mes",
+      "quickCaptureAria": "Captura rápida",
+      "quickCaptureHint": "Abre acciones rápidas para registrar transacciones, eventos, correos o preguntar a la IA",
+      "saveLayoutFailed": "No se pudo guardar el diseño del resumen",
+      "saveLayoutTryAgain": "Inténtalo de nuevo."
+    },
     "pendingInboxItems": "{count} elementos pendientes en la cola",
     "preset": {
       "automation": {
@@ -780,6 +796,28 @@
       }
     },
     "presets": "Ajustes predefinidos",
+    "quickAction": {
+      "askAi": "Pregunta a Saturn AI",
+      "askAiDesc": "Chatea con el asistente de tu espacio",
+      "composeEmail": "Redactar correo",
+      "composeEmailDesc": "Escribe y envía un mensaje nuevo",
+      "confirmScheduled": "Confirmar factura programada",
+      "confirmScheduledDesc": "Revisa y registra una factura recurrente pendiente",
+      "newAccount": "Nueva cuenta",
+      "newAccountDesc": "Añade una cuenta bancaria, tarjeta o efectivo",
+      "newBudget": "Nuevo presupuesto",
+      "newBudgetDesc": "Crea un presupuesto por categoría de gasto",
+      "newEvent": "Nuevo evento de calendario",
+      "newEventDesc": "Programa una reunión o recordatorio",
+      "recordExpense": "Registrar gasto",
+      "recordExpenseDesc": "Registra un gasto o compra de salida",
+      "recordIncome": "Registrar ingreso",
+      "recordIncomeDesc": "Registra un salario, pago o depósito",
+      "reviewQueue": "Revisar cola",
+      "reviewQueueDesc": "Clasifica recibos, facturas y alertas bancarias pendientes",
+      "transferFunds": "Transferir fondos",
+      "transferFundsDesc": "Mueve dinero entre cuentas"
+    },
     "widget": {
       "ai_quick_ask": {
         "description": "Barra compacta del copiloto con accesos rápidos en tu espacio.",

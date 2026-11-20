@@ -1,3 +1,5 @@
+import type { TranslationKey } from "@saturn/i18n"
+
 export type SpaceRole = "owner" | "admin" | "member" | "viewer"
 
 export type TransactionFlowType =
@@ -40,8 +42,8 @@ export type QuickCaptureIconKey =
 
 export interface QuickCaptureRouteDescriptor {
   id: string
-  label: string
-  description: string
+  label: TranslationKey
+  description: TranslationKey
   route: string
   iconKey: QuickCaptureIconKey
   tone: "destructive" | "success" | "primary" | "accent" | "warning"
@@ -57,32 +59,32 @@ export function getOverviewQuickCaptureActions(
     actions.push(
       {
         id: "record-expense",
-        label: "Record Expense",
-        description: "Log an outgoing spend or purchase",
+        label: "dashboard.quickAction.recordExpense",
+        description: "dashboard.quickAction.recordExpenseDesc",
         route: "/modal/add-transaction?type=EXPENSE",
         iconKey: "expense",
         tone: "destructive",
       },
       {
         id: "record-income",
-        label: "Record Income",
-        description: "Log salary, payout, or deposit",
+        label: "dashboard.quickAction.recordIncome",
+        description: "dashboard.quickAction.recordIncomeDesc",
         route: "/modal/add-transaction?type=INCOME",
         iconKey: "income",
         tone: "success",
       },
       {
         id: "transfer-funds",
-        label: "Transfer Funds",
-        description: "Move money between accounts",
+        label: "dashboard.quickAction.transferFunds",
+        description: "dashboard.quickAction.transferFundsDesc",
         route: "/modal/add-transaction?type=TRANSFER",
         iconKey: "transfer",
         tone: "primary",
       },
       {
         id: "new-calendar-event",
-        label: "New Calendar Event",
-        description: "Schedule a meeting or reminder",
+        label: "dashboard.quickAction.newEvent",
+        description: "dashboard.quickAction.newEventDesc",
         route: "/modal/manage-event",
         iconKey: "event",
         tone: "accent",
@@ -93,16 +95,16 @@ export function getOverviewQuickCaptureActions(
   actions.push(
     {
       id: "compose-email",
-      label: "Compose Email",
-      description: "Write and send a new message",
+      label: "dashboard.quickAction.composeEmail",
+      description: "dashboard.quickAction.composeEmailDesc",
       route: "/modal/compose-mail",
       iconKey: "mail",
       tone: "primary",
     },
     {
       id: "ask-saturn-ai",
-      label: "Ask Saturn AI",
-      description: "Chat with your workspace assistant",
+      label: "dashboard.quickAction.askAi",
+      description: "dashboard.quickAction.askAiDesc",
       route: "/(app)/ai",
       iconKey: "ai",
       tone: "accent",
@@ -122,56 +124,56 @@ export function getFinanceQuickCaptureActions(
   return [
     {
       id: "finance-record-expense",
-      label: "Record Expense",
-      description: "Log an outgoing spend or purchase",
+      label: "dashboard.quickAction.recordExpense",
+      description: "dashboard.quickAction.recordExpenseDesc",
       route: "/modal/add-transaction?type=EXPENSE",
       iconKey: "expense",
       tone: "destructive",
     },
     {
       id: "finance-record-income",
-      label: "Record Income",
-      description: "Log salary, payout, or deposit",
+      label: "dashboard.quickAction.recordIncome",
+      description: "dashboard.quickAction.recordIncomeDesc",
       route: "/modal/add-transaction?type=INCOME",
       iconKey: "income",
       tone: "success",
     },
     {
       id: "finance-transfer-funds",
-      label: "Transfer Funds",
-      description: "Move money between accounts",
+      label: "dashboard.quickAction.transferFunds",
+      description: "dashboard.quickAction.transferFundsDesc",
       route: "/modal/add-transaction?type=TRANSFER",
       iconKey: "transfer",
       tone: "primary",
     },
     {
       id: "finance-confirm-scheduled",
-      label: "Confirm Scheduled Bill",
-      description: "Review and post a pending recurring bill",
+      label: "dashboard.quickAction.confirmScheduled",
+      description: "dashboard.quickAction.confirmScheduledDesc",
       route: "/modal/add-transaction?type=SCHEDULED",
       iconKey: "scheduled",
       tone: "warning",
     },
     {
       id: "finance-new-account",
-      label: "New Account",
-      description: "Add a bank, card, or cash account",
+      label: "dashboard.quickAction.newAccount",
+      description: "dashboard.quickAction.newAccountDesc",
       route: "/modal/manage-account",
       iconKey: "account",
       tone: "success",
     },
     {
       id: "finance-new-budget",
-      label: "New Budget",
-      description: "Create a spending category budget",
+      label: "dashboard.quickAction.newBudget",
+      description: "dashboard.quickAction.newBudgetDesc",
       route: "/modal/manage-budget",
       iconKey: "budget",
       tone: "accent",
     },
     {
       id: "finance-review-queue",
-      label: "Review Queue",
-      description: "Triage pending receipts, invoices, and bank alerts",
+      label: "dashboard.quickAction.reviewQueue",
+      description: "dashboard.quickAction.reviewQueueDesc",
       route: "/(app)/finance/inbox",
       iconKey: "inbox",
       tone: "primary",

@@ -760,6 +760,22 @@
   "dashboard": {
     "customizeDescription": "Choose a preset or toggle widgets for your daily pulse.",
     "customizeTitle": "Customize Dashboard",
+    "overview": {
+      "aiPlaceholder": "Ask Saturn AI anything...",
+      "aiSendAria": "Ask Saturn AI",
+      "customizeAria": "Customize overview widgets",
+      "greetingAfternoon": "Good afternoon",
+      "greetingEvening": "Good evening",
+      "greetingFallback": "there",
+      "greetingMorning": "Good morning",
+      "promptMail": "Unread mail",
+      "promptSchedule": "Today's schedule",
+      "promptSpend": "This month's spend",
+      "quickCaptureAria": "Quick capture",
+      "quickCaptureHint": "Opens quick actions to record transactions, events, emails, or ask AI",
+      "saveLayoutFailed": "Could not save overview layout",
+      "saveLayoutTryAgain": "Please try again."
+    },
     "pendingInboxItems": "{count} pending inbox items",
     "preset": {
       "automation": {
@@ -780,6 +796,28 @@
       }
     },
     "presets": "Presets",
+    "quickAction": {
+      "askAi": "Ask Saturn AI",
+      "askAiDesc": "Chat with your workspace assistant",
+      "composeEmail": "Compose Email",
+      "composeEmailDesc": "Write and send a new message",
+      "confirmScheduled": "Confirm Scheduled Bill",
+      "confirmScheduledDesc": "Review and post a pending recurring bill",
+      "newAccount": "New Account",
+      "newAccountDesc": "Add a bank, card, or cash account",
+      "newBudget": "New Budget",
+      "newBudgetDesc": "Create a spending category budget",
+      "newEvent": "New Calendar Event",
+      "newEventDesc": "Schedule a meeting or reminder",
+      "recordExpense": "Record Expense",
+      "recordExpenseDesc": "Log an outgoing spend or purchase",
+      "recordIncome": "Record Income",
+      "recordIncomeDesc": "Log salary, payout, or deposit",
+      "reviewQueue": "Review Queue",
+      "reviewQueueDesc": "Triage pending receipts, invoices, and bank alerts",
+      "transferFunds": "Transfer Funds",
+      "transferFundsDesc": "Move money between accounts"
+    },
     "widget": {
       "ai_quick_ask": {
         "description": "Compact copilot omnibar with one-click prompts across your Space.",
