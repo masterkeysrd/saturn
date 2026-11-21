@@ -14,6 +14,7 @@ import {
 import { SpaceAvatarButton } from "../components/app-header"
 import { getToolDomainLabelKey } from "../components/ai/tool-domain-label"
 import { CustomizeOverviewSheet } from "../components/widgets/customize-overview-sheet"
+import { getLocalizedCronSummary } from "../components/workflows/cron-label"
 import {
   DatePickerSheet,
   formatDisplayDate,
@@ -490,6 +491,85 @@ function FinanceI18nProbe() {
         {t("ai.chatMobile.chatSheetTitle")}
       </span>
       <span data-testid="ai-agents-title">{t("ai.agentsMobile.title")}</span>
+      <span data-testid="wf-system-section">
+        {t("workflows.mobile.systemWorkflows").toUpperCase()}
+      </span>
+      <span data-testid="wf-custom-section">
+        {t("workflows.mobile.customWorkflows").toUpperCase()}
+      </span>
+      <span data-testid="wf-generate-ai">
+        {t("workflows.mobile.generateWithAI")}
+      </span>
+      <span data-testid="wf-create">
+        {t("workflows.mobile.createWorkflow")}
+      </span>
+      <span data-testid="wf-tab-counts">
+        {t("workflows.mobile.workflowsWithCount", { count: 4 })} /{" "}
+        {t("workflows.mobile.runHistoryWithCount", { count: 2 })}
+      </span>
+      <span data-testid="wf-empty-custom">
+        {t("workflows.mobile.noCustomWorkflows")}
+      </span>
+      <span data-testid="wf-flow-meta">
+        {t("workflows.mobile.flowMeta", {
+          triggers: t("workflows.triggerCountOther", { count: 2 }),
+          steps: t("workflows.stepCountOne", { count: 1 }),
+          runs: `7 ${t("workflows.runs7d")}`,
+        })}
+      </span>
+      <span data-testid="wf-run-step-trace">
+        {t("workflows.mobile.stepTrace", { count: 3 })}
+      </span>
+      <span data-testid="wf-run-step-failed">
+        {t("workflows.mobile.stepFailedHeader", { step: "summarize" })}
+      </span>
+      <span data-testid="wf-run-rows">
+        {t("workflows.runs.rowsOther", { count: 5 })} /{" "}
+        {t("workflows.runs.cacheHit")}
+      </span>
+      <span data-testid="wf-trigger-title">
+        {t("workflows.mobile.configureTrigger")}
+      </span>
+      <span data-testid="wf-cron-label">
+        {t("workflows.trigger.cronExpression", { timezone: "Europe/Madrid" })}
+      </span>
+      <span data-testid="wf-cron-summary">
+        {getLocalizedCronSummary("0 9 * * 1-5", undefined, t)}
+      </span>
+      <span data-testid="wf-cron-invalid">
+        {getLocalizedCronSummary("nonsense", undefined, t)}
+      </span>
+      <span data-testid="wf-save-trigger">
+        {t("workflows.mobile.saveTrigger")}
+      </span>
+      <span data-testid="wf-step-type">{t("workflows.mobile.stepType")}</span>
+      <span data-testid="wf-insert-variable">
+        {t("workflows.variables.insert").toUpperCase()}
+      </span>
+      <span data-testid="wf-sources-pill">
+        {t("workflows.inspector.tabSources", { count: 2 })}
+      </span>
+      <span data-testid="wf-model-config">
+        {t("workflows.mobile.modelConfig")}
+      </span>
+      <span data-testid="wf-model-role-fast">
+        {t("workflows.model.roleFast")}
+      </span>
+      <span data-testid="wf-apply-model">
+        {t("workflows.mobile.applyModelSettings")}
+      </span>
+      <span data-testid="wf-data-sources">
+        {t("workflows.mobile.dataSources")}
+      </span>
+      <span data-testid="wf-dry-test-status">
+        {t("workflows.mobile.dryTestStatus", { status: "completed" })}
+      </span>
+      <span data-testid="wf-generate-title">
+        {t("workflows.mobile.buildWithAITitle")}
+      </span>
+      <span data-testid="wf-generate-draft">
+        {t("workflows.mobile.generateDraft")}
+      </span>
     </div>
   )
 }
@@ -758,6 +838,69 @@ describe("Mobile i18n & User-Scoped Regional Preferences", () => {
     )
     expect(getByTestId("ai-agents-title").textContent).toBe(
       "Agentes y ejecuciones recientes"
+    )
+    expect(getByTestId("wf-system-section").textContent).toBe(
+      "FLUJOS DEL SISTEMA"
+    )
+    expect(getByTestId("wf-custom-section").textContent).toBe(
+      "FLUJOS PERSONALIZADOS"
+    )
+    expect(getByTestId("wf-generate-ai").textContent).toBe("Generar con IA")
+    expect(getByTestId("wf-create").textContent).toBe("Crear flujo de trabajo")
+    expect(getByTestId("wf-tab-counts").textContent).toBe(
+      "Flujos (4) / Historial de ejecuciones (2)"
+    )
+    expect(getByTestId("wf-empty-custom").textContent).toBe(
+      "Aún no hay flujos personalizados. Toca Generar con IA o Crear flujo arriba."
+    )
+    expect(getByTestId("wf-flow-meta").textContent).toBe(
+      "2 disparadores • 1 paso • 7 ejecuciones (7 d)"
+    )
+    expect(getByTestId("wf-run-step-trace").textContent).toBe(
+      "Trazado de pasos (3)"
+    )
+    expect(getByTestId("wf-run-step-failed").textContent).toBe(
+      "El paso summarize falló"
+    )
+    expect(getByTestId("wf-run-rows").textContent).toBe("5 filas / acierto")
+    expect(getByTestId("wf-trigger-title").textContent).toBe(
+      "Configurar disparador"
+    )
+    expect(getByTestId("wf-cron-label").textContent).toBe(
+      "Expresión Cron (Europe/Madrid)"
+    )
+    expect(getByTestId("wf-cron-summary").textContent).toBe(
+      "Días laborables a las 09:00"
+    )
+    expect(getByTestId("wf-cron-invalid").textContent).toBe(
+      "Expresión cron no válida"
+    )
+    expect(getByTestId("wf-save-trigger").textContent).toBe(
+      "Guardar disparador"
+    )
+    expect(getByTestId("wf-step-type").textContent).toBe("Tipo de paso")
+    expect(getByTestId("wf-insert-variable").textContent).toBe(
+      "INSERTAR VARIABLE"
+    )
+    expect(getByTestId("wf-sources-pill").textContent).toBe("Fuentes (2)")
+    expect(getByTestId("wf-model-config").textContent).toBe(
+      "Configuración del modelo"
+    )
+    expect(getByTestId("wf-model-role-fast").textContent).toBe(
+      "Rápido (baja latencia)"
+    )
+    expect(getByTestId("wf-apply-model").textContent).toBe(
+      "Aplicar configuración del modelo"
+    )
+    expect(getByTestId("wf-data-sources").textContent).toBe("Fuentes de datos")
+    expect(getByTestId("wf-dry-test-status").textContent).toBe(
+      "Estado de la prueba simulada: completed"
+    )
+    expect(getByTestId("wf-generate-title").textContent).toBe(
+      "Crear un flujo con IA"
+    )
+    expect(getByTestId("wf-generate-draft").textContent).toBe(
+      "Generar borrador"
     )
   })
 

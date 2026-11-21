@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   KeyboardAvoidingView,
   Platform,
@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native"
-import { useRouter } from "expo-router"
+import { useNavigation, useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useI18n } from "@saturn/hooks"
+import type { TranslationKey } from "@saturn/i18n"
 import { useGenerateFlowMutation } from "@saturn/api/saturn/platform/workflow/v1/workflow"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
@@ -18,15 +20,30 @@ import { haptics } from "@/lib/haptics"
 import { setPendingWorkflowDraft } from "@/components/workflows/workflow-draft-store"
 import { Sparkles } from "lucide-react-native"
 
+const ROLE_PILL_KEYS: Record<"default" | "fast" | "reasoning", TranslationKey> =
+  {
+    default: "workflows.mobile.rolePillDefault",
+    fast: "workflows.mobile.rolePillFast",
+    reasoning: "workflows.mobile.rolePillReasoning",
+  }
+
 export default function GenerateWorkflowModalScreen() {
   const router = useRouter()
+  const navigation = useNavigation()
   const insets = useSafeAreaInsets()
   const toast = useToast()
+  const { t } = useI18n()
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
   const [prompt, setPrompt] = useState("")
   const [role, setRole] = useState<"default" | "fast" | "reasoning">("default")
   const generateMutation = useGenerateFlowMutation()
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerTitle: t("workflows.mobile.generateWorkflowTitle"),
+    })
+  }, [navigation, t])
 
   const handleGenerate = async () => {
     const trimmed = prompt.trim()
@@ -47,7 +64,7 @@ export default function GenerateWorkflowModalScreen() {
       haptics.error()
       toast.show({
         title:
-          err instanceof Error ? err.message : "Failed to generate workflow",
+          err instanceof Error ? err.message : t("workflows.generateFailed"),
         type: "error",
       })
     }
@@ -68,11 +85,12 @@ export default function GenerateWorkflowModalScreen() {
       >
         <View style={styles.header}>
           <Sparkles size={20} color={colors.primary} />
-          <Text style={styles.title}>Build Workflow with AI</Text>
+          <Text style={styles.title}>
+            {t("workflows.mobile.buildWithAITitle")}
+          </Text>
         </View>
         <Text style={styles.subtitle}>
-          Describe what should trigger your automation and what steps or actions
-          to perform. The generated draft opens in the editor before saving.
+          {t("workflows.mobile.buildWithAISubtitle")}
         </Text>
 
         <TextInput
@@ -80,7 +98,7 @@ export default function GenerateWorkflowModalScreen() {
           multiline
           value={prompt}
           onChangeText={setPrompt}
-          placeholder="e.g. Every weekday at 9am, check pending bills and summarize them..."
+          placeholder={t("workflows.mobile.generatePromptPlaceholder")}
           placeholderTextColor={colors.textMuted}
           keyboardAppearance={isDark ? "dark" : "light"}
         />
@@ -98,7 +116,7 @@ export default function GenerateWorkflowModalScreen() {
               <Text
                 style={[styles.roleText, role === r && styles.roleTextActive]}
               >
-                {r}
+                {t(ROLE_PILL_KEYS[r])}
               </Text>
             </TouchableOpacity>
           ))}
@@ -110,7 +128,7 @@ export default function GenerateWorkflowModalScreen() {
           disabled={!prompt.trim()}
           leftIcon={<Sparkles size={16} color={colors.primaryForeground} />}
         >
-          Generate Draft
+          {t("workflows.mobile.generateDraft")}
         </Button>
       </ScrollView>
     </KeyboardAvoidingView>

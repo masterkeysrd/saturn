@@ -1,6 +1,6 @@
 import { ActivityIndicator, ScrollView, Text, View } from "react-native"
 import { useLocalSearchParams } from "expo-router"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { useGetFlowRunQuery } from "@saturn/api/saturn/platform/workflow/v1/workflow"
 import { Badge } from "@/components/ui/badge"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
@@ -8,6 +8,7 @@ import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 export default function WorkflowRunDetailScreen() {
   const { runId } = useLocalSearchParams<{ runId: string }>()
   const tz = useTimezone()
+  const { t } = useI18n()
   const { colors } = useTheme()
   const styles = useThemedStyles(createStyles)
 
@@ -27,7 +28,7 @@ export default function WorkflowRunDetailScreen() {
   if (!run) {
     return (
       <View style={styles.loadingWrap}>
-        <Text style={styles.emptyText}>Flow run not found.</Text>
+        <Text style={styles.emptyText}>{t("workflows.runs.notFound")}</Text>
       </View>
     )
   }
@@ -53,10 +54,11 @@ export default function WorkflowRunDetailScreen() {
           />
         </View>
         <Text style={styles.monoMeta}>
-          {run.id} • v{run.flowVersion} • Attempt {run.attempts}
+          {run.id} • v{run.flowVersion} • {t("workflows.runs.attempt")}{" "}
+          {run.attempts}
         </Text>
         <Text style={styles.metaText}>
-          Started:{" "}
+          {t("workflows.runs.started")}{" "}
           {run.startTime
             ? tz.format(run.startTime, {
                 month: "short",
@@ -72,7 +74,9 @@ export default function WorkflowRunDetailScreen() {
             <Text style={styles.metaText}>{String(durationMs)} ms</Text>
           )}
           {tokensUsed !== undefined && Number(tokensUsed) > 0 && (
-            <Text style={styles.metaText}>{String(tokensUsed)} tokens</Text>
+            <Text style={styles.metaText}>
+              {String(tokensUsed)} {t("workflows.runs.tokens")}
+            </Text>
           )}
         </View>
       </View>
@@ -80,14 +84,20 @@ export default function WorkflowRunDetailScreen() {
       {run.error?.message && (
         <View style={styles.errorCard}>
           <Text style={styles.errorTitle}>
-            {run.error.stepId ? `Step ${run.error.stepId} Failed` : "Run Error"}
+            {run.error.stepId
+              ? t("workflows.mobile.stepFailedHeader", {
+                  step: run.error.stepId,
+                })
+              : t("workflows.mobile.runError")}
           </Text>
           <Text style={styles.errorBody}>{run.error.message}</Text>
         </View>
       )}
 
       <Text style={styles.sectionLabel}>
-        STEP TRACE ({run.stepRuns?.length ?? 0})
+        {t("workflows.mobile.stepTrace", {
+          count: run.stepRuns?.length ?? 0,
+        }).toUpperCase()}
       </Text>
 
       {(run.stepRuns ?? []).map((sr) => {
@@ -116,7 +126,7 @@ export default function WorkflowRunDetailScreen() {
               {sr.stepType}
               {srDuration !== undefined ? ` • ${String(srDuration)} ms` : ""}
               {srTokens !== undefined && Number(srTokens) > 0
-                ? ` • ${String(srTokens)} tokens`
+                ? ` • ${String(srTokens)} ${t("workflows.runs.tokens")}`
                 : ""}
             </Text>
 
@@ -127,10 +137,15 @@ export default function WorkflowRunDetailScreen() {
                     <Text style={styles.sourceText}>
                       {alias}: {String(info.loader ?? "")} (
                       {info.count !== undefined
-                        ? `${info.count} rows`
+                        ? t(
+                            Number(info.count) === 1
+                              ? "workflows.runs.rowsOne"
+                              : "workflows.runs.rowsOther",
+                            { count: Number(info.count) }
+                          )
                         : info.hit
-                          ? "hit"
-                          : "miss"}
+                          ? t("workflows.runs.cacheHit")
+                          : t("workflows.runs.cacheMiss")}
                       )
                     </Text>
                   </View>
@@ -153,7 +168,9 @@ export default function WorkflowRunDetailScreen() {
 
       {run.output && (
         <View style={styles.stepCard}>
-          <Text style={styles.sectionLabel}>TERMINAL OUTPUT</Text>
+          <Text style={styles.sectionLabel}>
+            {t("workflows.runs.terminalOutput").toUpperCase()}
+          </Text>
           <Text style={styles.codeBlock}>
             {JSON.stringify(run.output, null, 2)}
           </Text>

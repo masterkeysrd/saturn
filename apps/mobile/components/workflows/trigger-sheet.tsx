@@ -8,10 +8,9 @@ import * as Clipboard from "expo-clipboard"
 import {
   CRON_PRESETS,
   isValidCronExpression,
-  summarizeCron,
   discoverVariablesAtStep,
 } from "@saturn/core"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import { useCreateAPIKeyMutation } from "@saturn/api/saturn/identity/v1/identity"
 import type {
   Catalog_TriggerTopic,
@@ -25,6 +24,7 @@ import { useSpace } from "@/lib/space-context"
 import { useTheme, useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { VariableChipPicker } from "./variable-chip-picker"
+import { CRON_PRESET_LABEL_KEYS, getLocalizedCronSummary } from "./cron-label"
 import { Copy, Key, Trash2 } from "lucide-react-native"
 
 interface TriggerSheetProps {
@@ -39,6 +39,7 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
   ({ trigger, topics, onSave, onDelete, onClose }, ref) => {
     const { colors, isDark } = useTheme()
     const styles = useThemedStyles(createStyles)
+    const { t } = useI18n()
     const tz = useTimezone()
     const toast = useToast()
     const { serverUrl } = useAuth()
@@ -54,7 +55,7 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
     }, [trigger])
 
     const cfg = draft.config ?? {}
-    const selectedTopic = topics.find((t) => t.topic === cfg.topic)
+    const selectedTopic = topics.find((tp) => tp.topic === cfg.topic)
     const triggerVars = discoverVariablesAtStep({
       steps: [],
       triggerPayloadSchema: selectedTopic?.payloadSchema,
@@ -63,12 +64,12 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
     const base = (serverUrl || "").replace(/\/$/, "")
     const webhookUrl = draft.id
       ? `${base}/api/v1/platform/workflows/triggers/${draft.id}:webhook`
-      : "Save workflow to generate webhook URL"
+      : t("workflows.mobile.webhookUnsaved")
 
-    const handleCopy = async (text: string, label: string) => {
+    const handleCopy = async (text: string, title: string) => {
       await Clipboard.setStringAsync(text)
       haptics.success()
-      toast.show({ title: `${label} copied`, type: "success" })
+      toast.show({ title, type: "success" })
     }
 
     const handleMintKey = async () => {
@@ -78,7 +79,7 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
         const key = await createAPIKeyMutation.mutateAsync({
           apiKey: {
             name: `${draft.name || "Webhook"} Mobile Key`,
-            description: "Workflow webhook execute key",
+            description: t("workflows.trigger.keyDescription"),
             scopes: ["workflows:execute"],
             spaceIds: [activeSpaceId],
           },
@@ -89,7 +90,9 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
         haptics.error()
         toast.show({
           title:
-            err instanceof Error ? err.message : "Failed to create API key",
+            err instanceof Error
+              ? err.message
+              : t("workflows.trigger.keyCreateFailed"),
           type: "error",
         })
       }
@@ -101,13 +104,15 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
     return (
       <AppBottomSheet
         ref={ref}
-        title="Configure Trigger"
+        title={t("workflows.mobile.configureTrigger")}
         snapPoints={["75%", "92%"]}
         onClose={onClose}
       >
         <BottomSheetScrollView contentContainerStyle={styles.body}>
           <View style={styles.rowBetween}>
-            <Text style={styles.sectionLabel}>Enabled</Text>
+            <Text style={styles.sectionLabel}>
+              {t("workflows.mobile.enabled")}
+            </Text>
             <Switch
               value={draft.isEnabled}
               onValueChange={(val) => {
@@ -122,51 +127,57 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text style={styles.sectionLabel}>Trigger Name</Text>
+            <Text style={styles.sectionLabel}>
+              {t("workflows.trigger.name")}
+            </Text>
             <BottomSheetTextInput
               style={styles.input}
               value={draft.name}
               onChangeText={(name) => setDraft({ ...draft, name })}
-              placeholder="Trigger name"
+              placeholder={t("workflows.mobile.triggerNamePlaceholder")}
               placeholderTextColor={colors.textMuted}
               keyboardAppearance={isDark ? "dark" : "light"}
             />
           </View>
 
           <View style={styles.typeRow}>
-            {(["event", "webhook", "schedule", "manual"] as const).map((t) => (
-              <TouchableOpacity
-                key={t}
-                style={[
-                  styles.typeChip,
-                  draft.type === t && styles.typeChipActive,
-                ]}
-                onPress={() => {
-                  haptics.selection()
-                  setDraft({ ...draft, type: t })
-                }}
-              >
-                <Text
+            {(["event", "webhook", "schedule", "manual"] as const).map(
+              (kind) => (
+                <TouchableOpacity
+                  key={kind}
                   style={[
-                    styles.typeChipText,
-                    draft.type === t && styles.typeChipTextActive,
+                    styles.typeChip,
+                    draft.type === kind && styles.typeChipActive,
                   ]}
+                  onPress={() => {
+                    haptics.selection()
+                    setDraft({ ...draft, type: kind })
+                  }}
                 >
-                  {t.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.typeChipText,
+                      draft.type === kind && styles.typeChipTextActive,
+                    ]}
+                  >
+                    {kind.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              )
+            )}
           </View>
 
           {draft.type === "event" && (
             <View style={styles.fieldGroup}>
-              <Text style={styles.sectionLabel}>Event Topic</Text>
+              <Text style={styles.sectionLabel}>
+                {t("workflows.trigger.topic")}
+              </Text>
               <View style={styles.topicWrap}>
-                {topics.map((t) => {
-                  const active = t.topic === cfg.topic
+                {topics.map((tp) => {
+                  const active = tp.topic === cfg.topic
                   return (
                     <TouchableOpacity
-                      key={t.topic}
+                      key={tp.topic}
                       style={[
                         styles.topicPill,
                         active && styles.topicPillActive,
@@ -175,7 +186,7 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
                         haptics.selection()
                         setDraft({
                           ...draft,
-                          config: { ...cfg, topic: t.topic ?? "" },
+                          config: { ...cfg, topic: tp.topic ?? "" },
                         })
                       }}
                     >
@@ -185,14 +196,16 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
                           active && styles.topicTextActive,
                         ]}
                       >
-                        {t.topic}
+                        {tp.topic}
                       </Text>
                     </TouchableOpacity>
                   )
                 })}
               </View>
 
-              <Text style={styles.sectionLabel}>Optional CEL Filter</Text>
+              <Text style={styles.sectionLabel}>
+                {t("workflows.mobile.optionalCelFilter")}
+              </Text>
               <BottomSheetTextInput
                 style={styles.monoInput}
                 value={cfg.filter ?? ""}
@@ -220,7 +233,9 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
 
           {draft.type === "webhook" && (
             <View style={styles.webhookBox}>
-              <Text style={styles.sectionLabel}>Webhook URL</Text>
+              <Text style={styles.sectionLabel}>
+                {t("workflows.trigger.labelWebhookUrl")}
+              </Text>
               <Text style={styles.webhookUrl} selectable>
                 {webhookUrl}
               </Text>
@@ -228,10 +243,17 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
                 {draft.id && (
                   <TouchableOpacity
                     style={styles.actionPill}
-                    onPress={() => handleCopy(webhookUrl, "Webhook URL")}
+                    onPress={() =>
+                      handleCopy(
+                        webhookUrl,
+                        t("workflows.mobile.copyWebhookUrlToast")
+                      )
+                    }
                   >
                     <Copy size={14} color={colors.primary} />
-                    <Text style={styles.actionPillText}>Copy URL</Text>
+                    <Text style={styles.actionPillText}>
+                      {t("workflows.trigger.copyUrl")}
+                    </Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
@@ -241,18 +263,20 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
                   <Key size={14} color={colors.accent} />
                   <Text style={styles.actionPillText}>
                     {createAPIKeyMutation.isPending
-                      ? "Creating..."
-                      : "Create API Key"}
+                      ? t("workflows.mobile.creatingKey")
+                      : t("workflows.trigger.createApiKey")}
                   </Text>
                 </TouchableOpacity>
               </View>
               {mintedKey && (
                 <TouchableOpacity
                   style={styles.mintedBox}
-                  onPress={() => handleCopy(mintedKey, "API Key")}
+                  onPress={() =>
+                    handleCopy(mintedKey, t("workflows.mobile.copyApiKeyToast"))
+                  }
                 >
                   <Text style={styles.mintedHint}>
-                    Tap to copy one-time key (workflows:execute):
+                    {t("workflows.mobile.mintKeyHint")}
                   </Text>
                   <Text style={styles.mintedKey}>{mintedKey}</Text>
                 </TouchableOpacity>
@@ -263,7 +287,9 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
           {draft.type === "schedule" && (
             <View style={styles.fieldGroup}>
               <Text style={styles.sectionLabel}>
-                Cron Schedule ({tz.timezone})
+                {t("workflows.trigger.cronExpression", {
+                  timezone: tz.timezone,
+                })}
               </Text>
               <View style={styles.topicWrap}>
                 {CRON_PRESETS.map((p) => {
@@ -289,7 +315,7 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
                           active && styles.topicTextActive,
                         ]}
                       >
-                        {p.label}
+                        {t(CRON_PRESET_LABEL_KEYS[p.id])}
                       </Text>
                     </TouchableOpacity>
                   )
@@ -314,9 +340,11 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
               >
                 {cronVal
                   ? cronOk
-                    ? summarizeCron(cronVal, tz.timezone)
-                    : "Invalid 5-field cron expression"
-                  : `Evaluated in ${tz.timezone}`}
+                    ? getLocalizedCronSummary(cronVal, tz.timezone, t)
+                    : t("workflows.trigger.cronInvalid")
+                  : t("workflows.trigger.cronTimezoneNote", {
+                      timezone: tz.timezone,
+                    })}
               </Text>
             </View>
           )}
@@ -331,7 +359,9 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
               }}
             >
               <Trash2 size={16} color={colors.destructive} />
-              <Text style={styles.deleteText}>Remove</Text>
+              <Text style={styles.deleteText}>
+                {t("workflows.mobile.remove")}
+              </Text>
             </TouchableOpacity>
             <Button
               onPress={() => {
@@ -341,7 +371,7 @@ export const TriggerSheet = forwardRef<BottomSheet, TriggerSheetProps>(
               }}
               style={styles.saveBtn}
             >
-              Save Trigger
+              {t("workflows.mobile.saveTrigger")}
             </Button>
           </View>
         </BottomSheetScrollView>

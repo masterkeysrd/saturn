@@ -196,7 +196,7 @@ export default function AppLayout() {
         name="workflows/[id]"
         options={{
           headerShown: true,
-          headerTitle: "Workflow Editor",
+          headerTitle: t("workflows.editor.copilotTitle"),
           headerBackTitle: t("nav.workflows"),
         }}
       />
@@ -204,7 +204,7 @@ export default function AppLayout() {
         name="workflows/runs/[runId]"
         options={{
           headerShown: true,
-          headerTitle: "Run Trace",
+          headerTitle: t("workflows.mobile.runTraceTitle"),
           headerBackTitle: t("nav.workflows"),
         }}
       />

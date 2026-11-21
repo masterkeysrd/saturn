@@ -16,6 +16,7 @@ import type {
   Catalog_TriggerTopic,
   Flow_StepNode,
 } from "@saturn/api/saturn/platform/workflow/v1/workflow"
+import { useI18n } from "@saturn/hooks"
 import { useListAgentsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 import { Button } from "@/components/ui/button"
@@ -55,6 +56,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
   ) => {
     const { colors, isDark } = useTheme()
     const styles = useThemedStyles(createStyles)
+    const { t } = useI18n()
     const [draft, setDraft] = useState<Flow_StepNode>(step)
     const sourceSheetRef = useRef<BottomSheet>(null)
     const modelSheetRef = useRef<BottomSheet>(null)
@@ -153,7 +155,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
         >
           <BottomSheetScrollView contentContainerStyle={styles.body}>
             <View style={styles.section}>
-              <Text style={styles.label}>Step Type</Text>
+              <Text style={styles.label}>{t("workflows.mobile.stepType")}</Text>
               <View style={styles.typeGrid}>
                 {availableStepTypes.map((stepType) => {
                   const active = draft.type === stepType
@@ -185,7 +187,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
 
             <View style={styles.fieldRow}>
               <View style={styles.halfField}>
-                <Text style={styles.label}>Step ID</Text>
+                <Text style={styles.label}>{t("workflows.mobile.stepId")}</Text>
                 <BottomSheetTextInput
                   style={styles.monoInput}
                   value={draft.id}
@@ -196,7 +198,9 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                 />
               </View>
               <View style={styles.halfField}>
-                <Text style={styles.label}>Label</Text>
+                <Text style={styles.label}>
+                  {t("workflows.mobile.stepLabel")}
+                </Text>
                 <BottomSheetTextInput
                   style={styles.input}
                   value={draft.name ?? ""}
@@ -216,7 +220,9 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                 }}
               >
                 <Database size={14} color={colors.primary} />
-                <Text style={styles.pillBtnText}>Sources ({sourceCount})</Text>
+                <Text style={styles.pillBtnText}>
+                  {t("workflows.inspector.tabSources", { count: sourceCount })}
+                </Text>
               </TouchableOpacity>
               {(draft.type === "llm.generate" ||
                 draft.type === "ai.agent_run") && (
@@ -228,7 +234,9 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   }}
                 >
                   <Sparkles size={14} color={colors.accent} />
-                  <Text style={styles.pillBtnText}>Model Override</Text>
+                  <Text style={styles.pillBtnText}>
+                    {t("workflows.mobile.modelOverride")}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -237,7 +245,9 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
               draft.type === "ai.agent_run") && (
               <View style={styles.section}>
                 <View style={styles.rowBetween}>
-                  <Text style={styles.label}>Continue on Error</Text>
+                  <Text style={styles.label}>
+                    {t("workflows.mobile.continueOnError")}
+                  </Text>
                   <Switch
                     value={draft.onError === "continue"}
                     onValueChange={(v) => {
@@ -253,7 +263,9 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
 
                 {draft.type === "ai.agent_run" && (
                   <>
-                    <Text style={styles.label}>Target Agent</Text>
+                    <Text style={styles.label}>
+                      {t("workflows.inspector.targetAgent")}
+                    </Text>
                     <View style={styles.nestedBox}>
                       {agents.map((ag) => {
                         const selected = inputs.agent_id === ag.id
@@ -279,7 +291,9 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
 
                 {draft.type === "llm.generate" && (
                   <>
-                    <Text style={styles.label}>System Instruction</Text>
+                    <Text style={styles.label}>
+                      {t("workflows.inspector.systemInstruction")}
+                    </Text>
                     <BottomSheetTextInput
                       style={[styles.monoInput, styles.multiline]}
                       multiline
@@ -291,7 +305,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   </>
                 )}
 
-                <Text style={styles.label}>Prompt</Text>
+                <Text style={styles.label}>{t("workflows.mobile.prompt")}</Text>
                 <BottomSheetTextInput
                   style={[styles.monoInput, styles.multiline]}
                   multiline
@@ -310,7 +324,9 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
 
             {draft.type === "filter" && (
               <View style={styles.section}>
-                <Text style={styles.label}>CEL Condition</Text>
+                <Text style={styles.label}>
+                  {t("workflows.inspector.celCondition")}
+                </Text>
                 <BottomSheetTextInput
                   style={styles.monoInput}
                   value={String(inputs.condition ?? "")}
@@ -325,7 +341,9 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   rawMode
                   onInsert={(v) => updateInput("condition", v)}
                 />
-                <Text style={styles.label}>Skip Reason</Text>
+                <Text style={styles.label}>
+                  {t("workflows.inspector.skipReason")}
+                </Text>
                 <BottomSheetTextInput
                   style={styles.input}
                   value={String(inputs.reason ?? "")}
@@ -339,7 +357,9 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
             {draft.type === "switch" && (
               <View style={styles.section}>
                 <View style={styles.rowBetween}>
-                  <Text style={styles.label}>Switch Cases</Text>
+                  <Text style={styles.label}>
+                    {t("workflows.inspector.branchCases")}
+                  </Text>
                   <TouchableOpacity
                     style={styles.smallAdd}
                     onPress={() => {
@@ -358,7 +378,9 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                     }}
                   >
                     <Plus size={14} color={colors.primary} />
-                    <Text style={styles.smallAddText}>Add Case</Text>
+                    <Text style={styles.smallAddText}>
+                      {t("workflows.inspector.addCase")}
+                    </Text>
                   </TouchableOpacity>
                 </View>
 
@@ -396,7 +418,12 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                       autoCapitalize="none"
                     />
                     <Text style={styles.nestedCount}>
-                      {sc.steps?.length ?? 0} branch step(s)
+                      {t(
+                        (sc.steps?.length ?? 0) === 1
+                          ? "workflows.mobile.branchStepsOne"
+                          : "workflows.mobile.branchStepsOther",
+                        { count: sc.steps?.length ?? 0 }
+                      )}
                     </Text>
                     <TouchableOpacity
                       style={styles.smallAdd}
@@ -417,7 +444,9 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                       }}
                     >
                       <Plus size={14} color={colors.primary} />
-                      <Text style={styles.smallAddText}>Add Output Step</Text>
+                      <Text style={styles.smallAddText}>
+                        {t("workflows.mobile.addOutputStep")}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -426,7 +455,9 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
 
             {draft.type === "for_each" && (
               <View style={styles.section}>
-                <Text style={styles.label}>Items Expression</Text>
+                <Text style={styles.label}>
+                  {t("workflows.inspector.itemsExpression")}
+                </Text>
                 <BottomSheetTextInput
                   style={styles.monoInput}
                   value={String(inputs.items ?? "")}
@@ -440,7 +471,9 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   currentValue={String(inputs.items ?? "")}
                   onInsert={(v) => updateInput("items", v)}
                 />
-                <Text style={styles.label}>Item Alias</Text>
+                <Text style={styles.label}>
+                  {t("workflows.inspector.itemAlias")}
+                </Text>
                 <BottomSheetTextInput
                   style={styles.monoInput}
                   value={String(inputs.item_alias ?? "item")}
@@ -450,14 +483,21 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   autoCapitalize="none"
                 />
                 <Text style={styles.nestedCount}>
-                  {(draft.steps ?? []).length} loop step(s)
+                  {t(
+                    (draft.steps ?? []).length === 1
+                      ? "workflows.mobile.loopStepsOne"
+                      : "workflows.mobile.loopStepsOther",
+                    { count: (draft.steps ?? []).length }
+                  )}
                 </Text>
               </View>
             )}
 
             {draft.type === "output" && (
               <View style={styles.section}>
-                <Text style={styles.label}>Output Expression / JSON</Text>
+                <Text style={styles.label}>
+                  {t("workflows.inspector.outputExpression")}
+                </Text>
                 <BottomSheetTextInput
                   style={[styles.monoInput, styles.multiline]}
                   multiline
@@ -532,7 +572,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                 }}
               >
                 <Trash2 size={16} color={colors.destructive} />
-                <Text style={styles.deleteText}>Delete</Text>
+                <Text style={styles.deleteText}>{t("common.delete")}</Text>
               </TouchableOpacity>
               <Button
                 style={styles.saveBtn}
@@ -542,7 +582,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
                   onClose()
                 }}
               >
-                Save Step
+                {t("workflows.mobile.saveStep")}
               </Button>
             </View>
           </BottomSheetScrollView>
@@ -560,7 +600,7 @@ export const StepEditorSheet = forwardRef<BottomSheet, StepEditorSheetProps>(
         <ModelConfigSheet
           ref={modelSheetRef}
           value={draft.model}
-          defaultLabel="Inherit Flow Default"
+          defaultLabelKey="workflows.model.inheritDefault"
           onSave={(model) => setDraft({ ...draft, model })}
           onClose={() => modelSheetRef.current?.close()}
         />

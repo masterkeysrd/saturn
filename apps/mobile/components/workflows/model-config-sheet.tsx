@@ -4,6 +4,8 @@ import BottomSheet, {
   BottomSheetScrollView,
   BottomSheetTextInput,
 } from "@gorhom/bottom-sheet"
+import { useI18n } from "@saturn/hooks"
+import type { TranslationKey } from "@saturn/i18n"
 import { useListModelsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
 import type { ModelConfig } from "@saturn/api/saturn/platform/workflow/v1/workflow"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
@@ -14,17 +16,35 @@ import { haptics } from "@/lib/haptics"
 
 interface ModelConfigSheetProps {
   value?: ModelConfig
-  defaultLabel?: string
+  defaultLabelKey?: TranslationKey
   onSave: (next?: ModelConfig) => void
   onClose: () => void
 }
 
 type ModelStrategy = "default" | "role" | "model"
 
+const ROLE_OPTIONS: {
+  id: "default" | "fast" | "reasoning"
+  labelKey: TranslationKey
+}[] = [
+  { id: "default", labelKey: "workflows.model.roleDefault" },
+  { id: "fast", labelKey: "workflows.model.roleFast" },
+  { id: "reasoning", labelKey: "workflows.model.roleReasoning" },
+]
+
 export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
-  ({ value, defaultLabel = "Workspace Default", onSave, onClose }, ref) => {
+  (
+    {
+      value,
+      defaultLabelKey = "workflows.model.workspaceDefault",
+      onSave,
+      onClose,
+    },
+    ref
+  ) => {
     const { colors, isDark } = useTheme()
     const styles = useThemedStyles(createStyles)
+    const { t } = useI18n()
     const { data: modelsData } = useListModelsQuery({ isEnabled: true })
     const models = modelsData?.models ?? []
 
@@ -96,7 +116,7 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
     return (
       <AppBottomSheet
         ref={ref}
-        title="Model Configuration"
+        title={t("workflows.mobile.modelConfig")}
         snapPoints={["65%", "88%"]}
         onClose={onClose}
       >
@@ -121,10 +141,10 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
                   ]}
                 >
                   {s === "default"
-                    ? defaultLabel
+                    ? t(defaultLabelKey)
                     : s === "role"
-                      ? "Role Slot"
-                      : "Specific Model"}
+                      ? t("workflows.model.roleSlot")
+                      : t("workflows.model.specificModel")}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -132,14 +152,10 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
 
           {strategy === "role" && (
             <View style={styles.listSection}>
-              <Text style={styles.fieldLabel}>Workspace Role</Text>
-              {(
-                [
-                  { id: "default", label: "Default" },
-                  { id: "fast", label: "Fast (Low-latency)" },
-                  { id: "reasoning", label: "Reasoning" },
-                ] as const
-              ).map((r) => {
+              <Text style={styles.fieldLabel}>
+                {t("workflows.model.workspaceRole")}
+              </Text>
+              {ROLE_OPTIONS.map((r) => {
                 const selected = role === r.id
                 return (
                   <TouchableOpacity
@@ -153,7 +169,7 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
                       setRole(r.id)
                     }}
                   >
-                    <Text style={styles.optionTitle}>{r.label}</Text>
+                    <Text style={styles.optionTitle}>{t(r.labelKey)}</Text>
                     <Text style={styles.optionSub}>{r.id}</Text>
                   </TouchableOpacity>
                 )
@@ -163,9 +179,13 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
 
           {strategy === "model" && (
             <View style={styles.listSection}>
-              <Text style={styles.fieldLabel}>Registered Models</Text>
+              <Text style={styles.fieldLabel}>
+                {t("workflows.model.groupModels")}
+              </Text>
               {models.length === 0 ? (
-                <Text style={styles.hintText}>No enabled models found.</Text>
+                <Text style={styles.hintText}>
+                  {t("workflows.model.noModels")}
+                </Text>
               ) : (
                 models.map((m) => {
                   const selected = m.id === modelId
@@ -195,19 +215,23 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
 
           {strategy !== "default" && (
             <View style={styles.listSection}>
-              <Text style={styles.fieldLabel}>Temperature (0 - 2)</Text>
+              <Text style={styles.fieldLabel}>
+                {t("workflows.model.temperature")}
+              </Text>
               <BottomSheetTextInput
                 style={styles.input}
                 value={tempStr}
                 onChangeText={setTempStr}
                 keyboardType="decimal-pad"
                 keyboardAppearance={isDark ? "dark" : "light"}
-                placeholder="Model default"
+                placeholder={t("workflows.model.modelDefault")}
                 placeholderTextColor={colors.textMuted}
               />
 
               <View style={styles.switchRow}>
-                <Text style={styles.fieldLabel}>Enable Extended Thinking</Text>
+                <Text style={styles.fieldLabel}>
+                  {t("workflows.model.extendedThinking")}
+                </Text>
                 <Switch
                   value={thinkingEnabled}
                   onValueChange={(v) => {
@@ -224,7 +248,7 @@ export const ModelConfigSheet = forwardRef<BottomSheet, ModelConfigSheetProps>(
           )}
 
           <Button onPress={handleApply} style={styles.saveBtn}>
-            Apply Model Settings
+            {t("workflows.mobile.applyModelSettings")}
           </Button>
         </BottomSheetScrollView>
       </AppBottomSheet>

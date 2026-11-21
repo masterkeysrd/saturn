@@ -16,6 +16,7 @@ import {
   createDefaultWorkflowStep,
   createEmptyWorkflowDraft,
 } from "@saturn/core"
+import { useI18n } from "@saturn/hooks"
 import { FlowSchema } from "@saturn/schemas"
 import {
   useGetFlowQuery,
@@ -54,6 +55,7 @@ export default function WorkflowDetailEditorScreen() {
   const isNew = !id || id === "new"
   const router = useRouter()
   const toast = useToast()
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
@@ -112,9 +114,9 @@ export default function WorkflowDetailEditorScreen() {
   const loaderDescriptors = catalog?.loaders ?? []
 
   const firstEventTopic = useMemo(() => {
-    const t = (draft.triggers ?? []).find((x) => x.type === "event")
-    if (!t?.config?.topic) return undefined
-    return topics.find((item) => item.topic === t.config?.topic)
+    const event = (draft.triggers ?? []).find((x) => x.type === "event")
+    if (!event?.config?.topic) return undefined
+    return topics.find((item) => item.topic === event.config?.topic)
   }, [draft.triggers, topics])
 
   const handleSave = async () => {
@@ -130,7 +132,9 @@ export default function WorkflowDetailEditorScreen() {
     if (!parsed.success) {
       haptics.error()
       toast.show({
-        title: parsed.error.issues[0]?.message || "Invalid workflow",
+        title:
+          parsed.error.issues[0]?.message ||
+          t("workflows.editor.invalidWorkflow"),
         type: "error",
       })
       return
@@ -143,7 +147,10 @@ export default function WorkflowDetailEditorScreen() {
           flow: draft,
         })
         haptics.success()
-        toast.show({ title: "Workflow created", type: "success" })
+        toast.show({
+          title: t("workflows.editor.createdTitle"),
+          type: "success",
+        })
         if (created.id) {
           router.replace(`/(app)/workflows/${created.id}` as never)
         }
@@ -168,12 +175,13 @@ export default function WorkflowDetailEditorScreen() {
         })
         setDraftOverride(updated)
         haptics.success()
-        toast.show({ title: "Workflow saved", type: "success" })
+        toast.show({ title: t("workflows.editor.savedTitle"), type: "success" })
       }
     } catch (err) {
       haptics.error()
       toast.show({
-        title: err instanceof Error ? err.message : "Failed to save workflow",
+        title:
+          err instanceof Error ? err.message : t("workflows.editor.saveFailed"),
         type: "error",
       })
     }
@@ -190,13 +198,18 @@ export default function WorkflowDetailEditorScreen() {
       })
       haptics.success()
       toast.show({
-        title: `Dry test status: ${run.status ?? "completed"}`,
+        title: t("workflows.mobile.dryTestStatus", {
+          status: run.status ?? "completed",
+        }),
         type: "success",
       })
     } catch (err) {
       haptics.error()
       toast.show({
-        title: err instanceof Error ? err.message : "Dry test failed",
+        title:
+          err instanceof Error
+            ? err.message
+            : t("workflows.mobile.dryTestFailed"),
         type: "error",
       })
     }
@@ -225,7 +238,9 @@ export default function WorkflowDetailEditorScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <View style={styles.rowBetween}>
-            <Text style={styles.sectionLabel}>WORKFLOW DETAILS</Text>
+            <Text style={styles.sectionLabel}>
+              {t("workflows.mobile.workflowDetails").toUpperCase()}
+            </Text>
             <Switch
               value={draft.isEnabled}
               onValueChange={(isEnabled) => {
@@ -243,7 +258,7 @@ export default function WorkflowDetailEditorScreen() {
             style={styles.input}
             value={draft.name}
             onChangeText={(name) => setDraftOverride({ ...draft, name })}
-            placeholder="Workflow name"
+            placeholder={t("workflows.mobile.namePlaceholder")}
             placeholderTextColor={colors.textMuted}
             keyboardAppearance={isDark ? "dark" : "light"}
           />
@@ -255,7 +270,7 @@ export default function WorkflowDetailEditorScreen() {
             onChangeText={(description) =>
               setDraftOverride({ ...draft, description })
             }
-            placeholder="Describe what this workflow automates..."
+            placeholder={t("workflows.mobile.describeWorkflow")}
             placeholderTextColor={colors.textMuted}
             keyboardAppearance={isDark ? "dark" : "light"}
           />
@@ -269,7 +284,9 @@ export default function WorkflowDetailEditorScreen() {
           >
             <View style={styles.rowLeft}>
               <Settings2 size={16} color={colors.primary} />
-              <Text style={styles.configText}>Default Model & Config</Text>
+              <Text style={styles.configText}>
+                {t("workflows.mobile.defaultModelConfig")}
+              </Text>
             </View>
             <ChevronRight size={16} color={colors.textMuted} />
           </TouchableOpacity>
@@ -279,7 +296,9 @@ export default function WorkflowDetailEditorScreen() {
         <View style={styles.section}>
           <View style={styles.rowBetween}>
             <Text style={styles.sectionLabel}>
-              TRIGGERS ({draft.triggers?.length ?? 0})
+              {t("workflows.mobile.triggersWithCount", {
+                count: draft.triggers?.length ?? 0,
+              }).toUpperCase()}
             </Text>
             <TouchableOpacity
               onPress={() => {
@@ -296,13 +315,15 @@ export default function WorkflowDetailEditorScreen() {
                 requestAnimationFrame(() => triggerSheetRef.current?.expand())
               }}
             >
-              <Text style={styles.addLink}>+ Add Trigger</Text>
+              <Text style={styles.addLink}>
+                + {t("workflows.mobile.addTrigger")}
+              </Text>
             </TouchableOpacity>
           </View>
 
-          {(draft.triggers ?? []).map((t, idx) => (
+          {(draft.triggers ?? []).map((trig, idx) => (
             <TouchableOpacity
-              key={t.id ?? `trig-${idx}`}
+              key={trig.id ?? `trig-${idx}`}
               style={styles.itemRow}
               onPress={() => {
                 haptics.light()
@@ -311,8 +332,8 @@ export default function WorkflowDetailEditorScreen() {
               }}
             >
               <View style={styles.itemLeft}>
-                <Text style={styles.itemTitle}>{t.name}</Text>
-                <Badge size="sm" label={t.type.toUpperCase()} />
+                <Text style={styles.itemTitle}>{trig.name}</Text>
+                <Badge size="sm" label={trig.type.toUpperCase()} />
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -323,7 +344,9 @@ export default function WorkflowDetailEditorScreen() {
         <View style={styles.section}>
           <View style={styles.rowBetween}>
             <Text style={styles.sectionLabel}>
-              STEPS ({draft.steps?.length ?? 0})
+              {t("workflows.mobile.stepsWithCount", {
+                count: draft.steps?.length ?? 0,
+              }).toUpperCase()}
             </Text>
             <TouchableOpacity
               onPress={() => {
@@ -338,7 +361,9 @@ export default function WorkflowDetailEditorScreen() {
                 requestAnimationFrame(() => stepSheetRef.current?.expand())
               }}
             >
-              <Text style={styles.addLink}>+ Add Step</Text>
+              <Text style={styles.addLink}>
+                + {t("workflows.mobile.addStep")}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -397,7 +422,9 @@ export default function WorkflowDetailEditorScreen() {
             onPress={handleSave}
             loading={createMutation.isPending || updateMutation.isPending}
           >
-            {isNew ? "Create Workflow" : "Save Changes"}
+            {isNew
+              ? t("workflows.mobile.createWorkflow")
+              : t("workflows.mobile.saveChanges")}
           </Button>
 
           <Button
@@ -406,7 +433,7 @@ export default function WorkflowDetailEditorScreen() {
             loading={testMutation.isPending}
             leftIcon={<FlaskConical size={16} color={colors.textPrimary} />}
           >
-            Run Dry Test
+            {t("workflows.mobile.runDryTest")}
           </Button>
 
           {draft.isSystem && draft.id && (
@@ -418,7 +445,7 @@ export default function WorkflowDetailEditorScreen() {
               }}
               leftIcon={<RotateCcw size={16} color={colors.warning} />}
             >
-              Reset System Default
+              {t("workflows.resetButtonTitle")}
             </Button>
           )}
 
@@ -431,7 +458,7 @@ export default function WorkflowDetailEditorScreen() {
               }}
               leftIcon={<Trash2 size={16} color="#ffffff" />}
             >
-              Delete Workflow
+              {t("workflows.deleteButtonTitle")}
             </Button>
           )}
         </View>
@@ -458,8 +485,8 @@ export default function WorkflowDetailEditorScreen() {
             onSave={(nextTrig) =>
               setDraftOverride({
                 ...draft,
-                triggers: (draft.triggers ?? []).map((t, i) =>
-                  i === editingTriggerIdx ? nextTrig : t
+                triggers: (draft.triggers ?? []).map((trig, i) =>
+                  i === editingTriggerIdx ? nextTrig : trig
                 ),
               })
             }
@@ -510,9 +537,11 @@ export default function WorkflowDetailEditorScreen() {
 
       <ConfirmDialog
         visible={resetDialogVisible}
-        title="Reset System Workflow?"
-        message="Restores this workflow to factory defaults while keeping its ID and history."
-        confirmText="Reset"
+        title={t("workflows.resetDialog.title")}
+        message={`${t("workflows.resetDialog.descriptionStart")} ${
+          draft.name || t("workflows.editor.untitled")
+        } ${t("workflows.resetDialog.descriptionEnd")}`}
+        confirmText={t("workflows.resetDialog.confirm")}
         loading={resetMutation.isPending}
         onCancel={() => setResetDialogVisible(false)}
         onConfirm={async () => {
@@ -528,9 +557,11 @@ export default function WorkflowDetailEditorScreen() {
 
       <ConfirmDialog
         visible={deleteDialogVisible}
-        title="Delete Workflow?"
-        message="Permanently deletes this workflow and all associated triggers."
-        confirmText="Delete"
+        title={t("workflows.deleteDialog.title")}
+        message={`${t("workflows.deleteDialog.descriptionStart")} ${
+          draft.name || t("workflows.editor.untitled")
+        } ${t("workflows.deleteDialog.descriptionEnd")}`}
+        confirmText={t("workflows.deleteDialog.confirm")}
         isDestructive
         loading={deleteMutation.isPending}
         onCancel={() => setDeleteDialogVisible(false)}

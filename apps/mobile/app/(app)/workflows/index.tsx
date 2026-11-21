@@ -9,7 +9,7 @@ import {
 } from "react-native"
 import { useRouter } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
-import { useTimezone } from "@saturn/hooks"
+import { useI18n, useTimezone } from "@saturn/hooks"
 import {
   useListFlowsQuery,
   useListFlowRunsQuery,
@@ -35,6 +35,7 @@ import {
 export default function WorkflowsIndexScreen() {
   const router = useRouter()
   const tz = useTimezone()
+  const { t } = useI18n()
   const toast = useToast()
   const queryClient = useQueryClient()
   const { colors } = useTheme()
@@ -70,7 +71,7 @@ export default function WorkflowsIndexScreen() {
     } catch (err) {
       haptics.error()
       toast.show({
-        title: err instanceof Error ? err.message : "Failed to toggle workflow",
+        title: err instanceof Error ? err.message : t("workflows.toggleFailed"),
         type: "error",
       })
     }
@@ -92,7 +93,7 @@ export default function WorkflowsIndexScreen() {
             {flow.name}
           </Text>
           {flow.isSystem && (
-            <Badge variant="primary" size="sm" label="Built-in" />
+            <Badge variant="primary" size="sm" label={t("workflows.builtIn")} />
           )}
         </View>
         <Switch
@@ -113,8 +114,21 @@ export default function WorkflowsIndexScreen() {
 
       <View style={styles.flowMetaRow}>
         <Text style={styles.metaText}>
-          {flow.triggers?.length ?? 0} triggers • {flow.steps?.length ?? 0}{" "}
-          steps • {flow.stats?.totalRuns7d ?? 0} runs (7d)
+          {t("workflows.mobile.flowMeta", {
+            triggers: t(
+              (flow.triggers?.length ?? 0) === 1
+                ? "workflows.triggerCountOne"
+                : "workflows.triggerCountOther",
+              { count: flow.triggers?.length ?? 0 }
+            ),
+            steps: t(
+              (flow.steps?.length ?? 0) === 1
+                ? "workflows.stepCountOne"
+                : "workflows.stepCountOther",
+              { count: flow.steps?.length ?? 0 }
+            ),
+            runs: `${flow.stats?.totalRuns7d ?? 0} ${t("workflows.runs7d")}`,
+          })}
         </Text>
         <ChevronRight size={16} color={colors.textMuted} />
       </View>
@@ -135,7 +149,9 @@ export default function WorkflowsIndexScreen() {
             }}
           >
             <Sparkles size={16} color={colors.primaryForeground} />
-            <Text style={styles.aiButtonText}>Generate with AI</Text>
+            <Text style={styles.aiButtonText}>
+              {t("workflows.mobile.generateWithAI")}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -148,7 +164,9 @@ export default function WorkflowsIndexScreen() {
             }}
           >
             <Plus size={16} color={colors.primary} />
-            <Text style={styles.createButtonText}>Create Workflow</Text>
+            <Text style={styles.createButtonText}>
+              {t("workflows.mobile.createWorkflow")}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -171,7 +189,9 @@ export default function WorkflowsIndexScreen() {
                 tab === "flows" && styles.segmentLabelActive,
               ]}
             >
-              Workflows ({flows.length})
+              {t("workflows.mobile.workflowsWithCount", {
+                count: flows.length,
+              })}
             </Text>
           </TouchableOpacity>
 
@@ -192,7 +212,9 @@ export default function WorkflowsIndexScreen() {
                 tab === "runs" && styles.segmentLabelActive,
               ]}
             >
-              Run History ({runs.length})
+              {t("workflows.mobile.runHistoryWithCount", {
+                count: runs.length,
+              })}
             </Text>
           </TouchableOpacity>
         </View>
@@ -208,16 +230,19 @@ export default function WorkflowsIndexScreen() {
             <View style={styles.listGap}>
               <View style={styles.sectionHeaderRow}>
                 <ShieldCheck size={14} color={colors.primary} />
-                <Text style={styles.sectionTitle}>SYSTEM WORKFLOWS</Text>
+                <Text style={styles.sectionTitle}>
+                  {t("workflows.mobile.systemWorkflows").toUpperCase()}
+                </Text>
               </View>
               {systemFlows.map(renderFlowRow)}
 
-              <Text style={styles.sectionTitle}>CUSTOM WORKFLOWS</Text>
+              <Text style={styles.sectionTitle}>
+                {t("workflows.mobile.customWorkflows").toUpperCase()}
+              </Text>
               {customFlows.length === 0 ? (
                 <Card style={styles.emptyCard}>
                   <Text style={styles.emptyText}>
-                    No custom workflows yet. Tap Generate with AI or Create
-                    Workflow above.
+                    {t("workflows.mobile.noCustomWorkflows")}
                   </Text>
                 </Card>
               ) : (
@@ -233,7 +258,7 @@ export default function WorkflowsIndexScreen() {
           />
         ) : runs.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No workflow runs recorded yet.</Text>
+            <Text style={styles.emptyText}>{t("workflows.mobile.noRuns")}</Text>
           </Card>
         ) : (
           <View style={styles.listGap}>

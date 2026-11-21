@@ -1,5 +1,6 @@
 import { ScrollView, Text, TouchableOpacity, View } from "react-native"
 import { insertVariableToken, type WorkflowVariable } from "@saturn/core"
+import { useI18n } from "@saturn/hooks"
 import { useThemedStyles, type SaturnMobileTheme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 
@@ -17,12 +18,15 @@ export function VariableChipPicker({
   rawMode = false,
 }: VariableChipPickerProps) {
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
 
   if (variables.length === 0) return null
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>INSERT VARIABLE</Text>
+      <Text style={styles.label}>
+        {t("workflows.variables.insert").toUpperCase()}
+      </Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

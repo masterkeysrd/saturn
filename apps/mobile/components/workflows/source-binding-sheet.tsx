@@ -5,6 +5,7 @@ import BottomSheet, {
   BottomSheetTextInput,
 } from "@gorhom/bottom-sheet"
 import type { WorkflowVariable } from "@saturn/core"
+import { useI18n } from "@saturn/hooks"
 import type {
   Catalog_Loader,
   Flow_SourceBinding,
@@ -30,6 +31,7 @@ export const SourceBindingSheet = forwardRef<
 >(({ sources, loaders, variables, onSave, onClose }, ref) => {
   const { colors, isDark } = useTheme()
   const styles = useThemedStyles(createStyles)
+  const { t } = useI18n()
   const [draft, setDraft] =
     useState<Record<string, Flow_SourceBinding>>(sources)
 
@@ -61,14 +63,16 @@ export const SourceBindingSheet = forwardRef<
   return (
     <AppBottomSheet
       ref={ref}
-      title="Data Sources"
+      title={t("workflows.mobile.dataSources")}
       snapPoints={["70%", "92%"]}
       onClose={onClose}
     >
       <BottomSheetScrollView contentContainerStyle={styles.body}>
         <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
           <Plus size={16} color={colors.primary} />
-          <Text style={styles.addText}>Add Data Loader</Text>
+          <Text style={styles.addText}>
+            {t("workflows.mobile.addDataLoader")}
+          </Text>
         </TouchableOpacity>
 
         {Object.entries(draft).map(([alias, binding]) => {
@@ -98,7 +102,9 @@ export const SourceBindingSheet = forwardRef<
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.subLabel}>Loader</Text>
+              <Text style={styles.subLabel}>
+                {t("workflows.mobile.loaderLabel")}
+              </Text>
               <View style={styles.loaderGrid}>
                 {loaders.map((l) => {
                   const active = l.name === binding.loader
@@ -134,7 +140,9 @@ export const SourceBindingSheet = forwardRef<
               </View>
 
               <View style={styles.rowBetween}>
-                <Text style={styles.subLabel}>Required</Text>
+                <Text style={styles.subLabel}>
+                  {t("workflows.mobile.required")}
+                </Text>
                 <Switch
                   value={Boolean(binding.required)}
                   onValueChange={(val) => {
@@ -203,7 +211,9 @@ export const SourceBindingSheet = forwardRef<
           )
         })}
 
-        <Button onPress={handleSave}>Save Sources</Button>
+        <Button onPress={handleSave}>
+          {t("workflows.mobile.saveSources")}
+        </Button>
       </BottomSheetScrollView>
     </AppBottomSheet>
   )
