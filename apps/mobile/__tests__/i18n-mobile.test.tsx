@@ -448,6 +448,20 @@ function FinanceI18nProbe() {
       <span data-testid="fin-inbox-subtitle">
         {t("finance.tab.pendingInboxSubtitle")}
       </span>
+      <span data-testid="menu-section-triage">{t("menu.sectionTriage")}</span>
+      <span data-testid="menu-section-workspace">
+        {t("menu.sectionWorkspace")}
+      </span>
+      <span data-testid="menu-appearance-light">{t("menu.light")}</span>
+      <span data-testid="menu-appearance-dark">{t("menu.dark")}</span>
+      <span data-testid="menu-ai-assistant">{t("menu.aiAssistant")}</span>
+      <span data-testid="menu-api-keys">{t("menu.apiKeys")}</span>
+      <span data-testid="menu-web-only">{t("menu.webOnly")}</span>
+      <span data-testid="menu-workspace-active">
+        {t("menu.workspaceActive")}
+      </span>
+      <span data-testid="menu-switch">{t("menu.switchWorkspace")}</span>
+      <span data-testid="menu-approval-needed">{t("menu.approvalNeeded")}</span>
     </div>
   )
 }
@@ -670,6 +684,24 @@ describe("Mobile i18n & User-Scoped Regional Preferences", () => {
     )
     expect(getByTestId("fin-inbox-subtitle").textContent).toBe(
       "Toca para revisar y aprobar en tu libro mayor"
+    )
+    expect(getByTestId("menu-section-triage").textContent).toBe(
+      "Triaje y automatización"
+    )
+    expect(getByTestId("menu-section-workspace").textContent).toBe(
+      "Espacio de trabajo y preferencias"
+    )
+    expect(getByTestId("menu-appearance-light").textContent).toBe("Claro")
+    expect(getByTestId("menu-appearance-dark").textContent).toBe("Oscuro")
+    expect(getByTestId("menu-ai-assistant").textContent).toBe("Asistente de IA")
+    expect(getByTestId("menu-api-keys").textContent).toBe("Claves de API")
+    expect(getByTestId("menu-web-only").textContent).toBe("Solo web")
+    expect(getByTestId("menu-workspace-active").textContent).toBe(
+      "Espacio de trabajo activo"
+    )
+    expect(getByTestId("menu-switch").textContent).toBe("Cambiar")
+    expect(getByTestId("menu-approval-needed").textContent).toBe(
+      "Aprobación requerida"
     )
   })
 

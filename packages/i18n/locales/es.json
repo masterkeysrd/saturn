@@ -4084,5 +4084,33 @@
       "insert": "Insertar variable",
       "search": "Buscar variables..."
     }
+  },
+  "menu": {
+    "aiAssistant": "Asistente de IA",
+    "apiKeys": "Claves de API",
+    "appearance": "Apariencia",
+    "appearanceAria": "Tema {label}",
+    "approvalNeeded": "Aprobación requerida",
+    "dark": "Oscuro",
+    "designSystem": "Galería del sistema de diseño",
+    "gotIt": "Entendido",
+    "languageUpdateFailed": "No se pudo actualizar el idioma",
+    "light": "Claro",
+    "personalWorkspace": "Personal",
+    "profileAria": "Abrir perfil y configuración",
+    "reconciliationWebDesc": "La conciliación con extractos bancarios y líneas CSV subidos se realiza en la web de Saturn.",
+    "saturnUser": "Usuario de Saturn",
+    "sectionTriage": "Triaje y automatización",
+    "sectionWorkspace": "Espacio de trabajo y preferencias",
+    "switchWorkspace": "Cambiar",
+    "switchWorkspaceAria": "Cambiar de espacio de trabajo",
+    "system": "Sistema",
+    "updateFailed": "Actualización fallida",
+    "webFeatureTitle": "{name} (función web)",
+    "webNoticeBody": "{description}\n\nAccede al panel web de Saturn desde un ordenador para usar esta herramienta.",
+    "webOnly": "Solo web",
+    "workspaceActive": "Espacio de trabajo activo",
+    "workspaceDetails": "Detalles y miembros del espacio de trabajo",
+    "workspaceSecurity": "Seguridad y biometría"
   }
 }

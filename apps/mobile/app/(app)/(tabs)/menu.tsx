@@ -38,7 +38,7 @@ import {
 } from "lucide-react-native"
 import { useListInboxItemsQuery } from "@saturn/api/saturn/finance/v1/finance"
 import { useListThreadsQuery } from "@saturn/api/saturn/platform/ai/v1/ai"
-import { SUPPORTED_UI_LOCALES } from "@saturn/i18n"
+import { SUPPORTED_UI_LOCALES, type TranslationKey } from "@saturn/i18n"
 import { useI18n } from "@saturn/hooks"
 import { useAuth } from "@/lib/auth-context"
 import { useSpace } from "@/lib/space-context"
@@ -58,12 +58,12 @@ import { haptics } from "@/lib/haptics"
 
 const APPEARANCE_OPTIONS: readonly {
   value: ThemeMode
-  label: string
+  labelKey: TranslationKey
   Icon: typeof Sun
 }[] = [
-  { value: "light", label: "Light", Icon: Sun },
-  { value: "dark", label: "Dark", Icon: Moon },
-  { value: "system", label: "System", Icon: Smartphone },
+  { value: "light", labelKey: "menu.light", Icon: Sun },
+  { value: "dark", labelKey: "menu.dark", Icon: Moon },
+  { value: "system", labelKey: "menu.system", Icon: Smartphone },
 ]
 
 export default function MenuScreen() {
@@ -101,9 +101,9 @@ export default function MenuScreen() {
       haptics.error()
       toast.show({
         type: "error",
-        title: "Update Failed",
+        title: t("menu.updateFailed"),
         message:
-          err instanceof Error ? err.message : "Failed to update language",
+          err instanceof Error ? err.message : t("menu.languageUpdateFailed"),
       })
     }
   }
@@ -132,7 +132,7 @@ export default function MenuScreen() {
   const displayName =
     user?.name && user.name !== "User"
       ? user.name
-      : user?.username || user?.email || "Saturn User"
+      : user?.username || user?.email || t("menu.saturnUser")
 
   const navigateTo = (path: string) => {
     haptics.light()
@@ -142,9 +142,9 @@ export default function MenuScreen() {
   const showWebOnlyNotice = (featureName: string, description: string) => {
     haptics.light()
     Alert.alert(
-      `${featureName} (Web Feature)`,
-      `${description}\n\nPlease access the Saturn web dashboard on desktop to use this tool.`,
-      [{ text: "Got it" }]
+      t("menu.webFeatureTitle", { name: featureName }),
+      t("menu.webNoticeBody", { description }),
+      [{ text: t("menu.gotIt") }]
     )
   }
 
@@ -168,7 +168,7 @@ export default function MenuScreen() {
             activeOpacity={0.7}
             onPress={() => navigateTo("/(app)/settings")}
             accessibilityRole="button"
-            accessibilityLabel="Open profile and settings"
+            accessibilityLabel={t("menu.profileAria")}
             testID="menu-profile-row"
           >
             <Avatar name={displayName} imageUri={user?.avatarUrl} size={44} />
@@ -187,10 +187,12 @@ export default function MenuScreen() {
 
           <View style={styles.workspaceRow}>
             <View style={styles.workspaceInfo}>
-              <Text style={styles.workspaceCaption}>Active workspace</Text>
+              <Text style={styles.workspaceCaption}>
+                {t("menu.workspaceActive")}
+              </Text>
               <View style={styles.workspaceTitleRow}>
                 <Text style={styles.workspaceName} numberOfLines={1}>
-                  {activeSpace?.name || "Personal"}
+                  {activeSpace?.name || t("menu.personalWorkspace")}
                 </Text>
                 <Badge
                   variant={activeSpaceRole === "owner" ? "primary" : "default"}
@@ -204,18 +206,20 @@ export default function MenuScreen() {
               activeOpacity={0.7}
               onPress={() => navigateTo("/modal/switch-space")}
               accessibilityRole="button"
-              accessibilityLabel="Switch workspace"
+              accessibilityLabel={t("menu.switchWorkspaceAria")}
               testID="menu-switch-space-btn"
             >
               <ArrowLeftRight size={13} color={colors.primary} />
-              <Text style={styles.switchBtnText}>Switch</Text>
+              <Text style={styles.switchBtnText}>
+                {t("menu.switchWorkspace")}
+              </Text>
             </TouchableOpacity>
           </View>
         </Card>
 
         {/* Section 1: Triage & Automation */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Triage & Automation</Text>
+          <Text style={styles.sectionHeader}>{t("menu.sectionTriage")}</Text>
           <Card style={styles.menuGroup}>
             <TouchableOpacity
               style={[styles.menuItem, styles.menuItemBorder]}
@@ -247,11 +251,15 @@ export default function MenuScreen() {
             >
               <View style={styles.menuLeft}>
                 <Sparkles size={18} color={colors.brandSecondary} />
-                <Text style={styles.menuLabel}>AI Assistant</Text>
+                <Text style={styles.menuLabel}>{t("menu.aiAssistant")}</Text>
               </View>
               <View style={styles.menuRight}>
                 {hasApprovalNeeded && (
-                  <Badge variant="warning" size="sm" label="Approval needed" />
+                  <Badge
+                    variant="warning"
+                    size="sm"
+                    label={t("menu.approvalNeeded")}
+                  />
                 )}
                 <ChevronRight size={16} color={colors.textMuted} />
               </View>
@@ -341,8 +349,8 @@ export default function MenuScreen() {
               activeOpacity={0.7}
               onPress={() =>
                 showWebOnlyNotice(
-                  "Bank Reconciliation",
-                  "Reconciliation against uploaded bank statements and CSV lines is handled on the Saturn web app."
+                  t("nav.reconciliation"),
+                  t("menu.reconciliationWebDesc")
                 )
               }
             >
@@ -351,7 +359,7 @@ export default function MenuScreen() {
                 <Text style={styles.menuLabel}>{t("nav.reconciliation")}</Text>
               </View>
               <View style={styles.menuRight}>
-                <Badge variant="outline" size="sm" label="Web Only" />
+                <Badge variant="outline" size="sm" label={t("menu.webOnly")} />
                 <ChevronRight size={16} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
@@ -360,15 +368,15 @@ export default function MenuScreen() {
 
         {/* Section 3: Workspace & Preferences */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Workspace & Preferences</Text>
+          <Text style={styles.sectionHeader}>{t("menu.sectionWorkspace")}</Text>
           <Card style={styles.menuGroup}>
             <View style={[styles.appearanceRow, styles.menuItemBorder]}>
               <View style={styles.menuLeft}>
                 <Sun size={18} color={colors.warning} />
-                <Text style={styles.menuLabel}>Appearance</Text>
+                <Text style={styles.menuLabel}>{t("menu.appearance")}</Text>
               </View>
               <View style={styles.appearanceStrip}>
-                {APPEARANCE_OPTIONS.map(({ value, label, Icon }) => {
+                {APPEARANCE_OPTIONS.map(({ value, labelKey, Icon }) => {
                   const isActive = mode === value
                   return (
                     <TouchableOpacity
@@ -380,7 +388,9 @@ export default function MenuScreen() {
                       activeOpacity={0.75}
                       accessibilityRole="button"
                       accessibilityState={{ selected: isActive }}
-                      accessibilityLabel={`${label} theme`}
+                      accessibilityLabel={t("menu.appearanceAria", {
+                        label: t(labelKey),
+                      })}
                       onPress={() => {
                         haptics.selection()
                         setMode(value)
@@ -398,7 +408,7 @@ export default function MenuScreen() {
                           isActive && styles.appearanceChipLabelActive,
                         ]}
                       >
-                        {label}
+                        {t(labelKey)}
                       </Text>
                     </TouchableOpacity>
                   )
@@ -436,7 +446,9 @@ export default function MenuScreen() {
             >
               <View style={styles.menuLeft}>
                 <Link2 size={18} color={colors.primary} />
-                <Text style={styles.menuLabel}>Connected Accounts</Text>
+                <Text style={styles.menuLabel}>
+                  {t("settings.hub.navConnectedAccounts")}
+                </Text>
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -449,7 +461,7 @@ export default function MenuScreen() {
               <View style={styles.menuLeft}>
                 <Users size={18} color={colors.brandSecondary} />
                 <Text style={styles.menuLabel}>
-                  Workspace Details & Members
+                  {t("menu.workspaceDetails")}
                 </Text>
               </View>
               <View style={styles.menuRight}>
@@ -469,7 +481,9 @@ export default function MenuScreen() {
             >
               <View style={styles.menuLeft}>
                 <ShieldCheck size={18} color={colors.success} />
-                <Text style={styles.menuLabel}>Security & Biometrics</Text>
+                <Text style={styles.menuLabel}>
+                  {t("menu.workspaceSecurity")}
+                </Text>
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -481,7 +495,7 @@ export default function MenuScreen() {
             >
               <View style={styles.menuLeft}>
                 <KeyRound size={18} color={colors.primary} />
-                <Text style={styles.menuLabel}>API Keys</Text>
+                <Text style={styles.menuLabel}>{t("menu.apiKeys")}</Text>
               </View>
               <ChevronRight size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -506,7 +520,7 @@ export default function MenuScreen() {
               >
                 <View style={styles.menuLeft}>
                   <Palette size={18} color={colors.primary} />
-                  <Text style={styles.menuLabel}>Design System Gallery</Text>
+                  <Text style={styles.menuLabel}>{t("menu.designSystem")}</Text>
                 </View>
                 <View style={styles.menuRight}>
                   <Badge variant="outline" size="sm" label="DEV" />

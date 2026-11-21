@@ -4084,5 +4084,33 @@
       "insert": "Insert variable",
       "search": "Search variables..."
     }
+  },
+  "menu": {
+    "aiAssistant": "AI Assistant",
+    "apiKeys": "API Keys",
+    "appearance": "Appearance",
+    "appearanceAria": "{label} theme",
+    "approvalNeeded": "Approval needed",
+    "dark": "Dark",
+    "designSystem": "Design System Gallery",
+    "gotIt": "Got it",
+    "languageUpdateFailed": "Failed to update language",
+    "light": "Light",
+    "personalWorkspace": "Personal",
+    "profileAria": "Open profile and settings",
+    "reconciliationWebDesc": "Reconciliation against uploaded bank statements and CSV lines is handled on the Saturn web app.",
+    "saturnUser": "Saturn User",
+    "sectionTriage": "Triage & Automation",
+    "sectionWorkspace": "Workspace & Preferences",
+    "switchWorkspace": "Switch",
+    "switchWorkspaceAria": "Switch workspace",
+    "system": "System",
+    "updateFailed": "Update Failed",
+    "webFeatureTitle": "{name} (Web Feature)",
+    "webNoticeBody": "{description}\n\nPlease access the Saturn web dashboard on desktop to use this tool.",
+    "webOnly": "Web Only",
+    "workspaceActive": "Active workspace",
+    "workspaceDetails": "Workspace Details & Members",
+    "workspaceSecurity": "Security & Biometrics"
   }
 }
